@@ -141,20 +141,40 @@ const Auth = () => {
               </TabsList>
 
               <TabsContent value="signin">
-                <form onSubmit={handleEmailSignIn} className="space-y-3 mt-3">
-                  <div className="space-y-1.5">
-                    <Label htmlFor="signin-email">Email</Label>
-                    <Input id="signin-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="signin-password">Password</Label>
-                    <Input id="signin-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
-                  </div>
-                  <Button type="submit" className="w-full" disabled={loading}>
-                    {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Mail className="w-4 h-4 mr-2" />}
-                    Sign In
-                  </Button>
-                </form>
+                {forgotMode ? (
+                  <form onSubmit={handleForgotPassword} className="space-y-3 mt-3">
+                    <p className="text-sm text-muted-foreground">Enter your email and we'll send you a reset link.</p>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="forgot-email">Email</Label>
+                      <Input id="forgot-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                    </div>
+                    <Button type="submit" className="w-full" disabled={loading}>
+                      {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Mail className="w-4 h-4 mr-2" />}
+                      Send Reset Link
+                    </Button>
+                    <button type="button" onClick={() => setForgotMode(false)} className="text-xs text-primary hover:underline w-full text-center">
+                      Back to sign in
+                    </button>
+                  </form>
+                ) : (
+                  <form onSubmit={handleEmailSignIn} className="space-y-3 mt-3">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="signin-email">Email</Label>
+                      <Input id="signin-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="signin-password">Password</Label>
+                      <Input id="signin-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                    </div>
+                    <Button type="submit" className="w-full" disabled={loading}>
+                      {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Mail className="w-4 h-4 mr-2" />}
+                      Sign In
+                    </Button>
+                    <button type="button" onClick={() => setForgotMode(true)} className="text-xs text-muted-foreground hover:text-primary w-full text-center transition-colors">
+                      Forgot your password?
+                    </button>
+                  </form>
+                )}
               </TabsContent>
 
               <TabsContent value="signup">
