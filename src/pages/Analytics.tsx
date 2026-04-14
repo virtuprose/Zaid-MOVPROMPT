@@ -25,6 +25,44 @@ interface Stats {
 const Analytics = () => {
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [authenticated, setAuthenticated] = useState(() => sessionStorage.getItem("analytics_auth") === "true");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState(false);
+
+  const handleLogin = () => {
+    if (password === ADMIN_PASSWORD) {
+      sessionStorage.setItem("analytics_auth", "true");
+      setAuthenticated(true);
+      setError(false);
+    } else {
+      setError(true);
+    }
+  };
+
+  if (!authenticated) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Card className="w-full max-w-sm bg-card border-border">
+          <CardContent className="p-6 space-y-4">
+            <div className="flex items-center gap-2 justify-center mb-2">
+              <Lock className="w-5 h-5 text-primary" />
+              <h2 className="text-lg font-mono font-bold">Admin Access</h2>
+            </div>
+            <Input
+              type="password"
+              placeholder="Enter password"
+              value={password}
+              onChange={(e) => { setPassword(e.target.value); setError(false); }}
+              onKeyDown={(e) => e.key === "Enter" && handleLogin()}
+              className={error ? "border-destructive" : ""}
+            />
+            {error && <p className="text-xs text-destructive text-center">Incorrect password</p>}
+            <Button onClick={handleLogin} className="w-full">Unlock</Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   useEffect(() => {
     fetchStats();
