@@ -14,11 +14,11 @@ IMPORTANT: You must autonomously analyze the scene and determine the best cinema
 WORKFLOW TYPES:
 1. "single" — Analyze the scene and write a camera movement prompt to animate it
 2. "twoframe" — Given start and end frames, describe the transition/interpolation path
-3. "multishot" — Given one concept image, generate 3-5 varied shots (Wide, Medium, Close-up, etc.)
+3. "multishot" — Given one concept image, generate exactly 10 varied shots (Wide Establishing, Medium, Close-up, Extreme Close-up, Over-the-shoulder, Low Angle, High Angle, Dutch Angle, Tracking, POV, etc.)
 
 OUTPUT FORMAT (you MUST use this tool):
 For "single" and "twoframe": Return 1 shot result
-For "multishot": Return 3-5 shot results with descriptive shotName
+For "multishot": Return exactly 10 shot results with descriptive shotName
 
 Each shot has: mainPrompt, negativePrompt, cameraSuggestions, modelNotes
 
@@ -130,7 +130,7 @@ serve(async (req) => {
                   results: {
                     type: "array",
                     items: shotSchema,
-                    description: "Array of shot results. 1 for single/twoframe, 3-5 for multishot.",
+                    description: "Array of shot results. 1 for single/twoframe, exactly 10 for multishot.",
                   },
                 },
                 required: ["results"],
