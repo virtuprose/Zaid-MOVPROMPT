@@ -8,11 +8,20 @@ const CINEMATIC_STYLES = [
 ];
 
 const TARGET_MODELS = [
-  { value: "runway", label: "Runway Gen-3" },
-  { value: "kling", label: "Kling" },
+  { value: "runway", label: "Runway Gen-3 Alpha" },
+  { value: "kling", label: "Kling 1.5" },
   { value: "luma", label: "Luma Dream Machine" },
-  { value: "veo", label: "Google Veo" },
+  { value: "veo", label: "Google Veo 2" },
   { value: "sora", label: "OpenAI Sora" },
+  { value: "pika", label: "Pika 2.0" },
+  { value: "hailuo", label: "Hailuo MiniMax" },
+  { value: "stable-video", label: "Stable Video Diffusion" },
+  { value: "genmo", label: "Genmo Mochi" },
+  { value: "pixverse", label: "PixVerse" },
+  { value: "haiper", label: "Haiper 2.0" },
+  { value: "vidu", label: "Vidu" },
+  { value: "cogvideo", label: "CogVideoX" },
+  { value: "wan", label: "Wan 2.1" },
 ];
 
 interface ConfigPanelProps {

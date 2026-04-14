@@ -27,7 +27,16 @@ Adapt prompt vocabulary for the target model:
 - Kling: Focus on subject motion, use action verbs, be explicit about movement direction
 - Luma: Describe lighting and atmosphere heavily, use painterly language
 - Veo: Structured and precise, reference real cinematography techniques
-- Sora: Natural language descriptions, emphasize physics and realism`;
+- Sora: Natural language descriptions, emphasize physics and realism
+- Pika: Focus on stylized motion, artistic transitions, creative camera work
+- Hailuo/MiniMax: Emphasize fluid motion, character consistency, detailed scene description
+- Stable Video Diffusion: Technical prompts, seed-based consistency, motion amount control
+- Genmo Mochi: Natural motion descriptions, physics-aware language
+- PixVerse: Action-oriented prompts, dynamic camera movements
+- Haiper: Concise motion descriptions, emphasize temporal consistency
+- Vidu: Detailed scene composition, reference-based consistency
+- CogVideoX: Structured prompts, explicit temporal descriptions
+- Wan: Cinematic language, emphasize lighting and atmosphere`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -46,11 +55,20 @@ serve(async (req) => {
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
     const modelLabels: Record<string, string> = {
-      runway: "Runway Gen-3",
-      kling: "Kling",
+      runway: "Runway Gen-3 Alpha",
+      kling: "Kling 1.5",
       luma: "Luma Dream Machine",
-      veo: "Google Veo",
+      veo: "Google Veo 2",
       sora: "OpenAI Sora",
+      pika: "Pika 2.0",
+      hailuo: "Hailuo MiniMax",
+      "stable-video": "Stable Video Diffusion",
+      genmo: "Genmo Mochi",
+      pixverse: "PixVerse",
+      haiper: "Haiper 2.0",
+      vidu: "Vidu",
+      cogvideo: "CogVideoX",
+      wan: "Wan 2.1",
     };
 
     const userContent: any[] = [
