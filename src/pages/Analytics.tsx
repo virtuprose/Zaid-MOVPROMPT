@@ -3,7 +3,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
-import { Eye, Sparkles, Users, TrendingUp } from "lucide-react";
+import { Eye, Sparkles, Users, TrendingUp, Lock } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+
+const ADMIN_PASSWORD = "movprompt2024";
 
 const COLORS = ["hsl(190, 90%, 50%)", "hsl(35, 90%, 55%)", "hsl(280, 70%, 60%)", "hsl(140, 70%, 50%)", "hsl(350, 70%, 55%)"];
 
