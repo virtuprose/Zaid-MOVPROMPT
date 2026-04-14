@@ -29,6 +29,7 @@ Adapt prompt vocabulary for the target model:
 - Veo: Structured and precise, reference real cinematography techniques
 - Sora: Natural language descriptions, emphasize physics and realism
 - Pika: Focus on stylized motion, artistic transitions, creative camera work
+- Seedance: Emphasize dance-like fluid motion, rhythmic transitions, expressive movement
 - Hailuo/MiniMax: Emphasize fluid motion, character consistency, detailed scene description
 - Stable Video Diffusion: Technical prompts, seed-based consistency, motion amount control
 - Genmo Mochi: Natural motion descriptions, physics-aware language
@@ -62,6 +63,7 @@ serve(async (req) => {
       sora: "OpenAI Sora",
       pika: "Pika 2.0",
       hailuo: "Hailuo MiniMax",
+      seedance: "Seedance",
       "stable-video": "Stable Video Diffusion",
       genmo: "Genmo Mochi",
       pixverse: "PixVerse",
