@@ -11,7 +11,7 @@ const PRESET_GROUPS = [
   },
   {
     label: "✨ Transitions",
-    chips: ["Fade in", "Fade out", "Cross dissolve", "Morph cut", "Zoom transition", "Swipe cut", "Match cut", "Jump cut", "Smash cut", "Iris wipe"],
+    chips: ["Fade in", "Fade out", "Cross dissolve", "Morph cut", "Zoom transition", "Swipe cut", "Match cut", "Jump cut", "Smash cut", "Iris wipe", "Light leak", "Glitch", "Speed ramp", "Flash cut", "Whip transition", "Parallax shift"],
   },
 ];
 
