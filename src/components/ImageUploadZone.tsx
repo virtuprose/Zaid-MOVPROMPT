@@ -33,9 +33,9 @@ export const ImageUploadZone = ({ label, onImageSelect, onImageRemove, preview }
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
-            className="relative rounded-lg overflow-hidden border border-border aspect-video"
+            className="relative rounded-lg overflow-hidden border border-border bg-muted/30"
           >
-            <img src={preview} alt={label} className="w-full h-full object-cover" />
+            <img src={preview} alt={label} className="w-full max-h-[400px] object-contain" />
             <button
               onClick={onImageRemove}
               className="absolute top-2 right-2 p-1.5 rounded-full bg-background/80 backdrop-blur-sm hover:bg-destructive/80 transition-colors"
