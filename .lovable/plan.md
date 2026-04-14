@@ -1,31 +1,25 @@
 
 
-## Plan: Replace Cinematic Style with Description Box
+## Plan: Preserve Image Aspect Ratio on Upload
 
 ### Problem
-The cinematic style dropdown is confusing for most users who don't know which style to pick. Better to let the AI decide the style based on the image content.
+The preview container forces `aspect-video` (16:9) and uses `object-cover`, which crops images that aren't 16:9 (e.g. portrait, square, or ultra-wide images).
 
 ### Changes
 
-**1. Update ConfigPanel** (`src/components/ConfigPanel.tsx`)
-- Remove the cinematic style dropdown entirely
-- Add a textarea/description box labeled something like "Describe your vision (optional)" where users can type free-form notes (e.g. "slow motion rain scene", "epic drone shot")
-- Keep only the Target AI Model dropdown
-- Update props: replace `style`/`onStyleChange` with `description`/`onDescriptionChange`
+**`src/components/ImageUploadZone.tsx`**
+- Remove the fixed `aspect-video` class from the preview container (line 36)
+- Change `object-cover` to `object-contain` on the `<img>` tag (line 38)
+- Keep `aspect-video` on the empty upload zone (line 58) so it still has a nice shape before upload
+- Use `w-full` with auto height on the preview container so it adapts to the image's natural aspect ratio
+- Add `max-h-[400px]` to prevent extremely tall images from breaking the layout
+- Set a background color on the preview container for letterboxing when using `object-contain`
 
-**2. Update WorkflowPanel** (`src/components/WorkflowPanel.tsx`)
-- Replace `style` state with `description` state (string, initially empty)
-- Pass `description` to the edge function instead of `style`
-- Update ConfigPanel props accordingly
+### Technical Details
+```
+Preview container: "relative rounded-lg overflow-hidden border border-border"
+Image tag: "w-full max-h-[400px] object-contain"
+```
 
-**3. Update Edge Function** (`supabase/functions/generate-prompt/index.ts`)
-- Remove `style` from required fields validation (make it optional/removed)
-- Accept `description` (optional string) in the request body
-- Update the system prompt: instruct the AI to analyze the scene and determine the best cinematic style automatically, while incorporating the user's description if provided
-- Update the user message to include the description when present
-
-### UI Layout
-- Single column: description textarea on top, model selector below
-- Textarea placeholder: "Describe your vision... e.g. 'dramatic slow-motion with rain and neon lights'" 
-- The description is optional — if left empty, AI purely analyzes the image
+The upload zone keeps `aspect-video` for consistent empty-state sizing.
 
