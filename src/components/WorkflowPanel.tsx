@@ -106,6 +106,18 @@ export const WorkflowPanel = ({ type }: WorkflowPanelProps) => {
 
       setResults(data.results);
       trackGeneration(type, model);
+
+      // Save to history if logged in
+      if (user) {
+        supabase.from("prompt_history").insert({
+          user_id: user.id,
+          workflow_type: type,
+          target_model: model,
+          results: data.results,
+        }).then(({ error: histErr }) => {
+          if (histErr) console.error("Failed to save history:", histErr);
+        });
+      }
     } catch (err: any) {
       console.error("Generation error:", err);
       toast({
