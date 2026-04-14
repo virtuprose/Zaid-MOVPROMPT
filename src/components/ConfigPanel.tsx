@@ -95,39 +95,46 @@ interface ConfigPanelProps {
 }
 
 export const ConfigPanel = ({ description, model, onDescriptionChange, onModelChange }: ConfigPanelProps) => {
+  const [isOpen, setIsOpen] = useState(false);
+
   return (
     <div className="space-y-4">
-      <div className="space-y-2">
-        <Label className="text-sm text-muted-foreground">Describe Your Vision (optional)</Label>
-        <Textarea
-          value={description}
-          onChange={(e) => onDescriptionChange(e.target.value)}
-          placeholder="Describe your vision... e.g. 'dramatic slow-motion with rain and neon lights'"
-          className="bg-secondary border-border resize-none min-h-[80px]"
-        />
-        <div className="space-y-3">
-          {PRESET_GROUPS.map((group) => (
-            <div key={group.label} className="space-y-1.5">
-              <span className="text-xs font-medium text-muted-foreground/70">{group.label}</span>
-              <div className="flex flex-wrap gap-1.5">
-                {group.chips.map((chip) => (
-                  <Badge
-                    key={chip}
-                    variant="outline"
-                    className="cursor-pointer hover:bg-primary/20 hover:border-primary transition-colors text-xs px-2.5 py-1"
-                    onClick={() => {
-                      const sep = description.trim() ? ", " : "";
-                      onDescriptionChange(description.trim() + sep + chip.toLowerCase());
-                    }}
-                  >
-                    {chip}
-                  </Badge>
-                ))}
+      <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+        <CollapsibleTrigger className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors w-full">
+          {isOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+          <span>Describe Your Vision (optional)</span>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="pt-2 space-y-2">
+          <Textarea
+            value={description}
+            onChange={(e) => onDescriptionChange(e.target.value)}
+            placeholder="Describe your vision... e.g. 'dramatic slow-motion with rain and neon lights'"
+            className="bg-secondary border-border resize-none min-h-[80px]"
+          />
+          <div className="space-y-3">
+            {PRESET_GROUPS.map((group) => (
+              <div key={group.label} className="space-y-1.5">
+                <span className="text-xs font-medium text-muted-foreground/70">{group.label}</span>
+                <div className="flex flex-wrap gap-1.5">
+                  {group.chips.map((chip) => (
+                    <Badge
+                      key={chip}
+                      variant="outline"
+                      className="cursor-pointer hover:bg-primary/20 hover:border-primary transition-colors text-xs px-2.5 py-1"
+                      onClick={() => {
+                        const sep = description.trim() ? ", " : "";
+                        onDescriptionChange(description.trim() + sep + chip.toLowerCase());
+                      }}
+                    >
+                      {chip}
+                    </Badge>
+                  ))}
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
-      </div>
+            ))}
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
       <div className="space-y-2">
         <Label className="text-sm text-muted-foreground">Target AI Model</Label>
         <Select value={model} onValueChange={onModelChange}>
