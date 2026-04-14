@@ -1,28 +1,53 @@
 
 
-## Add Rate Limiting to generate-prompt Edge Function
+## Anonymous Analytics Tracking
 
-### Approach
-Use an in-memory sliding window rate limiter keyed by client IP address. This is lightweight, requires no database tables, and resets on function cold starts — which is acceptable for abuse protection.
+### What
+Track page visits and prompt generations without any authentication, using two database tables and a simple admin dashboard page to view reports.
 
-### Details
+### Database Tables
 
-**File: `supabase/functions/generate-prompt/index.ts`**
+**`page_visits`**
+- `id` (uuid, PK)
+- `visited_at` (timestamptz, default now())
+- `page_path` (text) — e.g. `/`
+- `user_agent` (text, nullable)
+- `session_id` (text) — random UUID stored in localStorage to approximate unique visitors
 
-- Add an in-memory `Map<string, number[]>` to track request timestamps per IP
-- Before processing, check if the IP has exceeded **5 requests per 60 seconds**
-- If exceeded, return `429 Too Many Requests` with a clear error message and `Retry-After` header
-- Extract IP from `x-forwarded-for` header (standard for edge functions behind a proxy), falling back to `"unknown"`
-- Clean up old timestamps on each request to prevent memory growth
+**`generation_events`**
+- `id` (uuid, PK)
+- `created_at` (timestamptz, default now())
+- `session_id` (text)
+- `workflow_type` (text) — single / twoframe / multishot
+- `target_model` (text) — runway, kling, etc.
 
-### Limitations
-- In-memory state resets on cold starts — this is a trade-off for simplicity
-- Shared IPs (corporate NATs) may hit limits faster
-- For persistent rate limiting, a database counter table would be needed (not proposed here to keep it simple)
+Both tables get RLS policies allowing anonymous inserts (no auth required) and a read policy restricted to a secret admin route.
 
-### Config
-- **Window**: 60 seconds
-- **Max requests**: 5 per window per IP
+### Frontend Tracking
 
-Single file change, ~25 lines added at the top of the request handler.
+**Page visit** — In `Index.tsx`, on mount, generate or retrieve a `session_id` from localStorage, then insert into `page_visits` via Supabase client.
+
+**Generation event** — In `WorkflowPanel.tsx`, after a successful generation, insert into `generation_events` with workflow type and model.
+
+### Admin Reports Page
+
+**Route**: `/admin/analytics` (unlisted, accessed by URL only)
+
+**Dashboard showing**:
+- Total visits (today / 7d / 30d / all-time)
+- Unique sessions (approximate unique visitors)
+- Total generations by period
+- Generations breakdown by workflow type (pie/bar chart)
+- Generations breakdown by target model
+- Daily trend line chart (visits + generations over last 30 days)
+
+Uses Recharts (already available via the chart UI components) for visualizations.
+
+### Files Changed
+1. **Migration** — Create `page_visits` and `generation_events` tables with anonymous insert RLS
+2. **`src/lib/analytics.ts`** — Helper functions: `trackPageVisit()`, `trackGeneration(workflowType, model)`, `getSessionId()`
+3. **`src/pages/Index.tsx`** — Call `trackPageVisit()` on mount
+4. **`src/components/WorkflowPanel.tsx`** — Call `trackGeneration()` after successful generation
+5. **`src/pages/Analytics.tsx`** — New admin dashboard page with charts
+6. **`src/App.tsx`** — Add `/admin/analytics` route
 
