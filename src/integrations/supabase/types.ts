@@ -14,7 +14,54 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      generation_events: {
+        Row: {
+          created_at: string
+          id: string
+          session_id: string
+          target_model: string
+          workflow_type: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          session_id: string
+          target_model: string
+          workflow_type: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          session_id?: string
+          target_model?: string
+          workflow_type?: string
+        }
+        Relationships: []
+      }
+      page_visits: {
+        Row: {
+          id: string
+          page_path: string
+          session_id: string
+          user_agent: string | null
+          visited_at: string
+        }
+        Insert: {
+          id?: string
+          page_path: string
+          session_id: string
+          user_agent?: string | null
+          visited_at?: string
+        }
+        Update: {
+          id?: string
+          page_path?: string
+          session_id?: string
+          user_agent?: string | null
+          visited_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
