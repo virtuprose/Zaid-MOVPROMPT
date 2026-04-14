@@ -26,7 +26,14 @@ const WORKFLOWS = [
   },
 ];
 
+const GUIDE_STEPS = [
+  { icon: Layers, title: "Choose a Workflow", desc: "Pick Single Frame, Two Frames, or Multi-Shot depending on your project." },
+  { icon: Upload, title: "Upload Your Image", desc: "Drag & drop or click to upload your reference frame(s)." },
+  { icon: Copy, title: "Generate & Copy", desc: "Hit generate, review your cinematic prompt, and copy it to your clipboard." },
+];
+
 const Index = () => {
+  const [guideOpen, setGuideOpen] = useState(false);
   return (
     <div className="min-h-screen bg-background">
       {/* Ambient glow */}
