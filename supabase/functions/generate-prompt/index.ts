@@ -57,7 +57,10 @@ serve(async (req) => {
 
     const modelLabels: Record<string, string> = {
       runway: "Runway Gen-3 Alpha",
-      kling: "Kling 1.5",
+      "kling-1.0": "Kling 1.0",
+      "kling-1.5": "Kling 1.5",
+      "kling-1.6": "Kling 1.6",
+      "kling-2.0": "Kling 2.0",
       luma: "Luma Dream Machine",
       veo: "Google Veo 3",
       sora: "OpenAI Sora",
