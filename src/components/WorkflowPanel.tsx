@@ -150,7 +150,7 @@ export const WorkflowPanel = ({ type }: WorkflowPanelProps) => {
                 size="lg"
                 onClick={handleGenerate}
                 disabled={isLoading}
-                className="px-8 font-display font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/25"
+                className="px-6 sm:px-8 font-display font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/25"
               >
                 {isLoading ? (
                   <>
