@@ -1,25 +1,42 @@
 
 
-## Plan: Preserve Image Aspect Ratio on Upload
+## Plan: Collapsible Description & Presets Section
 
 ### Problem
-The preview container forces `aspect-video` (16:9) and uses `object-cover`, which crops images that aren't 16:9 (e.g. portrait, square, or ultra-wide images).
+After uploading images, the "Describe Your Vision" textarea and preset chip categories take up too much space. The user wants them hidden by default with a toggle to show/hide.
 
 ### Changes
 
-**`src/components/ImageUploadZone.tsx`**
-- Remove the fixed `aspect-video` class from the preview container (line 36)
-- Change `object-cover` to `object-contain` on the `<img>` tag (line 38)
-- Keep `aspect-video` on the empty upload zone (line 58) so it still has a nice shape before upload
-- Use `w-full` with auto height on the preview container so it adapts to the image's natural aspect ratio
-- Add `max-h-[400px]` to prevent extremely tall images from breaking the layout
-- Set a background color on the preview container for letterboxing when using `object-contain`
+**`src/components/ConfigPanel.tsx`**
+- Wrap the description textarea and preset groups inside a collapsible section
+- Add a toggle button/icon (e.g. `ChevronDown`/`ChevronUp` or `Settings2`) labeled something like "Advanced Options" or "Describe Your Vision"
+- Default state: collapsed (hidden)
+- Keep the Target AI Model selector always visible (outside the collapsible)
+- Use the existing `Collapsible` component from `@/components/ui/collapsible`
+
+### UI Layout
+```text
+┌─────────────────────────────┐
+│ [▶ Describe Your Vision]    │  ← clickable toggle, collapsed by default
+│                             │
+│ Target AI Model: [dropdown] │  ← always visible
+└─────────────────────────────┘
+
+When expanded:
+┌─────────────────────────────┐
+│ [▼ Describe Your Vision]    │  ← toggle open
+│ ┌─────────────────────────┐ │
+│ │ Textarea                │ │
+│ └─────────────────────────┘ │
+│ 🎥 Camera: [chips...]      │
+│ ✨ Transitions: [chips...]  │
+│                             │
+│ Target AI Model: [dropdown] │
+└─────────────────────────────┘
+```
 
 ### Technical Details
-```
-Preview container: "relative rounded-lg overflow-hidden border border-border"
-Image tag: "w-full max-h-[400px] object-contain"
-```
-
-The upload zone keeps `aspect-video` for consistent empty-state sizing.
+- Import `Collapsible, CollapsibleTrigger, CollapsibleContent` from `@/components/ui/collapsible`
+- Add `useState` for open/closed state (default `false`)
+- Use `ChevronRight`/`ChevronDown` icon from lucide-react for the toggle indicator
 
