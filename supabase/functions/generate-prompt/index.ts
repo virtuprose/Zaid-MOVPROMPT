@@ -55,11 +55,20 @@ serve(async (req) => {
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
     const modelLabels: Record<string, string> = {
-      runway: "Runway Gen-3",
-      kling: "Kling",
+      runway: "Runway Gen-3 Alpha",
+      kling: "Kling 1.5",
       luma: "Luma Dream Machine",
-      veo: "Google Veo",
+      veo: "Google Veo 2",
       sora: "OpenAI Sora",
+      pika: "Pika 2.0",
+      hailuo: "Hailuo MiniMax",
+      "stable-video": "Stable Video Diffusion",
+      genmo: "Genmo Mochi",
+      pixverse: "PixVerse",
+      haiper: "Haiper 2.0",
+      vidu: "Vidu",
+      cogvideo: "CogVideoX",
+      wan: "Wan 2.1",
     };
 
     const userContent: any[] = [
