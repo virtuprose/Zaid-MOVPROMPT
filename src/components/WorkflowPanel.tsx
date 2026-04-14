@@ -53,21 +53,39 @@ export const WorkflowPanel = ({ type }: WorkflowPanelProps) => {
 
   const hasRequiredImages = type === "twoframe" ? images.length === 2 : images.length >= 1;
 
+  const compressImage = (file: File, maxWidth = 1024, quality = 0.7): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        let w = img.width;
+        let h = img.height;
+        if (w > maxWidth) {
+          h = (h * maxWidth) / w;
+          w = maxWidth;
+        }
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext("2d")!;
+        ctx.drawImage(img, 0, 0, w, h);
+        const dataUrl = canvas.toDataURL("image/jpeg", quality);
+        resolve(dataUrl.split(",")[1]); // return base64 without prefix
+        URL.revokeObjectURL(img.src);
+      };
+      img.onerror = reject;
+      img.src = URL.createObjectURL(file);
+    });
+  };
+
   const handleGenerate = async () => {
     if (!hasRequiredImages) return;
     setIsLoading(true);
     setResults(null);
 
     try {
-      // Convert images to base64
+      // Compress and convert images to base64
       const imageBase64s = await Promise.all(
-        images.map(async (img) => {
-          const buffer = await img.file.arrayBuffer();
-          const bytes = new Uint8Array(buffer);
-          let binary = "";
-          bytes.forEach((b) => (binary += String.fromCharCode(b)));
-          return btoa(binary);
-        })
+        images.map((img) => compressImage(img.file))
       );
 
       const { data, error } = await supabase.functions.invoke("generate-prompt", {
