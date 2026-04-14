@@ -35,7 +35,7 @@ export const ImageUploadZone = ({ label, onImageSelect, onImageRemove, preview }
             exit={{ opacity: 0, scale: 0.95 }}
             className="relative rounded-lg overflow-hidden border border-border bg-muted/30"
           >
-            <img src={preview} alt={label} className="w-full max-h-[400px] object-contain" />
+            <img src={preview} alt={label} className="w-full max-h-[250px] sm:max-h-[400px] object-contain" />
             <button
               onClick={onImageRemove}
               className="absolute top-2 right-2 p-1.5 rounded-full bg-background/80 backdrop-blur-sm hover:bg-destructive/80 transition-colors"
@@ -55,7 +55,7 @@ export const ImageUploadZone = ({ label, onImageSelect, onImageRemove, preview }
             onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
             onDragLeave={() => setIsDragging(false)}
             onDrop={handleDrop}
-            className={`flex flex-col items-center justify-center gap-3 p-8 rounded-lg border-2 border-dashed cursor-pointer transition-all duration-300 aspect-video ${
+            className={`flex flex-col items-center justify-center gap-2 sm:gap-3 p-5 sm:p-8 rounded-lg border-2 border-dashed cursor-pointer transition-all duration-300 min-h-[180px] sm:aspect-video ${
               isDragging
                 ? "border-primary bg-primary/10"
                 : "border-border hover:border-primary/50 hover:bg-secondary/50"

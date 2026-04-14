@@ -47,20 +47,20 @@ const Index = () => {
         <div className="absolute bottom-0 right-0 w-[600px] h-[300px] bg-accent/5 rounded-full blur-[100px] animate-pulse-glow" style={{ animationDelay: "1.5s" }} />
       </div>
 
-      <div className="relative z-10 container max-w-4xl mx-auto px-4 py-12">
+      <div className="relative z-10 container max-w-4xl mx-auto px-4 py-6 sm:py-12">
         {/* Hero */}
         <motion.header
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="text-center mb-12"
+          className="text-center mb-8 sm:mb-12"
         >
-          <div className="flex items-center justify-center gap-3 mb-4">
-            <h1 className="text-4xl tracking-tight font-mono sm:text-5xl font-bold">
+          <div className="flex items-center justify-center gap-3 mb-3 sm:mb-4">
+            <h1 className="text-3xl tracking-tight font-mono sm:text-5xl font-bold">
               Mov<span className="text-primary">Prompt</span>
             </h1>
           </div>
-          <p className="text-muted-foreground text-lg max-w-xl mx-auto">
+          <p className="text-muted-foreground text-base sm:text-lg max-w-xl mx-auto">
             Your AI Director of Photography. Turn any still image into a director-grade cinematic video prompt.
           </p>
         </motion.header>
@@ -109,10 +109,10 @@ const Index = () => {
                 <TabsTrigger
                   key={w.value}
                   value={w.value}
-                  className="flex flex-col gap-1.5 py-3 px-2 data-[state=active]:bg-card data-[state=active]:shadow-md data-[state=active]:border-primary/30 rounded-lg transition-all"
+                  className="flex flex-col gap-1 sm:gap-1.5 py-2 sm:py-3 px-1.5 sm:px-2 data-[state=active]:bg-card data-[state=active]:shadow-md data-[state=active]:border-primary/30 rounded-lg transition-all"
                 >
-                  <w.icon className="w-5 h-5" />
-                  <span className="text-xs sm:text-sm font-medium font-display">{w.label}</span>
+                  <w.icon className="w-4 h-4 sm:w-5 sm:h-5" />
+                  <span className="text-[11px] sm:text-sm font-medium font-display">{w.label}</span>
                 </TabsTrigger>
               ))}
             </TabsList>

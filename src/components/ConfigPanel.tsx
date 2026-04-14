@@ -115,7 +115,7 @@ export const ConfigPanel = ({ description, model, onDescriptionChange, onModelCh
             {PRESET_GROUPS.map((group) => (
               <div key={group.label} className="space-y-1.5">
                 <span className="text-xs font-medium text-muted-foreground/70">{group.label}</span>
-                <div className="flex flex-wrap gap-1.5">
+                <div className="flex gap-1.5 overflow-x-auto pb-1 sm:flex-wrap sm:overflow-x-visible sm:pb-0">
                   {group.chips.map((chip) => (
                     <Badge
                       key={chip}

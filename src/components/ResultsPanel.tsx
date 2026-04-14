@@ -33,7 +33,7 @@ const CopyButton = ({ text }: { text: string }) => {
 };
 
 const ResultCard = ({ label, value, accent }: { label: string; value: string; accent?: boolean }) => (
-  <div className={`rounded-lg p-4 ${accent ? "bg-primary/5 border border-primary/20" : "bg-secondary/50 border border-border"}`}>
+  <div className={`rounded-lg p-3 sm:p-4 ${accent ? "bg-primary/5 border border-primary/20" : "bg-secondary/50 border border-border"}`}>
     <div className="flex items-start justify-between gap-2 mb-2">
       <span className={`text-xs font-medium uppercase tracking-wider ${accent ? "text-primary" : "text-muted-foreground"}`}>{label}</span>
       <CopyButton text={value} />
@@ -53,14 +53,14 @@ export const ResultsPanel = forwardRef<HTMLDivElement, ResultsPanelProps>(({ res
 
   return (
     <motion.div ref={ref} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="font-display text-lg font-semibold">Generated Prompts</h3>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={handleCopyAll}>
-            <Copy className="w-3.5 h-3.5 mr-1.5" /> Copy All
+      <div className="flex items-center justify-between gap-2">
+        <h3 className="font-display text-base sm:text-lg font-semibold">Generated Prompts</h3>
+        <div className="flex gap-1.5 sm:gap-2">
+          <Button variant="outline" size="sm" onClick={handleCopyAll} className="px-2 sm:px-3">
+            <Copy className="w-3.5 h-3.5 sm:mr-1.5" /> <span className="hidden sm:inline">Copy All</span>
           </Button>
-          <Button variant="outline" size="sm" onClick={onRegenerate} disabled={isLoading}>
-            <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${isLoading ? "animate-spin" : ""}`} /> Regenerate
+          <Button variant="outline" size="sm" onClick={onRegenerate} disabled={isLoading} className="px-2 sm:px-3">
+            <RefreshCw className={`w-3.5 h-3.5 sm:mr-1.5 ${isLoading ? "animate-spin" : ""}`} /> <span className="hidden sm:inline">Regenerate</span>
           </Button>
         </div>
       </div>
