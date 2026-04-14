@@ -85,7 +85,7 @@ const Index = () => {
         {/* Footer */}
         <footer className="mt-16 text-center">
           <p className="text-xs text-muted-foreground/60">
-            MovPrompt — AI-powered cinematic prompts for Runway, Kling, Luma, Veo & Sora
+            MovPrompt — AI-powered cinematic prompts
           </p>
         </footer>
       </div>
