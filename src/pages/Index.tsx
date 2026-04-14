@@ -46,7 +46,7 @@ const Index = () => {
               <Clapperboard className="w-7 h-7 text-primary" />
             </div>
             <h1 className="text-4xl sm:text-5xl font-display font-bold tracking-tight">
-              Vido<span className="text-primary">Prompt</span>
+              Mov<span className="text-primary">Prompt</span>
             </h1>
           </div>
           <p className="text-muted-foreground text-lg max-w-xl mx-auto">
@@ -87,7 +87,7 @@ const Index = () => {
         {/* Footer */}
         <footer className="mt-16 text-center">
           <p className="text-xs text-muted-foreground/60">
-            VidoPrompt — AI-powered cinematic prompts for Runway, Kling, Luma, Veo & Sora
+            MovPrompt — AI-powered cinematic prompts for Runway, Kling, Luma, Veo & Sora
           </p>
         </footer>
       </div>
