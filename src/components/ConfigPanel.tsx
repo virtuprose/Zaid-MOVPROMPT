@@ -15,6 +15,7 @@ const TARGET_MODELS = [
   { value: "sora", label: "OpenAI Sora" },
   { value: "pika", label: "Pika 2.0" },
   { value: "hailuo", label: "Hailuo MiniMax" },
+  { value: "seedance", label: "Seedance" },
   { value: "stable-video", label: "Stable Video Diffusion" },
   { value: "genmo", label: "Genmo Mochi" },
   { value: "pixverse", label: "PixVerse" },
