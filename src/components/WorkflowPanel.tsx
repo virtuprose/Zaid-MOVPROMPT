@@ -8,6 +8,7 @@ import { Sparkles, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { trackGeneration } from "@/lib/analytics";
 
 type WorkflowType = "single" | "twoframe" | "multishot";
 
@@ -102,6 +103,7 @@ export const WorkflowPanel = ({ type }: WorkflowPanelProps) => {
       if (data?.error) throw new Error(data.error);
 
       setResults(data.results);
+      trackGeneration(type, model);
     } catch (err: any) {
       console.error("Generation error:", err);
       toast({

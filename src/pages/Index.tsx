@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { trackPageVisit } from "@/lib/analytics";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { WorkflowPanel } from "@/components/WorkflowPanel";
@@ -34,6 +35,10 @@ const GUIDE_STEPS = [
 
 const Index = () => {
   const [guideOpen, setGuideOpen] = useState(false);
+
+  useEffect(() => {
+    trackPageVisit("/");
+  }, []);
   return (
     <div className="min-h-screen bg-background">
       {/* Ambient glow */}
