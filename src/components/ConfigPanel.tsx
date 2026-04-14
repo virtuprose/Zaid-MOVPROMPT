@@ -5,9 +5,17 @@ import { SelectLabel } from "@radix-ui/react-select";
 import { Badge } from "@/components/ui/badge";
 
 const PRESET_CHIPS = [
-  "Slow motion", "Drone shot", "Cinematic rain", "Golden hour",
-  "Time lapse", "Dolly zoom", "Neon lights", "Epic reveal",
-  "Handheld", "Underwater", "Foggy atmosphere", "Chase scene",
+  // Camera
+  "Slow motion", "Drone shot", "Dolly zoom", "Handheld", "Tracking shot",
+  "Crane shot", "Steadicam", "POV shot", "Whip pan", "Timelapse",
+  // Mood & Lighting
+  "Golden hour", "Neon lights", "Cinematic rain", "Foggy atmosphere",
+  "Moody shadows", "Silhouette", "Backlit", "Candlelight", "Moonlit",
+  // Style
+  "Epic reveal", "Film noir", "Cyberpunk", "Vintage film", "Documentary",
+  // Action & Scene
+  "Chase scene", "Underwater", "Explosion", "Floating particles",
+  "Reflections", "Smoke & haze", "Snow falling", "Desert winds",
 ];
 
 const MODEL_GROUPS = [
