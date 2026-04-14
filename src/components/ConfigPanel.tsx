@@ -104,7 +104,7 @@ export const ConfigPanel = ({ description, model, onDescriptionChange, onModelCh
           {isOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
           <span>Describe Your Vision (optional)</span>
         </CollapsibleTrigger>
-        <CollapsibleContent className="pt-2 space-y-2">
+        <CollapsibleContent className="pt-2 space-y-2 data-[state=open]:animate-fade-in data-[state=closed]:animate-fade-out overflow-hidden">
           <Textarea
             value={description}
             onChange={(e) => onDescriptionChange(e.target.value)}
