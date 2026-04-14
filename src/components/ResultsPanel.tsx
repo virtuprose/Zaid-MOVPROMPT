@@ -33,7 +33,7 @@ const CopyButton = ({ text }: { text: string }) => {
 };
 
 const ResultCard = ({ label, value, accent }: { label: string; value: string; accent?: boolean }) => (
-  <div className={`rounded-lg p-4 ${accent ? "bg-primary/5 border border-primary/20" : "bg-secondary/50 border border-border"}`}>
+  <div className={`rounded-lg p-3 sm:p-4 ${accent ? "bg-primary/5 border border-primary/20" : "bg-secondary/50 border border-border"}`}>
     <div className="flex items-start justify-between gap-2 mb-2">
       <span className={`text-xs font-medium uppercase tracking-wider ${accent ? "text-primary" : "text-muted-foreground"}`}>{label}</span>
       <CopyButton text={value} />
