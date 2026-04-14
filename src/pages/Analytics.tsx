@@ -29,6 +29,10 @@ const Analytics = () => {
   const [password, setPassword] = useState("");
   const [error, setError] = useState(false);
 
+  useEffect(() => {
+    if (authenticated) fetchStats();
+  }, [authenticated]);
+
   const handleLogin = () => {
     if (password === ADMIN_PASSWORD) {
       sessionStorage.setItem("analytics_auth", "true");
@@ -63,10 +67,6 @@ const Analytics = () => {
       </div>
     );
   }
-
-  useEffect(() => {
-    fetchStats();
-  }, []);
 
   const fetchStats = async () => {
     try {
