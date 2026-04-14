@@ -9,6 +9,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { trackGeneration } from "@/lib/analytics";
+import { useAuth } from "@/hooks/useAuth";
 
 type WorkflowType = "single" | "twoframe" | "multishot";
 
@@ -26,6 +27,7 @@ interface WorkflowPanelProps {
 
 export const WorkflowPanel = ({ type }: WorkflowPanelProps) => {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [images, setImages] = useState<{ file: File; preview: string }[]>([]);
   const [description, setDescription] = useState("");
   const [model, setModel] = useState("runway");
@@ -104,6 +106,18 @@ export const WorkflowPanel = ({ type }: WorkflowPanelProps) => {
 
       setResults(data.results);
       trackGeneration(type, model);
+
+      // Save to history if logged in
+      if (user) {
+        supabase.from("prompt_history").insert({
+          user_id: user.id,
+          workflow_type: type,
+          target_model: model,
+          results: data.results,
+        }).then(({ error: histErr }) => {
+          if (histErr) console.error("Failed to save history:", histErr);
+        });
+      }
     } catch (err: any) {
       console.error("Generation error:", err);
       toast({

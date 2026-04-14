@@ -2,12 +2,8 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { BarChart, Bar, LineChart, Line, XAxis, YAxis, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
-import { Eye, Sparkles, Users, TrendingUp, Lock } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-
-const ADMIN_PASSWORD = "movprompt2024";
+import { BarChart, Bar, LineChart, Line, XAxis, YAxis, PieChart, Pie, Cell } from "recharts";
+import { Eye, Sparkles, Users, TrendingUp } from "lucide-react";
 
 const COLORS = ["hsl(190, 90%, 50%)", "hsl(35, 90%, 55%)", "hsl(280, 70%, 60%)", "hsl(140, 70%, 50%)", "hsl(350, 70%, 55%)"];
 
@@ -25,48 +21,10 @@ interface Stats {
 const Analytics = () => {
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
-  const [authenticated, setAuthenticated] = useState(() => sessionStorage.getItem("analytics_auth") === "true");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState(false);
 
   useEffect(() => {
-    if (authenticated) fetchStats();
-  }, [authenticated]);
-
-  const handleLogin = () => {
-    if (password === ADMIN_PASSWORD) {
-      sessionStorage.setItem("analytics_auth", "true");
-      setAuthenticated(true);
-      setError(false);
-    } else {
-      setError(true);
-    }
-  };
-
-  if (!authenticated) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Card className="w-full max-w-sm bg-card border-border">
-          <CardContent className="p-6 space-y-4">
-            <div className="flex items-center gap-2 justify-center mb-2">
-              <Lock className="w-5 h-5 text-primary" />
-              <h2 className="text-lg font-mono font-bold">Admin Access</h2>
-            </div>
-            <Input
-              type="password"
-              placeholder="Enter password"
-              value={password}
-              onChange={(e) => { setPassword(e.target.value); setError(false); }}
-              onKeyDown={(e) => e.key === "Enter" && handleLogin()}
-              className={error ? "border-destructive" : ""}
-            />
-            {error && <p className="text-xs text-destructive text-center">Incorrect password</p>}
-            <Button onClick={handleLogin} className="w-full">Unlock</Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+    fetchStats();
+  }, []);
 
   const fetchStats = async () => {
     try {
@@ -82,9 +40,8 @@ const Analytics = () => {
         supabase.from("page_visits").select("session_id"),
       ]);
 
-      // Workflow breakdown
       const { data: genData } = await supabase.from("generation_events").select("workflow_type, target_model");
-      
+
       const workflowCounts: Record<string, number> = {};
       const modelCounts: Record<string, number> = {};
       (genData || []).forEach((e) => {
@@ -92,15 +49,8 @@ const Analytics = () => {
         modelCounts[e.target_model] = (modelCounts[e.target_model] || 0) + 1;
       });
 
-      // Daily trend (last 30 days)
-      const { data: recentVisits } = await supabase
-        .from("page_visits")
-        .select("visited_at")
-        .gte("visited_at", thirtyDaysAgo);
-      const { data: recentGens } = await supabase
-        .from("generation_events")
-        .select("created_at")
-        .gte("created_at", thirtyDaysAgo);
+      const { data: recentVisits } = await supabase.from("page_visits").select("visited_at").gte("visited_at", thirtyDaysAgo);
+      const { data: recentGens } = await supabase.from("generation_events").select("created_at").gte("created_at", thirtyDaysAgo);
 
       const dailyMap: Record<string, { visits: number; generations: number }> = {};
       for (let i = 29; i >= 0; i--) {
@@ -166,7 +116,6 @@ const Analytics = () => {
         </h1>
         <p className="text-muted-foreground mb-8">Anonymous usage tracking dashboard</p>
 
-        {/* Stat Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           {statCards.map((s) => (
             <Card key={s.label} className="bg-card border-border">
@@ -182,7 +131,6 @@ const Analytics = () => {
           ))}
         </div>
 
-        {/* Daily Trend */}
         <Card className="bg-card border-border mb-8">
           <CardHeader>
             <CardTitle className="text-sm font-medium">Last 30 Days</CardTitle>
@@ -200,7 +148,6 @@ const Analytics = () => {
           </CardContent>
         </Card>
 
-        {/* Breakdowns */}
         <div className="grid gap-4 md:grid-cols-2">
           <Card className="bg-card border-border">
             <CardHeader>
