@@ -5,6 +5,26 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+// In-memory sliding window rate limiter
+const RATE_LIMIT_WINDOW = 60_000; // 60 seconds
+const RATE_LIMIT_MAX = 5;
+const requestLog = new Map<string, number[]>();
+
+function isRateLimited(ip: string): { limited: boolean; retryAfter?: number } {
+  const now = Date.now();
+  const timestamps = (requestLog.get(ip) || []).filter(t => now - t < RATE_LIMIT_WINDOW);
+  requestLog.set(ip, timestamps);
+
+  if (timestamps.length >= RATE_LIMIT_MAX) {
+    const oldest = timestamps[0];
+    const retryAfter = Math.ceil((oldest + RATE_LIMIT_WINDOW - now) / 1000);
+    return { limited: true, retryAfter };
+  }
+
+  timestamps.push(now);
+  return { limited: false };
+}
+
 const SYSTEM_PROMPT = `You are MovPrompt — an elite AI Director of Photography specializing in generative video. You analyze images and write highly technical, director-grade cinematic prompts designed for AI video generators.
 
 Your job: Given image(s), a target AI model, a workflow type, and an optional user description, produce structured cinematic prompts.
