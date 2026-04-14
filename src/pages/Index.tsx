@@ -42,7 +42,6 @@ const Index = () => {
           className="text-center mb-12"
         >
           <div className="flex items-center justify-center gap-3 mb-4">
-            <img src="/logo.png" alt="MovPrompt logo" width={48} height={48} className="w-12 h-12" />
             <h1 className="text-4xl sm:text-5xl font-display font-bold tracking-tight">
               Mov<span className="text-primary">Prompt</span>
             </h1>
