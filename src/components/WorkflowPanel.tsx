@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ImageUploadZone } from "./ImageUploadZone";
 import { ConfigPanel } from "./ConfigPanel";
@@ -27,6 +28,7 @@ interface WorkflowPanelProps {
 
 export const WorkflowPanel = ({ type }: WorkflowPanelProps) => {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [images, setImages] = useState<{ file: File; preview: string }[]>([]);
   const [description, setDescription] = useState("");
@@ -83,6 +85,15 @@ export const WorkflowPanel = ({ type }: WorkflowPanelProps) => {
 
   const handleGenerate = async () => {
     if (!hasRequiredImages) return;
+    if (!user) {
+      toast({
+        title: "Sign in required",
+        description: "Please sign in to generate prompts.",
+        variant: "destructive",
+      });
+      navigate("/auth");
+      return;
+    }
     setIsLoading(true);
     setResults(null);
 
