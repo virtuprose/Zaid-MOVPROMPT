@@ -64,6 +64,16 @@ Adapt prompt vocabulary for the target model:
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
+  // Rate limiting by client IP
+  const clientIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  const { limited, retryAfter } = isRateLimited(clientIp);
+  if (limited) {
+    return new Response(JSON.stringify({ error: "Too many requests. Please wait and try again." }), {
+      status: 429,
+      headers: { ...corsHeaders, "Content-Type": "application/json", "Retry-After": String(retryAfter) },
+    });
+  }
+
   try {
     const { images, workflowType, description, targetModel } = await req.json();
 
