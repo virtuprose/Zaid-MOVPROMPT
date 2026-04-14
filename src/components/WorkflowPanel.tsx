@@ -27,6 +27,7 @@ interface WorkflowPanelProps {
 
 export const WorkflowPanel = ({ type }: WorkflowPanelProps) => {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [images, setImages] = useState<{ file: File; preview: string }[]>([]);
   const [description, setDescription] = useState("");
   const [model, setModel] = useState("runway");
