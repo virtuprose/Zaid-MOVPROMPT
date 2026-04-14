@@ -67,11 +67,16 @@ export const ResultsPanel = ({ results, onRegenerate, isLoading }: ResultsPanelP
 
       {results.map((result, idx) => (
         <Card key={idx} className="bg-card border-border">
-          {result.shotName && (
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base font-display text-accent">{result.shotName}</CardTitle>
-            </CardHeader>
-          )}
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base font-display flex items-center gap-2">
+              {results.length > 1 && (
+                <span className="text-xs font-mono text-muted-foreground bg-secondary px-2 py-0.5 rounded">
+                  {idx + 1}/{results.length}
+                </span>
+              )}
+              <span className="text-accent">{result.shotName || `Shot ${idx + 1}`}</span>
+            </CardTitle>
+          </CardHeader>
           <CardContent className={result.shotName ? "" : "pt-6"}>
             <div className="grid gap-3">
               <ResultCard label="Main Prompt" value={result.mainPrompt} accent />
