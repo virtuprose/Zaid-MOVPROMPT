@@ -18,7 +18,7 @@ WORKFLOW TYPES:
 
 OUTPUT FORMAT (you MUST use this tool):
 For "single" and "twoframe": Return 1 shot result
-For "multishot": Return 3-5 shot results with descriptive shotName
+For "multishot": Return exactly 10 shot results with descriptive shotName
 
 Each shot has: mainPrompt, negativePrompt, cameraSuggestions, modelNotes
 
