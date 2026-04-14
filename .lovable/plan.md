@@ -1,42 +1,15 @@
 
 
-## Plan: Collapsible Description & Presets Section
+## Add More Camera Presets
 
-### Problem
-After uploading images, the "Describe Your Vision" textarea and preset chip categories take up too much space. The user wants them hidden by default with a toggle to show/hide.
+Currently the Camera category has 10 chips. I'll expand it with additional cinematic camera techniques commonly used in AI video generation.
 
 ### Changes
 
-**`src/components/ConfigPanel.tsx`**
-- Wrap the description textarea and preset groups inside a collapsible section
-- Add a toggle button/icon (e.g. `ChevronDown`/`ChevronUp` or `Settings2`) labeled something like "Advanced Options" or "Describe Your Vision"
-- Default state: collapsed (hidden)
-- Keep the Target AI Model selector always visible (outside the collapsible)
-- Use the existing `Collapsible` component from `@/components/ui/collapsible`
+**File: `src/components/ConfigPanel.tsx`**
 
-### UI Layout
-```text
-┌─────────────────────────────┐
-│ [▶ Describe Your Vision]    │  ← clickable toggle, collapsed by default
-│                             │
-│ Target AI Model: [dropdown] │  ← always visible
-└─────────────────────────────┘
+Update the Camera chips array from 10 to ~20 entries by adding:
+- Arc shot, Push in, Pull out, Orbit, Static lock, Rack focus, Dutch angle, Bird's eye, Worm's eye, Zoom in
 
-When expanded:
-┌─────────────────────────────┐
-│ [▼ Describe Your Vision]    │  ← toggle open
-│ ┌─────────────────────────┐ │
-│ │ Textarea                │ │
-│ └─────────────────────────┘ │
-│ 🎥 Camera: [chips...]      │
-│ ✨ Transitions: [chips...]  │
-│                             │
-│ Target AI Model: [dropdown] │
-└─────────────────────────────┘
-```
-
-### Technical Details
-- Import `Collapsible, CollapsibleTrigger, CollapsibleContent` from `@/components/ui/collapsible`
-- Add `useState` for open/closed state (default `false`)
-- Use `ChevronRight`/`ChevronDown` icon from lucide-react for the toggle indicator
+These are all standard cinematography terms that Gemini 2.5 Pro already understands and will incorporate into prompt generation.
 
