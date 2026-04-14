@@ -42,7 +42,7 @@ const Index = () => {
           className="text-center mb-12"
         >
           <div className="flex items-center justify-center gap-3 mb-4">
-            <h1 className="text-4xl sm:text-5xl font-display font-bold tracking-tight">
+            <h1 className="text-4xl tracking-tight font-mono sm:text-5xl font-bold">
               Mov<span className="text-primary">Prompt</span>
             </h1>
           </div>
