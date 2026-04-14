@@ -1,43 +1,127 @@
 
 
-# Improve Mobile Responsiveness
+# Add User Authentication (Email + Google)
 
 ## Overview
-Optimize the layout for small screens (< 640px) across four areas: hero, workflow tabs, upload zones, config/results panels.
+Add full authentication with Email/Password and Google sign-in. Public users can sign up to save prompt history. Admin dashboard gets proper role-based access replacing the hardcoded password.
 
-## Changes
+## Database Changes
 
-### 1. Index.tsx — Hero & Tabs
-- Reduce hero title from `text-4xl` to `text-3xl` on mobile, reduce bottom margin
-- Reduce container padding from `py-12` to `py-6` on mobile
-- Guide steps grid: already responsive (`sm:grid-cols-3`), no change needed
-- Tab triggers: reduce padding, use icon-only on very small screens with label below at smaller text
+### 1. Profiles table
+Create `profiles` table linked to `auth.users` with auto-creation trigger.
 
-### 2. ImageUploadZone.tsx — Upload Area
-- Reduce `aspect-video` to a smaller fixed height on mobile (`min-h-[180px]` instead of aspect-video constraint)
-- Reduce padding from `p-8` to `p-5` on mobile
-- Reduce `max-h-[400px]` on preview image to `max-h-[250px]` on mobile
+```sql
+CREATE TABLE public.profiles (
+  id uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  email text,
+  display_name text,
+  avatar_url text,
+  created_at timestamptz DEFAULT now()
+);
 
-### 3. ConfigPanel.tsx — Preset Chips
-- Chips are already flex-wrap, should work fine
-- Limit visible chips on mobile with horizontal scroll option for the chip groups
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
-### 4. ResultsPanel.tsx — Results Cards
-- Make header buttons stack or use icon-only on mobile
-- Reduce card padding on mobile
-- Camera/Model notes grid already uses `grid-cols-1 sm:grid-cols-2` — good
+CREATE POLICY "Users can read own profile" ON public.profiles
+  FOR SELECT TO authenticated USING (auth.uid() = id);
 
-### 5. WorkflowPanel.tsx — Generate Button
-- Reduce button padding on mobile
+CREATE POLICY "Users can update own profile" ON public.profiles
+  FOR UPDATE TO authenticated USING (auth.uid() = id);
 
-## Technical Details
+-- Auto-create profile on signup
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+BEGIN
+  INSERT INTO public.profiles (id, email, display_name, avatar_url)
+  VALUES (
+    NEW.id,
+    NEW.email,
+    COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.email),
+    NEW.raw_user_meta_data->>'avatar_url'
+  );
+  RETURN NEW;
+END;
+$$;
 
-| File | Key Changes |
-|------|-------------|
-| `src/pages/Index.tsx` | Responsive title size, padding, tab trigger sizing |
-| `src/components/ImageUploadZone.tsx` | Smaller upload zone height/padding on mobile |
-| `src/components/ResultsPanel.tsx` | Compact header buttons on mobile |
-| `src/components/WorkflowPanel.tsx` | Responsive button sizing |
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+```
 
-All changes use Tailwind responsive prefixes — no new dependencies.
+### 2. User roles table
+```sql
+CREATE TYPE public.app_role AS ENUM ('admin', 'user');
+
+CREATE TABLE public.user_roles (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  role app_role NOT NULL,
+  UNIQUE (user_id, role)
+);
+
+ALTER TABLE public.user_roles ENABLE ROW LEVEL SECURITY;
+
+CREATE OR REPLACE FUNCTION public.has_role(_user_id uuid, _role app_role)
+RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
+  SELECT EXISTS (SELECT 1 FROM public.user_roles WHERE user_id = _user_id AND role = _role)
+$$;
+
+CREATE POLICY "Users can read own roles" ON public.user_roles
+  FOR SELECT TO authenticated USING (auth.uid() = user_id);
+```
+
+### 3. Prompt history table
+```sql
+CREATE TABLE public.prompt_history (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  workflow_type text NOT NULL,
+  target_model text NOT NULL,
+  results jsonb NOT NULL,
+  created_at timestamptz DEFAULT now()
+);
+
+ALTER TABLE public.prompt_history ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can read own history" ON public.prompt_history
+  FOR SELECT TO authenticated USING (auth.uid() = user_id);
+CREATE POLICY "Users can insert own history" ON public.prompt_history
+  FOR INSERT TO authenticated WITH CHECK (auth.uid() = user_id);
+```
+
+## New Files
+
+### `src/pages/Auth.tsx`
+Login/signup page with:
+- Email/password form (sign up + sign in tabs)
+- Google sign-in button (using `lovable.auth.signInWithOAuth("google")`)
+- Redirect to `/` after successful auth
+
+### `src/components/AuthGuard.tsx`
+Wrapper component that checks auth state. Used to protect `/admin` route (requires admin role).
+
+### `src/hooks/useAuth.ts`
+Custom hook wrapping `supabase.auth.onAuthStateChange` and `getSession`. Exposes `user`, `session`, `loading`, `signOut`.
+
+## Modified Files
+
+### `src/App.tsx`
+- Add `/auth` route
+- Wrap `/admin` with AuthGuard requiring admin role
+
+### `src/pages/Index.tsx`
+- Add small user avatar/sign-in button in the header
+- Show "Save to history" option after generation if logged in
+
+### `src/pages/Analytics.tsx`
+- Remove hardcoded password gate
+- Use AuthGuard + role check instead
+
+### `src/components/WorkflowPanel.tsx`
+- After successful generation, save results to `prompt_history` if user is logged in
+
+## Technical Notes
+- Google OAuth uses Lovable Cloud's managed solution (no API keys needed)
+- Email verification required before sign-in (no auto-confirm)
+- The main app remains fully usable without an account
+- Admin role must be manually assigned via database after first signup
 
