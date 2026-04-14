@@ -9,7 +9,10 @@ const CINEMATIC_STYLES = [
 
 const TARGET_MODELS = [
   { value: "runway", label: "Runway Gen-3 Alpha" },
-  { value: "kling", label: "Kling 1.5" },
+  { value: "kling-1.0", label: "Kling 1.0" },
+  { value: "kling-1.5", label: "Kling 1.5" },
+  { value: "kling-1.6", label: "Kling 1.6" },
+  { value: "kling-2.0", label: "Kling 2.0" },
   { value: "luma", label: "Luma Dream Machine" },
   { value: "veo", label: "Google Veo 3" },
   { value: "sora", label: "OpenAI Sora" },
