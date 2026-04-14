@@ -1,15 +1,15 @@
 
 
-## Add More Camera Presets
+## Fix React forwardRef Warning on ResultsPanel
 
-Currently the Camera category has 10 chips. I'll expand it with additional cinematic camera techniques commonly used in AI video generation.
+### Problem
+Framer Motion's `motion.div` wrapping `ResultsPanel` output triggers a React warning because the component doesn't forward refs.
 
-### Changes
+### Change
 
-**File: `src/components/ConfigPanel.tsx`**
+**File: `src/components/ResultsPanel.tsx`**
+- Wrap the component with `React.forwardRef` so framer-motion can attach its ref without warnings.
+- Convert from a plain function component to a `forwardRef` component, passing the ref to the outer `motion.div`.
 
-Update the Camera chips array from 10 to ~20 entries by adding:
-- Arc shot, Push in, Pull out, Orbit, Static lock, Rack focus, Dutch angle, Bird's eye, Worm's eye, Zoom in
-
-These are all standard cinematography terms that Gemini 2.5 Pro already understands and will incorporate into prompt generation.
+Single file, ~5 lines changed.
 
