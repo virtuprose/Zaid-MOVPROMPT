@@ -1,10 +1,15 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { trackPageVisit } from "@/lib/analytics";
+import { useAuth } from "@/hooks/useAuth";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { WorkflowPanel } from "@/components/WorkflowPanel";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { motion } from "framer-motion";
-import { Camera, Layers, Film, BookOpen, ChevronDown, Upload, Copy } from "lucide-react";
+import { Camera, Layers, Film, BookOpen, ChevronDown, Upload, Copy, User, LogOut } from "lucide-react";
 
 const WORKFLOWS = [
   {
@@ -35,10 +40,17 @@ const GUIDE_STEPS = [
 
 const Index = () => {
   const [guideOpen, setGuideOpen] = useState(false);
+  const { user, loading, signOut } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
     trackPageVisit("/");
   }, []);
+
+  const initials = user?.user_metadata?.full_name
+    ? user.user_metadata.full_name.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase()
+    : user?.email?.slice(0, 2).toUpperCase() || "?";
+
   return (
     <div className="min-h-screen bg-background">
       {/* Ambient glow */}
@@ -48,6 +60,35 @@ const Index = () => {
       </div>
 
       <div className="relative z-10 container max-w-4xl mx-auto px-4 py-6 sm:py-12">
+        {/* Top bar */}
+        <div className="flex justify-end mb-4">
+          {!loading && (
+            user ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="gap-2">
+                    <Avatar className="w-6 h-6">
+                      <AvatarImage src={user.user_metadata?.avatar_url} />
+                      <AvatarFallback className="text-[10px] bg-primary/20 text-primary">{initials}</AvatarFallback>
+                    </Avatar>
+                    <span className="hidden sm:inline text-sm">{user.user_metadata?.full_name || user.email}</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={signOut}>
+                    <LogOut className="w-4 h-4 mr-2" /> Sign Out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Button variant="outline" size="sm" onClick={() => navigate("/auth")}>
+                <User className="w-4 h-4 mr-1.5" />
+                Sign In
+              </Button>
+            )
+          )}
+        </div>
+
         {/* Hero */}
         <motion.header
           initial={{ opacity: 0, y: -20 }}
@@ -117,7 +158,6 @@ const Index = () => {
               ))}
             </TabsList>
 
-            {/* Workflow descriptions */}
             {WORKFLOWS.map((w) => (
               <TabsContent key={w.value} value={w.value} className="space-y-6">
                 <p className="text-center text-sm text-muted-foreground">{w.description}</p>
