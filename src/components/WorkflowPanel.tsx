@@ -166,6 +166,7 @@ export const WorkflowPanel = ({ type }: WorkflowPanelProps) => {
       </AnimatePresence>
 
       <AnimatePresence>
+        {isLoading && !results && <ResultsSkeleton />}
         {results && (
           <ResultsPanel results={results} onRegenerate={handleGenerate} isLoading={isLoading} />
         )}
