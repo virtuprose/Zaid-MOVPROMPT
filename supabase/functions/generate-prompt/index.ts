@@ -130,7 +130,7 @@ serve(async (req) => {
                   results: {
                     type: "array",
                     items: shotSchema,
-                    description: "Array of shot results. 1 for single/twoframe, 3-5 for multishot.",
+                    description: "Array of shot results. 1 for single/twoframe, exactly 10 for multishot.",
                   },
                 },
                 required: ["results"],
