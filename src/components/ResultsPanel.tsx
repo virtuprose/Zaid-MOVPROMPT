@@ -1,7 +1,7 @@
 import { Copy, Check, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useState } from "react";
+import { useState, forwardRef } from "react";
 import { motion } from "framer-motion";
 
 interface ShotResult {
@@ -42,7 +42,7 @@ const ResultCard = ({ label, value, accent }: { label: string; value: string; ac
   </div>
 );
 
-export const ResultsPanel = ({ results, onRegenerate, isLoading }: ResultsPanelProps) => {
+export const ResultsPanel = forwardRef<HTMLDivElement, ResultsPanelProps>(({ results, onRegenerate, isLoading }, ref) => {
   const handleCopyAll = () => {
     const allText = results.map((r, i) => {
       const prefix = r.shotName ? `--- ${r.shotName} ---\n` : results.length > 1 ? `--- Shot ${i + 1} ---\n` : "";
@@ -52,7 +52,7 @@ export const ResultsPanel = ({ results, onRegenerate, isLoading }: ResultsPanelP
   };
 
   return (
-    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+    <motion.div ref={ref} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="font-display text-lg font-semibold">Generated Prompts</h3>
         <div className="flex gap-2">
@@ -91,4 +91,6 @@ export const ResultsPanel = ({ results, onRegenerate, isLoading }: ResultsPanelP
       ))}
     </motion.div>
   );
-};
+});
+
+ResultsPanel.displayName = "ResultsPanel";
