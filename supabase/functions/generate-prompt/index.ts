@@ -1,12 +1,13 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-// In-memory sliding window rate limiter
-const RATE_LIMIT_WINDOW = 60_000; // 60 seconds
+// In-memory sliding window rate limiter (secondary defence)
+const RATE_LIMIT_WINDOW = 60_000;
 const RATE_LIMIT_MAX = 5;
 const requestLog = new Map<string, number[]>();
 
@@ -14,15 +15,27 @@ function isRateLimited(ip: string): { limited: boolean; retryAfter?: number } {
   const now = Date.now();
   const timestamps = (requestLog.get(ip) || []).filter(t => now - t < RATE_LIMIT_WINDOW);
   requestLog.set(ip, timestamps);
-
   if (timestamps.length >= RATE_LIMIT_MAX) {
     const oldest = timestamps[0];
     const retryAfter = Math.ceil((oldest + RATE_LIMIT_WINDOW - now) / 1000);
     return { limited: true, retryAfter };
   }
-
   timestamps.push(now);
   return { limited: false };
+}
+
+const ALLOWED_WORKFLOWS = new Set(["single", "twoframe", "multishot"]);
+const ALLOWED_MODELS = new Set([
+  "runway", "kling-1.0", "kling-1.5", "kling-1.6", "kling-2.0", "kling-3.0",
+  "luma", "veo", "sora", "pika", "hailuo", "seedance",
+  "stable-video", "genmo", "pixverse", "haiper", "vidu", "cogvideo", "wan",
+]);
+
+function badRequest(msg: string) {
+  return new Response(JSON.stringify({ error: msg }), {
+    status: 400,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
 }
 
 const SYSTEM_PROMPT = `You are MovPrompt — an elite AI Director of Photography specializing in generative video. You analyze images and write highly technical, director-grade cinematic prompts designed for AI video generators.
@@ -64,7 +77,31 @@ Adapt prompt vocabulary for the target model:
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
-  // Rate limiting by client IP
+  // --- Authentication ---
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader?.startsWith("Bearer ")) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+  const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+    global: { headers: { Authorization: authHeader } },
+  });
+
+  const token = authHeader.replace("Bearer ", "");
+  const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
+  if (claimsError || !claimsData?.claims) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  // Rate limiting by client IP (secondary defence)
   const clientIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
   const { limited, retryAfter } = isRateLimited(clientIp);
   if (limited) {
@@ -75,17 +112,36 @@ serve(async (req) => {
   }
 
   try {
-    const { images, workflowType, description, targetModel } = await req.json();
+    const body = await req.json();
+    const { images, workflowType, description, targetModel } = body;
 
-    if (!images?.length || !workflowType || !targetModel) {
-      return new Response(JSON.stringify({ error: "Missing required fields" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    // --- Input Validation ---
+    if (!Array.isArray(images) || images.length === 0 || images.length > 2) {
+      return badRequest("Invalid images: must be an array of 1-2 items");
+    }
+    for (const img of images) {
+      if (typeof img !== "string" || img.length > 2_000_000) {
+        return badRequest("Each image must be a base64 string under 2MB");
+      }
+    }
+    if (!workflowType || !ALLOWED_WORKFLOWS.has(workflowType)) {
+      return badRequest("Invalid workflowType");
+    }
+    if (!targetModel || !ALLOWED_MODELS.has(targetModel)) {
+      return badRequest("Invalid targetModel");
+    }
+    if (description && (typeof description !== "string" || description.length > 2000)) {
+      return badRequest("Description must be a string under 2000 characters");
     }
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+    if (!LOVABLE_API_KEY) {
+      console.error("LOVABLE_API_KEY env var is missing");
+      return new Response(JSON.stringify({ error: "Service misconfigured" }), {
+        status: 503,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     const modelLabels: Record<string, string> = {
       runway: "Runway Gen-3 Alpha",
@@ -116,7 +172,6 @@ serve(async (req) => {
     userText += `Analyze the image(s), determine the best cinematic style automatically, and generate cinematic prompts.`;
 
     const userContent: any[] = [{ type: "text", text: userText }];
-
     for (const img of images) {
       userContent.push({
         type: "image_url",
@@ -127,11 +182,11 @@ serve(async (req) => {
     const shotSchema = {
       type: "object" as const,
       properties: {
-        shotName: { type: "string" as const, description: "Name of the shot, e.g. 'Wide Establishing Shot'" },
-        mainPrompt: { type: "string" as const, description: "The main cinematic prompt for AI video generation" },
-        negativePrompt: { type: "string" as const, description: "What to avoid in the generation" },
-        cameraSuggestions: { type: "string" as const, description: "Camera movement, lens, angle suggestions" },
-        modelNotes: { type: "string" as const, description: "Model-specific tips and settings" },
+        shotName: { type: "string" as const, description: "Name of the shot" },
+        mainPrompt: { type: "string" as const, description: "The main cinematic prompt" },
+        negativePrompt: { type: "string" as const, description: "What to avoid" },
+        cameraSuggestions: { type: "string" as const, description: "Camera movement suggestions" },
+        modelNotes: { type: "string" as const, description: "Model-specific tips" },
       },
       required: ["mainPrompt", "negativePrompt", "cameraSuggestions", "modelNotes"] as const,
     };
@@ -214,7 +269,7 @@ serve(async (req) => {
     });
   } catch (e) {
     console.error("generate-prompt error:", e);
-    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
+    return new Response(JSON.stringify({ error: "Internal server error. Please try again." }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

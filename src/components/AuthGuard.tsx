@@ -22,7 +22,6 @@ export const AuthGuard = ({ children, requireAdmin = false }: AuthGuardProps) =>
 
     const checkAdmin = async () => {
       const { data } = await supabase.rpc("has_role", {
-        _user_id: user.id,
         _role: "admin",
       });
       setIsAdmin(!!data);
