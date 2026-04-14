@@ -59,7 +59,7 @@ serve(async (req) => {
       runway: "Runway Gen-3 Alpha",
       kling: "Kling 1.5",
       luma: "Luma Dream Machine",
-      veo: "Google Veo 2",
+      veo: "Google Veo 3",
       sora: "OpenAI Sora",
       pika: "Pika 2.0",
       hailuo: "Hailuo MiniMax",
