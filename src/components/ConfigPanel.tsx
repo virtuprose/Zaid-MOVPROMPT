@@ -20,6 +20,7 @@ const MODEL_GROUPS = [
       { value: "kling-1.5", label: "Kling 1.5" },
       { value: "kling-1.6", label: "Kling 1.6" },
       { value: "kling-2.0", label: "Kling 2.0" },
+      { value: "kling-3.0", label: "Kling 3.0" },
     ],
   },
   {
