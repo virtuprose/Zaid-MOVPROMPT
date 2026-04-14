@@ -10,16 +10,8 @@ const PRESET_GROUPS = [
     chips: ["Slow motion", "Drone shot", "Dolly zoom", "Handheld", "Tracking shot", "Crane shot", "Steadicam", "POV shot", "Whip pan", "Timelapse"],
   },
   {
-    label: "💡 Mood & Lighting",
-    chips: ["Golden hour", "Neon lights", "Cinematic rain", "Foggy atmosphere", "Moody shadows", "Silhouette", "Backlit", "Candlelight", "Moonlit"],
-  },
-  {
-    label: "🎬 Style",
-    chips: ["Epic reveal", "Film noir", "Cyberpunk", "Vintage film", "Documentary"],
-  },
-  {
-    label: "🌍 Action & Scene",
-    chips: ["Chase scene", "Underwater", "Explosion", "Floating particles", "Reflections", "Smoke & haze", "Snow falling", "Desert winds"],
+    label: "✨ Transitions",
+    chips: ["Fade in", "Fade out", "Cross dissolve", "Morph cut", "Zoom transition", "Swipe cut", "Match cut", "Jump cut", "Smash cut", "Iris wipe"],
   },
 ];
 
