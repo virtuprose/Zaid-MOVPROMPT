@@ -1,7 +1,7 @@
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { WorkflowPanel } from "@/components/WorkflowPanel";
 import { motion } from "framer-motion";
-import { Camera, Layers, Film, Clapperboard } from "lucide-react";
+import { Camera, Layers, Film } from "lucide-react";
 
 const WORKFLOWS = [
   {
@@ -42,9 +42,7 @@ const Index = () => {
           className="text-center mb-12"
         >
           <div className="flex items-center justify-center gap-3 mb-4">
-            <div className="p-2.5 rounded-xl bg-primary/10 border border-primary/20">
-              <Clapperboard className="w-7 h-7 text-primary" />
-            </div>
+            <img src="/logo.png" alt="MovPrompt logo" width={48} height={48} className="w-12 h-12" />
             <h1 className="text-4xl sm:text-5xl font-display font-bold tracking-tight">
               Mov<span className="text-primary">Prompt</span>
             </h1>
