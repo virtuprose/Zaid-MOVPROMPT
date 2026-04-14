@@ -1,27 +1,28 @@
 
 
-## Add How-To Guide at the Top
+## Add Rate Limiting to generate-prompt Edge Function
 
-### What
-Add a collapsible tutorial guide between the hero header and the workflow tabs, showing step-by-step instructions for using MovPrompt.
+### Approach
+Use an in-memory sliding window rate limiter keyed by client IP address. This is lightweight, requires no database tables, and resets on function cold starts — which is acceptable for abuse protection.
 
-### Design
-- A styled card with a **Book/HelpCircle icon** and "How to Use" title
-- Uses the `Collapsible` component so users can expand/collapse it
-- 3 numbered steps with icons matching each action:
-  1. **Choose a Workflow** — Pick Single Frame, Two Frames, or Multi-Shot
-  2. **Upload Your Image** — Drag & drop or click to upload your reference frame(s)
-  3. **Generate & Copy** — Hit generate, review your cinematic prompt, and copy it
-- Matches the dark cinematic theme with `bg-card border-border` styling
-- Animated entry with framer-motion, appearing after the hero
+### Details
 
-### Changes
+**File: `supabase/functions/generate-prompt/index.ts`**
 
-**File: `src/pages/Index.tsx`**
-- Import `Collapsible`, `CollapsibleTrigger`, `CollapsibleContent` from UI
-- Import `BookOpen`, `ChevronDown` icons
-- Add the guide section between the hero `</motion.header>` and the workflow tabs `<motion.div>`
-- Use local state to toggle open/closed (default: collapsed)
+- Add an in-memory `Map<string, number[]>` to track request timestamps per IP
+- Before processing, check if the IP has exceeded **5 requests per 60 seconds**
+- If exceeded, return `429 Too Many Requests` with a clear error message and `Retry-After` header
+- Extract IP from `x-forwarded-for` header (standard for edge functions behind a proxy), falling back to `"unknown"`
+- Clean up old timestamps on each request to prevent memory growth
 
-Single file change, ~40 lines added.
+### Limitations
+- In-memory state resets on cold starts — this is a trade-off for simplicity
+- Shared IPs (corporate NATs) may hit limits faster
+- For persistent rate limiting, a database counter table would be needed (not proposed here to keep it simple)
+
+### Config
+- **Window**: 60 seconds
+- **Max requests**: 5 per window per IP
+
+Single file change, ~25 lines added at the top of the request handler.
 
