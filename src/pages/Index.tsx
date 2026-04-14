@@ -1,7 +1,9 @@
+import { useState } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { WorkflowPanel } from "@/components/WorkflowPanel";
 import { motion } from "framer-motion";
-import { Camera, Layers, Film } from "lucide-react";
+import { Camera, Layers, Film, BookOpen, ChevronDown, Upload, Copy } from "lucide-react";
 
 const WORKFLOWS = [
   {
