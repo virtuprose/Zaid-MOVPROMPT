@@ -85,6 +85,15 @@ export const WorkflowPanel = ({ type }: WorkflowPanelProps) => {
 
   const handleGenerate = async () => {
     if (!hasRequiredImages) return;
+    if (!user) {
+      toast({
+        title: "Sign in required",
+        description: "Please sign in to generate prompts.",
+        variant: "destructive",
+      });
+      navigate("/auth");
+      return;
+    }
     setIsLoading(true);
     setResults(null);
 
