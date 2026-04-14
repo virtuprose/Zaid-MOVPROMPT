@@ -77,7 +77,7 @@ export const ResultsPanel = ({ results, onRegenerate, isLoading }: ResultsPanelP
               <span className="text-accent">{result.shotName || `Shot ${idx + 1}`}</span>
             </CardTitle>
           </CardHeader>
-          <CardContent className={result.shotName ? "" : "pt-6"}>
+          <CardContent>
             <div className="grid gap-3">
               <ResultCard label="Main Prompt" value={result.mainPrompt} accent />
               <ResultCard label="Negative Prompt" value={result.negativePrompt} />
