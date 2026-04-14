@@ -11,7 +11,7 @@ const TARGET_MODELS = [
   { value: "runway", label: "Runway Gen-3 Alpha" },
   { value: "kling", label: "Kling 1.5" },
   { value: "luma", label: "Luma Dream Machine" },
-  { value: "veo", label: "Google Veo 2" },
+  { value: "veo", label: "Google Veo 3" },
   { value: "sora", label: "OpenAI Sora" },
   { value: "pika", label: "Pika 2.0" },
   { value: "hailuo", label: "Hailuo MiniMax" },
