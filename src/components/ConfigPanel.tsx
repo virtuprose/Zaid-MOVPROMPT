@@ -1,12 +1,7 @@
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { SelectLabel } from "@radix-ui/react-select";
-
-const CINEMATIC_STYLES = [
-  "Film Noir", "Cyberpunk", "Magical Realism", "35mm Film", "Anamorphic",
-  "Documentary", "Sci-Fi Epic", "Horror", "Golden Hour", "Noir Thriller",
-  "Vintage 8mm", "IMAX", "Music Video", "Commercial",
-];
 
 const MODEL_GROUPS = [
   {
@@ -78,27 +73,23 @@ const MODEL_GROUPS = [
 ];
 
 interface ConfigPanelProps {
-  style: string;
+  description: string;
   model: string;
-  onStyleChange: (v: string) => void;
+  onDescriptionChange: (v: string) => void;
   onModelChange: (v: string) => void;
 }
 
-export const ConfigPanel = ({ style, model, onStyleChange, onModelChange }: ConfigPanelProps) => {
+export const ConfigPanel = ({ description, model, onDescriptionChange, onModelChange }: ConfigPanelProps) => {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+    <div className="space-y-4">
       <div className="space-y-2">
-        <Label className="text-sm text-muted-foreground">Cinematic Style</Label>
-        <Select value={style} onValueChange={onStyleChange}>
-          <SelectTrigger className="bg-secondary border-border">
-            <SelectValue placeholder="Choose a style..." />
-          </SelectTrigger>
-          <SelectContent>
-            {CINEMATIC_STYLES.map((s) => (
-              <SelectItem key={s} value={s}>{s}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <Label className="text-sm text-muted-foreground">Describe Your Vision (optional)</Label>
+        <Textarea
+          value={description}
+          onChange={(e) => onDescriptionChange(e.target.value)}
+          placeholder="Describe your vision... e.g. 'dramatic slow-motion with rain and neon lights'"
+          className="bg-secondary border-border resize-none min-h-[80px]"
+        />
       </div>
       <div className="space-y-2">
         <Label className="text-sm text-muted-foreground">Target AI Model</Label>

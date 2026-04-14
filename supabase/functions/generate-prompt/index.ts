@@ -7,7 +7,9 @@ const corsHeaders = {
 
 const SYSTEM_PROMPT = `You are MovPrompt — an elite AI Director of Photography specializing in generative video. You analyze images and write highly technical, director-grade cinematic prompts designed for AI video generators.
 
-Your job: Given image(s), a cinematic style, a target AI model, and a workflow type, produce structured cinematic prompts.
+Your job: Given image(s), a target AI model, a workflow type, and an optional user description, produce structured cinematic prompts.
+
+IMPORTANT: You must autonomously analyze the scene and determine the best cinematic style, lighting, mood, and camera work based on the image content. If the user provides a description, incorporate their creative vision into your analysis. If no description is provided, rely entirely on your visual analysis of the image.
 
 WORKFLOW TYPES:
 1. "single" — Analyze the scene and write a camera movement prompt to animate it
@@ -43,9 +45,9 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { images, workflowType, style, targetModel } = await req.json();
+    const { images, workflowType, description, targetModel } = await req.json();
 
-    if (!images?.length || !workflowType || !style || !targetModel) {
+    if (!images?.length || !workflowType || !targetModel) {
       return new Response(JSON.stringify({ error: "Missing required fields" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -77,12 +79,13 @@ serve(async (req) => {
       wan: "Wan 2.1",
     };
 
-    const userContent: any[] = [
-      {
-        type: "text",
-        text: `Workflow: ${workflowType}\nCinematic Style: ${style}\nTarget Model: ${modelLabels[targetModel] || targetModel}\n\nAnalyze the image(s) and generate cinematic prompts.`,
-      },
-    ];
+    let userText = `Workflow: ${workflowType}\nTarget Model: ${modelLabels[targetModel] || targetModel}\n\n`;
+    if (description?.trim()) {
+      userText += `User's creative vision: ${description.trim()}\n\n`;
+    }
+    userText += `Analyze the image(s), determine the best cinematic style automatically, and generate cinematic prompts.`;
+
+    const userContent: any[] = [{ type: "text", text: userText }];
 
     for (const img of images) {
       userContent.push({

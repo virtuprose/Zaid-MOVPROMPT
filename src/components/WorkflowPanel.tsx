@@ -25,7 +25,7 @@ interface WorkflowPanelProps {
 export const WorkflowPanel = ({ type }: WorkflowPanelProps) => {
   const { toast } = useToast();
   const [images, setImages] = useState<{ file: File; preview: string }[]>([]);
-  const [style, setStyle] = useState("35mm Film");
+  const [description, setDescription] = useState("");
   const [model, setModel] = useState("runway");
   const [results, setResults] = useState<ShotResult[] | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -74,7 +74,7 @@ export const WorkflowPanel = ({ type }: WorkflowPanelProps) => {
         body: {
           images: imageBase64s,
           workflowType: type,
-          style,
+          description,
           targetModel: model,
         },
       });
@@ -123,7 +123,7 @@ export const WorkflowPanel = ({ type }: WorkflowPanelProps) => {
             exit={{ opacity: 0, height: 0 }}
             className="space-y-4"
           >
-            <ConfigPanel style={style} model={model} onStyleChange={setStyle} onModelChange={setModel} />
+            <ConfigPanel description={description} model={model} onDescriptionChange={setDescription} onModelChange={setModel} />
             <div className="flex justify-center">
               <Button
                 size="lg"
