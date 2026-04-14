@@ -10,7 +10,7 @@ import { ChevronRight, ChevronDown } from "lucide-react";
 const PRESET_GROUPS = [
   {
     label: "🎥 Camera",
-    chips: ["Slow motion", "Drone shot", "Dolly zoom", "Handheld", "Tracking shot", "Crane shot", "Steadicam", "POV shot", "Whip pan", "Timelapse", "Arc shot", "Push in", "Pull out", "Orbit", "Static lock", "Rack focus", "Dutch angle", "Bird's eye", "Worm's eye", "Zoom in"],
+    chips: ["Slow motion", "Drone shot", "Dolly zoom", "Handheld", "Tracking shot", "Crane shot", "Steadicam", "POV shot", "Whip pan", "Timelapse", "Arc shot", "Push in", "Pull out", "Orbit", "Static lock", "Rack focus", "Dutch angle", "Bird's eye", "Worm's eye", "Zoom in", "Jib down", "Jib up", "Dolly left", "Dolly right", "Dolly out", "Dolly in", "False POV"],
   },
   {
     label: "✨ Transitions",
