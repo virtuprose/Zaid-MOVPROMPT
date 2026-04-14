@@ -1,7 +1,9 @@
+import { useState } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { WorkflowPanel } from "@/components/WorkflowPanel";
 import { motion } from "framer-motion";
-import { Camera, Layers, Film } from "lucide-react";
+import { Camera, Layers, Film, BookOpen, ChevronDown, Upload, Copy } from "lucide-react";
 
 const WORKFLOWS = [
   {
@@ -24,7 +26,14 @@ const WORKFLOWS = [
   },
 ];
 
+const GUIDE_STEPS = [
+  { icon: Layers, title: "Choose a Workflow", desc: "Pick Single Frame, Two Frames, or Multi-Shot depending on your project." },
+  { icon: Upload, title: "Upload Your Image", desc: "Drag & drop or click to upload your reference frame(s)." },
+  { icon: Copy, title: "Generate & Copy", desc: "Hit generate, review your cinematic prompt, and copy it to your clipboard." },
+];
+
 const Index = () => {
+  const [guideOpen, setGuideOpen] = useState(false);
   return (
     <div className="min-h-screen bg-background">
       {/* Ambient glow */}
@@ -50,6 +59,38 @@ const Index = () => {
             Your AI Director of Photography. Turn any still image into a director-grade cinematic video prompt.
           </p>
         </motion.header>
+
+        {/* How-To Guide */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.15 }}
+          className="mb-8"
+        >
+          <Collapsible open={guideOpen} onOpenChange={setGuideOpen}>
+            <CollapsibleTrigger className="w-full flex items-center justify-between gap-2 rounded-lg border border-border bg-card px-4 py-3 text-sm font-medium hover:bg-secondary/60 transition-colors">
+              <span className="flex items-center gap-2">
+                <BookOpen className="w-4 h-4 text-primary" />
+                How to Use
+              </span>
+              <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${guideOpen ? "rotate-180" : ""}`} />
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <div className="grid gap-3 mt-3 sm:grid-cols-3">
+                {GUIDE_STEPS.map((step, i) => (
+                  <div key={i} className="flex flex-col gap-2 rounded-lg border border-border bg-secondary/30 p-4">
+                    <div className="flex items-center gap-2">
+                      <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/15 text-primary text-xs font-bold">{i + 1}</span>
+                      <step.icon className="w-4 h-4 text-primary" />
+                      <span className="font-medium text-sm">{step.title}</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground leading-relaxed">{step.desc}</p>
+                  </div>
+                ))}
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+        </motion.div>
 
         {/* Workflow Tabs */}
         <motion.div
