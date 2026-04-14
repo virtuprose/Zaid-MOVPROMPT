@@ -1,127 +1,43 @@
 
 
-# Add User Authentication (Email + Google)
+# Add Marketing Content to Auth / Signup Page
 
 ## Overview
-Add full authentication with Email/Password and Google sign-in. Public users can sign up to save prompt history. Admin dashboard gets proper role-based access replacing the hardcoded password.
+Transform the Auth page into a marketing-infused signup experience. Add feature highlights, social proof, and value propositions alongside the existing sign-in/sign-up form.
 
-## Database Changes
+## Layout
+Split layout on desktop (two columns), stacked on mobile:
+- **Left column**: Marketing content (hero headline, 3 feature cards, tagline)
+- **Right column**: Existing auth form (Google + email sign-in/sign-up)
 
-### 1. Profiles table
-Create `profiles` table linked to `auth.users` with auto-creation trigger.
+On mobile (current 440px viewport), marketing content stacks above the form.
 
-```sql
-CREATE TABLE public.profiles (
-  id uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-  email text,
-  display_name text,
-  avatar_url text,
-  created_at timestamptz DEFAULT now()
-);
+## Marketing Sections
 
-ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+### 1. Hero headline (left/top)
+- "Turn Stills Into Cinema" with a supporting line about AI-powered cinematic prompts
+- MovPrompt branding
 
-CREATE POLICY "Users can read own profile" ON public.profiles
-  FOR SELECT TO authenticated USING (auth.uid() = id);
+### 2. Feature highlights (3 cards)
+- **AI Director of Photography** -- Describe prompt generation from any image
+- **3 Powerful Workflows** -- Single Frame, Two Frames, Multi-Shot
+- **Save & Reuse** -- Prompt history for signed-in users
 
-CREATE POLICY "Users can update own profile" ON public.profiles
-  FOR UPDATE TO authenticated USING (auth.uid() = id);
+### 3. Trust line
+- "Trusted by filmmakers and creators" or similar social proof placeholder
 
--- Auto-create profile on signup
-CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
-BEGIN
-  INSERT INTO public.profiles (id, email, display_name, avatar_url)
-  VALUES (
-    NEW.id,
-    NEW.email,
-    COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.email),
-    NEW.raw_user_meta_data->>'avatar_url'
-  );
-  RETURN NEW;
-END;
-$$;
-
-CREATE TRIGGER on_auth_user_created
-  AFTER INSERT ON auth.users
-  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
-```
-
-### 2. User roles table
-```sql
-CREATE TYPE public.app_role AS ENUM ('admin', 'user');
-
-CREATE TABLE public.user_roles (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
-  role app_role NOT NULL,
-  UNIQUE (user_id, role)
-);
-
-ALTER TABLE public.user_roles ENABLE ROW LEVEL SECURITY;
-
-CREATE OR REPLACE FUNCTION public.has_role(_user_id uuid, _role app_role)
-RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
-  SELECT EXISTS (SELECT 1 FROM public.user_roles WHERE user_id = _user_id AND role = _role)
-$$;
-
-CREATE POLICY "Users can read own roles" ON public.user_roles
-  FOR SELECT TO authenticated USING (auth.uid() = user_id);
-```
-
-### 3. Prompt history table
-```sql
-CREATE TABLE public.prompt_history (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
-  workflow_type text NOT NULL,
-  target_model text NOT NULL,
-  results jsonb NOT NULL,
-  created_at timestamptz DEFAULT now()
-);
-
-ALTER TABLE public.prompt_history ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Users can read own history" ON public.prompt_history
-  FOR SELECT TO authenticated USING (auth.uid() = user_id);
-CREATE POLICY "Users can insert own history" ON public.prompt_history
-  FOR INSERT TO authenticated WITH CHECK (auth.uid() = user_id);
-```
-
-## New Files
+## Changes
 
 ### `src/pages/Auth.tsx`
-Login/signup page with:
-- Email/password form (sign up + sign in tabs)
-- Google sign-in button (using `lovable.auth.signInWithOAuth("google")`)
-- Redirect to `/` after successful auth
-
-### `src/components/AuthGuard.tsx`
-Wrapper component that checks auth state. Used to protect `/admin` route (requires admin role).
-
-### `src/hooks/useAuth.ts`
-Custom hook wrapping `supabase.auth.onAuthStateChange` and `getSession`. Exposes `user`, `session`, `loading`, `signOut`.
-
-## Modified Files
-
-### `src/App.tsx`
-- Add `/auth` route
-- Wrap `/admin` with AuthGuard requiring admin role
-
-### `src/pages/Index.tsx`
-- Add small user avatar/sign-in button in the header
-- Show "Save to history" option after generation if logged in
-
-### `src/pages/Analytics.tsx`
-- Remove hardcoded password gate
-- Use AuthGuard + role check instead
-
-### `src/components/WorkflowPanel.tsx`
-- After successful generation, save results to `prompt_history` if user is logged in
+- Wrap in a two-column grid (`md:grid-cols-2`)
+- Left side: marketing content with feature cards, animated entrance
+- Right side: existing auth card (unchanged logic)
+- Mobile: marketing stacks above auth form with compact spacing
+- Add ambient glow background consistent with the rest of the app
 
 ## Technical Notes
-- Google OAuth uses Lovable Cloud's managed solution (no API keys needed)
-- Email verification required before sign-in (no auto-confirm)
-- The main app remains fully usable without an account
-- Admin role must be manually assigned via database after first signup
+- No new files or dependencies -- all changes in `Auth.tsx`
+- Uses existing UI components (Card) and Tailwind classes
+- Matches the dark cinematic theme (primary cyan, accent amber)
+- Framer Motion for staggered entrance animations
 
