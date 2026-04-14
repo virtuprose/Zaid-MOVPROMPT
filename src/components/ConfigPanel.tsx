@@ -4,18 +4,23 @@ import { Textarea } from "@/components/ui/textarea";
 import { SelectLabel } from "@radix-ui/react-select";
 import { Badge } from "@/components/ui/badge";
 
-const PRESET_CHIPS = [
-  // Camera
-  "Slow motion", "Drone shot", "Dolly zoom", "Handheld", "Tracking shot",
-  "Crane shot", "Steadicam", "POV shot", "Whip pan", "Timelapse",
-  // Mood & Lighting
-  "Golden hour", "Neon lights", "Cinematic rain", "Foggy atmosphere",
-  "Moody shadows", "Silhouette", "Backlit", "Candlelight", "Moonlit",
-  // Style
-  "Epic reveal", "Film noir", "Cyberpunk", "Vintage film", "Documentary",
-  // Action & Scene
-  "Chase scene", "Underwater", "Explosion", "Floating particles",
-  "Reflections", "Smoke & haze", "Snow falling", "Desert winds",
+const PRESET_GROUPS = [
+  {
+    label: "🎥 Camera",
+    chips: ["Slow motion", "Drone shot", "Dolly zoom", "Handheld", "Tracking shot", "Crane shot", "Steadicam", "POV shot", "Whip pan", "Timelapse"],
+  },
+  {
+    label: "💡 Mood & Lighting",
+    chips: ["Golden hour", "Neon lights", "Cinematic rain", "Foggy atmosphere", "Moody shadows", "Silhouette", "Backlit", "Candlelight", "Moonlit"],
+  },
+  {
+    label: "🎬 Style",
+    chips: ["Epic reveal", "Film noir", "Cyberpunk", "Vintage film", "Documentary"],
+  },
+  {
+    label: "🌍 Action & Scene",
+    chips: ["Chase scene", "Underwater", "Explosion", "Floating particles", "Reflections", "Smoke & haze", "Snow falling", "Desert winds"],
+  },
 ];
 
 const MODEL_GROUPS = [
@@ -105,19 +110,26 @@ export const ConfigPanel = ({ description, model, onDescriptionChange, onModelCh
           placeholder="Describe your vision... e.g. 'dramatic slow-motion with rain and neon lights'"
           className="bg-secondary border-border resize-none min-h-[80px]"
         />
-        <div className="flex flex-wrap gap-2">
-          {PRESET_CHIPS.map((chip) => (
-            <Badge
-              key={chip}
-              variant="outline"
-              className="cursor-pointer hover:bg-primary/20 hover:border-primary transition-colors text-xs px-2.5 py-1"
-              onClick={() => {
-                const sep = description.trim() ? ", " : "";
-                onDescriptionChange(description.trim() + sep + chip.toLowerCase());
-              }}
-            >
-              {chip}
-            </Badge>
+        <div className="space-y-3">
+          {PRESET_GROUPS.map((group) => (
+            <div key={group.label} className="space-y-1.5">
+              <span className="text-xs font-medium text-muted-foreground/70">{group.label}</span>
+              <div className="flex flex-wrap gap-1.5">
+                {group.chips.map((chip) => (
+                  <Badge
+                    key={chip}
+                    variant="outline"
+                    className="cursor-pointer hover:bg-primary/20 hover:border-primary transition-colors text-xs px-2.5 py-1"
+                    onClick={() => {
+                      const sep = description.trim() ? ", " : "";
+                      onDescriptionChange(description.trim() + sep + chip.toLowerCase());
+                    }}
+                  >
+                    {chip}
+                  </Badge>
+                ))}
+              </div>
+            </div>
           ))}
         </div>
       </div>
