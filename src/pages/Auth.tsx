@@ -11,6 +11,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Mail, Camera, Layers, History } from "lucide-react";
 import { motion } from "framer-motion";
+import { InstallPrompt } from "@/components/InstallPrompt";
 
 const FEATURES = [
   {
@@ -296,6 +297,7 @@ const Auth = () => {
           </div>
         </motion.div>
       </div>
+      <InstallPrompt />
     </div>
   );
 };
