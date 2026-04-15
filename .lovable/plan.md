@@ -1,70 +1,62 @@
 
+## Fix Admin Dashboard Flow
 
-# UI Design Polish for Desktop, Tablet, and Mobile
+### Diagnosis
+The admin role check is succeeding, but the app still renders the main page first. The evidence is:
+- `has_role` returns `true`
+- right after login, `page_visits` logs `/`, which means `Index` mounted
+- current `AuthGuard` can still render the `Navigate to="/"` branch in the brief render between:
+  1. auth session becoming available
+  2. admin role check finishing for that user
 
-## Issues Identified
+There is also a second flow problem:
+- `AdminLogin` redirects any authenticated user to `/admin` immediately, without first confirming they are actually an admin
+- that makes the admin flow feel mixed/confusing
 
-### Auth Page (`/auth`)
-1. **Desktop**: Layout is functional but the right-side form card feels disconnected — no vertical centering alignment between left and right, and the "Back to app" link is odd since auth is required
-2. **Mobile**: Feature cards take up too much space before the form — user has to scroll far to reach sign-in
-3. **Form card**: No rounded corners visible, input fields lack focus glow, Sign In button blends into the card
+### What I’ll change
 
-### Index Page (`/`)
-1. **Desktop**: Max-width 4xl is a bit narrow for wider screens; top bar alignment feels sparse
-2. **Mobile**: Workflow tab labels are cramped at small sizes; guide steps stack well but could use tighter spacing
-3. **General**: No logo mark/icon, just text — could add a subtle camera/film icon
+#### 1. Make `AuthGuard` wait for the correct admin check result
+Update `src/components/AuthGuard.tsx` so it:
+- keeps a dedicated admin-role loading state tied to the current user
+- does not clear role-check loading while auth is still restoring
+- only redirects to `/admin/login` after auth is fully resolved and no user exists
+- only redirects away from `/admin` after the role check for the current user has completed and confirmed they are not admin
+- ignores stale role-check results if the user changes during the async request
 
-### Admin Login (`/admin/login`)
-1. Clean and minimal — minor polish: add ambient glow background to match app theme
+This is the main fix.
 
-### NotFound (`/404`)
-1. Uses `bg-muted` which clashes with the dark cinematic theme — should use `bg-background`
+#### 2. Fix `AdminLogin` redirect logic
+Update `src/pages/AdminLogin.tsx` so it:
+- does not auto-navigate to `/admin` just because `user` exists
+- verifies admin role first, then navigates
+- keeps non-admin authenticated users on the admin login page instead of bouncing them into a broken loop
+- shows a clear error/toast if the signed-in account is not an admin
 
-### Analytics (`/admin`)
-1. **Mobile**: 2-column stat cards grid may be too tight on small phones
-2. Chart containers need `min-h` to avoid collapse on mobile
+This will make the flow predictable.
 
-### General Polish
-1. Remove `src/App.css` — it has unused Vite boilerplate styles that could interfere
-2. Input fields across the app could use a subtle focus ring glow (primary color)
-3. Buttons could benefit from subtle hover scale transitions
+#### 3. Make the admin destination visually obvious
+Update `src/pages/Analytics.tsx` slightly so the page clearly reads as an admin dashboard, for example:
+- “Admin Dashboard”
+- “Analytics overview”
 
-## Plan
+This is small, but it will help confirm the user landed in the right place.
 
-### 1. Polish Auth Page
-- On mobile, hide the feature cards and show only the brand + form to reduce scroll
-- Center the form better vertically on desktop
-- Remove "Back to app" link (auth is required, so there's no "back")
-- Add subtle glow/ring to input focus states
-- Add brand logo/icon above the form on mobile
+### Files to update
+- `src/components/AuthGuard.tsx`
+- `src/pages/AdminLogin.tsx`
+- `src/pages/Analytics.tsx`
 
-### 2. Polish Index Page
-- Tighten spacing on mobile for guide steps
-- Make workflow tab labels more readable on small screens (abbreviate or use icon-only on tiny screens)
-- Add subtle hover scale to the generate button
-- Ensure avatar dropdown works well on mobile
+### Expected flow after fix
+```text
+/admin
+  -> if not signed in: show /admin/login
+  -> if signed in and admin: show loading spinner briefly, then /admin dashboard
+  -> if signed in but not admin: stay out of dashboard and show clear rejection
 
-### 3. Polish Admin Login
-- Add ambient glow background matching the main theme
-- Improve input focus styles
+/admin/login
+  -> if already signed in and admin: go to /admin
+  -> if already signed in but not admin: remain on login page with clear message
+```
 
-### 4. Fix NotFound Page
-- Change `bg-muted` to `bg-background` to match dark theme
-- Add ambient glow and proper styling
-
-### 5. Clean Up App.css
-- Remove unused Vite boilerplate CSS
-
-### 6. Global Input/Button Polish
-- Add consistent focus-visible ring styles using primary color glow
-- Add `transition-transform hover:scale-[1.02]` to primary action buttons
-
-## Files Changed
-- `src/pages/Auth.tsx` — responsive layout improvements, hide features on mobile
-- `src/pages/Index.tsx` — spacing and typography polish
-- `src/pages/AdminLogin.tsx` — ambient glow background
-- `src/pages/NotFound.tsx` — dark theme fix
-- `src/pages/Analytics.tsx` — mobile grid adjustments
-- `src/App.css` — delete or empty out
-- `src/index.css` — add global focus/hover polish utilities
-
+### Note
+I also spotted a separate console warning from the home-page account dropdown (`Function components cannot be given refs`). That is unrelated to the admin redirect bug, so I would keep this fix focused on the auth/admin flow first.
