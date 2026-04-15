@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Pencil } from "lucide-react";
+import { Pencil, Download } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 interface UserRow {
@@ -110,6 +110,25 @@ const UsersTab = () => {
 
   return (
     <>
+      <div className="flex items-center justify-end mb-4">
+        <Button variant="outline" size="sm" onClick={() => {
+          const lines: string[] = [
+            "=== MovPrompt Users Report ===", "",
+            "Name,Email,Role,Joined",
+            ...users.map((u) => `"${(u.display_name || "—").replace(/"/g, '""')}","${u.email || "—"}","${u.role}","${u.created_at ? new Date(u.created_at).toLocaleDateString() : "—"}"`),
+          ];
+          const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8;" });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = `movprompt-users-${new Date().toISOString().split("T")[0]}.csv`;
+          a.click();
+          URL.revokeObjectURL(url);
+        }} className="gap-2">
+          <Download className="w-4 h-4" />
+          Download Report
+        </Button>
+      </div>
       <Card className="bg-card border-border">
         <CardHeader>
           <CardTitle className="text-sm font-medium">All Users ({users.length})</CardTitle>
