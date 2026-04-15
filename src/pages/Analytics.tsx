@@ -21,6 +21,7 @@ interface Stats {
 }
 
 const Analytics = () => {
+  const navigate = useNavigate();
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
 
