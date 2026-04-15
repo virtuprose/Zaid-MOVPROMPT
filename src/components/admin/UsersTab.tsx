@@ -30,6 +30,8 @@ const UsersTab = () => {
   const [saving, setSaving] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState<"all" | "admin" | "user">("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
 
   const filteredUsers = useMemo(() => {
     return users.filter((u) => {
