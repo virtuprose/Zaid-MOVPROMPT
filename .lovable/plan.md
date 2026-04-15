@@ -1,73 +1,48 @@
 
 
-# Add Marketing Section to Admin Dashboard
+# Replace AI Model List with Updated Models
 
 ## What
-Add a new "Marketing" tab to the admin dashboard with two features:
-1. **Announcements & Banners** — Create, edit, and toggle promotional banners that display to users on the main app
-2. **Email Campaign Tracker** — View email send history, delivery stats, and status breakdowns
+Replace the current model list with the complete set from the uploaded document. This affects the frontend dropdown, backend validation, model labels, and system prompt.
 
-## Plan
+## New Model List (from uploaded file)
 
-### 1. Database: Create `announcements` table
+| Family | Models |
+|--------|--------|
+| Minimax Hailuo | 2.3 Fast, 2.3, 02 Fast, 02 |
+| Kling | 3.0, 3.0 Omni, 3.0 Omni Edit, 2.6, O1 Video, O1 Video Edit, Motion Control, 3.0 Motion Control |
+| Sora | Sora 2, Sora 2 Pro, Sora 2 Max, Sora 2 Pro Max |
+| Google Veo | 3.1 Lite, 3.1 Fast, 3.1, 3 Fast, 3 |
+| Higgsfield | Lite, Standard, Turbo |
+| Wan | 2.7, 2.6, 2.5, 2.5 Fast, 2.2, 2.2 Fast |
+| Seedance | 2.0 Fast, 2.0, 1.5 Pro, Pro, Pro Fast |
+| Grok | Imagine, Imagine Edit |
 
-New table with columns:
-- `id` (uuid, PK)
-- `title` (text, required)
-- `message` (text, required)
-- `link_url` (text, nullable — optional CTA link)
-- `link_text` (text, nullable — CTA button label)
-- `type` (text — "info", "warning", "promo")
-- `is_active` (boolean, default false)
-- `starts_at` (timestamptz, nullable)
-- `ends_at` (timestamptz, nullable)
-- `created_at` (timestamptz, default now())
-- `created_by` (uuid, references profiles)
-
-RLS policies:
-- Admins can SELECT/INSERT/UPDATE/DELETE
-- Anonymous and authenticated users can SELECT where `is_active = true` (for displaying banners)
-
-### 2. Create `AnnouncementsSection` component
-
-Located at `src/components/admin/AnnouncementsSection.tsx`:
-- Table listing all announcements with title, type badge, status (active/inactive), date range
-- "New Announcement" button opening a dialog with form fields (title, message, type, link, date range)
-- Toggle switch per row to activate/deactivate
-- Edit and delete buttons per row
-- Visual preview of how the banner will look
-
-### 3. Create `EmailTracker` component
-
-Located at `src/components/admin/EmailTracker.tsx`:
-- Check if `email_send_log` table exists; if not, show a placeholder message ("Email tracking not yet configured")
-- If it exists: show stat cards (total sent, failed, suppressed) and a log table with template name, recipient, status badge, timestamp
-- Time range filter (24h, 7d, 30d)
-- Deduplicate by `message_id` as required
-
-### 4. Create `AnnouncementBanner` component for the main app
-
-Located at `src/components/AnnouncementBanner.tsx`:
-- Fetches active announcements from the `announcements` table
-- Renders a dismissible banner at the top of the main page (Index.tsx)
-- Styled to match the dark cinematic theme with type-based colors (info=cyan, warning=amber, promo=gradient)
-- Stores dismissed state in localStorage so users don't see the same banner repeatedly
-
-### 5. Update Admin Dashboard with Marketing tab
-
-Add a third tab "Marketing" (with Megaphone icon) to `Analytics.tsx` containing:
-- Announcements section at the top
-- Email tracker section below
-
-### 6. Wire banner into Index.tsx
-
-Import and render `AnnouncementBanner` at the top of the main page.
+**Removed**: Runway, Luma, Pika, Stable Video, Genmo, PixVerse, Haiper, Vidu, CogVideoX
 
 ## Files Changed
-- Migration SQL — create `announcements` table with RLS
-- `src/components/admin/AnnouncementsSection.tsx` — new
-- `src/components/admin/EmailTracker.tsx` — new
-- `src/components/AnnouncementBanner.tsx` — new
-- `src/pages/Analytics.tsx` — add Marketing tab
-- `src/pages/Index.tsx` — add AnnouncementBanner
+
+### 1. `src/components/ConfigPanel.tsx`
+- Replace `MODEL_GROUPS` array with new groups and models
+- Each model gets a unique value key (e.g. `hailuo-2.3-fast`, `kling-3.0-omni`, `veo-3.1-lite`)
+
+### 2. `supabase/functions/generate-prompt/index.ts`
+- Update `ALLOWED_MODELS` set with all new model value keys
+- Update `modelLabels` map with display names
+- Update `SYSTEM_PROMPT` model-specific guidance section:
+  - **Hailuo**: Emphasize fluid motion, character consistency, detailed scene description
+  - **Kling**: Focus on subject motion, action verbs, explicit movement direction. Edit variants for video editing prompts. Motion Control for camera path descriptions
+  - **Sora**: Natural language, emphasize physics and realism. Pro/Max variants for higher quality
+  - **Veo**: Structured and precise, reference real cinematography techniques
+  - **Higgsfield**: Short-form focused, concise motion descriptions
+  - **Wan**: Cinematic language, lighting and atmosphere emphasis
+  - **Seedance**: Dance-like fluid motion, rhythmic transitions, expressive movement
+  - **Grok**: Creative visual generation, stylized outputs. Edit variant for video editing
+
+## Technical Details
+
+- ~37 individual models across 8 families
+- Value keys use kebab-case: `{family}-{version}` pattern
+- Edit models (Kling O1 Video Edit, Kling 3.0 Omni Edit, Grok Imagine Edit) will be noted in model tips as designed for editing existing videos
+- Resolution and duration info from the document will be included in `modelNotes` guidance in the system prompt
 
