@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectSeparator, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { SelectLabel } from "@radix-ui/react-select";
@@ -153,6 +153,8 @@ export const ConfigPanel = ({ description, model, onDescriptionChange, onModelCh
             <SelectValue placeholder="Choose a model..." />
           </SelectTrigger>
           <SelectContent className="max-h-80">
+            <SelectItem value="any" className="font-medium">Any Model — Universal Prompt</SelectItem>
+            <SelectSeparator />
             {MODEL_GROUPS.map((group) => (
               <SelectGroup key={group.label}>
                 <SelectLabel className="px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
