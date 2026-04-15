@@ -43,6 +43,14 @@ const UsersTab = () => {
     });
   }, [users, searchQuery, roleFilter]);
 
+  const totalPages = Math.max(1, Math.ceil(filteredUsers.length / pageSize));
+  const paginatedUsers = filteredUsers.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, roleFilter]);
+
   useEffect(() => {
     fetchUsers();
   }, []);
