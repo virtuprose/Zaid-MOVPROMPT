@@ -181,7 +181,6 @@ export const ConfigPanel = ({ description, model, onDescriptionChange, onModelCh
               <AccordionItem key={group.label} value={group.label} className="border-border/40 rounded-md">
                 <AccordionTrigger className="py-2 px-3 text-sm hover:no-underline hover:bg-secondary/50 rounded-md transition-colors">
                   <div className="flex items-center gap-2">
-                    <span>{group.icon}</span>
                     <span className="text-muted-foreground">{group.label}</span>
                     <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 font-normal">
                       {group.chips.length}
