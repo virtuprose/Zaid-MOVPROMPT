@@ -10,6 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { motion } from "framer-motion";
 import { Camera, Layers, Film, BookOpen, ChevronDown, Upload, Copy, User, LogOut } from "lucide-react";
+import AnnouncementBanner from "@/components/AnnouncementBanner";
 
 const WORKFLOWS = [
   {
@@ -60,6 +61,7 @@ const Index = () => {
       </div>
 
       <div className="relative z-10 container max-w-5xl mx-auto px-4 py-6 sm:py-12">
+        <AnnouncementBanner />
         {/* Top bar */}
         <div className="flex justify-end mb-4">
           {!loading && (

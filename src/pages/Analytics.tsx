@@ -3,9 +3,11 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LogOut, BarChart3, Users } from "lucide-react";
+import { LogOut, BarChart3, Users, Megaphone } from "lucide-react";
 import AnalyticsTab, { type Stats } from "@/components/admin/AnalyticsTab";
 import UsersTab from "@/components/admin/UsersTab";
+import AnnouncementsSection from "@/components/admin/AnnouncementsSection";
+import EmailTracker from "@/components/admin/EmailTracker";
 
 const Analytics = () => {
   const navigate = useNavigate();
@@ -118,6 +120,10 @@ const Analytics = () => {
               <Users className="w-4 h-4" />
               Users
             </TabsTrigger>
+            <TabsTrigger value="marketing" className="gap-2">
+              <Megaphone className="w-4 h-4" />
+              Marketing
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="analytics">
@@ -126,6 +132,13 @@ const Analytics = () => {
 
           <TabsContent value="users">
             <UsersTab />
+          </TabsContent>
+
+          <TabsContent value="marketing">
+            <div className="space-y-6">
+              <AnnouncementsSection />
+              <EmailTracker />
+            </div>
           </TabsContent>
         </Tabs>
       </div>
