@@ -1,7 +1,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, PieChart, Pie, Cell } from "recharts";
-import { Eye, Sparkles, Users, TrendingUp } from "lucide-react";
+import { Eye, Sparkles, Users, TrendingUp, Download } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 const COLORS = ["hsl(190, 90%, 50%)", "hsl(35, 90%, 55%)", "hsl(280, 70%, 60%)", "hsl(140, 70%, 50%)", "hsl(350, 70%, 55%)"];
 
@@ -19,6 +20,36 @@ interface Stats {
 const chartConfig = {
   visits: { label: "Visits", color: "hsl(190, 90%, 50%)" },
   generations: { label: "Generations", color: "hsl(35, 90%, 55%)" },
+};
+
+const downloadCSV = (stats: Stats) => {
+  const convRate = stats.totalVisits ? ((stats.totalGenerations / stats.totalVisits) * 100).toFixed(1) + "%" : "0%";
+  const lines: string[] = [
+    "=== MovPrompt Analytics Report ===","",
+    "Metric,Value",
+    `Total Visits,${stats.totalVisits}`,
+    `Unique Visitors,${stats.uniqueSessions}`,
+    `Total Generations,${stats.totalGenerations}`,
+    `Visits Today,${stats.visitsToday}`,
+    `Generations Today,${stats.generationsToday}`,
+    `Conversion Rate,${convRate}`,
+    "","=== Daily Trend (30 Days) ===","",
+    "Date,Visits,Generations",
+    ...stats.dailyTrend.map((d) => `${d.date},${d.visits},${d.generations}`),
+    "","=== Workflow Breakdown ===","",
+    "Workflow,Count",
+    ...stats.workflowBreakdown.map((w) => `${w.name},${w.value}`),
+    "","=== Model Breakdown ===","",
+    "Model,Count",
+    ...stats.modelBreakdown.map((m) => `${m.name},${m.value}`),
+  ];
+  const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `movprompt-analytics-${new Date().toISOString().split("T")[0]}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
 };
 
 const AnalyticsTab = ({ stats }: { stats: Stats }) => {
