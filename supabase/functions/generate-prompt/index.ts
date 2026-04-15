@@ -26,6 +26,7 @@ function isRateLimited(ip: string): { limited: boolean; retryAfter?: number } {
 
 const ALLOWED_WORKFLOWS = new Set(["single", "twoframe", "multishot"]);
 const ALLOWED_MODELS = new Set([
+  "any",
   "hailuo-2.3-fast", "hailuo-2.3", "hailuo-02-fast", "hailuo-02",
   "kling-3.0", "kling-3.0-omni", "kling-3.0-omni-edit", "kling-2.6",
   "kling-o1-video", "kling-o1-video-edit", "kling-motion-control", "kling-3.0-motion-control",
@@ -64,6 +65,7 @@ Each shot has: mainPrompt, negativePrompt, cameraSuggestions, modelNotes
 Use precise cinematic terminology: lens focal lengths, camera movements (dolly, crane, steadicam, rack focus), lighting terms (chiaroscuro, rim light, motivated lighting), aspect ratios, film stocks, depth of field.
 
 Adapt prompt vocabulary for the target model:
+- Any Model (universal): Write a well-rounded, model-agnostic cinematic prompt. Focus on clear scene description, precise camera movement, lighting, and mood. Avoid model-specific syntax or optimizations. Prioritize universally understood cinematography language that works across all AI video generators.
 - Hailuo (Minimax): Emphasize fluid motion, character consistency, detailed scene description. Hailuo 02 models support longer durations and higher resolution.
 - Kling: Focus on subject motion, use action verbs, be explicit about movement direction. Edit variants (O1 Video Edit, 3.0 Omni Edit) are for editing/transforming existing videos. Motion Control variants allow precise camera path descriptions.
 - Sora (OpenAI): Natural language descriptions, emphasize physics and realism. Pro/Max variants produce higher quality and longer outputs.
