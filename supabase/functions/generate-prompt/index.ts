@@ -145,6 +145,7 @@ serve(async (req) => {
     }
 
     const modelLabels: Record<string, string> = {
+      "any": "Any Model (Universal)",
       "hailuo-2.3-fast": "Minimax Hailuo 2.3 Fast",
       "hailuo-2.3": "Minimax Hailuo 2.3",
       "hailuo-02-fast": "Minimax Hailuo 02 Fast",
