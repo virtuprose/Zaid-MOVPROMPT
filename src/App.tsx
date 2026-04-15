@@ -4,6 +4,8 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthGuard } from "@/components/AuthGuard";
+import { OfflineFallback } from "@/components/OfflineFallback";
+import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import Index from "./pages/Index.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import Analytics from "./pages/Analytics.tsx";
@@ -14,23 +16,33 @@ import Unsubscribe from "./pages/Unsubscribe.tsx";
 
 const queryClient = new QueryClient();
 
+const AppRoutes = () => {
+  const isOnline = useOnlineStatus();
+
+  if (!isOnline) return <OfflineFallback />;
+
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<AuthGuard><Index /></AuthGuard>} />
+        <Route path="/auth" element={<Auth />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/admin/login" element={<AdminLogin />} />
+        <Route path="/admin" element={<AuthGuard requireAdmin><Analytics /></AuthGuard>} />
+        <Route path="/unsubscribe" element={<Unsubscribe />} />
+        {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </BrowserRouter>
+  );
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<AuthGuard><Index /></AuthGuard>} />
-          <Route path="/auth" element={<Auth />} />
-          <Route path="/reset-password" element={<ResetPassword />} />
-          <Route path="/admin/login" element={<AdminLogin />} />
-          <Route path="/admin" element={<AuthGuard requireAdmin><Analytics /></AuthGuard>} />
-          <Route path="/unsubscribe" element={<Unsubscribe />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
+      <AppRoutes />
     </TooltipProvider>
   </QueryClientProvider>
 );
