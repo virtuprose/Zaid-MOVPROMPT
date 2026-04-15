@@ -29,16 +29,17 @@ const UsersTab = () => {
   const [editRole, setEditRole] = useState<"admin" | "user">("user");
   const [saving, setSaving] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [roleFilter, setRoleFilter] = useState<"all" | "admin" | "user">("all");
 
   const filteredUsers = useMemo(() => {
-    if (!searchQuery.trim()) return users;
-    const q = searchQuery.toLowerCase();
-    return users.filter(
-      (u) =>
-        (u.display_name || "").toLowerCase().includes(q) ||
-        (u.email || "").toLowerCase().includes(q)
-    );
-  }, [users, searchQuery]);
+    return users.filter((u) => {
+      const matchesRole = roleFilter === "all" || u.role === roleFilter;
+      if (!matchesRole) return false;
+      if (!searchQuery.trim()) return true;
+      const q = searchQuery.toLowerCase();
+      return (u.display_name || "").toLowerCase().includes(q) || (u.email || "").toLowerCase().includes(q);
+    });
+  }, [users, searchQuery, roleFilter]);
 
   useEffect(() => {
     fetchUsers();
@@ -131,6 +132,16 @@ const UsersTab = () => {
             className="pl-9"
           />
         </div>
+        <Select value={roleFilter} onValueChange={(v) => setRoleFilter(v as "all" | "admin" | "user")}>
+          <SelectTrigger className="w-[140px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Roles</SelectItem>
+            <SelectItem value="admin">Admin</SelectItem>
+            <SelectItem value="user">User</SelectItem>
+          </SelectContent>
+        </Select>
         <Button variant="outline" size="sm" onClick={() => {
           const lines: string[] = [
             "=== MovPrompt Users Report ===", "",
