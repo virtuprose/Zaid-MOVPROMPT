@@ -151,7 +151,7 @@ const UsersTab = () => {
       </div>
       <Card className="bg-card border-border">
         <CardHeader>
-          <CardTitle className="text-sm font-medium">All Users ({users.length})</CardTitle>
+          <CardTitle className="text-sm font-medium">All Users ({filteredUsers.length}{searchQuery ? ` of ${users.length}` : ""})</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           <Table>
