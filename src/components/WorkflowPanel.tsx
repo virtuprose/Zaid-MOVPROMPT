@@ -20,6 +20,8 @@ interface ShotResult {
   negativePrompt: string;
   cameraSuggestions: string;
   modelNotes: string;
+  suggestedAspectRatio?: string;
+  suggestedDuration?: string;
 }
 
 interface WorkflowPanelProps {

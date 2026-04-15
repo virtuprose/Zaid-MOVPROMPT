@@ -10,6 +10,8 @@ interface ShotResult {
   negativePrompt: string;
   cameraSuggestions: string;
   modelNotes: string;
+  suggestedAspectRatio?: string;
+  suggestedDuration?: string;
 }
 
 interface ResultsPanelProps {
@@ -79,6 +81,20 @@ export const ResultsPanel = forwardRef<HTMLDivElement, ResultsPanelProps>(({ res
           </CardHeader>
           <CardContent>
             <div className="grid gap-3">
+              {(result.suggestedAspectRatio || result.suggestedDuration) && (
+                <div className="flex items-center gap-3 flex-wrap">
+                  {result.suggestedAspectRatio && (
+                    <span className="text-xs font-mono bg-primary/10 text-primary border border-primary/20 px-2.5 py-1 rounded-md">
+                      📐 {result.suggestedAspectRatio}
+                    </span>
+                  )}
+                  {result.suggestedDuration && (
+                    <span className="text-xs font-mono bg-accent/10 text-accent border border-accent/20 px-2.5 py-1 rounded-md">
+                      ⏱ {result.suggestedDuration}
+                    </span>
+                  )}
+                </div>
+              )}
               <ResultCard label="Main Prompt" value={result.mainPrompt} accent />
               <ResultCard label="Negative Prompt" value={result.negativePrompt} />
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
