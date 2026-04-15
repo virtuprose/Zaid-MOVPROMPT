@@ -11,6 +11,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { motion } from "framer-motion";
 import { Camera, Layers, Film, BookOpen, ChevronDown, Upload, Copy, User, LogOut } from "lucide-react";
 import AnnouncementBanner from "@/components/AnnouncementBanner";
+import { InstallPrompt } from "@/components/InstallPrompt";
 
 const WORKFLOWS = [
   {
@@ -176,6 +177,7 @@ const Index = () => {
           </p>
         </footer>
       </div>
+      <InstallPrompt />
     </div>
   );
 };
