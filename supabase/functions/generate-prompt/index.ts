@@ -26,9 +26,15 @@ function isRateLimited(ip: string): { limited: boolean; retryAfter?: number } {
 
 const ALLOWED_WORKFLOWS = new Set(["single", "twoframe", "multishot"]);
 const ALLOWED_MODELS = new Set([
-  "runway", "kling-1.0", "kling-1.5", "kling-1.6", "kling-2.0", "kling-3.0",
-  "luma", "veo", "sora", "pika", "hailuo", "seedance",
-  "stable-video", "genmo", "pixverse", "haiper", "vidu", "cogvideo", "wan",
+  "hailuo-2.3-fast", "hailuo-2.3", "hailuo-02-fast", "hailuo-02",
+  "kling-3.0", "kling-3.0-omni", "kling-3.0-omni-edit", "kling-2.6",
+  "kling-o1-video", "kling-o1-video-edit", "kling-motion-control", "kling-3.0-motion-control",
+  "sora-2", "sora-2-pro", "sora-2-max", "sora-2-pro-max",
+  "veo-3.1-lite", "veo-3.1-fast", "veo-3.1", "veo-3-fast", "veo-3",
+  "higgsfield-lite", "higgsfield-standard", "higgsfield-turbo",
+  "wan-2.7", "wan-2.6", "wan-2.5", "wan-2.5-fast", "wan-2.2", "wan-2.2-fast",
+  "seedance-2.0-fast", "seedance-2.0", "seedance-1.5-pro", "seedance-pro", "seedance-pro-fast",
+  "grok-imagine", "grok-imagine-edit",
 ]);
 
 function badRequest(msg: string) {
@@ -58,21 +64,14 @@ Each shot has: mainPrompt, negativePrompt, cameraSuggestions, modelNotes
 Use precise cinematic terminology: lens focal lengths, camera movements (dolly, crane, steadicam, rack focus), lighting terms (chiaroscuro, rim light, motivated lighting), aspect ratios, film stocks, depth of field.
 
 Adapt prompt vocabulary for the target model:
-- Runway Gen-3: Emphasize camera motion descriptions, use "camera pushes in", "slow dolly"
-- Kling: Focus on subject motion, use action verbs, be explicit about movement direction
-- Luma: Describe lighting and atmosphere heavily, use painterly language
-- Veo: Structured and precise, reference real cinematography techniques
-- Sora: Natural language descriptions, emphasize physics and realism
-- Pika: Focus on stylized motion, artistic transitions, creative camera work
-- Seedance: Emphasize dance-like fluid motion, rhythmic transitions, expressive movement
-- Hailuo/MiniMax: Emphasize fluid motion, character consistency, detailed scene description
-- Stable Video Diffusion: Technical prompts, seed-based consistency, motion amount control
-- Genmo Mochi: Natural motion descriptions, physics-aware language
-- PixVerse: Action-oriented prompts, dynamic camera movements
-- Haiper: Concise motion descriptions, emphasize temporal consistency
-- Vidu: Detailed scene composition, reference-based consistency
-- CogVideoX: Structured prompts, explicit temporal descriptions
-- Wan: Cinematic language, emphasize lighting and atmosphere`;
+- Hailuo (Minimax): Emphasize fluid motion, character consistency, detailed scene description. Hailuo 02 models support longer durations and higher resolution.
+- Kling: Focus on subject motion, use action verbs, be explicit about movement direction. Edit variants (O1 Video Edit, 3.0 Omni Edit) are for editing/transforming existing videos. Motion Control variants allow precise camera path descriptions.
+- Sora (OpenAI): Natural language descriptions, emphasize physics and realism. Pro/Max variants produce higher quality and longer outputs.
+- Veo (Google): Structured and precise, reference real cinematography techniques. 3.1 models offer improved temporal consistency. Lite/Fast variants trade quality for speed.
+- Higgsfield: Short-form focused, concise motion descriptions. Turbo for fastest generation, Standard for balanced quality.
+- Wan (Alibaba): Cinematic language, emphasize lighting and atmosphere. Higher versions (2.7) offer better quality. Fast variants trade quality for speed.
+- Seedance (ByteDance): Dance-like fluid motion, rhythmic transitions, expressive movement. 2.0 models are latest generation. Pro variants for highest quality.
+- Grok (xAI): Creative visual generation, stylized outputs. Imagine Edit variant is for editing/transforming existing videos.`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -144,25 +143,43 @@ serve(async (req) => {
     }
 
     const modelLabels: Record<string, string> = {
-      runway: "Runway Gen-3 Alpha",
-      "kling-1.0": "Kling 1.0",
-      "kling-1.5": "Kling 1.5",
-      "kling-1.6": "Kling 1.6",
-      "kling-2.0": "Kling 2.0",
+      "hailuo-2.3-fast": "Minimax Hailuo 2.3 Fast",
+      "hailuo-2.3": "Minimax Hailuo 2.3",
+      "hailuo-02-fast": "Minimax Hailuo 02 Fast",
+      "hailuo-02": "Minimax Hailuo 02",
       "kling-3.0": "Kling 3.0",
-      luma: "Luma Dream Machine",
-      veo: "Google Veo 3",
-      sora: "OpenAI Sora",
-      pika: "Pika 2.0",
-      hailuo: "Hailuo MiniMax",
-      seedance: "Seedance",
-      "stable-video": "Stable Video Diffusion",
-      genmo: "Genmo Mochi",
-      pixverse: "PixVerse",
-      haiper: "Haiper 2.0",
-      vidu: "Vidu",
-      cogvideo: "CogVideoX",
-      wan: "Wan 2.1",
+      "kling-3.0-omni": "Kling 3.0 Omni",
+      "kling-3.0-omni-edit": "Kling 3.0 Omni Edit",
+      "kling-2.6": "Kling 2.6",
+      "kling-o1-video": "Kling O1 Video",
+      "kling-o1-video-edit": "Kling O1 Video Edit",
+      "kling-motion-control": "Kling Motion Control",
+      "kling-3.0-motion-control": "Kling 3.0 Motion Control",
+      "sora-2": "OpenAI Sora 2",
+      "sora-2-pro": "OpenAI Sora 2 Pro",
+      "sora-2-max": "OpenAI Sora 2 Max",
+      "sora-2-pro-max": "OpenAI Sora 2 Pro Max",
+      "veo-3.1-lite": "Google Veo 3.1 Lite",
+      "veo-3.1-fast": "Google Veo 3.1 Fast",
+      "veo-3.1": "Google Veo 3.1",
+      "veo-3-fast": "Google Veo 3 Fast",
+      "veo-3": "Google Veo 3",
+      "higgsfield-lite": "Higgsfield Lite",
+      "higgsfield-standard": "Higgsfield Standard",
+      "higgsfield-turbo": "Higgsfield Turbo",
+      "wan-2.7": "Wan 2.7",
+      "wan-2.6": "Wan 2.6",
+      "wan-2.5": "Wan 2.5",
+      "wan-2.5-fast": "Wan 2.5 Fast",
+      "wan-2.2": "Wan 2.2",
+      "wan-2.2-fast": "Wan 2.2 Fast",
+      "seedance-2.0-fast": "Seedance 2.0 Fast",
+      "seedance-2.0": "Seedance 2.0",
+      "seedance-1.5-pro": "Seedance 1.5 Pro",
+      "seedance-pro": "Seedance Pro",
+      "seedance-pro-fast": "Seedance Pro Fast",
+      "grok-imagine": "Grok Imagine",
+      "grok-imagine-edit": "Grok Imagine Edit",
     };
 
     let userText = `Workflow: ${workflowType}\nTarget Model: ${modelLabels[targetModel] || targetModel}\n\n`;
