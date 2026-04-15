@@ -62,6 +62,12 @@ const AnalyticsTab = ({ stats }: { stats: Stats }) => {
 
   return (
     <>
+      <div className="flex items-center justify-end mb-4">
+        <Button variant="outline" size="sm" onClick={() => downloadCSV(stats)} className="gap-2">
+          <Download className="w-4 h-4" />
+          Download Report
+        </Button>
+      </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8">
         {statCards.map((s) => (
           <Card key={s.label} className="bg-card border-border">
