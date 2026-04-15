@@ -30,6 +30,24 @@
 </head>
 
   <body>
+    <!-- Splash screen for standalone/PWA mode -->
+    <div id="splash" style="display:none;position:fixed;inset:0;z-index:9999;background:#0a0a0f;flex-direction:column;align-items:center;justify-content:center;gap:24px;">
+      <div style="width:72px;height:72px;border-radius:16px;overflow:hidden;">
+        <img src="/icon-192.png" alt="" width="72" height="72" style="display:block;" />
+      </div>
+      <div style="font-family:'Space Grotesk',sans-serif;font-size:24px;font-weight:700;color:#e8edf5;">
+        Mov<span style="color:hsl(190,90%,50%);">Prompt</span>
+      </div>
+      <div style="width:40px;height:40px;border:3px solid hsl(190,90%,50%,0.2);border-top-color:hsl(190,90%,50%);border-radius:50%;animation:sp .8s linear infinite;"></div>
+      <style>@keyframes sp{to{transform:rotate(360deg)}}</style>
+    </div>
+    <script>
+      // Show splash only in standalone (installed PWA) mode
+      (function(){
+        var s=window.matchMedia('(display-mode:standalone)').matches||(navigator.standalone===true);
+        if(s)document.getElementById('splash').style.display='flex';
+      })();
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
