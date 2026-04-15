@@ -166,7 +166,7 @@ const UsersTab = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {users.map((u) => (
+              {filteredUsers.map((u) => (
                 <TableRow key={u.id}>
                   <TableCell>
                     <Avatar className="h-8 w-8">
