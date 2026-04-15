@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, PieChart, Pie, Cell } from "recharts";
-import { Eye, Sparkles, Users, TrendingUp } from "lucide-react";
+import { Eye, Sparkles, Users, TrendingUp, LogOut } from "lucide-react";
 
 const COLORS = ["hsl(190, 90%, 50%)", "hsl(35, 90%, 55%)", "hsl(280, 70%, 60%)", "hsl(140, 70%, 50%)", "hsl(350, 70%, 55%)"];
 
