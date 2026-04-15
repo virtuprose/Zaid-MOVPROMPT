@@ -1,24 +1,11 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { BarChart, Bar, LineChart, Line, XAxis, YAxis, PieChart, Pie, Cell } from "recharts";
-import { Eye, Sparkles, Users, TrendingUp, LogOut } from "lucide-react";
-
-const COLORS = ["hsl(190, 90%, 50%)", "hsl(35, 90%, 55%)", "hsl(280, 70%, 60%)", "hsl(140, 70%, 50%)", "hsl(350, 70%, 55%)"];
-
-interface Stats {
-  totalVisits: number;
-  uniqueSessions: number;
-  totalGenerations: number;
-  visitsToday: number;
-  generationsToday: number;
-  workflowBreakdown: { name: string; value: number }[];
-  modelBreakdown: { name: string; value: number }[];
-  dailyTrend: { date: string; visits: number; generations: number }[];
-}
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { LogOut, BarChart3, Users } from "lucide-react";
+import AnalyticsTab, { type Stats } from "@/components/admin/AnalyticsTab";
+import UsersTab from "@/components/admin/UsersTab";
 
 const Analytics = () => {
   const navigate = useNavigate();
@@ -97,20 +84,6 @@ const Analytics = () => {
     );
   }
 
-  if (!stats) return null;
-
-  const statCards = [
-    { label: "Total Visits", value: stats.totalVisits, icon: Eye, sub: `${stats.visitsToday} today` },
-    { label: "Unique Visitors", value: stats.uniqueSessions, icon: Users, sub: "approximate" },
-    { label: "Total Generations", value: stats.totalGenerations, icon: Sparkles, sub: `${stats.generationsToday} today` },
-    { label: "Conversion Rate", value: stats.totalVisits ? `${((stats.totalGenerations / stats.totalVisits) * 100).toFixed(1)}%` : "0%", icon: TrendingUp, sub: "visits → generations" },
-  ];
-
-  const chartConfig = {
-    visits: { label: "Visits", color: "hsl(190, 90%, 50%)" },
-    generations: { label: "Generations", color: "hsl(35, 90%, 55%)" },
-  };
-
   return (
     <div className="min-h-screen bg-background">
       <div className="container max-w-6xl mx-auto px-4 py-12">
@@ -119,7 +92,7 @@ const Analytics = () => {
             <h1 className="text-3xl font-mono font-bold mb-1">
               Admin <span className="text-primary">Dashboard</span>
             </h1>
-            <p className="text-muted-foreground">Analytics overview — MovPrompt usage tracking</p>
+            <p className="text-muted-foreground">MovPrompt admin panel</p>
           </div>
           <Button
             variant="outline"
@@ -135,81 +108,26 @@ const Analytics = () => {
           </Button>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8">
-          {statCards.map((s) => (
-            <Card key={s.label} className="bg-card border-border">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <s.icon className="w-4 h-4 text-primary" />
-                  <span className="text-xs text-muted-foreground">{s.label}</span>
-                </div>
-                <p className="text-2xl font-bold">{s.value}</p>
-                <p className="text-xs text-muted-foreground mt-1">{s.sub}</p>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        <Tabs defaultValue="analytics" className="space-y-6">
+          <TabsList>
+            <TabsTrigger value="analytics" className="gap-2">
+              <BarChart3 className="w-4 h-4" />
+              Analytics
+            </TabsTrigger>
+            <TabsTrigger value="users" className="gap-2">
+              <Users className="w-4 h-4" />
+              Users
+            </TabsTrigger>
+          </TabsList>
 
-        <Card className="bg-card border-border mb-8">
-          <CardHeader>
-            <CardTitle className="text-sm font-medium">Last 30 Days</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ChartContainer config={chartConfig} className="h-[300px] w-full">
-              <LineChart data={stats.dailyTrend}>
-                <XAxis dataKey="date" tick={{ fontSize: 10 }} tickFormatter={(v) => v.slice(5)} stroke="hsl(var(--muted-foreground))" />
-                <YAxis tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" />
-                <ChartTooltip content={<ChartTooltipContent />} />
-                <Line type="monotone" dataKey="visits" stroke="hsl(190, 90%, 50%)" strokeWidth={2} dot={false} />
-                <Line type="monotone" dataKey="generations" stroke="hsl(35, 90%, 55%)" strokeWidth={2} dot={false} />
-              </LineChart>
-            </ChartContainer>
-          </CardContent>
-        </Card>
+          <TabsContent value="analytics">
+            {stats && <AnalyticsTab stats={stats} />}
+          </TabsContent>
 
-        <div className="grid gap-4 md:grid-cols-2">
-          <Card className="bg-card border-border">
-            <CardHeader>
-              <CardTitle className="text-sm font-medium">By Workflow Type</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {stats.workflowBreakdown.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-8">No data yet</p>
-              ) : (
-                <ChartContainer config={chartConfig} className="h-[250px] w-full">
-                  <BarChart data={stats.workflowBreakdown}>
-                    <XAxis dataKey="name" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
-                    <YAxis tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" />
-                    <ChartTooltip content={<ChartTooltipContent />} />
-                    <Bar dataKey="value" fill="hsl(190, 90%, 50%)" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ChartContainer>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card className="bg-card border-border">
-            <CardHeader>
-              <CardTitle className="text-sm font-medium">By Target Model</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {stats.modelBreakdown.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-8">No data yet</p>
-              ) : (
-                <ChartContainer config={chartConfig} className="h-[250px] w-full">
-                  <PieChart>
-                    <Pie data={stats.modelBreakdown} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label={(e) => e.name}>
-                      {stats.modelBreakdown.map((_, i) => (
-                        <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <ChartTooltip content={<ChartTooltipContent />} />
-                  </PieChart>
-                </ChartContainer>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+          <TabsContent value="users">
+            <UsersTab />
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
