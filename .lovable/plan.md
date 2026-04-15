@@ -1,21 +1,56 @@
 
 
-# Add "Any Model" Default Option to Target AI Model Dropdown
+# Redesign "Describe Your Vision" Presets
 
 ## What
-Add a generic "Any Model" option at the top of the model dropdown that generates a universal prompt not optimized for any specific model. Make it the default selection.
+Replace the current messy flat chip layout with a clean, organized preset system based on the 5 categories from the uploaded file. Use collapsible sub-sections so users can browse by category without being overwhelmed.
 
-## Changes
+## New Categories (from your file)
 
-### 1. `src/components/ConfigPanel.tsx`
-- Add an "Any Model" `SelectItem` before the model groups in the dropdown (value: `"any"`, label: `"Any Model — Universal Prompt"`)
-- Add a `SelectSeparator` after it to visually separate from specific models
+| Category | Icon | Count | Examples |
+|----------|------|-------|---------|
+| Basic Camera Control | 🎥 | 14 | General, Static, Handheld, Dolly In/Out, Zoom, Tilt, Focus Change |
+| Epic Camera Control | 🎬 | 23 | Dolly Zoom, Crash Zoom, Arc, Crane, FPV Drone, Bullet Time, 360 Orbit |
+| Effects | ✨ | 39 | Flood, Freezing, Melting, Diamond, Disintegration, Thunder God, Levitation |
+| Catch the Pulse | 🔥 | 17 | Paparazzi, Rap Flex, Catwalk, Boxing, Car Chasing, Glam, Agent Reveal |
+| Mix | 🎭 | 13 | Thunder God x Levitation, Action Run x Set on Fire, etc. |
 
-### 2. `src/components/WorkflowPanel.tsx`
-- Change default model state from `"runway"` to `"any"`
+## Design Approach
 
-### 3. `supabase/functions/generate-prompt/index.ts`
-- Add `"any"` to `ALLOWED_MODELS` set
-- Add `"any"` to `modelLabels` map
-- Update system prompt to handle `"any"` — generate a model-agnostic prompt that works well across all video AI models, without model-specific optimizations
+- Each category is a **collapsible accordion section** (closed by default) inside the "Describe Your Vision" collapsible
+- Category header shows icon + name + chip count badge
+- Chips inside use the same `Badge` click-to-append behavior
+- Chips display in Title Case (e.g. "Dolly Zoom In", not "DOLLY ZOOM IN")
+- Keep the textarea at the top for free-form input
+- On mobile: horizontal scroll per category. On desktop: flex-wrap
+
+## Visual Hierarchy
+
+```text
+▸ Describe Your Vision (optional)
+  ┌─────────────────────────────────┐
+  │ [textarea]                       │
+  └─────────────────────────────────┘
+  
+  ▸ 🎥 Basic Camera Control (14)
+  ▸ 🎬 Epic Camera Control (23)
+  ▸ ✨ Effects (39)
+  ▸ 🔥 Catch the Pulse (17)
+  ▸ 🎭 Mix (13)
+```
+
+When expanded:
+```text
+  ▾ 🎥 Basic Camera Control (14)
+    [General] [Static] [Handheld] [Dolly In] [Dolly Out] ...
+```
+
+## Files Changed
+
+### `src/components/ConfigPanel.tsx`
+- Replace `PRESET_GROUPS` with 5 new category arrays matching the uploaded file
+- Replace flat chip rendering with accordion-based collapsible sections per category
+- Each section header: icon + label + count badge, clickable to expand
+- Chips render inside each section with the same click-to-append behavior
+- Use Radix Accordion (already available as `src/components/ui/accordion.tsx`) for clean expand/collapse with only one section open at a time
 
