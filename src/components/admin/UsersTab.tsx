@@ -28,6 +28,17 @@ const UsersTab = () => {
   const [editName, setEditName] = useState("");
   const [editRole, setEditRole] = useState<"admin" | "user">("user");
   const [saving, setSaving] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const filteredUsers = useMemo(() => {
+    if (!searchQuery.trim()) return users;
+    const q = searchQuery.toLowerCase();
+    return users.filter(
+      (u) =>
+        (u.display_name || "").toLowerCase().includes(q) ||
+        (u.email || "").toLowerCase().includes(q)
+    );
+  }, [users, searchQuery]);
 
   useEffect(() => {
     fetchUsers();
