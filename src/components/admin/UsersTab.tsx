@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Pencil, Download } from "lucide-react";
+import { Pencil, Download, Search } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 interface UserRow {
@@ -28,6 +28,17 @@ const UsersTab = () => {
   const [editName, setEditName] = useState("");
   const [editRole, setEditRole] = useState<"admin" | "user">("user");
   const [saving, setSaving] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const filteredUsers = useMemo(() => {
+    if (!searchQuery.trim()) return users;
+    const q = searchQuery.toLowerCase();
+    return users.filter(
+      (u) =>
+        (u.display_name || "").toLowerCase().includes(q) ||
+        (u.email || "").toLowerCase().includes(q)
+    );
+  }, [users, searchQuery]);
 
   useEffect(() => {
     fetchUsers();
@@ -110,7 +121,16 @@ const UsersTab = () => {
 
   return (
     <>
-      <div className="flex items-center justify-end mb-4">
+      <div className="flex items-center justify-between gap-4 mb-4">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search by name or email..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
+        </div>
         <Button variant="outline" size="sm" onClick={() => {
           const lines: string[] = [
             "=== MovPrompt Users Report ===", "",
@@ -131,7 +151,7 @@ const UsersTab = () => {
       </div>
       <Card className="bg-card border-border">
         <CardHeader>
-          <CardTitle className="text-sm font-medium">All Users ({users.length})</CardTitle>
+          <CardTitle className="text-sm font-medium">All Users ({filteredUsers.length}{searchQuery ? ` of ${users.length}` : ""})</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           <Table>
@@ -146,7 +166,7 @@ const UsersTab = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {users.map((u) => (
+              {filteredUsers.map((u) => (
                 <TableRow key={u.id}>
                   <TableCell>
                     <Avatar className="h-8 w-8">
