@@ -14,6 +14,56 @@ export type Database = {
   }
   public: {
     Tables: {
+      announcements: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          ends_at: string | null
+          id: string
+          is_active: boolean
+          link_text: string | null
+          link_url: string | null
+          message: string
+          starts_at: string | null
+          title: string
+          type: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          ends_at?: string | null
+          id?: string
+          is_active?: boolean
+          link_text?: string | null
+          link_url?: string | null
+          message: string
+          starts_at?: string | null
+          title: string
+          type?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          ends_at?: string | null
+          id?: string
+          is_active?: boolean
+          link_text?: string | null
+          link_url?: string | null
+          message?: string
+          starts_at?: string | null
+          title?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "announcements_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       generation_events: {
         Row: {
           created_at: string
