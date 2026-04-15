@@ -1,62 +1,69 @@
 
-## Fix Admin Dashboard Flow
 
-### Diagnosis
-The admin role check is succeeding, but the app still renders the main page first. The evidence is:
-- `has_role` returns `true`
-- right after login, `page_visits` logs `/`, which means `Index` mounted
-- current `AuthGuard` can still render the `Navigate to="/"` branch in the brief render between:
-  1. auth session becoming available
-  2. admin role check finishing for that user
+# Add User Management to Admin Dashboard
 
-There is also a second flow problem:
-- `AdminLogin` redirects any authenticated user to `/admin` immediately, without first confirming they are actually an admin
-- that makes the admin flow feel mixed/confusing
+## What
+Add a "Users" section to the admin dashboard showing all registered users in a table, with the ability to edit user details (display name, role) and view their information.
 
-### What I’ll change
+## Current State
+- 3 users exist: buziyadd@gmail.com (admin), icedtaster@gmail.com, rjrmousherji@gmail.com
+- Profiles table has: id, email, display_name, avatar_url, created_at
+- User roles table has: user_id, role (admin/user)
+- Only admins can read analytics tables; profiles are restricted to own-read
 
-#### 1. Make `AuthGuard` wait for the correct admin check result
-Update `src/components/AuthGuard.tsx` so it:
-- keeps a dedicated admin-role loading state tied to the current user
-- does not clear role-check loading while auth is still restoring
-- only redirects to `/admin/login` after auth is fully resolved and no user exists
-- only redirects away from `/admin` after the role check for the current user has completed and confirmed they are not admin
-- ignores stale role-check results if the user changes during the async request
+## Plan
 
-This is the main fix.
-
-#### 2. Fix `AdminLogin` redirect logic
-Update `src/pages/AdminLogin.tsx` so it:
-- does not auto-navigate to `/admin` just because `user` exists
-- verifies admin role first, then navigates
-- keeps non-admin authenticated users on the admin login page instead of bouncing them into a broken loop
-- shows a clear error/toast if the signed-in account is not an admin
-
-This will make the flow predictable.
-
-#### 3. Make the admin destination visually obvious
-Update `src/pages/Analytics.tsx` slightly so the page clearly reads as an admin dashboard, for example:
-- “Admin Dashboard”
-- “Analytics overview”
-
-This is small, but it will help confirm the user landed in the right place.
-
-### Files to update
-- `src/components/AuthGuard.tsx`
-- `src/pages/AdminLogin.tsx`
-- `src/pages/Analytics.tsx`
-
-### Expected flow after fix
-```text
-/admin
-  -> if not signed in: show /admin/login
-  -> if signed in and admin: show loading spinner briefly, then /admin dashboard
-  -> if signed in but not admin: stay out of dashboard and show clear rejection
-
-/admin/login
-  -> if already signed in and admin: go to /admin
-  -> if already signed in but not admin: remain on login page with clear message
+### 1. Database: Add RLS policy for admin to read all profiles
+Create a migration adding a SELECT policy on `profiles` so admins can see all users:
+```sql
+CREATE POLICY "Admins can read all profiles"
+  ON public.profiles FOR SELECT
+  TO authenticated
+  USING (public.has_role('admin'::app_role));
 ```
 
-### Note
-I also spotted a separate console warning from the home-page account dropdown (`Function components cannot be given refs`). That is unrelated to the admin redirect bug, so I would keep this fix focused on the auth/admin flow first.
+Also add admin SELECT on `user_roles` (currently users can only read their own):
+```sql
+CREATE POLICY "Admins can read all roles"
+  ON public.user_roles FOR SELECT
+  TO authenticated
+  USING (public.has_role('admin'::app_role));
+```
+
+Add admin UPDATE on `profiles`:
+```sql
+CREATE POLICY "Admins can update all profiles"
+  ON public.profiles FOR UPDATE
+  TO authenticated
+  USING (public.has_role('admin'::app_role));
+```
+
+Add admin INSERT/UPDATE/DELETE on `user_roles` so admins can assign roles:
+```sql
+CREATE POLICY "Admins can manage roles"
+  ON public.user_roles FOR ALL
+  TO authenticated
+  USING (public.has_role('admin'::app_role))
+  WITH CHECK (public.has_role('admin'::app_role));
+```
+
+### 2. Update Analytics page with Users tab
+Add a tabbed layout to the admin dashboard:
+- **Analytics** tab (existing charts/stats)
+- **Users** tab (new user management)
+
+The Users tab will show:
+- Table with columns: Avatar, Name, Email, Role, Joined
+- Edit button per row opening a dialog to update display_name and toggle admin role
+- Badge showing role (admin vs user)
+
+### 3. Edit User Dialog
+A dialog with:
+- Display name input (editable)
+- Role toggle (admin/user) via a select dropdown
+- Save button that updates `profiles` and `user_roles` tables
+
+## Files Changed
+- `src/pages/Analytics.tsx` — add Tabs layout, users table, edit dialog
+- Migration SQL — add admin RLS policies on profiles and user_roles
+
