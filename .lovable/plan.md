@@ -1,27 +1,36 @@
 
 
-# Admin Login — Standalone Sign-In Page
+# Fix Admin Login Redirect
 
 ## Problem
-When visiting `/admin`, unauthenticated users are redirected to the full `/auth` page with marketing content and signup options. The user wants `/admin` to show only a minimal sign-in form — no marketing, no signup tab.
+After signing in on `/admin/login`, the user lands on `/` instead of `/admin`. This is a race condition in `AuthGuard`:
 
-## Plan
+1. Component mounts with `checkingRole = true` (good)
+2. Auth is loading, `user` is null → effect runs, sets `checkingRole = false` (bad)
+3. Auth finishes, `user` is set → effect re-runs, starts async `has_role` RPC
+4. But `checkingRole` is already `false`, so the render logic sees `isAdmin = false` and redirects to `/`
 
-### 1. Create `src/pages/AdminLogin.tsx`
-A minimal dark-themed login page with:
-- Only email + password sign-in (no Google, no signup tab, no marketing)
-- On successful sign-in, redirect to `/admin` (where AuthGuard checks admin role)
-- Forgot password link still available
+## Fix
+One change in `src/components/AuthGuard.tsx`: set `checkingRole` back to `true` before starting the role check.
 
-### 2. Update `AuthGuard.tsx`
-Change the redirect for unauthenticated users: when `requireAdmin` is true, redirect to `/admin/login` instead of `/auth`.
+```typescript
+useEffect(() => {
+  if (!requireAdmin || !user) {
+    setCheckingRole(false);
+    return;
+  }
 
-### 3. Update `App.tsx`
-Add route: `<Route path="/admin/login" element={<AdminLogin />} />`
+  setCheckingRole(true); // <-- ADD THIS LINE
 
-## Technical Notes
-- AdminLogin will use `supabase.auth.signInWithPassword` directly
-- After sign-in, `useEffect` navigates to `/admin`, where AuthGuard verifies admin role
-- If a non-admin signs in, they get bounced to `/` as before
-- No new dependencies needed
+  const checkAdmin = async () => {
+    const { data } = await supabase.rpc("has_role", { _role: "admin" });
+    setIsAdmin(!!data);
+    setCheckingRole(false);
+  };
+
+  checkAdmin();
+}, [user, requireAdmin]);
+```
+
+Single line addition. No other files affected.
 
