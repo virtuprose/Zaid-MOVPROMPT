@@ -32,7 +32,7 @@ export const WorkflowPanel = ({ type }: WorkflowPanelProps) => {
   const { user } = useAuth();
   const [images, setImages] = useState<{ file: File; preview: string }[]>([]);
   const [description, setDescription] = useState("");
-  const [model, setModel] = useState("runway");
+  const [model, setModel] = useState("any");
   const [results, setResults] = useState<ShotResult[] | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
