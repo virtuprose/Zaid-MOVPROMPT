@@ -26,9 +26,15 @@ function isRateLimited(ip: string): { limited: boolean; retryAfter?: number } {
 
 const ALLOWED_WORKFLOWS = new Set(["single", "twoframe", "multishot"]);
 const ALLOWED_MODELS = new Set([
-  "runway", "kling-1.0", "kling-1.5", "kling-1.6", "kling-2.0", "kling-3.0",
-  "luma", "veo", "sora", "pika", "hailuo", "seedance",
-  "stable-video", "genmo", "pixverse", "haiper", "vidu", "cogvideo", "wan",
+  "hailuo-2.3-fast", "hailuo-2.3", "hailuo-02-fast", "hailuo-02",
+  "kling-3.0", "kling-3.0-omni", "kling-3.0-omni-edit", "kling-2.6",
+  "kling-o1-video", "kling-o1-video-edit", "kling-motion-control", "kling-3.0-motion-control",
+  "sora-2", "sora-2-pro", "sora-2-max", "sora-2-pro-max",
+  "veo-3.1-lite", "veo-3.1-fast", "veo-3.1", "veo-3-fast", "veo-3",
+  "higgsfield-lite", "higgsfield-standard", "higgsfield-turbo",
+  "wan-2.7", "wan-2.6", "wan-2.5", "wan-2.5-fast", "wan-2.2", "wan-2.2-fast",
+  "seedance-2.0-fast", "seedance-2.0", "seedance-1.5-pro", "seedance-pro", "seedance-pro-fast",
+  "grok-imagine", "grok-imagine-edit",
 ]);
 
 function badRequest(msg: string) {
