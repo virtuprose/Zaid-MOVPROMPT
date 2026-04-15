@@ -10,10 +10,29 @@ export const useAuth = () => {
   useEffect(() => {
     // Set up listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
+      (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
+
+        // Send welcome email for first-time OAuth signups
+        if (event === "SIGNED_IN" && session?.user) {
+          const u = session.user;
+          const isOAuth = u.app_metadata?.provider !== "email";
+          const createdAt = new Date(u.created_at).getTime();
+          const isNew = Date.now() - createdAt < 60_000; // created within last 60s
+          if (isOAuth && isNew) {
+            const name = u.user_metadata?.full_name || u.email?.split("@")[0] || "";
+            supabase.functions.invoke("send-transactional-email", {
+              body: {
+                templateName: "welcome",
+                recipientEmail: u.email,
+                idempotencyKey: `welcome-${u.id}`,
+                templateData: { name },
+              },
+            });
+          }
+        }
       }
     );
 
