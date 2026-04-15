@@ -108,6 +108,15 @@ const Auth = () => {
     }
   };
 
+  const handleAppleSignIn = async () => {
+    const result = await lovable.auth.signInWithOAuth("apple", {
+      redirect_uri: window.location.origin,
+    });
+    if (result.error) {
+      toast({ title: "Apple sign-in failed", description: String(result.error), variant: "destructive" });
+    }
+  };
+
   if (authLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
