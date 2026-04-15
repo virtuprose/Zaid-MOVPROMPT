@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, PieChart, Pie, Cell } from "recharts";
-import { Eye, Sparkles, Users, TrendingUp } from "lucide-react";
+import { Eye, Sparkles, Users, TrendingUp, LogOut } from "lucide-react";
 
 const COLORS = ["hsl(190, 90%, 50%)", "hsl(35, 90%, 55%)", "hsl(280, 70%, 60%)", "hsl(140, 70%, 50%)", "hsl(350, 70%, 55%)"];
 
@@ -19,6 +21,7 @@ interface Stats {
 }
 
 const Analytics = () => {
+  const navigate = useNavigate();
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -111,10 +114,26 @@ const Analytics = () => {
   return (
     <div className="min-h-screen bg-background">
       <div className="container max-w-6xl mx-auto px-4 py-12">
-        <h1 className="text-3xl font-mono font-bold mb-2">
-          Admin <span className="text-primary">Dashboard</span>
-        </h1>
-        <p className="text-muted-foreground mb-8">Analytics overview — MovPrompt usage tracking</p>
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-3xl font-mono font-bold mb-1">
+              Admin <span className="text-primary">Dashboard</span>
+            </h1>
+            <p className="text-muted-foreground">Analytics overview — MovPrompt usage tracking</p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={async () => {
+              await supabase.auth.signOut();
+              navigate("/admin/login", { replace: true });
+            }}
+            className="gap-2"
+          >
+            <LogOut className="w-4 h-4" />
+            Sign Out
+          </Button>
+        </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8">
           {statCards.map((s) => (
