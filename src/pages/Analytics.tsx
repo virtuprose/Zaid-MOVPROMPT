@@ -112,9 +112,9 @@ const Analytics = () => {
     <div className="min-h-screen bg-background">
       <div className="container max-w-6xl mx-auto px-4 py-12">
         <h1 className="text-3xl font-mono font-bold mb-2">
-          Mov<span className="text-primary">Prompt</span> Analytics
+          Admin <span className="text-primary">Dashboard</span>
         </h1>
-        <p className="text-muted-foreground mb-8">Anonymous usage tracking dashboard</p>
+        <p className="text-muted-foreground mb-8">Analytics overview — MovPrompt usage tracking</p>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8">
           {statCards.map((s) => (

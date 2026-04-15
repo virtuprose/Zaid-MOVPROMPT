@@ -13,17 +13,41 @@ const AdminLogin = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [checkingRole, setCheckingRole] = useState(false);
+  const [notAdmin, setNotAdmin] = useState(false);
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
-    if (user) navigate("/admin", { replace: true });
-  }, [user, navigate]);
+    if (authLoading || !user) {
+      setNotAdmin(false);
+      return;
+    }
+
+    // User is signed in — verify admin role before redirecting
+    setCheckingRole(true);
+    const checkRole = async () => {
+      const { data } = await supabase.rpc("has_role", { _role: "admin" });
+      if (data) {
+        navigate("/admin", { replace: true });
+      } else {
+        setNotAdmin(true);
+        toast({
+          title: "Access denied",
+          description: "This account does not have admin privileges.",
+          variant: "destructive",
+        });
+      }
+      setCheckingRole(false);
+    };
+    checkRole();
+  }, [user, authLoading, navigate, toast]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setNotAdmin(false);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
     if (error) {
@@ -31,7 +55,7 @@ const AdminLogin = () => {
     }
   };
 
-  if (authLoading) {
+  if (authLoading || checkingRole) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="w-6 h-6 animate-spin text-primary" />
@@ -55,40 +79,61 @@ const AdminLogin = () => {
           <CardTitle className="text-xl font-display text-foreground">Admin Access</CardTitle>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSignIn} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@example.com"
-                required
-              />
+          {notAdmin && user ? (
+            <div className="text-center space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Signed in as <span className="text-foreground font-medium">{user.email}</span>
+              </p>
+              <p className="text-sm text-destructive">This account does not have admin privileges.</p>
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={async () => {
+                  await supabase.auth.signOut();
+                  setNotAdmin(false);
+                }}
+              >
+                Sign out and try another account
+              </Button>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                required
-              />
-            </div>
-            <Button type="submit" className="w-full h-11 hover:scale-[1.02] active:scale-[0.98]" disabled={loading}>
-              {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              Sign In
-            </Button>
-          </form>
-          <button
-            onClick={() => navigate("/auth")}
-            className="mt-4 text-xs text-muted-foreground hover:text-foreground w-full text-center transition-colors"
-          >
-            Forgot password?
-          </button>
+          ) : (
+            <>
+              <form onSubmit={handleSignIn} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="admin@example.com"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="password">Password</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    required
+                  />
+                </div>
+                <Button type="submit" className="w-full h-11 hover:scale-[1.02] active:scale-[0.98]" disabled={loading}>
+                  {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                  Sign In
+                </Button>
+              </form>
+              <button
+                onClick={() => navigate("/auth")}
+                className="mt-4 text-xs text-muted-foreground hover:text-foreground w-full text-center transition-colors"
+              >
+                Forgot password?
+              </button>
+            </>
+          )}
         </CardContent>
       </Card>
     </div>

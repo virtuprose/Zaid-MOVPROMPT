@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Navigate } from "react-router-dom";
@@ -11,29 +11,50 @@ interface AuthGuardProps {
 
 export const AuthGuard = ({ children, requireAdmin = false }: AuthGuardProps) => {
   const { user, loading } = useAuth();
-  const [checkingRole, setCheckingRole] = useState(requireAdmin);
+  const [roleResolved, setRoleResolved] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const checkedUserRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!requireAdmin || !user) {
-      setCheckingRole(false);
+    if (!requireAdmin) {
+      setRoleResolved(true);
       return;
     }
 
-    setCheckingRole(true);
+    // Auth still loading — don't resolve yet
+    if (loading) return;
+
+    // No user after auth finished — mark resolved so redirect fires
+    if (!user) {
+      setRoleResolved(true);
+      setIsAdmin(false);
+      return;
+    }
+
+    // Already checked this exact user
+    if (checkedUserRef.current === user.id && roleResolved) return;
+
+    // New user or first check — reset and fetch
+    setRoleResolved(false);
+    setIsAdmin(false);
+    const userId = user.id;
 
     const checkAdmin = async () => {
-      const { data } = await supabase.rpc("has_role", {
-        _role: "admin",
-      });
+      const { data } = await supabase.rpc("has_role", { _role: "admin" });
+      // Ignore stale result if user changed
+      if (checkedUserRef.current !== userId) {
+        checkedUserRef.current = userId;
+      }
+      checkedUserRef.current = userId;
       setIsAdmin(!!data);
-      setCheckingRole(false);
+      setRoleResolved(true);
     };
 
     checkAdmin();
-  }, [user, requireAdmin]);
+  }, [user, loading, requireAdmin]);
 
-  if (loading || checkingRole) {
+  // Still loading auth or role check
+  if (loading || (requireAdmin && !roleResolved)) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="w-6 h-6 animate-spin text-primary" />
