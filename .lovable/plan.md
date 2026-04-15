@@ -1,35 +1,38 @@
 
 
-# Welcome Email After Signup
+# Add to Home Screen (Installable Web App)
 
-## Overview
-Send a branded welcome email to every new user after they sign up, encouraging them to stay tuned for new features.
+Since you want the app to feel like a native app when installed from mobile, we'll add a simple web app manifest — no service workers needed. This keeps things lightweight and avoids caching issues.
 
-## Prerequisites (in order)
-Since no email domain is configured yet, we need to set one up first.
+## What you'll get
+- An "Add to Home Screen" install prompt on mobile browsers
+- The app opens fullscreen (no browser chrome) with your branding
+- A custom splash screen with your app icon
 
-### Step 1: Set up email domain
-You'll need to configure a sender domain so emails come from your brand (e.g., `notify@yourdomain.com`). This is done through a setup dialog — you'll add DNS records at your domain provider.
+## Steps
 
-### Step 2: Set up email infrastructure
-Database tables, queues, and background processing for reliable email delivery.
+### 1. Create app icons
+Generate PWA icons (192×192 and 512×512) in the `public/` folder using the MovPrompt branding (dark background, cyan accent).
 
-### Step 3: Scaffold transactional email system
-Creates the Edge Functions needed to send app emails.
+### 2. Create `public/manifest.json`
+A web app manifest with:
+- App name: "MovPrompt"
+- Short name: "MovPrompt"
+- Theme color: `#0a0a0f` (dark bg)
+- Background color: `#0a0a0f`
+- Display: `standalone`
+- Icons referencing the generated files
 
-### Step 4: Create welcome email template
-A React Email template at `_shared/transactional-email-templates/welcome.tsx` with:
-- MovPrompt branding (cyan/dark theme colors adapted for email — white background with cyan accents)
-- Heading: "Welcome to MovPrompt"
-- Body: warm welcome message, excitement about what's coming, encouragement to explore
-- CTA button linking to the app
+### 3. Add meta tags to `index.html`
+- Link to `manifest.json`
+- Apple-specific meta tags (`apple-mobile-web-app-capable`, `apple-mobile-web-app-status-bar-style`, `apple-touch-icon`)
+- Theme color meta tag
 
-### Step 5: Wire up the trigger
-After successful signup in `Auth.tsx`, call `send-transactional-email` with the welcome template. Also handle Google OAuth signups by detecting first login in the auth state listener.
+### 4. Create an install prompt component
+A small banner or button (visible only on mobile when the app isn't already installed) that triggers the browser's native "Add to Home Screen" prompt. It will appear at the bottom of the auth page and main page, styled to match the dark cinematic theme.
 
-### Step 6: Create unsubscribe page
-A branded `/unsubscribe` page (required for compliance) matching the app's dark cinematic style.
-
-## First Action
-The first step is setting up your email domain. You'll see a dialog to enter your domain and configure DNS records.
+## Technical notes
+- No `vite-plugin-pwa` or service workers — just a manifest for installability
+- The install prompt uses the `beforeinstallprompt` browser event (Android/Chrome); on iOS Safari, we'll show instructions ("Tap Share → Add to Home Screen")
+- PWA install only works on the published URL, not in the Lovable editor preview
 
