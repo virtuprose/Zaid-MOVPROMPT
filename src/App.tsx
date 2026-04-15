@@ -9,6 +9,7 @@ import NotFound from "./pages/NotFound.tsx";
 import Analytics from "./pages/Analytics.tsx";
 import Auth from "./pages/Auth.tsx";
 import ResetPassword from "./pages/ResetPassword.tsx";
+import AdminLogin from "./pages/AdminLogin.tsx";
 
 const queryClient = new QueryClient();
 
@@ -22,6 +23,7 @@ const App = () => (
           <Route path="/" element={<AuthGuard><Index /></AuthGuard>} />
           <Route path="/auth" element={<Auth />} />
           <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/admin/login" element={<AdminLogin />} />
           <Route path="/admin" element={<AuthGuard requireAdmin><Analytics /></AuthGuard>} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />

@@ -40,7 +40,7 @@ export const AuthGuard = ({ children, requireAdmin = false }: AuthGuardProps) =>
   }
 
   if (!user) {
-    return <Navigate to="/auth" replace />;
+    return <Navigate to={requireAdmin ? "/admin/login" : "/auth"} replace />;
   }
 
   if (requireAdmin && !isAdmin) {
