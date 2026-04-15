@@ -113,10 +113,26 @@ const Analytics = () => {
   return (
     <div className="min-h-screen bg-background">
       <div className="container max-w-6xl mx-auto px-4 py-12">
-        <h1 className="text-3xl font-mono font-bold mb-2">
-          Admin <span className="text-primary">Dashboard</span>
-        </h1>
-        <p className="text-muted-foreground mb-8">Analytics overview — MovPrompt usage tracking</p>
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-3xl font-mono font-bold mb-1">
+              Admin <span className="text-primary">Dashboard</span>
+            </h1>
+            <p className="text-muted-foreground">Analytics overview — MovPrompt usage tracking</p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={async () => {
+              await supabase.auth.signOut();
+              navigate("/admin/login", { replace: true });
+            }}
+            className="gap-2"
+          >
+            <LogOut className="w-4 h-4" />
+            Sign Out
+          </Button>
+        </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8">
           {statCards.map((s) => (
