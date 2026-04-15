@@ -60,4 +60,17 @@
   h1, h2, h3, h4, h5, h6 {
     font-family: 'Space Grotesk', sans-serif;
   }
+
+  /* Global input focus glow */
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible {
+    @apply ring-2 ring-ring/50 ring-offset-0 outline-none;
+    box-shadow: 0 0 12px hsl(190 90% 50% / 0.15);
+  }
+
+  /* Smooth transitions for interactive elements */
+  button, a, input, textarea, select {
+    @apply transition-all duration-200;
+  }
 }

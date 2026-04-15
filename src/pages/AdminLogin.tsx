@@ -40,8 +40,14 @@ const AdminLogin = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <Card className="w-full max-w-sm border-border/40 bg-card/80 backdrop-blur">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Ambient glow */}
+      <div className="fixed inset-0 pointer-events-none">
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[500px] h-[300px] bg-primary/6 rounded-full blur-[120px]" />
+        <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[250px] bg-accent/4 rounded-full blur-[100px]" />
+      </div>
+
+      <Card className="w-full max-w-sm border-border/40 bg-card/80 backdrop-blur shadow-lg shadow-black/20 relative z-10">
         <CardHeader className="text-center space-y-2">
           <div className="mx-auto w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
             <Shield className="w-5 h-5 text-primary" />
@@ -72,14 +78,14 @@ const AdminLogin = () => {
                 required
               />
             </div>
-            <Button type="submit" className="w-full" disabled={loading}>
+            <Button type="submit" className="w-full h-11 hover:scale-[1.02] active:scale-[0.98]" disabled={loading}>
               {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               Sign In
             </Button>
           </form>
           <button
             onClick={() => navigate("/auth")}
-            className="mt-4 text-xs text-muted-foreground hover:text-foreground w-full text-center"
+            className="mt-4 text-xs text-muted-foreground hover:text-foreground w-full text-center transition-colors"
           >
             Forgot password?
           </button>

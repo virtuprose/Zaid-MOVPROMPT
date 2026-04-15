@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Mail, ArrowLeft, Camera, Layers, History } from "lucide-react";
+import { Loader2, Mail, Camera, Layers, History } from "lucide-react";
 import { motion } from "framer-motion";
 
 const FEATURES = [
@@ -114,25 +114,18 @@ const Auth = () => {
       </div>
 
       <div className="relative z-10 grid md:grid-cols-2 min-h-screen">
-        {/* Left — Marketing */}
+        {/* Left — Marketing (hidden on mobile) */}
         <motion.div
           initial={{ opacity: 0, x: -30 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.6 }}
-          className="flex flex-col justify-center px-6 py-10 md:px-12 lg:px-16"
+          className="hidden md:flex flex-col justify-center px-6 py-10 md:px-12 lg:px-16"
         >
-          <button
-            onClick={() => navigate("/")}
-            className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-8 transition-colors self-start"
-          >
-            <ArrowLeft className="w-4 h-4" /> Back to app
-          </button>
-
-          <h1 className="text-3xl md:text-4xl lg:text-5xl font-display font-bold leading-tight mb-3">
+          <h1 className="text-3xl lg:text-5xl font-display font-bold leading-tight mb-3">
             Turn Stills Into{" "}
             <span className="text-primary">Cinema</span>
           </h1>
-          <p className="text-muted-foreground text-base md:text-lg mb-8 max-w-md">
+          <p className="text-muted-foreground text-base lg:text-lg mb-8 max-w-md">
             AI-powered cinematic prompt generation. Upload a frame, choose your workflow, and get production-ready prompts for any video model.
           </p>
 
@@ -157,7 +150,7 @@ const Auth = () => {
             ))}
           </div>
 
-          <p className="text-xs text-muted-foreground/60 hidden md:block">
+          <p className="text-xs text-muted-foreground/60">
             Trusted by filmmakers and creators worldwide
           </p>
         </motion.div>
@@ -170,17 +163,24 @@ const Auth = () => {
           className="flex items-center justify-center px-4 py-8 md:py-0"
         >
           <div className="w-full max-w-sm">
-            <h2 className="text-xl font-mono font-bold mb-1 md:hidden">
-              Mov<span className="text-primary">Prompt</span>
-            </h2>
-            <p className="text-sm text-muted-foreground mb-5 md:mb-6">
-              Sign in to save your prompts & unlock full access
-            </p>
+            {/* Mobile brand header */}
+            <div className="text-center mb-6">
+              <h2 className="text-2xl font-mono font-bold mb-1">
+                Mov<span className="text-primary">Prompt</span>
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                Sign in to save your prompts & unlock full access
+              </p>
+            </div>
 
-            <Card className="bg-card border-border">
-              <CardContent className="p-5 space-y-5">
+            <Card className="bg-card border-border/60 shadow-lg shadow-black/20">
+              <CardContent className="p-5 sm:p-6 space-y-5">
                 {/* Google */}
-                <Button variant="outline" className="w-full" onClick={handleGoogleSignIn}>
+                <Button
+                  variant="outline"
+                  className="w-full h-11 hover:scale-[1.02] active:scale-[0.98]"
+                  onClick={handleGoogleSignIn}
+                >
                   <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24">
                     <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" />
                     <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
@@ -214,7 +214,7 @@ const Auth = () => {
                           <Label htmlFor="forgot-email">Email</Label>
                           <Input id="forgot-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
                         </div>
-                        <Button type="submit" className="w-full" disabled={loading}>
+                        <Button type="submit" className="w-full h-11 hover:scale-[1.02] active:scale-[0.98]" disabled={loading}>
                           {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Mail className="w-4 h-4 mr-2" />}
                           Send Reset Link
                         </Button>
@@ -232,7 +232,7 @@ const Auth = () => {
                           <Label htmlFor="signin-password">Password</Label>
                           <Input id="signin-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
                         </div>
-                        <Button type="submit" className="w-full" disabled={loading}>
+                        <Button type="submit" className="w-full h-11 hover:scale-[1.02] active:scale-[0.98]" disabled={loading}>
                           {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Mail className="w-4 h-4 mr-2" />}
                           Sign In
                         </Button>
@@ -253,7 +253,7 @@ const Auth = () => {
                         <Label htmlFor="signup-password">Password</Label>
                         <Input id="signup-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} />
                       </div>
-                      <Button type="submit" className="w-full" disabled={loading}>
+                      <Button type="submit" className="w-full h-11 hover:scale-[1.02] active:scale-[0.98]" disabled={loading}>
                         {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Mail className="w-4 h-4 mr-2" />}
                         Create Account
                       </Button>

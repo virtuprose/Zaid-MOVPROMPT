@@ -59,7 +59,7 @@ const Index = () => {
         <div className="absolute bottom-0 right-0 w-[600px] h-[300px] bg-accent/5 rounded-full blur-[100px] animate-pulse-glow" style={{ animationDelay: "1.5s" }} />
       </div>
 
-      <div className="relative z-10 container max-w-4xl mx-auto px-4 py-6 sm:py-12">
+      <div className="relative z-10 container max-w-5xl mx-auto px-4 py-6 sm:py-12">
         {/* Top bar */}
         <div className="flex justify-end mb-4">
           {!loading && (
