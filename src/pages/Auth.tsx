@@ -65,7 +65,7 @@ const Auth = () => {
   const handleEmailSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: { emailRedirectTo: window.location.origin },
@@ -75,6 +75,17 @@ const Auth = () => {
       toast({ title: "Sign up failed", description: error.message, variant: "destructive" });
     } else {
       toast({ title: "Check your email", description: "We sent you a verification link." });
+      // Send welcome email
+      if (data?.user?.email) {
+        supabase.functions.invoke("send-transactional-email", {
+          body: {
+            templateName: "welcome",
+            recipientEmail: data.user.email,
+            idempotencyKey: `welcome-${data.user.id}`,
+            templateData: { name: data.user.email.split("@")[0] },
+          },
+        });
+      }
     }
   };
 
