@@ -14,8 +14,8 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans: ["Inter", "sans-serif"],
-        display: ["Space Grotesk", "sans-serif"],
+        sans: ["Inter", "Noto Sans Arabic", "sans-serif"],
+        display: ["Space Grotesk", "Noto Sans Arabic", "sans-serif"],
       },
       colors: {
         border: "hsl(var(--border))",

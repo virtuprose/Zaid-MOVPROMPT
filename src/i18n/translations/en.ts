@@ -116,6 +116,9 @@ export const en = {
 
   // AnnouncementBanner
   "announcement.learnMore": "Learn more",
+
+  // ImageUploadZone
+  "upload.dragDrop": "Drag & drop or click to upload",
 } as const;
 
 export type TranslationKey = keyof typeof en;
