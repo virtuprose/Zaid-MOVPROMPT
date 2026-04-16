@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useState, forwardRef } from "react";
 import { motion } from "framer-motion";
 import { useLanguage } from "@/i18n/LanguageContext";
+import { toast } from "sonner";
 
 interface ShotResult {
   shotName?: string;
@@ -47,13 +48,21 @@ const ResultCard = ({ label, value, accent }: { label: string; value: string; ac
 
 export const ResultsPanel = forwardRef<HTMLDivElement, ResultsPanelProps>(({ results, onRegenerate, isLoading }, ref) => {
   const { t } = useLanguage();
+  const [allCopied, setAllCopied] = useState(false);
 
-  const handleCopyAll = () => {
+  const handleCopyAll = async () => {
     const allText = results.map((r, i) => {
       const prefix = r.shotName ? `--- ${r.shotName} ---\n` : results.length > 1 ? `--- Shot ${i + 1} ---\n` : "";
       return `${prefix}Main Prompt:\n${r.mainPrompt}\n\nNegative Prompt:\n${r.negativePrompt}\n\nCamera:\n${r.cameraSuggestions}\n\nModel Notes:\n${r.modelNotes}`;
     }).join("\n\n");
-    navigator.clipboard.writeText(allText);
+    try {
+      await navigator.clipboard.writeText(allText);
+      setAllCopied(true);
+      toast.success(t("results.copied"));
+      setTimeout(() => setAllCopied(false), 2000);
+    } catch {
+      toast.error("Failed to copy");
+    }
   };
 
   return (
@@ -61,8 +70,9 @@ export const ResultsPanel = forwardRef<HTMLDivElement, ResultsPanelProps>(({ res
       <div className="flex items-center justify-between gap-2">
         <h3 className="font-display text-base sm:text-lg font-semibold">{t("results.title")}</h3>
         <div className="flex gap-1.5 sm:gap-2">
-          <Button variant="outline" size="sm" onClick={handleCopyAll} className="px-2 sm:px-3">
-            <Copy className="w-3.5 h-3.5 sm:me-1.5" /> <span className="hidden sm:inline">{t("results.copyAll")}</span>
+          <Button variant="outline" size="sm" onClick={handleCopyAll} className={`px-2 sm:px-3 ${allCopied ? "border-green-500/50 text-green-400" : ""}`}>
+            {allCopied ? <Check className="w-3.5 h-3.5 sm:me-1.5 text-green-400" /> : <Copy className="w-3.5 h-3.5 sm:me-1.5" />}
+            <span className="hidden sm:inline">{allCopied ? t("results.copied") : t("results.copyAll")}</span>
           </Button>
           <Button variant="outline" size="sm" onClick={onRegenerate} disabled={isLoading} className="px-2 sm:px-3">
             <RefreshCw className={`w-3.5 h-3.5 sm:me-1.5 ${isLoading ? "animate-spin" : ""}`} /> <span className="hidden sm:inline">{t("results.regenerate")}</span>
