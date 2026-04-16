@@ -5,7 +5,8 @@ import { ImageUploadZone } from "./ImageUploadZone";
 import { ConfigPanel } from "./ConfigPanel";
 import { ResultsPanel } from "./ResultsPanel";
 import { ResultsSkeleton } from "./ResultsSkeleton";
-import { Sparkles, Loader2 } from "lucide-react";
+import { SceneBreakdown, type SceneElement, type ElementDirection, type ElementDirections } from "./SceneBreakdown";
+import { Sparkles, Loader2, ScanSearch, RotateCcw } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -13,6 +14,7 @@ import { trackGeneration } from "@/lib/analytics";
 import { useAuth } from "@/hooks/useAuth";
 
 type WorkflowType = "single" | "twoframe" | "multishot";
+type Phase = "upload" | "breakdown" | "generate";
 
 interface ShotResult {
   shotName?: string;
@@ -38,6 +40,12 @@ export const WorkflowPanel = ({ type }: WorkflowPanelProps) => {
   const [results, setResults] = useState<ShotResult[] | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
+  // Scene breakdown state
+  const [phase, setPhase] = useState<Phase>("upload");
+  const [sceneElements, setSceneElements] = useState<SceneElement[]>([]);
+  const [elementDirections, setElementDirections] = useState<ElementDirections>({});
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+
   const maxImages = type === "twoframe" ? 2 : 1;
 
   const handleImageSelect = useCallback((index: number, file: File) => {
@@ -48,6 +56,9 @@ export const WorkflowPanel = ({ type }: WorkflowPanelProps) => {
       return next;
     });
     setResults(null);
+    setPhase("upload");
+    setSceneElements([]);
+    setElementDirections({});
   }, []);
 
   const handleImageRemove = useCallback((index: number) => {
@@ -57,6 +68,9 @@ export const WorkflowPanel = ({ type }: WorkflowPanelProps) => {
       return next;
     });
     setResults(null);
+    setPhase("upload");
+    setSceneElements([]);
+    setElementDirections({});
   }, []);
 
   const hasRequiredImages = type === "twoframe" ? images.length === 2 : images.length >= 1;
@@ -77,7 +91,7 @@ export const WorkflowPanel = ({ type }: WorkflowPanelProps) => {
         const ctx = canvas.getContext("2d")!;
         ctx.drawImage(img, 0, 0, w, h);
         const dataUrl = canvas.toDataURL("image/jpeg", quality);
-        resolve(dataUrl.split(",")[1]); // return base64 without prefix
+        resolve(dataUrl.split(",")[1]);
         URL.revokeObjectURL(img.src);
       };
       img.onerror = reject;
@@ -85,14 +99,44 @@ export const WorkflowPanel = ({ type }: WorkflowPanelProps) => {
     });
   };
 
+  const handleAnalyze = async () => {
+    if (!hasRequiredImages) return;
+    if (!user) {
+      toast({ title: "Sign in required", description: "Please sign in to analyze scenes.", variant: "destructive" });
+      navigate("/auth");
+      return;
+    }
+    setIsAnalyzing(true);
+    try {
+      const imageBase64s = await Promise.all(images.map((img) => compressImage(img.file)));
+      const { data, error } = await supabase.functions.invoke("analyze-scene", {
+        body: { images: imageBase64s },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      const elements: SceneElement[] = data.elements || [];
+      setSceneElements(elements);
+
+      // Default all elements to "move"
+      const dirs: ElementDirections = {};
+      for (const el of elements) {
+        dirs[el.id] = { action: "move", note: "" };
+      }
+      setElementDirections(dirs);
+      setPhase("breakdown");
+    } catch (err: any) {
+      console.error("Analysis error:", err);
+      toast({ title: "Scene analysis failed", description: err.message || "Something went wrong.", variant: "destructive" });
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
   const handleGenerate = async () => {
     if (!hasRequiredImages) return;
     if (!user) {
-      toast({
-        title: "Sign in required",
-        description: "Please sign in to generate prompts.",
-        variant: "destructive",
-      });
+      toast({ title: "Sign in required", description: "Please sign in to generate prompts.", variant: "destructive" });
       navigate("/auth");
       return;
     }
@@ -100,10 +144,17 @@ export const WorkflowPanel = ({ type }: WorkflowPanelProps) => {
     setResults(null);
 
     try {
-      // Compress and convert images to base64
-      const imageBase64s = await Promise.all(
-        images.map((img) => compressImage(img.file))
-      );
+      const imageBase64s = await Promise.all(images.map((img) => compressImage(img.file)));
+
+      // Build scene breakdown payload if available
+      const sceneBreakdown = sceneElements.length > 0
+        ? sceneElements.map((el) => ({
+            category: el.category,
+            description: el.description,
+            action: elementDirections[el.id]?.action || "move",
+            note: elementDirections[el.id]?.note || "",
+          }))
+        : undefined;
 
       const { data, error } = await supabase.functions.invoke("generate-prompt", {
         body: {
@@ -111,6 +162,7 @@ export const WorkflowPanel = ({ type }: WorkflowPanelProps) => {
           workflowType: type,
           description,
           targetModel: model,
+          sceneBreakdown,
         },
       });
 
@@ -118,9 +170,9 @@ export const WorkflowPanel = ({ type }: WorkflowPanelProps) => {
       if (data?.error) throw new Error(data.error);
 
       setResults(data.results);
+      setPhase("generate");
       trackGeneration(type, model);
 
-      // Save to history if logged in
       if (user) {
         supabase.from("prompt_history").insert({
           user_id: user.id,
@@ -133,11 +185,7 @@ export const WorkflowPanel = ({ type }: WorkflowPanelProps) => {
       }
     } catch (err: any) {
       console.error("Generation error:", err);
-      toast({
-        title: "Generation failed",
-        description: err.message || "Something went wrong. Please try again.",
-        variant: "destructive",
-      });
+      toast({ title: "Generation failed", description: err.message || "Something went wrong. Please try again.", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -164,14 +212,57 @@ export const WorkflowPanel = ({ type }: WorkflowPanelProps) => {
       </div>
 
       <AnimatePresence>
-        {hasRequiredImages && (
+        {/* Phase 1: Show Analyze Scene button */}
+        {hasRequiredImages && phase === "upload" && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className="flex justify-center"
+          >
+            <Button
+              size="lg"
+              onClick={handleAnalyze}
+              disabled={isAnalyzing}
+              className="px-6 sm:px-8 font-display font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/25"
+            >
+              {isAnalyzing ? (
+                <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Analyzing Scene...</>
+              ) : (
+                <><ScanSearch className="w-4 h-4 mr-2" /> Analyze Scene</>
+              )}
+            </Button>
+          </motion.div>
+        )}
+
+        {/* Phase 2: Scene Breakdown + ConfigPanel + Generate */}
+        {(phase === "breakdown" || phase === "generate") && sceneElements.length > 0 && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
             className="space-y-4"
           >
+            <SceneBreakdown
+              elements={sceneElements}
+              directions={elementDirections}
+              onDirectionsChange={setElementDirections}
+            />
+
+            <div className="flex justify-end">
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={handleAnalyze}
+                disabled={isAnalyzing}
+                className="text-xs text-muted-foreground gap-1"
+              >
+                <RotateCcw className="w-3 h-3" /> Re-analyze
+              </Button>
+            </div>
+
             <ConfigPanel description={description} model={model} onDescriptionChange={setDescription} onModelChange={setModel} />
+
             <div className="flex justify-center">
               <Button
                 size="lg"
@@ -180,13 +271,9 @@ export const WorkflowPanel = ({ type }: WorkflowPanelProps) => {
                 className="px-6 sm:px-8 font-display font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/25"
               >
                 {isLoading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Analyzing Scene...
-                  </>
+                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Analyzing Scene...</>
                 ) : (
-                  <>
-                    <Sparkles className="w-4 h-4 mr-2" /> Generate Cinematic Prompt
-                  </>
+                  <><Sparkles className="w-4 h-4 mr-2" /> Generate Cinematic Prompt</>
                 )}
               </Button>
             </div>

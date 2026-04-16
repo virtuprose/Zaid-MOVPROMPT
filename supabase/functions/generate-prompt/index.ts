@@ -206,7 +206,7 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { images, workflowType, description, targetModel } = body;
+    const { images, workflowType, description, targetModel, sceneBreakdown } = body;
 
     // --- Input Validation ---
     if (!Array.isArray(images) || images.length === 0 || images.length > 2) {
@@ -281,6 +281,18 @@ serve(async (req) => {
     if (description?.trim()) {
       userText += `User's creative vision: ${description.trim()}\n\n`;
     }
+    // Inject scene breakdown if provided by user
+    if (Array.isArray(sceneBreakdown) && sceneBreakdown.length > 0) {
+      userText += `Scene Breakdown (user-directed):\n`;
+      for (const el of sceneBreakdown) {
+        const actionLabel = el.action === "lock" ? "LOCK (keep static)" : "MOVE (animate)";
+        userText += `- ${el.category}: "${el.description}" → ${actionLabel}`;
+        if (el.note?.trim()) userText += ` | Note: "${el.note.trim()}"`;
+        userText += `\n`;
+      }
+      userText += `\nRespect the user's lock/move directions precisely. Locked elements should remain static. Move elements should be animated.\n\n`;
+    }
+
     userText += `Analyze the image(s) using the Scene Decomposition Protocol, then generate cinematic prompts optimized for the target model.`;
 
     const userContent: any[] = [{ type: "text", text: userText }];
