@@ -10,7 +10,7 @@ import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Copy, ChevronDown, Library as LibraryIcon, Sparkles, Check } from "lucide-react";
+import { ArrowLeft, Copy, ChevronDown, Library as LibraryIcon, Sparkles, Check, Trash2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 interface HistoryEntry {
@@ -54,7 +54,7 @@ function CopyButton({ text }: { text: string }) {
   );
 }
 
-function HistoryCard({ entry, t }: { entry: HistoryEntry; t: (k: string) => string }) {
+function HistoryCard({ entry, t, onDelete }: { entry: HistoryEntry; t: (k: string) => string; onDelete: (id: string) => void }) {
   const [expanded, setExpanded] = useState(false);
   const wf = WORKFLOW_LABELS[entry.workflow_type] || WORKFLOW_LABELS.single;
   const results: any[] = Array.isArray(entry.results) ? entry.results : [entry.results];
@@ -98,7 +98,16 @@ function HistoryCard({ entry, t }: { entry: HistoryEntry; t: (k: string) => stri
             className="overflow-hidden"
           >
             <div className="px-4 pb-4 space-y-4 border-t border-border pt-3">
-              <div className="flex justify-end">
+              <div className="flex justify-end gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2 text-xs gap-1 text-destructive hover:text-destructive hover:bg-destructive/10"
+                  onClick={(e) => { e.stopPropagation(); onDelete(entry.id); }}
+                >
+                  <Trash2 className="w-3 h-3" />
+                  {t("library.delete")}
+                </Button>
                 <CopyButton text={allText} />
               </div>
               {results.map((shot: any, i: number) => (
