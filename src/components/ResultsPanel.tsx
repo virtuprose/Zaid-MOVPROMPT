@@ -52,8 +52,8 @@ export const ResultsPanel = forwardRef<HTMLDivElement, ResultsPanelProps>(({ res
 
   const handleCopyAll = async () => {
     const allText = results.map((r, i) => {
-      const prefix = r.shotName ? `--- ${r.shotName} ---\n` : results.length > 1 ? `--- Shot ${i + 1} ---\n` : "";
-      return `${prefix}Main Prompt:\n${r.mainPrompt}\n\nNegative Prompt:\n${r.negativePrompt}\n\nCamera:\n${r.cameraSuggestions}\n\nModel Notes:\n${r.modelNotes}`;
+      const prefix = r.shotName ? `--- ${r.shotName} ---\n` : results.length > 1 ? `--- ${t("library.shot")} ${i + 1} ---\n` : "";
+      return `${prefix}${t("results.mainPrompt")}:\n${r.mainPrompt}\n\n${t("results.negativePrompt")}:\n${r.negativePrompt}\n\n${t("results.cameraSuggestions")}:\n${r.cameraSuggestions}\n\n${t("results.modelNotes")}:\n${r.modelNotes}`;
     }).join("\n\n");
     try {
       await navigator.clipboard.writeText(allText);
@@ -61,7 +61,7 @@ export const ResultsPanel = forwardRef<HTMLDivElement, ResultsPanelProps>(({ res
       toast.success(t("results.copied"));
       setTimeout(() => setAllCopied(false), 2000);
     } catch {
-      toast.error("Failed to copy");
+      toast.error(t("results.failedCopy"));
     }
   };
 
@@ -89,7 +89,7 @@ export const ResultsPanel = forwardRef<HTMLDivElement, ResultsPanelProps>(({ res
                   {idx + 1}/{results.length}
                 </span>
               )}
-              <span className="text-accent">{result.shotName || `Shot ${idx + 1}`}</span>
+              <span className="text-accent">{result.shotName || `${t("library.shot")} ${idx + 1}`}</span>
             </CardTitle>
           </CardHeader>
           <CardContent>
