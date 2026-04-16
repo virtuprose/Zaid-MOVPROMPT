@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useLanguage } from "@/i18n/LanguageContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Loader2, MailX, CheckCircle2, AlertCircle } from "lucide-react";
@@ -12,6 +13,7 @@ const Unsubscribe = () => {
   const token = searchParams.get("token");
   const [status, setStatus] = useState<Status>("loading");
   const [submitting, setSubmitting] = useState(false);
+  const { t } = useLanguage();
 
   useEffect(() => {
     if (!token) {
@@ -70,33 +72,33 @@ const Unsubscribe = () => {
   const content: Record<Status, { icon: React.ReactNode; title: string; desc: string }> = {
     loading: {
       icon: <Loader2 className="w-8 h-8 animate-spin text-primary" />,
-      title: "Verifying…",
-      desc: "Please wait while we verify your request.",
+      title: t("unsub.verifying"),
+      desc: t("unsub.verifyingDesc"),
     },
     valid: {
       icon: <MailX className="w-8 h-8 text-primary" />,
-      title: "Unsubscribe",
-      desc: "Click below to unsubscribe from MovPrompt emails.",
+      title: t("unsub.title"),
+      desc: t("unsub.desc"),
     },
     already: {
       icon: <CheckCircle2 className="w-8 h-8 text-muted-foreground" />,
-      title: "Already Unsubscribed",
-      desc: "You've already unsubscribed from these emails.",
+      title: t("unsub.alreadyTitle"),
+      desc: t("unsub.alreadyDesc"),
     },
     invalid: {
       icon: <AlertCircle className="w-8 h-8 text-destructive" />,
-      title: "Invalid Link",
-      desc: "This unsubscribe link is invalid or has expired.",
+      title: t("unsub.invalidTitle"),
+      desc: t("unsub.invalidDesc"),
     },
     success: {
       icon: <CheckCircle2 className="w-8 h-8 text-green-500" />,
-      title: "Unsubscribed",
-      desc: "You've been successfully unsubscribed. You won't receive any more emails from us.",
+      title: t("unsub.successTitle"),
+      desc: t("unsub.successDesc"),
     },
     error: {
       icon: <AlertCircle className="w-8 h-8 text-destructive" />,
-      title: "Something Went Wrong",
-      desc: "We couldn't process your request. Please try again later.",
+      title: t("unsub.errorTitle"),
+      desc: t("unsub.errorDesc"),
     },
   };
 
@@ -117,7 +119,7 @@ const Unsubscribe = () => {
               variant="destructive"
             >
               {submitting && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
-              Confirm Unsubscribe
+              {t("unsub.confirm")}
             </Button>
           )}
         </CardContent>

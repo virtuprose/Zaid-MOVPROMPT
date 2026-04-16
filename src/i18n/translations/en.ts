@@ -193,6 +193,21 @@ export const en = {
   "auth.termsLink": "Terms & Conditions",
   "auth.privacyLink": "Privacy Policy",
   "auth.mustAgreeTerms": "You must agree to the Terms & Conditions to create an account.",
+
+  // Unsubscribe
+  "unsub.verifying": "Verifying…",
+  "unsub.verifyingDesc": "Please wait while we verify your request.",
+  "unsub.title": "Unsubscribe",
+  "unsub.desc": "Click below to unsubscribe from MovPrompt emails.",
+  "unsub.alreadyTitle": "Already Unsubscribed",
+  "unsub.alreadyDesc": "You've already unsubscribed from these emails.",
+  "unsub.invalidTitle": "Invalid Link",
+  "unsub.invalidDesc": "This unsubscribe link is invalid or has expired.",
+  "unsub.successTitle": "Unsubscribed",
+  "unsub.successDesc": "You've been successfully unsubscribed. You won't receive any more emails from us.",
+  "unsub.errorTitle": "Something Went Wrong",
+  "unsub.errorDesc": "We couldn't process your request. Please try again later.",
+  "unsub.confirm": "Confirm Unsubscribe",
 } as const;
 
 export type TranslationKey = keyof typeof en;

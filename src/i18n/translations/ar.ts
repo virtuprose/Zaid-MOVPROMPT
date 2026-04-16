@@ -195,4 +195,19 @@ export const ar: Record<TranslationKey, string> = {
   "auth.termsLink": "الشروط والأحكام",
   "auth.privacyLink": "سياسة الخصوصية",
   "auth.mustAgreeTerms": "يجب الموافقة على الشروط والأحكام لإنشاء حساب.",
+
+  // Unsubscribe
+  "unsub.verifying": "جاري التحقق…",
+  "unsub.verifyingDesc": "يرجى الانتظار أثناء التحقق من طلبك.",
+  "unsub.title": "إلغاء الاشتراك",
+  "unsub.desc": "اضغط أدناه لإلغاء الاشتراك من رسائل MovPrompt.",
+  "unsub.alreadyTitle": "تم إلغاء الاشتراك مسبقاً",
+  "unsub.alreadyDesc": "لقد ألغيت اشتراكك بالفعل من هذه الرسائل.",
+  "unsub.invalidTitle": "رابط غير صالح",
+  "unsub.invalidDesc": "رابط إلغاء الاشتراك هذا غير صالح أو منتهي الصلاحية.",
+  "unsub.successTitle": "تم إلغاء الاشتراك",
+  "unsub.successDesc": "تم إلغاء اشتراكك بنجاح. لن تتلقى المزيد من الرسائل منا.",
+  "unsub.errorTitle": "حدث خطأ",
+  "unsub.errorDesc": "لم نتمكن من معالجة طلبك. يرجى المحاولة لاحقاً.",
+  "unsub.confirm": "تأكيد إلغاء الاشتراك",
 };
