@@ -97,6 +97,7 @@ export const ar: Record<TranslationKey, string> = {
   "results.title": "التوجيهات المُولّدة",
   "results.copyAll": "نسخ الكل",
   "results.regenerate": "إعادة التوليد",
+  "results.copied": "تم النسخ!",
   "results.mainPrompt": "التوجيه الرئيسي",
   "results.negativePrompt": "التوجيه السلبي",
   "results.cameraSuggestions": "اقتراحات الكاميرا",

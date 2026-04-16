@@ -95,6 +95,7 @@ export const en = {
   "results.title": "Generated Prompts",
   "results.copyAll": "Copy All",
   "results.regenerate": "Regenerate",
+  "results.copied": "Copied!",
   "results.mainPrompt": "Main Prompt",
   "results.negativePrompt": "Negative Prompt",
   "results.cameraSuggestions": "Camera Suggestions",
