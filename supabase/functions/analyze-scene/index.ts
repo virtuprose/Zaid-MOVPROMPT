@@ -30,15 +30,19 @@ function badRequest(msg: string) {
   });
 }
 
-const SYSTEM_PROMPT = `You are an expert scene analyst for cinematic video production. Given an image, decompose it into distinct visual elements that a director would consider when planning camera movement and animation.
+const SYSTEM_PROMPT = `You are an expert scene analyst for cinematic video production. You will be given one or more images. Analyze EACH image separately and return the results grouped by frame index.
+
+For each image (frame), decompose it into distinct visual elements that a director would consider when planning camera movement and animation.
 
 For each element, provide:
-- id: a unique short identifier (e.g. "subject_1", "bg_1")
+- id: a unique short identifier prefixed with frame index (e.g. "f0_subject_1", "f1_bg_1")
 - category: one of "Subject", "Background", "Lighting", "Atmosphere", "Objects", "Colors"
 - description: a concise label (e.g. "Woman in red dress", "Golden hour side lighting")
 - details: 1-2 sentences elaborating on the element's current state, texture, position, and animation potential
 
-Analyze the image thoroughly. Return 4-8 elements covering the most important visual components. Focus on elements that are relevant for deciding what should stay static vs what should be animated in a video.`;
+Analyze each image thoroughly. Return 4-8 elements per frame covering the most important visual components. Focus on elements that are relevant for deciding what should stay static vs what should be animated in a video.
+
+IMPORTANT: Return results as a "frames" array where each frame has a frameIndex (0-based) and its own elements array. Even for a single image, wrap it in the frames structure.`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -98,7 +102,7 @@ serve(async (req) => {
     }
 
     const userContent: any[] = [
-      { type: "text", text: "Analyze this image and decompose it into distinct scene elements for cinematic direction." },
+      { type: "text", text: `Analyze ${images.length === 1 ? "this image" : "these " + images.length + " images separately"} and decompose each into distinct scene elements for cinematic direction. ${images.length > 1 ? "Image 1 is the first frame, Image 2 is the second frame. Analyze each independently." : ""}` },
     ];
     for (const img of images) {
       userContent.push({
@@ -124,31 +128,43 @@ serve(async (req) => {
             type: "function",
             function: {
               name: "scene_breakdown",
-              description: "Return structured scene elements from image analysis",
+              description: "Return structured scene elements from image analysis, grouped by frame",
               parameters: {
                 type: "object",
                 properties: {
-                  elements: {
+                  frames: {
                     type: "array",
                     items: {
                       type: "object",
                       properties: {
-                        id: { type: "string", description: "Unique element identifier" },
-                        category: {
-                          type: "string",
-                          enum: ["Subject", "Background", "Lighting", "Atmosphere", "Objects", "Colors"],
-                          description: "Element category",
+                        frameIndex: { type: "number", description: "Zero-based frame index" },
+                        elements: {
+                          type: "array",
+                          items: {
+                            type: "object",
+                            properties: {
+                              id: { type: "string", description: "Unique element identifier" },
+                              category: {
+                                type: "string",
+                                enum: ["Subject", "Background", "Lighting", "Atmosphere", "Objects", "Colors"],
+                                description: "Element category",
+                              },
+                              description: { type: "string", description: "Concise label for the element" },
+                              details: { type: "string", description: "Elaborated description with animation potential" },
+                            },
+                            required: ["id", "category", "description", "details"],
+                            additionalProperties: false,
+                          },
+                          description: "Array of 4-8 scene elements for this frame",
                         },
-                        description: { type: "string", description: "Concise label for the element" },
-                        details: { type: "string", description: "Elaborated description with animation potential" },
                       },
-                      required: ["id", "category", "description", "details"],
+                      required: ["frameIndex", "elements"],
                       additionalProperties: false,
                     },
-                    description: "Array of 4-8 scene elements",
+                    description: "Array of frames, each containing its scene elements",
                   },
                 },
-                required: ["elements"],
+                required: ["frames"],
                 additionalProperties: false,
               },
             },

@@ -5,7 +5,7 @@ import { ImageUploadZone } from "./ImageUploadZone";
 import { ConfigPanel } from "./ConfigPanel";
 import { ResultsPanel } from "./ResultsPanel";
 import { ResultsSkeleton } from "./ResultsSkeleton";
-import { SceneBreakdown, type SceneElement, type ElementDirection, type ElementDirections } from "./SceneBreakdown";
+import { SceneBreakdown, type SceneFrame, type ElementDirections } from "./SceneBreakdown";
 import { Sparkles, Loader2, ScanSearch, RotateCcw } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
@@ -40,9 +40,9 @@ export const WorkflowPanel = ({ type }: WorkflowPanelProps) => {
   const [results, setResults] = useState<ShotResult[] | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Scene breakdown state
+  // Scene breakdown state — now frame-grouped
   const [phase, setPhase] = useState<Phase>("upload");
-  const [sceneElements, setSceneElements] = useState<SceneElement[]>([]);
+  const [sceneFrames, setSceneFrames] = useState<SceneFrame[]>([]);
   const [elementDirections, setElementDirections] = useState<ElementDirections>({});
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
@@ -57,7 +57,7 @@ export const WorkflowPanel = ({ type }: WorkflowPanelProps) => {
     });
     setResults(null);
     setPhase("upload");
-    setSceneElements([]);
+    setSceneFrames([]);
     setElementDirections({});
   }, []);
 
@@ -69,7 +69,7 @@ export const WorkflowPanel = ({ type }: WorkflowPanelProps) => {
     });
     setResults(null);
     setPhase("upload");
-    setSceneElements([]);
+    setSceneFrames([]);
     setElementDirections({});
   }, []);
 
@@ -115,13 +115,15 @@ export const WorkflowPanel = ({ type }: WorkflowPanelProps) => {
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
-      const elements: SceneElement[] = data.elements || [];
-      setSceneElements(elements);
+      const frames: SceneFrame[] = data.frames || [];
+      setSceneFrames(frames);
 
       // Default all elements to "move"
       const dirs: ElementDirections = {};
-      for (const el of elements) {
-        dirs[el.id] = { action: "move", note: "" };
+      for (const frame of frames) {
+        for (const el of frame.elements) {
+          dirs[el.id] = { action: "move", note: "" };
+        }
       }
       setElementDirections(dirs);
       setPhase("breakdown");
@@ -146,13 +148,17 @@ export const WorkflowPanel = ({ type }: WorkflowPanelProps) => {
     try {
       const imageBase64s = await Promise.all(images.map((img) => compressImage(img.file)));
 
-      // Build scene breakdown payload if available
-      const sceneBreakdown = sceneElements.length > 0
-        ? sceneElements.map((el) => ({
-            category: el.category,
-            description: el.description,
-            action: elementDirections[el.id]?.action || "move",
-            note: elementDirections[el.id]?.note || "",
+      // Build scene breakdown payload grouped by frame
+      const sceneBreakdown = sceneFrames.length > 0
+        ? sceneFrames.map((frame) => ({
+            frameIndex: frame.frameIndex,
+            frameLabel: frameLabels[frame.frameIndex] || `Frame ${frame.frameIndex + 1}`,
+            elements: frame.elements.map((el) => ({
+              category: el.category,
+              description: el.description,
+              action: elementDirections[el.id]?.action || "move",
+              note: elementDirections[el.id]?.note || "",
+            })),
           }))
         : undefined;
 
@@ -191,6 +197,14 @@ export const WorkflowPanel = ({ type }: WorkflowPanelProps) => {
     }
   };
 
+  const frameLabels: string[] = (() => {
+    switch (type) {
+      case "twoframe": return ["Start Frame", "End Frame"];
+      case "multishot": return ["Concept Image"];
+      default: return ["Your Frame"];
+    }
+  })();
+
   const labels = {
     single: ["Upload your frame"],
     twoframe: ["Start Frame", "End Frame"],
@@ -212,7 +226,6 @@ export const WorkflowPanel = ({ type }: WorkflowPanelProps) => {
       </div>
 
       <AnimatePresence>
-        {/* Phase 1: Show Analyze Scene button */}
         {hasRequiredImages && phase === "upload" && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
@@ -235,8 +248,7 @@ export const WorkflowPanel = ({ type }: WorkflowPanelProps) => {
           </motion.div>
         )}
 
-        {/* Phase 2: Scene Breakdown + ConfigPanel + Generate */}
-        {(phase === "breakdown" || phase === "generate") && sceneElements.length > 0 && (
+        {(phase === "breakdown" || phase === "generate") && sceneFrames.length > 0 && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
@@ -244,7 +256,9 @@ export const WorkflowPanel = ({ type }: WorkflowPanelProps) => {
             className="space-y-4"
           >
             <SceneBreakdown
-              elements={sceneElements}
+              frames={sceneFrames}
+              frameLabels={frameLabels}
+              framePreviews={images.map((img) => img?.preview || null)}
               directions={elementDirections}
               onDirectionsChange={setElementDirections}
             />
@@ -271,7 +285,7 @@ export const WorkflowPanel = ({ type }: WorkflowPanelProps) => {
                 className="px-6 sm:px-8 font-display font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/25"
               >
                 {isLoading ? (
-                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Analyzing Scene...</>
+                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Generating Prompt...</>
                 ) : (
                   <><Sparkles className="w-4 h-4 mr-2" /> Generate Cinematic Prompt</>
                 )}

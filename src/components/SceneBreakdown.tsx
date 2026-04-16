@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Lock, Play, Plus, X, User, Mountain, Sun, Cloud, Package, Palette } from "lucide-react";
+import { Lock, Play, Plus, X, User, Mountain, Sun, Cloud, Package, Palette, Film } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -11,6 +11,11 @@ export interface SceneElement {
   details: string;
 }
 
+export interface SceneFrame {
+  frameIndex: number;
+  elements: SceneElement[];
+}
+
 export interface ElementDirection {
   action: "lock" | "move";
   note: string;
@@ -19,7 +24,9 @@ export interface ElementDirection {
 export type ElementDirections = Record<string, ElementDirection>;
 
 interface SceneBreakdownProps {
-  elements: SceneElement[];
+  frames: SceneFrame[];
+  frameLabels: string[];
+  framePreviews: (string | null)[];
   directions: ElementDirections;
   onDirectionsChange: (directions: ElementDirections) => void;
 }
@@ -42,7 +49,7 @@ const categoryEmoji: Record<string, string> = {
   Colors: "🎨",
 };
 
-export const SceneBreakdown = ({ elements, directions, onDirectionsChange }: SceneBreakdownProps) => {
+export const SceneBreakdown = ({ frames, frameLabels, framePreviews, directions, onDirectionsChange }: SceneBreakdownProps) => {
   const [expandedNotes, setExpandedNotes] = useState<Set<string>>(new Set());
 
   const toggleAction = (id: string) => {
@@ -69,105 +76,139 @@ export const SceneBreakdown = ({ elements, directions, onDirectionsChange }: Sce
     });
   };
 
+  const showFrameHeaders = frames.length > 1;
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="space-y-3"
+      className="space-y-4"
     >
       <div className="flex items-center gap-2 mb-2">
         <h3 className="text-sm font-display font-semibold text-foreground">Scene Elements</h3>
         <span className="text-xs text-muted-foreground">— Mark each as Lock (static) or Move (animate)</span>
       </div>
 
-      <div className="space-y-2">
-        {elements.map((el, i) => {
-          const dir = directions[el.id];
-          const isLocked = dir?.action === "lock";
-          const noteExpanded = expandedNotes.has(el.id);
-          const Icon = categoryIcons[el.category] || Package;
+      {frames.map((frame, frameIdx) => {
+        const label = frameLabels[frameIdx] || `Frame ${frameIdx + 1}`;
+        const preview = framePreviews[frameIdx];
 
-          return (
-            <motion.div
-              key={el.id}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: i * 0.08 }}
-              className={`rounded-lg border p-3 transition-colors ${
-                isLocked
-                  ? "border-border bg-card/50 opacity-75"
-                  : "border-primary/30 bg-primary/5"
-              }`}
-            >
-              <div className="flex items-start gap-3">
-                {/* Category icon */}
-                <div className={`mt-0.5 flex-shrink-0 rounded-md p-1.5 ${
-                  isLocked ? "bg-muted text-muted-foreground" : "bg-primary/15 text-primary"
-                }`}>
-                  <Icon className="w-4 h-4" />
-                </div>
-
-                {/* Content */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-0.5">
-                    <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">
-                      {categoryEmoji[el.category]} {el.category}
-                    </span>
-                  </div>
-                  <p className="text-sm font-medium text-foreground">{el.description}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{el.details}</p>
-                </div>
-
-                {/* Controls */}
-                <div className="flex items-center gap-1.5 flex-shrink-0">
-                  <Button
-                    size="sm"
-                    variant={isLocked ? "secondary" : "ghost"}
-                    onClick={() => { if (!isLocked) toggleAction(el.id); }}
-                    className={`h-7 px-2 text-xs gap-1 ${isLocked ? "bg-secondary text-secondary-foreground" : ""}`}
-                  >
-                    <Lock className="w-3 h-3" /> Lock
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant={!isLocked ? "secondary" : "ghost"}
-                    onClick={() => { if (isLocked) toggleAction(el.id); }}
-                    className={`h-7 px-2 text-xs gap-1 ${!isLocked ? "bg-primary/20 text-primary" : ""}`}
-                  >
-                    <Play className="w-3 h-3" /> Move
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => toggleNoteExpanded(el.id)}
-                    className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
-                  >
-                    {noteExpanded ? <X className="w-3 h-3" /> : <Plus className="w-3 h-3" />}
-                  </Button>
-                </div>
-              </div>
-
-              {/* Note input */}
-              {noteExpanded && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="mt-2 ml-9"
-                >
-                  <Textarea
-                    placeholder={`e.g. "make hair blow in wind", "add rain effect"...`}
-                    value={dir?.note || ""}
-                    onChange={(e) => updateNote(el.id, e.target.value)}
-                    className="min-h-[60px] text-xs bg-background/50 border-border/50 resize-none"
-                    maxLength={300}
+        return (
+          <div key={frame.frameIndex} className="space-y-2">
+            {showFrameHeaders && (
+              <motion.div
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: frameIdx * 0.15 }}
+                className="flex items-center gap-3 pt-2 pb-1 border-b border-border/50"
+              >
+                {preview ? (
+                  <img
+                    src={preview}
+                    alt={label}
+                    className="w-10 h-10 rounded-md object-cover border border-border/50 flex-shrink-0"
                   />
-                </motion.div>
-              )}
-            </motion.div>
-          );
-        })}
-      </div>
+                ) : (
+                  <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center flex-shrink-0">
+                    <Film className="w-4 h-4 text-muted-foreground" />
+                  </div>
+                )}
+                <h4 className="text-xs font-display font-semibold text-primary uppercase tracking-wider">
+                  {label}
+                </h4>
+                <span className="text-xs text-muted-foreground">
+                  {frame.elements.length} elements
+                </span>
+              </motion.div>
+            )}
+
+            <div className="space-y-2">
+              {frame.elements.map((el, i) => {
+                const dir = directions[el.id];
+                const isLocked = dir?.action === "lock";
+                const noteExpanded = expandedNotes.has(el.id);
+                const Icon = categoryIcons[el.category] || Package;
+
+                return (
+                  <motion.div
+                    key={el.id}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: frameIdx * 0.15 + i * 0.08 }}
+                    className={`rounded-lg border p-3 transition-colors ${
+                      isLocked
+                        ? "border-border bg-card/50 opacity-75"
+                        : "border-primary/30 bg-primary/5"
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className={`mt-0.5 flex-shrink-0 rounded-md p-1.5 ${
+                        isLocked ? "bg-muted text-muted-foreground" : "bg-primary/15 text-primary"
+                      }`}>
+                        <Icon className="w-4 h-4" />
+                      </div>
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">
+                            {categoryEmoji[el.category]} {el.category}
+                          </span>
+                        </div>
+                        <p className="text-sm font-medium text-foreground">{el.description}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{el.details}</p>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                        <Button
+                          size="sm"
+                          variant={isLocked ? "secondary" : "ghost"}
+                          onClick={() => { if (!isLocked) toggleAction(el.id); }}
+                          className={`h-7 px-2 text-xs gap-1 ${isLocked ? "bg-secondary text-secondary-foreground" : ""}`}
+                        >
+                          <Lock className="w-3 h-3" /> Lock
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant={!isLocked ? "secondary" : "ghost"}
+                          onClick={() => { if (isLocked) toggleAction(el.id); }}
+                          className={`h-7 px-2 text-xs gap-1 ${!isLocked ? "bg-primary/20 text-primary" : ""}`}
+                        >
+                          <Play className="w-3 h-3" /> Move
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => toggleNoteExpanded(el.id)}
+                          className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
+                        >
+                          {noteExpanded ? <X className="w-3 h-3" /> : <Plus className="w-3 h-3" />}
+                        </Button>
+                      </div>
+                    </div>
+
+                    {noteExpanded && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="mt-2 ml-9"
+                      >
+                        <Textarea
+                          placeholder={`e.g. "make hair blow in wind", "add rain effect"...`}
+                          value={dir?.note || ""}
+                          onChange={(e) => updateNote(el.id, e.target.value)}
+                          className="min-h-[60px] text-xs bg-background/50 border-border/50 resize-none"
+                          maxLength={300}
+                        />
+                      </motion.div>
+                    )}
+                  </motion.div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
     </motion.div>
   );
 };
