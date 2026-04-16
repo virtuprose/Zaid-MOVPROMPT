@@ -125,14 +125,14 @@ export const ar: Record<TranslationKey, string> = {
   "upload.dragDrop": "اسحب وأفلت أو انقر للرفع",
 
   // Library
-  "library.title": "مكتبة التوجيهات",
+  "library.title": "مكتبة الأوامر",
   "library.empty": "لا توجد توجيهات بعد. أنشئ أول توجيه سينمائي!",
   "library.generate": "أنشئ أول توجيه",
   "library.delete": "حذف",
-  "library.searchPlaceholder": "ابحث في التوجيهات...",
+  "library.searchPlaceholder": "ابحث في الأوامر...",
   "library.clearFilters": "مسح الفلاتر",
   "library.noResults": "لا توجد نتائج مطابقة.",
-  "library.resultsCount": "توجيهات",
+  "library.resultsCount": "الأوامر",
 
   // Terms & Conditions
   "terms.back": "رجوع",
