@@ -15,6 +15,7 @@ import { Camera, Layers, Film, BookOpen, ChevronDown, Upload, Copy, User, LogOut
 import AnnouncementBanner from "@/components/AnnouncementBanner";
 import NotificationBell from "@/components/NotificationBell";
 import { InstallPrompt } from "@/components/InstallPrompt";
+import WelcomePopup from "@/components/WelcomePopup";
 
 const Index = () => {
   const [guideOpen, setGuideOpen] = useState(false);
@@ -175,6 +176,7 @@ const Index = () => {
         </footer>
       </div>
       <InstallPrompt />
+      {!loading && user && <WelcomePopup />}
     </div>
   );
 };

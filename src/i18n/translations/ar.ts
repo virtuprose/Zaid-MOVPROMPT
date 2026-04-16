@@ -253,4 +253,19 @@ export const ar: Record<TranslationKey, string> = {
   "announcements.form.titleAr": "العنوان (عربي)",
   "announcements.form.messageAr": "الرسالة (عربي)",
   "announcements.form.linkTextAr": "نص الرابط (عربي)",
+
+  // Welcome Popup
+  "welcomePopup.title": "نافذة الترحيب",
+  "welcomePopup.new": "نافذة جديدة",
+  "welcomePopup.edit": "تعديل النافذة",
+  "welcomePopup.form.title": "العنوان (إنجليزي)",
+  "welcomePopup.form.titleAr": "العنوان (عربي)",
+  "welcomePopup.form.message": "الرسالة (إنجليزي)",
+  "welcomePopup.form.messageAr": "الرسالة (عربي)",
+  "welcomePopup.form.imageUrl": "رابط الصورة",
+  "welcomePopup.form.linkUrl": "رابط الوجهة",
+  "welcomePopup.form.linkText": "نص الرابط (إنجليزي)",
+  "welcomePopup.form.linkTextAr": "نص الرابط (عربي)",
+  "welcomePopup.empty": "لم يتم إعداد نافذة ترحيب بعد",
+  "welcomePopup.learnMore": "اعرف المزيد",
 };

@@ -251,6 +251,21 @@ export const en = {
   "announcements.form.titleAr": "Title (Arabic)",
   "announcements.form.messageAr": "Message (Arabic)",
   "announcements.form.linkTextAr": "CTA Text (Arabic)",
+
+  // Welcome Popup
+  "welcomePopup.title": "Welcome Popup",
+  "welcomePopup.new": "New Popup",
+  "welcomePopup.edit": "Edit Popup",
+  "welcomePopup.form.title": "Title (English)",
+  "welcomePopup.form.titleAr": "Title (Arabic)",
+  "welcomePopup.form.message": "Message (English)",
+  "welcomePopup.form.messageAr": "Message (Arabic)",
+  "welcomePopup.form.imageUrl": "Image URL",
+  "welcomePopup.form.linkUrl": "Link URL",
+  "welcomePopup.form.linkText": "Link Text (English)",
+  "welcomePopup.form.linkTextAr": "Link Text (Arabic)",
+  "welcomePopup.empty": "No welcome popups configured",
+  "welcomePopup.learnMore": "Learn More",
 } as const;
 
 export type TranslationKey = keyof typeof en;
