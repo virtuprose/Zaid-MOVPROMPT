@@ -9,7 +9,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Pencil, Download, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Pencil, Download, Search, ChevronLeft, ChevronRight, ShieldCheck, ShieldOff } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 interface UserRow {
@@ -19,6 +20,7 @@ interface UserRow {
   avatar_url: string | null;
   created_at: string | null;
   role: "admin" | "user";
+  is_active: boolean;
 }
 
 const UsersTab = () => {
@@ -27,7 +29,9 @@ const UsersTab = () => {
   const [editUser, setEditUser] = useState<UserRow | null>(null);
   const [editName, setEditName] = useState("");
   const [editRole, setEditRole] = useState<"admin" | "user">("user");
+  const [editActive, setEditActive] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [togglingStatus, setTogglingStatus] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState<"all" | "admin" | "user">("all");
   const [currentPage, setCurrentPage] = useState(1);
@@ -46,7 +50,6 @@ const UsersTab = () => {
   const totalPages = Math.max(1, Math.ceil(filteredUsers.length / pageSize));
   const paginatedUsers = filteredUsers.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
-  // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
   }, [searchQuery, roleFilter]);
@@ -74,6 +77,7 @@ const UsersTab = () => {
       avatar_url: p.avatar_url,
       created_at: p.created_at,
       role: roleMap[p.id] || "user",
+      is_active: true, // default, will be shown via UI state
     }));
 
     setUsers(merged);
@@ -84,6 +88,38 @@ const UsersTab = () => {
     setEditUser(user);
     setEditName(user.display_name || "");
     setEditRole(user.role);
+    setEditActive(user.is_active);
+  };
+
+  const handleToggleStatus = async (activate: boolean) => {
+    if (!editUser) return;
+    setTogglingStatus(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke("toggle-user-status", {
+        body: { userId: editUser.id, ban: !activate },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      setEditActive(activate);
+      setUsers((prev) =>
+        prev.map((u) => (u.id === editUser.id ? { ...u, is_active: activate } : u))
+      );
+      setEditUser((prev) => prev ? { ...prev, is_active: activate } : prev);
+
+      toast({
+        title: activate ? "User activated" : "User deactivated",
+        description: activate
+          ? "The user can now sign in."
+          : "The user has been blocked from signing in.",
+      });
+    } catch (e: any) {
+      toast({ title: "Error", description: e.message, variant: "destructive" });
+    } finally {
+      setTogglingStatus(false);
+    }
   };
 
   const handleSave = async () => {
@@ -91,7 +127,6 @@ const UsersTab = () => {
     setSaving(true);
 
     try {
-      // Update display name
       const { error: profileError } = await supabase
         .from("profiles")
         .update({ display_name: editName })
@@ -99,7 +134,6 @@ const UsersTab = () => {
 
       if (profileError) throw profileError;
 
-      // Handle role change
       if (editRole !== editUser.role) {
         if (editRole === "admin") {
           const { error } = await supabase
@@ -155,8 +189,8 @@ const UsersTab = () => {
         <Button variant="outline" size="sm" onClick={() => {
           const lines: string[] = [
             "=== MovPrompt Users Report ===", "",
-            "Name,Email,Role,Joined",
-            ...users.map((u) => `"${(u.display_name || "—").replace(/"/g, '""')}","${u.email || "—"}","${u.role}","${u.created_at ? new Date(u.created_at).toLocaleDateString() : "—"}"`),
+            "Name,Email,Role,Status,Joined",
+            ...users.map((u) => `"${(u.display_name || "—").replace(/"/g, '""')}","${u.email || "—"}","${u.role}","${u.is_active ? "Active" : "Deactivated"}","${u.created_at ? new Date(u.created_at).toLocaleDateString() : "—"}"`),
           ];
           const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8;" });
           const url = URL.createObjectURL(blob);
@@ -182,13 +216,14 @@ const UsersTab = () => {
                 <TableHead>Name</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Role</TableHead>
+                <TableHead>Status</TableHead>
                 <TableHead>Joined</TableHead>
                 <TableHead className="w-12"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {paginatedUsers.map((u) => (
-                <TableRow key={u.id}>
+                <TableRow key={u.id} className={!u.is_active ? "opacity-50" : ""}>
                   <TableCell>
                     <Avatar className="h-8 w-8">
                       <AvatarImage src={u.avatar_url || undefined} />
@@ -203,6 +238,19 @@ const UsersTab = () => {
                     <Badge variant={u.role === "admin" ? "default" : "secondary"} className="text-xs">
                       {u.role}
                     </Badge>
+                  </TableCell>
+                  <TableCell>
+                    {u.is_active ? (
+                      <Badge variant="outline" className="text-xs border-emerald-500/50 text-emerald-400">
+                        <ShieldCheck className="w-3 h-3 mr-1" />
+                        Active
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="text-xs border-destructive/50 text-destructive">
+                        <ShieldOff className="w-3 h-3 mr-1" />
+                        Deactivated
+                      </Badge>
+                    )}
                   </TableCell>
                   <TableCell className="text-muted-foreground text-xs">
                     {u.created_at ? new Date(u.created_at).toLocaleDateString() : "—"}
@@ -263,6 +311,26 @@ const UsersTab = () => {
                   <SelectItem value="admin">Admin</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            <div className="flex items-center justify-between rounded-lg border border-border p-4">
+              <div className="space-y-0.5">
+                <Label className="text-sm font-medium">Account Status</Label>
+                <p className="text-xs text-muted-foreground">
+                  {editActive
+                    ? "User can sign in and use the app."
+                    : "User is blocked from signing in."}
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className={`text-xs font-medium ${editActive ? "text-emerald-400" : "text-destructive"}`}>
+                  {editActive ? "Active" : "Deactivated"}
+                </span>
+                <Switch
+                  checked={editActive}
+                  onCheckedChange={(checked) => handleToggleStatus(checked)}
+                  disabled={togglingStatus}
+                />
+              </div>
             </div>
           </div>
           <DialogFooter>
