@@ -69,6 +69,7 @@ export const ar: Record<TranslationKey, string> = {
   "wp.startOver": "البدء من جديد",
   "wp.reAnalyze": "إعادة التحليل",
   "wp.generatePrompt": "توليد توجيه سينمائي",
+  "wp.regeneratePrompt": "إعادة توليد التوجيه",
   "wp.generatingPrompt": "جاري توليد التوجيه...",
   "wp.signInRequired": "تسجيل الدخول مطلوب",
   "wp.signInAnalyze": "يرجى تسجيل الدخول لتحليل المشاهد.",
