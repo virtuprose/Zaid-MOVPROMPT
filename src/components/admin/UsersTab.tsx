@@ -21,6 +21,7 @@ interface UserRow {
   created_at: string | null;
   role: "admin" | "user";
   is_active: boolean;
+  generations: number;
 }
 
 const UsersTab = () => {
@@ -223,6 +224,7 @@ const UsersTab = () => {
                 <TableHead>Name</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Role</TableHead>
+                <TableHead>Generations</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Joined</TableHead>
                 <TableHead className="w-12"></TableHead>
@@ -231,6 +233,9 @@ const UsersTab = () => {
             <TableBody>
               {paginatedUsers.map((u) => (
                 <TableRow key={u.id} className={!u.is_active ? "opacity-50" : ""}>
+                  <TableCell>
+                    <span className="text-sm font-medium text-primary">{u.generations}</span>
+                  </TableCell>
                   <TableCell>
                     <Avatar className="h-8 w-8">
                       <AvatarImage src={u.avatar_url || undefined} />
