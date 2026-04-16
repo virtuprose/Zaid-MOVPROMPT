@@ -360,7 +360,6 @@ const Library = () => {
                 </button>
               )}
             </div>
-            </div>
           </motion.div>
         )}
 
@@ -395,7 +394,7 @@ const Library = () => {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => { setSearch(""); setWorkflowFilter(null); setModelFilter(null); }}
+              onClick={() => { setSearch(""); setWorkflowFilter(new Set()); setModelFilter(new Set()); }}
             >
               {t("library.clearFilters")}
             </Button>
