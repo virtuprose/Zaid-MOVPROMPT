@@ -23,25 +23,27 @@ interface HistoryEntry {
   image_paths?: string[] | null;
 }
 
-const WORKFLOW_LABELS: Record<string, { label: string; color: string }> = {
-  single: { label: "Single Frame", color: "bg-primary/20 text-primary border-primary/30" },
-  twoframe: { label: "Two Frames", color: "bg-accent/20 text-accent border-accent/30" },
-  multishot: { label: "Multi-Shot", color: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" },
-};
+function getWorkflowLabels(t: (k: string) => string): Record<string, { label: string; color: string }> {
+  return {
+    single: { label: t("library.singleFrame"), color: "bg-primary/20 text-primary border-primary/30" },
+    twoframe: { label: t("library.twoFrames"), color: "bg-accent/20 text-accent border-accent/30" },
+    multishot: { label: t("library.multiShot"), color: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" },
+  };
+}
 
-function timeAgo(dateStr: string): string {
+function timeAgo(dateStr: string, t: (k: string) => string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
   const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
+  if (mins < 1) return t("library.justNow");
+  if (mins < 60) return `${mins}${t("library.minsAgo")}`;
   const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
+  if (hrs < 24) return `${hrs}${t("library.hrsAgo")}`;
   const days = Math.floor(hrs / 24);
-  if (days < 30) return `${days}d ago`;
+  if (days < 30) return `${days}${t("library.daysAgo")}`;
   return new Date(dateStr).toLocaleDateString();
 }
 
-function CopyButton({ text, label = "نسخ" }: { text: string; label?: string }) {
+function CopyButton({ text, label, copiedLabel }: { text: string; label: string; copiedLabel: string }) {
   const [copied, setCopied] = useState(false);
   const handleCopy = async () => {
     await navigator.clipboard.writeText(text);
@@ -51,7 +53,7 @@ function CopyButton({ text, label = "نسخ" }: { text: string; label?: string }
   return (
     <Button variant="ghost" size="sm" onClick={handleCopy} className="h-7 px-2 text-xs gap-1">
       {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-      {copied ? "تم النسخ" : label}
+      {copied ? copiedLabel : label}
     </Button>
   );
 }
@@ -59,7 +61,8 @@ function CopyButton({ text, label = "نسخ" }: { text: string; label?: string }
 function HistoryCard({ entry, t, onDelete }: { entry: HistoryEntry; t: (k: string) => string; onDelete: (id: string) => void }) {
   const [expanded, setExpanded] = useState(false);
   const [imageUrls, setImageUrls] = useState<string[]>([]);
-  const wf = WORKFLOW_LABELS[entry.workflow_type] || WORKFLOW_LABELS.single;
+  const workflowLabels = getWorkflowLabels(t);
+  const wf = workflowLabels[entry.workflow_type] || workflowLabels.single;
   const results: any[] = Array.isArray(entry.results) ? entry.results : [entry.results];
   const preview = results[0]?.mainPrompt?.slice(0, 120) || "";
 
@@ -78,10 +81,10 @@ function HistoryCard({ entry, t, onDelete }: { entry: HistoryEntry; t: (k: strin
 
   const allText = results
     .map((r: any, i: number) => {
-      let s = `Shot ${i + 1}\n${r.mainPrompt || ""}`;
-      if (r.negativePrompt) s += `\nNegative: ${r.negativePrompt}`;
-      if (r.cameraSuggestions) s += `\nCamera: ${r.cameraSuggestions}`;
-      if (r.modelNotes) s += `\nNotes: ${r.modelNotes}`;
+      let s = `${t("library.shot")} ${i + 1}\n${r.mainPrompt || ""}`;
+      if (r.negativePrompt) s += `\n${t("library.negative")}: ${r.negativePrompt}`;
+      if (r.cameraSuggestions) s += `\n${t("library.camera")}: ${r.cameraSuggestions}`;
+      if (r.modelNotes) s += `\n${t("library.notes")}: ${r.modelNotes}`;
       return s;
     })
     .join("\n\n");
@@ -97,7 +100,7 @@ function HistoryCard({ entry, t, onDelete }: { entry: HistoryEntry; t: (k: strin
             <Badge variant="outline" className={`text-[10px] ${wf.color}`}>{wf.label}</Badge>
             <span className="text-[11px] text-muted-foreground">{entry.target_model}</span>
             <span className="text-[11px] text-muted-foreground/60">·</span>
-            <span className="text-[11px] text-muted-foreground/60">{timeAgo(entry.created_at)}</span>
+            <span className="text-[11px] text-muted-foreground/60">{timeAgo(entry.created_at, t)}</span>
           </div>
           <p className="text-sm text-foreground/80 line-clamp-2">{preview}{preview.length >= 120 ? "…" : ""}</p>
         </div>
@@ -137,18 +140,18 @@ function HistoryCard({ entry, t, onDelete }: { entry: HistoryEntry; t: (k: strin
                   <Trash2 className="w-3 h-3" />
                   {t("library.delete")}
                 </Button>
-                <CopyButton text={allText} label="نسخ-الكل" />
+                <CopyButton text={allText} label={t("library.copyAll")} copiedLabel={t("library.copied")} />
               </div>
               {results.map((shot: any, i: number) => (
                 <div key={i} className="space-y-2">
                   {results.length > 1 && (
-                    <p className="text-xs font-medium text-primary">Shot {i + 1}</p>
+                    <p className="text-xs font-medium text-primary">{t("library.shot")} {i + 1}</p>
                   )}
                   {shot.mainPrompt && (
                     <div className="space-y-1">
                       <div className="flex items-center justify-between">
                         <span className="text-[11px] font-medium text-muted-foreground">{t("results.mainPrompt")}</span>
-                        <CopyButton text={shot.mainPrompt} />
+                        <CopyButton text={shot.mainPrompt} label={t("library.copy")} copiedLabel={t("library.copied")} />
                       </div>
                       <p className="text-sm bg-secondary/40 rounded-md p-2.5 leading-relaxed">{shot.mainPrompt}</p>
                     </div>
@@ -157,7 +160,7 @@ function HistoryCard({ entry, t, onDelete }: { entry: HistoryEntry; t: (k: strin
                     <div className="space-y-1">
                       <div className="flex items-center justify-between">
                         <span className="text-[11px] font-medium text-muted-foreground">{t("results.negativePrompt")}</span>
-                        <CopyButton text={shot.negativePrompt} />
+                        <CopyButton text={shot.negativePrompt} label={t("library.copy")} copiedLabel={t("library.copied")} />
                       </div>
                       <p className="text-xs bg-secondary/40 rounded-md p-2.5 text-muted-foreground">{shot.negativePrompt}</p>
                     </div>
@@ -301,14 +304,14 @@ const Library = () => {
             {/* Filter chips */}
             <div className="flex flex-wrap gap-2">
               {/* Workflow chips */}
-              {Object.entries(WORKFLOW_LABELS).map(([key, wf]) => {
+              {Object.entries(getWorkflowLabels(t)).map(([key, wf]) => {
                 const active = workflowFilter.has(key);
                 return (
                   <button
                     key={key}
                     onClick={() => setWorkflowFilter(prev => {
                       const next = new Set(prev);
-                      next.has(key) ? next.delete(key) : next.add(key);
+                      if (next.has(key)) next.delete(key); else next.add(key);
                       return next;
                     })}
                     className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors ${
@@ -331,7 +334,7 @@ const Library = () => {
                     key={model}
                     onClick={() => setModelFilter(prev => {
                       const next = new Set(prev);
-                      next.has(model) ? next.delete(model) : next.add(model);
+                      if (next.has(model)) next.delete(model); else next.add(model);
                       return next;
                     })}
                     className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors ${
