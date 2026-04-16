@@ -191,8 +191,8 @@ const Library = () => {
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [workflowFilter, setWorkflowFilter] = useState<string | null>(null);
-  const [modelFilter, setModelFilter] = useState<string | null>(null);
+  const [workflowFilter, setWorkflowFilter] = useState<Set<string>>(new Set());
+  const [modelFilter, setModelFilter] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     trackPageVisit("/library");
