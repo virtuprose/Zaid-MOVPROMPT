@@ -14,6 +14,7 @@ import ResetPassword from "./pages/ResetPassword.tsx";
 import AdminLogin from "./pages/AdminLogin.tsx";
 import Unsubscribe from "./pages/Unsubscribe.tsx";
 import Library from "./pages/Library.tsx";
+import Terms from "./pages/Terms.tsx";
 
 const queryClient = new QueryClient();
 
@@ -32,6 +33,7 @@ const AppRoutes = () => {
         <Route path="/admin" element={<AuthGuard requireAdmin><Analytics /></AuthGuard>} />
         <Route path="/library" element={<AuthGuard><Library /></AuthGuard>} />
         <Route path="/unsubscribe" element={<Unsubscribe />} />
+        <Route path="/terms" element={<Terms />} />
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
         <Route path="*" element={<NotFound />} />
       </Routes>

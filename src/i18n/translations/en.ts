@@ -131,6 +131,32 @@ export const en = {
   "library.clearFilters": "Clear filters",
   "library.noResults": "No prompts match your filters.",
   "library.resultsCount": "prompts",
+
+  // Terms & Conditions
+  "terms.back": "Back",
+  "terms.title": "Terms & Conditions",
+  "terms.lastUpdated": "Last updated",
+  "terms.acceptance.title": "1. Acceptance of Terms",
+  "terms.acceptance.body": "By accessing or using MovPrompt, you agree to be bound by these Terms and Conditions. If you do not agree to these terms, please do not use our service.",
+  "terms.service.title": "2. Description of Service",
+  "terms.service.body": "MovPrompt is an AI-powered tool that generates cinematic video prompts from uploaded images. The service analyzes your images and produces text prompts, camera suggestions, and model-specific notes for use with generative video models.",
+  "terms.images.title": "3. Uploaded Images",
+  "terms.images.body": "By uploading images to MovPrompt, you grant us a non-exclusive, worldwide license to store, process, and analyze your images for the purpose of providing the service and improving our AI models. Images are stored securely and associated with your account. You retain ownership of your original images. You must not upload images that violate copyright, contain illegal content, or infringe on the rights of others.",
+  "terms.ip.title": "4. Intellectual Property",
+  "terms.ip.body": "Generated prompts and suggestions are provided for your personal and commercial use. The MovPrompt platform, brand, and underlying technology remain our intellectual property.",
+  "terms.privacy.title": "5. Privacy & Data",
+  "terms.privacy.body": "We collect your email address and uploaded images. Images are stored per-user with access controls — only you and authorized administrators can access your data. We do not sell your personal data to third parties. Anonymous usage analytics are collected to improve the service.",
+  "terms.disclaimer.title": "6. Disclaimer of Warranties",
+  "terms.disclaimer.body": "MovPrompt is provided \"as is\" without warranties of any kind. We do not guarantee that generated prompts will produce specific results in any video generation model. The service may be interrupted for maintenance or updates.",
+  "terms.changes.title": "7. Changes to Terms",
+  "terms.changes.body": "We reserve the right to modify these terms at any time. Continued use of the service after changes constitutes acceptance of the updated terms.",
+  "terms.contact.title": "8. Contact",
+  "terms.contact.body": "For questions about these terms, please contact us through our website at movprompt.com.",
+
+  // Auth T&C
+  "auth.agreeTerms": "I agree to the",
+  "auth.termsLink": "Terms & Conditions",
+  "auth.mustAgreeTerms": "You must agree to the Terms & Conditions to create an account.",
 } as const;
 
 export type TranslationKey = keyof typeof en;

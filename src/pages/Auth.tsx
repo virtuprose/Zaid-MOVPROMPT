@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -24,6 +25,7 @@ const Auth = () => {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [forgotMode, setForgotMode] = useState(false);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
 
   const FEATURES = [
     { icon: Camera, title: t("auth.feat.dop.title"), description: t("auth.feat.dop.desc"), color: "text-primary" },
@@ -53,6 +55,10 @@ const Auth = () => {
 
   const handleEmailSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!agreedToTerms) {
+      toast({ title: t("auth.mustAgreeTerms"), variant: "destructive" });
+      return;
+    }
     setLoading(true);
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -277,7 +283,21 @@ const Auth = () => {
                         <Label htmlFor="signup-password">{t("auth.password")}</Label>
                         <Input id="signup-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} />
                       </div>
-                      <Button type="submit" className="w-full h-11 hover:scale-[1.02] active:scale-[0.98]" disabled={loading}>
+                      <div className="flex items-start gap-2">
+                        <Checkbox
+                          id="agree-terms"
+                          checked={agreedToTerms}
+                          onCheckedChange={(checked) => setAgreedToTerms(checked === true)}
+                          className="mt-0.5"
+                        />
+                        <label htmlFor="agree-terms" className="text-xs text-muted-foreground leading-relaxed cursor-pointer">
+                          {t("auth.agreeTerms")}{" "}
+                          <Link to="/terms" className="text-primary hover:underline" target="_blank">
+                            {t("auth.termsLink")}
+                          </Link>
+                        </label>
+                      </div>
+                      <Button type="submit" className="w-full h-11 hover:scale-[1.02] active:scale-[0.98]" disabled={loading || !agreedToTerms}>
                         {loading ? <Loader2 className="w-4 h-4 animate-spin me-2" /> : <Mail className="w-4 h-4 me-2" />}
                         {t("auth.createAccount")}
                       </Button>
