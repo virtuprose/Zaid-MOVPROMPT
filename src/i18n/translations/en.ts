@@ -208,6 +208,35 @@ export const en = {
   "unsub.errorTitle": "Something Went Wrong",
   "unsub.errorDesc": "We couldn't process your request. Please try again later.",
   "unsub.confirm": "Confirm Unsubscribe",
+
+  // NotFound
+  "notFound.title": "Oops! Page not found",
+  "notFound.home": "Return to Home",
+
+  // ResetPassword
+  "reset.passwordsMismatch": "Passwords don't match",
+  "reset.minLength": "Password must be at least 6 characters",
+  "reset.failed": "Reset failed",
+  "reset.success": "Password updated!",
+  "reset.successDesc": "You can now sign in with your new password.",
+  "reset.invalidLink": "Invalid or expired reset link.",
+  "reset.goSignIn": "Go to Sign In",
+  "reset.backToApp": "Back to app",
+  "reset.setNew": "Set your new password",
+  "reset.newPassword": "New Password",
+  "reset.confirmPassword": "Confirm Password",
+  "reset.updatePassword": "Update Password",
+
+  // AdminLogin
+  "admin.accessDenied": "Access denied",
+  "admin.noPrivileges": "This account does not have admin privileges.",
+  "admin.signOutTry": "Sign out and try another account",
+  "admin.title": "Admin Access",
+  "admin.signedInAs": "Signed in as",
+  "admin.signInFailed": "Sign in failed",
+
+  // ResultsPanel
+  "results.failedCopy": "Failed to copy",
 } as const;
 
 export type TranslationKey = keyof typeof en;

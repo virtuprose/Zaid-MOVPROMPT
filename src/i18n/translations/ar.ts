@@ -210,4 +210,33 @@ export const ar: Record<TranslationKey, string> = {
   "unsub.errorTitle": "حدث خطأ",
   "unsub.errorDesc": "لم نتمكن من معالجة طلبك. يرجى المحاولة لاحقاً.",
   "unsub.confirm": "تأكيد إلغاء الاشتراك",
+
+  // NotFound
+  "notFound.title": "عذراً! الصفحة غير موجودة",
+  "notFound.home": "العودة للرئيسية",
+
+  // ResetPassword
+  "reset.passwordsMismatch": "كلمتا المرور غير متطابقتين",
+  "reset.minLength": "كلمة المرور يجب أن تكون ٦ أحرف على الأقل",
+  "reset.failed": "فشل إعادة التعيين",
+  "reset.success": "تم تحديث كلمة المرور!",
+  "reset.successDesc": "يمكنك الآن تسجيل الدخول بكلمة المرور الجديدة.",
+  "reset.invalidLink": "رابط إعادة التعيين غير صالح أو منتهي الصلاحية.",
+  "reset.goSignIn": "الذهاب لتسجيل الدخول",
+  "reset.backToApp": "العودة للتطبيق",
+  "reset.setNew": "عيّن كلمة المرور الجديدة",
+  "reset.newPassword": "كلمة المرور الجديدة",
+  "reset.confirmPassword": "تأكيد كلمة المرور",
+  "reset.updatePassword": "تحديث كلمة المرور",
+
+  // AdminLogin
+  "admin.accessDenied": "تم رفض الوصول",
+  "admin.noPrivileges": "هذا الحساب لا يملك صلاحيات المسؤول.",
+  "admin.signOutTry": "تسجيل الخروج وتجربة حساب آخر",
+  "admin.title": "وصول المسؤول",
+  "admin.signedInAs": "مسجل الدخول كـ",
+  "admin.signInFailed": "فشل تسجيل الدخول",
+
+  // ResultsPanel
+  "results.failedCopy": "فشل النسخ",
 };

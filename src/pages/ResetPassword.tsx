@@ -8,10 +8,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, ArrowLeft, KeyRound } from "lucide-react";
 import { motion } from "framer-motion";
+import { useLanguage } from "@/i18n/LanguageContext";
 
 const ResetPassword = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { t } = useLanguage();
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -19,7 +21,6 @@ const ResetPassword = () => {
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
-    // Listen for PASSWORD_RECOVERY event
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === "PASSWORD_RECOVERY") {
         setIsRecovery(true);
@@ -27,13 +28,11 @@ const ResetPassword = () => {
       setChecking(false);
     });
 
-    // Also check hash for recovery token
     const hash = window.location.hash;
     if (hash.includes("type=recovery")) {
       setIsRecovery(true);
     }
-    
-    // Timeout fallback
+
     const timeout = setTimeout(() => setChecking(false), 3000);
 
     return () => {
@@ -45,11 +44,11 @@ const ResetPassword = () => {
   const handleReset = async (e: React.FormEvent) => {
     e.preventDefault();
     if (password !== confirmPassword) {
-      toast({ title: "Passwords don't match", variant: "destructive" });
+      toast({ title: t("reset.passwordsMismatch"), variant: "destructive" });
       return;
     }
     if (password.length < 6) {
-      toast({ title: "Password must be at least 6 characters", variant: "destructive" });
+      toast({ title: t("reset.minLength"), variant: "destructive" });
       return;
     }
 
@@ -58,9 +57,9 @@ const ResetPassword = () => {
     setLoading(false);
 
     if (error) {
-      toast({ title: "Reset failed", description: error.message, variant: "destructive" });
+      toast({ title: t("reset.failed"), description: error.message, variant: "destructive" });
     } else {
-      toast({ title: "Password updated!", description: "You can now sign in with your new password." });
+      toast({ title: t("reset.success"), description: t("reset.successDesc") });
       navigate("/", { replace: true });
     }
   };
@@ -77,8 +76,8 @@ const ResetPassword = () => {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center px-4">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center space-y-4">
-          <p className="text-muted-foreground">Invalid or expired reset link.</p>
-          <Button variant="outline" onClick={() => navigate("/auth")}>Go to Sign In</Button>
+          <p className="text-muted-foreground">{t("reset.invalidLink")}</p>
+          <Button variant="outline" onClick={() => navigate("/auth")}>{t("reset.goSignIn")}</Button>
         </motion.div>
       </div>
     );
@@ -95,28 +94,28 @@ const ResetPassword = () => {
           onClick={() => navigate("/")}
           className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-6 transition-colors"
         >
-          <ArrowLeft className="w-4 h-4" /> Back to app
+          <ArrowLeft className="w-4 h-4" /> {t("reset.backToApp")}
         </button>
 
         <h1 className="text-2xl font-mono font-bold mb-1">
           Mov<span className="text-primary">Prompt</span>
         </h1>
-        <p className="text-sm text-muted-foreground mb-6">Set your new password</p>
+        <p className="text-sm text-muted-foreground mb-6">{t("reset.setNew")}</p>
 
         <Card className="bg-card border-border">
           <CardContent className="p-5">
             <form onSubmit={handleReset} className="space-y-3">
               <div className="space-y-1.5">
-                <Label htmlFor="new-password">New Password</Label>
+                <Label htmlFor="new-password">{t("reset.newPassword")}</Label>
                 <Input id="new-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="confirm-password">Confirm Password</Label>
+                <Label htmlFor="confirm-password">{t("reset.confirmPassword")}</Label>
                 <Input id="confirm-password" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required minLength={6} />
               </div>
               <Button type="submit" className="w-full" disabled={loading}>
                 {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <KeyRound className="w-4 h-4 mr-2" />}
-                Update Password
+                {t("reset.updatePassword")}
               </Button>
             </form>
           </CardContent>
