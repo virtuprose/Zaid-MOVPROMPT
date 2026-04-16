@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useLanguage } from "@/i18n/LanguageContext";
 import { Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -14,13 +15,16 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 interface Notification {
   id: string;
   title: string;
+  title_ar: string | null;
   message: string;
+  message_ar: string | null;
   type: string;
   created_at: string;
 }
 
 const NotificationBell = () => {
   const { user } = useAuth();
+  const { locale, t } = useLanguage();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [readIds, setReadIds] = useState<Set<string>>(new Set());
   const [open, setOpen] = useState(false);
@@ -47,7 +51,6 @@ const NotificationBell = () => {
   useEffect(() => {
     fetchNotifications();
 
-    // Realtime subscription
     const channel = supabase
       .channel("notifications-bell")
       .on(
@@ -93,6 +96,9 @@ const NotificationBell = () => {
 
   const unreadCount = notifications.filter((n) => !readIds.has(n.id)).length;
 
+  const getTitle = (n: Notification) => (locale === "ar" && n.title_ar) ? n.title_ar : n.title;
+  const getMessage = (n: Notification) => (locale === "ar" && n.message_ar) ? n.message_ar : n.message;
+
   const typeColor = (type: string) => {
     switch (type) {
       case "alert": return "text-destructive";
@@ -120,16 +126,16 @@ const NotificationBell = () => {
       </PopoverTrigger>
       <PopoverContent className="w-80 p-0" align="end">
         <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-          <h4 className="text-sm font-semibold">Notifications</h4>
+          <h4 className="text-sm font-semibold">{t("notifications.title")}</h4>
           {unreadCount > 0 && (
             <Button variant="ghost" size="sm" className="text-xs h-7" onClick={markAllRead}>
-              Mark all read
+              {t("notifications.markAllRead")}
             </Button>
           )}
         </div>
         <ScrollArea className="max-h-[320px]">
           {notifications.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-8">No notifications yet</p>
+            <p className="text-sm text-muted-foreground text-center py-8">{t("notifications.empty")}</p>
           ) : (
             <div className="divide-y divide-border">
               {notifications.map((n) => {
@@ -147,8 +153,8 @@ const NotificationBell = () => {
                         <span className="mt-1.5 h-2 w-2 rounded-full bg-primary flex-shrink-0" />
                       )}
                       <div className={!isRead ? "" : "ml-4"}>
-                        <p className="text-sm font-medium leading-tight">{n.title}</p>
-                        <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{n.message}</p>
+                        <p className="text-sm font-medium leading-tight">{getTitle(n)}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{getMessage(n)}</p>
                         <p className={`text-[10px] mt-1 ${typeColor(n.type)}`}>
                           {new Date(n.created_at).toLocaleDateString()} · {n.type}
                         </p>

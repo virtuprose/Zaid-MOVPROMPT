@@ -1,15 +1,17 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { X } from "lucide-react";
-
 import { useLanguage } from "@/i18n/LanguageContext";
 
 interface Announcement {
   id: string;
   title: string;
+  title_ar: string | null;
   message: string;
+  message_ar: string | null;
   link_url: string | null;
   link_text: string | null;
+  link_text_ar: string | null;
   type: string;
 }
 
@@ -21,14 +23,14 @@ const getDismissed = (): string[] => {
 
 const AnnouncementBanner = () => {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
-  const { t } = useLanguage();
+  const { locale, t } = useLanguage();
 
   useEffect(() => {
     const fetch = async () => {
       const now = new Date().toISOString();
       const { data } = await supabase
         .from("announcements")
-        .select("id, title, message, link_url, link_text, type")
+        .select("id, title, title_ar, message, message_ar, link_url, link_text, link_text_ar, type")
         .eq("is_active", true)
         .or(`starts_at.is.null,starts_at.lte.${now}`)
         .or(`ends_at.is.null,ends_at.gte.${now}`)
@@ -54,16 +56,20 @@ const AnnouncementBanner = () => {
     promo: "bg-gradient-to-r from-primary/10 to-accent/10 border-primary/20 text-foreground",
   };
 
+  const getTitle = (a: Announcement) => (locale === "ar" && a.title_ar) ? a.title_ar : a.title;
+  const getMessage = (a: Announcement) => (locale === "ar" && a.message_ar) ? a.message_ar : a.message;
+  const getLinkText = (a: Announcement) => (locale === "ar" && a.link_text_ar) ? a.link_text_ar : (a.link_text || t("announcement.learnMore"));
+
   return (
     <div className="space-y-2 mb-6">
       {announcements.map((a) => (
         <div key={a.id} className={`relative rounded-lg border px-4 py-3 text-sm flex items-center gap-3 ${typeStyles[a.type] || typeStyles.info}`}>
           <div className="flex-1 min-w-0">
-            <span className="font-semibold me-1.5">{a.title}</span>
-            <span className="text-muted-foreground">{a.message}</span>
+            <span className="font-semibold me-1.5">{getTitle(a)}</span>
+            <span className="text-muted-foreground">{getMessage(a)}</span>
             {a.link_url && (
               <a href={a.link_url} target="_blank" rel="noopener noreferrer" className="ms-2 underline font-medium hover:text-primary">
-                {a.link_text || t("announcement.learnMore")}
+                {getLinkText(a)}
               </a>
             )}
           </div>

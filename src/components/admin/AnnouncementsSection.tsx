@@ -30,7 +30,7 @@ const AnnouncementsSection = () => {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
-  const [form, setForm] = useState({ title: "", message: "", type: "info", link_url: "", link_text: "", starts_at: "", ends_at: "" });
+  const [form, setForm] = useState({ title: "", title_ar: "", message: "", message_ar: "", type: "info", link_url: "", link_text: "", link_text_ar: "", starts_at: "", ends_at: "" });
 
   const fetchAnnouncements = async () => {
     const { data } = await supabase.from("announcements").select("*").order("created_at", { ascending: false });
