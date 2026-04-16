@@ -1,29 +1,22 @@
 
 
-# Generate MovPrompt Business Model Document (PDF + DOCX)
+# Add Text Descriptions to Preset Groups
 
-Create a professional business model and product overview document for the marketing team, covering:
+Add a short subtitle/description under each preset group name in the accordion to explain what the effects do.
 
-## Document Contents
+## Changes
 
-1. **Executive Summary** — What MovPrompt is and the problem it solves
-2. **The Problem** — Gap between still images and AI video generation prompts
-3. **The Solution** — AI Director of Photography that analyzes scenes and writes model-specific prompts
-4. **Key Features** — Three workflows (Single Frame, Two Frames, Multi-Shot), 8 AI video platforms supported (35+ models), scene decomposition, model-specific syntax
-5. **Target Audience** — Content creators, filmmakers, marketing teams, social media managers
-6. **Supported Platforms** — Hailuo, Kling, Sora, Veo, Higgsfield, Wan, Seedance, Grok
-7. **Business Model / Monetization** — Freemium tiers, potential API access, enterprise plans
-8. **Competitive Advantage** — Model-aware prompting, scene analysis depth, multi-workflow support
-9. **Go-to-Market Strategy** — Community-driven growth, creator partnerships, platform integrations
+**File: `src/components/ConfigPanel.tsx`**
 
-## Approach
+Add a `description` field to each entry in `PRESET_GROUPS`:
 
-- Write a Python script using `reportlab` for the PDF (dark-themed, branded with MovPrompt colors)
-- Write a Node.js script using `docx` for the DOCX (clean, professional, editable)
-- QA both outputs visually
-- Output to `/mnt/documents/`
+- **Basic Camera Control** — "Simple camera movements like panning, tilting, and zooming"
+- **Epic Camera Control** — "Advanced cinematic shots: crane, orbit, drone, and dramatic angles"
+- **Effects** — "Visual transformations: materials, weather, artistic styles, and motion effects"
+- **Catch the Pulse** — "Action and lifestyle scenes: fashion, sports, stage moments"
+- **Mix** — "Two effects combined for unique cinematic results"
 
-## Files produced
-- `/mnt/documents/MovPrompt_Business_Model.pdf`
-- `/mnt/documents/MovPrompt_Business_Model.docx`
+Display the description as a muted text line below the group label inside each `AccordionTrigger`.
+
+No new dependencies, no images, no storage changes.
 
