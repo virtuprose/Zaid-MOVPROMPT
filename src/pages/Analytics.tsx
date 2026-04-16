@@ -10,9 +10,12 @@ import AnnouncementsSection from "@/components/admin/AnnouncementsSection";
 import NotificationsSection from "@/components/admin/NotificationsSection";
 import EmailTracker from "@/components/admin/EmailTracker";
 import WelcomePopupSection from "@/components/admin/WelcomePopupSection";
+import { useLanguage } from "@/i18n/LanguageContext";
 
 const Analytics = () => {
   const navigate = useNavigate();
+  const { locale } = useLanguage();
+  const dir = locale === "ar" ? "rtl" : "ltr";
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -89,7 +92,7 @@ const Analytics = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background" dir={dir}>
       <div className="container max-w-6xl mx-auto px-4 py-12">
         <div className="flex items-center justify-between mb-8">
           <div>

@@ -129,7 +129,7 @@ const AnnouncementsSection = () => {
                 <TableHead>Type</TableHead>
                 <TableHead>Active</TableHead>
                 <TableHead>Date Range</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead className="text-end">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -143,7 +143,7 @@ const AnnouncementsSection = () => {
                   <TableCell className="text-xs text-muted-foreground">
                     {a.starts_at ? new Date(a.starts_at).toLocaleDateString() : "—"} → {a.ends_at ? new Date(a.ends_at).toLocaleDateString() : "—"}
                   </TableCell>
-                  <TableCell className="text-right space-x-1">
+                  <TableCell className="text-end space-x-1 rtl:space-x-reverse">
                     <Button variant="ghost" size="icon" onClick={() => openEdit(a)}><Pencil className="w-4 h-4" /></Button>
                     <Button variant="ghost" size="icon" onClick={() => handleDelete(a.id)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
                   </TableCell>
