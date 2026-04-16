@@ -23,25 +23,27 @@ interface HistoryEntry {
   image_paths?: string[] | null;
 }
 
-const WORKFLOW_LABELS: Record<string, { label: string; color: string }> = {
-  single: { label: "Single Frame", color: "bg-primary/20 text-primary border-primary/30" },
-  twoframe: { label: "Two Frames", color: "bg-accent/20 text-accent border-accent/30" },
-  multishot: { label: "Multi-Shot", color: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" },
-};
+function getWorkflowLabels(t: (k: string) => string): Record<string, { label: string; color: string }> {
+  return {
+    single: { label: t("library.singleFrame"), color: "bg-primary/20 text-primary border-primary/30" },
+    twoframe: { label: t("library.twoFrames"), color: "bg-accent/20 text-accent border-accent/30" },
+    multishot: { label: t("library.multiShot"), color: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" },
+  };
+}
 
-function timeAgo(dateStr: string): string {
+function timeAgo(dateStr: string, t: (k: string) => string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
   const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
+  if (mins < 1) return t("library.justNow");
+  if (mins < 60) return `${mins}${t("library.minsAgo")}`;
   const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
+  if (hrs < 24) return `${hrs}${t("library.hrsAgo")}`;
   const days = Math.floor(hrs / 24);
-  if (days < 30) return `${days}d ago`;
+  if (days < 30) return `${days}${t("library.daysAgo")}`;
   return new Date(dateStr).toLocaleDateString();
 }
 
-function CopyButton({ text, label = "نسخ" }: { text: string; label?: string }) {
+function CopyButton({ text, label, copiedLabel }: { text: string; label: string; copiedLabel: string }) {
   const [copied, setCopied] = useState(false);
   const handleCopy = async () => {
     await navigator.clipboard.writeText(text);
@@ -51,7 +53,7 @@ function CopyButton({ text, label = "نسخ" }: { text: string; label?: string }
   return (
     <Button variant="ghost" size="sm" onClick={handleCopy} className="h-7 px-2 text-xs gap-1">
       {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-      {copied ? "تم النسخ" : label}
+      {copied ? copiedLabel : label}
     </Button>
   );
 }
