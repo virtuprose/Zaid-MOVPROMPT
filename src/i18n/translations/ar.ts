@@ -37,19 +37,19 @@ export const ar: Record<TranslationKey, string> = {
   "auth.continueGoogle": "المتابعة مع Google",
   "auth.continueApple": "المتابعة مع Apple",
   "auth.or": "أو",
-  "auth.mobileBrand": "سجّل الدخول لحفظ توجيهاتك والحصول على وصول كامل",
+  "auth.mobileBrand": "سجّل الدخول لحفظ اوامرك والحصول على وصول كامل",
   "auth.heroTitle": "حوّل الصور إلى",
   "auth.heroCinema": "سينما",
-  "auth.heroDesc": "أسقط إطاراً. اختر أسلوباً. احصل على توجيه سينمائي جاهز للصق في Kling أو Runway أو Wan أو أي أداة فيديو ذكية — في ثوانٍ.",
+  "auth.heroDesc": "ارف إطاراً. اختر أسلوباً. احصل على أمر سينمائي جاهز للصق في Kling أو Veo أو Seedance أو أي أداة فيديو ذكية — في ثوانٍ.",
   "auth.trusted": "يستخدمه صانعو الأفلام والمبدعون وفنانو الفيديو بالذكاء الاصطناعي حول العالم",
 
   // Auth features
   "auth.feat.dop.title": "مصوّرك السينمائي الذكي",
-  "auth.feat.dop.desc": "أسقط أي صورة — واحصل على توجيه فيديو احترافي مُصمّم للنموذج الذي تختاره.",
+  "auth.feat.dop.desc": "ارفع أي صورة — واحصل على امر فيديو احترافي مُصمّم للنموذج الذي تختاره.",
   "auth.feat.workflows.title": "صورة واحدة، ثلاثة مسارات",
   "auth.feat.workflows.desc": "لقطة واحدة، انتقال سلس، أو لوحة قصة كاملة — كل اتجاه إبداعي مغطى.",
-  "auth.feat.save.title": "مكتبة توجيهاتك",
-  "auth.feat.save.desc": "كل توجيه يُحفظ تلقائياً. أعد الزيارة، عدّل، وأعد استخدام أفضل أفكارك السينمائية.",
+  "auth.feat.save.title": "مكتبة اوامرك",
+  "auth.feat.save.desc": "كل امر يُحفظ تلقائياً. أعد الزيارة، عدّل، وأعد استخدام أفضل أفكارك السينمائية.",
 
   // Auth toasts
   "toast.resetFailed": "فشل إعادة التعيين",
