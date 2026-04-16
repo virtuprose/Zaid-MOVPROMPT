@@ -20,6 +20,7 @@ interface HistoryEntry {
   target_model: string;
   results: any;
   created_at: string;
+  image_paths?: string[] | null;
 }
 
 const WORKFLOW_LABELS: Record<string, { label: string; color: string }> = {
@@ -57,9 +58,23 @@ function CopyButton({ text }: { text: string }) {
 
 function HistoryCard({ entry, t, onDelete }: { entry: HistoryEntry; t: (k: string) => string; onDelete: (id: string) => void }) {
   const [expanded, setExpanded] = useState(false);
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
   const wf = WORKFLOW_LABELS[entry.workflow_type] || WORKFLOW_LABELS.single;
   const results: any[] = Array.isArray(entry.results) ? entry.results : [entry.results];
   const preview = results[0]?.mainPrompt?.slice(0, 120) || "";
+
+  useEffect(() => {
+    if (!expanded || !entry.image_paths?.length) return;
+    const loadUrls = async () => {
+      const urls: string[] = [];
+      for (const path of entry.image_paths!) {
+        const { data } = await supabase.storage.from("generation-images").createSignedUrl(path, 3600);
+        if (data?.signedUrl) urls.push(data.signedUrl);
+      }
+      setImageUrls(urls);
+    };
+    loadUrls();
+  }, [expanded, entry.image_paths]);
 
   const allText = results
     .map((r: any, i: number) => {
