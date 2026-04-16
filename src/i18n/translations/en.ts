@@ -119,6 +119,11 @@ export const en = {
 
   // ImageUploadZone
   "upload.dragDrop": "Drag & drop or click to upload",
+
+  // Library
+  "library.title": "Prompt Library",
+  "library.empty": "No prompts yet. Generate your first cinematic prompt!",
+  "library.generate": "Generate Your First Prompt",
 } as const;
 
 export type TranslationKey = keyof typeof en;
