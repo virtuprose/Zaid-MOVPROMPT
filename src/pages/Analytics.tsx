@@ -9,6 +9,7 @@ import UsersTab from "@/components/admin/UsersTab";
 import AnnouncementsSection from "@/components/admin/AnnouncementsSection";
 import NotificationsSection from "@/components/admin/NotificationsSection";
 import EmailTracker from "@/components/admin/EmailTracker";
+import WelcomePopupSection from "@/components/admin/WelcomePopupSection";
 
 const Analytics = () => {
   const navigate = useNavigate();
@@ -139,6 +140,7 @@ const Analytics = () => {
             <div className="space-y-6">
               <NotificationsSection />
               <AnnouncementsSection />
+              <WelcomePopupSection />
               <EmailTracker />
             </div>
           </TabsContent>
