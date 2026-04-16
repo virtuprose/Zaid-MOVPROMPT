@@ -124,6 +124,7 @@ export const en = {
   "library.title": "Prompt Library",
   "library.empty": "No prompts yet. Generate your first cinematic prompt!",
   "library.generate": "Generate Your First Prompt",
+  "library.delete": "Delete",
 } as const;
 
 export type TranslationKey = keyof typeof en;
