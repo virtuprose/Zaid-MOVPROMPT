@@ -95,12 +95,12 @@ export const ar: Record<TranslationKey, string> = {
   "config.anyModel": "أي نموذج — توجيه عام",
 
   // ResultsPanel
-  "results.title": "التوجيهات المُولّدة",
+  "results.title": "الاوامر المُولّدة",
   "results.copyAll": "نسخ الكل",
   "results.regenerate": "إعادة التوليد",
   "results.copied": "تم النسخ!",
-  "results.mainPrompt": "التوجيه الرئيسي",
-  "results.negativePrompt": "التوجيه السلبي",
+  "results.mainPrompt": "الامر الرئيسي",
+  "results.negativePrompt": "الامر السلبي",
   "results.cameraSuggestions": "اقتراحات الكاميرا",
   "results.modelNotes": "ملاحظات خاصة بالنموذج",
 
@@ -126,13 +126,27 @@ export const ar: Record<TranslationKey, string> = {
 
   // Library
   "library.title": "مكتبة الأوامر",
-  "library.empty": "لا توجد توجيهات بعد. أنشئ أول توجيه سينمائي!",
-  "library.generate": "أنشئ أول توجيه",
+  "library.empty": "لا توجد اوامر بعد. أنشئ أول امر سينمائي!",
+  "library.generate": "أنشئ أول امر",
   "library.delete": "حذف",
   "library.searchPlaceholder": "ابحث في الأوامر...",
   "library.clearFilters": "مسح الفلاتر",
   "library.noResults": "لا توجد نتائج مطابقة.",
   "library.resultsCount": "الأوامر",
+  "library.singleFrame": "إطار واحد",
+  "library.twoFrames": "إطاران",
+  "library.multiShot": "متعدد اللقطات",
+  "library.justNow": "الآن",
+  "library.minsAgo": "د",
+  "library.hrsAgo": "س",
+  "library.daysAgo": "ي",
+  "library.shot": "لقطة",
+  "library.copy": "نسخ",
+  "library.copyAll": "نسخ-الكل",
+  "library.copied": "تم النسخ",
+  "library.negative": "سلبي",
+  "library.camera": "كاميرا",
+  "library.notes": "ملاحظات",
 
   // Terms & Conditions
   "terms.back": "رجوع",
