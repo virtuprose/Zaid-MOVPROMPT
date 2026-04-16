@@ -118,4 +118,7 @@ export const ar: Record<TranslationKey, string> = {
 
   // AnnouncementBanner
   "announcement.learnMore": "اعرف المزيد",
+
+  // ImageUploadZone
+  "upload.dragDrop": "اسحب وأفلت أو انقر للرفع",
 };

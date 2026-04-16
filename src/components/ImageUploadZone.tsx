@@ -1,5 +1,6 @@
 import { useCallback, useState } from "react";
 import { Upload, X, Image as ImageIcon } from "lucide-react";
+import { useLanguage } from "@/i18n/LanguageContext";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface ImageUploadZoneProps {
