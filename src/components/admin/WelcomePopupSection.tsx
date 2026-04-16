@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "@/hooks/use-toast";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Upload, X, Loader2 } from "lucide-react";
 
 interface WelcomePopup {
   id: string;
@@ -29,12 +29,16 @@ const emptyForm = {
   image_url: "", link_url: "", link_text: "", link_text_ar: "",
 };
 
+const BUCKET = "welcome-popup-media";
+
 const WelcomePopupSection = () => {
   const [popups, setPopups] = useState<WelcomePopup[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetch_ = async () => {
     const { data } = await supabase.from("welcome_popups").select("*").order("created_at", { ascending: false });
@@ -52,6 +56,47 @@ const WelcomePopupSection = () => {
       image_url: p.image_url || "", link_url: p.link_url || "", link_text: p.link_text || "", link_text_ar: p.link_text_ar || "",
     });
     setDialogOpen(true);
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const isImage = file.type.startsWith("image/");
+    const isVideo = file.type.startsWith("video/");
+    if (!isImage && !isVideo) {
+      toast({ title: "Only image and video files are allowed", variant: "destructive" });
+      return;
+    }
+    if (file.size > 20 * 1024 * 1024) {
+      toast({ title: "File must be under 20MB", variant: "destructive" });
+      return;
+    }
+
+    setUploading(true);
+    const ext = file.name.split(".").pop();
+    const fileName = `${Date.now()}.${ext}`;
+
+    const { error } = await supabase.storage.from(BUCKET).upload(fileName, file, {
+      cacheControl: "3600",
+      upsert: false,
+    });
+
+    if (error) {
+      toast({ title: "Upload failed", description: error.message, variant: "destructive" });
+      setUploading(false);
+      return;
+    }
+
+    const { data: urlData } = supabase.storage.from(BUCKET).getPublicUrl(fileName);
+    setForm((prev) => ({ ...prev, image_url: urlData.publicUrl }));
+    toast({ title: "File uploaded" });
+    setUploading(false);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const clearMedia = () => {
+    setForm((prev) => ({ ...prev, image_url: "" }));
   };
 
   const handleSave = async () => {
@@ -72,7 +117,6 @@ const WelcomePopupSection = () => {
 
   const toggleActive = async (id: string, current: boolean) => {
     if (!current) {
-      // Deactivate all others first
       await supabase.from("welcome_popups").update({ is_active: false }).neq("id", id);
     }
     await supabase.from("welcome_popups").update({ is_active: !current }).eq("id", id);
@@ -86,6 +130,8 @@ const WelcomePopupSection = () => {
   };
 
   if (loading) return <p className="text-muted-foreground">Loading...</p>;
+
+  const isVideo = form.image_url && /\.(mp4|webm|mov|ogg)(\?|$)/i.test(form.image_url);
 
   return (
     <Card>
@@ -133,14 +179,63 @@ const WelcomePopupSection = () => {
             <Input placeholder="Title (Arabic)" value={form.title_ar} onChange={(e) => setForm({ ...form, title_ar: e.target.value })} dir="rtl" />
             <Textarea placeholder="Message (English)" value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })} />
             <Textarea placeholder="Message (Arabic)" value={form.message_ar} onChange={(e) => setForm({ ...form, message_ar: e.target.value })} dir="rtl" />
-            <Input placeholder="Image URL (optional)" value={form.image_url} onChange={(e) => setForm({ ...form, image_url: e.target.value })} />
+
+            {/* Media upload section */}
+            <div className="space-y-2">
+              <label className="text-xs text-muted-foreground font-medium">Image or Video (optional)</label>
+              {form.image_url ? (
+                <div className="relative rounded-md border border-border overflow-hidden">
+                  {isVideo ? (
+                    <video src={form.image_url} className="w-full max-h-40 object-cover" controls muted />
+                  ) : (
+                    <img src={form.image_url} alt="Preview" className="w-full max-h-40 object-cover" />
+                  )}
+                  <Button
+                    variant="destructive"
+                    size="icon"
+                    className="absolute top-2 end-2 w-6 h-6"
+                    onClick={clearMedia}
+                  >
+                    <X className="w-3 h-3" />
+                  </Button>
+                </div>
+              ) : (
+                <div
+                  className="flex flex-col items-center justify-center gap-2 rounded-md border-2 border-dashed border-border p-6 cursor-pointer hover:border-primary/50 transition-colors"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  {uploading ? (
+                    <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                  ) : (
+                    <>
+                      <Upload className="w-6 h-6 text-muted-foreground" />
+                      <span className="text-xs text-muted-foreground">Click to upload image or video</span>
+                    </>
+                  )}
+                </div>
+              )}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*,video/*"
+                className="hidden"
+                onChange={handleFileUpload}
+              />
+              <p className="text-[10px] text-muted-foreground">Or paste a URL below:</p>
+              <Input
+                placeholder="https://..."
+                value={form.image_url}
+                onChange={(e) => setForm({ ...form, image_url: e.target.value })}
+              />
+            </div>
+
             <Input placeholder="Link URL (optional)" value={form.link_url} onChange={(e) => setForm({ ...form, link_url: e.target.value })} />
             <Input placeholder="Link Text (English)" value={form.link_text} onChange={(e) => setForm({ ...form, link_text: e.target.value })} />
             <Input placeholder="Link Text (Arabic)" value={form.link_text_ar} onChange={(e) => setForm({ ...form, link_text_ar: e.target.value })} dir="rtl" />
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSave}>Save</Button>
+            <Button onClick={handleSave} disabled={uploading}>Save</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

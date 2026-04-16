@@ -56,7 +56,11 @@ const WelcomePopup = () => {
           <DialogTitle className="text-xl">{title}</DialogTitle>
         </DialogHeader>
         {popup.image_url && (
-          <img src={popup.image_url} alt="" className="w-full rounded-md max-h-48 object-cover" />
+          /\.(mp4|webm|mov|ogg)(\?|$)/i.test(popup.image_url) ? (
+            <video src={popup.image_url} className="w-full rounded-md max-h-48 object-cover" controls autoPlay muted loop />
+          ) : (
+            <img src={popup.image_url} alt="" className="w-full rounded-md max-h-48 object-cover" />
+          )
         )}
         <DialogDescription className="text-sm whitespace-pre-wrap">{message}</DialogDescription>
         <div className="flex justify-end gap-2 mt-2">
