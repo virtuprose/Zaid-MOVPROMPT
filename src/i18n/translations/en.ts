@@ -38,16 +38,16 @@ export const en = {
   "auth.mobileBrand": "Sign in to save your prompts & unlock full access",
   "auth.heroTitle": "Turn Stills Into",
   "auth.heroCinema": "Cinema",
-  "auth.heroDesc": "AI-powered cinematic prompt generation. Upload a frame, choose your workflow, and get production-ready prompts for any video model.",
-  "auth.trusted": "Trusted by filmmakers and creators worldwide",
+  "auth.heroDesc": "Drop a frame. Pick a style. Get a cinematic prompt ready to paste into Kling, Runway, Wan, or any AI video tool — in seconds.",
+  "auth.trusted": "Used by filmmakers, creators, and AI video artists worldwide",
 
   // Auth features
-  "auth.feat.dop.title": "AI Director of Photography",
-  "auth.feat.dop.desc": "Upload any frame and get cinematic video prompts tuned for top AI models.",
-  "auth.feat.workflows.title": "3 Powerful Workflows",
-  "auth.feat.workflows.desc": "Single Frame, Two Frames, or Multi-Shot Storyboard — pick your creative path.",
-  "auth.feat.save.title": "Save & Reuse",
-  "auth.feat.save.desc": "Sign in to keep your prompt history and revisit your best cinematic directions.",
+  "auth.feat.dop.title": "Your AI Cinematographer",
+  "auth.feat.dop.desc": "Drop any image — get a director-grade video prompt crafted for the model you choose.",
+  "auth.feat.workflows.title": "One Image, Three Workflows",
+  "auth.feat.workflows.desc": "Single shot, smooth transition, or full storyboard — every creative direction covered.",
+  "auth.feat.save.title": "Your Prompt Library",
+  "auth.feat.save.desc": "Every prompt saved automatically. Revisit, remix, and reuse your best cinematic ideas.",
 
   // Auth toasts
   "toast.resetFailed": "Reset failed",
