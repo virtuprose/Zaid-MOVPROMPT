@@ -277,7 +277,15 @@ export const WorkflowPanel = ({ type }: WorkflowPanelProps) => {
               onDirectionsChange={setElementDirections}
             />
 
-            <div className="flex justify-end">
+            <div className="flex justify-between">
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => { setPhase("upload"); setSceneFrames([]); setElementDirections({}); setResults(null); }}
+                className="text-xs text-muted-foreground gap-1"
+              >
+                <RotateCcw className="w-3 h-3" /> Start Over
+              </Button>
               <Button
                 size="sm"
                 variant="ghost"
@@ -315,6 +323,16 @@ export const WorkflowPanel = ({ type }: WorkflowPanelProps) => {
             exit={{ opacity: 0, height: 0 }}
             className="space-y-4"
           >
+            <div className="flex justify-start">
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => { setPhase("upload"); setResults(null); }}
+                className="text-xs text-muted-foreground gap-1"
+              >
+                <RotateCcw className="w-3 h-3" /> Start Over
+              </Button>
+            </div>
             <ConfigPanel description={description} model={model} onDescriptionChange={setDescription} onModelChange={setModel} />
 
             <div className="flex justify-center">
