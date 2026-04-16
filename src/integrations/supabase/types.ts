@@ -374,6 +374,59 @@ export type Database = {
         }
         Relationships: []
       }
+      welcome_popups: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          image_url: string | null
+          is_active: boolean
+          link_text: string | null
+          link_text_ar: string | null
+          link_url: string | null
+          message: string
+          message_ar: string | null
+          title: string
+          title_ar: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          link_text?: string | null
+          link_text_ar?: string | null
+          link_url?: string | null
+          message: string
+          message_ar?: string | null
+          title: string
+          title_ar?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          link_text?: string | null
+          link_text_ar?: string | null
+          link_url?: string | null
+          message?: string
+          message_ar?: string | null
+          title?: string
+          title_ar?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "welcome_popups_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
