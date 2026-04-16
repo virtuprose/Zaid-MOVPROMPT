@@ -1,20 +1,29 @@
 
 
-# Add Skip Analysis Button & Analyze Scene Explanation
+# Improve Start Over & Re-analyze Button Styling
 
-## Changes
+## Problem
+The "Start Over" and "Re-analyze" buttons are tiny ghost buttons with muted text — they're hard to notice and don't feel like intentional UI actions.
 
-### File: `src/components/WorkflowPanel.tsx`
+## Solution
+Style them as proper visible buttons with outline variant, slightly larger size, and better visual presence while keeping them secondary to the main "Generate" CTA.
 
-**1. Add explanation text** above the "Analyze Scene" button (in the `phase === "upload"` section):
-- Short muted paragraph: *"AI will break down your scene into individual elements (subject, background, lighting, atmosphere) so you can control exactly what stays still and what moves."*
+### Changes in `src/components/WorkflowPanel.tsx`
 
-**2. Add "Skip Analysis" button** next to the "Analyze Scene" button:
-- Secondary/ghost variant, labeled "Skip — Go Straight to Generate"
-- On click: skip to showing ConfigPanel + Generate button directly (set `phase` to `"breakdown"` with empty `sceneFrames`, so the breakdown section is skipped but ConfigPanel and Generate appear)
-- Need a small logic adjustment: when `phase === "breakdown"` and `sceneFrames` is empty, show only ConfigPanel + Generate (no SceneBreakdown cards)
+**1. Breakdown view (with scene frames) — lines 280-298:**
+- Change both buttons from `ghost` + `text-xs text-muted-foreground` to `outline` variant, `sm` size, with proper border styling matching the dark cinematic theme
+- Use distinct icons: `RotateCcw` for Start Over, `ScanSearch` for Re-analyze
+- Add subtle border glow or border-primary/30 styling to make them visible against the dark background
 
-**3. Layout**: Stack the two buttons horizontally — "Analyze Scene" (primary) on left, "Skip Analysis" (ghost/outline) on right, with the explanation text centered above them.
+**2. Skip-analysis view (no scene frames) — lines 326-335:**
+- Same treatment for the Start Over button there
 
-Single file edit. No backend changes.
+**Styling approach:**
+```
+variant="outline"
+size="sm" 
+className="gap-1.5 border-white/20 text-muted-foreground hover:text-foreground hover:border-primary/50"
+```
+
+Single file edit, no backend changes.
 
