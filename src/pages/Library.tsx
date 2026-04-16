@@ -334,7 +334,7 @@ const Library = () => {
                     key={model}
                     onClick={() => setModelFilter(prev => {
                       const next = new Set(prev);
-                      next.has(model) ? next.delete(model) : next.add(model);
+                      if (next.has(model)) next.delete(model); else next.add(model);
                       return next;
                     })}
                     className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors ${
