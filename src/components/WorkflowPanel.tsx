@@ -260,7 +260,7 @@ export const WorkflowPanel = ({ type }: WorkflowPanelProps) => {
             {...phaseTransition}
             className="space-y-3"
           >
-            <p className="text-sm text-muted-foreground max-w-md mx-auto text-center whitespace-pre-line">
+            <p className="text-sm text-muted-foreground max-w-md mx-auto text-center">
               {t("wp.analyzeDesc")}
             </p>
             <div className="flex justify-center gap-3">
