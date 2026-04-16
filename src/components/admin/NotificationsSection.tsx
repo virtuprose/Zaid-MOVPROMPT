@@ -109,7 +109,7 @@ const NotificationsSection = () => {
                 <TableHead>Message</TableHead>
                 <TableHead>Type</TableHead>
                 <TableHead>Sent</TableHead>
-                <TableHead className="w-12"></TableHead>
+                <TableHead className="w-12 text-end"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
