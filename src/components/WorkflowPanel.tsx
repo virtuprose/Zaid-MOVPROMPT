@@ -280,20 +280,20 @@ export const WorkflowPanel = ({ type }: WorkflowPanelProps) => {
             <div className="flex justify-between">
               <Button
                 size="sm"
-                variant="ghost"
+                variant="outline"
                 onClick={() => { setPhase("upload"); setSceneFrames([]); setElementDirections({}); setResults(null); }}
-                className="text-xs text-muted-foreground gap-1"
+                className="gap-1.5 border-white/20 text-muted-foreground hover:text-foreground hover:border-primary/50"
               >
-                <RotateCcw className="w-3 h-3" /> Start Over
+                <RotateCcw className="w-3.5 h-3.5" /> Start Over
               </Button>
               <Button
                 size="sm"
-                variant="ghost"
+                variant="outline"
                 onClick={handleAnalyze}
                 disabled={isAnalyzing}
-                className="text-xs text-muted-foreground gap-1"
+                className="gap-1.5 border-white/20 text-muted-foreground hover:text-foreground hover:border-primary/50"
               >
-                <RotateCcw className="w-3 h-3" /> Re-analyze
+                <ScanSearch className="w-3.5 h-3.5" /> Re-analyze
               </Button>
             </div>
 
@@ -326,11 +326,11 @@ export const WorkflowPanel = ({ type }: WorkflowPanelProps) => {
             <div className="flex justify-start">
               <Button
                 size="sm"
-                variant="ghost"
+                variant="outline"
                 onClick={() => { setPhase("upload"); setResults(null); }}
-                className="text-xs text-muted-foreground gap-1"
+                className="gap-1.5 border-white/20 text-muted-foreground hover:text-foreground hover:border-primary/50"
               >
-                <RotateCcw className="w-3 h-3" /> Start Over
+                <RotateCcw className="w-3.5 h-3.5" /> Start Over
               </Button>
             </div>
             <ConfigPanel description={description} model={model} onDescriptionChange={setDescription} onModelChange={setModel} />
