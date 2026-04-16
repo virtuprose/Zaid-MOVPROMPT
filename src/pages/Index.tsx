@@ -13,6 +13,7 @@ import { LanguageToggle } from "@/components/LanguageToggle";
 import { motion } from "framer-motion";
 import { Camera, Layers, Film, BookOpen, ChevronDown, Upload, Copy, User, LogOut, Library } from "lucide-react";
 import AnnouncementBanner from "@/components/AnnouncementBanner";
+import NotificationBell from "@/components/NotificationBell";
 import { InstallPrompt } from "@/components/InstallPrompt";
 
 const Index = () => {
@@ -54,6 +55,7 @@ const Index = () => {
         {/* Top bar */}
         <div className="flex justify-end gap-1.5 mb-4">
           <LanguageToggle />
+          {!loading && user && <NotificationBell />}
           {!loading && user && (
             <Button variant="ghost" size="sm" onClick={() => navigate("/library")} className="gap-1.5">
               <Library className="w-4 h-4" />
