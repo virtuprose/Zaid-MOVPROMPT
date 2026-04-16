@@ -167,7 +167,7 @@ const Index = () => {
 
         {/* Footer */}
         <footer className="mt-16 text-center">
-          <p className="text-xs text-muted-foreground/60">
+          <p className="text-xs text-muted-foreground/60 font-light">
             {t("footer")}
           </p>
         </footer>

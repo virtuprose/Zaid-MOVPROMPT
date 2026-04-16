@@ -3,12 +3,12 @@ import type { TranslationKey } from "./en";
 export const ar: Record<TranslationKey, string> = {
   // Index page
   "hero.title": "MovPrompt",
-  "hero.subtitle": "مدير التصوير الذكي. حوّل أي صورة ثابتة إلى توجيه سينمائي احترافي.",
-  "footer": "MovPrompt — توجيهات سينمائية بالذكاء الاصطناعي",
+  "hero.subtitle": "المخرج السينمائي الذكي: حوّل صورك الثابتة إلى كادرات سينمائية ملهمة",
+  "footer": "MovPrompt — أوامر سينمائية بالذكاء الاصطناعي",
 
   // Workflows
   "workflow.single": "إطار واحد",
-  "workflow.single.desc": "ارفع صورة واحدة. الذكاء الاصطناعي يكتب توجيه حركة الكاميرا المثالي.",
+  "workflow.single.desc": "تفضل برفع الصورة هنا، وسأقوم بتحليلها بدقة واقتراح أمر حركة الكاميرا المثالي",
   "workflow.twoframe": "إطاران",
   "workflow.twoframe.desc": "ارفع إطار البداية والنهاية. الذكاء الاصطناعي يصنع انتقالاً سلساً.",
   "workflow.multishot": "لقطات متعددة",
@@ -84,7 +84,7 @@ export const ar: Record<TranslationKey, string> = {
   "frame.end": "إطار النهاية",
   "frame.concept": "صورة المفهوم",
   "frame.your": "إطارك",
-  "frame.upload": "ارفع إطارك",
+  "frame.upload": "ارفع الصورة",
   "frame.uploadConcept": "ارفع صورة المفهوم",
 
   // ConfigPanel
@@ -122,7 +122,7 @@ export const ar: Record<TranslationKey, string> = {
   "announcement.learnMore": "اعرف المزيد",
 
   // ImageUploadZone
-  "upload.dragDrop": "اسحب وأفلت أو انقر للرفع",
+  "upload.dragDrop": "بانتظارك! ارفع الصورة الآن، وسأقوم فوراً بتحليل",
 
   // Library
   "library.title": "مكتبة الأوامر",
