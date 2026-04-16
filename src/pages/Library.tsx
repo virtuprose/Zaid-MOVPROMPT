@@ -191,8 +191,8 @@ const Library = () => {
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [workflowFilter, setWorkflowFilter] = useState<string | null>(null);
-  const [modelFilter, setModelFilter] = useState<string | null>(null);
+  const [workflowFilter, setWorkflowFilter] = useState<Set<string>>(new Set());
+  const [modelFilter, setModelFilter] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     trackPageVisit("/library");
@@ -234,8 +234,8 @@ const Library = () => {
 
   // Filter logic
   const filtered = history.filter((entry) => {
-    if (workflowFilter && entry.workflow_type !== workflowFilter) return false;
-    if (modelFilter && entry.target_model !== modelFilter) return false;
+    if (workflowFilter.size > 0 && !workflowFilter.has(entry.workflow_type)) return false;
+    if (modelFilter.size > 0 && !modelFilter.has(entry.target_model)) return false;
     if (search.trim()) {
       const q = search.toLowerCase();
       const results: any[] = Array.isArray(entry.results) ? entry.results : [entry.results];
@@ -245,7 +245,8 @@ const Library = () => {
     return true;
   });
 
-  const hasActiveFilters = !!workflowFilter || !!modelFilter || !!search.trim();
+  const activeFilterCount = workflowFilter.size + modelFilter.size;
+  const hasActiveFilters = activeFilterCount > 0 || !!search.trim();
 
   return (
     <div className="min-h-screen bg-background">
@@ -300,43 +301,62 @@ const Library = () => {
             {/* Filter chips */}
             <div className="flex flex-wrap gap-2">
               {/* Workflow chips */}
-              {Object.entries(WORKFLOW_LABELS).map(([key, wf]) => (
-                <button
-                  key={key}
-                  onClick={() => setWorkflowFilter(workflowFilter === key ? null : key)}
-                  className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors ${
-                    workflowFilter === key
-                      ? `${wf.color} border-current`
-                      : "border-border text-muted-foreground hover:text-foreground hover:border-foreground/30"
-                  }`}
-                >
-                  {wf.label}
-                </button>
-              ))}
+              {Object.entries(WORKFLOW_LABELS).map(([key, wf]) => {
+                const active = workflowFilter.has(key);
+                return (
+                  <button
+                    key={key}
+                    onClick={() => setWorkflowFilter(prev => {
+                      const next = new Set(prev);
+                      next.has(key) ? next.delete(key) : next.add(key);
+                      return next;
+                    })}
+                    className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors ${
+                      active
+                        ? `${wf.color} border-current`
+                        : "border-border text-muted-foreground hover:text-foreground hover:border-foreground/30"
+                    }`}
+                  >
+                    {active && <Check className="w-3 h-3" />}
+                    {wf.label}
+                  </button>
+                );
+              })}
 
               {/* Model chips */}
-              {uniqueModels.map((model) => (
-                <button
-                  key={model}
-                  onClick={() => setModelFilter(modelFilter === model ? null : model)}
-                  className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors ${
-                    modelFilter === model
-                      ? "bg-foreground/10 text-foreground border-foreground/30"
-                      : "border-border text-muted-foreground hover:text-foreground hover:border-foreground/30"
-                  }`}
-                >
-                  {model}
-                </button>
-              ))}
+              {uniqueModels.map((model) => {
+                const active = modelFilter.has(model);
+                return (
+                  <button
+                    key={model}
+                    onClick={() => setModelFilter(prev => {
+                      const next = new Set(prev);
+                      next.has(model) ? next.delete(model) : next.add(model);
+                      return next;
+                    })}
+                    className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors ${
+                      active
+                        ? "bg-foreground/10 text-foreground border-foreground/30"
+                        : "border-border text-muted-foreground hover:text-foreground hover:border-foreground/30"
+                    }`}
+                  >
+                    {active && <Check className="w-3 h-3" />}
+                    {model}
+                  </button>
+                );
+              })}
 
-              {/* Clear all */}
+              {/* Active filter count + Clear all */}
               {hasActiveFilters && (
                 <button
-                  onClick={() => { setSearch(""); setWorkflowFilter(null); setModelFilter(null); }}
+                  onClick={() => { setSearch(""); setWorkflowFilter(new Set()); setModelFilter(new Set()); }}
                   className="inline-flex items-center gap-1 rounded-full border border-border px-2.5 py-1 text-[11px] font-medium text-muted-foreground hover:text-foreground transition-colors"
                 >
                   <X className="w-3 h-3" />
                   {t("library.clearFilters")}
+                  {activeFilterCount > 0 && (
+                    <Badge variant="secondary" className="ml-1 h-4 px-1.5 text-[10px]">{activeFilterCount}</Badge>
+                  )}
                 </button>
               )}
             </div>
@@ -374,7 +394,7 @@ const Library = () => {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => { setSearch(""); setWorkflowFilter(null); setModelFilter(null); }}
+              onClick={() => { setSearch(""); setWorkflowFilter(new Set()); setModelFilter(new Set()); }}
             >
               {t("library.clearFilters")}
             </Button>
