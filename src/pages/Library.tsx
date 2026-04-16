@@ -10,7 +10,7 @@ import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Copy, ChevronDown, Library as LibraryIcon, Sparkles, Check, Trash2 } from "lucide-react";
+import { ArrowLeft, Copy, ChevronDown, Sparkles, Check, Trash2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 interface HistoryEntry {
@@ -188,6 +188,15 @@ const Library = () => {
     fetchHistory();
   }, [user, authLoading, navigate]);
 
+  const handleDelete = async (id: string) => {
+    const { error } = await supabase.from("prompt_history").delete().eq("id", id);
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } else {
+      setHistory((prev) => prev.filter((e) => e.id !== id));
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
@@ -243,7 +252,7 @@ const Library = () => {
             className="space-y-3"
           >
             {history.map((entry) => (
-              <HistoryCard key={entry.id} entry={entry} t={t} />
+              <HistoryCard key={entry.id} entry={entry} t={t} onDelete={handleDelete} />
             ))}
           </motion.div>
         )}
