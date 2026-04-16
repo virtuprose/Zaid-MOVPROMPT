@@ -68,7 +68,7 @@ export const ar: Record<TranslationKey, string> = {
   "wp.skip": "تخطي — انتقل مباشرة للتوليد",
   "wp.startOver": "البدء من جديد",
   "wp.reAnalyze": "إعادة التحليل",
-  "wp.generatePrompt": "توليد توجيه سينمائي",
+  "wp.generatePrompt": "توليد أمر سينمائي",
   "wp.regeneratePrompt": "إعادة توليد التوجيه",
   "wp.generatingPrompt": "جاري توليد التوجيه...",
   "wp.signInRequired": "تسجيل الدخول مطلوب",
@@ -106,7 +106,7 @@ export const ar: Record<TranslationKey, string> = {
 
   // SceneBreakdown
   "scene.title": "عناصر المشهد",
-  "scene.subtitle": "— حدد كل عنصر كثابت أو متحرك",
+  "scene.subtitle": "— حدد كل عنصر كثابت، متحرك او تكتب الامر",
   "scene.lock": "تثبيت",
   "scene.move": "تحريك",
   "scene.elements": "عناصر",
