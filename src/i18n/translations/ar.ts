@@ -62,7 +62,7 @@ export const ar: Record<TranslationKey, string> = {
   "toast.appleFailed": "فشل تسجيل الدخول بـ Apple",
 
   // WorkflowPanel
-  "wp.analyzeDesc": "سيقوم الذكاء الاصطناعي بتحليل مشهدك إلى عناصر فردية (الموضوع، الخلفية، الإضاءة، الأجواء) حتى تتحكم بدقة فيما يبقى ثابتاً وما يتحرك.",
+  "wp.analyzeDesc": "سيقوم الذكاء الاصطناعي بتحليل مشهدك إلى عناصر فردية \n(الموضوع، الخلفية، الإضاءة، الأجواء) حتى تتحكم بدقة فيما يبقى ثابتاً وما يتحرك",
   "wp.analyzeScene": "تحليل المشهد",
   "wp.analyzingScene": "جاري تحليل المشهد...",
   "wp.skip": "تخطي — انتقل مباشرة للتوليد",
@@ -84,7 +84,7 @@ export const ar: Record<TranslationKey, string> = {
   "frame.end": "إطار النهاية",
   "frame.concept": "صورة المفهوم",
   "frame.your": "إطارك",
-  "frame.upload": "ارفع الصورة",
+  "frame.upload": "المشهد",
   "frame.uploadConcept": "ارفع صورة المفهوم",
 
   // ConfigPanel
