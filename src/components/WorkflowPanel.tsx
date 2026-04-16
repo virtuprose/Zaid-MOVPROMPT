@@ -312,6 +312,8 @@ export const WorkflowPanel = ({ type }: WorkflowPanelProps) => {
               >
                 {isLoading ? (
                   <><Loader2 className="w-4 h-4 me-2 animate-spin" /> {t("wp.generatingPrompt")}</>
+                ) : results ? (
+                  <><RefreshCw className="w-4 h-4 me-2" /> {t("wp.regeneratePrompt")}</>
                 ) : (
                   <><Sparkles className="w-4 h-4 me-2" /> {t("wp.generatePrompt")}</>
                 )}
@@ -347,6 +349,8 @@ export const WorkflowPanel = ({ type }: WorkflowPanelProps) => {
               >
                 {isLoading ? (
                   <><Loader2 className="w-4 h-4 me-2 animate-spin" /> {t("wp.generatingPrompt")}</>
+                ) : results ? (
+                  <><RefreshCw className="w-4 h-4 me-2" /> {t("wp.regeneratePrompt")}</>
                 ) : (
                   <><Sparkles className="w-4 h-4 me-2" /> {t("wp.generatePrompt")}</>
                 )}
