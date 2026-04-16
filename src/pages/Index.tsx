@@ -2,52 +2,40 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { trackPageVisit } from "@/lib/analytics";
 import { useAuth } from "@/hooks/useAuth";
+import { useLanguage } from "@/i18n/LanguageContext";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { WorkflowPanel } from "@/components/WorkflowPanel";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { LanguageToggle } from "@/components/LanguageToggle";
 import { motion } from "framer-motion";
 import { Camera, Layers, Film, BookOpen, ChevronDown, Upload, Copy, User, LogOut } from "lucide-react";
 import AnnouncementBanner from "@/components/AnnouncementBanner";
 import { InstallPrompt } from "@/components/InstallPrompt";
 
-const WORKFLOWS = [
-  {
-    value: "single",
-    label: "Single Frame",
-    icon: Camera,
-    description: "Upload one image. AI writes the perfect camera movement prompt.",
-  },
-  {
-    value: "twoframe",
-    label: "Two Frames",
-    icon: Layers,
-    description: "Upload start & end frames. AI crafts a seamless transition.",
-  },
-  {
-    value: "multishot",
-    label: "Multi-Shot",
-    icon: Film,
-    description: "Upload one concept. AI generates a full storyboard sequence.",
-  },
-];
-
-const GUIDE_STEPS = [
-  { icon: Layers, title: "Choose a Workflow", desc: "Pick Single Frame, Two Frames, or Multi-Shot depending on your project." },
-  { icon: Upload, title: "Upload Your Image", desc: "Drag & drop or click to upload your reference frame(s)." },
-  { icon: Copy, title: "Generate & Copy", desc: "Hit generate, review your cinematic prompt, and copy it to your clipboard." },
-];
-
 const Index = () => {
   const [guideOpen, setGuideOpen] = useState(false);
   const { user, loading, signOut } = useAuth();
   const navigate = useNavigate();
+  const { t } = useLanguage();
 
   useEffect(() => {
     trackPageVisit("/");
   }, []);
+
+  const WORKFLOWS = [
+    { value: "single", label: t("workflow.single"), icon: Camera, description: t("workflow.single.desc") },
+    { value: "twoframe", label: t("workflow.twoframe"), icon: Layers, description: t("workflow.twoframe.desc") },
+    { value: "multishot", label: t("workflow.multishot"), icon: Film, description: t("workflow.multishot.desc") },
+  ];
+
+  const GUIDE_STEPS = [
+    { icon: Layers, title: t("guide.step1.title"), desc: t("guide.step1.desc") },
+    { icon: Upload, title: t("guide.step2.title"), desc: t("guide.step2.desc") },
+    { icon: Copy, title: t("guide.step3.title"), desc: t("guide.step3.desc") },
+  ];
 
   const initials = user?.user_metadata?.full_name
     ? user.user_metadata.full_name.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase()
@@ -64,7 +52,8 @@ const Index = () => {
       <div className="relative z-10 container max-w-5xl mx-auto px-4 py-6 sm:py-12">
         <AnnouncementBanner />
         {/* Top bar */}
-        <div className="flex justify-end mb-4">
+        <div className="flex justify-end gap-1.5 mb-4">
+          <LanguageToggle />
           {!loading && (
             user ? (
               <DropdownMenu>
@@ -79,14 +68,14 @@ const Index = () => {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem onClick={signOut}>
-                    <LogOut className="w-4 h-4 mr-2" /> Sign Out
+                    <LogOut className="w-4 h-4 me-2" /> {t("auth.signOut")}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
               <Button variant="outline" size="sm" onClick={() => navigate("/auth")}>
-                <User className="w-4 h-4 mr-1.5" />
-                Sign In
+                <User className="w-4 h-4 me-1.5" />
+                {t("auth.signIn")}
               </Button>
             )
           )}
@@ -105,7 +94,7 @@ const Index = () => {
             </h1>
           </div>
           <p className="text-muted-foreground text-base sm:text-lg max-w-xl mx-auto">
-            Your AI Director of Photography. Turn any still image into a director-grade cinematic video prompt.
+            {t("hero.subtitle")}
           </p>
         </motion.header>
 
@@ -120,7 +109,7 @@ const Index = () => {
             <CollapsibleTrigger className="w-full flex items-center justify-between gap-2 rounded-lg border border-border bg-card px-4 py-3 text-sm font-medium hover:bg-secondary/60 transition-colors">
               <span className="flex items-center gap-2">
                 <BookOpen className="w-4 h-4 text-primary" />
-                How to Use
+                {t("guide.title")}
               </span>
               <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${guideOpen ? "rotate-180" : ""}`} />
             </CollapsibleTrigger>
@@ -173,7 +162,7 @@ const Index = () => {
         {/* Footer */}
         <footer className="mt-16 text-center">
           <p className="text-xs text-muted-foreground/60">
-            MovPrompt — AI-powered cinematic prompts
+            {t("footer")}
           </p>
         </footer>
       </div>

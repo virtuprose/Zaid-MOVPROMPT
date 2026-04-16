@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useState, forwardRef } from "react";
 import { motion } from "framer-motion";
+import { useLanguage } from "@/i18n/LanguageContext";
 
 interface ShotResult {
   shotName?: string;
@@ -45,6 +46,8 @@ const ResultCard = ({ label, value, accent }: { label: string; value: string; ac
 );
 
 export const ResultsPanel = forwardRef<HTMLDivElement, ResultsPanelProps>(({ results, onRegenerate, isLoading }, ref) => {
+  const { t } = useLanguage();
+
   const handleCopyAll = () => {
     const allText = results.map((r, i) => {
       const prefix = r.shotName ? `--- ${r.shotName} ---\n` : results.length > 1 ? `--- Shot ${i + 1} ---\n` : "";
@@ -56,13 +59,13 @@ export const ResultsPanel = forwardRef<HTMLDivElement, ResultsPanelProps>(({ res
   return (
     <motion.div ref={ref} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
       <div className="flex items-center justify-between gap-2">
-        <h3 className="font-display text-base sm:text-lg font-semibold">Generated Prompts</h3>
+        <h3 className="font-display text-base sm:text-lg font-semibold">{t("results.title")}</h3>
         <div className="flex gap-1.5 sm:gap-2">
           <Button variant="outline" size="sm" onClick={handleCopyAll} className="px-2 sm:px-3">
-            <Copy className="w-3.5 h-3.5 sm:mr-1.5" /> <span className="hidden sm:inline">Copy All</span>
+            <Copy className="w-3.5 h-3.5 sm:me-1.5" /> <span className="hidden sm:inline">{t("results.copyAll")}</span>
           </Button>
           <Button variant="outline" size="sm" onClick={onRegenerate} disabled={isLoading} className="px-2 sm:px-3">
-            <RefreshCw className={`w-3.5 h-3.5 sm:mr-1.5 ${isLoading ? "animate-spin" : ""}`} /> <span className="hidden sm:inline">Regenerate</span>
+            <RefreshCw className={`w-3.5 h-3.5 sm:me-1.5 ${isLoading ? "animate-spin" : ""}`} /> <span className="hidden sm:inline">{t("results.regenerate")}</span>
           </Button>
         </div>
       </div>
@@ -95,11 +98,11 @@ export const ResultsPanel = forwardRef<HTMLDivElement, ResultsPanelProps>(({ res
                   )}
                 </div>
               )}
-              <ResultCard label="Main Prompt" value={result.mainPrompt} accent />
-              <ResultCard label="Negative Prompt" value={result.negativePrompt} />
+              <ResultCard label={t("results.mainPrompt")} value={result.mainPrompt} accent />
+              <ResultCard label={t("results.negativePrompt")} value={result.negativePrompt} />
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <ResultCard label="Camera Suggestions" value={result.cameraSuggestions} />
-                <ResultCard label="Model-Specific Notes" value={result.modelNotes} />
+                <ResultCard label={t("results.cameraSuggestions")} value={result.cameraSuggestions} />
+                <ResultCard label={t("results.modelNotes")} value={result.modelNotes} />
               </div>
             </div>
           </CardContent>

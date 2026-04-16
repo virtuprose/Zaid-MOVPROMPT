@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { X } from "lucide-react";
-import { Button } from "@/components/ui/button";
+
+import { useLanguage } from "@/i18n/LanguageContext";
 
 interface Announcement {
   id: string;
@@ -20,6 +21,7 @@ const getDismissed = (): string[] => {
 
 const AnnouncementBanner = () => {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const { t } = useLanguage();
 
   useEffect(() => {
     const fetch = async () => {
@@ -57,11 +59,11 @@ const AnnouncementBanner = () => {
       {announcements.map((a) => (
         <div key={a.id} className={`relative rounded-lg border px-4 py-3 text-sm flex items-center gap-3 ${typeStyles[a.type] || typeStyles.info}`}>
           <div className="flex-1 min-w-0">
-            <span className="font-semibold mr-1.5">{a.title}</span>
+            <span className="font-semibold me-1.5">{a.title}</span>
             <span className="text-muted-foreground">{a.message}</span>
             {a.link_url && (
-              <a href={a.link_url} target="_blank" rel="noopener noreferrer" className="ml-2 underline font-medium hover:text-primary">
-                {a.link_text || "Learn more"}
+              <a href={a.link_url} target="_blank" rel="noopener noreferrer" className="ms-2 underline font-medium hover:text-primary">
+                {a.link_text || t("announcement.learnMore")}
               </a>
             )}
           </div>

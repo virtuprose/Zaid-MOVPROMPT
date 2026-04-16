@@ -1,0 +1,121 @@
+import type { TranslationKey } from "./en";
+
+export const ar: Record<TranslationKey, string> = {
+  // Index page
+  "hero.title": "MovPrompt",
+  "hero.subtitle": "مدير التصوير الذكي. حوّل أي صورة ثابتة إلى توجيه سينمائي احترافي.",
+  "footer": "MovPrompt — توجيهات سينمائية بالذكاء الاصطناعي",
+
+  // Workflows
+  "workflow.single": "إطار واحد",
+  "workflow.single.desc": "ارفع صورة واحدة. الذكاء الاصطناعي يكتب توجيه حركة الكاميرا المثالي.",
+  "workflow.twoframe": "إطاران",
+  "workflow.twoframe.desc": "ارفع إطار البداية والنهاية. الذكاء الاصطناعي يصنع انتقالاً سلساً.",
+  "workflow.multishot": "لقطات متعددة",
+  "workflow.multishot.desc": "ارفع مفهوماً واحداً. الذكاء الاصطناعي يولّد تسلسل قصة كامل.",
+
+  // Guide
+  "guide.title": "كيفية الاستخدام",
+  "guide.step1.title": "اختر سير العمل",
+  "guide.step1.desc": "اختر إطار واحد أو إطاران أو لقطات متعددة حسب مشروعك.",
+  "guide.step2.title": "ارفع صورتك",
+  "guide.step2.desc": "اسحب وأفلت أو انقر لرفع الإطار(ات) المرجعية.",
+  "guide.step3.title": "أنشئ وانسخ",
+  "guide.step3.desc": "اضغط على إنشاء، راجع التوجيه السينمائي، وانسخه إلى الحافظة.",
+
+  // Auth
+  "auth.signIn": "تسجيل الدخول",
+  "auth.signOut": "تسجيل الخروج",
+  "auth.signUp": "إنشاء حساب",
+  "auth.email": "البريد الإلكتروني",
+  "auth.password": "كلمة المرور",
+  "auth.createAccount": "إنشاء حساب",
+  "auth.forgotPassword": "نسيت كلمة المرور؟",
+  "auth.backToSignIn": "العودة لتسجيل الدخول",
+  "auth.sendResetLink": "إرسال رابط إعادة التعيين",
+  "auth.resetDesc": "أدخل بريدك الإلكتروني وسنرسل لك رابط إعادة التعيين.",
+  "auth.continueGoogle": "المتابعة مع Google",
+  "auth.continueApple": "المتابعة مع Apple",
+  "auth.or": "أو",
+  "auth.mobileBrand": "سجّل الدخول لحفظ توجيهاتك والحصول على وصول كامل",
+  "auth.heroTitle": "حوّل الصور إلى",
+  "auth.heroCinema": "سينما",
+  "auth.heroDesc": "توليد توجيهات سينمائية بالذكاء الاصطناعي. ارفع إطاراً، اختر سير العمل، واحصل على توجيهات جاهزة للإنتاج لأي نموذج فيديو.",
+  "auth.trusted": "موثوق به من صانعي الأفلام والمبدعين حول العالم",
+
+  // Auth features
+  "auth.feat.dop.title": "مدير تصوير ذكي",
+  "auth.feat.dop.desc": "ارفع أي إطار واحصل على توجيهات فيديو سينمائية مُحسّنة لأفضل نماذج الذكاء الاصطناعي.",
+  "auth.feat.workflows.title": "3 مسارات عمل قوية",
+  "auth.feat.workflows.desc": "إطار واحد، إطاران، أو لوحة قصة متعددة اللقطات — اختر مسارك الإبداعي.",
+  "auth.feat.save.title": "حفظ وإعادة استخدام",
+  "auth.feat.save.desc": "سجّل الدخول للاحتفاظ بسجل التوجيهات وإعادة زيارة أفضل اتجاهاتك السينمائية.",
+
+  // Auth toasts
+  "toast.resetFailed": "فشل إعادة التعيين",
+  "toast.checkEmail": "تحقق من بريدك",
+  "toast.resetLinkSent": "أرسلنا لك رابط إعادة تعيين كلمة المرور.",
+  "toast.signUpFailed": "فشل التسجيل",
+  "toast.verificationSent": "أرسلنا لك رابط التحقق.",
+  "toast.signInFailed": "فشل تسجيل الدخول",
+  "toast.googleFailed": "فشل تسجيل الدخول بـ Google",
+  "toast.appleFailed": "فشل تسجيل الدخول بـ Apple",
+
+  // WorkflowPanel
+  "wp.analyzeDesc": "سيقوم الذكاء الاصطناعي بتحليل مشهدك إلى عناصر فردية (الموضوع، الخلفية، الإضاءة، الأجواء) حتى تتحكم بدقة فيما يبقى ثابتاً وما يتحرك.",
+  "wp.analyzeScene": "تحليل المشهد",
+  "wp.analyzingScene": "جاري تحليل المشهد...",
+  "wp.skip": "تخطي — انتقل مباشرة للتوليد",
+  "wp.startOver": "البدء من جديد",
+  "wp.reAnalyze": "إعادة التحليل",
+  "wp.generatePrompt": "توليد توجيه سينمائي",
+  "wp.generatingPrompt": "جاري توليد التوجيه...",
+  "wp.signInRequired": "تسجيل الدخول مطلوب",
+  "wp.signInAnalyze": "يرجى تسجيل الدخول لتحليل المشاهد.",
+  "wp.signInGenerate": "يرجى تسجيل الدخول لتوليد التوجيهات.",
+  "wp.analysisFailed": "فشل تحليل المشهد",
+  "wp.generationFailed": "فشل التوليد",
+  "wp.somethingWrong": "حدث خطأ ما.",
+  "wp.somethingWrongRetry": "حدث خطأ ما. يرجى المحاولة مرة أخرى.",
+
+  // Frame labels
+  "frame.start": "إطار البداية",
+  "frame.end": "إطار النهاية",
+  "frame.concept": "صورة المفهوم",
+  "frame.your": "إطارك",
+  "frame.upload": "ارفع إطارك",
+  "frame.uploadConcept": "ارفع صورة المفهوم",
+
+  // ConfigPanel
+  "config.describeVision": "صِف رؤيتك (اختياري)",
+  "config.placeholder": "صِف رؤيتك... مثال: 'حركة بطيئة درامية مع مطر وأضواء نيون'",
+  "config.targetModel": "نموذج الذكاء الاصطناعي المستهدف",
+  "config.chooseModel": "اختر نموذجاً...",
+  "config.anyModel": "أي نموذج — توجيه عام",
+
+  // ResultsPanel
+  "results.title": "التوجيهات المُولّدة",
+  "results.copyAll": "نسخ الكل",
+  "results.regenerate": "إعادة التوليد",
+  "results.mainPrompt": "التوجيه الرئيسي",
+  "results.negativePrompt": "التوجيه السلبي",
+  "results.cameraSuggestions": "اقتراحات الكاميرا",
+  "results.modelNotes": "ملاحظات خاصة بالنموذج",
+
+  // SceneBreakdown
+  "scene.title": "عناصر المشهد",
+  "scene.subtitle": "— حدد كل عنصر كثابت أو متحرك",
+  "scene.lock": "تثبيت",
+  "scene.move": "تحريك",
+  "scene.elements": "عناصر",
+  "scene.notePlaceholder": 'مثال: "اجعل الشعر يتطاير مع الريح"، "أضف تأثير المطر"...',
+
+  // InstallPrompt
+  "install.title": "تثبيت MovPrompt",
+  "install.desc": "أضف إلى الشاشة الرئيسية لتجربة التطبيق الكاملة",
+  "install.btn": "تثبيت",
+  "install.iosDesc": "اضغط على {icon} ثم \"إضافة إلى الشاشة الرئيسية\" للتثبيت",
+
+  // AnnouncementBanner
+  "announcement.learnMore": "اعرف المزيد",
+};
