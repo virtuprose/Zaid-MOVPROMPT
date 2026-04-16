@@ -61,7 +61,8 @@ function CopyButton({ text, label, copiedLabel }: { text: string; label: string;
 function HistoryCard({ entry, t, onDelete }: { entry: HistoryEntry; t: (k: string) => string; onDelete: (id: string) => void }) {
   const [expanded, setExpanded] = useState(false);
   const [imageUrls, setImageUrls] = useState<string[]>([]);
-  const wf = WORKFLOW_LABELS[entry.workflow_type] || WORKFLOW_LABELS.single;
+  const workflowLabels = getWorkflowLabels(t);
+  const wf = workflowLabels[entry.workflow_type] || workflowLabels.single;
   const results: any[] = Array.isArray(entry.results) ? entry.results : [entry.results];
   const preview = results[0]?.mainPrompt?.slice(0, 120) || "";
 
