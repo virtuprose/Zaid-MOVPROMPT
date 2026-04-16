@@ -13,6 +13,7 @@ import { LanguageToggle } from "@/components/LanguageToggle";
 import { motion } from "framer-motion";
 import { Camera, Layers, Film, BookOpen, ChevronDown, Upload, Copy, User, LogOut, Library } from "lucide-react";
 import AnnouncementBanner from "@/components/AnnouncementBanner";
+import NotificationBell from "@/components/NotificationBell";
 import { InstallPrompt } from "@/components/InstallPrompt";
 
 const Index = () => {
