@@ -237,6 +237,20 @@ export const en = {
 
   // ResultsPanel
   "results.failedCopy": "Failed to copy",
+
+  // Notifications
+  "notifications.title": "Notifications",
+  "notifications.markAllRead": "Mark all read",
+  "notifications.empty": "No notifications yet",
+  "notifications.form.title": "Title (English)",
+  "notifications.form.titleAr": "Title (Arabic)",
+  "notifications.form.message": "Message (English)",
+  "notifications.form.messageAr": "Message (Arabic)",
+
+  // Announcements i18n
+  "announcements.form.titleAr": "Title (Arabic)",
+  "announcements.form.messageAr": "Message (Arabic)",
+  "announcements.form.linkTextAr": "CTA Text (Arabic)",
 } as const;
 
 export type TranslationKey = keyof typeof en;
