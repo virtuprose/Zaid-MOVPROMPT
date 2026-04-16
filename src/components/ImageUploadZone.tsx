@@ -12,6 +12,7 @@ interface ImageUploadZoneProps {
 
 export const ImageUploadZone = ({ label, onImageSelect, onImageRemove, preview }: ImageUploadZoneProps) => {
   const [isDragging, setIsDragging] = useState(false);
+  const { t } = useLanguage();
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -68,7 +69,7 @@ export const ImageUploadZone = ({ label, onImageSelect, onImageRemove, preview }
             </div>
             <div className="text-center">
               <p className="text-sm font-medium text-foreground">{label}</p>
-              <p className="text-xs text-muted-foreground mt-1">Drag & drop or click to upload</p>
+              <p className="text-xs text-muted-foreground mt-1">{t("upload.dragDrop")}</p>
             </div>
           </motion.label>
         )}
