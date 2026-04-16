@@ -11,7 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { motion } from "framer-motion";
-import { Camera, Layers, Film, BookOpen, ChevronDown, Upload, Copy, User, LogOut } from "lucide-react";
+import { Camera, Layers, Film, BookOpen, ChevronDown, Upload, Copy, User, LogOut, Library } from "lucide-react";
 import AnnouncementBanner from "@/components/AnnouncementBanner";
 import { InstallPrompt } from "@/components/InstallPrompt";
 
@@ -54,6 +54,12 @@ const Index = () => {
         {/* Top bar */}
         <div className="flex justify-end gap-1.5 mb-4">
           <LanguageToggle />
+          {!loading && user && (
+            <Button variant="ghost" size="sm" onClick={() => navigate("/library")} className="gap-1.5">
+              <Library className="w-4 h-4" />
+              <span className="hidden sm:inline text-sm">{t("library.title")}</span>
+            </Button>
+          )}
           {!loading && (
             user ? (
               <DropdownMenu>
