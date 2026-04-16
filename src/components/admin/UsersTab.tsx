@@ -21,6 +21,7 @@ interface UserRow {
   created_at: string | null;
   role: "admin" | "user";
   is_active: boolean;
+  generations: number;
 }
 
 const UsersTab = () => {
@@ -60,14 +61,20 @@ const UsersTab = () => {
 
   const fetchUsers = async () => {
     setLoading(true);
-    const [{ data: profiles }, { data: roles }] = await Promise.all([
+    const [{ data: profiles }, { data: roles }, { data: history }] = await Promise.all([
       supabase.from("profiles").select("*"),
       supabase.from("user_roles").select("*"),
+      supabase.from("prompt_history").select("user_id"),
     ]);
 
     const roleMap: Record<string, "admin" | "user"> = {};
     (roles || []).forEach((r) => {
       if (r.role === "admin") roleMap[r.user_id] = "admin";
+    });
+
+    const genCount: Record<string, number> = {};
+    (history || []).forEach((h) => {
+      genCount[h.user_id] = (genCount[h.user_id] || 0) + 1;
     });
 
     const merged: UserRow[] = (profiles || []).map((p) => ({
@@ -77,7 +84,8 @@ const UsersTab = () => {
       avatar_url: p.avatar_url,
       created_at: p.created_at,
       role: roleMap[p.id] || "user",
-      is_active: true, // default, will be shown via UI state
+      is_active: true,
+      generations: genCount[p.id] || 0,
     }));
 
     setUsers(merged);
@@ -216,6 +224,7 @@ const UsersTab = () => {
                 <TableHead>Name</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Role</TableHead>
+                <TableHead>Generations</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Joined</TableHead>
                 <TableHead className="w-12"></TableHead>
@@ -224,6 +233,9 @@ const UsersTab = () => {
             <TableBody>
               {paginatedUsers.map((u) => (
                 <TableRow key={u.id} className={!u.is_active ? "opacity-50" : ""}>
+                  <TableCell>
+                    <span className="text-sm font-medium text-primary">{u.generations}</span>
+                  </TableCell>
                   <TableCell>
                     <Avatar className="h-8 w-8">
                       <AvatarImage src={u.avatar_url || undefined} />
