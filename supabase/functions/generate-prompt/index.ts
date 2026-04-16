@@ -281,14 +281,21 @@ serve(async (req) => {
     if (description?.trim()) {
       userText += `User's creative vision: ${description.trim()}\n\n`;
     }
-    // Inject scene breakdown if provided by user
+    // Inject scene breakdown if provided by user (frame-grouped)
     if (Array.isArray(sceneBreakdown) && sceneBreakdown.length > 0) {
       userText += `Scene Breakdown (user-directed):\n`;
-      for (const el of sceneBreakdown) {
-        const actionLabel = el.action === "lock" ? "LOCK (keep static)" : "MOVE (animate)";
-        userText += `- ${el.category}: "${el.description}" → ${actionLabel}`;
-        if (el.note?.trim()) userText += ` | Note: "${el.note.trim()}"`;
-        userText += `\n`;
+      for (const frame of sceneBreakdown) {
+        if (sceneBreakdown.length > 1) {
+          userText += `\n--- ${frame.frameLabel || "Frame " + (frame.frameIndex + 1)} ---\n`;
+        }
+        if (Array.isArray(frame.elements)) {
+          for (const el of frame.elements) {
+            const actionLabel = el.action === "lock" ? "LOCK (keep static)" : "MOVE (animate)";
+            userText += `- ${el.category}: "${el.description}" → ${actionLabel}`;
+            if (el.note?.trim()) userText += ` | Note: "${el.note.trim()}"`;
+            userText += `\n`;
+          }
+        }
       }
       userText += `\nRespect the user's lock/move directions precisely. Locked elements should remain static. Move elements should be animated.\n\n`;
     }
