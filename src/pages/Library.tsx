@@ -7,10 +7,11 @@ import { trackPageVisit } from "@/lib/analytics";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Copy, ChevronDown, Sparkles, Check, Trash2 } from "lucide-react";
+import { ArrowLeft, Copy, ChevronDown, Sparkles, Check, Trash2, Search, X } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 interface HistoryEntry {
@@ -161,6 +162,9 @@ const Library = () => {
   const { t } = useLanguage();
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [workflowFilter, setWorkflowFilter] = useState<string | null>(null);
+  const [modelFilter, setModelFilter] = useState<string | null>(null);
 
   useEffect(() => {
     trackPageVisit("/library");
@@ -197,6 +201,24 @@ const Library = () => {
     }
   };
 
+  // Derive unique models from data
+  const uniqueModels = [...new Set(history.map((e) => e.target_model))].sort();
+
+  // Filter logic
+  const filtered = history.filter((entry) => {
+    if (workflowFilter && entry.workflow_type !== workflowFilter) return false;
+    if (modelFilter && entry.target_model !== modelFilter) return false;
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      const results: any[] = Array.isArray(entry.results) ? entry.results : [entry.results];
+      const text = results.map((r: any) => r.mainPrompt || "").join(" ").toLowerCase();
+      if (!text.includes(q) && !entry.target_model.toLowerCase().includes(q)) return false;
+    }
+    return true;
+  });
+
+  const hasActiveFilters = !!workflowFilter || !!modelFilter || !!search.trim();
+
   return (
     <div className="min-h-screen bg-background">
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
@@ -217,12 +239,81 @@ const Library = () => {
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-8"
+          className="text-center mb-6"
         >
           <h1 className="text-2xl sm:text-3xl font-bold font-mono">
             {t("library.title")}
           </h1>
         </motion.div>
+
+        {/* Search & Filters */}
+        {!loading && history.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="space-y-3 mb-6"
+          >
+            {/* Search input */}
+            <div className="relative">
+              <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder={t("library.searchPlaceholder")}
+                className="ps-9 pe-9 bg-secondary/30 border-border"
+              />
+              {search && (
+                <button onClick={() => setSearch("")} className="absolute end-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+
+            {/* Filter chips */}
+            <div className="flex flex-wrap gap-2">
+              {/* Workflow chips */}
+              {Object.entries(WORKFLOW_LABELS).map(([key, wf]) => (
+                <button
+                  key={key}
+                  onClick={() => setWorkflowFilter(workflowFilter === key ? null : key)}
+                  className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors ${
+                    workflowFilter === key
+                      ? `${wf.color} border-current`
+                      : "border-border text-muted-foreground hover:text-foreground hover:border-foreground/30"
+                  }`}
+                >
+                  {wf.label}
+                </button>
+              ))}
+
+              {/* Model chips */}
+              {uniqueModels.map((model) => (
+                <button
+                  key={model}
+                  onClick={() => setModelFilter(modelFilter === model ? null : model)}
+                  className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors ${
+                    modelFilter === model
+                      ? "bg-foreground/10 text-foreground border-foreground/30"
+                      : "border-border text-muted-foreground hover:text-foreground hover:border-foreground/30"
+                  }`}
+                >
+                  {model}
+                </button>
+              ))}
+
+              {/* Clear all */}
+              {hasActiveFilters && (
+                <button
+                  onClick={() => { setSearch(""); setWorkflowFilter(null); setModelFilter(null); }}
+                  className="inline-flex items-center gap-1 rounded-full border border-border px-2.5 py-1 text-[11px] font-medium text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <X className="w-3 h-3" />
+                  {t("library.clearFilters")}
+                </button>
+              )}
+            </div>
+          </motion.div>
+        )}
 
         {/* Content */}
         {loading ? (
@@ -245,13 +336,31 @@ const Library = () => {
               {t("library.generate")}
             </Button>
           </motion.div>
+        ) : filtered.length === 0 ? (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="text-center py-12 space-y-3"
+          >
+            <p className="text-muted-foreground">{t("library.noResults")}</p>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => { setSearch(""); setWorkflowFilter(null); setModelFilter(null); }}
+            >
+              {t("library.clearFilters")}
+            </Button>
+          </motion.div>
         ) : (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             className="space-y-3"
           >
-            {history.map((entry) => (
+            <p className="text-xs text-muted-foreground/60">
+              {filtered.length} {t("library.resultsCount")}
+            </p>
+            {filtered.map((entry) => (
               <HistoryCard key={entry.id} entry={entry} t={t} onDelete={handleDelete} />
             ))}
           </motion.div>
