@@ -41,7 +41,7 @@ function timeAgo(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString();
 }
 
-function CopyButton({ text }: { text: string }) {
+function CopyButton({ text, label = "نسخ" }: { text: string; label?: string }) {
   const [copied, setCopied] = useState(false);
   const handleCopy = async () => {
     await navigator.clipboard.writeText(text);
@@ -51,7 +51,7 @@ function CopyButton({ text }: { text: string }) {
   return (
     <Button variant="ghost" size="sm" onClick={handleCopy} className="h-7 px-2 text-xs gap-1">
       {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-      {copied ? "Copied" : "Copy"}
+      {copied ? "تم النسخ" : label}
     </Button>
   );
 }
@@ -137,7 +137,7 @@ function HistoryCard({ entry, t, onDelete }: { entry: HistoryEntry; t: (k: strin
                   <Trash2 className="w-3 h-3" />
                   {t("library.delete")}
                 </Button>
-                <CopyButton text={allText} />
+                <CopyButton text={allText} label="نسخ-الكل" />
               </div>
               {results.map((shot: any, i: number) => (
                 <div key={i} className="space-y-2">
