@@ -153,9 +153,31 @@ export const en = {
   "terms.contact.title": "8. Contact",
   "terms.contact.body": "For questions about these terms, please contact us through our website at movprompt.com.",
 
+  // Privacy Policy
+  "privacy.title": "Privacy Policy",
+  "privacy.collect.title": "1. Information We Collect",
+  "privacy.collect.body": "We collect the following information when you use MovPrompt: your email address and authentication credentials when you create an account; images you upload for analysis; generated prompts and associated metadata; anonymous usage analytics including page visits, feature usage, and device information.",
+  "privacy.use.title": "2. How We Use Your Information",
+  "privacy.use.body": "Your information is used to: provide and improve the MovPrompt service; generate AI-powered cinematic prompts from your uploaded images; save your prompt history for future reference; send important service communications; analyze aggregate usage patterns to improve the platform. We may use uploaded images and generated prompts to train and improve our AI models.",
+  "privacy.storage.title": "3. Data Storage & Security",
+  "privacy.storage.body": "Your data is stored securely using industry-standard encryption. Images are stored in private cloud storage with row-level security — only you and authorized administrators can access your files. We use secure authentication protocols and regularly review our security practices.",
+  "privacy.sharing.title": "4. Data Sharing",
+  "privacy.sharing.body": "We do not sell, rent, or trade your personal data to third parties. We may share data with: service providers who help operate our platform (e.g., cloud hosting, AI processing); law enforcement if required by law. All third-party providers are bound by data processing agreements.",
+  "privacy.cookies.title": "5. Cookies & Tracking",
+  "privacy.cookies.body": "MovPrompt uses essential cookies for authentication and session management. We collect anonymous analytics data to understand how the service is used. We do not use third-party advertising trackers.",
+  "privacy.rights.title": "6. Your Rights",
+  "privacy.rights.body": "You have the right to: access your personal data; request deletion of your account and associated data; export your prompt history; opt out of non-essential communications via the unsubscribe link in emails. To exercise these rights, contact us at movprompt.com.",
+  "privacy.children.title": "7. Children's Privacy",
+  "privacy.children.body": "MovPrompt is not intended for users under 13 years of age. We do not knowingly collect personal information from children.",
+  "privacy.changes.title": "8. Changes to This Policy",
+  "privacy.changes.body": "We may update this Privacy Policy from time to time. We will notify you of significant changes via email or an in-app announcement. Continued use of the service after changes constitutes acceptance.",
+  "privacy.contact.title": "9. Contact Us",
+  "privacy.contact.body": "For privacy-related questions or requests, please contact us through our website at movprompt.com.",
+
   // Auth T&C
   "auth.agreeTerms": "I agree to the",
   "auth.termsLink": "Terms & Conditions",
+  "auth.privacyLink": "Privacy Policy",
   "auth.mustAgreeTerms": "You must agree to the Terms & Conditions to create an account.",
 } as const;
 

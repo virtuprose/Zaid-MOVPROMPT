@@ -295,6 +295,10 @@ const Auth = () => {
                           <Link to="/terms" className="text-primary hover:underline" target="_blank">
                             {t("auth.termsLink")}
                           </Link>
+                          {" & "}
+                          <Link to="/privacy" className="text-primary hover:underline" target="_blank">
+                            {t("auth.privacyLink")}
+                          </Link>
                         </label>
                       </div>
                       <Button type="submit" className="w-full h-11 hover:scale-[1.02] active:scale-[0.98]" disabled={loading || !agreedToTerms}>

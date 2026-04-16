@@ -15,6 +15,7 @@ import AdminLogin from "./pages/AdminLogin.tsx";
 import Unsubscribe from "./pages/Unsubscribe.tsx";
 import Library from "./pages/Library.tsx";
 import Terms from "./pages/Terms.tsx";
+import PrivacyPolicy from "./pages/PrivacyPolicy.tsx";
 
 const queryClient = new QueryClient();
 
@@ -34,6 +35,7 @@ const AppRoutes = () => {
         <Route path="/library" element={<AuthGuard><Library /></AuthGuard>} />
         <Route path="/unsubscribe" element={<Unsubscribe />} />
         <Route path="/terms" element={<Terms />} />
+        <Route path="/privacy" element={<PrivacyPolicy />} />
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
         <Route path="*" element={<NotFound />} />
       </Routes>
