@@ -121,4 +121,9 @@ export const ar: Record<TranslationKey, string> = {
 
   // ImageUploadZone
   "upload.dragDrop": "اسحب وأفلت أو انقر للرفع",
+
+  // Library
+  "library.title": "مكتبة التوجيهات",
+  "library.empty": "لا توجد توجيهات بعد. أنشئ أول توجيه سينمائي!",
+  "library.generate": "أنشئ أول توجيه",
 };
