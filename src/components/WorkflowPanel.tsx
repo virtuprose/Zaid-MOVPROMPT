@@ -30,6 +30,13 @@ interface WorkflowPanelProps {
   type: WorkflowType;
 }
 
+const phaseTransition = {
+  initial: { opacity: 0, y: 14, scale: 0.97 },
+  animate: { opacity: 1, y: 0, scale: 1 },
+  exit: { opacity: 0, y: -8, scale: 0.98 },
+  transition: { duration: 0.32, ease: [0.4, 0, 0.2, 1] as const },
+};
+
 export const WorkflowPanel = ({ type }: WorkflowPanelProps) => {
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -118,7 +125,6 @@ export const WorkflowPanel = ({ type }: WorkflowPanelProps) => {
       const frames: SceneFrame[] = data.frames || [];
       setSceneFrames(frames);
 
-      // Default all elements to "move"
       const dirs: ElementDirections = {};
       for (const frame of frames) {
         for (const el of frame.elements) {
@@ -148,7 +154,6 @@ export const WorkflowPanel = ({ type }: WorkflowPanelProps) => {
     try {
       const imageBase64s = await Promise.all(images.map((img) => compressImage(img.file)));
 
-      // Build scene breakdown payload grouped by frame
       const sceneBreakdown = sceneFrames.length > 0
         ? sceneFrames.map((frame) => ({
             frameIndex: frame.frameIndex,
@@ -225,12 +230,11 @@ export const WorkflowPanel = ({ type }: WorkflowPanelProps) => {
         ))}
       </div>
 
-      <AnimatePresence>
+      <AnimatePresence mode="wait">
         {hasRequiredImages && phase === "upload" && (
           <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
+            key="upload-phase"
+            {...phaseTransition}
             className="space-y-3"
           >
             <p className="text-center text-sm text-muted-foreground max-w-md mx-auto">
@@ -264,9 +268,8 @@ export const WorkflowPanel = ({ type }: WorkflowPanelProps) => {
 
         {(phase === "breakdown" || phase === "generate") && sceneFrames.length > 0 && (
           <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
+            key="breakdown-phase"
+            {...phaseTransition}
             className="space-y-4"
           >
             <SceneBreakdown
@@ -318,9 +321,8 @@ export const WorkflowPanel = ({ type }: WorkflowPanelProps) => {
 
         {(phase === "breakdown" || phase === "generate") && sceneFrames.length === 0 && (
           <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
+            key="skip-phase"
+            {...phaseTransition}
             className="space-y-4"
           >
             <div className="flex justify-start">
