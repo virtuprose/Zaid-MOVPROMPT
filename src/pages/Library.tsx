@@ -81,10 +81,10 @@ function HistoryCard({ entry, t, onDelete }: { entry: HistoryEntry; t: (k: strin
 
   const allText = results
     .map((r: any, i: number) => {
-      let s = `Shot ${i + 1}\n${r.mainPrompt || ""}`;
-      if (r.negativePrompt) s += `\nNegative: ${r.negativePrompt}`;
-      if (r.cameraSuggestions) s += `\nCamera: ${r.cameraSuggestions}`;
-      if (r.modelNotes) s += `\nNotes: ${r.modelNotes}`;
+      let s = `${t("library.shot")} ${i + 1}\n${r.mainPrompt || ""}`;
+      if (r.negativePrompt) s += `\n${t("library.negative")}: ${r.negativePrompt}`;
+      if (r.cameraSuggestions) s += `\n${t("library.camera")}: ${r.cameraSuggestions}`;
+      if (r.modelNotes) s += `\n${t("library.notes")}: ${r.modelNotes}`;
       return s;
     })
     .join("\n\n");
@@ -100,7 +100,7 @@ function HistoryCard({ entry, t, onDelete }: { entry: HistoryEntry; t: (k: strin
             <Badge variant="outline" className={`text-[10px] ${wf.color}`}>{wf.label}</Badge>
             <span className="text-[11px] text-muted-foreground">{entry.target_model}</span>
             <span className="text-[11px] text-muted-foreground/60">·</span>
-            <span className="text-[11px] text-muted-foreground/60">{timeAgo(entry.created_at)}</span>
+            <span className="text-[11px] text-muted-foreground/60">{timeAgo(entry.created_at, t)}</span>
           </div>
           <p className="text-sm text-foreground/80 line-clamp-2">{preview}{preview.length >= 120 ? "…" : ""}</p>
         </div>
@@ -140,18 +140,18 @@ function HistoryCard({ entry, t, onDelete }: { entry: HistoryEntry; t: (k: strin
                   <Trash2 className="w-3 h-3" />
                   {t("library.delete")}
                 </Button>
-                <CopyButton text={allText} label="نسخ-الكل" />
+                <CopyButton text={allText} label={t("library.copyAll")} copiedLabel={t("library.copied")} />
               </div>
               {results.map((shot: any, i: number) => (
                 <div key={i} className="space-y-2">
                   {results.length > 1 && (
-                    <p className="text-xs font-medium text-primary">Shot {i + 1}</p>
+                    <p className="text-xs font-medium text-primary">{t("library.shot")} {i + 1}</p>
                   )}
                   {shot.mainPrompt && (
                     <div className="space-y-1">
                       <div className="flex items-center justify-between">
                         <span className="text-[11px] font-medium text-muted-foreground">{t("results.mainPrompt")}</span>
-                        <CopyButton text={shot.mainPrompt} />
+                        <CopyButton text={shot.mainPrompt} label={t("library.copy")} copiedLabel={t("library.copied")} />
                       </div>
                       <p className="text-sm bg-secondary/40 rounded-md p-2.5 leading-relaxed">{shot.mainPrompt}</p>
                     </div>
@@ -160,7 +160,7 @@ function HistoryCard({ entry, t, onDelete }: { entry: HistoryEntry; t: (k: strin
                     <div className="space-y-1">
                       <div className="flex items-center justify-between">
                         <span className="text-[11px] font-medium text-muted-foreground">{t("results.negativePrompt")}</span>
-                        <CopyButton text={shot.negativePrompt} />
+                        <CopyButton text={shot.negativePrompt} label={t("library.copy")} copiedLabel={t("library.copied")} />
                       </div>
                       <p className="text-xs bg-secondary/40 rounded-md p-2.5 text-muted-foreground">{shot.negativePrompt}</p>
                     </div>
@@ -304,14 +304,14 @@ const Library = () => {
             {/* Filter chips */}
             <div className="flex flex-wrap gap-2">
               {/* Workflow chips */}
-              {Object.entries(WORKFLOW_LABELS).map(([key, wf]) => {
+              {Object.entries(getWorkflowLabels(t)).map(([key, wf]) => {
                 const active = workflowFilter.has(key);
                 return (
                   <button
                     key={key}
                     onClick={() => setWorkflowFilter(prev => {
                       const next = new Set(prev);
-                      next.has(key) ? next.delete(key) : next.add(key);
+                      if (next.has(key)) next.delete(key); else next.add(key);
                       return next;
                     })}
                     className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors ${
