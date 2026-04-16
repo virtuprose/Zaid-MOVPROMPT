@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { X } from "lucide-react";
-import { Button } from "@/components/ui/button";
+
 import { useLanguage } from "@/i18n/LanguageContext";
 
 interface Announcement {
