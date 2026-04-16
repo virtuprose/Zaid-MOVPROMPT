@@ -125,7 +125,7 @@ const NotificationBell = () => {
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-80 p-0" align="end">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+        <div dir={locale === "ar" ? "rtl" : "ltr"} className="flex items-center justify-between px-4 py-3 border-b border-border">
           <h4 className="text-sm font-semibold">{t("notifications.title")}</h4>
           {unreadCount > 0 && (
             <Button variant="ghost" size="sm" className="text-xs h-7" onClick={markAllRead}>
@@ -143,7 +143,8 @@ const NotificationBell = () => {
                 return (
                   <button
                     key={n.id}
-                    className={`w-full text-left px-4 py-3 hover:bg-accent/50 transition-colors ${
+                    dir={locale === "ar" ? "rtl" : "ltr"}
+                    className={`w-full text-start px-4 py-3 hover:bg-accent/50 transition-colors ${
                       !isRead ? "bg-primary/5" : ""
                     }`}
                     onClick={() => markAsRead(n.id)}
@@ -152,7 +153,7 @@ const NotificationBell = () => {
                       {!isRead && (
                         <span className="mt-1.5 h-2 w-2 rounded-full bg-primary flex-shrink-0" />
                       )}
-                      <div className={!isRead ? "" : "ml-4"}>
+                      <div className={!isRead ? "" : "ms-4"}>
                         <p className="text-sm font-medium leading-tight">{getTitle(n)}</p>
                         <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{getMessage(n)}</p>
                         <p className={`text-[10px] mt-1 ${typeColor(n.type)}`}>

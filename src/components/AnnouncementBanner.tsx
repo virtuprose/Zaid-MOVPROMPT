@@ -63,7 +63,7 @@ const AnnouncementBanner = () => {
   return (
     <div className="space-y-2 mb-6">
       {announcements.map((a) => (
-        <div key={a.id} className={`relative rounded-lg border px-4 py-3 text-sm flex items-center gap-3 ${typeStyles[a.type] || typeStyles.info}`}>
+        <div key={a.id} dir={locale === "ar" ? "rtl" : "ltr"} className={`relative rounded-lg border px-4 py-3 text-sm flex items-center gap-3 ${typeStyles[a.type] || typeStyles.info}`}>
           <div className="flex-1 min-w-0">
             <span className="font-semibold me-1.5">{getTitle(a)}</span>
             <span className="text-muted-foreground">{getMessage(a)}</span>
