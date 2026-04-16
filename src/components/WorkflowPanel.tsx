@@ -34,7 +34,7 @@ const phaseTransition = {
   initial: { opacity: 0, y: 14, scale: 0.97 },
   animate: { opacity: 1, y: 0, scale: 1 },
   exit: { opacity: 0, y: -8, scale: 0.98 },
-  transition: { duration: 0.32, ease: [0.4, 0, 0.2, 1] },
+  transition: { duration: 0.32, ease: [0.4, 0, 0.2, 1] as const },
 };
 
 export const WorkflowPanel = ({ type }: WorkflowPanelProps) => {
