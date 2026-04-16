@@ -227,6 +227,7 @@ export type Database = {
         Row: {
           created_at: string | null
           id: string
+          image_paths: string[] | null
           results: Json
           target_model: string
           user_id: string
@@ -235,6 +236,7 @@ export type Database = {
         Insert: {
           created_at?: string | null
           id?: string
+          image_paths?: string[] | null
           results: Json
           target_model: string
           user_id: string
@@ -243,6 +245,7 @@ export type Database = {
         Update: {
           created_at?: string | null
           id?: string
+          image_paths?: string[] | null
           results?: Json
           target_model?: string
           user_id?: string
