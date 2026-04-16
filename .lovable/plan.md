@@ -1,20 +1,18 @@
 
 
-## Enhance Copy All Feedback
+## Keep Results Visible After Removing Image
 
-The "Copy All" button works (it does copy to clipboard), but there's **no visual feedback** — the user can't tell anything happened. The individual `CopyButton` component shows a checkmark, but the main "Copy All" button doesn't.
+**Problem:** When a user removes their uploaded image after generation, everything resets — results disappear, config clears, and the workflow restarts from scratch. The user loses their generated prompts.
+
+**Fix:** When removing an image, only clear the image itself and reset the phase to "upload". Keep the results, description, model selection, and scene data intact. The results remain visible below. Once a new image is uploaded, clear the old results and start fresh.
 
 ### Changes
 
-**`src/components/ResultsPanel.tsx`**:
-- Add a `copied` state to track when "Copy All" was clicked
-- Show a green checkmark icon (`Check`) instead of the `Copy` icon for 2 seconds after clicking
-- Change button text to "Copied!" temporarily
-- Add a toast notification as secondary feedback
-- Wrap `navigator.clipboard.writeText` in try/catch with fallback for older browsers
+**`src/components/WorkflowPanel.tsx`:**
+- `handleImageRemove`: Only clear the image and set phase to "upload". Do NOT reset `results`, `sceneFrames`, `elementDirections`, or `description`/`model`.
+- `handleImageSelect`: Keep current behavior — clear results and scene data when a NEW image is selected (fresh start with new input).
 
-### Translation keys
-
-**`en.ts`** + **`ar.ts`**:
-- Add `results.copied` — "Copied!" / "تم النسخ!"
+This means:
+- Remove image → results stay visible, user can still copy them
+- Upload new image → results clear, workflow restarts cleanly
 
