@@ -234,8 +234,8 @@ const Library = () => {
 
   // Filter logic
   const filtered = history.filter((entry) => {
-    if (workflowFilter && entry.workflow_type !== workflowFilter) return false;
-    if (modelFilter && entry.target_model !== modelFilter) return false;
+    if (workflowFilter.size > 0 && !workflowFilter.has(entry.workflow_type)) return false;
+    if (modelFilter.size > 0 && !modelFilter.has(entry.target_model)) return false;
     if (search.trim()) {
       const q = search.toLowerCase();
       const results: any[] = Array.isArray(entry.results) ? entry.results : [entry.results];
@@ -245,7 +245,8 @@ const Library = () => {
     return true;
   });
 
-  const hasActiveFilters = !!workflowFilter || !!modelFilter || !!search.trim();
+  const activeFilterCount = workflowFilter.size + modelFilter.size;
+  const hasActiveFilters = activeFilterCount > 0 || !!search.trim();
 
   return (
     <div className="min-h-screen bg-background">
