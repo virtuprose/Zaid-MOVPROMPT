@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { trackGeneration } from "@/lib/analytics";
 import { useAuth } from "@/hooks/useAuth";
+import { useLanguage } from "@/i18n/LanguageContext";
 
 type WorkflowType = "single" | "twoframe" | "multishot";
 type Phase = "upload" | "breakdown" | "generate";
@@ -41,13 +42,13 @@ export const WorkflowPanel = ({ type }: WorkflowPanelProps) => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [images, setImages] = useState<{ file: File; preview: string }[]>([]);
   const [description, setDescription] = useState("");
   const [model, setModel] = useState("any");
   const [results, setResults] = useState<ShotResult[] | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Scene breakdown state — now frame-grouped
   const [phase, setPhase] = useState<Phase>("upload");
   const [sceneFrames, setSceneFrames] = useState<SceneFrame[]>([]);
   const [elementDirections, setElementDirections] = useState<ElementDirections>({});
@@ -109,7 +110,7 @@ export const WorkflowPanel = ({ type }: WorkflowPanelProps) => {
   const handleAnalyze = async () => {
     if (!hasRequiredImages) return;
     if (!user) {
-      toast({ title: "Sign in required", description: "Please sign in to analyze scenes.", variant: "destructive" });
+      toast({ title: t("wp.signInRequired"), description: t("wp.signInAnalyze"), variant: "destructive" });
       navigate("/auth");
       return;
     }
@@ -135,7 +136,7 @@ export const WorkflowPanel = ({ type }: WorkflowPanelProps) => {
       setPhase("breakdown");
     } catch (err: any) {
       console.error("Analysis error:", err);
-      toast({ title: "Scene analysis failed", description: err.message || "Something went wrong.", variant: "destructive" });
+      toast({ title: t("wp.analysisFailed"), description: err.message || t("wp.somethingWrong"), variant: "destructive" });
     } finally {
       setIsAnalyzing(false);
     }
@@ -144,7 +145,7 @@ export const WorkflowPanel = ({ type }: WorkflowPanelProps) => {
   const handleGenerate = async () => {
     if (!hasRequiredImages) return;
     if (!user) {
-      toast({ title: "Sign in required", description: "Please sign in to generate prompts.", variant: "destructive" });
+      toast({ title: t("wp.signInRequired"), description: t("wp.signInGenerate"), variant: "destructive" });
       navigate("/auth");
       return;
     }
@@ -196,7 +197,7 @@ export const WorkflowPanel = ({ type }: WorkflowPanelProps) => {
       }
     } catch (err: any) {
       console.error("Generation error:", err);
-      toast({ title: "Generation failed", description: err.message || "Something went wrong. Please try again.", variant: "destructive" });
+      toast({ title: t("wp.generationFailed"), description: err.message || t("wp.somethingWrongRetry"), variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -204,16 +205,16 @@ export const WorkflowPanel = ({ type }: WorkflowPanelProps) => {
 
   const frameLabels: string[] = (() => {
     switch (type) {
-      case "twoframe": return ["Start Frame", "End Frame"];
-      case "multishot": return ["Concept Image"];
-      default: return ["Your Frame"];
+      case "twoframe": return [t("frame.start"), t("frame.end")];
+      case "multishot": return [t("frame.concept")];
+      default: return [t("frame.your")];
     }
   })();
 
   const labels = {
-    single: ["Upload your frame"],
-    twoframe: ["Start Frame", "End Frame"],
-    multishot: ["Upload concept image"],
+    single: [t("frame.upload")],
+    twoframe: [t("frame.start"), t("frame.end")],
+    multishot: [t("frame.uploadConcept")],
   };
 
   return (
@@ -238,7 +239,7 @@ export const WorkflowPanel = ({ type }: WorkflowPanelProps) => {
             className="space-y-3"
           >
             <p className="text-center text-sm text-muted-foreground max-w-md mx-auto">
-              AI will break down your scene into individual elements (subject, background, lighting, atmosphere) so you can control exactly what stays still and what moves.
+              {t("wp.analyzeDesc")}
             </p>
             <div className="flex justify-center gap-3">
               <Button
@@ -248,9 +249,9 @@ export const WorkflowPanel = ({ type }: WorkflowPanelProps) => {
                 className="px-6 sm:px-8 font-display font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/25"
               >
                 {isAnalyzing ? (
-                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Analyzing Scene...</>
+                  <><Loader2 className="w-4 h-4 me-2 animate-spin" /> {t("wp.analyzingScene")}</>
                 ) : (
-                  <><ScanSearch className="w-4 h-4 mr-2" /> Analyze Scene</>
+                  <><ScanSearch className="w-4 h-4 me-2" /> {t("wp.analyzeScene")}</>
                 )}
               </Button>
               <Button
@@ -260,7 +261,7 @@ export const WorkflowPanel = ({ type }: WorkflowPanelProps) => {
                 disabled={isAnalyzing}
                 className="px-6 sm:px-8 font-display text-muted-foreground"
               >
-                Skip — Go Straight to Generate
+                {t("wp.skip")}
               </Button>
             </div>
           </motion.div>
@@ -287,7 +288,7 @@ export const WorkflowPanel = ({ type }: WorkflowPanelProps) => {
                 onClick={() => { setPhase("upload"); setSceneFrames([]); setElementDirections({}); setResults(null); }}
                 className="gap-1.5 border-white/20 text-muted-foreground hover:text-foreground hover:border-primary/50"
               >
-                <RotateCcw className="w-3.5 h-3.5" /> Start Over
+                <RotateCcw className="w-3.5 h-3.5" /> {t("wp.startOver")}
               </Button>
               <Button
                 size="sm"
@@ -296,7 +297,7 @@ export const WorkflowPanel = ({ type }: WorkflowPanelProps) => {
                 disabled={isAnalyzing}
                 className="gap-1.5 border-white/20 text-muted-foreground hover:text-foreground hover:border-primary/50"
               >
-                <ScanSearch className="w-3.5 h-3.5" /> Re-analyze
+                <ScanSearch className="w-3.5 h-3.5" /> {t("wp.reAnalyze")}
               </Button>
             </div>
 
@@ -310,9 +311,9 @@ export const WorkflowPanel = ({ type }: WorkflowPanelProps) => {
                 className="px-6 sm:px-8 font-display font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/25"
               >
                 {isLoading ? (
-                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Generating Prompt...</>
+                  <><Loader2 className="w-4 h-4 me-2 animate-spin" /> {t("wp.generatingPrompt")}</>
                 ) : (
-                  <><Sparkles className="w-4 h-4 mr-2" /> Generate Cinematic Prompt</>
+                  <><Sparkles className="w-4 h-4 me-2" /> {t("wp.generatePrompt")}</>
                 )}
               </Button>
             </div>
@@ -332,7 +333,7 @@ export const WorkflowPanel = ({ type }: WorkflowPanelProps) => {
                 onClick={() => { setPhase("upload"); setResults(null); }}
                 className="gap-1.5 border-white/20 text-muted-foreground hover:text-foreground hover:border-primary/50"
               >
-                <RotateCcw className="w-3.5 h-3.5" /> Start Over
+                <RotateCcw className="w-3.5 h-3.5" /> {t("wp.startOver")}
               </Button>
             </div>
             <ConfigPanel description={description} model={model} onDescriptionChange={setDescription} onModelChange={setModel} />
@@ -345,9 +346,9 @@ export const WorkflowPanel = ({ type }: WorkflowPanelProps) => {
                 className="px-6 sm:px-8 font-display font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/25"
               >
                 {isLoading ? (
-                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Generating Prompt...</>
+                  <><Loader2 className="w-4 h-4 me-2 animate-spin" /> {t("wp.generatingPrompt")}</>
                 ) : (
-                  <><Sparkles className="w-4 h-4 mr-2" /> Generate Cinematic Prompt</>
+                  <><Sparkles className="w-4 h-4 me-2" /> {t("wp.generatePrompt")}</>
                 )}
               </Button>
             </div>

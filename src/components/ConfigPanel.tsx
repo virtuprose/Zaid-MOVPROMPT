@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 import { ChevronRight, ChevronDown } from "lucide-react";
+import { useLanguage } from "@/i18n/LanguageContext";
 
 const PRESET_GROUPS = [
   {
@@ -168,19 +169,20 @@ interface ConfigPanelProps {
 
 export const ConfigPanel = ({ description, model, onDescriptionChange, onModelChange }: ConfigPanelProps) => {
   const [isOpen, setIsOpen] = useState(false);
+  const { t } = useLanguage();
 
   return (
     <div className="space-y-4">
       <Collapsible open={isOpen} onOpenChange={setIsOpen}>
         <CollapsibleTrigger className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors w-full">
           {isOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-          <span>Describe Your Vision (optional)</span>
+          <span>{t("config.describeVision")}</span>
         </CollapsibleTrigger>
         <CollapsibleContent className="pt-2 space-y-3 data-[state=open]:animate-fade-in data-[state=closed]:animate-fade-out overflow-hidden">
           <Textarea
             value={description}
             onChange={(e) => onDescriptionChange(e.target.value)}
-            placeholder="Describe your vision... e.g. 'dramatic slow-motion with rain and neon lights'"
+            placeholder={t("config.placeholder")}
             className="bg-secondary border-border resize-none min-h-[80px]"
           />
           <Accordion type="single" collapsible className="space-y-1">
@@ -220,13 +222,13 @@ export const ConfigPanel = ({ description, model, onDescriptionChange, onModelCh
         </CollapsibleContent>
       </Collapsible>
       <div className="space-y-2">
-        <Label className="text-sm text-muted-foreground">Target AI Model</Label>
+        <Label className="text-sm text-muted-foreground">{t("config.targetModel")}</Label>
         <Select value={model} onValueChange={onModelChange}>
           <SelectTrigger className="bg-secondary border-border">
-            <SelectValue placeholder="Choose a model..." />
+            <SelectValue placeholder={t("config.chooseModel")} />
           </SelectTrigger>
           <SelectContent className="max-h-80">
-            <SelectItem value="any" className="font-medium">Any Model — Universal Prompt</SelectItem>
+            <SelectItem value="any" className="font-medium">{t("config.anyModel")}</SelectItem>
             <SelectSeparator />
             {MODEL_GROUPS.map((group) => (
               <SelectGroup key={group.label}>
