@@ -75,10 +75,7 @@ export const WorkflowPanel = ({ type }: WorkflowPanelProps) => {
       next.splice(index, 1);
       return next;
     });
-    setResults(null);
     setPhase("upload");
-    setSceneFrames([]);
-    setElementDirections({});
   }, []);
 
   const hasRequiredImages = type === "twoframe" ? images.length === 2 : images.length >= 1;
