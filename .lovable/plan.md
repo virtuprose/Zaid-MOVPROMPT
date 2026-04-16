@@ -1,26 +1,58 @@
 
 
-## Enhance Library Filters — Multi-Select
+# Fix Library Page i18n — All Text Must Follow Language Selection
 
-**Problem:** Currently workflow type and model filters are single-select (only one at a time). Users want to combine filters, e.g. see both "Single Frame" AND "Two Frames" results, or filter by multiple models simultaneously.
+## Problem
+The Library page has many hardcoded strings (both English and Arabic) that don't change when the language is toggled. Text should use `t()` translation keys consistently.
 
-### Changes
+## Changes
 
-**`src/pages/Library.tsx`:**
-- Change `workflowFilter` from `string | null` to `Set<string>` — toggling a chip adds/removes it from the set
-- Change `modelFilter` from `string | null` to `Set<string>` — same behavior
-- Update filter logic: if the set is empty, show all; if non-empty, entry must match one of the selected values (OR logic within each group, AND between groups)
-- Update chip styling: active state when the value is in the set
-- Update `hasActiveFilters` check: `set.size > 0`
-- Update "Clear all" to reset both sets
-- Add a count badge on the filter section showing how many filters are active (e.g. "3 filters")
+### 1. Add missing translation keys
 
-**`src/i18n/translations/en.ts`** + **`ar.ts`:**
-- Add `library.activeFilters` — "{count} filters active" / "{count} فلاتر نشطة"
+**`src/i18n/translations/en.ts`** — add:
+- `library.singleFrame`: "Single Frame"
+- `library.twoFrames`: "Two Frames"
+- `library.multiShot`: "Multi-Shot"
+- `library.justNow`: "just now"
+- `library.minsAgo`: "m ago"
+- `library.hrsAgo`: "h ago"
+- `library.daysAgo`: "d ago"
+- `library.shot`: "Shot"
+- `library.copy`: "Copy"
+- `library.copyAll`: "Copy All"
+- `library.copied`: "Copied"
 
-### UX behavior
-- Click a chip → toggle it on/off (checkmark icon appears when active)
-- Multiple chips can be active simultaneously within the same group
-- Workflow filters and model filters combine with AND (must match at least one workflow AND at least one model)
-- Clear all button resets everything
+**`src/i18n/translations/ar.ts`** — add matching Arabic keys:
+- `library.singleFrame`: "إطار واحد"
+- `library.twoFrames`: "إطاران"
+- `library.multiShot`: "متعدد اللقطات"
+- `library.justNow`: "الآن"
+- `library.minsAgo`: "د"
+- `library.hrsAgo`: "س"
+- `library.daysAgo`: "ي"
+- `library.shot`: "لقطة"
+- `library.copy`: "نسخ"
+- `library.copyAll`: "نسخ-الكل"
+- `library.copied`: "تم النسخ"
+
+Also fix Arabic results keys (التوجيه → الامر):
+- `results.title`: "الاوامر المُولّدة"
+- `results.mainPrompt`: "الامر الرئيسي"
+- `results.negativePrompt`: "الامر السلبي"
+- `library.empty`: "لا توجد اوامر بعد. أنشئ أول امر سينمائي!"
+- `library.generate`: "أنشئ أول امر"
+
+### 2. Update `src/pages/Library.tsx`
+
+- **`WORKFLOW_LABELS`**: Remove hardcoded labels, make it a function that takes `t` and returns translated labels.
+- **`timeAgo`**: Accept `t` function, use translation keys instead of hardcoded strings.
+- **`CopyButton`**: Accept `t` function, use `t("library.copy")` and `t("library.copied")` instead of hardcoded Arabic.
+- **Line 140**: Use `t("library.copyAll")` instead of `"نسخ-الكل"`.
+- **Line 145**: Use `t("library.shot")` instead of `"Shot"`.
+- **`allText` builder** (lines 80-87): Use `t()` for "Shot", "Negative", "Camera", "Notes" labels.
+
+### Technical Details
+- `CopyButton` and `HistoryCard` will need `t` passed as a prop (HistoryCard already has it; CopyButton needs it added).
+- `WORKFLOW_LABELS` becomes a function: `getWorkflowLabels(t)` returning the same structure but with `t("library.singleFrame")` etc.
+- `timeAgo` becomes `timeAgo(dateStr, t)`.
 
