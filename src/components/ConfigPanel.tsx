@@ -14,9 +14,12 @@ const PRESET_GROUPS = [
     icon: "🎥",
     description: "Simple camera movements like panning, tilting, and zooming",
     chips: [
-      "General", "Static", "Handheld", "Dolly In", "Dolly Out",
+      "General", "Static", "No Movement", "Natural Movement", "Shake",
+      "Handheld", "Dolly In", "Dolly Out",
       "Pan Left", "Pan Right", "Tilt Up", "Tilt Down",
-      "Zoom In", "Zoom Out", "Tracking Shot", "Push In", "Pull Out",
+      "Zoom In", "Zoom Out", "Snap Zoom",
+      "Tracking Shot", "Follow", "Push In", "Pull Out",
+      "Pedestal Up", "Pedestal Down", "Swivel", "Drift", "Reveal",
     ],
   },
   {
