@@ -6,7 +6,7 @@ import { ConfigPanel } from "./ConfigPanel";
 import { ResultsPanel } from "./ResultsPanel";
 import { ResultsSkeleton } from "./ResultsSkeleton";
 import { SceneBreakdown, type SceneFrame, type ElementDirections } from "./SceneBreakdown";
-import { Sparkles, Loader2, ScanSearch, RotateCcw } from "lucide-react";
+import { Sparkles, Loader2, ScanSearch, RotateCcw, RefreshCw } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -312,6 +312,8 @@ export const WorkflowPanel = ({ type }: WorkflowPanelProps) => {
               >
                 {isLoading ? (
                   <><Loader2 className="w-4 h-4 me-2 animate-spin" /> {t("wp.generatingPrompt")}</>
+                ) : results ? (
+                  <><RefreshCw className="w-4 h-4 me-2" /> {t("wp.regeneratePrompt")}</>
                 ) : (
                   <><Sparkles className="w-4 h-4 me-2" /> {t("wp.generatePrompt")}</>
                 )}
@@ -347,6 +349,8 @@ export const WorkflowPanel = ({ type }: WorkflowPanelProps) => {
               >
                 {isLoading ? (
                   <><Loader2 className="w-4 h-4 me-2 animate-spin" /> {t("wp.generatingPrompt")}</>
+                ) : results ? (
+                  <><RefreshCw className="w-4 h-4 me-2" /> {t("wp.regeneratePrompt")}</>
                 ) : (
                   <><Sparkles className="w-4 h-4 me-2" /> {t("wp.generatePrompt")}</>
                 )}

@@ -67,6 +67,7 @@ export const en = {
   "wp.startOver": "Start Over",
   "wp.reAnalyze": "Re-analyze",
   "wp.generatePrompt": "Generate Cinematic Prompt",
+  "wp.regeneratePrompt": "Regenerate Prompt",
   "wp.generatingPrompt": "Generating Prompt...",
   "wp.signInRequired": "Sign in required",
   "wp.signInAnalyze": "Please sign in to analyze scenes.",
