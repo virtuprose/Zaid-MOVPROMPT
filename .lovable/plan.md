@@ -1,41 +1,26 @@
 
 
-## Save Uploaded Images for Future Training Data
+## Enhance Library Filters — Multi-Select
 
-**Current state:** Images are NOT saved. They're compressed to base64 in the browser, sent to edge functions for AI analysis, and discarded after processing. Nothing persists.
-
-**Proposed:** Store uploaded images in cloud storage alongside their prompt history entry, building a dataset of image → prompt pairs for future model training and analytics.
-
-### Architecture
-
-```text
-User uploads image → compress → send to AI (existing)
-                   ↘ upload original to Storage bucket
-                     → save storage path in prompt_history
-```
+**Problem:** Currently workflow type and model filters are single-select (only one at a time). Users want to combine filters, e.g. see both "Single Frame" AND "Two Frames" results, or filter by multiple models simultaneously.
 
 ### Changes
 
-**1. Create a storage bucket (migration)**
-- Create a `generation-images` private bucket
-- RLS policies: users can upload to their own folder (`user_id/`), read their own files, admins can read all
+**`src/pages/Library.tsx`:**
+- Change `workflowFilter` from `string | null` to `Set<string>` — toggling a chip adds/removes it from the set
+- Change `modelFilter` from `string | null` to `Set<string>` — same behavior
+- Update filter logic: if the set is empty, show all; if non-empty, entry must match one of the selected values (OR logic within each group, AND between groups)
+- Update chip styling: active state when the value is in the set
+- Update `hasActiveFilters` check: `set.size > 0`
+- Update "Clear all" to reset both sets
+- Add a count badge on the filter section showing how many filters are active (e.g. "3 filters")
 
-**2. Database migration**
-- Add `image_paths text[]` column to `prompt_history` table (nullable, default null — won't break existing rows)
+**`src/i18n/translations/en.ts`** + **`ar.ts`:**
+- Add `library.activeFilters` — "{count} filters active" / "{count} فلاتر نشطة"
 
-**3. `src/components/WorkflowPanel.tsx`**
-- After successful generation, upload each image to `generation-images/{user_id}/{prompt_history_id}/frame_{i}.jpg`
-- Save the resulting paths into the `prompt_history` insert
-
-**4. `src/pages/Library.tsx`**
-- Display saved image thumbnails alongside each history entry (small previews using signed URLs)
-
-### What this enables
-- **Training data**: Paired image + prompt dataset grows organically
-- **User value**: Users see their reference images in the library
-- **Analytics**: Admins can study what types of images produce which prompts
-- **Future**: Fine-tuning, style clustering, recommendation engine
-
-### Privacy note
-Images are stored per-user with RLS. Only the uploading user and admins can access them.
+### UX behavior
+- Click a chip → toggle it on/off (checkmark icon appears when active)
+- Multiple chips can be active simultaneously within the same group
+- Workflow filters and model filters combine with AND (must match at least one workflow AND at least one model)
+- Clear all button resets everything
 
