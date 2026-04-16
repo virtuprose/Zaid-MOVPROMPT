@@ -127,4 +127,8 @@ export const ar: Record<TranslationKey, string> = {
   "library.empty": "لا توجد توجيهات بعد. أنشئ أول توجيه سينمائي!",
   "library.generate": "أنشئ أول توجيه",
   "library.delete": "حذف",
+  "library.searchPlaceholder": "ابحث في التوجيهات...",
+  "library.clearFilters": "مسح الفلاتر",
+  "library.noResults": "لا توجد نتائج مطابقة.",
+  "library.resultsCount": "توجيهات",
 };

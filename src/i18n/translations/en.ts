@@ -125,6 +125,10 @@ export const en = {
   "library.empty": "No prompts yet. Generate your first cinematic prompt!",
   "library.generate": "Generate Your First Prompt",
   "library.delete": "Delete",
+  "library.searchPlaceholder": "Search prompts...",
+  "library.clearFilters": "Clear filters",
+  "library.noResults": "No prompts match your filters.",
+  "library.resultsCount": "prompts",
 } as const;
 
 export type TranslationKey = keyof typeof en;
