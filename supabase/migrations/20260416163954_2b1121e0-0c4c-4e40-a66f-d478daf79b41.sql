@@ -1,0 +1,2 @@
+ALTER TABLE public.notifications ADD COLUMN title_ar text, ADD COLUMN message_ar text;
+ALTER TABLE public.announcements ADD COLUMN title_ar text, ADD COLUMN message_ar text, ADD COLUMN link_text_ar text;
