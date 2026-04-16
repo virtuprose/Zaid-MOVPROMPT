@@ -1,40 +1,20 @@
 
 
-## Build the Prompt Library UI
+## Enhance Copy All Feedback
 
-Add a visible prompt history page so signed-in users can browse, copy, and reuse their saved prompts.
+The "Copy All" button works (it does copy to clipboard), but there's **no visual feedback** — the user can't tell anything happened. The individual `CopyButton` component shows a checkmark, but the main "Copy All" button doesn't.
 
-### What We'll Build
+### Changes
 
-A `/library` page accessible from the main nav showing all previously generated prompts in reverse chronological order.
+**`src/components/ResultsPanel.tsx`**:
+- Add a `copied` state to track when "Copy All" was clicked
+- Show a green checkmark icon (`Check`) instead of the `Copy` icon for 2 seconds after clicking
+- Change button text to "Copied!" temporarily
+- Add a toast notification as secondary feedback
+- Wrap `navigator.clipboard.writeText` in try/catch with fallback for older browsers
 
-Each history card displays:
-- Workflow type badge (Single / Two Frames / Multi-Shot)
-- Target model used
-- Timestamp (relative, e.g. "2 hours ago")
-- Truncated preview of the main prompt
-- Expand to see full results (all shots with main prompt, negative prompt, camera, model notes)
-- Copy All button per entry
+### Translation keys
 
-### Navigation
-- Add a "Library" link in the main app header (visible only when signed in)
-- Use the History icon (already imported on Auth page)
-
-### Technical Details
-
-**New files:**
-- `src/pages/Library.tsx` — main page with query to `prompt_history`, cards, expand/collapse, copy
-- Route added in `App.tsx`
-
-**Translation keys added:**
-- `library.title`, `library.empty`, `library.copyAll`, `library.delete` (EN + AR)
-
-**No database changes needed** — the `prompt_history` table and RLS policies already exist.
-
-### Design
-- Dark cinematic theme matching existing app
-- Cards with `bg-card border-border` styling
-- Workflow type as colored badge
-- Expandable results using existing `ResultCard`-style layout
-- Empty state with icon + CTA to generate first prompt
+**`en.ts`** + **`ar.ts`**:
+- Add `results.copied` — "Copied!" / "تم النسخ!"
 
