@@ -14,12 +14,12 @@ export const en = {
 
   // Guide
   "guide.title": "How to Use",
-  "guide.step1.title": "Choose a Workflow",
-  "guide.step1.desc": "Pick Single Frame, Two Frames, or Multi-Shot depending on your project.",
-  "guide.step2.title": "Upload Your Image",
-  "guide.step2.desc": "Drag & drop or click to upload your reference frame(s).",
-  "guide.step3.title": "Generate & Copy",
-  "guide.step3.desc": "Hit generate, review your cinematic prompt, and copy it to your clipboard.",
+  "guide.step1.title": "Pick Your Workflow",
+  "guide.step1.desc": "Single frame, transitions, or full storyboard — choose the mode that fits your vision.",
+  "guide.step2.title": "Drop Your Frame",
+  "guide.step2.desc": "Drag and drop any reference image. AI handles the rest.",
+  "guide.step3.title": "Copy & Create",
+  "guide.step3.desc": "One click generates a production-ready prompt. Paste it into any AI video tool.",
 
   // Auth
   "auth.signIn": "Sign In",
