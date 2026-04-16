@@ -102,7 +102,7 @@ const WelcomePopupSection = () => {
               <TableRow>
                 <TableHead>Title</TableHead>
                 <TableHead>Active</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead className="text-end">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -112,7 +112,7 @@ const WelcomePopupSection = () => {
                   <TableCell>
                     <Switch checked={p.is_active} onCheckedChange={() => toggleActive(p.id, p.is_active)} />
                   </TableCell>
-                  <TableCell className="text-right space-x-2">
+                  <TableCell className="text-end space-x-2 rtl:space-x-reverse">
                     <Button variant="ghost" size="icon" onClick={() => openEdit(p)}><Pencil className="w-4 h-4" /></Button>
                     <Button variant="ghost" size="icon" onClick={() => handleDelete(p.id)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
                   </TableCell>
