@@ -188,8 +188,33 @@ export const WorkflowPanel = ({ type }: WorkflowPanelProps) => {
           workflow_type: type,
           target_model: model,
           results: data.results,
-        }).then(({ error: histErr }) => {
-          if (histErr) console.error("Failed to save history:", histErr);
+        }).select("id").single().then(async ({ data: row, error: histErr }) => {
+          if (histErr || !row) {
+            console.error("Failed to save history:", histErr);
+            return;
+          }
+          // Upload images to storage
+          try {
+            const paths: string[] = [];
+            for (let i = 0; i < images.length; i++) {
+              const filePath = `${user.id}/${row.id}/frame_${i}.jpg`;
+              const { error: uploadErr } = await supabase.storage
+                .from("generation-images")
+                .upload(filePath, images[i].file, { contentType: "image/jpeg", upsert: true });
+              if (uploadErr) {
+                console.error("Image upload error:", uploadErr);
+              } else {
+                paths.push(filePath);
+              }
+            }
+            if (paths.length > 0) {
+              await supabase.from("prompt_history")
+                .update({ image_paths: paths } as any)
+                .eq("id", row.id);
+            }
+          } catch (e) {
+            console.error("Image upload failed:", e);
+          }
         });
       }
     } catch (err: any) {

@@ -20,6 +20,7 @@ interface HistoryEntry {
   target_model: string;
   results: any;
   created_at: string;
+  image_paths?: string[] | null;
 }
 
 const WORKFLOW_LABELS: Record<string, { label: string; color: string }> = {
@@ -57,9 +58,23 @@ function CopyButton({ text }: { text: string }) {
 
 function HistoryCard({ entry, t, onDelete }: { entry: HistoryEntry; t: (k: string) => string; onDelete: (id: string) => void }) {
   const [expanded, setExpanded] = useState(false);
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
   const wf = WORKFLOW_LABELS[entry.workflow_type] || WORKFLOW_LABELS.single;
   const results: any[] = Array.isArray(entry.results) ? entry.results : [entry.results];
   const preview = results[0]?.mainPrompt?.slice(0, 120) || "";
+
+  useEffect(() => {
+    if (!expanded || !entry.image_paths?.length) return;
+    const loadUrls = async () => {
+      const urls: string[] = [];
+      for (const path of entry.image_paths!) {
+        const { data } = await supabase.storage.from("generation-images").createSignedUrl(path, 3600);
+        if (data?.signedUrl) urls.push(data.signedUrl);
+      }
+      setImageUrls(urls);
+    };
+    loadUrls();
+  }, [expanded, entry.image_paths]);
 
   const allText = results
     .map((r: any, i: number) => {
@@ -99,6 +114,19 @@ function HistoryCard({ entry, t, onDelete }: { entry: HistoryEntry; t: (k: strin
             className="overflow-hidden"
           >
             <div className="px-4 pb-4 space-y-4 border-t border-border pt-3">
+              {/* Reference images */}
+              {imageUrls.length > 0 && (
+                <div className="flex gap-2 overflow-x-auto pb-1">
+                  {imageUrls.map((url, i) => (
+                    <img
+                      key={i}
+                      src={url}
+                      alt={`Reference frame ${i + 1}`}
+                      className="w-20 h-20 rounded-md object-cover border border-border shrink-0"
+                    />
+                  ))}
+                </div>
+              )}
               <div className="flex justify-end gap-2">
                 <Button
                   variant="ghost"
