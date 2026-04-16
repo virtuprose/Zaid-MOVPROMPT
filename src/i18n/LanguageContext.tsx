@@ -43,8 +43,13 @@ export const LanguageProvider = ({ children }: { children: ReactNode }) => {
   );
 };
 
+const fallback: LanguageContextValue = {
+  locale: "en",
+  setLocale: () => {},
+  t: (key: TranslationKey) => translations.en[key] || key,
+};
+
 export const useLanguage = () => {
   const ctx = useContext(LanguageContext);
-  if (!ctx) throw new Error("useLanguage must be used within LanguageProvider");
-  return ctx;
+  return ctx ?? fallback;
 };
