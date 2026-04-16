@@ -231,20 +231,34 @@ export const WorkflowPanel = ({ type }: WorkflowPanelProps) => {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            className="flex justify-center"
+            className="space-y-3"
           >
-            <Button
-              size="lg"
-              onClick={handleAnalyze}
-              disabled={isAnalyzing}
-              className="px-6 sm:px-8 font-display font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/25"
-            >
-              {isAnalyzing ? (
-                <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Analyzing Scene...</>
-              ) : (
-                <><ScanSearch className="w-4 h-4 mr-2" /> Analyze Scene</>
-              )}
-            </Button>
+            <p className="text-center text-sm text-muted-foreground max-w-md mx-auto">
+              AI will break down your scene into individual elements (subject, background, lighting, atmosphere) so you can control exactly what stays still and what moves.
+            </p>
+            <div className="flex justify-center gap-3">
+              <Button
+                size="lg"
+                onClick={handleAnalyze}
+                disabled={isAnalyzing}
+                className="px-6 sm:px-8 font-display font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/25"
+              >
+                {isAnalyzing ? (
+                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Analyzing Scene...</>
+                ) : (
+                  <><ScanSearch className="w-4 h-4 mr-2" /> Analyze Scene</>
+                )}
+              </Button>
+              <Button
+                size="lg"
+                variant="ghost"
+                onClick={() => { setSceneFrames([]); setPhase("breakdown"); }}
+                disabled={isAnalyzing}
+                className="px-6 sm:px-8 font-display text-muted-foreground"
+              >
+                Skip — Go Straight to Generate
+              </Button>
+            </div>
           </motion.div>
         )}
 
@@ -275,6 +289,32 @@ export const WorkflowPanel = ({ type }: WorkflowPanelProps) => {
               </Button>
             </div>
 
+            <ConfigPanel description={description} model={model} onDescriptionChange={setDescription} onModelChange={setModel} />
+
+            <div className="flex justify-center">
+              <Button
+                size="lg"
+                onClick={handleGenerate}
+                disabled={isLoading}
+                className="px-6 sm:px-8 font-display font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/25"
+              >
+                {isLoading ? (
+                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Generating Prompt...</>
+                ) : (
+                  <><Sparkles className="w-4 h-4 mr-2" /> Generate Cinematic Prompt</>
+                )}
+              </Button>
+            </div>
+          </motion.div>
+        )}
+
+        {(phase === "breakdown" || phase === "generate") && sceneFrames.length === 0 && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className="space-y-4"
+          >
             <ConfigPanel description={description} model={model} onDescriptionChange={setDescription} onModelChange={setModel} />
 
             <div className="flex justify-center">
