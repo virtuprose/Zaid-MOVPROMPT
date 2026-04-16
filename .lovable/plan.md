@@ -1,22 +1,32 @@
 
 
-# Add Text Descriptions to Preset Groups
-
-Add a short subtitle/description under each preset group name in the accordion to explain what the effects do.
+# Add More Basic Camera Control Presets
 
 ## Changes
 
-**File: `src/components/ConfigPanel.tsx`**
+**File: `src/components/ConfigPanel.tsx`** — Update the Basic Camera Control chips array.
 
-Add a `description` field to each entry in `PRESET_GROUPS`:
+**Add these new presets:**
+- **Natural Movement** — subtle organic camera drift
+- **Shake** — handheld shake/vibration effect
+- **No Movement** — completely locked-off static frame
+- **Pedestal Up** — camera moves vertically up (body rises)
+- **Pedestal Down** — camera moves vertically down
+- **Swivel** — camera rotates on its axis
+- **Follow** — camera follows the subject's movement
+- **Reveal** — camera moves to reveal something hidden
+- **Drift** — slow gentle lateral float
+- **Snap Zoom** — quick abrupt zoom
 
-- **Basic Camera Control** — "Simple camera movements like panning, tilting, and zooming"
-- **Epic Camera Control** — "Advanced cinematic shots: crane, orbit, drone, and dramatic angles"
-- **Effects** — "Visual transformations: materials, weather, artistic styles, and motion effects"
-- **Catch the Pulse** — "Action and lifestyle scenes: fashion, sports, stage moments"
-- **Mix** — "Two effects combined for unique cinematic results"
+Updated chips list:
+```
+"General", "Static", "No Movement", "Natural Movement", "Shake",
+"Handheld", "Dolly In", "Dolly Out",
+"Pan Left", "Pan Right", "Tilt Up", "Tilt Down",
+"Zoom In", "Zoom Out", "Snap Zoom",
+"Tracking Shot", "Follow", "Push In", "Pull Out",
+"Pedestal Up", "Pedestal Down", "Swivel", "Drift", "Reveal"
+```
 
-Display the description as a muted text line below the group label inside each `AccordionTrigger`.
-
-No new dependencies, no images, no storage changes.
+Single file edit, no backend changes.
 
