@@ -12,6 +12,7 @@ const PRESET_GROUPS = [
   {
     label: "Basic Camera Control",
     icon: "🎥",
+    description: "Simple camera movements like panning, tilting, and zooming",
     chips: [
       "General", "Static", "Handheld", "Dolly In", "Dolly Out",
       "Pan Left", "Pan Right", "Tilt Up", "Tilt Down",
@@ -21,6 +22,7 @@ const PRESET_GROUPS = [
   {
     label: "Epic Camera Control",
     icon: "🎬",
+    description: "Advanced cinematic shots: crane, orbit, drone, and dramatic angles",
     chips: [
       "Dolly Zoom", "Dolly Zoom In", "Dolly Zoom Out", "Crash Zoom In", "Crash Zoom Out",
       "Arc Left", "Arc Right", "Crane Up", "Crane Down",
@@ -33,6 +35,7 @@ const PRESET_GROUPS = [
   {
     label: "Effects",
     icon: "✨",
+    description: "Visual transformations: materials, weather, artistic styles, and motion effects",
     chips: [
       "Flood", "Freezing", "Melting", "Burning", "Explosion",
       "Diamond", "Crystal", "Gold", "Silver", "Bronze",
@@ -49,6 +52,7 @@ const PRESET_GROUPS = [
   {
     label: "Catch the Pulse",
     icon: "🔥",
+    description: "Action and lifestyle scenes: fashion, sports, stage moments",
     chips: [
       "Paparazzi", "Rap Flex", "Catwalk", "Boxing", "Car Chasing",
       "Glam", "Agent Reveal", "Hero Landing", "Villain Entrance",
@@ -60,6 +64,7 @@ const PRESET_GROUPS = [
   {
     label: "Mix",
     icon: "🎭",
+    description: "Two effects combined for unique cinematic results",
     chips: [
       "Thunder God x Levitation", "Action Run x Set on Fire",
       "Disintegration x Levitation", "Freezing x Explosion",
@@ -71,7 +76,6 @@ const PRESET_GROUPS = [
     ],
   },
 ];
-
 const MODEL_GROUPS = [
   {
     label: "Minimax Hailuo",
@@ -180,11 +184,14 @@ export const ConfigPanel = ({ description, model, onDescriptionChange, onModelCh
             {PRESET_GROUPS.map((group) => (
               <AccordionItem key={group.label} value={group.label} className="border-border/40 rounded-md">
                 <AccordionTrigger className="py-2 px-3 text-sm hover:no-underline hover:bg-secondary/50 rounded-md transition-colors">
-                  <div className="flex items-center gap-2">
-                    <span className="text-muted-foreground">{group.label}</span>
-                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 font-normal">
-                      {group.chips.length}
-                    </Badge>
+                  <div className="flex flex-col items-start gap-0.5">
+                    <div className="flex items-center gap-2">
+                      <span className="text-muted-foreground">{group.label}</span>
+                      <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 font-normal">
+                        {group.chips.length}
+                      </Badge>
+                    </div>
+                    <span className="text-[11px] text-muted-foreground/60 font-normal">{group.description}</span>
                   </div>
                 </AccordionTrigger>
                 <AccordionContent className="px-3 pb-3 pt-1">
