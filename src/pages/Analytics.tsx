@@ -7,6 +7,7 @@ import { LogOut, BarChart3, Users, Megaphone } from "lucide-react";
 import AnalyticsTab, { type Stats } from "@/components/admin/AnalyticsTab";
 import UsersTab from "@/components/admin/UsersTab";
 import AnnouncementsSection from "@/components/admin/AnnouncementsSection";
+import NotificationsSection from "@/components/admin/NotificationsSection";
 import EmailTracker from "@/components/admin/EmailTracker";
 
 const Analytics = () => {
@@ -136,6 +137,7 @@ const Analytics = () => {
 
           <TabsContent value="marketing">
             <div className="space-y-6">
+              <NotificationsSection />
               <AnnouncementsSection />
               <EmailTracker />
             </div>
