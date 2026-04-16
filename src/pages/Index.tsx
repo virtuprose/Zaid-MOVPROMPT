@@ -55,6 +55,7 @@ const Index = () => {
         {/* Top bar */}
         <div className="flex justify-end gap-1.5 mb-4">
           <LanguageToggle />
+          {!loading && user && <NotificationBell />}
           {!loading && user && (
             <Button variant="ghost" size="sm" onClick={() => navigate("/library")} className="gap-1.5">
               <Library className="w-4 h-4" />
