@@ -30,7 +30,7 @@ const AnnouncementsSection = () => {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
-  const [form, setForm] = useState({ title: "", message: "", type: "info", link_url: "", link_text: "", starts_at: "", ends_at: "" });
+  const [form, setForm] = useState({ title: "", title_ar: "", message: "", message_ar: "", type: "info", link_url: "", link_text: "", link_text_ar: "", starts_at: "", ends_at: "" });
 
   const fetchAnnouncements = async () => {
     const { data } = await supabase.from("announcements").select("*").order("created_at", { ascending: false });
@@ -41,19 +41,22 @@ const AnnouncementsSection = () => {
   useEffect(() => { fetchAnnouncements(); }, []);
 
   const resetForm = () => {
-    setForm({ title: "", message: "", type: "info", link_url: "", link_text: "", starts_at: "", ends_at: "" });
+    setForm({ title: "", title_ar: "", message: "", message_ar: "", type: "info", link_url: "", link_text: "", link_text_ar: "", starts_at: "", ends_at: "" });
     setEditId(null);
   };
 
   const openNew = () => { resetForm(); setDialogOpen(true); };
 
-  const openEdit = (a: Announcement) => {
+  const openEdit = (a: any) => {
     setForm({
       title: a.title,
+      title_ar: a.title_ar || "",
       message: a.message,
+      message_ar: a.message_ar || "",
       type: a.type,
       link_url: a.link_url || "",
       link_text: a.link_text || "",
+      link_text_ar: a.link_text_ar || "",
       starts_at: a.starts_at ? a.starts_at.split("T")[0] : "",
       ends_at: a.ends_at ? a.ends_at.split("T")[0] : "",
     });
@@ -64,10 +67,13 @@ const AnnouncementsSection = () => {
   const handleSave = async () => {
     const payload = {
       title: form.title,
+      title_ar: form.title_ar || null,
       message: form.message,
+      message_ar: form.message_ar || null,
       type: form.type,
       link_url: form.link_url || null,
       link_text: form.link_text || null,
+      link_text_ar: form.link_text_ar || null,
       starts_at: form.starts_at || null,
       ends_at: form.ends_at || null,
     };
@@ -154,8 +160,10 @@ const AnnouncementsSection = () => {
             <DialogTitle>{editId ? "Edit" : "New"} Announcement</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <Input placeholder="Title" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
-            <Textarea placeholder="Message" value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })} />
+            <Input placeholder="Title (English)" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+            <Input placeholder="Title (Arabic)" value={form.title_ar} onChange={(e) => setForm({ ...form, title_ar: e.target.value })} dir="rtl" />
+            <Textarea placeholder="Message (English)" value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })} />
+            <Textarea placeholder="Message (Arabic)" value={form.message_ar} onChange={(e) => setForm({ ...form, message_ar: e.target.value })} dir="rtl" />
             <Select value={form.type} onValueChange={(v) => setForm({ ...form, type: v })}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -164,9 +172,10 @@ const AnnouncementsSection = () => {
                 <SelectItem value="promo">Promo</SelectItem>
               </SelectContent>
             </Select>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-3 gap-3">
               <Input placeholder="CTA URL" value={form.link_url} onChange={(e) => setForm({ ...form, link_url: e.target.value })} />
-              <Input placeholder="CTA Text" value={form.link_text} onChange={(e) => setForm({ ...form, link_text: e.target.value })} />
+              <Input placeholder="CTA Text (EN)" value={form.link_text} onChange={(e) => setForm({ ...form, link_text: e.target.value })} />
+              <Input placeholder="CTA Text (AR)" value={form.link_text_ar} onChange={(e) => setForm({ ...form, link_text_ar: e.target.value })} dir="rtl" />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>

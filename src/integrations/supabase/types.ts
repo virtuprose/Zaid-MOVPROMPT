@@ -22,10 +22,13 @@ export type Database = {
           id: string
           is_active: boolean
           link_text: string | null
+          link_text_ar: string | null
           link_url: string | null
           message: string
+          message_ar: string | null
           starts_at: string | null
           title: string
+          title_ar: string | null
           type: string
         }
         Insert: {
@@ -35,10 +38,13 @@ export type Database = {
           id?: string
           is_active?: boolean
           link_text?: string | null
+          link_text_ar?: string | null
           link_url?: string | null
           message: string
+          message_ar?: string | null
           starts_at?: string | null
           title: string
+          title_ar?: string | null
           type?: string
         }
         Update: {
@@ -48,10 +54,13 @@ export type Database = {
           id?: string
           is_active?: boolean
           link_text?: string | null
+          link_text_ar?: string | null
           link_url?: string | null
           message?: string
+          message_ar?: string | null
           starts_at?: string | null
           title?: string
+          title_ar?: string | null
           type?: string
         }
         Relationships: [
@@ -210,7 +219,9 @@ export type Database = {
           created_by: string | null
           id: string
           message: string
+          message_ar: string | null
           title: string
+          title_ar: string | null
           type: string
         }
         Insert: {
@@ -218,7 +229,9 @@ export type Database = {
           created_by?: string | null
           id?: string
           message: string
+          message_ar?: string | null
           title: string
+          title_ar?: string | null
           type?: string
         }
         Update: {
@@ -226,7 +239,9 @@ export type Database = {
           created_by?: string | null
           id?: string
           message?: string
+          message_ar?: string | null
           title?: string
+          title_ar?: string | null
           type?: string
         }
         Relationships: [

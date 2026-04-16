@@ -239,4 +239,18 @@ export const ar: Record<TranslationKey, string> = {
 
   // ResultsPanel
   "results.failedCopy": "فشل النسخ",
+
+  // Notifications
+  "notifications.title": "الإشعارات",
+  "notifications.markAllRead": "تعليم الكل كمقروء",
+  "notifications.empty": "لا توجد إشعارات بعد",
+  "notifications.form.title": "العنوان (إنجليزي)",
+  "notifications.form.titleAr": "العنوان (عربي)",
+  "notifications.form.message": "الرسالة (إنجليزي)",
+  "notifications.form.messageAr": "الرسالة (عربي)",
+
+  // Announcements i18n
+  "announcements.form.titleAr": "العنوان (عربي)",
+  "announcements.form.messageAr": "الرسالة (عربي)",
+  "announcements.form.linkTextAr": "نص الرابط (عربي)",
 };

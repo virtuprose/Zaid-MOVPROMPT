@@ -10,11 +10,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "@/hooks/use-toast";
 import { Plus, Trash2, Bell, Send } from "lucide-react";
+import { useLanguage } from "@/i18n/LanguageContext";
 
 interface Notification {
   id: string;
   title: string;
+  title_ar: string | null;
   message: string;
+  message_ar: string | null;
   type: string;
   created_at: string;
 }
@@ -23,8 +26,9 @@ const NotificationsSection = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [form, setForm] = useState({ title: "", message: "", type: "info" });
+  const [form, setForm] = useState({ title: "", title_ar: "", message: "", message_ar: "", type: "info" });
   const [sending, setSending] = useState(false);
+  const { t } = useLanguage();
 
   const fetchNotifications = async () => {
     const { data } = await supabase
@@ -48,7 +52,9 @@ const NotificationsSection = () => {
     setSending(true);
     const { error } = await supabase.from("notifications").insert({
       title: form.title,
+      title_ar: form.title_ar || null,
       message: form.message,
+      message_ar: form.message_ar || null,
       type: form.type,
     });
 
@@ -56,7 +62,7 @@ const NotificationsSection = () => {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } else {
       toast({ title: "Notification sent", description: "All users will see this notification." });
-      setForm({ title: "", message: "", type: "info" });
+      setForm({ title: "", title_ar: "", message: "", message_ar: "", type: "info" });
       setDialogOpen(false);
       fetchNotifications();
     }
@@ -99,7 +105,7 @@ const NotificationsSection = () => {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Title</TableHead>
+                <TableHead>Title (EN / AR)</TableHead>
                 <TableHead>Message</TableHead>
                 <TableHead>Type</TableHead>
                 <TableHead>Sent</TableHead>
@@ -109,7 +115,10 @@ const NotificationsSection = () => {
             <TableBody>
               {notifications.map((n) => (
                 <TableRow key={n.id}>
-                  <TableCell className="font-medium">{n.title}</TableCell>
+                  <TableCell className="font-medium">
+                    <div>{n.title}</div>
+                    {n.title_ar && <div className="text-xs text-muted-foreground" dir="rtl">{n.title_ar}</div>}
+                  </TableCell>
                   <TableCell className="text-muted-foreground text-sm max-w-[300px] truncate">
                     {n.message}
                   </TableCell>
@@ -136,15 +145,28 @@ const NotificationsSection = () => {
           </DialogHeader>
           <div className="space-y-4">
             <Input
-              placeholder="Notification title"
+              placeholder={t("notifications.form.title")}
               value={form.title}
               onChange={(e) => setForm({ ...form, title: e.target.value })}
             />
+            <Input
+              placeholder={t("notifications.form.titleAr")}
+              value={form.title_ar}
+              onChange={(e) => setForm({ ...form, title_ar: e.target.value })}
+              dir="rtl"
+            />
             <Textarea
-              placeholder="Notification message..."
+              placeholder={t("notifications.form.message")}
               value={form.message}
               onChange={(e) => setForm({ ...form, message: e.target.value })}
               rows={3}
+            />
+            <Textarea
+              placeholder={t("notifications.form.messageAr")}
+              value={form.message_ar}
+              onChange={(e) => setForm({ ...form, message_ar: e.target.value })}
+              rows={3}
+              dir="rtl"
             />
             <Select value={form.type} onValueChange={(v) => setForm({ ...form, type: v })}>
               <SelectTrigger>
