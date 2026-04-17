@@ -25,6 +25,10 @@ interface ShotResult {
   modelNotes: string;
   suggestedAspectRatio?: string;
   suggestedDuration?: string;
+  audioBlock?: string;
+  cameraTags?: string;
+  referenceGuidance?: string;
+  shotStructure?: string;
 }
 
 interface WorkflowPanelProps {
@@ -47,6 +51,7 @@ export const WorkflowPanel = ({ type }: WorkflowPanelProps) => {
   const [description, setDescription] = useState("");
   const [model, setModel] = useState("any");
   const [results, setResults] = useState<ShotResult[] | null>(null);
+  const [agentName, setAgentName] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   const [phase, setPhase] = useState<Phase>("upload");
@@ -179,6 +184,7 @@ export const WorkflowPanel = ({ type }: WorkflowPanelProps) => {
       if (data?.error) throw new Error(data.error);
 
       setResults(data.results);
+      setAgentName(data.agentName ?? null);
       setPhase("generate");
       trackGeneration(type, model);
 
@@ -385,7 +391,7 @@ export const WorkflowPanel = ({ type }: WorkflowPanelProps) => {
       <AnimatePresence>
         {isLoading && !results && <ResultsSkeleton />}
         {results && (
-          <ResultsPanel results={results} onRegenerate={handleGenerate} isLoading={isLoading} />
+          <ResultsPanel results={results} onRegenerate={handleGenerate} isLoading={isLoading} agentName={agentName ?? undefined} />
         )}
       </AnimatePresence>
     </div>

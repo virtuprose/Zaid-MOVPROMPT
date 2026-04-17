@@ -103,6 +103,11 @@ export const ar: Record<TranslationKey, string> = {
   "results.negativePrompt": "الامر السلبي",
   "results.cameraSuggestions": "اقتراحات الكاميرا",
   "results.modelNotes": "ملاحظات خاصة بالنموذج",
+  "results.audioBlock": "توجيه الصوت",
+  "results.cameraTags": "وسوم الكاميرا",
+  "results.referenceGuidance": "توجيه المرجع",
+  "results.shotStructure": "بنية اللقطات",
+  "results.generatedBy": "أُنشئ بواسطة",
 
   // SceneBreakdown
   "scene.title": "عناصر المشهد",
