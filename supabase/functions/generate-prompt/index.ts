@@ -160,9 +160,27 @@ serve(async (req) => {
       "grok-imagine-edit": "Grok Imagine Edit",
     };
 
-    // Resolve specialist agent for this target model
+    // Resolve specialist agent for this target model (in-code defaults)
     const agent = getAgent(targetModel);
-    const composedSystemPrompt = `${BASE_SYSTEM_PROMPT}\n\n${agent.docSummary}\n\n${agent.systemAddendum}\n\n═══ FEW-SHOT EXAMPLE ═══\n${agent.examples}`;
+
+    // Try to load admin-edited overrides from agent_profiles table (cached 60s)
+    let docSummary = agent.docSummary;
+    let systemAddendum = agent.systemAddendum;
+    let examples = agent.examples;
+    let displayName = agent.displayName;
+    try {
+      const profile = await getAgentProfile(agent.id.replace(/-director$/, ""));
+      if (profile && profile.is_active) {
+        if (profile.doc_summary?.trim()) docSummary = profile.doc_summary;
+        if (profile.system_addendum?.trim()) systemAddendum = profile.system_addendum;
+        if (profile.examples?.trim()) examples = profile.examples;
+        if (profile.display_name?.trim()) displayName = profile.display_name;
+      }
+    } catch (err) {
+      console.error("agent_profiles lookup failed, using in-code defaults:", err);
+    }
+
+    const composedSystemPrompt = `${BASE_SYSTEM_PROMPT}\n\n${docSummary}\n\n${systemAddendum}\n\n═══ FEW-SHOT EXAMPLE ═══\n${examples}`;
 
     let userText = `Workflow: ${workflowType}\nTarget Model: ${modelLabels[targetModel] || targetModel}\nActive Agent: ${agent.displayName}\n\n`;
     if (description?.trim()) {

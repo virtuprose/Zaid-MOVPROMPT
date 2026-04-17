@@ -3,13 +3,14 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LogOut, BarChart3, Users, Megaphone } from "lucide-react";
+import { LogOut, BarChart3, Users, Megaphone, Bot } from "lucide-react";
 import AnalyticsTab, { type Stats } from "@/components/admin/AnalyticsTab";
 import UsersTab from "@/components/admin/UsersTab";
 import AnnouncementsSection from "@/components/admin/AnnouncementsSection";
 import NotificationsSection from "@/components/admin/NotificationsSection";
 import EmailTracker from "@/components/admin/EmailTracker";
 import WelcomePopupSection from "@/components/admin/WelcomePopupSection";
+import AgentProfilesSection from "@/components/admin/AgentProfilesSection";
 import { useLanguage } from "@/i18n/LanguageContext";
 
 const Analytics = () => {
@@ -129,6 +130,10 @@ const Analytics = () => {
               <Megaphone className="w-4 h-4" />
               Marketing
             </TabsTrigger>
+            <TabsTrigger value="agents" className="gap-2">
+              <Bot className="w-4 h-4" />
+              Agents
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="analytics">
@@ -146,6 +151,10 @@ const Analytics = () => {
               <WelcomePopupSection />
               <EmailTracker />
             </div>
+          </TabsContent>
+
+          <TabsContent value="agents">
+            <AgentProfilesSection />
           </TabsContent>
         </Tabs>
       </div>
