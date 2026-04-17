@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { BASE_SYSTEM_PROMPT } from "./experts/_base.ts";
 import { getAgent } from "./experts/registry.ts";
+import { getAgentProfile } from "./experts/profile-loader.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -182,7 +183,7 @@ serve(async (req) => {
 
     const composedSystemPrompt = `${BASE_SYSTEM_PROMPT}\n\n${docSummary}\n\n${systemAddendum}\n\n═══ FEW-SHOT EXAMPLE ═══\n${examples}`;
 
-    let userText = `Workflow: ${workflowType}\nTarget Model: ${modelLabels[targetModel] || targetModel}\nActive Agent: ${agent.displayName}\n\n`;
+    let userText = `Workflow: ${workflowType}\nTarget Model: ${modelLabels[targetModel] || targetModel}\nActive Agent: ${displayName}\n\n`;
     if (description?.trim()) {
       userText += `User's creative vision: ${description.trim()}\n\n`;
     }
@@ -306,7 +307,7 @@ serve(async (req) => {
 
     const parsed = JSON.parse(toolCall.function.arguments);
 
-    return new Response(JSON.stringify({ ...parsed, agent: agent.id, agentName: agent.displayName }), {
+    return new Response(JSON.stringify({ ...parsed, agent: agent.id, agentName: displayName }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
