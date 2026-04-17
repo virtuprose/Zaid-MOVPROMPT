@@ -1,4 +1,4 @@
-import { Copy, Check, RefreshCw } from "lucide-react";
+import { Copy, Check, RefreshCw, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useState, forwardRef } from "react";
@@ -14,12 +14,17 @@ interface ShotResult {
   modelNotes: string;
   suggestedAspectRatio?: string;
   suggestedDuration?: string;
+  audioBlock?: string;
+  cameraTags?: string;
+  referenceGuidance?: string;
+  shotStructure?: string;
 }
 
 interface ResultsPanelProps {
   results: ShotResult[];
   onRegenerate: () => void;
   isLoading: boolean;
+  agentName?: string;
 }
 
 const CopyButton = ({ text }: { text: string }) => {
@@ -46,14 +51,21 @@ const ResultCard = ({ label, value, accent }: { label: string; value: string; ac
   </div>
 );
 
-export const ResultsPanel = forwardRef<HTMLDivElement, ResultsPanelProps>(({ results, onRegenerate, isLoading }, ref) => {
+const isMeaningful = (v?: string) => !!v && v.trim().length > 0 && v.trim().toLowerCase() !== "(none)";
+
+export const ResultsPanel = forwardRef<HTMLDivElement, ResultsPanelProps>(({ results, onRegenerate, isLoading, agentName }, ref) => {
   const { t } = useLanguage();
   const [allCopied, setAllCopied] = useState(false);
 
   const handleCopyAll = async () => {
     const allText = results.map((r, i) => {
       const prefix = r.shotName ? `--- ${r.shotName} ---\n` : results.length > 1 ? `--- ${t("library.shot")} ${i + 1} ---\n` : "";
-      return `${prefix}${t("results.mainPrompt")}:\n${r.mainPrompt}\n\n${t("results.negativePrompt")}:\n${r.negativePrompt}\n\n${t("results.cameraSuggestions")}:\n${r.cameraSuggestions}\n\n${t("results.modelNotes")}:\n${r.modelNotes}`;
+      let block = `${prefix}${t("results.mainPrompt")}:\n${r.mainPrompt}\n\n${t("results.negativePrompt")}:\n${r.negativePrompt}\n\n${t("results.cameraSuggestions")}:\n${r.cameraSuggestions}\n\n${t("results.modelNotes")}:\n${r.modelNotes}`;
+      if (isMeaningful(r.audioBlock)) block += `\n\n${t("results.audioBlock")}:\n${r.audioBlock}`;
+      if (isMeaningful(r.cameraTags)) block += `\n\n${t("results.cameraTags")}:\n${r.cameraTags}`;
+      if (isMeaningful(r.referenceGuidance)) block += `\n\n${t("results.referenceGuidance")}:\n${r.referenceGuidance}`;
+      if (isMeaningful(r.shotStructure)) block += `\n\n${t("results.shotStructure")}:\n${r.shotStructure}`;
+      return block;
     }).join("\n\n");
     try {
       await navigator.clipboard.writeText(allText);
@@ -67,8 +79,15 @@ export const ResultsPanel = forwardRef<HTMLDivElement, ResultsPanelProps>(({ res
 
   return (
     <motion.div ref={ref} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
-      <div className="flex items-center justify-between gap-2">
-        <h3 className="font-display text-base sm:text-lg font-semibold">{t("results.title")}</h3>
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap">
+          <h3 className="font-display text-base sm:text-lg font-semibold">{t("results.title")}</h3>
+          {agentName && (
+            <span className="inline-flex items-center gap-1 text-[10px] sm:text-xs font-medium bg-accent/10 text-accent border border-accent/20 px-2 py-0.5 rounded-full">
+              <Sparkles className="w-3 h-3" /> {t("results.generatedBy")} {agentName}
+            </span>
+          )}
+        </div>
         <div className="flex gap-1.5 sm:gap-2">
           <Button variant="outline" size="sm" onClick={handleCopyAll} className={`px-2 sm:px-3 ${allCopied ? "border-green-500/50 text-green-400" : ""}`}>
             {allCopied ? <Check className="w-3.5 h-3.5 sm:me-1.5 text-green-400" /> : <Copy className="w-3.5 h-3.5 sm:me-1.5" />}
@@ -110,6 +129,18 @@ export const ResultsPanel = forwardRef<HTMLDivElement, ResultsPanelProps>(({ res
               )}
               <ResultCard label={t("results.mainPrompt")} value={result.mainPrompt} accent />
               <ResultCard label={t("results.negativePrompt")} value={result.negativePrompt} />
+              {isMeaningful(result.cameraTags) && (
+                <ResultCard label={t("results.cameraTags")} value={result.cameraTags!} />
+              )}
+              {isMeaningful(result.audioBlock) && (
+                <ResultCard label={t("results.audioBlock")} value={result.audioBlock!} />
+              )}
+              {isMeaningful(result.referenceGuidance) && (
+                <ResultCard label={t("results.referenceGuidance")} value={result.referenceGuidance!} />
+              )}
+              {isMeaningful(result.shotStructure) && (
+                <ResultCard label={t("results.shotStructure")} value={result.shotStructure!} />
+              )}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <ResultCard label={t("results.cameraSuggestions")} value={result.cameraSuggestions} />
                 <ResultCard label={t("results.modelNotes")} value={result.modelNotes} />
