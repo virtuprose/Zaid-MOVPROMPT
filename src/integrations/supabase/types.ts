@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      agent_profiles: {
+        Row: {
+          agent_id: string
+          display_name: string
+          doc_summary: string
+          examples: string
+          id: string
+          is_active: boolean
+          system_addendum: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          agent_id: string
+          display_name: string
+          doc_summary?: string
+          examples?: string
+          id?: string
+          is_active?: boolean
+          system_addendum?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          agent_id?: string
+          display_name?: string
+          doc_summary?: string
+          examples?: string
+          id?: string
+          is_active?: boolean
+          system_addendum?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       announcements: {
         Row: {
           created_at: string
