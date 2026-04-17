@@ -160,7 +160,11 @@ serve(async (req) => {
       "grok-imagine-edit": "Grok Imagine Edit",
     };
 
-    let userText = `Workflow: ${workflowType}\nTarget Model: ${modelLabels[targetModel] || targetModel}\n\n`;
+    // Resolve specialist agent for this target model
+    const agent = getAgent(targetModel);
+    const composedSystemPrompt = `${BASE_SYSTEM_PROMPT}\n\n${agent.docSummary}\n\n${agent.systemAddendum}\n\n═══ FEW-SHOT EXAMPLE ═══\n${agent.examples}`;
+
+    let userText = `Workflow: ${workflowType}\nTarget Model: ${modelLabels[targetModel] || targetModel}\nActive Agent: ${agent.displayName}\n\n`;
     if (description?.trim()) {
       userText += `User's creative vision: ${description.trim()}\n\n`;
     }
@@ -203,6 +207,10 @@ serve(async (req) => {
         modelNotes: { type: "string" as const, description: "Model-specific tips and settings" },
         suggestedAspectRatio: { type: "string" as const, description: "Recommended aspect ratio: 16:9, 9:16, or 1:1" },
         suggestedDuration: { type: "string" as const, description: "Recommended clip duration: 5s or 10s" },
+        audioBlock: { type: "string" as const, description: "Audio direction (DIALOGUE / SFX / AMBIENT). Empty string if model has no audio." },
+        cameraTags: { type: "string" as const, description: "Bracketed camera tags (Kling-style). Empty string if not applicable." },
+        referenceGuidance: { type: "string" as const, description: "How the uploaded image(s) are used as reference. Empty string if not applicable." },
+        shotStructure: { type: "string" as const, description: "Multi-shot timing breakdown (Seedance-style). Empty string if not applicable." },
       },
       required: ["mainPrompt", "negativePrompt", "cameraSuggestions", "modelNotes", "suggestedAspectRatio", "suggestedDuration"] as const,
     };
@@ -214,9 +222,9 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "google/gemini-2.5-pro",
         messages: [
-          { role: "system", content: SYSTEM_PROMPT },
+          { role: "system", content: composedSystemPrompt },
           { role: "user", content: userContent },
         ],
         tools: [
@@ -280,7 +288,7 @@ serve(async (req) => {
 
     const parsed = JSON.parse(toolCall.function.arguments);
 
-    return new Response(JSON.stringify(parsed), {
+    return new Response(JSON.stringify({ ...parsed, agent: agent.id, agentName: agent.displayName }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
