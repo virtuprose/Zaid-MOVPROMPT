@@ -6,7 +6,7 @@ import { ConfigPanel } from "./ConfigPanel";
 import { ResultsPanel } from "./ResultsPanel";
 import { ResultsSkeleton } from "./ResultsSkeleton";
 import { SceneBreakdown, type SceneFrame, type ElementDirections } from "./SceneBreakdown";
-import { Sparkles, Loader2, ScanSearch, RotateCcw, RefreshCw, Info } from "lucide-react";
+import { Sparkles, Loader2, ScanSearch, RotateCcw, RefreshCw, Info, Volume2, VolumeX } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -60,6 +60,7 @@ export const WorkflowPanel = ({ selectedModel }: WorkflowPanelProps) => {
 
   const contract = useMemo(() => getContract(selectedModel), [selectedModel]);
   const [twoFrameMode, setTwoFrameMode] = useState(false);
+  const [audioEnabled, setAudioEnabled] = useState(true);
   const activeSlots = contract.supportsTwoFrameToggle && twoFrameMode ? 2 : contract.slots;
   const workflowType = deriveWorkflowType(selectedModel, activeSlots);
 
