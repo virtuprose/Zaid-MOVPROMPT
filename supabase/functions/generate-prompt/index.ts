@@ -335,6 +335,40 @@ serve(async (req) => {
       userText += `\n`;
     }
 
+    // Build the @Element brief (Seedance 2.0 / 2.0 Fast multi-reference flow)
+    const elementImageBlocks: { label: string; b64: string }[] = [];
+    if (validElements.length > 0) {
+      userText += `\n\n═══ NUMBERED ELEMENTS (user-uploaded references) ═══\n`;
+      validElements.forEach((e, idx) => {
+        const n = idx + 1;
+        const noteSuffix = e.note ? ` — note: "${e.note}"` : "";
+        const fileSuffix = e.filename ? ` [${e.filename}]` : "";
+        if (e.kind === "image") {
+          userText += `- @Element ${n} (image)${fileSuffix}${noteSuffix}\n`;
+          if (Array.isArray(e.images) && e.images[0]) {
+            elementImageBlocks.push({ label: `@Element ${n} (image${e.filename ? ", filename: " + e.filename : ""})`, b64: e.images[0] });
+          }
+        } else if (e.kind === "video") {
+          const frameCount = Array.isArray(e.images) ? e.images.length : 0;
+          userText += `- @Element ${n} (video — ${frameCount} keyframes)${fileSuffix}${noteSuffix}\n`;
+          if (Array.isArray(e.images)) {
+            e.images.forEach((b64: string, fIdx: number) => {
+              elementImageBlocks.push({ label: `@Element ${n} (video keyframe ${fIdx + 1}/${frameCount})`, b64 });
+            });
+          }
+        } else if (e.kind === "audio") {
+          userText += `- @Element ${n} (audio)${fileSuffix}${noteSuffix || " — mood reference"}\n`;
+        }
+      });
+      if (autoInjectElements) {
+        userText += `\nELEMENT MENTION PROTOCOL — In your mainPrompt:\n`;
+        userText += `1. Preserve every \`@Element N\` token from the user's brief verbatim — Seedance parses these as reference anchors.\n`;
+        userText += `2. If the user did NOT mention an Element, you MUST still incorporate it naturally and tag it inline as \`(@Element N: <one-word role: subject/outfit/style/lighting/motion/mood>)\` the first time it appears.\n`;
+        userText += `3. Never describe an Element's content literally without its \`@Element N\` tag — the anchor is required to bind generation to the upload.\n`;
+        userText += `4. Result: the user can copy your mainPrompt directly into Seedance and every upload is correctly referenced.\n\n`;
+      }
+    }
+
     userText += `Analyze the image(s) using the Scene Decomposition Protocol, then generate cinematic prompts optimized for the target model.`;
 
     if (workflowType === "multishot") {
