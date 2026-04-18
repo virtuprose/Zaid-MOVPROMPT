@@ -402,6 +402,7 @@ serve(async (req) => {
       });
     }
 
+    const shotSchema = {
       type: "object" as const,
       properties: {
         shotName: { type: "string" as const, description: "Name of the shot" },
