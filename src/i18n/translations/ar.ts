@@ -327,5 +327,7 @@ export const ar: Record<TranslationKey, string> = {
   "elements.mentionHint": "اكتب @ أو انقر للإشارة إلى عنصر",
   "elements.legend": "العناصر المستخدمة في هذا البرومبت",
   "elements.autoTag": "تمت إضافة وسوم تلقائية للعناصر غير المذكورة.",
+  "elements.uploadMedia": "ارفع وسائط",
+  "elements.uploadMediaSubtitle": "صورة أو فيديو أو صوت",
   "contract.hint.seedanceElements": "ارفع حتى 10 مراجع (صور، فيديوهات، صوت) واذكرها في البرومبت بـ @Element 1, @Element 2 إلخ. العناصر غير المذكورة سيتم وسمها تلقائياً.",
 };
