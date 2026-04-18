@@ -191,6 +191,8 @@ serve(async (req) => {
         return badRequest("Combined element images exceed 8MB");
       }
     }
+
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
       console.error("LOVABLE_API_KEY env var is missing");
       return new Response(JSON.stringify({ error: "Service misconfigured" }), {
