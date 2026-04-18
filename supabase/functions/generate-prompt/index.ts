@@ -301,6 +301,8 @@ serve(async (req) => {
       userText += `\n`;
     }
 
+    userText += `Analyze the image(s) using the Scene Decomposition Protocol, then generate cinematic prompts optimized for the target model.`;
+
     if (workflowType === "multishot") {
       userText += ` Generate EXACTLY ${resolvedShotCount} shot${resolvedShotCount === 1 ? "" : "s"} in the results array.`;
       if (resolvedShotCount === 3) {
@@ -366,7 +368,7 @@ serve(async (req) => {
                   results: {
                     type: "array",
                     items: shotSchema,
-                    description: "Array of shot results. 1 for single/twoframe, exactly 10 for multishot.",
+                    description: "Array of shot results. 1 for single/twoframe; for multishot, exactly the number of shots requested in the user message (default 10, may be 3 for stitched-sequence mode).",
                   },
                 },
                 required: ["results"],
