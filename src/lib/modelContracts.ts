@@ -21,6 +21,10 @@ export interface ModelContract {
   variantDescKey?: string;
   /** Whether this model supports an audio on/off toggle. */
   supportsAudio?: boolean;
+  /** Whether this model uses the @Element multi-reference grid (Seedance 2.0 / 2.0 Fast). */
+  supportsElementReferences?: boolean;
+  /** Maximum number of @Element references (default 10). */
+  maxElements?: number;
 }
 
 const STD: ModelContract = {
@@ -76,12 +80,14 @@ export function getContract(model: string): ModelContract {
   // Seedance — non-Fast and non-2.0 variants support 1↔2 frame toggle
   if (model.startsWith("seedance")) {
     if (model.includes("fast")) return STD;
-    if (model === "seedance-2.0") {
+    if (model === "seedance-2.0" || model === "seedance-2.0-fast") {
       return {
         slots: 1,
         slotLabels: ["contract.slot.reference"],
-        extrasHintKey: "contract.hint.seedanceAudio",
+        extrasHintKey: "contract.hint.seedanceElements",
         supportsAudio: true,
+        supportsElementReferences: true,
+        maxElements: 10,
         workflowType: "single",
       };
     }
