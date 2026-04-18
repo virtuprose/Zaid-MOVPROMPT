@@ -50,13 +50,6 @@ export const MODEL_GROUPS: ModelGroup[] = [
       { value: "seedance-pro-fast", label: "Seedance Pro Fast" },
     ],
   },
-  {
-    label: "xAI (Grok)",
-    models: [
-      { value: "grok-imagine", label: "Grok Imagine" },
-      { value: "grok-imagine-edit", label: "Grok Imagine Edit" },
-    ],
-  },
 ];
 
 export function getModelLabel(value: string): string {
