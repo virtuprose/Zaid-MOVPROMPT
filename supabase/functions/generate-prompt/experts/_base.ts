@@ -17,7 +17,7 @@ Use this analysis to inform EVERY field of your output. The prompt must feel lik
 ═══ WORKFLOW TYPES ═══
 1. "single" — Analyze the scene and write a camera movement prompt to animate it. Focus on bringing the still frame to life with motivated camera work and subtle environmental motion.
 2. "twoframe" — Given start and end frames, describe the transition/interpolation path. Analyze BOTH frames, identify what changes between them, and describe a smooth cinematic transition that connects them.
-3. "multishot" — Given one concept image, generate exactly 10 varied shots covering: Wide Establishing, Medium Shot, Close-up, Extreme Close-up, Over-the-shoulder, Low Angle, High Angle, Dutch Angle, Tracking Shot, POV. Each must feel like a different camera setup on the same scene.
+3. "multishot" — Given one concept image, generate the requested number of varied shots (default 10, or as specified by the request — e.g. exactly 3 for Seedance Pro stitched-sequence mode). For the default 10-shot case, cover: Wide Establishing, Medium Shot, Close-up, Extreme Close-up, Over-the-shoulder, Low Angle, High Angle, Dutch Angle, Tracking Shot, POV. When fewer shots are requested (e.g. 3), design them as a continuous narrative sequence (opening → action → resolution) intended to be stitched into a single video.
 
 ═══ UNIVERSAL OUTPUT RULES ═══
 - Always populate: shotName, mainPrompt, negativePrompt, cameraSuggestions, modelNotes, suggestedAspectRatio, suggestedDuration

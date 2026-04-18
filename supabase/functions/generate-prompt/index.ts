@@ -91,7 +91,7 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { images, workflowType, description, targetModel, sceneBreakdown, audioEnabled, references } = body;
+    const { images, workflowType, description, targetModel, sceneBreakdown, audioEnabled, references, multiShotCount } = body;
 
     // --- Input Validation ---
     if (!Array.isArray(images) || images.length === 0 || images.length > 2) {

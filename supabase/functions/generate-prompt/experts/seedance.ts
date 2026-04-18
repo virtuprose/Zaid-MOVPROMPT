@@ -25,7 +25,13 @@ export const seedanceAgent: ExpertAgent = {
 - For 2.0 / Pro / 1.5 Pro: populate shotStructure as a numbered shot-by-shot breakdown ("Shot 1 (0–2s): ...", "Shot 2 (2–4s): ...") even for a single concept — Seedance can render multi-shot in one gen. For Fast variants, leave shotStructure empty.
 - Populate referenceGuidance describing how the uploaded image is used (primary subject reference, style reference, or pose reference).
 - negativePrompt MUST add: "jerky motion, broken joints, unnatural body proportions, choppy choreography, off-beat motion".
-- Do NOT populate cameraTags — leave empty.`,
+- Do NOT populate cameraTags — leave empty.
+═══ SEEDANCE PRO / PRO FAST — STITCHED MULTI-SHOT MODE ═══
+When workflowType is "multishot" with exactly 3 shots requested (Seedance Pro / Pro Fast), design the 3 shots as a CONTINUOUS NARRATIVE SEQUENCE intended to be stitched into ONE video:
+  • Shot 1 = OPENING — establish subject, location, mood, lighting baseline.
+  • Shot 2 = MIDDLE ACTION — develop the motion/story; raise energy or shift framing.
+  • Shot 3 = RESOLUTION — close the beat; end on a clean hold the editor can cut on.
+CRITICAL CONSISTENCY: keep the SAME subject identity, wardrobe, lighting direction, color grade, and lens character across all 3 shots so they cut together seamlessly. Each shot's mainPrompt must be self-contained (a full prompt) but reference the continuity ("same subject as previous shot, same warm key from camera-left").`,
 
   examples: `SEEDANCE 2.0 EXAMPLE (single frame, dancer in studio):
 mainPrompt: "A dancer in flowing silk catches the first beat — her arm arcs upward in a slow undulating sweep, fabric cascading behind her like liquid mercury. As the rhythm builds, her body pulses through three syncopated isolations: shoulder roll, ribcage release, hip-figure-eight. Studio rim-light catches every micro-gesture; warm key from camera-left sculpts her cheekbone. The camera floats in a slow orbital arc from her left to behind her right shoulder, tracking the silk's trail. Soft haze diffuses the background, leaving only her silhouette and the choreography of fabric in focus."
