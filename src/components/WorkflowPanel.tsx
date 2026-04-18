@@ -6,8 +6,6 @@ import { ConfigPanel } from "./ConfigPanel";
 import { ResultsPanel } from "./ResultsPanel";
 import { ResultsSkeleton } from "./ResultsSkeleton";
 import { SceneBreakdown, type SceneFrame, type ElementDirections } from "./SceneBreakdown";
-import { ReferenceMediaPanel } from "./ReferenceMediaPanel";
-import type { ReferenceMediaItem } from "./ReferenceItem";
 import { ElementGrid, type ElementItem } from "./ElementGrid";
 import { MentionTextarea } from "./MentionTextarea";
 import { extractVideoKeyframes, compressImageFile } from "@/lib/videoFrames";
@@ -63,7 +61,7 @@ export const WorkflowPanel = ({ selectedModel }: WorkflowPanelProps) => {
   const [sceneFrames, setSceneFrames] = useState<SceneFrame[]>([]);
   const [elementDirections, setElementDirections] = useState<ElementDirections>({});
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [referenceItems, setReferenceItems] = useState<ReferenceMediaItem[]>([]);
+  
   const [elementItems, setElementItems] = useState<ElementItem[]>([]);
 
   const contract = useMemo(() => getContract(selectedModel), [selectedModel]);
@@ -169,25 +167,8 @@ export const WorkflowPanel = ({ selectedModel }: WorkflowPanelProps) => {
     try {
       const imageBase64s = await Promise.all(images.map((img) => compressImage(img.file)));
 
-      // Process references: images → resized base64; videos → keyframes; audio → metadata only
-      const referencesPayload = await Promise.all(
-        referenceItems.map(async (ref) => {
-          if (ref.kind === "image") {
-            const b64 = await compressImageFile(ref.file);
-            return { kind: "image", role: ref.role, note: ref.note || undefined, filename: ref.file.name, images: [b64] };
-          }
-          if (ref.kind === "video") {
-            try {
-              const frames = await extractVideoKeyframes(ref.file, 3);
-              return { kind: "video", role: ref.role, note: ref.note || undefined, filename: ref.file.name, images: frames };
-            } catch (e) {
-              console.error("Video keyframe extraction failed:", e);
-              return { kind: "video", role: ref.role, note: ref.note || undefined, filename: ref.file.name, images: [] };
-            }
-          }
-          return { kind: "audio", role: ref.role, note: ref.note || undefined, filename: ref.file.name };
-        })
-      );
+      // References removed — only @Elements are supported.
+      const referencesPayload: any[] = [];
 
       // Process @Element references (Seedance 2.0 / 2.0 Fast). Treated like references on the wire.
       const elementsPayload = contract.supportsElementReferences

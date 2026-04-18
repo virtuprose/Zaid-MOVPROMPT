@@ -2,7 +2,7 @@ import { useRef, useState } from "react";
 import { Plus, X, ImageIcon, Film, Music } from "lucide-react";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { toast } from "sonner";
-import type { ReferenceKind } from "./ReferenceItem";
+type ReferenceKind = "image" | "video" | "audio";
 
 export interface ElementItem {
   id: string;
