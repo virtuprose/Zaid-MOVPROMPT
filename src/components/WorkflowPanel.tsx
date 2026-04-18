@@ -14,6 +14,7 @@ import { trackGeneration } from "@/lib/analytics";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { getContract, deriveWorkflowType } from "@/lib/modelContracts";
+import { MODEL_GROUPS } from "@/lib/models";
 
 type Phase = "upload" | "breakdown" | "generate";
 
@@ -448,7 +449,13 @@ export const WorkflowPanel = ({ selectedModel }: WorkflowPanelProps) => {
       <AnimatePresence>
         {isLoading && !results && <ResultsSkeleton />}
         {results && (
-          <ResultsPanel results={results} onRegenerate={handleGenerate} isLoading={isLoading} agentName={agentName ?? undefined} />
+          <ResultsPanel
+            results={results}
+            onRegenerate={handleGenerate}
+            isLoading={isLoading}
+            agentName={agentName ?? undefined}
+            modelLabel={MODEL_GROUPS.flatMap(g => g.models).find(m => m.value === selectedModel)?.label ?? selectedModel}
+          />
         )}
       </AnimatePresence>
     </div>
