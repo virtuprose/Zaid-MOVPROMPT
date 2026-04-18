@@ -50,17 +50,6 @@ export const MODEL_GROUPS: ModelGroup[] = [
     ],
   },
   {
-    label: "Alibaba (Wan)",
-    models: [
-      { value: "wan-2.7", label: "Wan 2.7" },
-      { value: "wan-2.6", label: "Wan 2.6" },
-      { value: "wan-2.5", label: "Wan 2.5" },
-      { value: "wan-2.5-fast", label: "Wan 2.5 Fast" },
-      { value: "wan-2.2", label: "Wan 2.2" },
-      { value: "wan-2.2-fast", label: "Wan 2.2 Fast" },
-    ],
-  },
-  {
     label: "ByteDance (Seedance)",
     models: [
       { value: "seedance-2.0-fast", label: "Seedance 2.0 Fast" },
