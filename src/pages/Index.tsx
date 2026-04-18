@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { trackPageVisit } from "@/lib/analytics";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/i18n/LanguageContext";
-import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { WorkflowPanel } from "@/components/WorkflowPanel";
 import { ModelPicker } from "@/components/ModelPicker";
 import { Button } from "@/components/ui/button";
@@ -18,7 +17,6 @@ import { InstallPrompt } from "@/components/InstallPrompt";
 import WelcomePopup from "@/components/WelcomePopup";
 
 const Index = () => {
-  const [guideOpen, setGuideOpen] = useState(false);
   const [model, setModel] = useState("any");
   const { user, loading, signOut } = useAuth();
   const navigate = useNavigate();
@@ -27,12 +25,6 @@ const Index = () => {
   useEffect(() => {
     trackPageVisit("/");
   }, []);
-
-  const GUIDE_STEPS = [
-    { icon: Sparkles, title: t("guide.step1.title"), desc: t("guide.step1.desc") },
-    { icon: Upload, title: t("guide.step2.title"), desc: t("guide.step2.desc") },
-    { icon: Copy, title: t("guide.step3.title"), desc: t("guide.step3.desc") },
-  ];
 
   const initials = user?.user_metadata?.full_name
     ? user.user_metadata.full_name.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase()
