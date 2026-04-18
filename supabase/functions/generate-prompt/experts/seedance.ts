@@ -27,10 +27,13 @@ export const seedanceAgent: ExpertAgent = {
 - negativePrompt MUST add: "jerky motion, broken joints, unnatural body proportions, choppy choreography, off-beat motion".
 - Do NOT populate cameraTags — leave empty.
 ═══ SEEDANCE PRO / PRO FAST — STITCHED MULTI-SHOT MODE ═══
-When workflowType is "multishot" with exactly 3 shots requested (Seedance Pro / Pro Fast), design the 3 shots as a CONTINUOUS NARRATIVE SEQUENCE intended to be stitched into ONE video:
+When workflowType is "multishot" with exactly 5 shots requested (Seedance Pro / Pro Fast), design the 5 shots as a CONTINUOUS NARRATIVE SEQUENCE intended to be stitched into ONE video:
   • Shot 1 = OPENING — establish subject, location, mood, lighting baseline.
-  • Shot 2 = MIDDLE ACTION — develop the motion/story; raise energy or shift framing.
-  • Shot 3 = RESOLUTION — close the beat; end on a clean hold the editor can cut on.
+  • Shot 2 = RISING ACTION — introduce motion/intent; tighten or shift framing.
+  • Shot 3 = PEAK MOMENT — the strongest beat; biggest energy or most expressive framing.
+  • Shot 4 = REACTION / TRANSITION — answer the peak; change angle or reveal a new detail.
+  • Shot 5 = RESOLUTION — close the beat; end on a clean hold the editor can cut on.
+CRITICAL CONSISTENCY: keep the SAME subject identity, wardrobe, lighting direction, color grade, and lens character across all 5 shots so they cut together seamlessly. Each shot's mainPrompt must be self-contained (a full prompt) but reference the continuity ("same subject as previous shot, same warm key from camera-left").
 CRITICAL CONSISTENCY: keep the SAME subject identity, wardrobe, lighting direction, color grade, and lens character across all 3 shots so they cut together seamlessly. Each shot's mainPrompt must be self-contained (a full prompt) but reference the continuity ("same subject as previous shot, same warm key from camera-left").
 ═══ SEEDANCE 2.0 / 2.0 FAST — @ELEMENT REFERENCE MODE ═══
 When the user provides numbered Elements (@Element 1 … @Element N, or shorthand @1 … @N), Seedance 2.0 binds each Element to a specific upload. In your mainPrompt:

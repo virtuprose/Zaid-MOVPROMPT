@@ -71,7 +71,7 @@ export function getContract(model: string): ModelContract {
       slots: 1,
       slotLabels: ["contract.slot.reference"],
       supportsMultiShotToggle: true,
-      multiShotCount: 3,
+      multiShotCount: 5,
       extrasHintKey: "contract.hint.seedanceMultiShot",
       workflowType: "single",
     };
