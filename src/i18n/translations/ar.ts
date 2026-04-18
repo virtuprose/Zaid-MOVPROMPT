@@ -281,8 +281,8 @@ export const ar: Record<TranslationKey, string> = {
   "contract.toggle.single": "إطار واحد",
   "contract.toggle.startEnd": "البداية + النهاية",
   "contract.toggle.singleShot": "لقطة واحدة",
-  "contract.toggle.multiShot3": "متعدد اللقطات (3)",
-  "contract.hint.seedanceMultiShot": "يولّد 3 لقطات متصلة مصممة لتُدمج معاً في فيديو واحد متواصل.",
+  "contract.toggle.multiShot3": "متعدد اللقطات (5)",
+  "contract.hint.seedanceMultiShot": "يولّد 5 لقطات متصلة مصممة لتُدمج معاً في فيديو واحد متواصل.",
   "contract.audio.label": "توليد مع الصوت",
 
   // Welcome Popup

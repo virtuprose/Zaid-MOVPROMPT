@@ -279,8 +279,8 @@ export const en = {
   "contract.toggle.single": "Single frame",
   "contract.toggle.startEnd": "Start + End",
   "contract.toggle.singleShot": "Single shot",
-  "contract.toggle.multiShot3": "Multi-shot (3)",
-  "contract.hint.seedanceMultiShot": "Generates 3 connected shots designed to be stitched into one continuous video.",
+  "contract.toggle.multiShot3": "Multi-shot (5)",
+  "contract.hint.seedanceMultiShot": "Generates 5 connected shots designed to be stitched into one continuous video.",
   "contract.audio.label": "Generate with audio",
 
   // Welcome Popup
