@@ -1,25 +1,41 @@
 
-User wants two contract tweaks:
-1. **Seedance 2.0**: change the slot label from generic "Reference image" to... wait, re-reading: "replace to reference image" — currently Seedance 2.0 shows "Single frame" label (because of two-frame toggle). User wants the single-mode label to read "Reference image" instead. Actually checking `modelContracts.ts` — Seedance uses `contract.slot.reference` which already translates to "Reference image". So what does user mean?
+## Problem
+After generation, users see many fields (Main Prompt, Negative Prompt, Camera Tags, Audio Block, Reference Guidance, Shot Structure, Camera Suggestions, Model Notes) — and don't know which one to actually paste into the target video model. Every field has the same visual weight and its own copy button, so the "primary" output gets lost.
 
-Re-reading more carefully: "on seedance 2.0 replace to reference image" — I think user wants to REMOVE the two-frame toggle from Seedance 2.0, making it a single "Reference image" slot only. AND add the toggle to Kling instead.
+## Solution: Make the "what to copy" obvious
 
-2. **Kling**: add the "Single frame / Start + End" toggle to Kling variants.
+Three coordinated changes in `src/components/ResultsPanel.tsx` (plus 2 new translation keys in `en.ts` / `ar.ts`):
 
-But which Kling variants? Kling 3.0 Omni supports start+end frame officially. Edit and Motion Control don't. Let me ask to be safe — actually the user said "add to kling" generally. I'll scope it to standard Kling variants (3.0, 3.0 Omni, 2.6) and exclude Edit/Motion Control/O1 which have specialized single-input contracts.
+### 1. Promote the Main Prompt as "the one to paste"
+- Make the Main Prompt card visually dominant: larger padding, stronger primary border/glow, and a prominent **"Copy this into [Model]"** primary button (full-width, with paste icon) instead of the tiny corner copy icon.
+- Add a one-line helper above it: *"This is what you paste into the model. Other sections are optional refinements."*
 
-Quick clarifying question needed.
+### 2. Demote secondary fields
+- Group Negative Prompt + model-specific blocks (Audio, Camera Tags, Reference Guidance, Shot Structure) under a collapsible **"Optional refinements"** section, collapsed by default.
+- Camera Suggestions + Model Notes go under a second collapsible **"Director's notes (reference only)"** — these are guidance, not paste-able.
+- Each still has its small copy button when expanded.
 
-## Plan
+### 3. Clarify the "Copy All" button
+- Rename to **"Copy full package"** with a tooltip explaining it copies everything formatted, for users who want the whole bundle.
+- Keep the prominent single-field copy as the default action.
 
-**Seedance 2.0**: Remove the two-frame toggle. It becomes a single "Reference image" slot like Fast variants. Other Seedance variants (Pro, 1.5 Pro) keep the toggle.
+### Visual hierarchy (result)
+```text
+┌─ Shot 1 ──────────────────────────┐
+│ 📐 16:9   ⏱ 5s                    │
+│                                   │
+│ ┌── MAIN PROMPT ─────────────┐   │ ← big, glowing, primary
+│ │ "A cat walks through..."   │   │
+│ │ [ 📋 Copy into Veo 3.1 ]   │   │ ← full-width primary button
+│ └────────────────────────────┘   │
+│                                   │
+│ ▸ Optional refinements (4)       │ ← collapsed
+│ ▸ Director's notes               │ ← collapsed
+└───────────────────────────────────┘
+```
 
-**Kling**: Add the `supportsTwoFrameToggle` to standard Kling variants only (3.0, 3.0 Omni, 2.6). Edit, Motion Control, and O1 keep their specialized single-slot contracts.
+### Files touched
+- `src/components/ResultsPanel.tsx` — restructure card layout, add collapsibles (already in `ui/collapsible.tsx`)
+- `src/i18n/translations/en.ts` + `ar.ts` — add keys: `results.copyIntoModel`, `results.pasteHint`, `results.optionalRefinements`, `results.directorsNotes`, `results.copyFullPackage`
 
-### Files
-- `src/lib/modelContracts.ts` — flip `supportsTwoFrameToggle` flag: off for `seedance-2.0`, on for standard Kling variants.
-
-That's it. One file change. WorkflowPanel already reads the flag and renders the toggle + 2nd slot dynamically, and `deriveWorkflowType` already returns `"twoframe"` when 2 slots are active — so the backend payload works automatically.
-
-### Quick check
-Need to confirm which Kling values count as "standard" — from `src/lib/models.ts` I'll match: `kling-3.0`, `kling-3.0-omni`, `kling-2.6` (exclude anything with `edit`, `motion-control`, `o1`).
+No backend changes. No new dependencies.
