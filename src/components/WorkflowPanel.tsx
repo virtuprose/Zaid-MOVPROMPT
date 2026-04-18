@@ -354,6 +354,8 @@ export const WorkflowPanel = ({ selectedModel }: WorkflowPanelProps) => {
         ))}
       </div>
 
+      <ReferenceMediaPanel items={referenceItems} onChange={setReferenceItems} />
+
       <AnimatePresence mode="wait">
         {hasRequiredImages && phase === "upload" && (
           <motion.div key="upload-phase" {...phaseTransition} className="space-y-3">
