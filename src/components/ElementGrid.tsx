@@ -198,6 +198,7 @@ export const ElementGrid = ({ items, onChange, max = 10 }: ElementGridProps) => 
           {items.map((item, idx) => (
             <div
               key={item.id}
+              data-element-tile-id={item.id}
               draggable
               onDragStart={(e) => {
                 setDraggingId(item.id);
@@ -227,7 +228,12 @@ export const ElementGrid = ({ items, onChange, max = 10 }: ElementGridProps) => 
                 setDraggingId(null);
                 setDragOverId(null);
               }}
-              className={`relative aspect-square rounded-lg border bg-secondary/40 overflow-hidden group cursor-move transition-all ${
+              onTouchStart={(e) => onTouchStart(e, item.id)}
+              onTouchMove={onTouchMove}
+              onTouchEnd={onTouchEnd}
+              onTouchCancel={onTouchEnd}
+              style={{ touchAction: draggingId ? "none" : "auto" }}
+              className={`relative aspect-square rounded-lg border bg-secondary/40 overflow-hidden group cursor-move transition-all select-none ${
                 draggingId === item.id ? "opacity-40 scale-95" : ""
               } ${
                 dragOverId === item.id && draggingId !== item.id
