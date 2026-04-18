@@ -91,7 +91,7 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { images, workflowType, description, targetModel, sceneBreakdown } = body;
+    const { images, workflowType, description, targetModel, sceneBreakdown, audioEnabled } = body;
 
     // --- Input Validation ---
     if (!Array.isArray(images) || images.length === 0 || images.length > 2) {
@@ -212,6 +212,12 @@ serve(async (req) => {
         }
       }
       userText += `\nRespect the user's lock/move directions precisely. Locked elements should remain static. Move elements should be animated.\n\n`;
+    }
+
+    if (typeof audioEnabled === "boolean") {
+      userText += audioEnabled
+        ? `Audio: ENABLED — generate a synced audio direction (ambient sound, music cues, dialogue/SFX as appropriate). Populate the audioBlock field.\n\n`
+        : `Audio: DISABLED — produce a SILENT video. Do not include any audio direction. Set audioBlock to "Silent — no audio".\n\n`;
     }
 
     userText += `Analyze the image(s) using the Scene Decomposition Protocol, then generate cinematic prompts optimized for the target model.`;
