@@ -270,6 +270,7 @@ export const en = {
   "contract.variant.motionControl": "Motion Control — camera path with waypoints.",
   "contract.toggle.single": "Single frame",
   "contract.toggle.startEnd": "Start + End",
+  "contract.audio.label": "Generate with audio",
 
   // Welcome Popup
   "welcomePopup.title": "Welcome Popup",
