@@ -1,11 +1,7 @@
 
-User wants the `#1`, `#2` badges on Element thumbnails replaced with `@1`, `@2` to match the mention syntax used in the description.
+User wants two changes:
 
-## Plan
+1. **Kling 3.0** — already has 1↔2 frame toggle (start + end frame). Need to verify labels say "Start frame" / "End frame" instead of generic "Reference".
+2. **Multi-shot** — currently Seedance Pro generates 3 shots. User wants 5 shots that stitch into one video.
 
-In `src/components/ElementGrid.tsx`, find the badge rendering each thumbnail's index (currently `#${idx + 1}`) and change it to `@${idx + 1}`.
-
-### Files touched
-- `src/components/ElementGrid.tsx`
-
-No i18n, backend, or styling changes needed.
+Let me check current state.
