@@ -125,6 +125,13 @@ export const WorkflowPanel = ({ selectedModel }: WorkflowPanelProps) => {
 
   const handleAnalyze = async () => {
     if (!hasRequiredImages) return;
+    // Element-only mode (no main frames): skip scene analysis and jump straight to breakdown phase.
+    if (images.filter(Boolean).length === 0) {
+      setSceneFrames([]);
+      setElementDirections({});
+      setPhase("breakdown");
+      return;
+    }
     if (!user) {
       toast({ title: t("wp.signInRequired"), description: t("wp.signInAnalyze"), variant: "destructive" });
       navigate("/auth");
