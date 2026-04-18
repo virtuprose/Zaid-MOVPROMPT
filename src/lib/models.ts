@@ -23,15 +23,6 @@ export const MODEL_GROUPS: ModelGroup[] = [
     ],
   },
   {
-    label: "OpenAI",
-    models: [
-      { value: "sora-2", label: "Sora 2" },
-      { value: "sora-2-pro", label: "Sora 2 Pro" },
-      { value: "sora-2-max", label: "Sora 2 Max" },
-      { value: "sora-2-pro-max", label: "Sora 2 Pro Max" },
-    ],
-  },
-  {
     label: "Google",
     models: [
       { value: "veo-3.1-lite", label: "Veo 3.1 Lite" },
