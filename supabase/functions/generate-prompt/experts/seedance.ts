@@ -31,7 +31,14 @@ When workflowType is "multishot" with exactly 3 shots requested (Seedance Pro / 
   • Shot 1 = OPENING — establish subject, location, mood, lighting baseline.
   • Shot 2 = MIDDLE ACTION — develop the motion/story; raise energy or shift framing.
   • Shot 3 = RESOLUTION — close the beat; end on a clean hold the editor can cut on.
-CRITICAL CONSISTENCY: keep the SAME subject identity, wardrobe, lighting direction, color grade, and lens character across all 3 shots so they cut together seamlessly. Each shot's mainPrompt must be self-contained (a full prompt) but reference the continuity ("same subject as previous shot, same warm key from camera-left").`,
+CRITICAL CONSISTENCY: keep the SAME subject identity, wardrobe, lighting direction, color grade, and lens character across all 3 shots so they cut together seamlessly. Each shot's mainPrompt must be self-contained (a full prompt) but reference the continuity ("same subject as previous shot, same warm key from camera-left").
+═══ SEEDANCE 2.0 / 2.0 FAST — @ELEMENT REFERENCE MODE ═══
+When the user provides numbered Elements (@Element 1 … @Element N), Seedance 2.0 binds each Element to a specific upload. In your mainPrompt:
+  • Preserve every \`@Element N\` token from the user's brief verbatim.
+  • For any Element the user did NOT mention, you MUST integrate it naturally into the prose and tag it on first appearance as \`(@Element N: <one-word role: subject/outfit/style/lighting/motion/mood>)\`.
+  • Never describe an Element's content literally without its \`@Element N\` anchor — Seedance needs the tag to bind the upload.
+  • Example phrasing: "...the subject (@Element 1: subject) wearing the outfit from @Element 6, in the warm rim-lighting style of @Element 2 (lighting), moving to the rhythm of @Element 4 (mood)..."
+  • The user should be able to copy the mainPrompt directly into Seedance 2.0 with every upload correctly referenced.`,
 
   examples: `SEEDANCE 2.0 EXAMPLE (single frame, dancer in studio):
 mainPrompt: "A dancer in flowing silk catches the first beat — her arm arcs upward in a slow undulating sweep, fabric cascading behind her like liquid mercury. As the rhythm builds, her body pulses through three syncopated isolations: shoulder roll, ribcage release, hip-figure-eight. Studio rim-light catches every micro-gesture; warm key from camera-left sculpts her cheekbone. The camera floats in a slow orbital arc from her left to behind her right shoulder, tracking the silk's trail. Soft haze diffuses the background, leaving only her silhouette and the choreography of fabric in focus."

@@ -91,7 +91,7 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { images, workflowType, description, targetModel, sceneBreakdown, audioEnabled, references, multiShotCount } = body;
+    const { images, workflowType, description, targetModel, sceneBreakdown, audioEnabled, references, elements, autoInjectElements, multiShotCount } = body;
 
     // --- Input Validation ---
     if (!Array.isArray(images) || images.length === 0 || images.length > 2) {
@@ -155,6 +155,40 @@ serve(async (req) => {
       }
       if (totalRefImageBytes > 8_000_000) {
         return badRequest("Combined reference images exceed 8MB");
+      }
+    }
+
+    // Validate elements (Seedance @Element flow). Same shape as references but max 10, role optional.
+    const validElements: any[] = [];
+    if (elements !== undefined) {
+      if (!Array.isArray(elements) || elements.length > 10) {
+        return badRequest("elements must be an array of at most 10 items");
+      }
+      let totalElBytes = 0;
+      for (const e of elements) {
+        if (!e || typeof e !== "object") return badRequest("Invalid element entry");
+        if (!ALLOWED_REF_KINDS.has(e.kind)) return badRequest("Invalid element kind");
+        if (e.note !== undefined && (typeof e.note !== "string" || e.note.length > 300)) {
+          return badRequest("Element note must be a string under 300 chars");
+        }
+        if (e.filename !== undefined && (typeof e.filename !== "string" || e.filename.length > 200)) {
+          return badRequest("Element filename too long");
+        }
+        if (e.images !== undefined) {
+          if (!Array.isArray(e.images) || e.images.length > 3) {
+            return badRequest("Element images must be an array of up to 3");
+          }
+          for (const img of e.images) {
+            if (typeof img !== "string" || img.length > 2_000_000) {
+              return badRequest("Each element image must be base64 under 2MB");
+            }
+            totalElBytes += img.length;
+          }
+        }
+        validElements.push(e);
+      }
+      if (totalElBytes > 8_000_000) {
+        return badRequest("Combined element images exceed 8MB");
       }
     }
 
@@ -301,6 +335,40 @@ serve(async (req) => {
       userText += `\n`;
     }
 
+    // Build the @Element brief (Seedance 2.0 / 2.0 Fast multi-reference flow)
+    const elementImageBlocks: { label: string; b64: string }[] = [];
+    if (validElements.length > 0) {
+      userText += `\n\n═══ NUMBERED ELEMENTS (user-uploaded references) ═══\n`;
+      validElements.forEach((e, idx) => {
+        const n = idx + 1;
+        const noteSuffix = e.note ? ` — note: "${e.note}"` : "";
+        const fileSuffix = e.filename ? ` [${e.filename}]` : "";
+        if (e.kind === "image") {
+          userText += `- @Element ${n} (image)${fileSuffix}${noteSuffix}\n`;
+          if (Array.isArray(e.images) && e.images[0]) {
+            elementImageBlocks.push({ label: `@Element ${n} (image${e.filename ? ", filename: " + e.filename : ""})`, b64: e.images[0] });
+          }
+        } else if (e.kind === "video") {
+          const frameCount = Array.isArray(e.images) ? e.images.length : 0;
+          userText += `- @Element ${n} (video — ${frameCount} keyframes)${fileSuffix}${noteSuffix}\n`;
+          if (Array.isArray(e.images)) {
+            e.images.forEach((b64: string, fIdx: number) => {
+              elementImageBlocks.push({ label: `@Element ${n} (video keyframe ${fIdx + 1}/${frameCount})`, b64 });
+            });
+          }
+        } else if (e.kind === "audio") {
+          userText += `- @Element ${n} (audio)${fileSuffix}${noteSuffix || " — mood reference"}\n`;
+        }
+      });
+      if (autoInjectElements) {
+        userText += `\nELEMENT MENTION PROTOCOL — In your mainPrompt:\n`;
+        userText += `1. Preserve every \`@Element N\` token from the user's brief verbatim — Seedance parses these as reference anchors.\n`;
+        userText += `2. If the user did NOT mention an Element, you MUST still incorporate it naturally and tag it inline as \`(@Element N: <one-word role: subject/outfit/style/lighting/motion/mood>)\` the first time it appears.\n`;
+        userText += `3. Never describe an Element's content literally without its \`@Element N\` tag — the anchor is required to bind generation to the upload.\n`;
+        userText += `4. Result: the user can copy your mainPrompt directly into Seedance and every upload is correctly referenced.\n\n`;
+      }
+    }
+
     userText += `Analyze the image(s) using the Scene Decomposition Protocol, then generate cinematic prompts optimized for the target model.`;
 
     if (workflowType === "multishot") {
@@ -323,6 +391,14 @@ serve(async (req) => {
       userContent.push({
         type: "image_url",
         image_url: { url: `data:image/jpeg;base64,${ref.b64}` },
+      });
+    }
+    // Append element images (Seedance @Element flow)
+    for (const el of elementImageBlocks) {
+      userContent.push({ type: "text", text: el.label });
+      userContent.push({
+        type: "image_url",
+        image_url: { url: `data:image/jpeg;base64,${el.b64}` },
       });
     }
 

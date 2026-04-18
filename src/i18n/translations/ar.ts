@@ -318,4 +318,14 @@ export const ar: Record<TranslationKey, string> = {
   "references.roles.composition": "التركيب",
   "references.roles.motion": "الحركة",
   "references.roles.mood": "المزاج / الصوت",
+
+  // @Element flow (Seedance 2.0 / 2.0 Fast)
+  "elements.title": "العناصر",
+  "elements.add": "إضافة",
+  "elements.limit": "حتى 10",
+  "elements.limitReached": "تم بلوغ الحد (10)",
+  "elements.mentionHint": "اكتب @ أو انقر للإشارة إلى عنصر",
+  "elements.legend": "العناصر المستخدمة في هذا البرومبت",
+  "elements.autoTag": "تمت إضافة وسوم تلقائية للعناصر غير المذكورة.",
+  "contract.hint.seedanceElements": "ارفع حتى 10 مراجع (صور، فيديوهات، صوت) واذكرها في البرومبت بـ @Element 1, @Element 2 إلخ. العناصر غير المذكورة سيتم وسمها تلقائياً.",
 };

@@ -29,6 +29,7 @@ interface ResultsPanelProps {
   agentName?: string;
   modelLabel?: string;
   stitchHint?: boolean;
+  elementsLegend?: { index: number; kind: "image" | "video" | "audio"; preview?: string }[];
 }
 
 const CopyButton = ({ text }: { text: string }) => {
@@ -107,7 +108,7 @@ const SectionToggle = ({ label, count, open }: { label: string; count?: number; 
   </CollapsibleTrigger>
 );
 
-export const ResultsPanel = forwardRef<HTMLDivElement, ResultsPanelProps>(({ results, onRegenerate, isLoading, agentName, modelLabel, stitchHint }, ref) => {
+export const ResultsPanel = forwardRef<HTMLDivElement, ResultsPanelProps>(({ results, onRegenerate, isLoading, agentName, modelLabel, stitchHint, elementsLegend }, ref) => {
   const { t } = useLanguage();
   const [allCopied, setAllCopied] = useState(false);
 
@@ -163,6 +164,26 @@ export const ResultsPanel = forwardRef<HTMLDivElement, ResultsPanelProps>(({ res
           <div className="rounded-lg border border-accent/30 bg-accent/10 px-3 py-2 text-xs text-foreground/90 flex items-start gap-2">
             <Sparkles className="w-3.5 h-3.5 text-accent mt-0.5 shrink-0" />
             <span>{t("results.multishotStitchHint")}</span>
+          </div>
+        )}
+
+        {elementsLegend && elementsLegend.length > 0 && (
+          <div className="rounded-lg border border-primary/30 bg-primary/5 px-3 py-2.5 space-y-2">
+            <div className="text-[11px] font-semibold uppercase tracking-wider text-primary">
+              {t("elements.legend" as any)}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {elementsLegend.map((el) => (
+                <div key={el.index} className="flex items-center gap-1.5 rounded-md border border-border bg-card px-1.5 py-1">
+                  <span className="text-[10px] font-mono font-bold text-primary">@Element {el.index}</span>
+                  <div className="w-6 h-6 rounded overflow-hidden bg-secondary flex items-center justify-center">
+                    {el.kind === "image" && el.preview && <img src={el.preview} alt="" className="w-full h-full object-cover" />}
+                    {el.kind === "video" && el.preview && <video src={el.preview} className="w-full h-full object-cover" muted />}
+                    {el.kind === "audio" && <span className="text-[9px]">🔊</span>}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
