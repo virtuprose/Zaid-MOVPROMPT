@@ -15,6 +15,8 @@ export interface ModelContract {
   workflowType: WorkflowType;
   /** Short description of the model variant (translation key). */
   variantDescKey?: string;
+  /** Whether this model supports an audio on/off toggle. */
+  supportsAudio?: boolean;
 }
 
 const STD: ModelContract = {
@@ -55,6 +57,7 @@ export function getContract(model: string): ModelContract {
       slotLabels: ["contract.slot.reference"],
       extrasHintKey: model === "seedance-2.0" ? "contract.hint.seedanceAudio" : undefined,
       supportsTwoFrameToggle: true,
+      supportsAudio: model === "seedance-2.0",
       workflowType: "single",
     };
   }
@@ -65,6 +68,7 @@ export function getContract(model: string): ModelContract {
       slots: 1,
       slotLabels: ["contract.slot.reference"],
       extrasHintKey: "contract.hint.veoAudio",
+      supportsAudio: true,
       workflowType: "single",
     };
   }
