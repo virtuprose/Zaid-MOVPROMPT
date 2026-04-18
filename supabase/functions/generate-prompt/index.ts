@@ -3,6 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { BASE_SYSTEM_PROMPT } from "./experts/_base.ts";
 import { getAgent } from "./experts/registry.ts";
 import { getAgentProfile } from "./experts/profile-loader.ts";
+import { getKlingVariantHints } from "./experts/kling.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -181,7 +182,14 @@ serve(async (req) => {
       console.error("agent_profiles lookup failed, using in-code defaults:", err);
     }
 
-    const composedSystemPrompt = `${BASE_SYSTEM_PROMPT}\n\n${docSummary}\n\n${systemAddendum}\n\n═══ FEW-SHOT EXAMPLE ═══\n${examples}`;
+    // Variant-aware sub-routing (currently Kling only — extend to Veo/Seedance later if needed)
+    let variantHints = "";
+    if (agent.id === "kling-director") {
+      variantHints = getKlingVariantHints(targetModel);
+    }
+    const variantBlock = variantHints ? `\n\n═══ VARIANT-SPECIFIC RULES ═══\n${variantHints}` : "";
+
+    const composedSystemPrompt = `${BASE_SYSTEM_PROMPT}\n\n${docSummary}\n\n${systemAddendum}${variantBlock}\n\n═══ FEW-SHOT EXAMPLE ═══\n${examples}`;
 
     let userText = `Workflow: ${workflowType}\nTarget Model: ${modelLabels[targetModel] || targetModel}\nActive Agent: ${displayName}\n\n`;
     if (description?.trim()) {
