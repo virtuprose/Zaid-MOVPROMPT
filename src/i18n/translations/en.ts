@@ -322,7 +322,7 @@ export const en = {
   "elements.add": "Add",
   "elements.limit": "Up to 10",
   "elements.limitReached": "Limit reached (10)",
-  "elements.mentionHint": "Type @ or click to mention an Element",
+  "elements.mentionHint": "Type @1, @2 … to reference an element",
   "elements.legend": "Elements used in this prompt",
   "elements.autoTag": "Unmentioned elements were auto-tagged by the AI.",
   "elements.uploadMedia": "Upload media",

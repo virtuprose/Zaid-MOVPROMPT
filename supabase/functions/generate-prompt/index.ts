@@ -273,7 +273,9 @@ serve(async (req) => {
 
     let userText = `Workflow: ${workflowType}\nTarget Model: ${modelLabels[targetModel] || targetModel}\nActive Agent: ${displayName}\n\n`;
     if (description?.trim()) {
-      userText += `User's creative vision: ${description.trim()}\n\n`;
+      // Normalize shorthand @N → @Element N so the model sees a single canonical form
+      const normalizedDescription = description.trim().replace(/@(\d+)\b/g, "@Element $1");
+      userText += `User's creative vision: ${normalizedDescription}\n\n`;
     }
     // Inject scene breakdown if provided by user (frame-grouped)
     if (Array.isArray(sceneBreakdown) && sceneBreakdown.length > 0) {
