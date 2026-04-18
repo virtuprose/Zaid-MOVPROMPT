@@ -28,6 +28,7 @@ interface ResultsPanelProps {
   isLoading: boolean;
   agentName?: string;
   modelLabel?: string;
+  stitchHint?: boolean;
 }
 
 const CopyButton = ({ text }: { text: string }) => {
@@ -106,7 +107,7 @@ const SectionToggle = ({ label, count, open }: { label: string; count?: number; 
   </CollapsibleTrigger>
 );
 
-export const ResultsPanel = forwardRef<HTMLDivElement, ResultsPanelProps>(({ results, onRegenerate, isLoading, agentName, modelLabel }, ref) => {
+export const ResultsPanel = forwardRef<HTMLDivElement, ResultsPanelProps>(({ results, onRegenerate, isLoading, agentName, modelLabel, stitchHint }, ref) => {
   const { t } = useLanguage();
   const [allCopied, setAllCopied] = useState(false);
 
