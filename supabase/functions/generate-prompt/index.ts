@@ -393,8 +393,15 @@ serve(async (req) => {
         image_url: { url: `data:image/jpeg;base64,${ref.b64}` },
       });
     }
+    // Append element images (Seedance @Element flow)
+    for (const el of elementImageBlocks) {
+      userContent.push({ type: "text", text: el.label });
+      userContent.push({
+        type: "image_url",
+        image_url: { url: `data:image/jpeg;base64,${el.b64}` },
+      });
+    }
 
-    const shotSchema = {
       type: "object" as const,
       properties: {
         shotName: { type: "string" as const, description: "Name of the shot" },
