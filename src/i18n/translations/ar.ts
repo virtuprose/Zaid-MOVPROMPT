@@ -295,4 +295,23 @@ export const ar: Record<TranslationKey, string> = {
   "welcomePopup.form.linkTextAr": "نص الرابط (عربي)",
   "welcomePopup.empty": "لم يتم إعداد نافذة ترحيب بعد",
   "welcomePopup.learnMore": "اعرف المزيد",
+
+  // Reference media
+  "references.title": "وسائط مرجعية (اختياري)",
+  "references.desc": "أضف صورًا أو فيديوهات أو ملفات صوتية إضافية لتوجيه الأسلوب أو الإضاءة أو الحركة أو المزاج. سيستخدمها الذكاء الاصطناعي كإشارات فقط ولن ينسخ محتواها.",
+  "references.add": "إضافة مرجع",
+  "references.limit": "تم بلوغ الحد الأقصى للمراجع",
+  "references.limitDesc": "يمكنك إرفاق حتى 10 مراجع.",
+  "references.limitReached": "تم بلوغ الحد (10)",
+  "references.remove": "إزالة المرجع",
+  "references.notePlaceholder": "ملاحظة اختيارية (مثل: \"طابق درجات الألوان هذه\")",
+  "references.audioHint": "صف المزاج (مثل: \"إيقاع طبول قوي 120 نبضة\")",
+  "references.videoHint": "الفيديو: نستخرج 3 لقطات رئيسية. الحد الأقصى 10 ميجابايت لكل ملف.",
+  "references.invalidType": "نوع الملف غير مدعوم",
+  "references.tooLarge": "الملف يتجاوز 10 ميجابايت",
+  "references.roles.style": "الأسلوب",
+  "references.roles.lighting": "الإضاءة",
+  "references.roles.composition": "التركيب",
+  "references.roles.motion": "الحركة",
+  "references.roles.mood": "المزاج / الصوت",
 };

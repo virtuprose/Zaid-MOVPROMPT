@@ -293,6 +293,25 @@ export const en = {
   "welcomePopup.form.linkTextAr": "Link Text (Arabic)",
   "welcomePopup.empty": "No welcome popups configured",
   "welcomePopup.learnMore": "Learn More",
+
+  // Reference media
+  "references.title": "Reference media (optional)",
+  "references.desc": "Attach extra images, videos or audio to guide style, lighting, motion or mood. The AI uses these only as cues — it won't copy their content.",
+  "references.add": "Add reference",
+  "references.limit": "Reference limit reached",
+  "references.limitDesc": "You can attach up to 10 references.",
+  "references.limitReached": "Limit reached (10)",
+  "references.remove": "Remove reference",
+  "references.notePlaceholder": "Optional note (e.g. \"match this color grade\")",
+  "references.audioHint": "Describe the mood (e.g. \"punchy 120bpm drums\")",
+  "references.videoHint": "Videos: we extract 3 keyframes. Max 10MB per file.",
+  "references.invalidType": "Unsupported file type",
+  "references.tooLarge": "File is over 10MB",
+  "references.roles.style": "Style",
+  "references.roles.lighting": "Lighting",
+  "references.roles.composition": "Composition",
+  "references.roles.motion": "Motion",
+  "references.roles.mood": "Mood / Audio",
 } as const;
 
 export type TranslationKey = keyof typeof en;
