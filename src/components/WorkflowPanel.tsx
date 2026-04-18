@@ -8,6 +8,8 @@ import { ResultsSkeleton } from "./ResultsSkeleton";
 import { SceneBreakdown, type SceneFrame, type ElementDirections } from "./SceneBreakdown";
 import { ReferenceMediaPanel } from "./ReferenceMediaPanel";
 import type { ReferenceMediaItem } from "./ReferenceItem";
+import { ElementGrid, type ElementItem } from "./ElementGrid";
+import { MentionTextarea } from "./MentionTextarea";
 import { extractVideoKeyframes, compressImageFile } from "@/lib/videoFrames";
 import { Sparkles, Loader2, ScanSearch, RotateCcw, RefreshCw, Info, Volume2, VolumeX } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -62,6 +64,7 @@ export const WorkflowPanel = ({ selectedModel }: WorkflowPanelProps) => {
   const [elementDirections, setElementDirections] = useState<ElementDirections>({});
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [referenceItems, setReferenceItems] = useState<ReferenceMediaItem[]>([]);
+  const [elementItems, setElementItems] = useState<ElementItem[]>([]);
 
   const contract = useMemo(() => getContract(selectedModel), [selectedModel]);
   const [twoFrameMode, setTwoFrameMode] = useState(false);
