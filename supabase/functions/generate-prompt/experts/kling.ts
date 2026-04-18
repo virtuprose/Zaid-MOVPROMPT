@@ -3,6 +3,52 @@
 
 import type { ExpertAgent } from "./registry.ts";
 
+// Variant-aware sub-routing: returns extra rules appended after the base
+// systemAddendum so admin DB edits still take precedence on the core rules.
+export function getKlingVariantHints(model: string): string {
+  const m = model.toLowerCase();
+  const isEdit = m.includes("edit");
+  const isMotionControl = m.includes("motion-control");
+  const isO1 = m.includes("o1");
+
+  const blocks: string[] = [];
+
+  if (isMotionControl) {
+    blocks.push(`▸ MOTION CONTROL VARIANT ACTIVE
+- mainPrompt MUST describe the camera path as 3 explicit waypoints: START → MIDPOINT → END (e.g. "Camera begins at low-angle wide → arcs right to eye-level medium → settles into close-up over-shoulder").
+- For every visible subject/element, explicitly tag it as [LOCKED] (stays static, motion-brush masked out) or [MOVING] (animated). Example: "the woman [MOVING], the chandelier [LOCKED], the curtains [MOVING]".
+- cameraSuggestions MUST list the 3 waypoints as a bulleted path.
+- modelNotes: remind user that motion-brush masks in Kling Motion Control take priority over prompt — prompt should reinforce, not contradict, the mask.`);
+  } else if (isEdit) {
+    blocks.push(`▸ EDIT VARIANT ACTIVE (Omni Edit / O1 Video Edit)
+- mainPrompt MUST describe ONLY the desired transformation/change — do NOT re-describe the full scene, subject, or background.
+- Start with the change verb: "Transform...", "Replace...", "Add...", "Remove...", "Change the...".
+- Keep mainPrompt under 60 words — edit prompts should be surgical.
+- referenceGuidance: explain which parts of the source image are PRESERVED vs MODIFIED.
+- Skip [camera:*] tags unless the edit explicitly involves camera motion change.`);
+  } else {
+    blocks.push(`▸ STANDARD GENERATION VARIANT (3.0 / 3.0 Omni / 2.6 / O1 Video)
+- Apply default Kling rules: 80–180 words, exactly ONE [camera:*] tag, action-verb opening.`);
+  }
+
+  if (isO1) {
+    blocks.push(`▸ O1 FAMILY ENHANCEMENT
+- O1 has stronger prompt adherence and better text rendering than 3.0/2.6 — you may extend mainPrompt up to 220 words for richer scenes.
+- O1 handles complex multi-subject choreography better — feel free to describe 2–3 simultaneous actions if the source image supports it.
+- modelNotes MUST mention: "O1 generation — uses newer reasoning model, expect tighter prompt adherence and improved text legibility vs 3.0/2.6."`);
+  } else if (m.includes("2.6")) {
+    blocks.push(`▸ KLING 2.6 LEGACY NOTE
+- 2.6 has looser motion fidelity than 3.0 — keep motion descriptions simple and avoid more than one major action per shot.
+- modelNotes MUST mention: "Kling 2.6 — legacy stable variant, best for single-subject single-action shots."`);
+  } else if (m.includes("3.0")) {
+    blocks.push(`▸ KLING 3.0 NOTE
+- 3.0 is the strongest non-O1 variant for cinematic camera moves and fluid character motion.
+- Omni variants accept richer multi-subject scenes than base 3.0.`);
+  }
+
+  return blocks.join("\n\n");
+}
+
 export const klingAgent: ExpertAgent = {
   id: "kling-director",
   displayName: "Kling Specialist",
