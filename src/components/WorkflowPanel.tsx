@@ -410,9 +410,6 @@ export const WorkflowPanel = ({ selectedModel }: WorkflowPanelProps) => {
         <ElementGrid items={elementItems} onChange={setElementItems} max={contract.maxElements ?? 10} />
       )}
 
-      {!contract.supportsElementReferences && (
-        <ReferenceMediaPanel items={referenceItems} onChange={setReferenceItems} />
-      )}
 
       <AnimatePresence mode="wait">
         {hasRequiredImages && phase === "upload" && (
