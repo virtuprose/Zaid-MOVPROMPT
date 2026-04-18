@@ -113,6 +113,7 @@ export const en = {
   "results.directorsNotes": "Director's notes (reference only)",
   "results.copyFullPackage": "Copy full package",
   "results.copyFullPackageHint": "Copies everything formatted — main prompt, refinements and notes.",
+  "results.multishotStitchHint": "These 3 shots are designed to be stitched into one continuous video — keep them in order.",
 
   // SceneBreakdown
   "scene.title": "Scene Elements",
@@ -277,6 +278,9 @@ export const en = {
   "contract.variant.motionControl": "Motion Control — camera path with waypoints.",
   "contract.toggle.single": "Single frame",
   "contract.toggle.startEnd": "Start + End",
+  "contract.toggle.singleShot": "Single shot",
+  "contract.toggle.multiShot3": "Multi-shot (3)",
+  "contract.hint.seedanceMultiShot": "Generates 3 connected shots designed to be stitched into one continuous video.",
   "contract.audio.label": "Generate with audio",
 
   // Welcome Popup

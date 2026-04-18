@@ -65,9 +65,10 @@ export const WorkflowPanel = ({ selectedModel }: WorkflowPanelProps) => {
 
   const contract = useMemo(() => getContract(selectedModel), [selectedModel]);
   const [twoFrameMode, setTwoFrameMode] = useState(false);
+  const [multiShotMode, setMultiShotMode] = useState(false);
   const [audioEnabled, setAudioEnabled] = useState(true);
   const activeSlots = contract.supportsTwoFrameToggle && twoFrameMode ? 2 : contract.slots;
-  const workflowType = deriveWorkflowType(selectedModel, activeSlots);
+  const workflowType = deriveWorkflowType(selectedModel, activeSlots, contract.supportsMultiShotToggle && multiShotMode);
 
   const handleImageSelect = useCallback((index: number, file: File) => {
     const preview = URL.createObjectURL(file);
@@ -207,6 +208,7 @@ export const WorkflowPanel = ({ selectedModel }: WorkflowPanelProps) => {
           sceneBreakdown,
           audioEnabled: contract.supportsAudio ? audioEnabled : undefined,
           references: referencesPayload.length > 0 ? referencesPayload : undefined,
+          multiShotCount: workflowType === "multishot" && contract.supportsMultiShotToggle ? contract.multiShotCount : undefined,
         },
       });
 
@@ -320,7 +322,7 @@ export const WorkflowPanel = ({ selectedModel }: WorkflowPanelProps) => {
         </button>
       )}
 
-      {/* Seedance toggle */}
+      {/* Seedance toggle (1 ↔ 2 frames) */}
       {contract.supportsTwoFrameToggle && (
         <div className="flex justify-center gap-1 rounded-lg bg-secondary/50 border border-border p-1 max-w-xs mx-auto">
           <button
@@ -338,6 +340,28 @@ export const WorkflowPanel = ({ selectedModel }: WorkflowPanelProps) => {
             }`}
           >
             {t("contract.toggle.startEnd" as any)}
+          </button>
+        </div>
+      )}
+
+      {/* Seedance Pro / Pro Fast toggle (Single ↔ Multi-shot 3) */}
+      {contract.supportsMultiShotToggle && (
+        <div className="flex justify-center gap-1 rounded-lg bg-secondary/50 border border-border p-1 max-w-xs mx-auto">
+          <button
+            onClick={() => { setMultiShotMode(false); setResults(null); setPhase("upload"); }}
+            className={`flex-1 px-3 py-1.5 text-xs rounded-md font-medium transition-colors ${
+              !multiShotMode ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {t("contract.toggle.singleShot" as any)}
+          </button>
+          <button
+            onClick={() => { setMultiShotMode(true); setResults(null); setPhase("upload"); }}
+            className={`flex-1 px-3 py-1.5 text-xs rounded-md font-medium transition-colors ${
+              multiShotMode ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {t("contract.toggle.multiShot3" as any)}
           </button>
         </div>
       )}
@@ -482,6 +506,7 @@ export const WorkflowPanel = ({ selectedModel }: WorkflowPanelProps) => {
             isLoading={isLoading}
             agentName={agentName ?? undefined}
             modelLabel={MODEL_GROUPS.flatMap(g => g.models).find(m => m.value === selectedModel)?.label ?? selectedModel}
+            stitchHint={workflowType === "multishot" && contract.supportsMultiShotToggle && contract.multiShotCount === 3}
           />
         )}
       </AnimatePresence>

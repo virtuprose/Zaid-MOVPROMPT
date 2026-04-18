@@ -28,6 +28,7 @@ interface ResultsPanelProps {
   isLoading: boolean;
   agentName?: string;
   modelLabel?: string;
+  stitchHint?: boolean;
 }
 
 const CopyButton = ({ text }: { text: string }) => {
@@ -106,7 +107,7 @@ const SectionToggle = ({ label, count, open }: { label: string; count?: number; 
   </CollapsibleTrigger>
 );
 
-export const ResultsPanel = forwardRef<HTMLDivElement, ResultsPanelProps>(({ results, onRegenerate, isLoading, agentName, modelLabel }, ref) => {
+export const ResultsPanel = forwardRef<HTMLDivElement, ResultsPanelProps>(({ results, onRegenerate, isLoading, agentName, modelLabel, stitchHint }, ref) => {
   const { t } = useLanguage();
   const [allCopied, setAllCopied] = useState(false);
 
@@ -157,6 +158,13 @@ export const ResultsPanel = forwardRef<HTMLDivElement, ResultsPanelProps>(({ res
             </Button>
           </div>
         </div>
+
+        {stitchHint && (
+          <div className="rounded-lg border border-accent/30 bg-accent/10 px-3 py-2 text-xs text-foreground/90 flex items-start gap-2">
+            <Sparkles className="w-3.5 h-3.5 text-accent mt-0.5 shrink-0" />
+            <span>{t("results.multishotStitchHint")}</span>
+          </div>
+        )}
 
         {results.map((result, idx) => {
           const refinements: { label: string; value: string }[] = [

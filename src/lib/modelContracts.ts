@@ -11,6 +11,10 @@ export interface ModelContract {
   extrasHintKey?: string;
   /** Whether this model supports a 1↔2 frame toggle (Seedance non-Fast). */
   supportsTwoFrameToggle?: boolean;
+  /** Whether this model supports a Single ↔ Multi-shot toggle (Seedance Pro / Pro Fast). */
+  supportsMultiShotToggle?: boolean;
+  /** Number of shots to generate when multi-shot mode is active. */
+  multiShotCount?: number;
   /** Workflow type to send to backend. */
   workflowType: WorkflowType;
   /** Short description of the model variant (translation key). */
@@ -57,6 +61,18 @@ export function getContract(model: string): ModelContract {
     };
   }
 
+  // Seedance Pro / Pro Fast — Single ↔ Multi-shot (3 shots stitched into one video)
+  if (model === "seedance-pro" || model === "seedance-pro-fast") {
+    return {
+      slots: 1,
+      slotLabels: ["contract.slot.reference"],
+      supportsMultiShotToggle: true,
+      multiShotCount: 3,
+      extrasHintKey: "contract.hint.seedanceMultiShot",
+      workflowType: "single",
+    };
+  }
+
   // Seedance — non-Fast and non-2.0 variants support 1↔2 frame toggle
   if (model.startsWith("seedance")) {
     if (model.includes("fast")) return STD;
@@ -96,7 +112,12 @@ export function getContract(model: string): ModelContract {
 }
 
 /** Derive workflow type from contract + current slot count (for the Seedance toggle). */
-export function deriveWorkflowType(model: string, activeSlotCount: number): WorkflowType {
+export function deriveWorkflowType(
+  model: string,
+  activeSlotCount: number,
+  multiShotMode = false,
+): WorkflowType {
+  if (multiShotMode) return "multishot";
   if (activeSlotCount === 2) return "twoframe";
   return getContract(model).workflowType;
 }
