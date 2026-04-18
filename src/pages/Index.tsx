@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { trackPageVisit } from "@/lib/analytics";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/i18n/LanguageContext";
-import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { WorkflowPanel } from "@/components/WorkflowPanel";
 import { ModelPicker } from "@/components/ModelPicker";
 import { Button } from "@/components/ui/button";
@@ -11,14 +10,13 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { motion } from "framer-motion";
-import { BookOpen, ChevronDown, Upload, Copy, User, LogOut, Library, Sparkles } from "lucide-react";
+import { User, LogOut, Library } from "lucide-react";
 import AnnouncementBanner from "@/components/AnnouncementBanner";
 import NotificationBell from "@/components/NotificationBell";
 import { InstallPrompt } from "@/components/InstallPrompt";
 import WelcomePopup from "@/components/WelcomePopup";
 
 const Index = () => {
-  const [guideOpen, setGuideOpen] = useState(false);
   const [model, setModel] = useState("any");
   const { user, loading, signOut } = useAuth();
   const navigate = useNavigate();
@@ -27,12 +25,6 @@ const Index = () => {
   useEffect(() => {
     trackPageVisit("/");
   }, []);
-
-  const GUIDE_STEPS = [
-    { icon: Sparkles, title: t("guide.step1.title"), desc: t("guide.step1.desc") },
-    { icon: Upload, title: t("guide.step2.title"), desc: t("guide.step2.desc") },
-    { icon: Copy, title: t("guide.step3.title"), desc: t("guide.step3.desc") },
-  ];
 
   const initials = user?.user_metadata?.full_name
     ? user.user_metadata.full_name.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase()
@@ -101,38 +93,6 @@ const Index = () => {
             {t("hero.subtitle")}
           </p>
         </motion.header>
-
-        {/* How-To Guide */}
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.15 }}
-          className="mb-8"
-        >
-          <Collapsible open={guideOpen} onOpenChange={setGuideOpen}>
-            <CollapsibleTrigger className="w-full flex items-center justify-between gap-2 rounded-lg border border-border bg-card px-4 py-3 text-sm font-medium hover:bg-secondary/60 transition-colors">
-              <span className="flex items-center gap-2">
-                <BookOpen className="w-4 h-4 text-primary" />
-                {t("guide.title")}
-              </span>
-              <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${guideOpen ? "rotate-180" : ""}`} />
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <div className="grid gap-3 mt-3 sm:grid-cols-3">
-                {GUIDE_STEPS.map((step, i) => (
-                  <div key={i} className="flex flex-col gap-2 rounded-lg border border-border bg-secondary/30 p-4">
-                    <div className="flex items-center gap-2">
-                      <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/15 text-primary text-xs font-bold">{i + 1}</span>
-                      <step.icon className="w-4 h-4 text-primary" />
-                      <span className="font-medium text-sm">{step.title}</span>
-                    </div>
-                    <p className="text-xs text-muted-foreground leading-relaxed">{step.desc}</p>
-                  </div>
-                ))}
-              </div>
-            </CollapsibleContent>
-          </Collapsible>
-        </motion.div>
 
         {/* Model-First flow: pick model, then upload */}
         <motion.div
