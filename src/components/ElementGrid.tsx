@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { Plus, X, ImageIcon, Film, Music } from "lucide-react";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { toast } from "sonner";
@@ -30,6 +30,7 @@ const MAX_BYTES = 10 * 1024 * 1024;
 export const ElementGrid = ({ items, onChange, max = 10 }: ElementGridProps) => {
   const { t } = useLanguage();
   const inputRef = useRef<HTMLInputElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
 
   const handleFiles = (files: FileList | null) => {
     if (!files || files.length === 0) return;
@@ -65,6 +66,21 @@ export const ElementGrid = ({ items, onChange, max = 10 }: ElementGridProps) => 
   };
 
   const isFull = items.length >= max;
+  const openPicker = () => inputRef.current?.click();
+
+  const onDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+  const onDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+  const onDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    handleFiles(e.dataTransfer.files);
+  };
 
   return (
     <div className="space-y-2">
@@ -72,59 +88,97 @@ export const ElementGrid = ({ items, onChange, max = 10 }: ElementGridProps) => 
         <span className="text-sm font-medium text-foreground">{t("elements.title" as any)}</span>
         <span className="text-xs text-muted-foreground">{items.length}/{max}</span>
       </div>
-      <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
-        {items.map((item, idx) => (
-          <div
-            key={item.id}
-            className="relative aspect-square rounded-lg border border-border bg-secondary/40 overflow-hidden group"
-          >
-            {item.kind === "image" && item.preview && (
-              <img src={item.preview} alt="" className="w-full h-full object-cover" />
-            )}
-            {item.kind === "video" && item.preview && (
-              <video src={item.preview} className="w-full h-full object-cover" muted playsInline />
-            )}
-            {item.kind === "audio" && (
-              <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-accent/20 to-primary/20">
-                <Music className="w-6 h-6 text-accent" />
-              </div>
-            )}
 
-            {/* Number badge */}
-            <span className="absolute top-1 left-1 text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-primary text-primary-foreground shadow">
-              #{idx + 1}
-            </span>
+      {items.length === 0 ? (
+        <button
+          type="button"
+          onClick={openPicker}
+          onDragOver={onDragOver}
+          onDragLeave={onDragLeave}
+          onDrop={onDrop}
+          className={`w-full rounded-2xl border-2 border-dashed transition-all flex flex-col items-center justify-center gap-4 py-10 px-6 ${
+            isDragging
+              ? "border-primary bg-primary/10"
+              : "border-border bg-secondary/40 hover:border-primary/60 hover:bg-secondary/60"
+          }`}
+        >
+          <div className="flex items-center gap-3">
+            {[ImageIcon, Film, Music].map((Icon, i) => (
+              <span
+                key={i}
+                className="w-12 h-12 rounded-full flex items-center justify-center bg-gradient-to-br from-primary/20 to-accent/20 border border-border/60 shadow-inner"
+              >
+                <Icon className="w-5 h-5 text-foreground/80" />
+              </span>
+            ))}
+          </div>
+          <div className="text-center">
+            <div className="text-sm font-semibold text-foreground">{t("elements.uploadMedia" as any)}</div>
+            <div className="text-xs text-muted-foreground mt-0.5">{t("elements.uploadMediaSubtitle" as any)}</div>
+          </div>
+        </button>
+      ) : (
+        <div
+          className="grid grid-cols-3 sm:grid-cols-5 gap-2"
+          onDragOver={onDragOver}
+          onDragLeave={onDragLeave}
+          onDrop={onDrop}
+        >
+          {items.map((item, idx) => (
+            <div
+              key={item.id}
+              className="relative aspect-square rounded-lg border border-border bg-secondary/40 overflow-hidden group"
+            >
+              {item.kind === "image" && item.preview && (
+                <img src={item.preview} alt="" className="w-full h-full object-cover" />
+              )}
+              {item.kind === "video" && item.preview && (
+                <video src={item.preview} className="w-full h-full object-cover" muted playsInline />
+              )}
+              {item.kind === "audio" && (
+                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-accent/20 to-primary/20">
+                  <Music className="w-6 h-6 text-accent" />
+                </div>
+              )}
 
-            {/* Kind icon */}
-            <span className="absolute bottom-1 left-1 p-1 rounded bg-background/70 backdrop-blur-sm text-foreground">
-              {item.kind === "image" && <ImageIcon className="w-3 h-3" />}
-              {item.kind === "video" && <Film className="w-3 h-3" />}
-              {item.kind === "audio" && <Music className="w-3 h-3" />}
-            </span>
+              <span className="absolute top-1 left-1 text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-primary text-primary-foreground shadow">
+                #{idx + 1}
+              </span>
 
-            {/* Remove */}
+              <span className="absolute bottom-1 left-1 p-1 rounded bg-background/70 backdrop-blur-sm text-foreground">
+                {item.kind === "image" && <ImageIcon className="w-3 h-3" />}
+                {item.kind === "video" && <Film className="w-3 h-3" />}
+                {item.kind === "audio" && <Music className="w-3 h-3" />}
+              </span>
+
+              <button
+                type="button"
+                onClick={() => removeItem(item.id)}
+                className="absolute top-1 right-1 p-1 rounded-full bg-destructive/80 text-destructive-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+                aria-label={t("references.remove")}
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+          ))}
+
+          {!isFull && (
             <button
               type="button"
-              onClick={() => removeItem(item.id)}
-              className="absolute top-1 right-1 p-1 rounded-full bg-destructive/80 text-destructive-foreground opacity-0 group-hover:opacity-100 transition-opacity"
-              aria-label={t("references.remove")}
+              onClick={openPicker}
+              className={`aspect-square rounded-lg border-2 border-dashed flex flex-col items-center justify-center gap-1 transition-colors ${
+                isDragging
+                  ? "border-primary bg-primary/10 text-primary"
+                  : "border-border hover:border-primary/60 hover:bg-primary/5 text-muted-foreground hover:text-primary"
+              }`}
             >
-              <X className="w-3 h-3" />
+              <Plus className="w-5 h-5" />
+              <span className="text-[10px] font-medium">{t("elements.add" as any)}</span>
             </button>
-          </div>
-        ))}
+          )}
+        </div>
+      )}
 
-        {!isFull && (
-          <button
-            type="button"
-            onClick={() => inputRef.current?.click()}
-            className="aspect-square rounded-lg border-2 border-dashed border-border hover:border-primary/60 hover:bg-primary/5 flex flex-col items-center justify-center gap-1 text-muted-foreground hover:text-primary transition-colors"
-          >
-            <Plus className="w-5 h-5" />
-            <span className="text-[10px] font-medium">{t("elements.add" as any)}</span>
-          </button>
-        )}
-      </div>
       <input
         ref={inputRef}
         type="file"

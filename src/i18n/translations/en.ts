@@ -325,6 +325,8 @@ export const en = {
   "elements.mentionHint": "Type @ or click to mention an Element",
   "elements.legend": "Elements used in this prompt",
   "elements.autoTag": "Unmentioned elements were auto-tagged by the AI.",
+  "elements.uploadMedia": "Upload media",
+  "elements.uploadMediaSubtitle": "Image, Video or Audio",
   "contract.hint.seedanceElements": "Upload up to 10 references (images, videos, audio) and mention them in your prompt with @Element 1, @Element 2, etc. Unmentioned ones get auto-tagged.",
 } as const;
 
