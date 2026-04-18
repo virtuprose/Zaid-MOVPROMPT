@@ -272,6 +272,7 @@ export const ar: Record<TranslationKey, string> = {
   "contract.variant.motionControl": "التحكم بالحركة — مسار كاميرا بنقاط محددة.",
   "contract.toggle.single": "إطار واحد",
   "contract.toggle.startEnd": "البداية + النهاية",
+  "contract.audio.label": "توليد مع الصوت",
 
   // Welcome Popup
   "welcomePopup.title": "نافذة الترحيب",
