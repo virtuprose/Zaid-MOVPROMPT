@@ -31,6 +31,19 @@ export const ElementGrid = ({ items, onChange, max = 10 }: ElementGridProps) => 
   const { t } = useLanguage();
   const inputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [dragOverId, setDragOverId] = useState<string | null>(null);
+
+  const reorder = (sourceId: string, targetId: string) => {
+    if (sourceId === targetId) return;
+    const next = [...items];
+    const from = next.findIndex((it) => it.id === sourceId);
+    const to = next.findIndex((it) => it.id === targetId);
+    if (from === -1 || to === -1) return;
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved);
+    onChange(next);
+  };
 
   const handleFiles = (files: FileList | null) => {
     if (!files || files.length === 0) return;
@@ -127,7 +140,42 @@ export const ElementGrid = ({ items, onChange, max = 10 }: ElementGridProps) => 
           {items.map((item, idx) => (
             <div
               key={item.id}
-              className="relative aspect-square rounded-lg border border-border bg-secondary/40 overflow-hidden group"
+              draggable
+              onDragStart={(e) => {
+                setDraggingId(item.id);
+                e.dataTransfer.effectAllowed = "move";
+                e.dataTransfer.setData("text/plain", item.id);
+              }}
+              onDragEnd={() => {
+                setDraggingId(null);
+                setDragOverId(null);
+              }}
+              onDragOver={(e) => {
+                if (!draggingId) return;
+                e.preventDefault();
+                e.stopPropagation();
+                e.dataTransfer.dropEffect = "move";
+                if (dragOverId !== item.id) setDragOverId(item.id);
+              }}
+              onDragLeave={(e) => {
+                e.stopPropagation();
+                if (dragOverId === item.id) setDragOverId(null);
+              }}
+              onDrop={(e) => {
+                if (!draggingId) return;
+                e.preventDefault();
+                e.stopPropagation();
+                reorder(draggingId, item.id);
+                setDraggingId(null);
+                setDragOverId(null);
+              }}
+              className={`relative aspect-square rounded-lg border bg-secondary/40 overflow-hidden group cursor-move transition-all ${
+                draggingId === item.id ? "opacity-40 scale-95" : ""
+              } ${
+                dragOverId === item.id && draggingId !== item.id
+                  ? "border-primary ring-2 ring-primary/50"
+                  : "border-border"
+              }`}
             >
               {item.kind === "image" && item.preview && (
                 <img src={item.preview} alt="" className="w-full h-full object-cover" />
