@@ -46,18 +46,32 @@ export function getContract(model: string): ModelContract {
       };
     }
     if (model.includes("edit")) return EDIT;
-    return STD;
-  }
-
-  // Seedance — non-Fast variants support 1↔2 frame toggle
-  if (model.startsWith("seedance")) {
-    if (model.includes("fast")) return STD;
+    if (model.includes("o1")) return STD;
+    // Standard Kling variants (3.0, 3.0 Omni, 2.6) support 1↔2 frame toggle
     return {
       slots: 1,
       slotLabels: ["contract.slot.reference"],
-      extrasHintKey: model === "seedance-2.0" ? "contract.hint.seedanceAudio" : undefined,
       supportsTwoFrameToggle: true,
-      supportsAudio: model === "seedance-2.0",
+      workflowType: "single",
+    };
+  }
+
+  // Seedance — non-Fast and non-2.0 variants support 1↔2 frame toggle
+  if (model.startsWith("seedance")) {
+    if (model.includes("fast")) return STD;
+    if (model === "seedance-2.0") {
+      return {
+        slots: 1,
+        slotLabels: ["contract.slot.reference"],
+        extrasHintKey: "contract.hint.seedanceAudio",
+        supportsAudio: true,
+        workflowType: "single",
+      };
+    }
+    return {
+      slots: 1,
+      slotLabels: ["contract.slot.reference"],
+      supportsTwoFrameToggle: true,
       workflowType: "single",
     };
   }
