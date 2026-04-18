@@ -257,6 +257,41 @@ serve(async (req) => {
         : `Audio: DISABLED — produce a SILENT video. Do not include any audio direction. Set audioBlock to "Silent — no audio".\n\n`;
     }
 
+    // Build a Reference Brief if user attached references
+    const ROLE_LABELS: Record<string, string> = {
+      style: "Style — mirror artistic treatment only",
+      lighting: "Lighting — mirror lighting/color temperature only",
+      composition: "Composition — mirror framing/balance only",
+      motion: "Motion — mirror camera/subject motion pacing only",
+      mood: "Mood/Audio — inform tone and audioBlock energy only",
+    };
+    const refImageBlocks: { label: string; b64: string }[] = [];
+    if (validRefs.length > 0) {
+      userText += `\n\nREFERENCE MEDIA (use as guidance per role, do NOT copy their content):\n`;
+      validRefs.forEach((r, idx) => {
+        const refNum = idx + 1;
+        const noteSuffix = r.note ? ` — note: "${r.note}"` : "";
+        const fileSuffix = r.filename ? ` [${r.filename}]` : "";
+        if (r.kind === "image") {
+          userText += `- Ref #${refNum} (${ROLE_LABELS[r.role]}, image)${fileSuffix}${noteSuffix}\n`;
+          if (Array.isArray(r.images) && r.images[0]) {
+            refImageBlocks.push({ label: `Reference #${refNum} (${r.role}, image)`, b64: r.images[0] });
+          }
+        } else if (r.kind === "video") {
+          const frameCount = Array.isArray(r.images) ? r.images.length : 0;
+          userText += `- Ref #${refNum} (${ROLE_LABELS[r.role]}, video — ${frameCount} keyframes)${fileSuffix}${noteSuffix}\n`;
+          if (Array.isArray(r.images)) {
+            r.images.forEach((b64: string, fIdx: number) => {
+              refImageBlocks.push({ label: `Reference #${refNum} (${r.role}, video keyframe ${fIdx + 1}/${frameCount})`, b64 });
+            });
+          }
+        } else if (r.kind === "audio") {
+          userText += `- Ref #${refNum} (${ROLE_LABELS[r.role]}, audio)${fileSuffix}${noteSuffix || ' — no description provided'}\n`;
+        }
+      });
+      userText += `\n`;
+    }
+
     userText += `Analyze the image(s) using the Scene Decomposition Protocol, then generate cinematic prompts optimized for the target model.`;
 
     const userContent: any[] = [{ type: "text", text: userText }];
@@ -264,6 +299,14 @@ serve(async (req) => {
       userContent.push({
         type: "image_url",
         image_url: { url: `data:image/jpeg;base64,${img}` },
+      });
+    }
+    // Append reference images (each preceded by a labeled text block)
+    for (const ref of refImageBlocks) {
+      userContent.push({ type: "text", text: ref.label });
+      userContent.push({
+        type: "image_url",
+        image_url: { url: `data:image/jpeg;base64,${ref.b64}` },
       });
     }
 
