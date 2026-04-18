@@ -394,17 +394,19 @@ export const WorkflowPanel = ({ selectedModel }: WorkflowPanelProps) => {
         </div>
       )}
 
-      <div className={`grid gap-4 ${activeSlots === 2 ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1 max-w-lg mx-auto"}`}>
-        {Array.from({ length: activeSlots }).map((_, i) => (
-          <ImageUploadZone
-            key={i}
-            label={slotLabels[i] || `Frame ${i + 1}`}
-            preview={images[i]?.preview || null}
-            onImageSelect={(file) => handleImageSelect(i, file)}
-            onImageRemove={() => handleImageRemove(i)}
-          />
-        ))}
-      </div>
+      {!contract.supportsElementReferences && (
+        <div className={`grid gap-4 ${activeSlots === 2 ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1 max-w-lg mx-auto"}`}>
+          {Array.from({ length: activeSlots }).map((_, i) => (
+            <ImageUploadZone
+              key={i}
+              label={slotLabels[i] || `Frame ${i + 1}`}
+              preview={images[i]?.preview || null}
+              onImageSelect={(file) => handleImageSelect(i, file)}
+              onImageRemove={() => handleImageRemove(i)}
+            />
+          ))}
+        </div>
+      )}
 
       {contract.supportsElementReferences && (
         <ElementGrid items={elementItems} onChange={setElementItems} max={contract.maxElements ?? 10} />
