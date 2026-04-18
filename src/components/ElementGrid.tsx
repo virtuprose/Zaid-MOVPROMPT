@@ -254,7 +254,7 @@ export const ElementGrid = ({ items, onChange, max = 10 }: ElementGridProps) => 
               )}
 
               <span className="absolute top-1 left-1 text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-primary text-primary-foreground shadow">
-                #{idx + 1}
+                @{idx + 1}
               </span>
 
               <span className="absolute bottom-1 left-1 p-1 rounded bg-background/70 backdrop-blur-sm text-foreground">
