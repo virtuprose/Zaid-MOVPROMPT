@@ -1,41 +1,60 @@
 
-## Problem
-After generation, users see many fields (Main Prompt, Negative Prompt, Camera Tags, Audio Block, Reference Guidance, Shot Structure, Camera Suggestions, Model Notes) — and don't know which one to actually paste into the target video model. Every field has the same visual weight and its own copy button, so the "primary" output gets lost.
+## Goal
+Let users attach **reference media** (images, videos, audio) alongside the main image upload, so the AI Director can pull style, motion, lighting, and mood cues from them when generating prompts.
 
-## Solution: Make the "what to copy" obvious
+## Current state
+- `WorkflowPanel` accepts 1–2 main images via `ImageUploadZone`, base64 → sent as `images[]` to `generate-prompt`.
+- AI vision (Gemini 2.5 Pro) ingests **images natively**. It cannot directly process video or audio in this pipeline — we handle those by extracting frames (video) and using a user-typed mood note (audio).
 
-Three coordinated changes in `src/components/ResultsPanel.tsx` (plus 2 new translation keys in `en.ts` / `ar.ts`):
+## Approach
 
-### 1. Promote the Main Prompt as "the one to paste"
-- Make the Main Prompt card visually dominant: larger padding, stronger primary border/glow, and a prominent **"Copy this into [Model]"** primary button (full-width, with paste icon) instead of the tiny corner copy icon.
-- Add a one-line helper above it: *"This is what you paste into the model. Other sections are optional refinements."*
+### 1. New "Reference media" panel in `WorkflowPanel`
+Collapsible section under the main image slots: **"Reference media (optional) — up to 5"**.
 
-### 2. Demote secondary fields
-- Group Negative Prompt + model-specific blocks (Audio, Camera Tags, Reference Guidance, Shot Structure) under a collapsible **"Optional refinements"** section, collapsed by default.
-- Camera Suggestions + Model Notes go under a second collapsible **"Director's notes (reference only)"** — these are guidance, not paste-able.
-- Each still has its small copy button when expanded.
+Each reference is a card with:
+- Thumbnail (image preview / video poster / audio waveform icon)
+- **Role dropdown**: `Style`, `Lighting`, `Composition`, `Motion`, `Mood / Audio`
+- Optional one-line note (e.g. "match this color grade")
+- Remove button
 
-### 3. Clarify the "Copy All" button
-- Rename to **"Copy full package"** with a tooltip explaining it copies everything formatted, for users who want the whole bundle.
-- Keep the prominent single-field copy as the default action.
+### 2. How each media type is handled
+| Type | Client processing | Sent to AI |
+|---|---|---|
+| **Image** | Resize to ≤1024px, base64 | Image input + role label |
+| **Video** | Extract 3 keyframes (start/middle/end) via `<video>` + canvas | 3 images tagged "motion reference" + filename |
+| **Audio** | No transcription — show waveform icon only | Filename + user's mood note as text context |
 
-### Visual hierarchy (result)
-```text
-┌─ Shot 1 ──────────────────────────┐
-│ 📐 16:9   ⏱ 5s                    │
-│                                   │
-│ ┌── MAIN PROMPT ─────────────┐   │ ← big, glowing, primary
-│ │ "A cat walks through..."   │   │
-│ │ [ 📋 Copy into Veo 3.1 ]   │   │ ← full-width primary button
-│ └────────────────────────────┘   │
-│                                   │
-│ ▸ Optional refinements (4)       │ ← collapsed
-│ ▸ Director's notes               │ ← collapsed
-└───────────────────────────────────┘
-```
+Limits: 5 files total, 10MB per file, video ≤30s recommended.
 
-### Files touched
-- `src/components/ResultsPanel.tsx` — restructure card layout, add collapsibles (already in `ui/collapsible.tsx`)
-- `src/i18n/translations/en.ts` + `ar.ts` — add keys: `results.copyIntoModel`, `results.pasteHint`, `results.optionalRefinements`, `results.directorsNotes`, `results.copyFullPackage`
+### 3. Backend (`generate-prompt/index.ts`)
+- Accept new optional field: `references: { kind: 'image'|'video'|'audio', role: string, images?: string[], note?: string, filename?: string }[]`
+- Validate: max 5 entries, total payload guard (~8MB combined).
+- Build a "Reference Brief" text block injected before the main user text:
+  ```
+  REFERENCE MEDIA (use as guidance, do NOT copy literally):
+  - Ref #1 (Lighting, image): use ONLY for lighting/color cues
+  - Ref #2 (Motion, video keyframes): use ONLY for camera/subject motion pacing
+  - Ref #3 (Mood, audio "punchy 120bpm drums"): inform audioBlock energy
+  ```
+- Append reference images to the vision payload after main images, each preceded by its label.
+- Add a short **"Reference Handling Protocol"** to `_base.ts` so all expert agents respect roles (don't copy subjects from refs, only the tagged attribute).
 
-No backend changes. No new dependencies.
+### 4. New components
+- `src/components/ReferenceMediaPanel.tsx` — collapsible container + add button + 5-item limit
+- `src/components/ReferenceItem.tsx` — single card (thumbnail, role select, note input, remove)
+- `src/lib/videoFrames.ts` — helper: extract N keyframes from a video File → base64 images
+
+### 5. i18n
+Add to `en.ts` + `ar.ts` under `references.*`:
+`title`, `add`, `limit`, `roleLabel`, `roles.style|lighting|composition|motion|mood`, `notePlaceholder`, `videoHint`, `audioHint`, `remove`.
+
+### 6. Files touched
+- **New**: `ReferenceMediaPanel.tsx`, `ReferenceItem.tsx`, `videoFrames.ts`
+- **Edit**: `WorkflowPanel.tsx` (mount panel, pass refs to API call), `generate-prompt/index.ts` (validate + inject refs), `experts/_base.ts` (protocol), `en.ts`, `ar.ts`
+
+### Open questions before I build
+1. **Audio handling** — confirm we just take a user mood note (no transcription)? Or do you want me to wire ElevenLabs Scribe to transcribe spoken audio refs into text cues?
+2. **Video** — keyframe extraction (3 stills) is fast and free. OK, or do you want full motion analysis later (heavier)?
+3. **Limit** — 5 total references feels right; say the word if you want 3 or 10.
+
+If you approve as-is I'll go with: **5 max**, **audio = mood note only (no transcription)**, **video = 3 keyframes**.
