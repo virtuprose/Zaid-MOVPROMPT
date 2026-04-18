@@ -189,6 +189,29 @@ export const WorkflowPanel = ({ selectedModel }: WorkflowPanelProps) => {
         })
       );
 
+      // Process @Element references (Seedance 2.0 / 2.0 Fast). Treated like references on the wire.
+      const elementsPayload = contract.supportsElementReferences
+        ? await Promise.all(
+            elementItems.map(async (el, idx) => {
+              const base = { role: "style" as const, note: el.note || undefined, filename: el.file.name, index: idx + 1 };
+              if (el.kind === "image") {
+                const b64 = await compressImageFile(el.file);
+                return { ...base, kind: "image", images: [b64] };
+              }
+              if (el.kind === "video") {
+                try {
+                  const frames = await extractVideoKeyframes(el.file, 3);
+                  return { ...base, kind: "video", images: frames };
+                } catch (e) {
+                  console.error("Element video keyframe extraction failed:", e);
+                  return { ...base, kind: "video", images: [] };
+                }
+              }
+              return { ...base, kind: "audio" };
+            }),
+          )
+        : [];
+
       const sceneBreakdown = sceneFrames.length > 0
         ? sceneFrames.map((frame) => ({
             frameIndex: frame.frameIndex,
@@ -211,6 +234,8 @@ export const WorkflowPanel = ({ selectedModel }: WorkflowPanelProps) => {
           sceneBreakdown,
           audioEnabled: contract.supportsAudio ? audioEnabled : undefined,
           references: referencesPayload.length > 0 ? referencesPayload : undefined,
+          elements: elementsPayload.length > 0 ? elementsPayload : undefined,
+          autoInjectElements: elementsPayload.length > 0 ? true : undefined,
           multiShotCount: workflowType === "multishot" && contract.supportsMultiShotToggle ? contract.multiShotCount : undefined,
         },
       });
@@ -381,7 +406,13 @@ export const WorkflowPanel = ({ selectedModel }: WorkflowPanelProps) => {
         ))}
       </div>
 
-      <ReferenceMediaPanel items={referenceItems} onChange={setReferenceItems} />
+      {contract.supportsElementReferences && (
+        <ElementGrid items={elementItems} onChange={setElementItems} max={contract.maxElements ?? 10} />
+      )}
+
+      {!contract.supportsElementReferences && (
+        <ReferenceMediaPanel items={referenceItems} onChange={setReferenceItems} />
+      )}
 
       <AnimatePresence mode="wait">
         {hasRequiredImages && phase === "upload" && (
