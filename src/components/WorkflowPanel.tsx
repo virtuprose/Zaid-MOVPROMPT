@@ -476,7 +476,16 @@ export const WorkflowPanel = ({ selectedModel }: WorkflowPanelProps) => {
               </Button>
             </div>
 
-            <ConfigPanel description={description} onDescriptionChange={setDescription} />
+            {contract.supportsElementReferences ? (
+              <MentionTextarea
+                value={description}
+                onChange={setDescription}
+                elements={elementItems}
+                placeholder={t("config.placeholder")}
+              />
+            ) : (
+              <ConfigPanel description={description} onDescriptionChange={setDescription} />
+            )}
 
             <div className="flex justify-center">
               <Button
