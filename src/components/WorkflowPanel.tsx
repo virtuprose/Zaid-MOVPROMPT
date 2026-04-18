@@ -6,6 +6,9 @@ import { ConfigPanel } from "./ConfigPanel";
 import { ResultsPanel } from "./ResultsPanel";
 import { ResultsSkeleton } from "./ResultsSkeleton";
 import { SceneBreakdown, type SceneFrame, type ElementDirections } from "./SceneBreakdown";
+import { ReferenceMediaPanel } from "./ReferenceMediaPanel";
+import type { ReferenceMediaItem } from "./ReferenceItem";
+import { extractVideoKeyframes, compressImageFile } from "@/lib/videoFrames";
 import { Sparkles, Loader2, ScanSearch, RotateCcw, RefreshCw, Info, Volume2, VolumeX } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
@@ -58,6 +61,7 @@ export const WorkflowPanel = ({ selectedModel }: WorkflowPanelProps) => {
   const [sceneFrames, setSceneFrames] = useState<SceneFrame[]>([]);
   const [elementDirections, setElementDirections] = useState<ElementDirections>({});
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [referenceItems, setReferenceItems] = useState<ReferenceMediaItem[]>([]);
 
   const contract = useMemo(() => getContract(selectedModel), [selectedModel]);
   const [twoFrameMode, setTwoFrameMode] = useState(false);
@@ -161,6 +165,26 @@ export const WorkflowPanel = ({ selectedModel }: WorkflowPanelProps) => {
     try {
       const imageBase64s = await Promise.all(images.map((img) => compressImage(img.file)));
 
+      // Process references: images → resized base64; videos → keyframes; audio → metadata only
+      const referencesPayload = await Promise.all(
+        referenceItems.map(async (ref) => {
+          if (ref.kind === "image") {
+            const b64 = await compressImageFile(ref.file);
+            return { kind: "image", role: ref.role, note: ref.note || undefined, filename: ref.file.name, images: [b64] };
+          }
+          if (ref.kind === "video") {
+            try {
+              const frames = await extractVideoKeyframes(ref.file, 3);
+              return { kind: "video", role: ref.role, note: ref.note || undefined, filename: ref.file.name, images: frames };
+            } catch (e) {
+              console.error("Video keyframe extraction failed:", e);
+              return { kind: "video", role: ref.role, note: ref.note || undefined, filename: ref.file.name, images: [] };
+            }
+          }
+          return { kind: "audio", role: ref.role, note: ref.note || undefined, filename: ref.file.name };
+        })
+      );
+
       const sceneBreakdown = sceneFrames.length > 0
         ? sceneFrames.map((frame) => ({
             frameIndex: frame.frameIndex,
@@ -182,6 +206,7 @@ export const WorkflowPanel = ({ selectedModel }: WorkflowPanelProps) => {
           targetModel: selectedModel,
           sceneBreakdown,
           audioEnabled: contract.supportsAudio ? audioEnabled : undefined,
+          references: referencesPayload.length > 0 ? referencesPayload : undefined,
         },
       });
 
@@ -328,6 +353,8 @@ export const WorkflowPanel = ({ selectedModel }: WorkflowPanelProps) => {
           />
         ))}
       </div>
+
+      <ReferenceMediaPanel items={referenceItems} onChange={setReferenceItems} />
 
       <AnimatePresence mode="wait">
         {hasRequiredImages && phase === "upload" && (

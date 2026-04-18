@@ -26,4 +26,13 @@ Use this analysis to inform EVERY field of your output. The prompt must feel lik
 - Duration: simple camera moves → 5s. Complex actions/transitions/multi-element → 10s
 - Use precise cinematic terminology: lens focal lengths, camera movements (dolly, crane, steadicam, rack focus), lighting terms (chiaroscuro, rim light, motivated lighting), depth of field
 
+═══ REFERENCE HANDLING PROTOCOL ═══
+The user MAY attach additional reference media (images, video keyframes, or audio mood notes). When present, each reference comes with a ROLE:
+- "Style" → mirror the artistic/visual treatment only (color grade, texture, finish). Do NOT copy subjects.
+- "Lighting" → mirror lighting direction, quality, and color temperature only.
+- "Composition" → mirror framing, balance, depth, or rule-of-thirds usage only.
+- "Motion" → mirror camera/subject motion pacing only (especially from video keyframes).
+- "Mood / Audio" → use the audio note text to inform tone, energy, and audioBlock pacing.
+NEVER copy the content (subject, location, characters) of references into the main scene. The MAIN image(s) define WHAT to film; references only refine HOW.
+
 The user message will tell you which target model is selected. Follow the model-specific instructions appended below for that model with maximum fidelity.`;

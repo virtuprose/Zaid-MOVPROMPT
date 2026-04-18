@@ -91,7 +91,7 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { images, workflowType, description, targetModel, sceneBreakdown, audioEnabled } = body;
+    const { images, workflowType, description, targetModel, sceneBreakdown, audioEnabled, references } = body;
 
     // --- Input Validation ---
     if (!Array.isArray(images) || images.length === 0 || images.length > 2) {
@@ -110,6 +110,43 @@ serve(async (req) => {
     }
     if (description && (typeof description !== "string" || description.length > 2000)) {
       return badRequest("Description must be a string under 2000 characters");
+    }
+
+    // Validate references (optional, max 10, ~8MB combined image payload)
+    const ALLOWED_REF_KINDS = new Set(["image", "video", "audio"]);
+    const ALLOWED_REF_ROLES = new Set(["style", "lighting", "composition", "motion", "mood"]);
+    const validRefs: any[] = [];
+    if (references !== undefined) {
+      if (!Array.isArray(references) || references.length > 10) {
+        return badRequest("references must be an array of at most 10 items");
+      }
+      let totalRefImageBytes = 0;
+      for (const r of references) {
+        if (!r || typeof r !== "object") return badRequest("Invalid reference entry");
+        if (!ALLOWED_REF_KINDS.has(r.kind)) return badRequest("Invalid reference kind");
+        if (!ALLOWED_REF_ROLES.has(r.role)) return badRequest("Invalid reference role");
+        if (r.note !== undefined && (typeof r.note !== "string" || r.note.length > 300)) {
+          return badRequest("Reference note must be a string under 300 chars");
+        }
+        if (r.filename !== undefined && (typeof r.filename !== "string" || r.filename.length > 200)) {
+          return badRequest("Reference filename too long");
+        }
+        if (r.images !== undefined) {
+          if (!Array.isArray(r.images) || r.images.length > 3) {
+            return badRequest("Reference images must be an array of up to 3");
+          }
+          for (const img of r.images) {
+            if (typeof img !== "string" || img.length > 2_000_000) {
+              return badRequest("Each reference image must be base64 under 2MB");
+            }
+            totalRefImageBytes += img.length;
+          }
+        }
+        validRefs.push(r);
+      }
+      if (totalRefImageBytes > 8_000_000) {
+        return badRequest("Combined reference images exceed 8MB");
+      }
     }
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
@@ -220,6 +257,41 @@ serve(async (req) => {
         : `Audio: DISABLED — produce a SILENT video. Do not include any audio direction. Set audioBlock to "Silent — no audio".\n\n`;
     }
 
+    // Build a Reference Brief if user attached references
+    const ROLE_LABELS: Record<string, string> = {
+      style: "Style — mirror artistic treatment only",
+      lighting: "Lighting — mirror lighting/color temperature only",
+      composition: "Composition — mirror framing/balance only",
+      motion: "Motion — mirror camera/subject motion pacing only",
+      mood: "Mood/Audio — inform tone and audioBlock energy only",
+    };
+    const refImageBlocks: { label: string; b64: string }[] = [];
+    if (validRefs.length > 0) {
+      userText += `\n\nREFERENCE MEDIA (use as guidance per role, do NOT copy their content):\n`;
+      validRefs.forEach((r, idx) => {
+        const refNum = idx + 1;
+        const noteSuffix = r.note ? ` — note: "${r.note}"` : "";
+        const fileSuffix = r.filename ? ` [${r.filename}]` : "";
+        if (r.kind === "image") {
+          userText += `- Ref #${refNum} (${ROLE_LABELS[r.role]}, image)${fileSuffix}${noteSuffix}\n`;
+          if (Array.isArray(r.images) && r.images[0]) {
+            refImageBlocks.push({ label: `Reference #${refNum} (${r.role}, image)`, b64: r.images[0] });
+          }
+        } else if (r.kind === "video") {
+          const frameCount = Array.isArray(r.images) ? r.images.length : 0;
+          userText += `- Ref #${refNum} (${ROLE_LABELS[r.role]}, video — ${frameCount} keyframes)${fileSuffix}${noteSuffix}\n`;
+          if (Array.isArray(r.images)) {
+            r.images.forEach((b64: string, fIdx: number) => {
+              refImageBlocks.push({ label: `Reference #${refNum} (${r.role}, video keyframe ${fIdx + 1}/${frameCount})`, b64 });
+            });
+          }
+        } else if (r.kind === "audio") {
+          userText += `- Ref #${refNum} (${ROLE_LABELS[r.role]}, audio)${fileSuffix}${noteSuffix || ' — no description provided'}\n`;
+        }
+      });
+      userText += `\n`;
+    }
+
     userText += `Analyze the image(s) using the Scene Decomposition Protocol, then generate cinematic prompts optimized for the target model.`;
 
     const userContent: any[] = [{ type: "text", text: userText }];
@@ -227,6 +299,14 @@ serve(async (req) => {
       userContent.push({
         type: "image_url",
         image_url: { url: `data:image/jpeg;base64,${img}` },
+      });
+    }
+    // Append reference images (each preceded by a labeled text block)
+    for (const ref of refImageBlocks) {
+      userContent.push({ type: "text", text: ref.label });
+      userContent.push({
+        type: "image_url",
+        image_url: { url: `data:image/jpeg;base64,${ref.b64}` },
       });
     }
 
