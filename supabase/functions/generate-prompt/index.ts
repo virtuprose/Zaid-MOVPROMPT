@@ -91,7 +91,7 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { images, workflowType, description, targetModel, sceneBreakdown, audioEnabled, references, multiShotCount } = body;
+    const { images, workflowType, description, targetModel, sceneBreakdown, audioEnabled, references, elements, autoInjectElements, multiShotCount } = body;
 
     // --- Input Validation ---
     if (!Array.isArray(images) || images.length === 0 || images.length > 2) {
@@ -158,7 +158,39 @@ serve(async (req) => {
       }
     }
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    // Validate elements (Seedance @Element flow). Same shape as references but max 10, role optional.
+    const validElements: any[] = [];
+    if (elements !== undefined) {
+      if (!Array.isArray(elements) || elements.length > 10) {
+        return badRequest("elements must be an array of at most 10 items");
+      }
+      let totalElBytes = 0;
+      for (const e of elements) {
+        if (!e || typeof e !== "object") return badRequest("Invalid element entry");
+        if (!ALLOWED_REF_KINDS.has(e.kind)) return badRequest("Invalid element kind");
+        if (e.note !== undefined && (typeof e.note !== "string" || e.note.length > 300)) {
+          return badRequest("Element note must be a string under 300 chars");
+        }
+        if (e.filename !== undefined && (typeof e.filename !== "string" || e.filename.length > 200)) {
+          return badRequest("Element filename too long");
+        }
+        if (e.images !== undefined) {
+          if (!Array.isArray(e.images) || e.images.length > 3) {
+            return badRequest("Element images must be an array of up to 3");
+          }
+          for (const img of e.images) {
+            if (typeof img !== "string" || img.length > 2_000_000) {
+              return badRequest("Each element image must be base64 under 2MB");
+            }
+            totalElBytes += img.length;
+          }
+        }
+        validElements.push(e);
+      }
+      if (totalElBytes > 8_000_000) {
+        return badRequest("Combined element images exceed 8MB");
+      }
+    }
     if (!LOVABLE_API_KEY) {
       console.error("LOVABLE_API_KEY env var is missing");
       return new Response(JSON.stringify({ error: "Service misconfigured" }), {
