@@ -108,6 +108,13 @@ export const ar: Record<TranslationKey, string> = {
   "results.referenceGuidance": "توجيه المرجع",
   "results.shotStructure": "بنية اللقطات",
   "results.generatedBy": "أُنشئ بواسطة",
+  "results.copyIntoModel": "انسخ إلى",
+  "results.copyMainPrompt": "نسخ الأمر الرئيسي",
+  "results.pasteHint": "هذا هو النص الذي تلصقه في النموذج. الأقسام أدناه تحسينات اختيارية.",
+  "results.optionalRefinements": "تحسينات اختيارية",
+  "results.directorsNotes": "ملاحظات المخرج (للمرجع فقط)",
+  "results.copyFullPackage": "نسخ الحزمة الكاملة",
+  "results.copyFullPackageHint": "ينسخ كل شيء منسقاً — الأمر الرئيسي والتحسينات والملاحظات.",
 
   // SceneBreakdown
   "scene.title": "عناصر المشهد",
