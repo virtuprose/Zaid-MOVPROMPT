@@ -33,6 +33,64 @@ export const ElementGrid = ({ items, onChange, max = 10 }: ElementGridProps) => 
   const [isDragging, setIsDragging] = useState(false);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
+  const touchTimerRef = useRef<number | null>(null);
+  const touchStartPosRef = useRef<{ x: number; y: number } | null>(null);
+  const touchActiveRef = useRef<boolean>(false);
+
+  const findTileIdFromPoint = (x: number, y: number): string | null => {
+    const el = document.elementFromPoint(x, y);
+    const tile = el?.closest<HTMLElement>("[data-element-tile-id]");
+    return tile?.dataset.elementTileId ?? null;
+  };
+
+  const cancelTouchHold = () => {
+    if (touchTimerRef.current !== null) {
+      window.clearTimeout(touchTimerRef.current);
+      touchTimerRef.current = null;
+    }
+  };
+
+  const onTouchStart = (e: React.TouchEvent, id: string) => {
+    const touch = e.touches[0];
+    touchStartPosRef.current = { x: touch.clientX, y: touch.clientY };
+    touchActiveRef.current = false;
+    cancelTouchHold();
+    touchTimerRef.current = window.setTimeout(() => {
+      touchActiveRef.current = true;
+      setDraggingId(id);
+      if (navigator.vibrate) navigator.vibrate(15);
+    }, 250);
+  };
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    const start = touchStartPosRef.current;
+    if (!touchActiveRef.current) {
+      // If finger moves significantly before long-press fires, cancel hold (treat as scroll).
+      if (start) {
+        const dx = Math.abs(touch.clientX - start.x);
+        const dy = Math.abs(touch.clientY - start.y);
+        if (dx > 8 || dy > 8) cancelTouchHold();
+      }
+      return;
+    }
+    e.preventDefault();
+    const overId = findTileIdFromPoint(touch.clientX, touch.clientY);
+    setDragOverId(overId);
+  };
+
+  const onTouchEnd = (e: React.TouchEvent) => {
+    cancelTouchHold();
+    if (touchActiveRef.current && draggingId) {
+      const touch = e.changedTouches[0];
+      const targetId = findTileIdFromPoint(touch.clientX, touch.clientY);
+      if (targetId) reorder(draggingId, targetId);
+    }
+    touchActiveRef.current = false;
+    touchStartPosRef.current = null;
+    setDraggingId(null);
+    setDragOverId(null);
+  };
 
   const reorder = (sourceId: string, targetId: string) => {
     if (sourceId === targetId) return;
@@ -140,6 +198,7 @@ export const ElementGrid = ({ items, onChange, max = 10 }: ElementGridProps) => 
           {items.map((item, idx) => (
             <div
               key={item.id}
+              data-element-tile-id={item.id}
               draggable
               onDragStart={(e) => {
                 setDraggingId(item.id);
@@ -169,7 +228,12 @@ export const ElementGrid = ({ items, onChange, max = 10 }: ElementGridProps) => 
                 setDraggingId(null);
                 setDragOverId(null);
               }}
-              className={`relative aspect-square rounded-lg border bg-secondary/40 overflow-hidden group cursor-move transition-all ${
+              onTouchStart={(e) => onTouchStart(e, item.id)}
+              onTouchMove={onTouchMove}
+              onTouchEnd={onTouchEnd}
+              onTouchCancel={onTouchEnd}
+              style={{ touchAction: draggingId ? "none" : "auto" }}
+              className={`relative aspect-square rounded-lg border bg-secondary/40 overflow-hidden group cursor-move transition-all select-none ${
                 draggingId === item.id ? "opacity-40 scale-95" : ""
               } ${
                 dragOverId === item.id && draggingId !== item.id
