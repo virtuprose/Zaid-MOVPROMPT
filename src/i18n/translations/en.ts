@@ -257,6 +257,20 @@ export const en = {
   "announcements.form.messageAr": "Message (Arabic)",
   "announcements.form.linkTextAr": "CTA Text (Arabic)",
 
+  // Model picker & contracts
+  "modelPicker.title": "Pick your target AI model",
+  "contract.slot.reference": "Reference image",
+  "contract.slot.source": "Source image to transform",
+  "contract.slot.subject": "Subject image",
+  "contract.hint.edit": "Describe ONLY the change you want — this model transforms the source image.",
+  "contract.hint.motionControl": "We'll generate a 3-waypoint camera path with locked/moving subject tags.",
+  "contract.hint.seedanceAudio": "Audio is auto-generated (Seedance 2.0 only). Toggle below for first/last frame mode.",
+  "contract.hint.veoAudio": "Native synced audio will be generated.",
+  "contract.variant.edit": "Edit variant — describe only the transformation.",
+  "contract.variant.motionControl": "Motion Control — camera path with waypoints.",
+  "contract.toggle.single": "Single frame",
+  "contract.toggle.startEnd": "Start + End",
+
   // Welcome Popup
   "welcomePopup.title": "Welcome Popup",
   "welcomePopup.new": "New Popup",

@@ -3,15 +3,15 @@ import { useNavigate } from "react-router-dom";
 import { trackPageVisit } from "@/lib/analytics";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/i18n/LanguageContext";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { WorkflowPanel } from "@/components/WorkflowPanel";
+import { ModelPicker } from "@/components/ModelPicker";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { motion } from "framer-motion";
-import { Camera, Layers, Film, BookOpen, ChevronDown, Upload, Copy, User, LogOut, Library } from "lucide-react";
+import { BookOpen, ChevronDown, Upload, Copy, User, LogOut, Library, Sparkles } from "lucide-react";
 import AnnouncementBanner from "@/components/AnnouncementBanner";
 import NotificationBell from "@/components/NotificationBell";
 import { InstallPrompt } from "@/components/InstallPrompt";
@@ -19,6 +19,7 @@ import WelcomePopup from "@/components/WelcomePopup";
 
 const Index = () => {
   const [guideOpen, setGuideOpen] = useState(false);
+  const [model, setModel] = useState("any");
   const { user, loading, signOut } = useAuth();
   const navigate = useNavigate();
   const { t } = useLanguage();
@@ -27,14 +28,8 @@ const Index = () => {
     trackPageVisit("/");
   }, []);
 
-  const WORKFLOWS = [
-    { value: "single", label: t("workflow.single"), icon: Camera, description: t("workflow.single.desc") },
-    { value: "twoframe", label: t("workflow.twoframe"), icon: Layers, description: t("workflow.twoframe.desc") },
-    { value: "multishot", label: t("workflow.multishot"), icon: Film, description: t("workflow.multishot.desc") },
-  ];
-
   const GUIDE_STEPS = [
-    { icon: Layers, title: t("guide.step1.title"), desc: t("guide.step1.desc") },
+    { icon: Sparkles, title: t("guide.step1.title"), desc: t("guide.step1.desc") },
     { icon: Upload, title: t("guide.step2.title"), desc: t("guide.step2.desc") },
     { icon: Copy, title: t("guide.step3.title"), desc: t("guide.step3.desc") },
   ];
@@ -139,33 +134,15 @@ const Index = () => {
           </Collapsible>
         </motion.div>
 
-        {/* Workflow Tabs */}
+        {/* Model-First flow: pick model, then upload */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.2 }}
+          className="space-y-6"
         >
-          <Tabs defaultValue="single" className="space-y-8">
-            <TabsList className="grid grid-cols-3 w-full bg-secondary/50 border border-border p-1 h-auto">
-              {WORKFLOWS.map((w) => (
-                <TabsTrigger
-                  key={w.value}
-                  value={w.value}
-                  className="flex flex-col gap-1 sm:gap-1.5 py-2 sm:py-3 px-1.5 sm:px-2 data-[state=active]:bg-card data-[state=active]:shadow-md data-[state=active]:border-primary/30 rounded-lg transition-all"
-                >
-                  <w.icon className="w-4 h-4 sm:w-5 sm:h-5" />
-                  <span className="text-[11px] sm:text-sm font-medium font-display">{w.label}</span>
-                </TabsTrigger>
-              ))}
-            </TabsList>
-
-            {WORKFLOWS.map((w) => (
-              <TabsContent key={w.value} value={w.value} className="space-y-6">
-                <p className="text-center text-sm text-muted-foreground">{w.description}</p>
-                <WorkflowPanel type={w.value as "single" | "twoframe" | "multishot"} />
-              </TabsContent>
-            ))}
-          </Tabs>
+          <ModelPicker model={model} onModelChange={setModel} />
+          <WorkflowPanel selectedModel={model} />
         </motion.div>
 
         {/* Footer */}

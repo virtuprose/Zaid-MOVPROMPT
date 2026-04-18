@@ -259,6 +259,20 @@ export const ar: Record<TranslationKey, string> = {
   "announcements.form.messageAr": "الرسالة (عربي)",
   "announcements.form.linkTextAr": "نص الرابط (عربي)",
 
+  // Model picker & contracts
+  "modelPicker.title": "اختر نموذج الذكاء الاصطناعي المستهدف",
+  "contract.slot.reference": "صورة مرجعية",
+  "contract.slot.source": "الصورة المصدر للتحويل",
+  "contract.slot.subject": "صورة الموضوع",
+  "contract.hint.edit": "اكتب فقط التعديل المطلوب — هذا النموذج يحوّل الصورة المصدر.",
+  "contract.hint.motionControl": "سنُولّد مسار كاميرا بثلاث نقاط مع وسوم للعناصر الثابتة والمتحركة.",
+  "contract.hint.seedanceAudio": "يتم توليد الصوت تلقائياً (Seedance 2.0 فقط). بدّل الوضع أدناه لاستخدام إطار البداية والنهاية.",
+  "contract.hint.veoAudio": "سيتم توليد صوت متزامن أصلي.",
+  "contract.variant.edit": "نسخة التعديل — صف التحويل فقط.",
+  "contract.variant.motionControl": "التحكم بالحركة — مسار كاميرا بنقاط محددة.",
+  "contract.toggle.single": "إطار واحد",
+  "contract.toggle.startEnd": "البداية + النهاية",
+
   // Welcome Popup
   "welcomePopup.title": "نافذة الترحيب",
   "welcomePopup.new": "نافذة جديدة",
