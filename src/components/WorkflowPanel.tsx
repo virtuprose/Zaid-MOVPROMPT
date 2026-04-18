@@ -518,7 +518,16 @@ export const WorkflowPanel = ({ selectedModel }: WorkflowPanelProps) => {
                 <RotateCcw className="w-3.5 h-3.5" /> {t("wp.startOver")}
               </Button>
             </div>
-            <ConfigPanel description={description} onDescriptionChange={setDescription} />
+            {contract.supportsElementReferences ? (
+              <MentionTextarea
+                value={description}
+                onChange={setDescription}
+                elements={elementItems}
+                placeholder={t("config.placeholder")}
+              />
+            ) : (
+              <ConfigPanel description={description} onDescriptionChange={setDescription} />
+            )}
 
             <div className="flex justify-center">
               <Button
