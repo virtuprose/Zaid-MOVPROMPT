@@ -112,6 +112,15 @@ serve(async (req) => {
       return badRequest("Description must be a string under 2000 characters");
     }
 
+    // Validate multiShotCount: integer 3..10 (default 10 only used in multishot)
+    let resolvedShotCount = 10;
+    if (multiShotCount !== undefined) {
+      if (!Number.isInteger(multiShotCount) || multiShotCount < 3 || multiShotCount > 10) {
+        return badRequest("multiShotCount must be an integer between 3 and 10");
+      }
+      resolvedShotCount = multiShotCount;
+    }
+
     // Validate references (optional, max 10, ~8MB combined image payload)
     const ALLOWED_REF_KINDS = new Set(["image", "video", "audio"]);
     const ALLOWED_REF_ROLES = new Set(["style", "lighting", "composition", "motion", "mood"]);
@@ -292,7 +301,12 @@ serve(async (req) => {
       userText += `\n`;
     }
 
-    userText += `Analyze the image(s) using the Scene Decomposition Protocol, then generate cinematic prompts optimized for the target model.`;
+    if (workflowType === "multishot") {
+      userText += ` Generate EXACTLY ${resolvedShotCount} shot${resolvedShotCount === 1 ? "" : "s"} in the results array.`;
+      if (resolvedShotCount === 3) {
+        userText += ` These 3 shots will be STITCHED into one continuous video — design them as a narrative sequence (Shot 1 = opening, Shot 2 = middle action, Shot 3 = resolution) with consistent subject, wardrobe, lighting, color grade, and lens character so they cut together seamlessly.`;
+      }
+    }
 
     const userContent: any[] = [{ type: "text", text: userText }];
     for (const img of images) {
