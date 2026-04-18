@@ -94,8 +94,10 @@ serve(async (req) => {
     const { images, workflowType, description, targetModel, sceneBreakdown, audioEnabled, references, elements, autoInjectElements, multiShotCount } = body;
 
     // --- Input Validation ---
-    if (!Array.isArray(images) || images.length === 0 || images.length > 2) {
-      return badRequest("Invalid images: must be an array of 1-2 items");
+    // Allow 0 images when elements are provided (element-only mode, e.g. Seedance 2.0).
+    const hasElements = Array.isArray(elements) && elements.length > 0;
+    if (!Array.isArray(images) || images.length > 2 || (images.length === 0 && !hasElements)) {
+      return badRequest("Invalid images: must be an array of 1-2 items (or 0 with elements)");
     }
     for (const img of images) {
       if (typeof img !== "string" || img.length > 2_000_000) {
