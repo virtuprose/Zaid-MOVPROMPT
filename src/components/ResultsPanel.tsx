@@ -29,6 +29,7 @@ interface ResultsPanelProps {
   agentName?: string;
   modelLabel?: string;
   stitchHint?: boolean;
+  elementsLegend?: { index: number; kind: "image" | "video" | "audio"; preview?: string }[];
 }
 
 const CopyButton = ({ text }: { text: string }) => {

@@ -316,6 +316,16 @@ export const en = {
   "references.roles.composition": "Composition",
   "references.roles.motion": "Motion",
   "references.roles.mood": "Mood / Audio",
+
+  // @Element flow (Seedance 2.0 / 2.0 Fast)
+  "elements.title": "Elements",
+  "elements.add": "Add",
+  "elements.limit": "Up to 10",
+  "elements.limitReached": "Limit reached (10)",
+  "elements.mentionHint": "Type @ or click to mention an Element",
+  "elements.legend": "Elements used in this prompt",
+  "elements.autoTag": "Unmentioned elements were auto-tagged by the AI.",
+  "contract.hint.seedanceElements": "Upload up to 10 references (images, videos, audio) and mention them in your prompt with @Element 1, @Element 2, etc. Unmentioned ones get auto-tagged.",
 } as const;
 
 export type TranslationKey = keyof typeof en;
