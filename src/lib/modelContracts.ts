@@ -47,11 +47,12 @@ export function getContract(model: string): ModelContract {
     }
     if (model.includes("edit")) return EDIT;
     if (model.includes("o1")) return STD;
-    // Standard Kling variants (3.0, 3.0 Omni, 2.6) support 1↔2 frame toggle
+    // Standard Kling variants (3.0, 3.0 Omni, 2.6) support 1↔2 frame toggle + audio
     return {
       slots: 1,
       slotLabels: ["contract.slot.reference"],
       supportsTwoFrameToggle: true,
+      supportsAudio: true,
       workflowType: "single",
     };
   }
