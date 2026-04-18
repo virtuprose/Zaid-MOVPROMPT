@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ImageUploadZone } from "./ImageUploadZone";
@@ -6,15 +6,15 @@ import { ConfigPanel } from "./ConfigPanel";
 import { ResultsPanel } from "./ResultsPanel";
 import { ResultsSkeleton } from "./ResultsSkeleton";
 import { SceneBreakdown, type SceneFrame, type ElementDirections } from "./SceneBreakdown";
-import { Sparkles, Loader2, ScanSearch, RotateCcw, RefreshCw } from "lucide-react";
+import { Sparkles, Loader2, ScanSearch, RotateCcw, RefreshCw, Info } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { trackGeneration } from "@/lib/analytics";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/i18n/LanguageContext";
+import { getContract, deriveWorkflowType } from "@/lib/modelContracts";
 
-type WorkflowType = "single" | "twoframe" | "multishot";
 type Phase = "upload" | "breakdown" | "generate";
 
 interface ShotResult {
@@ -32,7 +32,7 @@ interface ShotResult {
 }
 
 interface WorkflowPanelProps {
-  type: WorkflowType;
+  selectedModel: string;
 }
 
 const phaseTransition = {
@@ -42,14 +42,13 @@ const phaseTransition = {
   transition: { duration: 0.32, ease: [0.4, 0, 0.2, 1] as const },
 };
 
-export const WorkflowPanel = ({ type }: WorkflowPanelProps) => {
+export const WorkflowPanel = ({ selectedModel }: WorkflowPanelProps) => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const { user } = useAuth();
   const { t } = useLanguage();
   const [images, setImages] = useState<{ file: File; preview: string }[]>([]);
   const [description, setDescription] = useState("");
-  const [model, setModel] = useState("any");
   const [results, setResults] = useState<ShotResult[] | null>(null);
   const [agentName, setAgentName] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -59,7 +58,10 @@ export const WorkflowPanel = ({ type }: WorkflowPanelProps) => {
   const [elementDirections, setElementDirections] = useState<ElementDirections>({});
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
-  const maxImages = type === "twoframe" ? 2 : 1;
+  const contract = useMemo(() => getContract(selectedModel), [selectedModel]);
+  const [twoFrameMode, setTwoFrameMode] = useState(false);
+  const activeSlots = contract.supportsTwoFrameToggle && twoFrameMode ? 2 : contract.slots;
+  const workflowType = deriveWorkflowType(selectedModel, activeSlots);
 
   const handleImageSelect = useCallback((index: number, file: File) => {
     const preview = URL.createObjectURL(file);
@@ -83,7 +85,7 @@ export const WorkflowPanel = ({ type }: WorkflowPanelProps) => {
     setPhase("upload");
   }, []);
 
-  const hasRequiredImages = type === "twoframe" ? images.length === 2 : images.length >= 1;
+  const hasRequiredImages = activeSlots === 2 ? images.filter(Boolean).length === 2 : images.filter(Boolean).length >= 1;
 
   const compressImage = (file: File, maxWidth = 1024, quality = 0.7): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -173,9 +175,9 @@ export const WorkflowPanel = ({ type }: WorkflowPanelProps) => {
       const { data, error } = await supabase.functions.invoke("generate-prompt", {
         body: {
           images: imageBase64s,
-          workflowType: type,
+          workflowType,
           description,
-          targetModel: model,
+          targetModel: selectedModel,
           sceneBreakdown,
         },
       });
@@ -186,20 +188,19 @@ export const WorkflowPanel = ({ type }: WorkflowPanelProps) => {
       setResults(data.results);
       setAgentName(data.agentName ?? null);
       setPhase("generate");
-      trackGeneration(type, model);
+      trackGeneration(workflowType, selectedModel);
 
       if (user) {
         supabase.from("prompt_history").insert({
           user_id: user.id,
-          workflow_type: type,
-          target_model: model,
+          workflow_type: workflowType,
+          target_model: selectedModel,
           results: data.results,
         }).select("id").single().then(async ({ data: row, error: histErr }) => {
           if (histErr || !row) {
             console.error("Failed to save history:", histErr);
             return;
           }
-          // Upload images to storage
           try {
             const paths: string[] = [];
             for (let i = 0; i < images.length; i++) {
@@ -231,27 +232,60 @@ export const WorkflowPanel = ({ type }: WorkflowPanelProps) => {
     }
   };
 
-  const frameLabels: string[] = (() => {
-    switch (type) {
-      case "twoframe": return [t("frame.start"), t("frame.end")];
-      case "multishot": return [t("frame.concept")];
-      default: return [t("frame.your")];
+  // Slot labels from contract (translation keys)
+  const slotLabels: string[] = (() => {
+    if (activeSlots === 2) {
+      return [t("frame.start"), t("frame.end")];
     }
+    return contract.slotLabels.map((k) => t(k as any));
   })();
 
-  const labels = {
-    single: [t("frame.upload")],
-    twoframe: [t("frame.start"), t("frame.end")],
-    multishot: [t("frame.uploadConcept")],
-  };
+  // Frame labels for SceneBreakdown
+  const frameLabels: string[] = (() => {
+    if (workflowType === "twoframe") return [t("frame.start"), t("frame.end")];
+    if (workflowType === "multishot") return [t("frame.concept")];
+    return [t("frame.your")];
+  })();
+
+  const extrasHint = contract.extrasHintKey ? t(contract.extrasHintKey as any) : null;
 
   return (
     <div className="space-y-6">
-      <div className={`grid gap-4 ${type === "twoframe" ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1 max-w-lg mx-auto"}`}>
-        {Array.from({ length: maxImages }).map((_, i) => (
+      {/* Extras hint */}
+      {extrasHint && (
+        <div className="flex items-start gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-xs text-foreground/80">
+          <Info className="w-3.5 h-3.5 text-primary mt-0.5 shrink-0" />
+          <span>{extrasHint}</span>
+        </div>
+      )}
+
+      {/* Seedance toggle */}
+      {contract.supportsTwoFrameToggle && (
+        <div className="flex justify-center gap-1 rounded-lg bg-secondary/50 border border-border p-1 max-w-xs mx-auto">
+          <button
+            onClick={() => { setTwoFrameMode(false); setImages([]); setPhase("upload"); }}
+            className={`flex-1 px-3 py-1.5 text-xs rounded-md font-medium transition-colors ${
+              !twoFrameMode ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {t("contract.toggle.single" as any)}
+          </button>
+          <button
+            onClick={() => { setTwoFrameMode(true); setImages([]); setPhase("upload"); }}
+            className={`flex-1 px-3 py-1.5 text-xs rounded-md font-medium transition-colors ${
+              twoFrameMode ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {t("contract.toggle.startEnd" as any)}
+          </button>
+        </div>
+      )}
+
+      <div className={`grid gap-4 ${activeSlots === 2 ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1 max-w-lg mx-auto"}`}>
+        {Array.from({ length: activeSlots }).map((_, i) => (
           <ImageUploadZone
             key={i}
-            label={labels[type][i] || `Frame ${i + 1}`}
+            label={slotLabels[i] || `Frame ${i + 1}`}
             preview={images[i]?.preview || null}
             onImageSelect={(file) => handleImageSelect(i, file)}
             onImageRemove={() => handleImageRemove(i)}
@@ -261,11 +295,7 @@ export const WorkflowPanel = ({ type }: WorkflowPanelProps) => {
 
       <AnimatePresence mode="wait">
         {hasRequiredImages && phase === "upload" && (
-          <motion.div
-            key="upload-phase"
-            {...phaseTransition}
-            className="space-y-3"
-          >
+          <motion.div key="upload-phase" {...phaseTransition} className="space-y-3">
             <p className="text-sm text-muted-foreground max-w-md mx-auto text-center">
               {t("wp.analyzeDesc")}
             </p>
@@ -296,11 +326,7 @@ export const WorkflowPanel = ({ type }: WorkflowPanelProps) => {
         )}
 
         {(phase === "breakdown" || phase === "generate") && sceneFrames.length > 0 && (
-          <motion.div
-            key="breakdown-phase"
-            {...phaseTransition}
-            className="space-y-4"
-          >
+          <motion.div key="breakdown-phase" {...phaseTransition} className="space-y-4">
             <SceneBreakdown
               frames={sceneFrames}
               frameLabels={frameLabels}
@@ -329,7 +355,7 @@ export const WorkflowPanel = ({ type }: WorkflowPanelProps) => {
               </Button>
             </div>
 
-            <ConfigPanel description={description} model={model} onDescriptionChange={setDescription} onModelChange={setModel} />
+            <ConfigPanel description={description} onDescriptionChange={setDescription} />
 
             <div className="flex justify-center">
               <Button
@@ -351,11 +377,7 @@ export const WorkflowPanel = ({ type }: WorkflowPanelProps) => {
         )}
 
         {(phase === "breakdown" || phase === "generate") && sceneFrames.length === 0 && (
-          <motion.div
-            key="skip-phase"
-            {...phaseTransition}
-            className="space-y-4"
-          >
+          <motion.div key="skip-phase" {...phaseTransition} className="space-y-4">
             <div className="flex justify-start">
               <Button
                 size="sm"
@@ -366,7 +388,7 @@ export const WorkflowPanel = ({ type }: WorkflowPanelProps) => {
                 <RotateCcw className="w-3.5 h-3.5" /> {t("wp.startOver")}
               </Button>
             </div>
-            <ConfigPanel description={description} model={model} onDescriptionChange={setDescription} onModelChange={setModel} />
+            <ConfigPanel description={description} onDescriptionChange={setDescription} />
 
             <div className="flex justify-center">
               <Button
