@@ -95,7 +95,9 @@ export const WorkflowPanel = ({ selectedModel }: WorkflowPanelProps) => {
     setPhase("upload");
   }, []);
 
-  const hasRequiredImages = activeSlots === 2 ? images.filter(Boolean).length === 2 : images.filter(Boolean).length >= 1;
+  const hasRequiredImages = contract.supportsElementReferences
+    ? elementItems.length >= 1
+    : activeSlots === 2 ? images.filter(Boolean).length === 2 : images.filter(Boolean).length >= 1;
 
   const compressImage = (file: File, maxWidth = 1024, quality = 0.7): Promise<string> => {
     return new Promise((resolve, reject) => {
