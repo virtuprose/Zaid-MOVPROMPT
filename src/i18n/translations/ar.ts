@@ -324,7 +324,7 @@ export const ar: Record<TranslationKey, string> = {
   "elements.add": "إضافة",
   "elements.limit": "حتى 10",
   "elements.limitReached": "تم بلوغ الحد (10)",
-  "elements.mentionHint": "اكتب @ أو انقر للإشارة إلى عنصر",
+  "elements.mentionHint": "اكتب @1 أو @2 … للإشارة إلى عنصر",
   "elements.legend": "العناصر المستخدمة في هذا البرومبت",
   "elements.autoTag": "تمت إضافة وسوم تلقائية للعناصر غير المذكورة.",
   "elements.uploadMedia": "ارفع وسائط",

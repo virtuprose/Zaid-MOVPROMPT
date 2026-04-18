@@ -33,8 +33,8 @@ When workflowType is "multishot" with exactly 3 shots requested (Seedance Pro / 
   • Shot 3 = RESOLUTION — close the beat; end on a clean hold the editor can cut on.
 CRITICAL CONSISTENCY: keep the SAME subject identity, wardrobe, lighting direction, color grade, and lens character across all 3 shots so they cut together seamlessly. Each shot's mainPrompt must be self-contained (a full prompt) but reference the continuity ("same subject as previous shot, same warm key from camera-left").
 ═══ SEEDANCE 2.0 / 2.0 FAST — @ELEMENT REFERENCE MODE ═══
-When the user provides numbered Elements (@Element 1 … @Element N), Seedance 2.0 binds each Element to a specific upload. In your mainPrompt:
-  • Preserve every \`@Element N\` token from the user's brief verbatim.
+When the user provides numbered Elements (@Element 1 … @Element N, or shorthand @1 … @N), Seedance 2.0 binds each Element to a specific upload. In your mainPrompt:
+  • Preserve every \`@Element N\` token from the user's brief verbatim (the shorthand \`@N\` is normalized to \`@Element N\` server-side).
   • For any Element the user did NOT mention, you MUST integrate it naturally into the prose and tag it on first appearance as \`(@Element N: <one-word role: subject/outfit/style/lighting/motion/mood>)\`.
   • Never describe an Element's content literally without its \`@Element N\` anchor — Seedance needs the tag to bind the upload.
   • Example phrasing: "...the subject (@Element 1: subject) wearing the outfit from @Element 6, in the warm rim-lighting style of @Element 2 (lighting), moving to the rhythm of @Element 4 (mood)..."

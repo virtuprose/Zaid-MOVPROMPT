@@ -19,7 +19,7 @@ export const MentionTextarea = ({ value, onChange, elements, placeholder }: Ment
 
   const insertMention = (n: number) => {
     const el = ref.current;
-    const token = `@Element ${n} `;
+    const token = `@${n} `;
     if (!el) {
       onChange(value + token);
       setOpen(false);
@@ -45,17 +45,21 @@ export const MentionTextarea = ({ value, onChange, elements, placeholder }: Ment
   }, [value]);
 
   const renderHighlighted = () => {
-    const parts = value.split(/(@Element \d+)/g);
+    const parts = value.split(/(@Element \d+|@\d+)/g);
     return parts.map((part, i) => {
-      if (/^@Element \d+$/.test(part)) {
-        return (
-          <span
-            key={i}
-            className="bg-primary/25 text-primary rounded px-0.5 -mx-0.5"
-          >
-            {part}
-          </span>
-        );
+      const m = /^@(?:Element )?(\d+)$/.exec(part);
+      if (m) {
+        const n = parseInt(m[1], 10);
+        if (n >= 1 && n <= elements.length) {
+          return (
+            <span
+              key={i}
+              className="bg-primary/25 text-primary rounded px-0.5 -mx-0.5"
+            >
+              {part}
+            </span>
+          );
+        }
       }
       return <span key={i}>{part}</span>;
     });
