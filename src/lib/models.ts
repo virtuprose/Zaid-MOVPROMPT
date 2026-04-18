@@ -10,15 +10,6 @@ export interface ModelGroup {
 
 export const MODEL_GROUPS: ModelGroup[] = [
   {
-    label: "Minimax Hailuo",
-    models: [
-      { value: "hailuo-2.3-fast", label: "Hailuo 2.3 Fast" },
-      { value: "hailuo-2.3", label: "Hailuo 2.3" },
-      { value: "hailuo-02-fast", label: "Hailuo 02 Fast" },
-      { value: "hailuo-02", label: "Hailuo 02" },
-    ],
-  },
-  {
     label: "Kuaishou (Kling)",
     models: [
       { value: "kling-3.0", label: "Kling 3.0" },
