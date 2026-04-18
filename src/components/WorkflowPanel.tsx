@@ -165,6 +165,26 @@ export const WorkflowPanel = ({ selectedModel }: WorkflowPanelProps) => {
     try {
       const imageBase64s = await Promise.all(images.map((img) => compressImage(img.file)));
 
+      // Process references: images → resized base64; videos → keyframes; audio → metadata only
+      const referencesPayload = await Promise.all(
+        referenceItems.map(async (ref) => {
+          if (ref.kind === "image") {
+            const b64 = await compressImageFile(ref.file);
+            return { kind: "image", role: ref.role, note: ref.note || undefined, filename: ref.file.name, images: [b64] };
+          }
+          if (ref.kind === "video") {
+            try {
+              const frames = await extractVideoKeyframes(ref.file, 3);
+              return { kind: "video", role: ref.role, note: ref.note || undefined, filename: ref.file.name, images: frames };
+            } catch (e) {
+              console.error("Video keyframe extraction failed:", e);
+              return { kind: "video", role: ref.role, note: ref.note || undefined, filename: ref.file.name, images: [] };
+            }
+          }
+          return { kind: "audio", role: ref.role, note: ref.note || undefined, filename: ref.file.name };
+        })
+      );
+
       const sceneBreakdown = sceneFrames.length > 0
         ? sceneFrames.map((frame) => ({
             frameIndex: frame.frameIndex,
@@ -186,6 +206,7 @@ export const WorkflowPanel = ({ selectedModel }: WorkflowPanelProps) => {
           targetModel: selectedModel,
           sceneBreakdown,
           audioEnabled: contract.supportsAudio ? audioEnabled : undefined,
+          references: referencesPayload.length > 0 ? referencesPayload : undefined,
         },
       });
 
