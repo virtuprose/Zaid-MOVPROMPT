@@ -115,6 +115,7 @@ export const ar: Record<TranslationKey, string> = {
   "results.directorsNotes": "ملاحظات المخرج (للمرجع فقط)",
   "results.copyFullPackage": "نسخ الحزمة الكاملة",
   "results.copyFullPackageHint": "ينسخ كل شيء منسقاً — الأمر الرئيسي والتحسينات والملاحظات.",
+  "results.multishotStitchHint": "هذه اللقطات الثلاث مصممة لتُدمج معاً في فيديو واحد متواصل — حافظ على ترتيبها.",
 
   // SceneBreakdown
   "scene.title": "عناصر المشهد",
@@ -279,6 +280,9 @@ export const ar: Record<TranslationKey, string> = {
   "contract.variant.motionControl": "التحكم بالحركة — مسار كاميرا بنقاط محددة.",
   "contract.toggle.single": "إطار واحد",
   "contract.toggle.startEnd": "البداية + النهاية",
+  "contract.toggle.singleShot": "لقطة واحدة",
+  "contract.toggle.multiShot3": "متعدد اللقطات (3)",
+  "contract.hint.seedanceMultiShot": "يولّد 3 لقطات متصلة مصممة لتُدمج معاً في فيديو واحد متواصل.",
   "contract.audio.label": "توليد مع الصوت",
 
   // Welcome Popup
