@@ -566,7 +566,7 @@ export const WorkflowPanel = ({ selectedModel }: WorkflowPanelProps) => {
             isLoading={isLoading}
             agentName={agentName ?? undefined}
             modelLabel={MODEL_GROUPS.flatMap(g => g.models).find(m => m.value === selectedModel)?.label ?? selectedModel}
-            stitchHint={workflowType === "multishot" && contract.supportsMultiShotToggle && contract.multiShotCount === 3}
+            stitchHint={workflowType === "multishot" && contract.supportsMultiShotToggle && (contract.multiShotCount ?? 0) > 1}
             elementsLegend={contract.supportsElementReferences && elementItems.length > 0
               ? elementItems.map((el, idx) => ({ index: idx + 1, kind: el.kind, preview: el.preview }))
               : undefined}
