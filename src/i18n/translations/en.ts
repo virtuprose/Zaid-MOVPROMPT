@@ -280,7 +280,9 @@ export const en = {
   "contract.toggle.startEnd": "Start + End",
   "contract.toggle.singleShot": "Single shot",
   "contract.toggle.multiShot3": "Multi-shot (5)",
+  "contract.toggle.multiShot10": "Multi-shot (10)",
   "contract.hint.seedanceMultiShot": "Generates 5 connected shots designed to be stitched into one continuous video.",
+  "contract.hint.klingMultiShot": "Generates 10 connected Kling 3.0 shots with locked subject, lighting, and color continuity — render each separately and stitch.",
   "contract.audio.label": "Generate with audio",
 
   // Welcome Popup
