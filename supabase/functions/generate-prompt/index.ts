@@ -267,7 +267,7 @@ serve(async (req) => {
     // Variant-aware sub-routing (currently Kling only — extend to Veo/Seedance later if needed)
     let variantHints = "";
     if (agent.id === "kling-director") {
-      variantHints = getKlingVariantHints(targetModel);
+      variantHints = getKlingVariantHints(targetModel, workflowType, resolvedShotCount);
     }
     const variantBlock = variantHints ? `\n\n═══ VARIANT-SPECIFIC RULES ═══\n${variantHints}` : "";
 

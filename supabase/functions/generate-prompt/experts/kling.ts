@@ -5,15 +5,38 @@ import type { ExpertAgent } from "./registry.ts";
 
 // Variant-aware sub-routing: returns extra rules appended after the base
 // systemAddendum so admin DB edits still take precedence on the core rules.
-export function getKlingVariantHints(model: string): string {
+export function getKlingVariantHints(model: string, workflowType?: string, shotCount?: number): string {
   const m = model.toLowerCase();
   const isEdit = m.includes("edit");
   const isMotionControl = m.includes("motion-control");
   const isO1 = m.includes("o1");
+  const isMultiShot = workflowType === "multishot";
+  const count = shotCount && shotCount > 0 ? shotCount : 10;
 
   const blocks: string[] = [];
 
-  if (isMotionControl) {
+  if (isMultiShot && m === "kling-3.0") {
+    blocks.push(`▸ KLING 3.0 MULTI-SHOT VARIANT ACTIVE (${count} shots)
+- Output EXACTLY ${count} shots in the results array — each is a self-contained Kling 3.0 prompt the user will render separately and stitch externally (Kling cannot output a stitched video natively).
+- Use this 10-beat cinematic arc (compress proportionally if shotCount < 10):
+  1. Establishing wide — set location, time of day, atmosphere
+  2. Subject intro — first clear look at the protagonist
+  3. Detail/Insert — significant prop, hands, eyes, environmental texture
+  4. Inciting beat — the moment that triggers the scene
+  5. Reaction — subject's emotional response
+  6. Rising action — escalating motion or stakes
+  7. Push-in close-up — intimate emotional peak
+  8. Peak moment — the dramatic apex
+  9. Aftermath — held breath, stillness, consequence
+  10. Resolution wide — closing image that mirrors shot 1's framing
+- EVERY shot MUST follow standard Kling rules: 80–180 words, exactly ONE [camera:*] tag, action-verb opening, no audio mentions.
+- CONTINUITY BLOCK (mandatory in every shot's mainPrompt or referenceGuidance): "Locked across all shots — Subject identity: <face/wardrobe/hair from uploaded image>. Lighting: <direction + color temp>. Color grade: <palette/tone>." Derive these from the uploaded reference image.
+- Each shot's referenceGuidance MUST explicitly state how it carries continuity from the previous shot (matching subject pose continuity, lighting carryover, grade carryover).
+- shotName format: "Shot N — <beat label>" (e.g. "Shot 1 — Establishing wide").
+- modelNotes for shot 1 ONLY: "Render each shot in Kling 3.0 separately at the same aspect ratio + duration, then stitch externally. Kling does not produce a single stitched video. Use shot 1's seed/style settings as the anchor and reuse for shots 2–${count} where supported."
+- DO NOT populate audioBlock — leave empty (Kling is silent).
+- suggestedAspectRatio + suggestedDuration MUST be identical across all ${count} shots.`);
+  } else if (isMotionControl) {
     blocks.push(`▸ MOTION CONTROL VARIANT ACTIVE
 - mainPrompt MUST describe the camera path as 3 explicit waypoints: START → MIDPOINT → END (e.g. "Camera begins at low-angle wide → arcs right to eye-level medium → settles into close-up over-shoulder").
 - For every visible subject/element, explicitly tag it as [LOCKED] (stays static, motion-brush masked out) or [MOVING] (animated). Example: "the woman [MOVING], the chandelier [LOCKED], the curtains [MOVING]".
