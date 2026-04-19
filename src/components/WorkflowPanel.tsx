@@ -359,49 +359,49 @@ export const WorkflowPanel = ({ selectedModel }: WorkflowPanelProps) => {
         </button>
       )}
 
-      {/* Seedance toggle (1 ↔ 2 frames) */}
-      {contract.supportsTwoFrameToggle && (
-        <div className="flex justify-center gap-1 rounded-lg bg-secondary/50 border border-border p-1 max-w-xs mx-auto">
-          <button
-            onClick={() => { setTwoFrameMode(false); setImages([]); setPhase("upload"); }}
-            className={`flex-1 px-3 py-1.5 text-xs rounded-md font-medium transition-colors ${
-              !twoFrameMode ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            {t("contract.toggle.single" as any)}
-          </button>
-          <button
-            onClick={() => { setTwoFrameMode(true); setImages([]); setPhase("upload"); }}
-            className={`flex-1 px-3 py-1.5 text-xs rounded-md font-medium transition-colors ${
-              twoFrameMode ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            {t("contract.toggle.startEnd" as any)}
-          </button>
-        </div>
-      )}
+      {/* Mode toggle: handles 1↔2 frame, single↔multishot, or 3-way (Single | 2 Frames | Multi-shot) */}
+      {(contract.supportsTwoFrameToggle || contract.supportsMultiShotToggle) && (() => {
+        const both = contract.supportsTwoFrameToggle && contract.supportsMultiShotToggle;
+        const multiLabel = contract.multiShotCount === 10
+          ? t("contract.toggle.multiShot10" as any)
+          : t("contract.toggle.multiShot3" as any);
 
-      {/* Seedance Pro / Pro Fast toggle (Single ↔ Multi-shot 3) */}
-      {contract.supportsMultiShotToggle && (
-        <div className="flex justify-center gap-1 rounded-lg bg-secondary/50 border border-border p-1 max-w-xs mx-auto">
-          <button
-            onClick={() => { setMultiShotMode(false); setResults(null); setPhase("upload"); }}
-            className={`flex-1 px-3 py-1.5 text-xs rounded-md font-medium transition-colors ${
-              !multiShotMode ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            {t("contract.toggle.singleShot" as any)}
-          </button>
-          <button
-            onClick={() => { setMultiShotMode(true); setResults(null); setPhase("upload"); }}
-            className={`flex-1 px-3 py-1.5 text-xs rounded-md font-medium transition-colors ${
-              multiShotMode ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            {t("contract.toggle.multiShot3" as any)}
-          </button>
-        </div>
-      )}
+        const setMode = (mode: "single" | "twoframe" | "multishot") => {
+          setTwoFrameMode(mode === "twoframe");
+          setMultiShotMode(mode === "multishot");
+          setImages([]);
+          setResults(null);
+          setPhase("upload");
+        };
+        const currentMode: "single" | "twoframe" | "multishot" =
+          multiShotMode ? "multishot" : twoFrameMode ? "twoframe" : "single";
+
+        const widthClass = both ? "max-w-md" : "max-w-xs";
+        const btn = (active: boolean) =>
+          `flex-1 px-3 py-1.5 text-xs rounded-md font-medium transition-colors ${
+            active ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+          }`;
+
+        return (
+          <div className={`flex justify-center gap-1 rounded-lg bg-secondary/50 border border-border p-1 ${widthClass} mx-auto`}>
+            <button onClick={() => setMode("single")} className={btn(currentMode === "single")}>
+              {contract.supportsMultiShotToggle && !contract.supportsTwoFrameToggle
+                ? t("contract.toggle.singleShot" as any)
+                : t("contract.toggle.single" as any)}
+            </button>
+            {contract.supportsTwoFrameToggle && (
+              <button onClick={() => setMode("twoframe")} className={btn(currentMode === "twoframe")}>
+                {t("contract.toggle.startEnd" as any)}
+              </button>
+            )}
+            {contract.supportsMultiShotToggle && (
+              <button onClick={() => setMode("multishot")} className={btn(currentMode === "multishot")}>
+                {multiLabel}
+              </button>
+            )}
+          </div>
+        );
+      })()}
 
       {!contract.supportsElementReferences && (
         <div className={`grid gap-4 ${activeSlots === 2 ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1 max-w-lg mx-auto"}`}>
