@@ -55,7 +55,20 @@ export function getContract(model: string): ModelContract {
     }
     if (model.includes("edit")) return EDIT;
     if (model.includes("o1")) return STD;
-    // Standard Kling variants (3.0, 3.0 Omni, 2.6) support 1↔2 frame toggle + audio
+    // Kling 3.0 (base, not Omni/Edit/Motion) — also supports Multi-shot (10) for stitched sequences.
+    if (model === "kling-3.0") {
+      return {
+        slots: 1,
+        slotLabels: ["contract.slot.reference"],
+        supportsTwoFrameToggle: true,
+        supportsAudio: true,
+        supportsMultiShotToggle: true,
+        multiShotCount: 10,
+        extrasHintKey: "contract.hint.klingMultiShot",
+        workflowType: "single",
+      };
+    }
+    // Standard Kling variants (3.0 Omni, 2.6) support 1↔2 frame toggle + audio
     return {
       slots: 1,
       slotLabels: ["contract.slot.reference"],
