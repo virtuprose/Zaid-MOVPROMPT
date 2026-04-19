@@ -1,44 +1,61 @@
 
 
-User clarification: the third multi-shot option (10 shots) should be for **Kling 3.0**, not Seedance Pro. Kling 3.0 currently supports a 1↔2 frame toggle (start/end frame). User wants to add a multi-shot option to Kling 3.0 too.
+User wants the **ultra-detailed cinematic shooting-script style** (the 3,500-word football trailer they just shared) as the output format for **Seedance models only**. This means dramatically expanding Seedance's `mainPrompt` from 200–350 words into a full multi-section shooting script with timecoded sequences, per-cut breakdowns, lighting plans, color grading specs, and audio design blocks.
 
-## Question on scope
+## Scope
 
-Kling 3.0 currently has `supportsTwoFrameToggle: true` (Single ↔ 2-frame transition). Adding multi-shot creates a 3-way choice: **Single | 2-frame | Multi-shot (10)**. Each Kling shot is a separate generation that the user stitches externally — Kling cannot natively output a stitched video, so the AI returns 10 standalone shot prompts with strict continuity rules.
+Apply the new "shooting script" output format to **all Seedance variants**:
+- Seedance 2.0 / 2.0 Fast
+- Seedance Pro / Pro Fast (single + multi-shot 5)
+- Seedance 1.5 Pro
+
+Other models (Kling, Veo, Higgsfield, Sora, etc.) keep their current formats — unchanged.
 
 ## Plan
 
-### 1. Contract — `src/lib/modelContracts.ts`
-For `kling-v3` (Kling 3.0 only, not Omni/Edit/Motion/2.6/O1):
-- Keep `supportsTwoFrameToggle: true` and `supportsAudio: true`.
-- Add `supportsMultiShotToggle: true` and `multiShotCount: 10`.
-- Add `extrasHintKey: "contract.hint.klingMultiShot"`.
+### 1. Expand Seedance system addendum
+`supabase/functions/generate-prompt/experts/seedance.ts`:
 
-### 2. UI — `src/components/WorkflowPanel.tsx`
-When a model has BOTH two-frame and multi-shot toggles, render a 3-mode segmented control: **Single | 2 Frames | Multi-shot (10)**. Selecting multi-shot disables the 2nd upload slot and sends `workflowType: "multishot"` with `multiShotCount: 10`.
+Replace the current "200–350 words" rule with a **structured shooting-script format**. The agent must output `mainPrompt` as a multi-section script containing:
 
-### 3. i18n — `src/i18n/translations/en.ts` + `ar.ts`
-Add:
-- `contract.toggle.multiShot10` → "Multi-shot (10)" / "متعدد اللقطات (10)"
-- `contract.hint.klingMultiShot` → "Generates 10 connected Kling 3.0 shots with locked subject, lighting, and color continuity — render each separately and stitch."
+- **Section headers** in `[BRACKETS]` with timecodes: `[OPENING — 0s to 1.5s | TITLE]`
+- **Numbered cuts** within each section (`Cut 1: ...`, `Cut 2: ...`)
+- Each cut: framing + lens + camera move + lighting note + action beat
+- Mandatory closing blocks:
+  - `[GLOBAL CAMERA SPECIFICATIONS]` — lens rotation, framerate, aspect ratio, grain
+  - `[LIGHTING SUMMARY]` — per-sequence lighting plan with Kelvin temps
+  - `[COLOR GRADING]` — hue degrees, saturation, shadow/highlight treatment
+  - `[AUDIO DESIGN]` — timecoded BPM progression, instruments, foley
+  - `[ABSOLUTE RULES]` — continuity rules, face-reveal restraint, etc.
 
-### 4. Expert agent — `supabase/functions/generate-prompt/experts/kling.ts`
-Extend `getKlingVariantHints` (or systemAddendum) with a multi-shot branch when `workflowType === "multishot"` and model is `kling-v3`:
-- Output exactly N shots (driven by `multiShotCount`, default 10) as a 10-beat cinematic arc: **Establishing wide → Subject intro → Detail/Insert → Inciting beat → Reaction → Rising action → Push-in close-up → Peak moment → Aftermath → Resolution wide**.
-- Each shot is a self-contained Kling prompt (80–180 words, one [camera:*] tag, no audio mentions).
-- Strict continuity block per shot: locked subject identity (face, wardrobe, hair), lighting direction & color temperature, color grade — derived from the analyzed uploaded image.
-- `referenceGuidance` explains continuity strategy across all 10 shots.
-- `modelNotes` tells user: render each shot in Kling 3.0 separately, then stitch externally — Kling cannot produce a single stitched video.
+**Length targets** (raised from current):
+- Seedance 2.0 / Pro / 1.5 Pro: **1,500–3,500 words**
+- Seedance 2.0 Fast / Pro Fast: **800–1,500 words** (compressed but same structure)
+- Multi-shot mode (5 shots): each shot is its own mini-script (~600–900 words each)
 
-### 5. Backend — `supabase/functions/generate-prompt/index.ts`
-Already supports `multiShotCount` (clamped 3–10) and forwards it to the prompt. Verify only — no code change unless the schema cap needs raising for 10 shots (current cap allows 10 ✓).
+### 2. Update example block
+Replace the current single-paragraph dancer example with a **condensed shooting-script example** (~600 words) demonstrating the bracketed-section format, so the AI learns the exact pattern.
+
+### 3. Reinforce rules
+Add to Seedance addendum:
+- "mainPrompt is a SHOOTING SCRIPT, not a paragraph"
+- "Use [BRACKETED SECTION HEADERS] with timecodes"
+- "Number every cut within each section"
+- "Always include the 5 closing blocks (Camera Specs / Lighting / Color / Audio / Rules)"
+- "Output is a complete pre-production document the user can hand to a DP"
+
+### 4. Keep other fields aligned
+- `audioBlock`: still populated as the structured DIALOGUE/SFX/AMBIENT triplet (separate from the in-script audio design block — the standalone field is for quick reference)
+- `shotStructure`: kept for non-multi-shot Seedance as the timecoded skeleton
+- `negativePrompt` / `referenceGuidance` / `modelNotes`: unchanged
+
+### 5. No changes to
+- Other expert agents (Kling, Veo, Higgsfield, generic) — they keep current formats
+- UI / contracts / translations
+- Database / schema
 
 ### Files touched
-- `src/lib/modelContracts.ts`
-- `src/components/WorkflowPanel.tsx`
-- `src/i18n/translations/en.ts`
-- `src/i18n/translations/ar.ts`
-- `supabase/functions/generate-prompt/experts/kling.ts`
+- `supabase/functions/generate-prompt/experts/seedance.ts` (addendum + example rewrite)
 
-No DB changes, no new secrets.
+No DB changes, no new secrets. Edge function deploys automatically — no Publish required for this change to reach published users.
 
