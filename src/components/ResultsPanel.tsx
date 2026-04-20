@@ -133,25 +133,38 @@ const MainPromptHero = ({ value, result, modelLabel }: { value: string; result: 
       toast.error(t("results.failedCopy"));
     }
   };
-  const sections = parseScriptedPrompt(value);
+  const parsed = parseScriptedPrompt(value);
+  const appended: { header: string; body: string }[] = [];
+  if (isMeaningful(result.negativePrompt)) appended.push({ header: "NEGATIVE PROMPT", body: result.negativePrompt });
+  if (isMeaningful(result.audioBlock)) appended.push({ header: "AUDIO DIRECTION", body: result.audioBlock! });
+  if (isMeaningful(result.shotStructure)) appended.push({ header: "SHOT STRUCTURE", body: result.shotStructure! });
+  if (isMeaningful(result.cameraSuggestions)) appended.push({ header: "CAMERA SUGGESTIONS", body: result.cameraSuggestions });
+  const totalSections = (parsed?.length ?? 0) + appended.length;
   return (
     <div className="relative rounded-xl p-4 sm:p-5 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border-2 border-primary/40 shadow-[0_0_30px_-10px_hsl(var(--primary)/0.5)]">
       <div className="flex items-center justify-between gap-2 mb-2">
         <span className="text-[11px] font-semibold uppercase tracking-wider text-primary flex items-center gap-1.5">
           <Sparkles className="w-3.5 h-3.5" /> {t("results.mainPrompt")}
-          {sections && (
+          {totalSections > 0 && (
             <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-primary/15 text-primary">
-              {sections.length} sections
+              {totalSections} sections
             </span>
           )}
         </span>
       </div>
-      {sections ? (
+      {parsed ? (
         <div className="mb-3">
-          <ScriptedPrompt sections={sections} />
+          <ScriptedPrompt sections={[...parsed, ...appended]} />
         </div>
       ) : (
-        <p className="text-sm sm:text-base text-foreground leading-relaxed whitespace-pre-wrap mb-3">{value}</p>
+        <>
+          <p className="text-sm sm:text-base text-foreground leading-relaxed whitespace-pre-wrap mb-3">{value}</p>
+          {appended.length > 0 && (
+            <div className="mb-3">
+              <ScriptedPrompt sections={appended} />
+            </div>
+          )}
+        </>
       )}
       <p className="text-xs text-muted-foreground italic mb-3">{t("results.pasteHint")}</p>
       <Button
@@ -262,13 +275,9 @@ export const ResultsPanel = forwardRef<HTMLDivElement, ResultsPanelProps>(({ res
         )}
 
         {results.map((result, idx) => {
-          const refinements: { label: string; value: string }[] = [
-            { label: t("results.negativePrompt"), value: result.negativePrompt },
-          ];
+          const refinements: { label: string; value: string }[] = [];
           if (isMeaningful(result.cameraTags)) refinements.push({ label: t("results.cameraTags"), value: result.cameraTags! });
-          if (isMeaningful(result.audioBlock)) refinements.push({ label: t("results.audioBlock"), value: result.audioBlock! });
           if (isMeaningful(result.referenceGuidance)) refinements.push({ label: t("results.referenceGuidance"), value: result.referenceGuidance! });
-          if (isMeaningful(result.shotStructure)) refinements.push({ label: t("results.shotStructure"), value: result.shotStructure! });
 
           return <ShotCard key={idx} result={result} idx={idx} total={results.length} refinements={refinements} modelLabel={modelLabel} />;
         })}
@@ -325,19 +334,20 @@ const ShotCard = ({
 
           <MainPromptHero value={result.mainPrompt} result={result} modelLabel={modelLabel} />
 
-          <Collapsible open={refinementsOpen} onOpenChange={setRefinementsOpen}>
-            <SectionToggle label={t("results.optionalRefinements")} count={refinements.length} open={refinementsOpen} />
-            <CollapsibleContent className="pt-3 grid gap-3">
-              {refinements.map((r) => (
-                <ResultCard key={r.label} label={r.label} value={r.value} />
-              ))}
-            </CollapsibleContent>
-          </Collapsible>
+          {refinements.length > 0 && (
+            <Collapsible open={refinementsOpen} onOpenChange={setRefinementsOpen}>
+              <SectionToggle label={t("results.optionalRefinements")} count={refinements.length} open={refinementsOpen} />
+              <CollapsibleContent className="pt-3 grid gap-3">
+                {refinements.map((r) => (
+                  <ResultCard key={r.label} label={r.label} value={r.value} />
+                ))}
+              </CollapsibleContent>
+            </Collapsible>
+          )}
 
           <Collapsible open={notesOpen} onOpenChange={setNotesOpen}>
-            <SectionToggle label={t("results.directorsNotes")} count={2} open={notesOpen} />
-            <CollapsibleContent className="pt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <ResultCard label={t("results.cameraSuggestions")} value={result.cameraSuggestions} />
+            <SectionToggle label={t("results.directorsNotes")} count={1} open={notesOpen} />
+            <CollapsibleContent className="pt-3 grid gap-3">
               <ResultCard label={t("results.modelNotes")} value={result.modelNotes} />
             </CollapsibleContent>
           </Collapsible>
