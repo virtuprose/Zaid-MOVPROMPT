@@ -1,57 +1,37 @@
 
-## Plan — Offer Single / Start+End / Multi-shot for Any Model
 
-When the user picks **Any Model (Universal Prompt)**, show the same 3-way workflow toggle already used by Kling 3.0: **Single Frame | Start + End | Multi-shot**. Today, "Any" falls through to the default `STD` contract, so no toggle appears and the user is locked into a single-frame workflow.
+## Plan — Polish UI: fix gaps, alignment, and visual rhythm
 
-### Behavior per mode (when model = `any`)
+Looking at the current screen (Any Model selected), three issues stand out:
 
-| Mode | Slots | Workflow sent to backend | Description |
-|---|---|---|---|
-| Single Frame | 1 upload | `single` | Universal cinematic prompt for one still. |
-| Start + End | 2 uploads (Start / End) | `twoframe` | Interpolation prompt between two frames. |
-| Multi-shot | 1 concept image | `multishot`, `multiShotCount = 10` | Ten varied shot descriptions (wide, MCU, OTS, etc.). |
+### 1. Model picker trigger looks unbalanced
+The trigger centers "Any Model — Universal Prompt" with its description, but the chevron is pinned far right, leaving a big dead zone on the right and making the card feel lopsided.
 
-In every mode, the generic agent still emits the **Director's Pick** recommendation at the top of the result. The recommendation rubric already accounts for multi-cut scenes (→ Seedance Pro) and transitions (→ Kling 3.0); no rubric changes needed.
+**Fix**: Left-align the label + description inside the trigger (instead of centered), so the text flows naturally from the start edge and the chevron sits at a normal distance. Remove `items-center` on a block that forces centering; use `text-start` and tighten the inner span.
 
-### Technical change — single file
+### 2. Hint strip width mismatches the toggle below it
+The "Any Model picks the best specialist…" strip stretches the full container width (~880px), while the 3-way toggle under it is `max-w-md` (~448px) centered. Two different widths stacked = untidy.
 
-**`src/lib/modelContracts.ts`** — add an explicit branch for `model === "any"` at the top of `getContract`:
+**Fix**: Constrain the hint strip to `max-w-2xl mx-auto` so it lines up with the workflow content rhythm. Keep the toggle centered underneath at `max-w-md` — the nested widths now feel intentional (wider context → narrower control).
 
-```ts
-if (model === "any") {
-  return {
-    slots: 1,
-    slotLabels: ["contract.slot.reference"],
-    supportsTwoFrameToggle: true,
-    supportsMultiShotToggle: true,
-    multiShotCount: 10,
-    extrasHintKey: "contract.hint.anyModel",
-    workflowType: "single",
-  };
-}
-```
+### 3. Vertical gaps too loose between major blocks
+`Index.tsx` wraps model picker + workflow in `space-y-6` (24px) and `WorkflowPanel` itself starts with `space-y-6`. Between the picker card and the hint strip it reads as too much breathing room on desktop.
 
-Because `WorkflowPanel` already renders the 3-way toggle whenever **both** `supportsTwoFrameToggle` and `supportsMultiShotToggle` are true, flipping those flags on for `any` is all that's needed — the UI, the `deriveWorkflowType` helper, slot labels (`frame.start` / `frame.end` / `frame.concept`), and the backend payload (`workflowType` + `multiShotCount`) all light up automatically.
+**Fix**: Tighten the outer wrapper in `Index.tsx` from `space-y-6` to `space-y-4`. Inside `WorkflowPanel`, keep `space-y-6` — but add a small top-level visual divider hairline above the hint only when it's the first element, so the hint reads as a subtitle for the picker rather than a floating island.
 
-### Translation
+### 4. Toggle polish
+The 3-way toggle pill uses `border border-border` + `bg-secondary/50`. Under the dark theme it's near-invisible against the background. Bump to `border-border/60` + `bg-secondary/70`, add subtle `shadow-inner`, and lift the active pill with a real `ring-1 ring-primary/30` instead of just `shadow-sm` so the selected mode reads clearly.
 
-Add one new key for the hint strip that appears above the toggle:
+### Files touched
+- `src/components/ModelPicker.tsx` — left-align trigger content; add `text-start` and remove any centering forcing the dead zone; trim trigger padding slightly.
+- `src/components/WorkflowPanel.tsx` — wrap the hint strip in `max-w-2xl mx-auto`; upgrade toggle styling (border/bg/shadow + active ring).
+- `src/pages/Index.tsx` — reduce wrapper spacing from `space-y-6` to `space-y-4`.
 
-- `contract.hint.anyModel` — EN: *"Any Model picks the best specialist for your scene. Choose a workflow: a single shot, a start→end transition, or a 10-shot storyboard."* ; AR equivalent.
-
-Files: `src/i18n/translations/en.ts`, `src/i18n/translations/ar.ts`.
-
-### Out of scope
-
-- No backend change. `generate-prompt/index.ts` already handles `single`, `twoframe`, and `multishot` for any target model (including `any-model`), and the generic agent's system prompt already documents all three workflow shapes.
-- No change to the Director's Pick logic — it fires on `any-model` regardless of workflow type.
-- No change to other models.
+No translation changes, no logic changes, no backend changes.
 
 ### Verification
+- Any Model view: trigger reads left-aligned cleanly with chevron close to text end; hint strip and toggle visually aligned; spacing between picker and hint feels like a related pair.
+- Switch to Kling 3.0: trigger still looks balanced with the shorter label.
+- Check RTL (Arabic): `text-start` flips naturally so the text begins from the right edge and chevron sits on the left.
+- Mobile (narrow viewport): nothing overflows; toggle remains readable.
 
-- Select **Any Model** → hint strip shows; 3-way toggle appears with Single / Start+End / Multi-shot.
-- **Start + End**: two upload slots labelled *Start Frame* / *End Frame*; Generate produces a transition prompt.
-- **Multi-shot**: one concept slot; Generate returns 10 shot cards.
-- Director's Pick strip appears on the first shot in all three modes.
-- Switch to any non-`any` model → old behavior unchanged (no hint, native toggle set per model).
-- Verify layout + RTL in Arabic.
