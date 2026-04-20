@@ -1,4 +1,5 @@
-import { Copy, Check, RefreshCw, Sparkles, ChevronDown, ClipboardCheck } from "lucide-react";
+import { Copy, Check, RefreshCw, Sparkles, ChevronDown, ClipboardCheck, Wand2 } from "lucide-react";
+import { getModelLabel } from "@/lib/models";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -115,7 +116,7 @@ const ScriptedPrompt = ({ sections }: { sections: { header: string; body: string
   );
 };
 
-const MainPromptHero = ({ value, result, modelLabel }: { value: string; result: ShotResult; modelLabel?: string }) => {
+const MainPromptHero = ({ value, result, modelLabel, onSwitchModel }: { value: string; result: ShotResult; modelLabel?: string; onSwitchModel?: (value: string) => void }) => {
   const { t } = useLanguage();
   const [copied, setCopied] = useState(false);
   const buildFullPrompt = () => {
@@ -145,6 +146,36 @@ const MainPromptHero = ({ value, result, modelLabel }: { value: string; result: 
   const totalSections = (parsed?.length ?? 0) + appended.length;
   return (
     <div className="relative rounded-xl p-4 sm:p-5 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border-2 border-primary/40 shadow-[0_0_30px_-10px_hsl(var(--primary)/0.5)]">
+      {result.recommendedModel && (
+        <div className="mb-3 rounded-lg border-s-4 border-primary bg-primary/10 border border-primary/30 px-3 py-2.5 shadow-[0_0_20px_-8px_hsl(var(--primary)/0.6)]">
+          <div className="flex items-start justify-between gap-3 flex-wrap">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-1.5 mb-1">
+                <Wand2 className="w-3.5 h-3.5 text-primary shrink-0" />
+                <span className="text-[11px] font-bold uppercase tracking-wider text-primary">
+                  {t("results.directorPick")}: {getModelLabel(result.recommendedModel)}
+                </span>
+              </div>
+              {result.recommendedModelReason && (
+                <p className="text-xs text-foreground/85 leading-relaxed">{result.recommendedModelReason}</p>
+              )}
+            </div>
+            {onSwitchModel && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  onSwitchModel(result.recommendedModel!);
+                  toast.success(t("results.switchedToast"));
+                }}
+                className="gap-1.5 border-primary/40 text-primary hover:bg-primary/10 hover:text-primary shrink-0"
+              >
+                <Wand2 className="w-3 h-3" /> {t("results.useThisModel")}
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
       <div className="flex items-center justify-between gap-2 mb-2">
         <span className="text-[11px] font-semibold uppercase tracking-wider text-primary flex items-center gap-1.5">
           <Sparkles className="w-3.5 h-3.5" /> {t("results.mainPrompt")}
@@ -198,7 +229,7 @@ const SectionToggle = ({ label, count, open }: { label: string; count?: number; 
   </CollapsibleTrigger>
 );
 
-export const ResultsPanel = forwardRef<HTMLDivElement, ResultsPanelProps>(({ results, onRegenerate, isLoading, agentName, modelLabel, stitchHint, elementsLegend }, ref) => {
+export const ResultsPanel = forwardRef<HTMLDivElement, ResultsPanelProps>(({ results, onRegenerate, isLoading, agentName, modelLabel, stitchHint, elementsLegend, onSwitchModel }, ref) => {
   const { t } = useLanguage();
   const [allCopied, setAllCopied] = useState(false);
 
@@ -282,7 +313,7 @@ export const ResultsPanel = forwardRef<HTMLDivElement, ResultsPanelProps>(({ res
           if (isMeaningful(result.cameraTags)) refinements.push({ label: t("results.cameraTags"), value: result.cameraTags! });
           if (isMeaningful(result.referenceGuidance)) refinements.push({ label: t("results.referenceGuidance"), value: result.referenceGuidance! });
 
-          return <ShotCard key={idx} result={result} idx={idx} total={results.length} refinements={refinements} modelLabel={modelLabel} />;
+          return <ShotCard key={idx} result={result} idx={idx} total={results.length} refinements={refinements} modelLabel={modelLabel} onSwitchModel={idx === 0 ? onSwitchModel : undefined} />;
         })}
       </motion.div>
     </TooltipProvider>
@@ -295,12 +326,14 @@ const ShotCard = ({
   total,
   refinements,
   modelLabel,
+  onSwitchModel,
 }: {
   result: ShotResult;
   idx: number;
   total: number;
   refinements: { label: string; value: string }[];
   modelLabel?: string;
+  onSwitchModel?: (value: string) => void;
 }) => {
   const { t } = useLanguage();
   const [refinementsOpen, setRefinementsOpen] = useState(false);
@@ -335,7 +368,7 @@ const ShotCard = ({
             </div>
           )}
 
-          <MainPromptHero value={result.mainPrompt} result={result} modelLabel={modelLabel} />
+          <MainPromptHero value={result.mainPrompt} result={result} modelLabel={modelLabel} onSwitchModel={onSwitchModel} />
 
           {refinements.length > 0 && (
             <Collapsible open={refinementsOpen} onOpenChange={setRefinementsOpen}>
