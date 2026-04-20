@@ -23,10 +23,12 @@ export const trackPageVisit = async (pagePath: string = "/") => {
 
 export const trackGeneration = async (workflowType: string, targetModel: string) => {
   try {
+    const { data: { user } } = await supabase.auth.getUser();
     await supabase.from("generation_events").insert({
       session_id: getSessionId(),
       workflow_type: workflowType,
       target_model: targetModel,
+      user_id: user?.id ?? null,
     });
   } catch (e) {
     console.error("Failed to track generation:", e);
