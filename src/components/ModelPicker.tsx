@@ -41,7 +41,7 @@ export const ModelPicker = ({ model, onModelChange }: ModelPickerProps) => {
         <Label className="text-sm font-medium font-display">{t("modelPicker.title" as any)}</Label>
       </div>
       <Select value={model} onValueChange={onModelChange}>
-        <SelectTrigger className="bg-secondary border-border h-11 text-base">
+        <SelectTrigger className="bg-secondary border-border min-h-[3.75rem] h-auto py-2.5 text-base items-center [&>span]:line-clamp-none [&>span]:w-full">
           <SelectValue placeholder={t("config.chooseModel")} />
         </SelectTrigger>
         <SelectContent className="max-h-[420px]">
