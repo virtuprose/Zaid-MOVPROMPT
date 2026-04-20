@@ -58,6 +58,60 @@ const ResultCard = ({ label, value }: { label: string; value: string }) => (
 
 const isMeaningful = (v?: string) => !!v && v.trim().length > 0 && v.trim().toLowerCase() !== "(none)";
 
+// Parse a mainPrompt that uses [BRACKETED SECTION HEADERS] (Seedance shooting-script format)
+// into discrete sections. Returns null if the text doesn't follow the format.
+const parseScriptedPrompt = (text: string): { header: string; body: string }[] | null => {
+  if (!text) return null;
+  // Header line: starts the line, wrapped in [ ... ], may include — | timecodes
+  const headerRe = /^\[([^\]\n]{2,160})\]\s*$/gm;
+  const matches: { header: string; index: number; length: number }[] = [];
+  let m: RegExpExecArray | null;
+  while ((m = headerRe.exec(text)) !== null) {
+    matches.push({ header: m[1].trim(), index: m.index, length: m[0].length });
+  }
+  if (matches.length < 3) return null; // need a real script with multiple sections
+  const sections: { header: string; body: string }[] = [];
+  // Optional preamble before first header
+  if (matches[0].index > 0) {
+    const pre = text.slice(0, matches[0].index).trim();
+    if (pre.length > 0) sections.push({ header: "INTRO", body: pre });
+  }
+  for (let i = 0; i < matches.length; i++) {
+    const start = matches[i].index + matches[i].length;
+    const end = i + 1 < matches.length ? matches[i + 1].index : text.length;
+    sections.push({ header: matches[i].header, body: text.slice(start, end).trim() });
+  }
+  return sections;
+};
+
+const ScriptedPrompt = ({ sections }: { sections: { header: string; body: string }[] }) => {
+  // Default: open the first 2 sections, collapse the rest
+  const [openMap, setOpenMap] = useState<Record<number, boolean>>(() =>
+    Object.fromEntries(sections.map((_, i) => [i, i < 2]))
+  );
+  const toggle = (i: number) => setOpenMap((p) => ({ ...p, [i]: !p[i] }));
+  return (
+    <div className="space-y-2">
+      {sections.map((s, i) => (
+        <Collapsible key={i} open={!!openMap[i]} onOpenChange={() => toggle(i)}>
+          <CollapsibleTrigger className="flex w-full items-center justify-between gap-2 rounded-md px-3 py-2 bg-background/60 hover:bg-background border border-primary/20 transition-colors group">
+            <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-primary font-mono text-start">
+              [{s.header}]
+            </span>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <CopyButton text={s.body} />
+              <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground transition-transform ${openMap[i] ? "rotate-180" : ""}`} />
+            </div>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap px-3 pt-2 pb-1">{s.body}</p>
+          </CollapsibleContent>
+        </Collapsible>
+      ))}
+    </div>
+  );
+};
+
 const MainPromptHero = ({ value, modelLabel }: { value: string; modelLabel?: string }) => {
   const { t } = useLanguage();
   const [copied, setCopied] = useState(false);
@@ -71,14 +125,26 @@ const MainPromptHero = ({ value, modelLabel }: { value: string; modelLabel?: str
       toast.error(t("results.failedCopy"));
     }
   };
+  const sections = parseScriptedPrompt(value);
   return (
     <div className="relative rounded-xl p-4 sm:p-5 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border-2 border-primary/40 shadow-[0_0_30px_-10px_hsl(var(--primary)/0.5)]">
       <div className="flex items-center justify-between gap-2 mb-2">
         <span className="text-[11px] font-semibold uppercase tracking-wider text-primary flex items-center gap-1.5">
           <Sparkles className="w-3.5 h-3.5" /> {t("results.mainPrompt")}
+          {sections && (
+            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-primary/15 text-primary">
+              {sections.length} sections
+            </span>
+          )}
         </span>
       </div>
-      <p className="text-sm sm:text-base text-foreground leading-relaxed whitespace-pre-wrap mb-3">{value}</p>
+      {sections ? (
+        <div className="mb-3">
+          <ScriptedPrompt sections={sections} />
+        </div>
+      ) : (
+        <p className="text-sm sm:text-base text-foreground leading-relaxed whitespace-pre-wrap mb-3">{value}</p>
+      )}
       <p className="text-xs text-muted-foreground italic mb-3">{t("results.pasteHint")}</p>
       <Button
         onClick={handleCopy}
