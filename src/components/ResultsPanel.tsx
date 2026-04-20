@@ -112,12 +112,20 @@ const ScriptedPrompt = ({ sections }: { sections: { header: string; body: string
   );
 };
 
-const MainPromptHero = ({ value, modelLabel }: { value: string; modelLabel?: string }) => {
+const MainPromptHero = ({ value, result, modelLabel }: { value: string; result: ShotResult; modelLabel?: string }) => {
   const { t } = useLanguage();
   const [copied, setCopied] = useState(false);
+  const buildFullPrompt = () => {
+    let out = value;
+    if (isMeaningful(result.negativePrompt)) out += `\n\n[NEGATIVE PROMPT]\n${result.negativePrompt}`;
+    if (isMeaningful(result.audioBlock)) out += `\n\n[AUDIO DIRECTION]\n${result.audioBlock}`;
+    if (isMeaningful(result.shotStructure)) out += `\n\n[SHOT STRUCTURE]\n${result.shotStructure}`;
+    if (isMeaningful(result.cameraSuggestions)) out += `\n\n[CAMERA SUGGESTIONS]\n${result.cameraSuggestions}`;
+    return out;
+  };
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(value);
+      await navigator.clipboard.writeText(buildFullPrompt());
       setCopied(true);
       toast.success(t("results.copied"));
       setTimeout(() => setCopied(false), 2000);
