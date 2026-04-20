@@ -133,25 +133,38 @@ const MainPromptHero = ({ value, result, modelLabel }: { value: string; result: 
       toast.error(t("results.failedCopy"));
     }
   };
-  const sections = parseScriptedPrompt(value);
+  const parsed = parseScriptedPrompt(value);
+  const appended: { header: string; body: string }[] = [];
+  if (isMeaningful(result.negativePrompt)) appended.push({ header: "NEGATIVE PROMPT", body: result.negativePrompt });
+  if (isMeaningful(result.audioBlock)) appended.push({ header: "AUDIO DIRECTION", body: result.audioBlock! });
+  if (isMeaningful(result.shotStructure)) appended.push({ header: "SHOT STRUCTURE", body: result.shotStructure! });
+  if (isMeaningful(result.cameraSuggestions)) appended.push({ header: "CAMERA SUGGESTIONS", body: result.cameraSuggestions });
+  const totalSections = (parsed?.length ?? 0) + appended.length;
   return (
     <div className="relative rounded-xl p-4 sm:p-5 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border-2 border-primary/40 shadow-[0_0_30px_-10px_hsl(var(--primary)/0.5)]">
       <div className="flex items-center justify-between gap-2 mb-2">
         <span className="text-[11px] font-semibold uppercase tracking-wider text-primary flex items-center gap-1.5">
           <Sparkles className="w-3.5 h-3.5" /> {t("results.mainPrompt")}
-          {sections && (
+          {totalSections > 0 && (
             <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-primary/15 text-primary">
-              {sections.length} sections
+              {totalSections} sections
             </span>
           )}
         </span>
       </div>
-      {sections ? (
+      {parsed ? (
         <div className="mb-3">
-          <ScriptedPrompt sections={sections} />
+          <ScriptedPrompt sections={[...parsed, ...appended]} />
         </div>
       ) : (
-        <p className="text-sm sm:text-base text-foreground leading-relaxed whitespace-pre-wrap mb-3">{value}</p>
+        <>
+          <p className="text-sm sm:text-base text-foreground leading-relaxed whitespace-pre-wrap mb-3">{value}</p>
+          {appended.length > 0 && (
+            <div className="mb-3">
+              <ScriptedPrompt sections={appended} />
+            </div>
+          )}
+        </>
       )}
       <p className="text-xs text-muted-foreground italic mb-3">{t("results.pasteHint")}</p>
       <Button
