@@ -1,60 +1,86 @@
 
 
-## Plan — Redesign preset library: visual previews + cleaner browsing
+## Plan — Real video previews for hero presets
 
-### The problem
-Today the "Describe Your Vision" panel hides ~118 presets behind 5 stacked accordions. When opened, each accordion dumps a wall of identical text-only pills. Users can't tell what "Dolly Zoom", "Crash Zoom In", or "Bullet Time" actually looks like — they just see words. The list also feels heavy and visually monotone.
+Upgrade a curated set of "hero" presets from animated icons to short looping video clips hosted on Lovable Cloud Storage. Animated-icon fallback stays for the other ~100 presets and for any clip that fails to load.
 
-### The solution — three combined moves
+### Scope: which presets get real videos
 
-**1. Replace accordions with a tabbed picker + search.**
-One row of 5 category tabs (Basic Camera, Epic Camera, Effects, Catch the Pulse, Mix) sits at the top. Below it, a search box (`Search 118 presets…`) filters the visible grid in real time across all categories. No more accordion stacking; the panel always shows one clean grid at a time.
+Start with **12 hero presets** that benefit most from motion (icons can't convey them well):
 
-**2. Show each preset as a visual preview card, not a text chip.**
-Each preset becomes a small card (~110×80) with:
-- A short looping video/GIF showing the effect (placed on the project's CDN)
-- The preset name overlaid at the bottom
-- Hover → cyan ring + slight scale-up + plays the loop
-- Click → appends to the description (existing behavior preserved)
+`dolly-zoom`, `bullet-time`, `orbit-360`, `crash-zoom-in`, `whip-pan-right`, `fpv-drone`, `levitation`, `explosion`, `disintegration`, `glitch`, `lightning`, `bullet-slow` (mix).
 
-The grid is responsive: 4 columns on desktop, 3 on tablet, 2 on mobile. Selected presets get a cyan border + checkmark badge so users can see what they've already added.
+Adding more later = drop a file in storage + add one row to the registry. No code change.
 
-**3. Hover preview tooltip with bigger demo + plain-language description.**
-On hover (desktop) or long-press (mobile), a Radix Tooltip pops a 320px preview with:
-- Larger demo clip
-- Plain-language description ("The camera tilts down past the subject as it rises in the frame — classic Hitchcock vertigo effect.")
-- Best-for hint ("Great for: Reveals, dramatic entrances")
+### Where the videos live
 
-### Where the preview media comes from
+New **public** Supabase Storage bucket: `preset-previews`.
+- Path convention: `preset-previews/<preset-id>.mp4` (e.g. `preset-previews/dolly-zoom.mp4`)
+- Public URL pattern: `${SUPABASE_URL}/storage/v1/object/public/preset-previews/<id>.mp4`
+- Format: MP4 (H.264), 480×320, ~1.5s loop, muted, ≤150KB each. Optional `<id>.webm` sibling for smaller payload.
 
-We have two options. I recommend **B** because it ships immediately with zero cost and looks clean, then we can upgrade individual presets to real clips over time.
+Created via SQL migration. RLS: public read, no public write (uploads via admin only).
 
-| Option | What it is | Pros | Cons |
-|---|---|---|---|
-| A. Real video clips | Tiny 1-2s MP4/WebM loops per preset, hosted on Supabase Storage | Most informative | Need to source/generate ~118 clips; storage + bandwidth cost; heavy first-load |
-| **B. Animated SVG/Lottie + emoji** *(recommended start)* | Each preset gets a small animated icon (e.g. arrow swooping for Dolly In, ripple for Levitation, lens flare burst for Bloom) built from existing Lucide icons + CSS keyframes | Zero asset cost, instant load, on-brand with the dark cinematic theme, easy to ship today | Less literal than real footage |
-| C. AI-generated thumbnails | Pre-render one still per preset via gemini-3-flash-image-preview, cache in Storage | Visual without video weight | Up-front generation cost, one-time setup task |
+### Sourcing the clips
 
-We start with B and add a "Preview" button on the hover card that, when clicked, triggers an on-demand video generation via the existing `generate-prompt` infrastructure (future enhancement, not in this change).
+Two options for how clips get into the bucket — pick one:
 
-### Files touched
+**A. You upload them** (recommended, fastest, best quality)
+I add an admin-only "Preset Previews" tile in `/admin` with a drag-drop uploader keyed by preset id. You drop 12 MP4s, they go straight to the bucket. No AI cost.
 
-- **`src/components/ConfigPanel.tsx`** — full rewrite of the preset section. Replace `Accordion` with `Tabs` + `Input` (search) + responsive grid of new `<PresetCard>` components. Keep the description textarea + collapsible wrapper as-is.
-- **`src/components/PresetCard.tsx`** *(new)* — single card: animated icon area (top), label (bottom), selected state, click handler. Wrapped in a Radix `Tooltip` that renders the larger hover preview.
-- **`src/lib/presets.ts`** *(new)* — extract the `PRESET_GROUPS` array into its own module, and add per-preset metadata: `{ id, label, group, icon, animationClass, description, bestFor }`. This keeps `ConfigPanel.tsx` lean and lets translations key off `id`.
-- **`src/index.css`** — add a small set of keyframe animations used by preset icons (`@keyframes preset-zoom-in`, `preset-orbit`, `preset-shake`, `preset-pulse`, `preset-drift`, etc. — ~10 reusable animations cover the whole catalog).
-- **`src/i18n/translations/en.ts`** + **`ar.ts`** — add `presets.search.placeholder`, `presets.empty`, `presets.tab.<id>` keys. Per-preset names stay English for now (cinematography terms are universal); add Arabic translations in a follow-up if needed.
+**B. AI-generated stills** (no upload work, lower fidelity)
+A one-time edge function `seed-preset-previews` calls `gemini-3-flash-image-preview` to render a representative still per preset, saves PNG to the bucket. Stills loop with a subtle CSS Ken Burns. Good enough for "what does this look like" but not true motion.
+
+I'll implement **A** unless you say otherwise — it's the only path that gives real motion (the whole point of the upgrade).
+
+### Code changes
+
+**`src/lib/presets.ts`**
+- Add optional `previewVideo?: string` field on `Preset`.
+- Add `PRESETS_WITH_VIDEO: Set<string>` containing the 12 hero IDs above.
+- Helper `getPresetVideoUrl(id)` → builds the public URL from `VITE_SUPABASE_URL` if the id is in the set, else `null`.
+
+**`src/components/PresetCard.tsx`**
+- If `getPresetVideoUrl(id)` returns a URL: render a `<video muted loop playsInline preload="metadata">` filling the icon area. Plays on hover (desktop) and always inside the HoverCard preview.
+- On `error` event: swap back to the animated icon (graceful fallback).
+- Keep the icon as a poster/placeholder while the video buffers.
+- HoverCard: bigger 320px video preview + same description/best-for.
+
+**`src/components/admin/PresetPreviewsSection.tsx`** *(new, only if option A)*
+- Grid of the 12 hero presets, each with current preview thumb + upload button. Uploads to `preset-previews/<id>.mp4` via Supabase JS, replacing on conflict. Shows file size + last-modified.
+
+**`src/pages/Analytics.tsx`** (admin shell) — add the new section card.
+
+### Migration
+
+```sql
+insert into storage.buckets (id, name, public)
+values ('preset-previews', 'preset-previews', true)
+on conflict (id) do nothing;
+
+create policy "Public read preset previews"
+on storage.objects for select
+using (bucket_id = 'preset-previews');
+
+create policy "Admins upload preset previews"
+on storage.objects for insert to authenticated
+with check (bucket_id = 'preset-previews' and public.has_role(auth.uid(), 'admin'));
+
+create policy "Admins update preset previews"
+on storage.objects for update to authenticated
+using (bucket_id = 'preset-previews' and public.has_role(auth.uid(), 'admin'));
+```
 
 ### Behavior preserved
-- Clicking a preset still appends `, <preset>` to the description textarea.
-- The whole section still lives inside the existing collapsible "Describe Your Vision".
-- No changes to the backend or to which presets exist.
+- Presets without a video keep their current animated-icon look exactly.
+- Click-to-add-to-prompt is unchanged.
+- Search, tabs, RTL, mobile grid — all unchanged.
+- Bandwidth: video only loads (`preload="metadata"`) when card is visible/hovered, so cold-start cost is tiny.
 
 ### Verification
-- Open Describe Your Vision → see tabs + search + grid of animated preset cards.
-- Type in search → grid filters live across all categories (no need to switch tabs).
-- Hover any card → cyan ring, animation plays, tooltip with bigger preview + description appears.
-- Click a card → checkmark appears on the card + word is appended to the textarea; click again removes it.
-- Mobile (≤640px): grid drops to 2 columns, tooltip becomes a tap-to-open popover.
-- RTL: tabs and grid flip naturally; tooltip flips to the left side.
+- Hover Dolly Zoom card → real video clip plays in the card and in the larger hover preview.
+- Hover any non-hero preset (e.g. "Pan Left") → animated icon plays as before.
+- Disconnect network → all cards fall back to animated icons cleanly.
+- Admin → "Preset Previews" section → upload an MP4 for `lightning` → reload main app, hovering Lightning shows the new clip.
+- Mobile: tap-and-hold a hero card → video plays in the popover.
 
