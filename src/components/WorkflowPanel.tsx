@@ -306,7 +306,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
   // Slot labels from contract (translation keys)
   const slotLabels: string[] = (() => {
     if (activeSlots === 2) {
-      return [t("frame.start"), t("frame.end")];
+      return [t("frame.start"), t("frame.endOptional" as any)];
     }
     return contract.slotLabels.map((k) => t(k as any));
   })();
