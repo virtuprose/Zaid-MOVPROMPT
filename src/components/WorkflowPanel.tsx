@@ -273,11 +273,12 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
           }
           try {
             const paths: string[] = [];
-            for (let i = 0; i < images.length; i++) {
+            const validImages = images.filter(Boolean);
+            for (let i = 0; i < validImages.length; i++) {
               const filePath = `${user.id}/${row.id}/frame_${i}.jpg`;
               const { error: uploadErr } = await supabase.storage
                 .from("generation-images")
-                .upload(filePath, images[i].file, { contentType: "image/jpeg", upsert: true });
+                .upload(filePath, validImages[i].file, { contentType: "image/jpeg", upsert: true });
               if (uploadErr) {
                 console.error("Image upload error:", uploadErr);
               } else {
