@@ -275,13 +275,9 @@ export const ResultsPanel = forwardRef<HTMLDivElement, ResultsPanelProps>(({ res
         )}
 
         {results.map((result, idx) => {
-          const refinements: { label: string; value: string }[] = [
-            { label: t("results.negativePrompt"), value: result.negativePrompt },
-          ];
+          const refinements: { label: string; value: string }[] = [];
           if (isMeaningful(result.cameraTags)) refinements.push({ label: t("results.cameraTags"), value: result.cameraTags! });
-          if (isMeaningful(result.audioBlock)) refinements.push({ label: t("results.audioBlock"), value: result.audioBlock! });
           if (isMeaningful(result.referenceGuidance)) refinements.push({ label: t("results.referenceGuidance"), value: result.referenceGuidance! });
-          if (isMeaningful(result.shotStructure)) refinements.push({ label: t("results.shotStructure"), value: result.shotStructure! });
 
           return <ShotCard key={idx} result={result} idx={idx} total={results.length} refinements={refinements} modelLabel={modelLabel} />;
         })}
