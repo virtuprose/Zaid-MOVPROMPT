@@ -1,61 +1,70 @@
 
-## Answer — Does the Veo agent handle all Veo models?
+## Answer — Does the Seedance agent handle all Seedance models?
 
-**Yes.** The Veo specialist in `supabase/functions/generate-prompt/experts/veo.ts` matches every model whose value starts with `veo` and applies a unified rule set with light per-variant guidance baked into the system prompt.
+**Yes.** The Seedance specialist in `supabase/functions/generate-prompt/experts/seedance.ts` matches every model whose value starts with `seedance` and applies a unified shooting-script ruleset with mode-based branches expressed inside the system addendum.
 
 ### How routing works
 
-1. **Registry match** (`experts/registry.ts`): `veoAgent.matches(model)` returns true for any `model.startsWith("veo")`. All 5 Veo entries in `src/lib/models.ts` flow into the Veo agent.
-2. **Single `systemAddendum`**: applied to every Veo variant — no separate `getVeoVariantHints` helper like Kling has. Per-variant tuning is expressed as conditional instructions inside that one addendum.
+1. **Registry match** (`experts/registry.ts`): `seedanceAgent.matches(model)` returns true for any `model.startsWith("seedance")`. All 5 Seedance entries in `src/lib/models.ts` flow into the Seedance agent.
+2. **Single `systemAddendum`** (like Veo, unlike Kling): per-variant tuning is conditional inside the addendum, not a separate helper function. Two named modes — **STITCHED MULTI-SHOT** and **@ELEMENT REFERENCE** — gate behavior by model family.
 
 ### Variant coverage matrix
 
-| Model value      | Word target         | Special behavior baked into the addendum |
-|------------------|---------------------|------------------------------------------|
-| `veo-3`          | 150–250 words       | Full structure SCENE → ACTION → CAMERA → LIGHTING; native audio block required. |
-| `veo-3-fast`     | 100–150 words       | `modelNotes` must flag that prompt was kept compact for Fast. |
-| `veo-3.1`        | 150–250 words       | `modelNotes` must emphasize **sustained-motion** guidance — what continues uninterrupted across the clip. |
-| `veo-3.1-fast`   | 100–150 words       | Compact + sustained-motion note. |
-| `veo-3.1-lite`   | 100–150 words       | Compact + sustained-motion note. Lowest fidelity tier. |
+| Model value            | Mode capability                                  | Word target / structure |
+|------------------------|--------------------------------------------------|--------------------------|
+| `seedance-2.0`         | @element references; single-shot script          | Full cinematic shooting script |
+| `seedance-2.0-fast`    | @element references; single-shot script          | Compact shooting script |
+| `seedance-1.5-pro`     | Single-shot script; legacy tier                  | Standard length |
+| `seedance-pro`         | **Stitched multi-shot mode** (numbered cuts)     | Full multi-cut script |
+| `seedance-pro-fast`    | **Stitched multi-shot mode**, compact            | Compact multi-cut script |
 
-All variants share these mandatory rules:
-- **Audio block** — DIALOGUE / SFX / AMBIENT (Veo generates native synced audio; this is the biggest differentiator vs Kling/Seedance).
-- **Real focal lengths** (e.g. "50mm f/2.0", "35mm anamorphic").
-- **Named director/DP styles** when fitting (Deakins, Kubrick, Malick, Lubezki).
-- **Reference guidance** explaining how the uploaded image anchors start frame + character likeness.
-- **Negative prompt additions**: `temporal artifacts, scene drift, sudden lighting change, lip-sync mismatch, audio-video desync`.
-- **Empty fields**: `cameraTags`, `shotStructure` — Veo doesn't use bracketed camera tags.
+Shared mandatory rules across all variants:
+- **Shooting-script `mainPrompt`** with sequence blocks, numbered cuts, camera/lens, lighting, color grading.
+- **Audio block** — DIALOGUE / SFX / AMBIENT (Seedance supports synced audio).
+- **`shotStructure`** populated with cut-by-cut breakdown.
+- **`referenceGuidance`** explaining anchor frame + element refs.
+- **Negative prompt** with Seedance-specific artifacts.
+- **`cameraTags`** left empty — Seedance uses prose camera specs, not bracketed tags.
+
+### Mode-specific behavior baked into the addendum
+
+- **STITCHED MULTI-SHOT MODE** (Pro / Pro Fast): triggered when model contains `pro`. Output is a numbered cut sequence (CUT 1, CUT 2…) with explicit transitions and continuity locks between cuts.
+- **@ELEMENT REFERENCE MODE** (2.0 / 2.0 Fast): triggered when model starts with `seedance-2.0`. Element references from the `ElementGrid` are addressed by `@name` tokens in `mainPrompt` and explained in `referenceGuidance`.
+- **1.5 Pro**: standard single-shot script, no special mode.
 
 ### End-to-end flow per request
 
 ```text
-user picks veo-* model ──▶ generate-prompt edge fn
-                              │
-                              ▼
-                 registry.getAgent(model)
-                              │
-                              ▼
-                     veoAgent selected
-                              │
-                              ▼
-              base systemAddendum (universal Veo rules)
-                              │
-              variant tuning happens via natural-language
+user picks seedance-* model ──▶ generate-prompt edge fn
+                                   │
+                                   ▼
+                     registry.getAgent(model)
+                                   │
+                                   ▼
+                       seedanceAgent selected
+                                   │
+                                   ▼
+              base systemAddendum (universal Seedance rules:
+              shooting script + audio + shotStructure)
+                                   │
+              mode tuning happens via natural-language
               conditionals INSIDE the addendum:
-                • word target by Fast/Lite vs full
-                • sustained-motion emphasis for 3.1*
-                              │
-                              ▼
-                combined system prompt sent
-                to Lovable AI Gateway
+                • Pro / Pro Fast → stitched multi-shot mode
+                • 2.0 / 2.0 Fast → @element reference mode
+                • 1.5 Pro → standard single-shot
+                                   │
+                                   ▼
+                    combined system prompt sent
+                    to Lovable AI Gateway
 ```
 
-### Comparison with Kling
-- **Kling** uses a separate `getKlingVariantHints()` helper because it has 4 distinct workflow shapes (Standard / Edit / Motion Control / Multi-shot) plus engine-tier overlays (O1 / 2.5 Turbo / 2.6 / 3.0).
-- **Veo** is simpler — all 5 variants share the same workflow shape (image-to-video with native audio), differing only in **word budget** and **sustained-motion emphasis**. So one addendum with conditional sentences is enough.
+### Comparison with Kling and Veo
+- **Kling** — `getKlingVariantHints()` helper with 4 workflow shapes (Standard / Edit / Motion Control / Multi-shot) + engine-tier overlays. Most complex.
+- **Seedance** — single addendum with 2 named modes (Stitched Multi-shot, @Element Reference) gated by model name. Medium complexity.
+- **Veo** — single addendum, only word-budget + sustained-motion conditionals. Simplest.
 
 ### Gaps / caveats
-- None functional. All 5 entries in `src/lib/models.ts` under the Google group route correctly.
-- If Google releases a new variant with a different shape (e.g. a Veo "Edit" or "Reference-character" mode), we'd want to add a `getVeoVariantHints()` helper mirroring the Kling pattern. Today, that's not needed.
+- None functional. All 5 entries in `src/lib/models.ts` under the ByteDance group route correctly.
+- If a future Seedance variant introduces a new workflow shape (e.g. an explicit Edit mode), promoting the conditionals into a `getSeedanceVariantHints()` helper — mirroring Kling — would keep the addendum readable.
 
 No code changes — status answer.
