@@ -16,7 +16,7 @@ export const MODEL_GROUPS: ModelGroup[] = [
       { value: "kling-3.0-omni", label: "Kling 3.0 Omni" },
       { value: "kling-3.0-omni-edit", label: "Kling 3.0 Omni Edit" },
       { value: "kling-2.6", label: "Kling 2.6" },
-      { value: "kling-2.6-turbo", label: "Kling 2.6 Turbo" },
+      { value: "kling-2.5-turbo", label: "Kling 2.5 Turbo" },
       { value: "kling-o1-video", label: "Kling O1 Video" },
       { value: "kling-o1-video-edit", label: "Kling O1 Video Edit" },
       { value: "kling-motion-control", label: "Kling Motion Control" },
