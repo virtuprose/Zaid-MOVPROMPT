@@ -1,62 +1,61 @@
 
-## Answer — Does the Kling agent handle all Kling models?
+## Answer — Does the Veo agent handle all Veo models?
 
-**Yes.** The Kling specialist agent in `supabase/functions/generate-prompt/experts/kling.ts` matches every model whose value starts with `kling` and routes each variant through tailored logic.
+**Yes.** The Veo specialist in `supabase/functions/generate-prompt/experts/veo.ts` matches every model whose value starts with `veo` and applies a unified rule set with light per-variant guidance baked into the system prompt.
 
 ### How routing works
 
-1. **Registry match** (`experts/registry.ts`): `klingAgent.matches(model)` returns true for any `model.startsWith("kling")`. All 9 Kling entries in `src/lib/models.ts` flow into the Kling agent.
-
-2. **Base Kling rules** (`systemAddendum`): applied to every variant — 80–180 words, one `[camera:*]` tag, action-verb opening, no audio, mandatory negative prompts.
-
-3. **Variant-specific hints** (`getKlingVariantHints`): appended on top of base rules, picked by substring match on the model ID.
+1. **Registry match** (`experts/registry.ts`): `veoAgent.matches(model)` returns true for any `model.startsWith("veo")`. All 5 Veo entries in `src/lib/models.ts` flow into the Veo agent.
+2. **Single `systemAddendum`**: applied to every Veo variant — no separate `getVeoVariantHints` helper like Kling has. Per-variant tuning is expressed as conditional instructions inside that one addendum.
 
 ### Variant coverage matrix
 
-| Model value                     | Branch triggered                          | Special behavior |
-|---------------------------------|-------------------------------------------|------------------|
-| `kling-3.0`                     | Standard + 3.0 note                       | Strongest cinematic motion. Multi-shot workflow unlocks the 10-beat arc branch. |
-| `kling-3.0-omni`                | Standard + 3.0 note                       | Richer multi-subject scenes allowed. |
-| `kling-3.0-omni-edit`           | Edit variant                              | Surgical transform prompts under 60 words, no scene re-description. |
-| `kling-2.6`                     | Standard + 2.6 legacy note                | Single-subject/single-action, simpler motion. |
-| `kling-2.5-turbo`               | Standard + 2.5 Turbo note                 | Tight 80–140 words, speed-optimized legacy. |
-| `kling-o1-video`                | Standard + O1 enhancement                 | Up to 220 words, multi-subject choreography. |
-| `kling-o1-video-edit`           | Edit variant + O1 enhancement             | Edit rules + O1 reasoning notes. |
-| `kling-motion-control`          | Motion Control variant                    | 3-waypoint camera path, LOCKED/MOVING tagging. |
-| `kling-3.0-motion-control`      | Motion Control variant                    | Same as above; 3.0 engine. |
+| Model value      | Word target         | Special behavior baked into the addendum |
+|------------------|---------------------|------------------------------------------|
+| `veo-3`          | 150–250 words       | Full structure SCENE → ACTION → CAMERA → LIGHTING; native audio block required. |
+| `veo-3-fast`     | 100–150 words       | `modelNotes` must flag that prompt was kept compact for Fast. |
+| `veo-3.1`        | 150–250 words       | `modelNotes` must emphasize **sustained-motion** guidance — what continues uninterrupted across the clip. |
+| `veo-3.1-fast`   | 100–150 words       | Compact + sustained-motion note. |
+| `veo-3.1-lite`   | 100–150 words       | Compact + sustained-motion note. Lowest fidelity tier. |
 
-Plus: **Kling 3.0 + Multi-Shot workflow** triggers a dedicated 10-beat storyboard branch that outputs N self-contained shots with locked continuity blocks.
+All variants share these mandatory rules:
+- **Audio block** — DIALOGUE / SFX / AMBIENT (Veo generates native synced audio; this is the biggest differentiator vs Kling/Seedance).
+- **Real focal lengths** (e.g. "50mm f/2.0", "35mm anamorphic").
+- **Named director/DP styles** when fitting (Deakins, Kubrick, Malick, Lubezki).
+- **Reference guidance** explaining how the uploaded image anchors start frame + character likeness.
+- **Negative prompt additions**: `temporal artifacts, scene drift, sudden lighting change, lip-sync mismatch, audio-video desync`.
+- **Empty fields**: `cameraTags`, `shotStructure` — Veo doesn't use bracketed camera tags.
 
 ### End-to-end flow per request
 
 ```text
-user picks model ──▶ generate-prompt edge fn
-                       │
-                       ▼
-            registry.getAgent(model)
-                       │
-                       ▼
-              klingAgent selected
-                       │
-          ┌────────────┴────────────┐
-          ▼                         ▼
- base systemAddendum      getKlingVariantHints(
- (universal Kling rules)     model, workflowType, shotCount)
-                                    │
-                         routes to ONE of:
-                         • Multi-shot 10-beat
-                         • Motion Control
-                         • Edit
-                         • Standard
-                         then layers: O1 / 2.5 Turbo / 2.6 / 3.0 note
-                                    │
-                                    ▼
-                        combined system prompt sent
-                        to Lovable AI Gateway
+user picks veo-* model ──▶ generate-prompt edge fn
+                              │
+                              ▼
+                 registry.getAgent(model)
+                              │
+                              ▼
+                     veoAgent selected
+                              │
+                              ▼
+              base systemAddendum (universal Veo rules)
+                              │
+              variant tuning happens via natural-language
+              conditionals INSIDE the addendum:
+                • word target by Fast/Lite vs full
+                • sustained-motion emphasis for 3.1*
+                              │
+                              ▼
+                combined system prompt sent
+                to Lovable AI Gateway
 ```
 
-### Gaps / caveats
-- None functional. Every model listed in `src/lib/models.ts` under the Kuaishou group has a matching branch.
-- `kling-2.5-turbo` uses the standard generation flow (not edit/motion-control) — correct, since Turbo is a speed variant of base generation.
+### Comparison with Kling
+- **Kling** uses a separate `getKlingVariantHints()` helper because it has 4 distinct workflow shapes (Standard / Edit / Motion Control / Multi-shot) plus engine-tier overlays (O1 / 2.5 Turbo / 2.6 / 3.0).
+- **Veo** is simpler — all 5 variants share the same workflow shape (image-to-video with native audio), differing only in **word budget** and **sustained-motion emphasis**. So one addendum with conditional sentences is enough.
 
-No code changes needed — this is a status answer. If you want me to add anything (e.g. a new variant, or to expose the variant routing in admin UI), say the word and I'll plan it.
+### Gaps / caveats
+- None functional. All 5 entries in `src/lib/models.ts` under the Google group route correctly.
+- If Google releases a new variant with a different shape (e.g. a Veo "Edit" or "Reference-character" mode), we'd want to add a `getVeoVariantHints()` helper mirroring the Kling pattern. Today, that's not needed.
+
+No code changes — status answer.
