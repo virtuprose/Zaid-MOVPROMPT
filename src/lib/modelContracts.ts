@@ -42,6 +42,19 @@ const EDIT: ModelContract = {
 };
 
 export function getContract(model: string): ModelContract {
+  // Any Model (Universal Prompt) — full 3-way workflow toggle
+  if (model === "any") {
+    return {
+      slots: 1,
+      slotLabels: ["contract.slot.reference"],
+      supportsTwoFrameToggle: true,
+      supportsMultiShotToggle: true,
+      multiShotCount: 10,
+      extrasHintKey: "contract.hint.anyModel",
+      workflowType: "single",
+    };
+  }
+
   // Kling variants
   if (model.startsWith("kling")) {
     if (model.includes("motion-control")) {
