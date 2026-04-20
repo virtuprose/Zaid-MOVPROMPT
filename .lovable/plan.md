@@ -1,72 +1,64 @@
 
-## Plan — Hover tooltips on model dropdown items
+## Plan — AI Director recommends a target model for "Any Model" mode
 
-Users don't know which model fits their scene. Add a short, plain-language description that appears when hovering (or long-pressing on mobile) each model in the dropdown, **before** they select it.
+When the user picks **Any Model (Universal Prompt)**, the AI already writes a model-agnostic prompt. The new ask: after analyzing the scene, the AI Director should **recommend which specific model** (Kling 3.0 / Veo 3.1 / Seedance Pro / etc.) fits this scene best, and that recommendation should appear **at the top of the main prompt box** — clearly labelled, not buried in notes.
 
 ### UX
 
-- Hover any model row in the dropdown → a tooltip pops to the side showing: **one-line strength** + **best-for use cases** + **speed/quality tier**.
-- Tooltip appears after ~200ms hover, disappears on leave. Works with keyboard focus too (accessible).
-- Mobile: since hover doesn't exist, add a small `info` icon on the right side of each row; tapping it opens the same content as a popover without selecting the model.
-- Bilingual: EN + AR, pulled from translation files. Fully RTL-safe.
+- Only visible when the selected model is `any-model` (aka Universal). Other models don't get a recommendation — the user already chose.
+- At the top of the result card, above `mainPrompt`, a highlighted strip:
+  > **Director's pick: Veo 3.1** — Native synced audio + sustained motion makes this dialogue-driven scene land best here.
+- Strip uses primary cyan accent border + subtle glow, matching the cinematic theme.
+- Includes a small **"Use this model"** button that switches the active model in the picker so the user can immediately regenerate with the recommended specialist for an even better prompt.
+- Bilingual — EN + AR, keys in the translation files.
 
-### Descriptions (EN — AR added in the same keys)
+### How the recommendation is produced
 
-| Model | One-liner |
-|---|---|
-| Kling 3.0 | Top cinematic motion & realism. Best for hero shots, dramatic action, and character-driven scenes. |
-| Kling 3.0 Omni | Multi-subject scenes with richer interaction. Best for group shots and complex staging. |
-| Kling 3.0 Omni Edit | Surgical edits to an existing frame — change outfit, object, or lighting without redescribing the scene. |
-| Kling 2.6 | Solid single-subject single-action clips. Use when 3.0 is overkill. |
-| Kling 2.5 Turbo | Fastest legacy tier. Best for quick iteration and previsualization. |
-| Kling O1 Video | Reasoning-heavy choreography, multi-subject, longer arcs. Best for complex narrative beats. |
-| Kling O1 Video Edit | O1 reasoning applied to an edit — precise, context-aware modifications. |
-| Kling Motion Control | Author the camera path yourself with waypoints. Best for virtual dolly/crane moves. |
-| Kling 3.0 Motion Control | Same waypoint camera control on the 3.0 engine. Highest fidelity camera moves. |
-| Veo 3.1 Lite | Fast + cheap Veo with native audio. Best for dialogue/ambient short clips. |
-| Veo 3.1 Fast | Compact Veo 3.1 with sustained motion emphasis. Quick iterations with audio. |
-| Veo 3.1 | Flagship Veo — sustained motion, native synced audio, best-in-class realism for dialogue scenes. |
-| Veo 3 Fast | Compact Veo 3 with audio. Good baseline for talking/performance clips. |
-| Veo 3 | Full-structure Veo 3 — audio + cinematography for dialogue-driven scenes. |
-| Seedance 2.0 Fast | Fast element-reference mode. Best for quick product/character composites with @refs. |
-| Seedance 2.0 | Element references + shooting script. Best for choreographed fashion/dance/product. |
-| Seedance 1.5 Pro | Stable legacy single-shot shooting script. |
-| Seedance Pro | Stitched multi-shot — numbered cuts with continuity. Best for mini-sequences. |
-| Seedance Pro Fast | Fast stitched multi-shot. Best for quick multi-cut iteration. |
+1. The `generate-prompt` edge function, when `targetModel === "any-model"`, adds a new required field to the structured output schema:
+   - `recommendedModel: string` — must be one of the known model values (`kling-3.0`, `veo-3.1`, `seedance-pro`, etc.).
+   - `recommendedModelReason: string` — one sentence, ≤ 25 words, explaining the pick based on scene analysis.
+2. The generic agent's `systemAddendum` gets a new section: **"MODEL RECOMMENDATION PROTOCOL"** — a decision rubric the AI applies after scene decomposition:
+   - Dialogue / lip-sync / native audio needed → Veo 3.1 (or Veo 3.1 Fast if short)
+   - Choreographed multi-cut sequence → Seedance Pro
+   - Product / fashion / element references → Seedance 2.0
+   - Hero cinematic single shot / dramatic realism → Kling 3.0
+   - Precise camera path (dolly/crane waypoints) → Kling 3.0 Motion Control
+   - Edit an existing frame → Kling 3.0 Omni Edit or Grok Imagine Edit
+   - Fast iteration / preview → Kling 2.5 Turbo or Veo 3.1 Fast
+   - Multi-subject complex interaction → Kling 3.0 Omni or Kling O1 Video
+3. The JSON schema enum for `recommendedModel` is restricted to valid values so the AI cannot invent a non-existent model.
+4. For every non-`any-model` request, these two fields are simply not requested — no change to existing flows.
 
-A 6th row added inside the dropdown for **Any Model** → "Let the AI pick the best fit based on your scene and references."
+### Frontend changes
 
-### Technical approach
-
-1. **Data layer** — extend `ModelOption` in `src/lib/models.ts`:
-   ```ts
-   interface ModelOption { value: string; label: string; descriptionKey: string; }
-   ```
-   Each entry gets a `descriptionKey` like `"models.desc.kling-3.0"`. No hardcoded English in the component.
-
-2. **Translations** — add a new `models.desc.*` namespace to both `src/i18n/translations/en.ts` and `src/i18n/translations/ar.ts` with one line per model + one for `any`.
-
-3. **Component** — update `src/components/ModelPicker.tsx`:
-   - Wrap the `SelectContent` tree in a `TooltipProvider` (already available in the design system).
-   - For each `SelectItem`, wrap its children in `<Tooltip>` with `<TooltipTrigger asChild>` on the row content and `<TooltipContent side="right" align="start">` showing the translated description. On RTL, Radix auto-flips `side="right"` to the logical start side; we'll pass `side="right"` and rely on Radix + `dir` attribute set by the language context.
-   - Add an `Info` icon (lucide-react) aligned to the end of each row as a visual affordance and mobile tap target. Clicking the icon opens a `Popover` with the same content and stops propagation so the select value doesn't change.
-   - Keep the existing variant description strip below the trigger unchanged.
-
-4. **Accessibility** — tooltip wired to the row so keyboard focus (arrow keys inside the Select) also surfaces the description. `aria-describedby` on each item linked to the tooltip content id.
-
-5. **Styling** — tooltip uses existing `popover` tokens, max-width `~280px`, two-line soft wrap, subtle primary-cyan left border to feel cinematic and match the dark theme.
+- `ShotResult` type gains `recommendedModel?: string` and `recommendedModelReason?: string` (both optional).
+- `ResultsPanel` → `MainPromptHero`: renders the "Director's pick" strip when `recommendedModel` is present, resolved to its display label via `src/lib/models.ts` lookup.
+- **"Use this model"** button calls a new `onSwitchModel?: (value: string) => void` prop lifted from `WorkflowPanel` → `Index`, which updates the `selectedModel` state the same way `ModelPicker` does. After switching, a toast nudges: "Model switched — click Generate to refine with the specialist."
+- No auto-regeneration (user decides when to spend credits).
 
 ### Files touched
-- `src/lib/models.ts` — add `descriptionKey` to each model + to the "any" option handling.
-- `src/i18n/translations/en.ts` — add `models.desc.*` keys (20 total).
-- `src/i18n/translations/ar.ts` — Arabic equivalents.
-- `src/components/ModelPicker.tsx` — tooltip + info-icon popover on each `SelectItem`.
+
+**Backend**
+- `supabase/functions/generate-prompt/index.ts` — extend `shotSchema` with conditional `recommendedModel` + `recommendedModelReason` fields (added only when `targetModel === "any-model"`); enum list mirrors `src/lib/models.ts` values.
+- `supabase/functions/generate-prompt/experts/generic.ts` — add Model Recommendation Protocol rubric to `systemAddendum` and a recommendation line to the `examples` block.
+
+**Frontend**
+- `src/components/ResultsPanel.tsx` — new "Director's pick" strip at the top of `MainPromptHero`; wire new optional `onSwitchModel` prop.
+- `src/components/WorkflowPanel.tsx` — extend `ShotResult` type; accept & forward `onSwitchModel` prop from parent.
+- `src/pages/Index.tsx` — pass `setSelectedModel` into `WorkflowPanel` as `onSwitchModel`.
+- `src/i18n/translations/en.ts` + `src/i18n/translations/ar.ts` — keys: `results.directorPick`, `results.useThisModel`, `results.switchedToast`.
 
 ### Out of scope
-- No backend changes. No prompt logic changes. Descriptions are UI-only hints.
-- No new deps — `@radix-ui/react-tooltip` and `@radix-ui/react-popover` already in the project.
+
+- No recommendation for model-specific requests (Kling/Veo/Seedance/etc.) — user already chose.
+- No automatic re-run after switching models — the user clicks Generate.
+- No ML-based scoring, no telemetry on pick accuracy (can be added later).
 
 ### Verification
-- Hover each row on desktop → tooltip appears on the correct side in both EN (LTR) and AR (RTL).
-- Tap info icon on mobile → popover opens; tapping the row label still selects the model.
-- Keyboard arrow through items → description is read by screen reader.
+
+- Pick **Any Model**, upload a dialogue-heavy portrait → recommendation should be Veo 3.1 with a reason mentioning audio/dialogue.
+- Pick **Any Model**, upload a product-on-turntable image with 3 element refs → recommendation should be Seedance 2.0.
+- Pick **Any Model**, upload a dramatic landscape for a hero shot → recommendation should be Kling 3.0.
+- Click **Use this model** → picker updates to the recommended value, toast shows, existing result stays visible until user hits Generate again.
+- Verify in AR (RTL): strip border and button alignment flip correctly.
+- Pick **Kling 3.0** (non-any) → no "Director's pick" strip appears.
