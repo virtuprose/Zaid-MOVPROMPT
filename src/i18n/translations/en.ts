@@ -330,6 +330,28 @@ export const en = {
   "elements.uploadMedia": "Upload media",
   "elements.uploadMediaSubtitle": "Image, Video or Audio",
   "contract.hint.seedanceElements": "Upload up to 10 references (images, videos, audio) and mention them in your prompt with @Element 1, @Element 2, etc. Unmentioned ones get auto-tagged.",
+
+  // Model picker descriptions
+  "models.desc.any": "Let the AI pick the best fit based on your scene and references.",
+  "models.desc.kling-3.0": "Top cinematic motion & realism. Best for hero shots, dramatic action, and character-driven scenes.",
+  "models.desc.kling-3.0-omni": "Multi-subject scenes with richer interaction. Best for group shots and complex staging.",
+  "models.desc.kling-3.0-omni-edit": "Surgical edits to an existing frame — change outfit, object, or lighting without redescribing the scene.",
+  "models.desc.kling-2.6": "Solid single-subject, single-action clips. Use when 3.0 is overkill.",
+  "models.desc.kling-2.5-turbo": "Fastest legacy tier. Best for quick iteration and previsualization.",
+  "models.desc.kling-o1-video": "Reasoning-heavy choreography, multi-subject, longer arcs. Best for complex narrative beats.",
+  "models.desc.kling-o1-video-edit": "O1 reasoning applied to an edit — precise, context-aware modifications.",
+  "models.desc.kling-motion-control": "Author the camera path yourself with waypoints. Best for virtual dolly/crane moves.",
+  "models.desc.kling-3.0-motion-control": "Same waypoint camera control on the 3.0 engine. Highest fidelity camera moves.",
+  "models.desc.veo-3.1-lite": "Fast & cheap Veo with native audio. Best for dialogue/ambient short clips.",
+  "models.desc.veo-3.1-fast": "Compact Veo 3.1 with sustained motion emphasis. Quick iterations with audio.",
+  "models.desc.veo-3.1": "Flagship Veo — sustained motion, native synced audio, best-in-class realism for dialogue scenes.",
+  "models.desc.veo-3-fast": "Compact Veo 3 with audio. Good baseline for talking/performance clips.",
+  "models.desc.veo-3": "Full-structure Veo 3 — audio + cinematography for dialogue-driven scenes.",
+  "models.desc.seedance-2.0-fast": "Fast element-reference mode. Best for quick product/character composites with @refs.",
+  "models.desc.seedance-2.0": "Element references + shooting script. Best for choreographed fashion/dance/product.",
+  "models.desc.seedance-1.5-pro": "Stable legacy single-shot shooting script.",
+  "models.desc.seedance-pro": "Stitched multi-shot — numbered cuts with continuity. Best for mini-sequences.",
+  "models.desc.seedance-pro-fast": "Fast stitched multi-shot. Best for quick multi-cut iteration.",
 } as const;
 
 export type TranslationKey = keyof typeof en;
