@@ -59,10 +59,10 @@ export function getKlingVariantHints(model: string, workflowType?: string, shotC
 - O1 has stronger prompt adherence and better text rendering than 3.0/2.6 — you may extend mainPrompt up to 220 words for richer scenes.
 - O1 handles complex multi-subject choreography better — feel free to describe 2–3 simultaneous actions if the source image supports it.
 - modelNotes MUST mention: "O1 generation — uses newer reasoning model, expect tighter prompt adherence and improved text legibility vs 3.0/2.6."`);
-  } else if (m.includes("2.6-turbo")) {
-    blocks.push(`▸ KLING 2.6 TURBO NOTE
-- Turbo is the speed-optimized variant of 2.6 — keep mainPrompt tight (80–140 words), single subject + single primary action.
-- modelNotes MUST mention: "Kling 2.6 Turbo — fastest 2.6 variant, optimized for quick iteration; expect slightly less motion fidelity than standard 2.6."`);
+  } else if (m.includes("2.5-turbo")) {
+    blocks.push(`▸ KLING 2.5 TURBO NOTE
+- Turbo is the speed-optimized legacy variant — keep mainPrompt tight (80–140 words), single subject + single primary action.
+- modelNotes MUST mention: "Kling 2.5 Turbo — speed-optimized legacy variant, optimized for quick iteration; expect slightly less motion fidelity than 2.6/3.0."`);
   } else if (m.includes("2.6")) {
     blocks.push(`▸ KLING 2.6 LEGACY NOTE
 - 2.6 has looser motion fidelity than 3.0 — keep motion descriptions simple and avoid more than one major action per shot.
