@@ -3,7 +3,7 @@ import {
   RefreshCw, RotateCw, Crosshair, Sparkles, Flame, Snowflake,
   Droplets, Zap, Waves, Wind, Eye, Aperture, Hexagon, Star,
   Wand2, Cloud, Sun, CircleDot, Rewind, FastForward, Pause,
-  ArrowUpRight, ArrowDownRight, ArrowLeftRight, Orbit, Plane,
+  ArrowUpRight, ArrowDownRight, Orbit, Plane,
   Radio, Music, Trophy, Shirt, Swords, Drama, Layers, GitMerge,
   type LucideIcon,
 } from "lucide-react";

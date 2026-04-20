@@ -94,6 +94,8 @@ export const ar: Record<TranslationKey, string> = {
   "config.targetModel": "نموذج الذكاء الاصطناعي المستهدف",
   "config.chooseModel": "اختر نموذجاً...",
   "config.anyModel": "أي نموذج — توجيه عام",
+  "presets.search.placeholder": "ابحث في 118 إعدادًا مسبقًا…",
+  "presets.empty": "لا توجد إعدادات مطابقة لبحثك.",
 
   // ResultsPanel
   "results.title": "الاوامر المُولّدة",
