@@ -179,7 +179,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
     setResults(null);
 
     try {
-      const imageBase64s = await Promise.all(images.map((img) => compressImage(img.file)));
+      const imageBase64s = await Promise.all(images.filter(Boolean).map((img) => compressImage(img.file)));
 
       // Process references: images → resized base64; videos → keyframes; audio → metadata only
       const referencesPayload = await Promise.all(
