@@ -80,6 +80,7 @@ export const en = {
   // Frame labels
   "frame.start": "Start Frame",
   "frame.end": "End Frame",
+  "frame.endOptional": "End Frame (Optional)",
   "frame.concept": "Concept Image",
   "frame.your": "Your Frame",
   "frame.upload": "Upload your frame",

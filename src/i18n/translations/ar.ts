@@ -82,6 +82,7 @@ export const ar: Record<TranslationKey, string> = {
   // Frame labels
   "frame.start": "إطار البداية",
   "frame.end": "إطار النهاية",
+  "frame.endOptional": "إطار النهاية (اختياري)",
   "frame.concept": "صورة المفهوم",
   "frame.your": "إطارك",
   "frame.upload": "المشهد",

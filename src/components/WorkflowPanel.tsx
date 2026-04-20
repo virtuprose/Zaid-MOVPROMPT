@@ -100,7 +100,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
 
   const hasRequiredImages = contract.supportsElementReferences
     ? elementItems.length >= 1
-    : activeSlots === 2 ? images.filter(Boolean).length === 2 : images.filter(Boolean).length >= 1;
+    : images.filter(Boolean).length >= 1;
 
   const compressImage = (file: File, maxWidth = 1024, quality = 0.7): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -142,7 +142,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
     }
     setIsAnalyzing(true);
     try {
-      const imageBase64s = await Promise.all(images.map((img) => compressImage(img.file)));
+      const imageBase64s = await Promise.all(images.filter(Boolean).map((img) => compressImage(img.file)));
       const { data, error } = await supabase.functions.invoke("analyze-scene", {
         body: { images: imageBase64s },
       });
@@ -179,7 +179,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
     setResults(null);
 
     try {
-      const imageBase64s = await Promise.all(images.map((img) => compressImage(img.file)));
+      const imageBase64s = await Promise.all(images.filter(Boolean).map((img) => compressImage(img.file)));
 
       // Process references: images → resized base64; videos → keyframes; audio → metadata only
       const referencesPayload = await Promise.all(
@@ -273,11 +273,12 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
           }
           try {
             const paths: string[] = [];
-            for (let i = 0; i < images.length; i++) {
+            const validImages = images.filter(Boolean);
+            for (let i = 0; i < validImages.length; i++) {
               const filePath = `${user.id}/${row.id}/frame_${i}.jpg`;
               const { error: uploadErr } = await supabase.storage
                 .from("generation-images")
-                .upload(filePath, images[i].file, { contentType: "image/jpeg", upsert: true });
+                .upload(filePath, validImages[i].file, { contentType: "image/jpeg", upsert: true });
               if (uploadErr) {
                 console.error("Image upload error:", uploadErr);
               } else {
@@ -305,7 +306,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
   // Slot labels from contract (translation keys)
   const slotLabels: string[] = (() => {
     if (activeSlots === 2) {
-      return [t("frame.start"), t("frame.end")];
+      return [t("frame.start"), t("frame.endOptional" as any)];
     }
     return contract.slotLabels.map((k) => t(k as any));
   })();
