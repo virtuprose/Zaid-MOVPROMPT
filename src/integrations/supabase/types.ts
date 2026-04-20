@@ -202,6 +202,7 @@ export type Database = {
           id: string
           session_id: string
           target_model: string
+          user_id: string | null
           workflow_type: string
         }
         Insert: {
@@ -209,6 +210,7 @@ export type Database = {
           id?: string
           session_id: string
           target_model: string
+          user_id?: string | null
           workflow_type: string
         }
         Update: {
@@ -216,6 +218,7 @@ export type Database = {
           id?: string
           session_id?: string
           target_model?: string
+          user_id?: string | null
           workflow_type?: string
         }
         Relationships: []
