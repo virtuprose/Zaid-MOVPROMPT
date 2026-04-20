@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LogOut, BarChart3, Users, Megaphone, Bot } from "lucide-react";
+import { LogOut, BarChart3, Users, Megaphone, Bot, Film } from "lucide-react";
 import AnalyticsTab, { type Stats } from "@/components/admin/AnalyticsTab";
 import UsersTab from "@/components/admin/UsersTab";
 import AnnouncementsSection from "@/components/admin/AnnouncementsSection";
@@ -134,6 +134,10 @@ const Analytics = () => {
               <Megaphone className="w-4 h-4" />
               Marketing
             </TabsTrigger>
+            <TabsTrigger value="previews" className="gap-2">
+              <Film className="w-4 h-4" />
+              Previews
+            </TabsTrigger>
             <TabsTrigger value="agents" className="gap-2">
               <Bot className="w-4 h-4" />
               Agents
@@ -153,9 +157,12 @@ const Analytics = () => {
               <NotificationsSection />
               <AnnouncementsSection />
               <WelcomePopupSection />
-              <PresetPreviewsSection />
               <EmailTracker />
             </div>
+          </TabsContent>
+
+          <TabsContent value="previews">
+            <PresetPreviewsSection />
           </TabsContent>
 
           <TabsContent value="agents">
