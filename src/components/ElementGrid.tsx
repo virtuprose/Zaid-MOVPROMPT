@@ -25,7 +25,7 @@ const detectKind = (file: File): ReferenceKind => {
   return "image";
 };
 
-const MAX_BYTES = 10 * 1024 * 1024;
+const MAX_BYTES = 25 * 1024 * 1024;
 
 export const ElementGrid = ({ items, onChange, max = 10 }: ElementGridProps) => {
   const { t } = useLanguage();
