@@ -92,6 +92,8 @@ export const en = {
   "config.targetModel": "Target AI Model",
   "config.chooseModel": "Choose a model...",
   "config.anyModel": "Any Model — Universal Prompt",
+  "presets.search.placeholder": "Search 118 presets…",
+  "presets.empty": "No presets match your search.",
 
   // ResultsPanel
   "results.title": "Generated Prompts",

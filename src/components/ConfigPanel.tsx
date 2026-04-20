@@ -1,91 +1,50 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
-import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
-import { ChevronRight, ChevronDown } from "lucide-react";
+import { ChevronRight, ChevronDown, Search } from "lucide-react";
 import { useLanguage } from "@/i18n/LanguageContext";
-
-const PRESET_GROUPS = [
-  {
-    label: "Basic Camera Control",
-    icon: "🎥",
-    description: "Simple camera movements like panning, tilting, and zooming",
-    chips: [
-      "General", "Static", "No Movement", "Natural Movement", "Shake",
-      "Handheld", "Dolly In", "Dolly Out",
-      "Pan Left", "Pan Right", "Tilt Up", "Tilt Down",
-      "Zoom In", "Zoom Out", "Snap Zoom",
-      "Tracking Shot", "Follow", "Push In", "Pull Out",
-      "Pedestal Up", "Pedestal Down", "Swivel", "Drift", "Reveal",
-    ],
-  },
-  {
-    label: "Epic Camera Control",
-    icon: "🎬",
-    description: "Advanced cinematic shots: crane, orbit, drone, and dramatic angles",
-    chips: [
-      "Dolly Zoom", "Dolly Zoom In", "Dolly Zoom Out", "Crash Zoom In", "Crash Zoom Out",
-      "Arc Left", "Arc Right", "Crane Up", "Crane Down",
-      "FPV Drone", "Orbit Left", "Orbit Right", "360 Orbit",
-      "Whip Pan Left", "Whip Pan Right", "Rack Focus",
-      "Bullet Time", "Steadicam", "Dutch Angle",
-      "Bird's Eye", "Worm's Eye", "Jib Up", "Jib Down",
-    ],
-  },
-  {
-    label: "Effects",
-    icon: "✨",
-    description: "Visual transformations: materials, weather, artistic styles, and motion effects",
-    chips: [
-      "Flood", "Freezing", "Melting", "Burning", "Explosion",
-      "Diamond", "Crystal", "Gold", "Silver", "Bronze",
-      "Disintegration", "Pixelation", "Glitch", "Hologram",
-      "Thunder God", "Lightning", "Electric", "Plasma",
-      "Levitation", "Gravity Pull", "Anti-Gravity", "Floating",
-      "Ink Spread", "Watercolor", "Oil Paint", "Sketch",
-      "Smoke", "Fog", "Mist", "Dust",
-      "Bloom", "Lens Flare", "Light Leak", "Prism",
-      "Time Freeze", "Slow Motion", "Speed Ramp", "Reverse",
-      "Portal", "Teleport", "Morph",
-    ],
-  },
-  {
-    label: "Catch the Pulse",
-    icon: "🔥",
-    description: "Action and lifestyle scenes: fashion, sports, stage moments",
-    chips: [
-      "Paparazzi", "Rap Flex", "Catwalk", "Boxing", "Car Chasing",
-      "Glam", "Agent Reveal", "Hero Landing", "Villain Entrance",
-      "Dance Battle", "Concert Stage", "Street Style",
-      "Martial Arts", "Surfing", "Skateboarding",
-      "Fashion Reveal", "Red Carpet",
-    ],
-  },
-  {
-    label: "Mix",
-    icon: "🎭",
-    description: "Two effects combined for unique cinematic results",
-    chips: [
-      "Thunder God x Levitation", "Action Run x Set on Fire",
-      "Disintegration x Levitation", "Freezing x Explosion",
-      "Diamond x Lightning", "Glitch x Hologram",
-      "Smoke x Light Leak", "Crystal x Prism",
-      "Ink Spread x Morph", "Bullet Time x Slow Motion",
-      "FPV Drone x Speed Ramp", "Dutch Angle x Glitch",
-      "Paparazzi x Glam",
-    ],
-  },
-];
+import { PRESETS, PRESET_GROUPS, type PresetGroupId, type Preset } from "@/lib/presets";
+import { PresetCard } from "@/components/PresetCard";
 
 interface ConfigPanelProps {
   description: string;
   onDescriptionChange: (v: string) => void;
 }
 
+const isPresetSelected = (description: string, label: string) => {
+  const tokens = description.split(",").map((t) => t.trim().toLowerCase());
+  return tokens.includes(label.toLowerCase());
+};
+
 export const ConfigPanel = ({ description, onDescriptionChange }: ConfigPanelProps) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<PresetGroupId>("basic");
+  const [search, setSearch] = useState("");
   const { t } = useLanguage();
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return PRESETS.filter((p) => p.group === activeTab);
+    return PRESETS.filter(
+      (p) =>
+        p.label.toLowerCase().includes(q) ||
+        p.description.toLowerCase().includes(q) ||
+        p.bestFor.toLowerCase().includes(q),
+    );
+  }, [activeTab, search]);
+
+  const togglePreset = (preset: Preset) => {
+    const tokens = description.split(",").map((t) => t.trim()).filter(Boolean);
+    const idx = tokens.findIndex((t) => t.toLowerCase() === preset.label.toLowerCase());
+    if (idx >= 0) {
+      tokens.splice(idx, 1);
+    } else {
+      tokens.push(preset.label);
+    }
+    onDescriptionChange(tokens.join(", "));
+  };
 
   return (
     <div className="space-y-4">
@@ -94,47 +53,76 @@ export const ConfigPanel = ({ description, onDescriptionChange }: ConfigPanelPro
           {isOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
           <span>{t("config.describeVision")}</span>
         </CollapsibleTrigger>
-        <CollapsibleContent className="pt-2 space-y-3 data-[state=open]:animate-fade-in data-[state=closed]:animate-fade-out overflow-hidden">
+        <CollapsibleContent className="pt-3 space-y-3 data-[state=open]:animate-fade-in data-[state=closed]:animate-fade-out overflow-hidden">
           <Textarea
             value={description}
             onChange={(e) => onDescriptionChange(e.target.value)}
             placeholder={t("config.placeholder")}
             className="bg-secondary border-border resize-none min-h-[80px]"
           />
-          <Accordion type="single" collapsible className="space-y-1">
-            {PRESET_GROUPS.map((group) => (
-              <AccordionItem key={group.label} value={group.label} className="border-border/40 rounded-md">
-                <AccordionTrigger className="py-2 px-3 text-sm hover:no-underline hover:bg-secondary/50 rounded-md transition-colors">
-                  <div className="flex flex-col items-start gap-0.5">
-                    <div className="flex items-center gap-2">
-                      <span className="text-muted-foreground">{group.label}</span>
-                      <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 font-normal">
-                        {group.chips.length}
-                      </Badge>
-                    </div>
-                    <span className="text-[11px] text-muted-foreground/60 font-normal">{group.description}</span>
-                  </div>
-                </AccordionTrigger>
-                <AccordionContent className="px-3 pb-3 pt-1">
-                  <div className="flex gap-1.5 flex-wrap">
-                    {group.chips.map((chip) => (
-                      <Badge
-                        key={chip}
-                        variant="outline"
-                        className="cursor-pointer hover:bg-primary/20 hover:border-primary transition-colors text-xs px-2.5 py-1"
-                        onClick={() => {
-                          const sep = description.trim() ? ", " : "";
-                          onDescriptionChange(description.trim() + sep + chip);
-                        }}
-                      >
-                        {chip}
-                      </Badge>
+
+          <div className="rounded-lg border border-border/50 bg-card/40 p-3 space-y-3">
+            <div className="relative">
+              <Search size={14} className="absolute start-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder={t("presets.search.placeholder")}
+                className="ps-9 h-9 bg-secondary/60 border-border/50 text-sm"
+              />
+            </div>
+
+            {search.trim() ? (
+              <div>
+                {filtered.length === 0 ? (
+                  <p className="text-xs text-muted-foreground text-center py-8">
+                    {t("presets.empty")}
+                  </p>
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+                    {filtered.map((preset) => (
+                      <PresetCard
+                        key={preset.id}
+                        preset={preset}
+                        selected={isPresetSelected(description, preset.label)}
+                        onToggle={togglePreset}
+                      />
                     ))}
                   </div>
-                </AccordionContent>
-              </AccordionItem>
-            ))}
-          </Accordion>
+                )}
+              </div>
+            ) : (
+              <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as PresetGroupId)}>
+                <TabsList className="w-full h-auto flex-wrap justify-start gap-1 bg-secondary/40 p-1">
+                  {PRESET_GROUPS.map((g) => (
+                    <TabsTrigger
+                      key={g.id}
+                      value={g.id}
+                      className="text-xs gap-1.5 data-[state=active]:bg-primary/20 data-[state=active]:text-primary"
+                    >
+                      <span>{g.icon}</span>
+                      <span>{g.label}</span>
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+                {PRESET_GROUPS.map((g) => (
+                  <TabsContent key={g.id} value={g.id} className="mt-3 space-y-2">
+                    <p className="text-[11px] text-muted-foreground/70">{g.description}</p>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+                      {filtered.map((preset) => (
+                        <PresetCard
+                          key={preset.id}
+                          preset={preset}
+                          selected={isPresetSelected(description, preset.label)}
+                          onToggle={togglePreset}
+                        />
+                      ))}
+                    </div>
+                  </TabsContent>
+                ))}
+              </Tabs>
+            )}
+          </div>
         </CollapsibleContent>
       </Collapsible>
     </div>
