@@ -1,61 +1,59 @@
 
 
-User wants the **ultra-detailed cinematic shooting-script style** (the 3,500-word football trailer they just shared) as the output format for **Seedance models only**. This means dramatically expanding Seedance's `mainPrompt` from 200–350 words into a full multi-section shooting script with timecoded sequences, per-cut breakdowns, lighting plans, color grading specs, and audio design blocks.
+## Plan — Wire official MovPrompt logos into the app
 
-## Scope
+### Assets to add
+Copy uploaded logos into the project:
 
-Apply the new "shooting script" output format to **all Seedance variants**:
-- Seedance 2.0 / 2.0 Fast
-- Seedance Pro / Pro Fast (single + multi-shot 5)
-- Seedance 1.5 Pro
+**`public/`** (PWA / favicon / meta — referenced by URL):
+- `MovPrompt_Logo_Mark.svg` → `public/logo-mark.svg` (replace inline SVG usage where needed)
+- `MovPrompt_Logo_Mark_64.png` → `public/favicon.png` (replace current favicon)
+- `MovPrompt_Logo_Mark_128.png` → `public/icon-192.png` source upgrade (keep filename for manifest — actually upload as `icon-192.png` replacement using the 256 version for crispness)
+- `MovPrompt_Logo_Mark_512.png` → `public/icon-512.png` (replace existing)
+- `MovPrompt_Logo_Mark_256.png` → `public/apple-touch-icon.png` (new, 256 is fine; iOS upscales)
 
-Other models (Kling, Veo, Higgsfield, Sora, etc.) keep their current formats — unchanged.
+**`src/assets/`** (bundled, imported in React components):
+- `MovPrompt_Logo_Mark.svg` → `src/assets/logo-mark.svg`
+- `MovPrompt_Logo_Wordmark.svg` → `src/assets/logo-wordmark.svg`
 
-## Plan
+### Code touchpoints
 
-### 1. Expand Seedance system addendum
-`supabase/functions/generate-prompt/experts/seedance.ts`:
+**1. `index.html`**
+- Splash screen `<img>` already points to `/icon-192.png` — will auto-pick up the new file. No change needed beyond file replacement.
+- Add `<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">`.
 
-Replace the current "200–350 words" rule with a **structured shooting-script format**. The agent must output `mainPrompt` as a multi-section script containing:
+**2. `src/pages/Index.tsx` (hero)**
+- Currently shows text-only "Mov**Prompt**". Add the logo mark to the left of the wordmark:
+  ```tsx
+  <img src={logoMark} alt="" className="w-10 h-10 sm:w-14 sm:h-14" />
+  <h1>Mov<span className="text-primary">Prompt</span></h1>
+  ```
 
-- **Section headers** in `[BRACKETS]` with timecodes: `[OPENING — 0s to 1.5s | TITLE]`
-- **Numbered cuts** within each section (`Cut 1: ...`, `Cut 2: ...`)
-- Each cut: framing + lens + camera move + lighting note + action beat
-- Mandatory closing blocks:
-  - `[GLOBAL CAMERA SPECIFICATIONS]` — lens rotation, framerate, aspect ratio, grain
-  - `[LIGHTING SUMMARY]` — per-sequence lighting plan with Kelvin temps
-  - `[COLOR GRADING]` — hue degrees, saturation, shadow/highlight treatment
-  - `[AUDIO DESIGN]` — timecoded BPM progression, instruments, foley
-  - `[ABSOLUTE RULES]` — continuity rules, face-reveal restraint, etc.
+**3. `src/pages/Auth.tsx` (marketing left column)**
+- Add wordmark SVG above the hero title at top of the left column (above `auth.heroTitle`).
 
-**Length targets** (raised from current):
-- Seedance 2.0 / Pro / 1.5 Pro: **1,500–3,500 words**
-- Seedance 2.0 Fast / Pro Fast: **800–1,500 words** (compressed but same structure)
-- Multi-shot mode (5 shots): each shot is its own mini-script (~600–900 words each)
+**4. `src/pages/Library.tsx` (top bar)**
+- Replace the text-only "MOVPROMPT" back button label with the logo mark + text.
 
-### 2. Update example block
-Replace the current single-paragraph dancer example with a **condensed shooting-script example** (~600 words) demonstrating the bracketed-section format, so the AI learns the exact pattern.
+**5. `src/pages/Analytics.tsx` (admin header)**
+- Add small logo mark next to the "Admin Dashboard" heading.
 
-### 3. Reinforce rules
-Add to Seedance addendum:
-- "mainPrompt is a SHOOTING SCRIPT, not a paragraph"
-- "Use [BRACKETED SECTION HEADERS] with timecodes"
-- "Number every cut within each section"
-- "Always include the 5 closing blocks (Camera Specs / Lighting / Color / Audio / Rules)"
-- "Output is a complete pre-production document the user can hand to a DP"
+**6. `src/components/WelcomePopup.tsx`**
+- Add logo mark at the top of the welcome dialog (visual brand reinforcement on first visit).
 
-### 4. Keep other fields aligned
-- `audioBlock`: still populated as the structured DIALOGUE/SFX/AMBIENT triplet (separate from the in-script audio design block — the standalone field is for quick reference)
-- `shotStructure`: kept for non-multi-shot Seedance as the timecoded skeleton
-- `negativePrompt` / `referenceGuidance` / `modelNotes`: unchanged
-
-### 5. No changes to
-- Other expert agents (Kling, Veo, Higgsfield, generic) — they keep current formats
-- UI / contracts / translations
-- Database / schema
+**7. `src/components/InstallPrompt.tsx`**
+- Replace the generic `<Download>` icon tile with the actual logo mark for stronger brand recognition in the install card.
 
 ### Files touched
-- `supabase/functions/generate-prompt/experts/seedance.ts` (addendum + example rewrite)
+- `public/favicon.png`, `public/icon-192.png`, `public/icon-512.png`, `public/apple-touch-icon.png`, `public/logo-mark.svg` (new files / replacements)
+- `src/assets/logo-mark.svg`, `src/assets/logo-wordmark.svg` (new)
+- `index.html` (one line: apple-touch-icon)
+- `src/pages/Index.tsx` (hero)
+- `src/pages/Auth.tsx` (left marketing column)
+- `src/pages/Library.tsx` (top bar)
+- `src/pages/Analytics.tsx` (admin header)
+- `src/components/WelcomePopup.tsx` (header)
+- `src/components/InstallPrompt.tsx` (icon tile)
 
-No DB changes, no new secrets. Edge function deploys automatically — no Publish required for this change to reach published users.
+No backend, DB, or translation changes needed. Frontend changes will require **Publish → Update** to reach live users on movprompt.com.
 
