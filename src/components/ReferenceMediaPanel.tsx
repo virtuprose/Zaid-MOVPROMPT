@@ -7,7 +7,7 @@ import { useLanguage } from "@/i18n/LanguageContext";
 import { useToast } from "@/hooks/use-toast";
 
 const MAX_REFERENCES = 10;
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB
 
 interface ReferenceMediaPanelProps {
   items: ReferenceMediaItem[];
