@@ -20,6 +20,8 @@ interface ShotResult {
   cameraTags?: string;
   referenceGuidance?: string;
   shotStructure?: string;
+  recommendedModel?: string;
+  recommendedModelReason?: string;
 }
 
 interface ResultsPanelProps {
@@ -30,6 +32,7 @@ interface ResultsPanelProps {
   modelLabel?: string;
   stitchHint?: boolean;
   elementsLegend?: { index: number; kind: "image" | "video" | "audio"; preview?: string }[];
+  onSwitchModel?: (value: string) => void;
 }
 
 const CopyButton = ({ text }: { text: string }) => {
