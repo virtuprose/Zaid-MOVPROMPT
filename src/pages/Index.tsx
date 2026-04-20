@@ -104,7 +104,7 @@ const Index = () => {
           className="space-y-6"
         >
           <ModelPicker model={model} onModelChange={setModel} />
-          <WorkflowPanel selectedModel={model} />
+          <WorkflowPanel selectedModel={model} onSwitchModel={setModel} />
         </motion.div>
 
         {/* Footer */}
