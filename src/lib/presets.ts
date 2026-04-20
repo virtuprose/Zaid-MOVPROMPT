@@ -178,3 +178,31 @@ export const PRESETS: Preset[] = [
 
 export const getPresetsByGroup = (group: PresetGroupId) =>
   PRESETS.filter((p) => p.group === group);
+
+/**
+ * Hero presets that ship with real looping video previews.
+ * Adding more = upload <id>.mp4 to the `preset-previews` bucket and add the id here.
+ */
+export const PRESETS_WITH_VIDEO = new Set<string>([
+  "dolly-zoom",
+  "bullet-time",
+  "orbit-360",
+  "crash-zoom-in",
+  "whip-pan-right",
+  "fpv-drone",
+  "levitation",
+  "explosion",
+  "disintegration",
+  "glitch",
+  "lightning",
+  "mix-bullet-slow",
+]);
+
+export const HERO_PRESET_IDS = Array.from(PRESETS_WITH_VIDEO);
+
+export const getPresetVideoUrl = (id: string): string | null => {
+  if (!PRESETS_WITH_VIDEO.has(id)) return null;
+  const base = import.meta.env.VITE_SUPABASE_URL;
+  if (!base) return null;
+  return `${base}/storage/v1/object/public/preset-previews/${id}.mp4`;
+};

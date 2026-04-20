@@ -11,6 +11,7 @@ import NotificationsSection from "@/components/admin/NotificationsSection";
 import EmailTracker from "@/components/admin/EmailTracker";
 import WelcomePopupSection from "@/components/admin/WelcomePopupSection";
 import AgentProfilesSection from "@/components/admin/AgentProfilesSection";
+import PresetPreviewsSection from "@/components/admin/PresetPreviewsSection";
 import { useLanguage } from "@/i18n/LanguageContext";
 
 const Analytics = () => {
@@ -152,6 +153,7 @@ const Analytics = () => {
               <NotificationsSection />
               <AnnouncementsSection />
               <WelcomePopupSection />
+              <PresetPreviewsSection />
               <EmailTracker />
             </div>
           </TabsContent>
