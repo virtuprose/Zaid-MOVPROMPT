@@ -334,19 +334,20 @@ const ShotCard = ({
 
           <MainPromptHero value={result.mainPrompt} result={result} modelLabel={modelLabel} />
 
-          <Collapsible open={refinementsOpen} onOpenChange={setRefinementsOpen}>
-            <SectionToggle label={t("results.optionalRefinements")} count={refinements.length} open={refinementsOpen} />
-            <CollapsibleContent className="pt-3 grid gap-3">
-              {refinements.map((r) => (
-                <ResultCard key={r.label} label={r.label} value={r.value} />
-              ))}
-            </CollapsibleContent>
-          </Collapsible>
+          {refinements.length > 0 && (
+            <Collapsible open={refinementsOpen} onOpenChange={setRefinementsOpen}>
+              <SectionToggle label={t("results.optionalRefinements")} count={refinements.length} open={refinementsOpen} />
+              <CollapsibleContent className="pt-3 grid gap-3">
+                {refinements.map((r) => (
+                  <ResultCard key={r.label} label={r.label} value={r.value} />
+                ))}
+              </CollapsibleContent>
+            </Collapsible>
+          )}
 
           <Collapsible open={notesOpen} onOpenChange={setNotesOpen}>
-            <SectionToggle label={t("results.directorsNotes")} count={2} open={notesOpen} />
-            <CollapsibleContent className="pt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <ResultCard label={t("results.cameraSuggestions")} value={result.cameraSuggestions} />
+            <SectionToggle label={t("results.directorsNotes")} count={1} open={notesOpen} />
+            <CollapsibleContent className="pt-3 grid gap-3">
               <ResultCard label={t("results.modelNotes")} value={result.modelNotes} />
             </CollapsibleContent>
           </Collapsible>
