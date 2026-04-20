@@ -61,9 +61,10 @@ const UsersTab = () => {
 
   const fetchUsers = async () => {
     setLoading(true);
-    const [{ data: profiles }, { data: roles }, { data: history }] = await Promise.all([
+    const [{ data: profiles }, { data: roles }, { data: events }, { data: history }] = await Promise.all([
       supabase.from("profiles").select("*"),
       supabase.from("user_roles").select("*"),
+      supabase.from("generation_events").select("user_id"),
       supabase.from("prompt_history").select("user_id"),
     ]);
 
@@ -72,9 +73,17 @@ const UsersTab = () => {
       if (r.role === "admin") roleMap[r.user_id] = "admin";
     });
 
-    const genCount: Record<string, number> = {};
+    const eventCount: Record<string, number> = {};
+    (events || []).forEach((e) => {
+      if (e.user_id) eventCount[e.user_id] = (eventCount[e.user_id] || 0) + 1;
+    });
+    const historyCount: Record<string, number> = {};
     (history || []).forEach((h) => {
-      genCount[h.user_id] = (genCount[h.user_id] || 0) + 1;
+      historyCount[h.user_id] = (historyCount[h.user_id] || 0) + 1;
+    });
+    const genCount: Record<string, number> = {};
+    new Set([...Object.keys(eventCount), ...Object.keys(historyCount)]).forEach((uid) => {
+      genCount[uid] = Math.max(eventCount[uid] || 0, historyCount[uid] || 0);
     });
 
     const merged: UserRow[] = (profiles || []).map((p) => ({
@@ -197,8 +206,8 @@ const UsersTab = () => {
         <Button variant="outline" size="sm" onClick={() => {
           const lines: string[] = [
             "=== MovPrompt Users Report ===", "",
-            "Name,Email,Role,Status,Joined",
-            ...users.map((u) => `"${(u.display_name || "—").replace(/"/g, '""')}","${u.email || "—"}","${u.role}","${u.is_active ? "Active" : "Deactivated"}","${u.created_at ? new Date(u.created_at).toLocaleDateString() : "—"}"`),
+            "Name,Email,Role,Generations,Status,Joined",
+            ...users.map((u) => `"${(u.display_name || "—").replace(/"/g, '""')}","${u.email || "—"}","${u.role}","${u.generations}","${u.is_active ? "Active" : "Deactivated"}","${u.created_at ? new Date(u.created_at).toLocaleDateString() : "—"}"`),
           ];
           const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8;" });
           const url = URL.createObjectURL(blob);
@@ -234,9 +243,6 @@ const UsersTab = () => {
               {paginatedUsers.map((u) => (
                 <TableRow key={u.id} className={!u.is_active ? "opacity-50" : ""}>
                   <TableCell>
-                    <span className="text-sm font-medium text-primary">{u.generations}</span>
-                  </TableCell>
-                  <TableCell>
                     <Avatar className="h-8 w-8">
                       <AvatarImage src={u.avatar_url || undefined} />
                       <AvatarFallback className="text-xs">
@@ -250,6 +256,15 @@ const UsersTab = () => {
                     <Badge variant={u.role === "admin" ? "default" : "secondary"} className="text-xs">
                       {u.role}
                     </Badge>
+                  </TableCell>
+                  <TableCell>
+                    {u.generations > 0 ? (
+                      <Badge variant="outline" className="text-xs border-primary/40 text-primary font-medium">
+                        {u.generations}
+                      </Badge>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">—</span>
+                    )}
                   </TableCell>
                   <TableCell>
                     {u.is_active ? (
