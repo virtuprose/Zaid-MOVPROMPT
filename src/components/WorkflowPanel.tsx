@@ -323,7 +323,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
     <div className="space-y-6">
       {/* Extras hint */}
       {extrasHint && (
-        <div className="flex items-start gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-xs text-foreground/80">
+        <div className="max-w-2xl mx-auto flex items-start gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-xs text-foreground/80">
           <Info className="w-3.5 h-3.5 text-primary mt-0.5 shrink-0" />
           <span>{extrasHint}</span>
         </div>
@@ -381,12 +381,12 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
 
         const widthClass = both ? "max-w-md" : "max-w-xs";
         const btn = (active: boolean) =>
-          `flex-1 px-3 py-1.5 text-xs rounded-md font-medium transition-colors ${
-            active ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+          `flex-1 px-3 py-1.5 text-xs rounded-md font-medium transition-all ${
+            active ? "bg-card text-foreground shadow-sm ring-1 ring-primary/30" : "text-muted-foreground hover:text-foreground"
           }`;
 
         return (
-          <div className={`flex justify-center gap-1 rounded-lg bg-secondary/50 border border-border p-1 ${widthClass} mx-auto`}>
+          <div className={`flex justify-center gap-1 rounded-lg bg-secondary/70 border border-border/60 shadow-inner p-1 ${widthClass} mx-auto`}>
             <button onClick={() => setMode("single")} className={btn(currentMode === "single")}>
               {contract.supportsMultiShotToggle && !contract.supportsTwoFrameToggle
                 ? t("contract.toggle.singleShot" as any)
