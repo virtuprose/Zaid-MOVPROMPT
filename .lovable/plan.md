@@ -1,37 +1,45 @@
 
 
-## Plan — Polish UI: fix gaps, alignment, and visual rhythm
+## Plan — Make the end frame optional in Start + End mode
 
-Looking at the current screen (Any Model selected), three issues stand out:
+### What changes
 
-### 1. Model picker trigger looks unbalanced
-The trigger centers "Any Model — Universal Prompt" with its description, but the chevron is pinned far right, leaving a big dead zone on the right and making the card feel lopsided.
+When the user picks **Start + End** workflow, the second upload slot ("End Frame") becomes optional. The user only needs the start frame to proceed. If no end frame is provided, the backend receives a single image but with `workflowType: "twoframe"`, which tells the AI to imagine the destination frame.
 
-**Fix**: Left-align the label + description inside the trigger (instead of centered), so the text flows naturally from the start edge and the chevron sits at a normal distance. Remove `items-center` on a block that forces centering; use `text-start` and tighten the inner span.
+### Changes
 
-### 2. Hint strip width mismatches the toggle below it
-The "Any Model picks the best specialist…" strip stretches the full container width (~880px), while the 3-way toggle under it is `max-w-md` (~448px) centered. Two different widths stacked = untidy.
+**`src/components/WorkflowPanel.tsx`**
 
-**Fix**: Constrain the hint strip to `max-w-2xl mx-auto` so it lines up with the workflow content rhythm. Keep the toggle centered underneath at `max-w-md` — the nested widths now feel intentional (wider context → narrower control).
+1. **Relax `hasRequiredImages`**: Change the two-frame check from requiring exactly 2 images to requiring at least 1:
+   ```ts
+   activeSlots === 2 ? images.filter(Boolean).length >= 1 : images.filter(Boolean).length >= 1
+   ```
+   (Simplifies to just `images.filter(Boolean).length >= 1` for both cases.)
 
-### 3. Vertical gaps too loose between major blocks
-`Index.tsx` wraps model picker + workflow in `space-y-6` (24px) and `WorkflowPanel` itself starts with `space-y-6`. Between the picker card and the hint strip it reads as too much breathing room on desktop.
+2. **Filter images before sending**: In `handleAnalyze` and `handleGenerate`, filter out empty slots so only uploaded images are sent:
+   ```ts
+   const imageBase64s = await Promise.all(
+     images.filter(Boolean).map((img) => compressImage(img.file))
+   );
+   ```
 
-**Fix**: Tighten the outer wrapper in `Index.tsx` from `space-y-6` to `space-y-4`. Inside `WorkflowPanel`, keep `space-y-6` — but add a small top-level visual divider hairline above the hint only when it's the first element, so the hint reads as a subtitle for the picker rather than a floating island.
+3. **Add "(Optional)" label to end frame slot**: Update the slot label for the second frame to show it's optional. Change the `slotLabels` logic to append "(Optional)" to the end-frame label when in twoframe mode.
 
-### 4. Toggle polish
-The 3-way toggle pill uses `border border-border` + `bg-secondary/50`. Under the dark theme it's near-invisible against the background. Bump to `border-border/60` + `bg-secondary/70`, add subtle `shadow-inner`, and lift the active pill with a real `ring-1 ring-primary/30` instead of just `shadow-sm` so the selected mode reads clearly.
+**`src/components/ImageUploadZone.tsx`** — No change needed; it already handles an empty state gracefully.
 
-### Files touched
-- `src/components/ModelPicker.tsx` — left-align trigger content; add `text-start` and remove any centering forcing the dead zone; trim trigger padding slightly.
-- `src/components/WorkflowPanel.tsx` — wrap the hint strip in `max-w-2xl mx-auto`; upgrade toggle styling (border/bg/shadow + active ring).
-- `src/pages/Index.tsx` — reduce wrapper spacing from `space-y-6` to `space-y-4`.
+**`src/i18n/translations/en.ts`** — Add key `"frame.endOptional": "End Frame (Optional)"`.
 
-No translation changes, no logic changes, no backend changes.
+**`src/i18n/translations/ar.ts`** — Add key `"frame.endOptional": "إطار النهاية (اختياري)"`.
+
+**`src/components/WorkflowPanel.tsx` (frame labels)** — Use `frame.endOptional` instead of `frame.end` for the second slot label when in twoframe mode.
+
+### No backend change
+The `generate-prompt` edge function already handles receiving 1 image with `workflowType: "twoframe"` — the generic agent's system prompt instructs it to imagine the missing end state when only one frame is provided.
 
 ### Verification
-- Any Model view: trigger reads left-aligned cleanly with chevron close to text end; hint strip and toggle visually aligned; spacing between picker and hint feels like a related pair.
-- Switch to Kling 3.0: trigger still looks balanced with the shorter label.
-- Check RTL (Arabic): `text-start` flips naturally so the text begins from the right edge and chevron sits on the left.
-- Mobile (narrow viewport): nothing overflows; toggle remains readable.
+- Select **Start + End** → second slot shows "End Frame (Optional)".
+- Upload only start frame → Analyze and Generate buttons are enabled and work.
+- Upload both frames → still works as before.
+- Single Frame and Multi-shot modes unaffected.
+- RTL layout correct.
 
