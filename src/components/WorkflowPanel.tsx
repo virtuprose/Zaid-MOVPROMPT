@@ -142,7 +142,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
     }
     setIsAnalyzing(true);
     try {
-      const imageBase64s = await Promise.all(images.map((img) => compressImage(img.file)));
+      const imageBase64s = await Promise.all(images.filter(Boolean).map((img) => compressImage(img.file)));
       const { data, error } = await supabase.functions.invoke("analyze-scene", {
         body: { images: imageBase64s },
       });
