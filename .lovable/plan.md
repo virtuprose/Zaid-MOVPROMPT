@@ -1,59 +1,39 @@
 
 
-## Plan — Wire official MovPrompt logos into the app
+## Issue
+The "File is over 10MB" toast comes from the **Reference Media** / **Element Grid** uploaders (not the main image upload). The current cap is `MAX_FILE_SIZE = 10 * 1024 * 1024` in two files. The user's "Professional Chat Image from Freepik.png" exceeded that cap.
 
-### Assets to add
-Copy uploaded logos into the project:
+## Root cause
+- `src/components/ReferenceMediaPanel.tsx` line 10 — `const MAX_FILE_SIZE = 10 * 1024 * 1024`
+- `src/components/ElementGrid.tsx` line 28 — `const MAX_BYTES = 10 * 1024 * 1024`
+- Translations: `en.ts` ("File is over 10MB", "Max 10MB per file") + matching `ar.ts` strings.
 
-**`public/`** (PWA / favicon / meta — referenced by URL):
-- `MovPrompt_Logo_Mark.svg` → `public/logo-mark.svg` (replace inline SVG usage where needed)
-- `MovPrompt_Logo_Mark_64.png` → `public/favicon.png` (replace current favicon)
-- `MovPrompt_Logo_Mark_128.png` → `public/icon-192.png` source upgrade (keep filename for manifest — actually upload as `icon-192.png` replacement using the 256 version for crispness)
-- `MovPrompt_Logo_Mark_512.png` → `public/icon-512.png` (replace existing)
-- `MovPrompt_Logo_Mark_256.png` → `public/apple-touch-icon.png` (new, 256 is fine; iOS upscales)
+Note: the main `ImageUploadZone` (hero/single/two-frame images) has **no size cap** — those go through `compressImage()` in `WorkflowPanel`, which downscales to 1280px JPEG before sending to the edge function. Reference & element uploads need the same treatment OR a higher cap.
 
-**`src/assets/`** (bundled, imported in React components):
-- `MovPrompt_Logo_Mark.svg` → `src/assets/logo-mark.svg`
-- `MovPrompt_Logo_Wordmark.svg` → `src/assets/logo-wordmark.svg`
+## Plan — raise to 25 MB and clarify copy
 
-### Code touchpoints
+Best balance of user freedom + edge-function payload safety (Supabase function payloads cap around 6 MB after base64 — but reference images are also compressed via `compressImageFile` to ~1024px before send, so a 25 MB source PNG ends up well under that). Videos still get keyframes extracted client-side, so source size only impacts browser memory.
 
-**1. `index.html`**
-- Splash screen `<img>` already points to `/icon-192.png` — will auto-pick up the new file. No change needed beyond file replacement.
-- Add `<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">`.
+### Changes
 
-**2. `src/pages/Index.tsx` (hero)**
-- Currently shows text-only "Mov**Prompt**". Add the logo mark to the left of the wordmark:
-  ```tsx
-  <img src={logoMark} alt="" className="w-10 h-10 sm:w-14 sm:h-14" />
-  <h1>Mov<span className="text-primary">Prompt</span></h1>
-  ```
+**1. `src/components/ReferenceMediaPanel.tsx`**
+- Bump `MAX_FILE_SIZE` from `10 * 1024 * 1024` → `25 * 1024 * 1024`.
 
-**3. `src/pages/Auth.tsx` (marketing left column)**
-- Add wordmark SVG above the hero title at top of the left column (above `auth.heroTitle`).
+**2. `src/components/ElementGrid.tsx`**
+- Bump `MAX_BYTES` from `10 * 1024 * 1024` → `25 * 1024 * 1024`.
 
-**4. `src/pages/Library.tsx` (top bar)**
-- Replace the text-only "MOVPROMPT" back button label with the logo mark + text.
+**3. `src/i18n/translations/en.ts`**
+- `references.tooLarge`: `"File is over 10MB"` → `"File is over 25MB"`
+- `references.videoHint`: `"...Max 10MB per file."` → `"...Max 25MB per file."`
 
-**5. `src/pages/Analytics.tsx` (admin header)**
-- Add small logo mark next to the "Admin Dashboard" heading.
-
-**6. `src/components/WelcomePopup.tsx`**
-- Add logo mark at the top of the welcome dialog (visual brand reinforcement on first visit).
-
-**7. `src/components/InstallPrompt.tsx`**
-- Replace the generic `<Download>` icon tile with the actual logo mark for stronger brand recognition in the install card.
+**4. `src/i18n/translations/ar.ts`**
+- Same two strings updated to "25MB".
 
 ### Files touched
-- `public/favicon.png`, `public/icon-192.png`, `public/icon-512.png`, `public/apple-touch-icon.png`, `public/logo-mark.svg` (new files / replacements)
-- `src/assets/logo-mark.svg`, `src/assets/logo-wordmark.svg` (new)
-- `index.html` (one line: apple-touch-icon)
-- `src/pages/Index.tsx` (hero)
-- `src/pages/Auth.tsx` (left marketing column)
-- `src/pages/Library.tsx` (top bar)
-- `src/pages/Analytics.tsx` (admin header)
-- `src/components/WelcomePopup.tsx` (header)
-- `src/components/InstallPrompt.tsx` (icon tile)
+- `src/components/ReferenceMediaPanel.tsx`
+- `src/components/ElementGrid.tsx`
+- `src/i18n/translations/en.ts`
+- `src/i18n/translations/ar.ts`
 
-No backend, DB, or translation changes needed. Frontend changes will require **Publish → Update** to reach live users on movprompt.com.
+No backend, no schema, no edge-function changes. Frontend-only — requires **Publish → Update** to reach live users.
 
