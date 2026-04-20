@@ -15,6 +15,7 @@ import AnnouncementBanner from "@/components/AnnouncementBanner";
 import NotificationBell from "@/components/NotificationBell";
 import { InstallPrompt } from "@/components/InstallPrompt";
 import WelcomePopup from "@/components/WelcomePopup";
+import logoMark from "@/assets/logo-mark.svg";
 
 const Index = () => {
   const [model, setModel] = useState("any");
@@ -85,6 +86,7 @@ const Index = () => {
           className="text-center mb-8 sm:mb-12"
         >
           <div className="flex items-center justify-center gap-3 mb-3 sm:mb-4">
+            <img src={logoMark} alt="MovPrompt" className="w-10 h-10 sm:w-14 sm:h-14" />
             <h1 className="text-3xl tracking-tight font-mono sm:text-5xl font-bold">
               Mov<span className="text-primary">Prompt</span>
             </h1>

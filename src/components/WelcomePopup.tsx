@@ -53,7 +53,10 @@ const WelcomePopup = () => {
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-md" dir={isAr ? "rtl" : "ltr"}>
         <DialogHeader>
-          <DialogTitle className="text-xl">{title}</DialogTitle>
+          <div className="flex items-center gap-2.5">
+            <img src="/logo-mark.svg" alt="" className="w-7 h-7" />
+            <DialogTitle className="text-xl">{title}</DialogTitle>
+          </div>
         </DialogHeader>
         {popup.image_url && (
           /\.(mp4|webm|mov|ogg)(\?|$)/i.test(popup.image_url) ? (

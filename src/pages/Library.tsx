@@ -262,7 +262,8 @@ const Library = () => {
         <div className="flex items-center justify-between mb-8">
           <Button variant="ghost" size="sm" onClick={() => navigate("/")} className="gap-1.5">
             <ArrowLeft className="w-4 h-4" />
-            <span className="hidden sm:inline">MOVPROMPT</span>
+            <img src="/logo-mark.svg" alt="" className="w-5 h-5" />
+            <span className="hidden sm:inline font-mono font-semibold">MOVPROMPT</span>
           </Button>
           <LanguageToggle />
         </div>

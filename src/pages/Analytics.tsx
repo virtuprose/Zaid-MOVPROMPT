@@ -96,11 +96,14 @@ const Analytics = () => {
     <div className="min-h-screen bg-background" dir={dir}>
       <div className="container max-w-6xl mx-auto px-4 py-12">
         <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-mono font-bold mb-1">
-              Admin <span className="text-primary">Dashboard</span>
-            </h1>
-            <p className="text-muted-foreground">MovPrompt admin panel</p>
+          <div className="flex items-center gap-3">
+            <img src="/logo-mark.svg" alt="MovPrompt" className="w-10 h-10" />
+            <div>
+              <h1 className="text-3xl font-mono font-bold mb-1">
+                Admin <span className="text-primary">Dashboard</span>
+              </h1>
+              <p className="text-muted-foreground">MovPrompt admin panel</p>
+            </div>
           </div>
           <Button
             variant="outline"

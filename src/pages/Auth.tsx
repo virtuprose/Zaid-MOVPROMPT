@@ -140,6 +140,7 @@ const Auth = () => {
           transition={{ duration: 0.6 }}
           className="hidden md:flex flex-col justify-center px-6 py-10 md:px-12 lg:px-16"
         >
+          <img src="/logo-mark.svg" alt="MovPrompt" className="w-14 h-14 mb-5" />
           <h1 className="text-3xl lg:text-5xl font-display font-bold leading-tight mb-3">
             {t("auth.heroTitle")}{" "}
             <span className="text-primary">{t("auth.heroCinema")}</span>
@@ -184,6 +185,7 @@ const Auth = () => {
           <div className="w-full max-w-sm">
             {/* Mobile brand header */}
             <div className="text-center mb-6">
+              <img src="/logo-mark.svg" alt="" className="w-12 h-12 mx-auto mb-2" />
               <h2 className="text-2xl font-mono font-bold mb-1">
                 Mov<span className="text-primary">Prompt</span>
               </h2>
