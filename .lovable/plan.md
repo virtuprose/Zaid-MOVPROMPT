@@ -1,39 +1,57 @@
 
-## Plan — Fix missing model descriptions on hover
+## Plan — Offer Single / Start+End / Multi-shot for Any Model
 
-### Root cause
-Wrapping a Radix `SelectItem` with a Radix `Tooltip` doesn't work reliably. The Select component manages its own pointer/focus events for keyboard navigation and row highlighting, which swallows the hover events the Tooltip needs to open. That's why pointing at a model shows nothing. The info-icon popover still works because it's triggered by click, not hover.
+When the user picks **Any Model (Universal Prompt)**, show the same 3-way workflow toggle already used by Kling 3.0: **Single Frame | Start + End | Multi-shot**. Today, "Any" falls through to the default `STD` contract, so no toggle appears and the user is locked into a single-frame workflow.
 
-### Fix — show descriptions inline, always visible
-Instead of fighting Radix, put the description **directly inside each row** as a small muted second line under the model name. This is:
+### Behavior per mode (when model = `any`)
 
-- Always visible — no hover needed, zero discoverability problem
-- Keyboard/screen-reader friendly out of the box
-- Works identically on desktop and mobile
-- Matches how high-end pickers (Linear, Raycast, Vercel) present option metadata
+| Mode | Slots | Workflow sent to backend | Description |
+|---|---|---|---|
+| Single Frame | 1 upload | `single` | Universal cinematic prompt for one still. |
+| Start + End | 2 uploads (Start / End) | `twoframe` | Interpolation prompt between two frames. |
+| Multi-shot | 1 concept image | `multishot`, `multiShotCount = 10` | Ten varied shot descriptions (wide, MCU, OTS, etc.). |
 
-The info icon and its popover are removed (redundant now). The tooltip wrapper is removed (it was the source of the bug).
+In every mode, the generic agent still emits the **Director's Pick** recommendation at the top of the result. The recommendation rubric already accounts for multi-cut scenes (→ Seedance Pro) and transitions (→ Kling 3.0); no rubric changes needed.
 
-### Layout per row
+### Technical change — single file
+
+**`src/lib/modelContracts.ts`** — add an explicit branch for `model === "any"` at the top of `getContract`:
+
+```ts
+if (model === "any") {
+  return {
+    slots: 1,
+    slotLabels: ["contract.slot.reference"],
+    supportsTwoFrameToggle: true,
+    supportsMultiShotToggle: true,
+    multiShotCount: 10,
+    extrasHintKey: "contract.hint.anyModel",
+    workflowType: "single",
+  };
+}
 ```
-Kling 3.0
-Top cinematic motion & realism. Best for hero shots and dramatic action.
-```
-- Label: current weight, truncates if needed.
-- Description: `text-xs text-muted-foreground`, clamped to 2 lines (`line-clamp-2`), full width.
-- Selected row keeps existing check indicator; spacing tightened so the dropdown doesn't feel tall.
-- `SelectContent` `max-h` bumped slightly (from `max-h-80` to `max-h-[420px]`) so more rows remain visible with the taller items.
-- "Any Model" row keeps its bolder label and gets the same description treatment.
 
-### RTL
-Works unchanged — the row content is a simple flex column, so Tailwind/`dir="rtl"` flips it correctly without extra CSS.
+Because `WorkflowPanel` already renders the 3-way toggle whenever **both** `supportsTwoFrameToggle` and `supportsMultiShotToggle` are true, flipping those flags on for `any` is all that's needed — the UI, the `deriveWorkflowType` helper, slot labels (`frame.start` / `frame.end` / `frame.concept`), and the backend payload (`workflowType` + `multiShotCount`) all light up automatically.
 
-### Files touched
-- `src/components/ModelPicker.tsx` — simplify `ModelRow`: remove `Tooltip`, `Popover`, `Info` icon, and the related state/handlers. Render label + description stacked inside each `SelectItem`. Remove the now-unused `TooltipProvider` wrapper. Adjust `SelectContent` `max-h`.
+### Translation
 
-No other files change. No translations change (keys `models.desc.*` are reused as-is). No backend change.
+Add one new key for the hint strip that appears above the toggle:
+
+- `contract.hint.anyModel` — EN: *"Any Model picks the best specialist for your scene. Choose a workflow: a single shot, a start→end transition, or a 10-shot storyboard."* ; AR equivalent.
+
+Files: `src/i18n/translations/en.ts`, `src/i18n/translations/ar.ts`.
+
+### Out of scope
+
+- No backend change. `generate-prompt/index.ts` already handles `single`, `twoframe`, and `multishot` for any target model (including `any-model`), and the generic agent's system prompt already documents all three workflow shapes.
+- No change to the Director's Pick logic — it fires on `any-model` regardless of workflow type.
+- No change to other models.
 
 ### Verification
-- Open the model dropdown → every row shows its description beneath its name, in both EN and AR.
-- Keyboard arrow-through reads label + description.
-- Selecting a row still works exactly as before and closes the dropdown.
+
+- Select **Any Model** → hint strip shows; 3-way toggle appears with Single / Start+End / Multi-shot.
+- **Start + End**: two upload slots labelled *Start Frame* / *End Frame*; Generate produces a transition prompt.
+- **Multi-shot**: one concept slot; Generate returns 10 shot cards.
+- Director's Pick strip appears on the first shot in all three modes.
+- Switch to any non-`any` model → old behavior unchanged (no hint, native toggle set per model).
+- Verify layout + RTL in Arabic.
