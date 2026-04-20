@@ -1,39 +1,32 @@
 
+The user wants the supplemental sections (Negative Prompt, Audio Direction, Shot Structure, Camera Suggestions) merged INTO the visible main prompt area — not just into the copy output, and not shown as separate cards/sections below.
 
-## Issue
-The "File is over 10MB" toast comes from the **Reference Media** / **Element Grid** uploaders (not the main image upload). The current cap is `MAX_FILE_SIZE = 10 * 1024 * 1024` in two files. The user's "Professional Chat Image from Freepik.png" exceeded that cap.
+## Plan — Inline supplemental sections into Main Prompt display
 
-## Root cause
-- `src/components/ReferenceMediaPanel.tsx` line 10 — `const MAX_FILE_SIZE = 10 * 1024 * 1024`
-- `src/components/ElementGrid.tsx` line 28 — `const MAX_BYTES = 10 * 1024 * 1024`
-- Translations: `en.ts` ("File is over 10MB", "Max 10MB per file") + matching `ar.ts` strings.
+### Changes to `src/components/ResultsPanel.tsx`
 
-Note: the main `ImageUploadZone` (hero/single/two-frame images) has **no size cap** — those go through `compressImage()` in `WorkflowPanel`, which downscales to 1280px JPEG before sending to the edge function. Reference & element uploads need the same treatment OR a higher cap.
+**1. `MainPromptHero` — render the merged content visibly**
+- Build a `displaySections` array from the parsed scripted prompt (or a single block if not scripted), then append:
+  - `[NEGATIVE PROMPT]` if meaningful
+  - `[AUDIO DIRECTION]` if meaningful
+  - `[SHOT STRUCTURE]` if meaningful
+  - `[CAMERA SUGGESTIONS]` if meaningful
+- These appended sections render as additional collapsible blocks via the existing `ScriptedPrompt` component (consistent styling, collapsible, copyable per-section).
+- For non-scripted prompts: show the original paragraph, then render the appended sections below it as the same collapsible blocks.
+- Section count badge updates to reflect total (script sections + appended).
+- The "Copy Main Prompt" button keeps copying the full aggregated text (already implemented).
 
-## Plan — raise to 25 MB and clarify copy
+**2. `ShotCard` — remove duplicates from "Optional Refinements"**
+- Strip `negativePrompt`, `audioBlock`, `shotStructure` from the `refinements` array (they now live inside the hero).
+- Keep only: `cameraTags`, `referenceGuidance` in refinements.
+- If refinements becomes empty, hide the entire "Optional Refinements" collapsible.
 
-Best balance of user freedom + edge-function payload safety (Supabase function payloads cap around 6 MB after base64 — but reference images are also compressed via `compressImageFile` to ~1024px before send, so a 25 MB source PNG ends up well under that). Videos still get keyframes extracted client-side, so source size only impacts browser memory.
-
-### Changes
-
-**1. `src/components/ReferenceMediaPanel.tsx`**
-- Bump `MAX_FILE_SIZE` from `10 * 1024 * 1024` → `25 * 1024 * 1024`.
-
-**2. `src/components/ElementGrid.tsx`**
-- Bump `MAX_BYTES` from `10 * 1024 * 1024` → `25 * 1024 * 1024`.
-
-**3. `src/i18n/translations/en.ts`**
-- `references.tooLarge`: `"File is over 10MB"` → `"File is over 25MB"`
-- `references.videoHint`: `"...Max 10MB per file."` → `"...Max 25MB per file."`
-
-**4. `src/i18n/translations/ar.ts`**
-- Same two strings updated to "25MB".
+**3. `ShotCard` — remove `cameraSuggestions` from "Director's Notes"**
+- Director's Notes now only contains `modelNotes`.
+- Update the grid from `sm:grid-cols-2` to single column.
+- Update the count badge from `2` to `1`.
 
 ### Files touched
-- `src/components/ReferenceMediaPanel.tsx`
-- `src/components/ElementGrid.tsx`
-- `src/i18n/translations/en.ts`
-- `src/i18n/translations/ar.ts`
+- `src/components/ResultsPanel.tsx` (only)
 
-No backend, no schema, no edge-function changes. Frontend-only — requires **Publish → Update** to reach live users.
-
+No translations, backend, or schema changes. Frontend-only — requires Publish to reach live users.
