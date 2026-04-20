@@ -35,10 +35,13 @@ interface ShotResult {
   cameraTags?: string;
   referenceGuidance?: string;
   shotStructure?: string;
+  recommendedModel?: string;
+  recommendedModelReason?: string;
 }
 
 interface WorkflowPanelProps {
   selectedModel: string;
+  onSwitchModel?: (value: string) => void;
 }
 
 const phaseTransition = {
@@ -48,7 +51,7 @@ const phaseTransition = {
   transition: { duration: 0.32, ease: [0.4, 0, 0.2, 1] as const },
 };
 
-export const WorkflowPanel = ({ selectedModel }: WorkflowPanelProps) => {
+export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelProps) => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -570,6 +573,7 @@ export const WorkflowPanel = ({ selectedModel }: WorkflowPanelProps) => {
             elementsLegend={contract.supportsElementReferences && elementItems.length > 0
               ? elementItems.map((el, idx) => ({ index: idx + 1, kind: el.kind, preview: el.preview }))
               : undefined}
+            onSwitchModel={selectedModel === "any" ? onSwitchModel : undefined}
           />
         )}
       </AnimatePresence>

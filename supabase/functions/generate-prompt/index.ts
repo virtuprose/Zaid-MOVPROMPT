@@ -406,7 +406,14 @@ serve(async (req) => {
       });
     }
 
-    const shotSchema = {
+    const RECOMMENDABLE_MODELS = [
+      "kling-3.0", "kling-3.0-omni", "kling-3.0-omni-edit", "kling-2.6", "kling-2.5-turbo",
+      "kling-o1-video", "kling-o1-video-edit", "kling-motion-control", "kling-3.0-motion-control",
+      "veo-3.1-lite", "veo-3.1-fast", "veo-3.1", "veo-3-fast", "veo-3",
+      "seedance-2.0-fast", "seedance-2.0", "seedance-1.5-pro", "seedance-pro", "seedance-pro-fast",
+    ] as const;
+    const isAnyModel = targetModel === "any";
+    const shotSchema: any = {
       type: "object" as const,
       properties: {
         shotName: { type: "string" as const, description: "Name of the shot" },
@@ -420,8 +427,14 @@ serve(async (req) => {
         cameraTags: { type: "string" as const, description: "Bracketed camera tags (Kling-style). Empty string if not applicable." },
         referenceGuidance: { type: "string" as const, description: "How the uploaded image(s) are used as reference. Empty string if not applicable." },
         shotStructure: { type: "string" as const, description: "Multi-shot timing breakdown (Seedance-style). Empty string if not applicable." },
+        ...(isAnyModel ? {
+          recommendedModel: { type: "string" as const, enum: RECOMMENDABLE_MODELS, description: "Universal mode only: the single best specialist model for this scene. Populate on the FIRST shot." },
+          recommendedModelReason: { type: "string" as const, description: "ONE sentence, ≤25 words, tying the recommendation to a concrete scene attribute." },
+        } : {}),
       },
-      required: ["mainPrompt", "negativePrompt", "cameraSuggestions", "modelNotes", "suggestedAspectRatio", "suggestedDuration"] as const,
+      required: isAnyModel
+        ? ["mainPrompt", "negativePrompt", "cameraSuggestions", "modelNotes", "suggestedAspectRatio", "suggestedDuration", "recommendedModel", "recommendedModelReason"]
+        : ["mainPrompt", "negativePrompt", "cameraSuggestions", "modelNotes", "suggestedAspectRatio", "suggestedDuration"],
     };
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
