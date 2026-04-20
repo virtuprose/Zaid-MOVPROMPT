@@ -323,7 +323,7 @@ const ShotCard = ({
             </div>
           )}
 
-          <MainPromptHero value={result.mainPrompt} modelLabel={modelLabel} />
+          <MainPromptHero value={result.mainPrompt} result={result} modelLabel={modelLabel} />
 
           <Collapsible open={refinementsOpen} onOpenChange={setRefinementsOpen}>
             <SectionToggle label={t("results.optionalRefinements")} count={refinements.length} open={refinementsOpen} />
