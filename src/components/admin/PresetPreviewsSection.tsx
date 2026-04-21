@@ -279,119 +279,145 @@ const PresetPreviewsSection = () => {
           </div>
         )}
       </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {heroPresets.map((preset) => {
-            const fileMeta = meta[preset.id];
-            const url = fileMeta ? `${getPresetVideoUrl(preset.id)}?t=${cacheBust}` : null;
-            const Icon = preset.icon;
-            const status = statuses[preset.id] ?? "idle";
-            const errMsg = errors[preset.id];
-            const isGen = status === "generating";
-            return (
-              <div
-                key={preset.id}
-                className="rounded-lg border border-border/50 bg-secondary/30 overflow-hidden flex flex-col"
-              >
-                <div className="relative h-28 bg-gradient-to-b from-background/60 to-secondary/60 flex items-center justify-center overflow-hidden">
-                  {url ? (
-                    <video
-                      key={url}
-                      src={url}
-                      autoPlay
-                      muted
-                      loop
-                      playsInline
-                      className="absolute inset-0 h-full w-full object-cover"
-                    />
-                  ) : (
-                    <Icon size={40} className="text-muted-foreground/40" />
-                  )}
-                  {isGen && (
-                    <div className="absolute inset-0 bg-background/70 backdrop-blur-sm flex items-center justify-center">
-                      <Loader2 className="w-6 h-6 animate-spin text-primary" />
-                    </div>
-                  )}
-                </div>
-                <div className="p-3 space-y-2 flex-1 flex flex-col">
-                  <div>
-                    <p className="text-sm font-semibold">{preset.label}</p>
-                    <p className="text-[11px] text-muted-foreground font-mono">{preset.id}</p>
-                  </div>
-                  <div className="text-[11px] text-muted-foreground">
-                    {fileMeta ? (
-                      <>
-                        {formatSize(fileMeta.size)} ·{" "}
-                        {fileMeta.updated_at
-                          ? new Date(fileMeta.updated_at).toLocaleDateString()
-                          : ""}
-                      </>
-                    ) : (
-                      <span className="italic">No video uploaded</span>
-                    )}
-                  </div>
-                  {status === "error" && errMsg && (
-                    <div className="flex items-start gap-1.5 text-[11px] text-destructive bg-destructive/10 rounded px-2 py-1">
-                      <AlertCircle className="w-3 h-3 mt-0.5 shrink-0" />
-                      <span className="line-clamp-2">{errMsg}</span>
-                    </div>
-                  )}
-                  <div className="flex flex-wrap gap-2 mt-auto">
-                    <input
-                      ref={(el) => (inputs.current[preset.id] = el)}
-                      type="file"
-                      accept="video/mp4,video/*"
-                      className="hidden"
-                      onChange={(e) => {
-                        const f = e.target.files?.[0];
-                        if (f) handleUpload(preset.id, f);
-                        e.target.value = "";
-                      }}
-                    />
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="default"
-                      className="flex-1 gap-1.5"
-                      disabled={isGen || bulkRunning}
-                      onClick={() => handleGenerateOne(preset.id)}
-                    >
-                      {isGen ? (
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      ) : (
-                        <Sparkles className="w-3.5 h-3.5" />
-                      )}
-                      {isGen ? "Generating" : "Generate"}
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      className="gap-1.5"
-                      disabled={uploading === preset.id || isGen}
-                      onClick={() => inputs.current[preset.id]?.click()}
-                    >
-                      <Upload className="w-3.5 h-3.5" />
-                      {uploading === preset.id ? "…" : fileMeta ? "Replace" : "Upload"}
-                    </Button>
-                    {fileMeta && (
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => handleDelete(preset.id)}
-                        disabled={isGen}
-                        className="text-destructive hover:text-destructive"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </Button>
-                    )}
-                  </div>
-                </div>
+      <CardContent className="space-y-8">
+        {presetsByGroup.map(({ group, items }) => {
+          const groupUploaded = items.filter((p) => meta[p.id]).length;
+          return (
+            <section key={group.id}>
+              <div className="flex items-baseline gap-2 mb-3">
+                <h3 className="text-sm font-semibold flex items-center gap-1.5">
+                  <span>{group.icon}</span>
+                  {group.label}
+                </h3>
+                <span className="text-xs text-muted-foreground">
+                  {groupUploaded} / {items.length} uploaded
+                </span>
               </div>
-            );
-          })}
-        </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {items.map((preset) => {
+                  const fileMeta = meta[preset.id];
+                  const url = fileMeta ? `${getPresetVideoUrl(preset.id)}?t=${cacheBust}` : null;
+                  const Icon = preset.icon;
+                  const status = statuses[preset.id] ?? "idle";
+                  const errMsg = errors[preset.id];
+                  const isGen = status === "generating";
+                  const isHero = HERO_PRESET_IDS.includes(preset.id);
+                  return (
+                    <div
+                      key={preset.id}
+                      className="rounded-lg border border-border/50 bg-secondary/30 overflow-hidden flex flex-col"
+                    >
+                      <div className="relative h-28 bg-gradient-to-b from-background/60 to-secondary/60 flex items-center justify-center overflow-hidden">
+                        {url ? (
+                          <video
+                            key={url}
+                            src={url}
+                            autoPlay
+                            muted
+                            loop
+                            playsInline
+                            className="absolute inset-0 h-full w-full object-cover"
+                          />
+                        ) : (
+                          <Icon size={40} className="text-muted-foreground/40" />
+                        )}
+                        {isGen && (
+                          <div className="absolute inset-0 bg-background/70 backdrop-blur-sm flex items-center justify-center">
+                            <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="p-3 space-y-2 flex-1 flex flex-col">
+                        <div>
+                          <p className="text-sm font-semibold flex items-center gap-1.5">
+                            {preset.label}
+                            {isHero && (
+                              <span className="text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-primary/15 text-primary font-medium">
+                                Hero
+                              </span>
+                            )}
+                          </p>
+                          <p className="text-[11px] text-muted-foreground font-mono">{preset.id}</p>
+                        </div>
+                        <div className="text-[11px] text-muted-foreground">
+                          {fileMeta ? (
+                            <>
+                              {formatSize(fileMeta.size)} ·{" "}
+                              {fileMeta.updated_at
+                                ? new Date(fileMeta.updated_at).toLocaleDateString()
+                                : ""}
+                            </>
+                          ) : (
+                            <span className="italic">No video uploaded</span>
+                          )}
+                        </div>
+                        {status === "error" && errMsg && (
+                          <div className="flex items-start gap-1.5 text-[11px] text-destructive bg-destructive/10 rounded px-2 py-1">
+                            <AlertCircle className="w-3 h-3 mt-0.5 shrink-0" />
+                            <span className="line-clamp-2">{errMsg}</span>
+                          </div>
+                        )}
+                        <div className="flex flex-wrap gap-2 mt-auto">
+                          <input
+                            ref={(el) => (inputs.current[preset.id] = el)}
+                            type="file"
+                            accept="video/mp4,video/*"
+                            className="hidden"
+                            onChange={(e) => {
+                              const f = e.target.files?.[0];
+                              if (f) handleUpload(preset.id, f);
+                              e.target.value = "";
+                            }}
+                          />
+                          {isHero && (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="default"
+                              className="flex-1 gap-1.5"
+                              disabled={isGen || bulkRunning}
+                              onClick={() => handleGenerateOne(preset.id)}
+                            >
+                              {isGen ? (
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              ) : (
+                                <Sparkles className="w-3.5 h-3.5" />
+                              )}
+                              {isGen ? "Generating" : "Generate"}
+                            </Button>
+                          )}
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            className={isHero ? "gap-1.5" : "flex-1 gap-1.5"}
+                            disabled={uploading === preset.id || isGen}
+                            onClick={() => inputs.current[preset.id]?.click()}
+                          >
+                            <Upload className="w-3.5 h-3.5" />
+                            {uploading === preset.id ? "…" : fileMeta ? "Replace" : "Upload"}
+                          </Button>
+                          {fileMeta && (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleDelete(preset.id)}
+                              disabled={isGen}
+                              className="text-destructive hover:text-destructive"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+          );
+        })}
       </CardContent>
     </Card>
   );
