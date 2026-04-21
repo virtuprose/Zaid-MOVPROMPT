@@ -203,6 +203,7 @@ const PresetPreviewsSection = () => {
       delete next[presetId];
       return next;
     });
+    setGenStarts((g) => ({ ...g, [presetId]: Date.now() }));
 
     const preset = allPresets.find((p) => p.id === presetId);
     const { data: subData, error: subErr } = await supabase.functions.invoke(
@@ -211,6 +212,7 @@ const PresetPreviewsSection = () => {
         body: {
           action: "submit",
           presetId,
+          model,
           label: preset?.label,
           description: preset?.description,
           bestFor: preset?.bestFor,
@@ -233,13 +235,14 @@ const PresetPreviewsSection = () => {
 
     const deadline = Date.now() + 6 * 60_000;
     while (Date.now() < deadline) {
-      await new Promise((r) => setTimeout(r, 8_000));
+      await new Promise((r) => setTimeout(r, 4_000));
       const { data: pData, error: pErr } = await supabase.functions.invoke(
         "generate-preset-preview",
         {
           body: {
             action: "poll",
             presetId,
+            model,
             statusUrl: sub.statusUrl,
             responseUrl: sub.responseUrl,
           },
