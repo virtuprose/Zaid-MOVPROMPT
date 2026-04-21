@@ -62,6 +62,9 @@ const PresetPreviewsSection = () => {
   const inputs = useRef<Record<string, HTMLInputElement | null>>({});
   const cancelRequested = useRef<Record<string, boolean>>({});
   const [canceling, setCanceling] = useState<Record<string, boolean>>({});
+  const [autoUpgrades, setAutoUpgrades] = useState<
+    Record<string, { effectiveModel: ModelValue; reason: string } | undefined>
+  >({});
 
   const [model, setModel] = useState<ModelValue>(() => {
     if (typeof window === "undefined") return DEFAULT_MODEL;
@@ -254,6 +257,11 @@ const PresetPreviewsSection = () => {
       delete next[presetId];
       return next;
     });
+    setAutoUpgrades((u) => {
+      const next = { ...u };
+      delete next[presetId];
+      return next;
+    });
 
     const markCanceled = (): { ok: false; code: "canceled" } => {
       cancelRequested.current[presetId] = false;
@@ -286,7 +294,7 @@ const PresetPreviewsSection = () => {
         },
       },
     );
-    const sub = (subData as { ok?: boolean; code?: string; error?: string; statusUrl?: string; responseUrl?: string } | null) ?? null;
+    const sub = (subData as { ok?: boolean; code?: string; error?: string; statusUrl?: string; responseUrl?: string; effectiveModel?: string; requestedModel?: string; upgraded?: boolean; upgradeReason?: string | null } | null) ?? null;
     if (cancelRequested.current[presetId]) return markCanceled();
     if (subErr || !sub?.ok) {
       const code = sub?.code;
@@ -300,6 +308,16 @@ const PresetPreviewsSection = () => {
       return { ok: false, code, error: msg };
     }
 
+    const effectiveModel = (MODEL_OPTIONS.some((o) => o.value === sub.effectiveModel)
+      ? (sub.effectiveModel as ModelValue)
+      : model);
+    if (sub.upgraded && sub.upgradeReason) {
+      setAutoUpgrades((u) => ({
+        ...u,
+        [presetId]: { effectiveModel, reason: sub.upgradeReason as string },
+      }));
+    }
+
     const deadline = Date.now() + 6 * 60_000;
     while (Date.now() < deadline) {
       await new Promise((r) => setTimeout(r, 4_000));
@@ -310,7 +328,7 @@ const PresetPreviewsSection = () => {
           body: {
             action: "poll",
             presetId,
-            model,
+            model: effectiveModel,
             statusUrl: sub.statusUrl,
             responseUrl: sub.responseUrl,
           },
@@ -651,8 +669,17 @@ const PresetPreviewsSection = () => {
                               {genStarts[preset.id] ? formatElapsed(now - genStarts[preset.id]) : "0:00"}
                             </div>
                             <div className="text-[10px] text-muted-foreground px-2 text-center leading-tight">
-                              {isCanceling ? "Canceling…" : MODEL_OPTIONS.find((o) => o.value === model)?.label}
+                              {isCanceling
+                                ? "Canceling…"
+                                : (MODEL_OPTIONS.find(
+                                    (o) => o.value === (autoUpgrades[preset.id]?.effectiveModel ?? model),
+                                  )?.label)}
                             </div>
+                            {autoUpgrades[preset.id] && !isCanceling && (
+                              <div className="text-[9px] text-accent px-2 text-center leading-tight max-w-[14rem]">
+                                Auto-upgraded for accuracy
+                              </div>
+                            )}
                             <Button
                               type="button"
                               size="sm"
