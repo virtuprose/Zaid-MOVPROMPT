@@ -462,6 +462,20 @@ const PresetPreviewsSection = () => {
               </DialogFooter>
             </DialogContent>
           </Dialog>
+          <div className="sm:ml-auto sm:max-w-xs w-full">
+            <Label htmlFor="pp-model" className="text-xs text-muted-foreground">Model</Label>
+            <Select value={model} onValueChange={(v) => setModel(v as ModelValue)}>
+              <SelectTrigger id="pp-model" className="h-9"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {MODEL_OPTIONS.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-[11px] text-muted-foreground mt-1">
+              LTX is fastest. Switch to Kling for the highest-quality reference clips.
+            </p>
+          </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-8">
