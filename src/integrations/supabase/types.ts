@@ -109,6 +109,42 @@ export type Database = {
           },
         ]
       }
+      custom_presets: {
+        Row: {
+          anim_class: string | null
+          best_for: string
+          created_at: string
+          created_by: string | null
+          description: string
+          group_id: string
+          icon_name: string
+          id: string
+          label: string
+        }
+        Insert: {
+          anim_class?: string | null
+          best_for?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          group_id: string
+          icon_name: string
+          id: string
+          label: string
+        }
+        Update: {
+          anim_class?: string | null
+          best_for?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          group_id?: string
+          icon_name?: string
+          id?: string
+          label?: string
+        }
+        Relationships: []
+      }
       email_send_log: {
         Row: {
           created_at: string
