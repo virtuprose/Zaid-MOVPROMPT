@@ -60,12 +60,35 @@ const PresetPreviewsSection = () => {
   });
   const [idEdited, setIdEdited] = useState(false);
 
-  const presetsByGroup = PRESET_GROUPS.map((g) => ({
-    group: g,
-    items: allPresets.filter((p) => p.group === g.id),
-  })).filter((g) => g.items.length > 0);
+  // Filters
+  const [search, setSearch] = useState("");
+  const [groupFilter, setGroupFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "uploaded" | "missing">("all");
+
+  const q = search.trim().toLowerCase();
+  const filterPreset = (p: typeof allPresets[number]) => {
+    if (groupFilter !== "all" && p.group !== groupFilter) return false;
+    if (statusFilter === "uploaded" && !meta[p.id]) return false;
+    if (statusFilter === "missing" && meta[p.id]) return false;
+    if (q) {
+      const hay = `${p.label} ${p.id} ${p.description ?? ""}`.toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  };
+
+  const filteredPresets = allPresets.filter(filterPreset);
+  const presetsByGroup = PRESET_GROUPS
+    .filter((g) => groupFilter === "all" || g.id === groupFilter)
+    .map((g) => ({
+      group: g,
+      items: filteredPresets.filter((p) => p.group === g.id),
+    }))
+    .filter((g) => g.items.length > 0);
 
   const uploadedCount = allIds.filter((id) => meta[id]).length;
+  const filtersActive = q !== "" || groupFilter !== "all" || statusFilter !== "all";
+  const clearFilters = () => { setSearch(""); setGroupFilter("all"); setStatusFilter("all"); };
 
   const refresh = async () => {
     const { data, error } = await supabase.storage.from(BUCKET).list("", { limit: 1000 });
@@ -461,6 +484,61 @@ const PresetPreviewsSection = () => {
         )}
       </CardHeader>
       <CardContent className="space-y-8">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 -mt-2">
+          <div className="relative flex-1 min-w-[180px]">
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search by name, id, or description…"
+              className="pr-8"
+            />
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch("")}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                aria-label="Clear search"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+          <Select value={groupFilter} onValueChange={setGroupFilter}>
+            <SelectTrigger className="sm:w-[180px]"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All groups</SelectItem>
+              {PRESET_GROUPS.map((g) => (
+                <SelectItem key={g.id} value={g.id}>
+                  <span className="me-2">{g.icon}</span>{g.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as typeof statusFilter)}>
+            <SelectTrigger className="sm:w-[160px]"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All statuses</SelectItem>
+              <SelectItem value="uploaded">Uploaded</SelectItem>
+              <SelectItem value="missing">Missing video</SelectItem>
+            </SelectContent>
+          </Select>
+          <span className="text-xs text-muted-foreground whitespace-nowrap">
+            Showing {filteredPresets.length} of {allIds.length}
+          </span>
+          {filtersActive && (
+            <Button type="button" variant="ghost" size="sm" onClick={clearFilters} className="gap-1">
+              <X className="w-3.5 h-3.5" />
+              Clear
+            </Button>
+          )}
+        </div>
+
+        {presetsByGroup.length === 0 && (
+          <p className="text-sm text-muted-foreground text-center py-8">
+            No presets match your filters.
+          </p>
+        )}
+
         {presetsByGroup.map(({ group, items }) => {
           const groupUploaded = items.filter((p) => meta[p.id]).length;
           return (
