@@ -60,12 +60,35 @@ const PresetPreviewsSection = () => {
   });
   const [idEdited, setIdEdited] = useState(false);
 
-  const presetsByGroup = PRESET_GROUPS.map((g) => ({
-    group: g,
-    items: allPresets.filter((p) => p.group === g.id),
-  })).filter((g) => g.items.length > 0);
+  // Filters
+  const [search, setSearch] = useState("");
+  const [groupFilter, setGroupFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "uploaded" | "missing">("all");
+
+  const q = search.trim().toLowerCase();
+  const filterPreset = (p: typeof allPresets[number]) => {
+    if (groupFilter !== "all" && p.group !== groupFilter) return false;
+    if (statusFilter === "uploaded" && !meta[p.id]) return false;
+    if (statusFilter === "missing" && meta[p.id]) return false;
+    if (q) {
+      const hay = `${p.label} ${p.id} ${p.description ?? ""}`.toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  };
+
+  const filteredPresets = allPresets.filter(filterPreset);
+  const presetsByGroup = PRESET_GROUPS
+    .filter((g) => groupFilter === "all" || g.id === groupFilter)
+    .map((g) => ({
+      group: g,
+      items: filteredPresets.filter((p) => p.group === g.id),
+    }))
+    .filter((g) => g.items.length > 0);
 
   const uploadedCount = allIds.filter((id) => meta[id]).length;
+  const filtersActive = q !== "" || groupFilter !== "all" || statusFilter !== "all";
+  const clearFilters = () => { setSearch(""); setGroupFilter("all"); setStatusFilter("all"); };
 
   const refresh = async () => {
     const { data, error } = await supabase.storage.from(BUCKET).list("", { limit: 1000 });
