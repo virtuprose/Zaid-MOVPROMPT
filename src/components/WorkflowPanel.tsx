@@ -252,6 +252,17 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
           }))
         : undefined;
 
+      // Resolve @N mentions from description against the flat scene element list
+      const mentionedNumbers = Array.from(new Set(
+        Array.from((description || "").matchAll(/(?:^|\s)@(\d+)\b/g))
+          .map((m) => Number(m[1]))
+          .filter((n) => Number.isInteger(n) && n >= 1 && n <= flatSceneElements.length),
+      ));
+      const elementMentions = mentionedNumbers
+        .map((n) => flatSceneElements.find((el) => el.index === n))
+        .filter((el): el is { index: number; category: string; description: string; id: string } => Boolean(el))
+        .map(({ index, category, description }) => ({ index, category, description }));
+
       const { data, error } = await supabase.functions.invoke("generate-prompt", {
         body: {
           images: imageBase64s,
@@ -263,6 +274,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
           references: referencesPayload.length > 0 ? referencesPayload : undefined,
           elements: elementsPayload.length > 0 ? elementsPayload : undefined,
           autoInjectElements: elementsPayload.length > 0 ? true : undefined,
+          elementMentions: elementMentions.length > 0 ? elementMentions : undefined,
           multiShotCount: workflowType === "multishot" && contract.supportsMultiShotToggle ? contract.multiShotCount : undefined,
         },
       });
