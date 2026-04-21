@@ -1,35 +1,24 @@
 
-## Add "New Preset" creation from Previews section
+## Add search + group filter to Preset Previews
 
-Add a button in the admin **Preset Previews** header that opens a dialog to create a brand-new preset (id, label, group, icon, description, best-for, animation class). New presets are persisted and merged into the existing preset list so they show up both in the admin grid (for video upload) and on the main page.
+Quickly locate any preset in the admin grid by typing a name/id or filtering to a single category.
 
 ### What changes
 
-**1. New table `custom_presets`** (migration)
-Columns: `id text pk`, `label text`, `group_id text`, `icon_name text` (lucide icon name), `description text`, `best_for text`, `anim_class text nullable`, `created_at timestamptz default now()`, `created_by uuid`.
-- RLS: public `select` (so main page can read), `insert/update/delete` restricted to admins via existing `has_role(auth.uid(),'admin')`.
+**`src/components/admin/PresetPreviewsSection.tsx`** — add a toolbar row above the grouped grid with:
 
-**2. `src/lib/presets.ts`**
-- Keep built-in `PRESETS` as-is.
-- Export a new async loader `loadCustomPresets()` that fetches from `custom_presets` and maps `icon_name` → lucide component via a small whitelist map (Camera, Film, Sparkles, Zap, Wand2, Aperture, Move, RotateCw, ZoomIn, etc. — ~20 common ones).
-- Export `getAllPresets()` returning built-ins + customs, and `useAllPresets()` hook (React Query) for components.
+1. **Search input** (debounced via local state) — matches case-insensitive against `preset.label`, `preset.id`, and `preset.description`.
+2. **Group filter** — `Select` with options: *All groups*, then each entry from `PRESET_GROUPS`.
+3. **Status filter** — `Select` with: *All*, *Uploaded*, *Missing video*. Useful for finding presets still needing a clip.
+4. **Clear button** (X icon) — appears when any filter is active; resets all three.
+5. **Result counter** — small text showing `Showing N of M presets` next to the toolbar.
 
-**3. `src/components/admin/PresetPreviewsSection.tsx`**
-- Add a **"New Preset"** button (Plus icon) in the card header next to the bulk-generate button.
-- Clicking opens a `Dialog` with a form: ID (slug, auto-generated from label, validated unique), Label, Group (Select from `PRESET_GROUPS`), Icon (Select from whitelist with live preview), Description, Best for, Animation class (optional, free text).
-- On submit: insert into `custom_presets`, refresh the list so the new preset appears in its group's grid, ready for MP4 upload.
-- Custom presets show a small "Custom" badge (like the existing "Hero" badge) and gain a delete-preset action (trash on the card header area, separate from the video delete).
-
-**4. Main page consumers (`Index.tsx` / wherever `PRESETS` is iterated)**
-- Switch from importing `PRESETS` directly to `useAllPresets()` so customs render alongside built-ins with the same hover-video behavior.
-
-### Out of scope
-- Editing existing built-in presets (still code-defined).
-- Bulk auto-generate for custom presets (upload-only, same as non-hero built-ins).
-- Custom icon upload — icon picker is limited to the lucide whitelist.
+### Behavior
+- Filters compose (AND): search ∧ group ∧ status.
+- When a group is selected, only that section renders. When *All* is selected, the existing grouped layout is kept and any group whose filtered items list is empty is hidden.
+- Per-group "X / Y uploaded" counter updates to reflect the filtered subset.
+- The top "X / Y uploaded" header counter stays global (not affected by filters) so the overall progress indicator remains stable.
+- Bulk-generate and "New Preset" buttons stay in the header, unaffected by filters.
 
 ### Files touched
-- `supabase/migrations/<new>.sql` (new `custom_presets` table + RLS)
-- `src/lib/presets.ts`
 - `src/components/admin/PresetPreviewsSection.tsx`
-- `src/pages/Index.tsx` (and any other file iterating `PRESETS` for display)
