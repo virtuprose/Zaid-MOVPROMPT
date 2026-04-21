@@ -498,12 +498,12 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
             <p className="text-sm text-muted-foreground max-w-md mx-auto text-center">
               {t("wp.analyzeDesc")}
             </p>
-            <div className="flex justify-center gap-3">
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 items-stretch sm:items-center sm:justify-center">
               <Button
                 size="lg"
                 onClick={handleAnalyze}
                 disabled={isAnalyzing}
-                className="px-6 sm:px-8 font-display font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/25"
+                className="w-full sm:w-auto px-4 sm:px-8 font-display font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/25"
               >
                 {isAnalyzing ? (
                   <><Loader2 className="w-4 h-4 me-2 animate-spin" /> {t("wp.analyzingScene")}</>
@@ -515,7 +515,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
                 size="lg"
                 onClick={() => { setSceneFrames([]); setPhase("breakdown"); }}
                 disabled={isAnalyzing}
-                className="px-6 sm:px-8 font-display font-semibold bg-accent text-accent-foreground hover:bg-accent/90 shadow-lg shadow-accent/25"
+                className="w-full sm:w-auto px-4 sm:px-8 font-display font-semibold bg-accent text-accent-foreground hover:bg-accent/90 shadow-lg shadow-accent/25"
               >
                 <Zap className="w-4 h-4 me-2" /> {t("wp.skip")}
               </Button>
@@ -525,23 +525,27 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
 
         {(phase === "breakdown" || phase === "generate") && sceneFrames.length > 0 && (
           <motion.div key="breakdown-phase" {...phaseTransition} className="space-y-4">
-            <div className="flex justify-between">
+            <div className="flex justify-between gap-2">
               <Button
                 size="sm"
                 variant="outline"
                 onClick={() => { setPhase("upload"); setSceneFrames([]); setElementDirections({}); setResults(null); }}
-                className="gap-1.5 border-white/20 text-muted-foreground hover:text-foreground hover:border-primary/50"
+                aria-label={t("wp.startOver")}
+                title={t("wp.startOver")}
+                className="gap-1.5 px-2 sm:px-3 border-white/20 text-muted-foreground hover:text-foreground hover:border-primary/50"
               >
-                <RotateCcw className="w-3.5 h-3.5" /> {t("wp.startOver")}
+                <RotateCcw className="w-3.5 h-3.5" /> <span className="hidden sm:inline">{t("wp.startOver")}</span>
               </Button>
               <Button
                 size="sm"
                 variant="outline"
                 onClick={handleAnalyze}
                 disabled={isAnalyzing}
-                className="gap-1.5 border-white/20 text-muted-foreground hover:text-foreground hover:border-primary/50"
+                aria-label={t("wp.reAnalyze")}
+                title={t("wp.reAnalyze")}
+                className="gap-1.5 px-2 sm:px-3 border-white/20 text-muted-foreground hover:text-foreground hover:border-primary/50"
               >
-                <ScanSearch className="w-3.5 h-3.5" /> {t("wp.reAnalyze")}
+                <ScanSearch className="w-3.5 h-3.5" /> <span className="hidden sm:inline">{t("wp.reAnalyze")}</span>
               </Button>
             </div>
 
@@ -609,9 +613,11 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
                 size="sm"
                 variant="outline"
                 onClick={() => { setPhase("upload"); setResults(null); }}
-                className="gap-1.5 border-white/20 text-muted-foreground hover:text-foreground hover:border-primary/50"
+                aria-label={t("wp.startOver")}
+                title={t("wp.startOver")}
+                className="gap-1.5 px-2 sm:px-3 border-white/20 text-muted-foreground hover:text-foreground hover:border-primary/50"
               >
-                <RotateCcw className="w-3.5 h-3.5" /> {t("wp.startOver")}
+                <RotateCcw className="w-3.5 h-3.5" /> <span className="hidden sm:inline">{t("wp.startOver")}</span>
               </Button>
             </div>
             {contract.supportsElementReferences ? (
