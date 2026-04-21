@@ -216,11 +216,56 @@ export const HERO_PRESET_IDS: string[] = [
   "mix-bullet-slow",
 ];
 
-/** Every preset is video-eligible — admin can upload an MP4 for any of them. */
+/** Every built-in preset is video-eligible — admin can upload an MP4 for any of them. */
 export const ALL_PRESET_IDS: string[] = PRESETS.map((p) => p.id);
 
 export const getPresetVideoUrl = (id: string): string | null => {
   const base = import.meta.env.VITE_SUPABASE_URL;
   if (!base) return null;
   return `${base}/storage/v1/object/public/preset-previews/${id}.mp4`;
+};
+
+// ---------- Custom (admin-created) presets ----------
+
+export interface CustomPresetRow {
+  id: string;
+  label: string;
+  group_id: string;
+  icon_name: string;
+  description: string;
+  best_for: string;
+  anim_class: string | null;
+  created_at: string;
+}
+
+export const customRowToPreset = (row: CustomPresetRow): Preset => ({
+  id: row.id,
+  label: row.label,
+  group: (row.group_id as PresetGroupId),
+  icon: getIconByName(row.icon_name),
+  animation: row.anim_class || "preset-pulse",
+  description: row.description,
+  bestFor: row.best_for,
+});
+
+export const loadCustomPresets = async (): Promise<Preset[]> => {
+  const { data, error } = await supabase
+    .from("custom_presets")
+    .select("*")
+    .order("created_at", { ascending: true });
+  if (error) {
+    console.error("loadCustomPresets", error);
+    return [];
+  }
+  return (data as CustomPresetRow[]).map(customRowToPreset);
+};
+
+/** React Query hook returning built-ins merged with custom presets. */
+export const useAllPresets = () => {
+  const { data: customs = [], ...rest } = useQuery({
+    queryKey: ["custom-presets"],
+    queryFn: loadCustomPresets,
+    staleTime: 60_000,
+  });
+  return { presets: [...PRESETS, ...customs], customs, ...rest };
 };
