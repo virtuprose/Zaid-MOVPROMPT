@@ -216,6 +216,7 @@ const PresetPreviewsSection = () => {
       toast.error(`Delete failed: ${error.message}`);
       return;
     }
+    await supabase.from("preset_preview_meta").delete().eq("preset_id", presetId);
     toast.success("Deleted");
     await refresh();
   };
@@ -223,6 +224,7 @@ const PresetPreviewsSection = () => {
   const handleDeleteCustomPreset = async (presetId: string) => {
     if (!confirm(`Delete custom preset "${presetId}"? This also removes its video.`)) return;
     await supabase.storage.from(BUCKET).remove([`${presetId}.mp4`]);
+    await supabase.from("preset_preview_meta").delete().eq("preset_id", presetId);
     const { error } = await supabase.from("custom_presets").delete().eq("id", presetId);
     if (error) {
       toast.error(`Delete failed: ${error.message}`);
