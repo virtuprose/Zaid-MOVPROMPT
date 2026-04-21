@@ -294,7 +294,7 @@ const PresetPreviewsSection = () => {
         },
       },
     );
-    const sub = (subData as { ok?: boolean; code?: string; error?: string; statusUrl?: string; responseUrl?: string } | null) ?? null;
+    const sub = (subData as { ok?: boolean; code?: string; error?: string; statusUrl?: string; responseUrl?: string; effectiveModel?: string; requestedModel?: string; upgraded?: boolean; upgradeReason?: string | null } | null) ?? null;
     if (cancelRequested.current[presetId]) return markCanceled();
     if (subErr || !sub?.ok) {
       const code = sub?.code;
@@ -308,6 +308,16 @@ const PresetPreviewsSection = () => {
       return { ok: false, code, error: msg };
     }
 
+    const effectiveModel = (MODEL_OPTIONS.some((o) => o.value === sub.effectiveModel)
+      ? (sub.effectiveModel as ModelValue)
+      : model);
+    if (sub.upgraded && sub.upgradeReason) {
+      setAutoUpgrades((u) => ({
+        ...u,
+        [presetId]: { effectiveModel, reason: sub.upgradeReason as string },
+      }));
+    }
+
     const deadline = Date.now() + 6 * 60_000;
     while (Date.now() < deadline) {
       await new Promise((r) => setTimeout(r, 4_000));
@@ -318,7 +328,7 @@ const PresetPreviewsSection = () => {
           body: {
             action: "poll",
             presetId,
-            model,
+            model: effectiveModel,
             statusUrl: sub.statusUrl,
             responseUrl: sub.responseUrl,
           },
