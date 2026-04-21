@@ -525,23 +525,27 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
 
         {(phase === "breakdown" || phase === "generate") && sceneFrames.length > 0 && (
           <motion.div key="breakdown-phase" {...phaseTransition} className="space-y-4">
-            <div className="flex justify-between">
+            <div className="flex justify-between gap-2">
               <Button
                 size="sm"
                 variant="outline"
                 onClick={() => { setPhase("upload"); setSceneFrames([]); setElementDirections({}); setResults(null); }}
-                className="gap-1.5 border-white/20 text-muted-foreground hover:text-foreground hover:border-primary/50"
+                aria-label={t("wp.startOver")}
+                title={t("wp.startOver")}
+                className="gap-1.5 px-2 sm:px-3 border-white/20 text-muted-foreground hover:text-foreground hover:border-primary/50"
               >
-                <RotateCcw className="w-3.5 h-3.5" /> {t("wp.startOver")}
+                <RotateCcw className="w-3.5 h-3.5" /> <span className="hidden sm:inline">{t("wp.startOver")}</span>
               </Button>
               <Button
                 size="sm"
                 variant="outline"
                 onClick={handleAnalyze}
                 disabled={isAnalyzing}
-                className="gap-1.5 border-white/20 text-muted-foreground hover:text-foreground hover:border-primary/50"
+                aria-label={t("wp.reAnalyze")}
+                title={t("wp.reAnalyze")}
+                className="gap-1.5 px-2 sm:px-3 border-white/20 text-muted-foreground hover:text-foreground hover:border-primary/50"
               >
-                <ScanSearch className="w-3.5 h-3.5" /> {t("wp.reAnalyze")}
+                <ScanSearch className="w-3.5 h-3.5" /> <span className="hidden sm:inline">{t("wp.reAnalyze")}</span>
               </Button>
             </div>
 
