@@ -134,6 +134,9 @@ export const en = {
   "scene.move": "Move",
   "scene.elements": "elements",
   "scene.notePlaceholder": 'e.g. "make hair blow in wind", "add rain effect"...',
+  "scene.mentionHint": "Type @ to reference an element (e.g. @2 should turn toward camera)",
+  "scene.mentionPickerTitle": "Insert element reference",
+  "scene.insertMention": "Mention element",
 
   // InstallPrompt
   "install.title": "Install MovPrompt",
