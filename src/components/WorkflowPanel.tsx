@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ImageUploadZone } from "./ImageUploadZone";
@@ -11,7 +11,6 @@ import type { ReferenceMediaItem } from "./ReferenceItem";
 import { ElementGrid, type ElementItem } from "./ElementGrid";
 import { MentionTextarea } from "./MentionTextarea";
 import { SceneMentionTextarea, type SceneMentionTextareaHandle } from "./SceneMentionTextarea";
-import { useRef } from "react";
 import { extractVideoKeyframes, compressImageFile } from "@/lib/videoFrames";
 import { Sparkles, Loader2, ScanSearch, RotateCcw, RefreshCw, Info, Volume2, VolumeX } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
