@@ -1,29 +1,35 @@
 
-## Expand Preset Previews to cover all presets
+## Add "New Preset" creation from Previews section
 
-Right now the admin **Preset Previews** section only shows the 12 hero presets (`HERO_PRESET_IDS`). You want to upload videos for **every** preset in the app, so each one can have a hover-play clip on the main page.
+Add a button in the admin **Preset Previews** header that opens a dialog to create a brand-new preset (id, label, group, icon, description, best-for, animation class). New presets are persisted and merged into the existing preset list so they show up both in the admin grid (for video upload) and on the main page.
 
 ### What changes
 
-**1. `src/lib/presets.ts`**
-- Replace the hard-coded `PRESETS_WITH_VIDEO` set with a derivation from all `PRESETS` (every preset becomes video-eligible).
-- `HERO_PRESET_IDS` stays as-is (still used for the homepage hero row), but a new `ALL_PRESET_IDS` export is added for the admin section.
-- `getPresetVideoUrl(id)` returns a URL for any preset id.
+**1. New table `custom_presets`** (migration)
+Columns: `id text pk`, `label text`, `group_id text`, `icon_name text` (lucide icon name), `description text`, `best_for text`, `anim_class text nullable`, `created_at timestamptz default now()`, `created_by uuid`.
+- RLS: public `select` (so main page can read), `insert/update/delete` restricted to admins via existing `has_role(auth.uid(),'admin')`.
 
-**2. `src/components/admin/PresetPreviewsSection.tsx`**
-- Iterate over **all** presets instead of `HERO_PRESET_IDS`, grouped by `PRESET_GROUPS` (Basic Camera / Epic Camera / Effects / Catch the Pulse / Mix) with a group header above each grid so the long list stays scannable.
-- Add a small summary line at the top: `X / Y previews uploaded`.
-- Keep per-card Upload / Replace / Delete / Generate buttons exactly as they are.
-- "Auto-generate all 12" button stays scoped to hero presets only (bulk generation across ~50 presets would be too slow / costly) — relabel to **"Auto-generate 12 hero presets"** and add a tooltip clarifying that non-hero presets are upload-only for now.
-- The `meta` refresh still lists the `preset-previews` bucket but now keys against every preset id.
+**2. `src/lib/presets.ts`**
+- Keep built-in `PRESETS` as-is.
+- Export a new async loader `loadCustomPresets()` that fetches from `custom_presets` and maps `icon_name` → lucide component via a small whitelist map (Camera, Film, Sparkles, Zap, Wand2, Aperture, Move, RotateCw, ZoomIn, etc. — ~20 common ones).
+- Export `getAllPresets()` returning built-ins + customs, and `useAllPresets()` hook (React Query) for components.
 
-**3. `src/components/PresetCard.tsx`**
-- No code change needed — it already calls `getPresetVideoUrl(preset.id)` and gracefully falls back to the icon when no video exists, so every preset will automatically pick up its video once uploaded.
+**3. `src/components/admin/PresetPreviewsSection.tsx`**
+- Add a **"New Preset"** button (Plus icon) in the card header next to the bulk-generate button.
+- Clicking opens a `Dialog` with a form: ID (slug, auto-generated from label, validated unique), Label, Group (Select from `PRESET_GROUPS`), Icon (Select from whitelist with live preview), Description, Best for, Animation class (optional, free text).
+- On submit: insert into `custom_presets`, refresh the list so the new preset appears in its group's grid, ready for MP4 upload.
+- Custom presets show a small "Custom" badge (like the existing "Hero" badge) and gain a delete-preset action (trash on the card header area, separate from the video delete).
+
+**4. Main page consumers (`Index.tsx` / wherever `PRESETS` is iterated)**
+- Switch from importing `PRESETS` directly to `useAllPresets()` so customs render alongside built-ins with the same hover-video behavior.
 
 ### Out of scope
-- No DB schema or storage bucket changes (the `preset-previews` public bucket already accepts any `<id>.mp4`).
-- No change to bulk-generate behavior beyond the relabel.
+- Editing existing built-in presets (still code-defined).
+- Bulk auto-generate for custom presets (upload-only, same as non-hero built-ins).
+- Custom icon upload — icon picker is limited to the lucide whitelist.
 
 ### Files touched
+- `supabase/migrations/<new>.sql` (new `custom_presets` table + RLS)
 - `src/lib/presets.ts`
 - `src/components/admin/PresetPreviewsSection.tsx`
+- `src/pages/Index.tsx` (and any other file iterating `PRESETS` for display)
