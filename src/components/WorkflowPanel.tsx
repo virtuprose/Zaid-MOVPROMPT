@@ -80,6 +80,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
   const [referenceItems, setReferenceItems] = useState<ReferenceMediaItem[]>([]);
   const [elementItems, setElementItems] = useState<ElementItem[]>([]);
   const sceneMentionRef = useRef<SceneMentionTextareaHandle>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   // Flatten scene frames into a single 1-based indexed list (left-to-right, frame-by-frame).
   const flatSceneElements = useMemo(() => {
