@@ -562,6 +562,12 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
               />
             )}
 
+            {!contract.supportsElementReferences && (
+              <p className="text-xs text-muted-foreground px-1 -mt-2">
+                {t("scene.autoAssignedHint" as any)}
+              </p>
+            )}
+
             <div className="flex items-start gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-xs text-foreground/80">
               <Info className="w-3.5 h-3.5 text-primary mt-0.5 shrink-0" />
               <span>{t("scene.reviewHint" as any)}</span>
@@ -574,6 +580,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
               directions={elementDirections}
               onDirectionsChange={setElementDirections}
               onInsertMention={(n) => sceneMentionRef.current?.insertMention(n)}
+              onManualToggle={(id) => setManualOverrides((prev) => ({ ...prev, [id]: true }))}
             />
 
             <div className="flex justify-center">
