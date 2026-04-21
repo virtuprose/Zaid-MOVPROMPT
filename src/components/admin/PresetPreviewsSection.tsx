@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Upload, Trash2, Film, Sparkles, Loader2, X, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
-import { HERO_PRESET_IDS, ALL_PRESET_IDS, PRESETS, PRESET_GROUPS, getPresetVideoUrl } from "@/lib/presets";
+import { HERO_PRESET_IDS, ALL_PRESET_IDS, PRESETS, PRESET_GROUPS, getPresetVideoUrl, type Preset } from "@/lib/presets";
 
 
 const BUCKET = "preset-previews";
