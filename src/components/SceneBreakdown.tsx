@@ -30,6 +30,7 @@ interface SceneBreakdownProps {
   framePreviews: (string | null)[];
   directions: ElementDirections;
   onDirectionsChange: (directions: ElementDirections) => void;
+  onInsertMention?: (n: number) => void;
 }
 
 const categoryIcons: Record<string, React.ElementType> = {
