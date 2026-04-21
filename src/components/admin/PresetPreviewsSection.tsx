@@ -14,7 +14,7 @@ import {
 import { Upload, Trash2, Film, Sparkles, Loader2, X, AlertCircle, Plus } from "lucide-react";
 import { toast } from "sonner";
 import {
-  PRESETS, PRESET_GROUPS, getPresetVideoUrl,
+  HERO_PRESET_IDS, PRESETS, PRESET_GROUPS, getPresetVideoUrl,
   useAllPresets, ICON_NAMES, getIconByName,
 } from "@/lib/presets";
 
