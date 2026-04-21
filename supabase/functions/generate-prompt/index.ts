@@ -91,7 +91,7 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { images, workflowType, description, targetModel, sceneBreakdown, audioEnabled, references, elements, autoInjectElements, multiShotCount } = body;
+    const { images, workflowType, description, targetModel, sceneBreakdown, audioEnabled, references, elements, autoInjectElements, multiShotCount, elementMentions } = body;
 
     // --- Input Validation ---
     // Allow 0 images when elements are provided (element-only mode, e.g. Seedance 2.0).
