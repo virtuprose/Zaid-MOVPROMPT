@@ -171,40 +171,63 @@ export const SceneMentionTextarea = forwardRef<SceneMentionTextareaHandle, Scene
             side="bottom"
             onOpenAutoFocus={(e) => e.preventDefault()}
           >
-            <div className="text-[10px] uppercase tracking-wider text-muted-foreground px-2 py-1">
-              {t("scene.mentionPickerTitle" as any)}
-            </div>
-            <div className="max-h-64 overflow-y-auto">
-              {elements.map((el) => (
+            {elements.length === 0 ? (
+              <div className="flex flex-col items-center text-center px-3 py-4 gap-2">
+                <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center">
+                  <AtSign className="w-4 h-4 text-primary" />
+                </div>
+                <div className="text-sm font-medium text-foreground">
+                  {t("scene.mentionEmptyTitle" as any)}
+                </div>
+                <div className="text-xs text-muted-foreground leading-relaxed">
+                  {t("scene.mentionEmptyHint" as any)}
+                </div>
                 <button
-                  key={el.index}
                   type="button"
-                  onClick={() => insertMention(el.index)}
-                  className="w-full flex items-start gap-2 px-2 py-1.5 rounded hover:bg-secondary text-left"
+                  onClick={() => insertMention(1)}
+                  className="mt-1 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors"
                 >
-                  <span className="font-mono text-xs text-primary mt-0.5 shrink-0">
-                    @{el.index}
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                      {categoryEmoji[el.category] ?? ""} {el.category}
-                    </div>
-                    <div className="text-xs text-foreground truncate">{el.description}</div>
-                  </div>
+                  <AtSign className="w-3 h-3" />
+                  {t("scene.mentionEmptyCta" as any)}
                 </button>
-              ))}
-            </div>
+              </div>
+            ) : (
+              <>
+                <div className="text-[10px] uppercase tracking-wider text-muted-foreground px-2 py-1">
+                  {t("scene.mentionPickerTitle" as any)}
+                </div>
+                <div className="max-h-64 overflow-y-auto">
+                  {elements.map((el) => (
+                    <button
+                      key={el.index}
+                      type="button"
+                      onClick={() => insertMention(el.index)}
+                      className="w-full flex items-start gap-2 px-2 py-1.5 rounded hover:bg-secondary text-left"
+                    >
+                      <span className="font-mono text-xs text-primary mt-0.5 shrink-0">
+                        @{el.index}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                          {categoryEmoji[el.category] ?? ""} {el.category}
+                        </div>
+                        <div className="text-xs text-foreground truncate">{el.description}</div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
           </PopoverContent>
 
           <div className="flex items-center gap-2 flex-wrap">
             <PopoverTrigger asChild>
               <button
                 type="button"
-                disabled={elements.length === 0}
                 onClick={() => {
                   triggerPosRef.current = null;
                 }}
-                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-primary/30 bg-primary/5 text-xs font-medium text-primary hover:bg-primary/10 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-primary/30 bg-primary/5 text-xs font-medium text-primary hover:bg-primary/10 transition-colors"
               >
                 <AtSign className="w-3 h-3" /> {t("scene.insertMention" as any)}
               </button>
