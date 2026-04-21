@@ -1,47 +1,44 @@
 
-## Faster preset previews — switch model + add per-card model selector
+## Cancel button for active preset generations
 
-Default to a faster Fal model so most previews finish in **20–45s** instead of 60–180s, and let admins override per-generation when they want Kling's quality.
+Add a per-card **Cancel** action while a preset preview is generating. Cancel is **client-side only** (no Fal API change): it stops the polling loop and flips the card to a `canceled` state with a clear visual + a one-click way to re-generate. The Fal job continues server-side, and if it eventually completes the next `refresh()` will still pick up the file from storage — but the UI no longer waits on it.
 
-### What changes
+### What changes — `src/components/admin/PresetPreviewsSection.tsx`
 
-**1. `supabase/functions/generate-preset-preview/index.ts`**
+1. **Status type** gains `"canceled"`:
+   ```ts
+   type CardStatus = "idle" | "generating" | "error" | "canceled";
+   ```
 
-- Add a small model registry at the top:
-  ```ts
-  const FAL_MODELS = {
-    "ltx-fast":   { url: "https://queue.fal.run/fal-ai/ltx-video",                 label: "LTX (fastest, ~20s)",  defaultDuration: "5", aspect: "16:9" },
-    "wan-fast":   { url: "https://queue.fal.run/fal-ai/wan/v2.2-5b/text-to-video", label: "Wan 2.2 5B (~30s)",   defaultDuration: "5", aspect: "16:9" },
-    "kling-std":  { url: "https://queue.fal.run/fal-ai/kling-video/v1/standard/text-to-video", label: "Kling v1 Standard (~90s, best quality)", defaultDuration: "5", aspect: "16:9" },
-  } as const;
-  type ModelKey = keyof typeof FAL_MODELS;
-  const DEFAULT_MODEL: ModelKey = "ltx-fast";
-  ```
-- `submit` action accepts an optional `model` field. Validate it's a known key; fall back to `DEFAULT_MODEL`. Return the chosen `model` in the submit response so the client can label the card.
-- Build the Fal request body per model (LTX/Wan accept `prompt` + `aspect_ratio`; some don't take `duration` — only include fields the model supports). Keep `prompt` resolution (`HERO_PROMPTS` / `buildDynamicPrompt`) unchanged.
-- `poll` action accepts the same `model` so it hits the right `statusUrl`/`responseUrl` (these are full URLs returned by Fal, so this is mostly a sanity field; no logic change needed beyond carrying it through error messages).
-- Surface the model in error/debug responses (`code: "fal_error"` messages) so admins can tell which engine failed.
-- No DB changes. No storage changes. Output path stays `<presetId>.mp4` (one canonical preview per preset, regardless of which model produced it — replacing on regeneration is the existing behavior).
+2. **Cancellation registry** (`useRef<Record<string, boolean>>({})`) — `cancelRequested.current[presetId] = true` flips the flag; the polling loop checks it on every tick.
 
-**2. `src/components/admin/PresetPreviewsSection.tsx`**
+3. **`generateOne` loop** — at the top of each poll iteration (and immediately after submit returns), check `cancelRequested.current[presetId]`. If set:
+   - Clear `cancelRequested.current[presetId]`.
+   - Clear `genStarts[presetId]`.
+   - `setStatuses(... "canceled")`.
+   - Return `{ ok: false, code: "canceled" }` (no toast — handled below).
 
-- Add a small `Select` in the card header (next to "New Preset") labeled **Model**, with three options matching the registry. Default: `ltx-fast`. Persist choice in `localStorage` (`preset-previews:model`) so it sticks across sessions.
-- Pass the selected `model` into the `submit` invoke body.
-- Per-card "Generating…" badge shows the model label + an elapsed-time counter (`0:23`) so the wait reads as intentional. No change to the existing polling loop or storage refresh.
-- Add a one-line caption under the selector: *"LTX is fastest. Switch to Kling for the highest-quality reference clips."*
+4. **`handleGenerateOne`** — when result is `code === "canceled"`, show a neutral `toast.info("Canceled")` instead of the error toast. Resetting status (clicking Generate again) clears `canceled`.
 
-**3. i18n (EN + AR)**
-- `presetPreviews.model` → `Model`
-- `presetPreviews.modelHelper` → `LTX is fastest. Switch to Kling for the highest-quality reference clips.`
-- `presetPreviews.elapsed` → `{time} elapsed`
+5. **Cancel button UI** — inside the generating overlay (next to the elapsed timer), add a small ghost button:
+   ```tsx
+   <Button size="sm" variant="ghost" className="h-6 px-2 gap-1" onClick={() => requestCancel(preset.id)}>
+     <X className="w-3 h-3" /> Cancel
+   </Button>
+   ```
+   `requestCancel(id)` simply sets the ref flag and shows a "Canceling…" sub-label until the loop notices (within ~4s, the current poll interval).
 
-### Out of scope
-- Webhooks (declined earlier).
-- Storing per-preset "which model produced this" metadata.
-- Bulk generate.
+6. **Canceled card state** — when `status === "canceled"`:
+   - Show a muted info chip on the card body (similar styling to the error chip but using `bg-muted text-muted-foreground`):
+     `Canceled — job may still complete server-side. Refresh to check.`
+   - The primary button label becomes **"Generate again"** and clears the canceled state on click (it just calls `handleGenerateOne` which resets `statuses[id]` to `"generating"`).
+
+7. **No backend / SQL / edge-function changes.** Out of scope: Fal-side cancellation API (their queue doesn't expose a stable cancel endpoint for the v1 standard model, and a true cancel would still bill for inference already in flight).
 
 ### Files touched
-- `supabase/functions/generate-preset-preview/index.ts`
 - `src/components/admin/PresetPreviewsSection.tsx`
-- `src/i18n/translations/en.ts`
-- `src/i18n/translations/ar.ts`
+
+### Out of scope
+- Server-side cancel call to Fal.
+- i18n strings (this section is hardcoded English, matching the rest of the component).
+- Persisting canceled state across refresh (it's an in-memory UI signal).
