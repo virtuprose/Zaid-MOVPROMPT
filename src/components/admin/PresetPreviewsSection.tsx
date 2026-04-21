@@ -217,10 +217,14 @@ const PresetPreviewsSection = () => {
         <CardTitle className="flex items-center gap-2">
           <Film className="w-5 h-5 text-primary" />
           Preset Previews
+          <span className="ml-auto text-xs font-normal text-muted-foreground">
+            {uploadedCount} / {ALL_PRESET_IDS.length} uploaded
+          </span>
         </CardTitle>
         <p className="text-sm text-muted-foreground">
-          Auto-generate looping clips for the 12 hero presets via Fal.ai Kling, or upload your own MP4.
-          Public bucket — videos load instantly on hover in the main app.
+          Upload an MP4 for any preset to enable hover-play on the main page.
+          The 12 hero presets can also be auto-generated via Fal.ai Kling.
+          Public bucket — videos load instantly.
         </p>
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 pt-2">
           <Button
@@ -228,13 +232,14 @@ const PresetPreviewsSection = () => {
             onClick={handleGenerateAll}
             disabled={bulkRunning}
             className="gap-2"
+            title="Bulk generation only covers the 12 hero presets. Other presets are upload-only."
           >
             {bulkRunning ? (
               <Loader2 className="w-4 h-4 animate-spin" />
             ) : (
               <Sparkles className="w-4 h-4" />
             )}
-            {bulkRunning ? "Generating…" : "Auto-generate all 12"}
+            {bulkRunning ? "Generating…" : "Auto-generate 12 hero presets"}
           </Button>
           <p className="text-xs text-muted-foreground">
             ~60–90s per clip · ~12–18 min total · ~$1.80
