@@ -14,9 +14,9 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const BUCKET = "preset-previews";
 const FAL_SUBMIT_URL =
   "https://queue.fal.run/fal-ai/kling-video/v1/standard/text-to-video";
-const FAL_QUEUE_BASE = "https://queue.fal.run/fal-ai/kling-video";
 
-const PROMPTS: Record<string, string> = {
+// Hand-tuned hero prompts (kept verbatim).
+const HERO_PROMPTS: Record<string, string> = {
   "dolly-zoom":
     "Vertigo dolly zoom on a lone figure standing on a foggy cliff at sunset, background dramatically compresses while subject stays the same size, cinematic 35mm film, golden hour rim light, shallow depth of field",
   "bullet-time":
@@ -43,7 +43,34 @@ const PROMPTS: Record<string, string> = {
     "Slow motion orbit around a figure firing a pistol, shell casing tumbling through air, smoke trail, golden hour backlight, cinematic action",
 };
 
-const ALLOWED_IDS = Object.keys(PROMPTS);
+const SCENE_HINTS: Record<string, string> = {
+  basic: "a lone figure walking down a city street at dusk",
+  epic: "a vast canyon at golden hour with sweeping vistas",
+  effects: "a dancer in a dark studio with a single key light",
+  pulse: "a sports car drifting on a wet street at night",
+  mix: "a rain-soaked alley with neon signs and reflective puddles",
+};
+
+const CAMERA_GROUPS = new Set(["basic", "epic"]);
+
+function buildDynamicPrompt(opts: {
+  label: string;
+  description: string;
+  bestFor: string;
+  groupId: string;
+}): string {
+  const effectKind = CAMERA_GROUPS.has(opts.groupId) ? "camera move" : "visual effect";
+  const sceneHint = SCENE_HINTS[opts.groupId] ?? "a cinematic environment with dramatic lighting";
+  return `Cinematic 5-second video that clearly demonstrates a "${opts.label}" ${effectKind}.
+The ${effectKind} must be the visible focus of the shot.
+
+Effect description: ${opts.description}
+Best used for: ${opts.bestFor}
+
+Scene: ${sceneHint}
+
+Style: 35mm anamorphic, dramatic lighting, shallow depth of field, photoreal, high detail. Subject and framing chosen to make the "${opts.label}" ${effectKind} unmistakable from the first frame.`;
+}
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -74,6 +101,54 @@ async function authAdmin(req: Request) {
   return { userId: userData.user.id };
 }
 
+const SLUG_RE = /^[a-z0-9-]+$/;
+
+async function resolvePrompt(
+  presetId: string,
+  body: Record<string, unknown>,
+): Promise<{ prompt: string } | { error: string }> {
+  if (HERO_PROMPTS[presetId]) {
+    return { prompt: HERO_PROMPTS[presetId] };
+  }
+
+  const clientLabel = typeof body.label === "string" ? body.label.trim() : "";
+  const clientDesc = typeof body.description === "string" ? body.description.trim() : "";
+  const clientBest = typeof body.bestFor === "string" ? body.bestFor.trim() : "";
+  const clientGroup = typeof body.groupId === "string" ? body.groupId.trim() : "";
+
+  if (clientLabel && clientDesc) {
+    return {
+      prompt: buildDynamicPrompt({
+        label: clientLabel,
+        description: clientDesc,
+        bestFor: clientBest || clientLabel,
+        groupId: clientGroup || "effects",
+      }),
+    };
+  }
+
+  // DB fallback for custom presets
+  const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+  const { data, error } = await admin
+    .from("custom_presets")
+    .select("label, description, best_for, group_id")
+    .eq("id", presetId)
+    .maybeSingle();
+  if (error) return { error: `DB lookup failed: ${error.message}` };
+  if (!data) return { error: `Unknown presetId: ${presetId}` };
+  if (!data.label || !data.description) {
+    return { error: `Preset "${presetId}" missing label/description` };
+  }
+  return {
+    prompt: buildDynamicPrompt({
+      label: data.label,
+      description: data.description,
+      bestFor: data.best_for || data.label,
+      groupId: data.group_id || "effects",
+    }),
+  };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -93,9 +168,15 @@ Deno.serve(async (req) => {
     // === SUBMIT ===
     if (action === "submit") {
       const presetId = String(body?.presetId ?? "");
-      if (!ALLOWED_IDS.includes(presetId)) {
-        return json({ ok: false, error: `Unknown presetId: ${presetId}`, code: "bad_input" }, 400);
+      if (!SLUG_RE.test(presetId)) {
+        return json({ ok: false, error: `Invalid presetId: ${presetId}`, code: "bad_input" }, 400);
       }
+
+      const resolved = await resolvePrompt(presetId, body);
+      if ("error" in resolved) {
+        return json({ ok: false, error: resolved.error, code: "bad_input" }, 400);
+      }
+
       const submitRes = await fetch(FAL_SUBMIT_URL, {
         method: "POST",
         headers: {
@@ -103,7 +184,7 @@ Deno.serve(async (req) => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          prompt: PROMPTS[presetId],
+          prompt: resolved.prompt,
           duration: "5",
           aspect_ratio: "16:9",
         }),
@@ -135,7 +216,7 @@ Deno.serve(async (req) => {
       const presetId = String(body?.presetId ?? "");
       const statusUrl = String(body?.statusUrl ?? "");
       const responseUrl = String(body?.responseUrl ?? "");
-      if (!ALLOWED_IDS.includes(presetId) || !statusUrl || !responseUrl) {
+      if (!SLUG_RE.test(presetId) || !statusUrl || !responseUrl) {
         return json({ ok: false, error: "Missing fields", code: "bad_input" }, 400);
       }
 
@@ -155,7 +236,6 @@ Deno.serve(async (req) => {
         return json({ ok: true, status: "pending", falStatus: statusData.status });
       }
 
-      // COMPLETED — fetch result, download, upload
       const finalRes = await fetch(responseUrl, {
         headers: { Authorization: `Key ${FAL_KEY}` },
       });
