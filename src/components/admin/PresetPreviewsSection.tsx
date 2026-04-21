@@ -41,9 +41,6 @@ const PresetPreviewsSection = () => {
   const [cacheBust, setCacheBust] = useState(Date.now());
   const [statuses, setStatuses] = useState<Record<string, CardStatus>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [bulkRunning, setBulkRunning] = useState(false);
-  const [bulkProgress, setBulkProgress] = useState<{ current: number; total: number; presetId: string } | null>(null);
-  const cancelRef = useRef(false);
   const inputs = useRef<Record<string, HTMLInputElement | null>>({});
 
   // New preset dialog state
@@ -229,39 +226,7 @@ const PresetPreviewsSection = () => {
     else toast.error(`Failed: ${res.error}`);
   };
 
-  const handleGenerateAll = async () => {
-    if (bulkRunning) return;
-    setBulkRunning(true);
-    cancelRef.current = false;
-    const total = HERO_PRESET_IDS.length;
-    let success = 0;
-    let failed = 0;
 
-    for (let i = 0; i < total; i++) {
-      if (cancelRef.current) {
-        toast.info(`Cancelled — ${success} done, ${total - i} skipped`);
-        break;
-      }
-      const presetId = HERO_PRESET_IDS[i];
-      setBulkProgress({ current: i + 1, total, presetId });
-      const res = await generateOne(presetId);
-      if (res.ok) success++;
-      else {
-        failed++;
-        if (res.code === "no_credits") {
-          toast.error("Fal.ai credits exhausted — stopping. Top up at fal.ai/dashboard/billing");
-          break;
-        }
-      }
-    }
-
-    setBulkProgress(null);
-    setBulkRunning(false);
-    if (!cancelRef.current) {
-      if (failed === 0) toast.success(`Generated all ${success} previews`);
-      else toast.warning(`Done — ${success} succeeded, ${failed} failed`);
-    }
-  };
 
   const resetForm = () => {
     setForm({
@@ -449,42 +414,10 @@ const PresetPreviewsSection = () => {
               </DialogFooter>
             </DialogContent>
           </Dialog>
-
-          <Button
-            type="button"
-            onClick={handleGenerateAll}
-            disabled={bulkRunning}
-            className="gap-2"
-            title="Bulk generation only covers the 12 hero presets."
-          >
-            {bulkRunning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-            {bulkRunning ? "Generating…" : "Auto-generate 12 hero presets"}
-          </Button>
-          <p className="text-xs text-muted-foreground">
-            ~60–90s per clip · ~12–18 min total · ~$1.80
-          </p>
         </div>
-        {bulkProgress && (
-          <div className="mt-3 rounded-md border border-border/50 bg-secondary/40 p-3 flex items-center gap-3">
-            <Loader2 className="w-4 h-4 animate-spin text-primary shrink-0" />
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium">
-                Generating {bulkProgress.current} / {bulkProgress.total}
-                <span className="text-muted-foreground font-mono ml-2">{bulkProgress.presetId}</span>
-              </p>
-              <div className="mt-1.5 h-1.5 w-full rounded-full bg-background overflow-hidden">
-                <div className="h-full bg-primary transition-all" style={{ width: `${(bulkProgress.current / bulkProgress.total) * 100}%` }} />
-              </div>
-            </div>
-            <Button type="button" size="sm" variant="ghost" onClick={() => { cancelRef.current = true; }} className="gap-1">
-              <X className="w-3.5 h-3.5" />
-              Cancel
-            </Button>
-          </div>
-        )}
       </CardHeader>
       <CardContent className="space-y-8">
-        <div className="flex flex-col sm:flex-row sm:items-center gap-2 -mt-2">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2">
           <div className="relative flex-1 min-w-[180px]">
             <Input
               value={search}
@@ -514,7 +447,7 @@ const PresetPreviewsSection = () => {
               ))}
             </SelectContent>
           </Select>
-          <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as typeof statusFilter)}>
+          <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as "all" | "uploaded" | "missing")}>
             <SelectTrigger className="sm:w-[160px]"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All statuses</SelectItem>
@@ -522,23 +455,15 @@ const PresetPreviewsSection = () => {
               <SelectItem value="missing">Missing video</SelectItem>
             </SelectContent>
           </Select>
-          <span className="text-xs text-muted-foreground whitespace-nowrap">
-            Showing {filteredPresets.length} of {allIds.length}
-          </span>
-          {filtersActive && (
-            <Button type="button" variant="ghost" size="sm" onClick={clearFilters} className="gap-1">
-              <X className="w-3.5 h-3.5" />
-              Clear
-            </Button>
-          )}
+          <div className="flex items-center gap-2 text-xs text-muted-foreground sm:ml-auto">
+            <span>Showing {filteredPresets.length} of {allIds.length}</span>
+            {filtersActive && (
+              <Button type="button" size="sm" variant="ghost" onClick={clearFilters} className="h-7 gap-1">
+                <X className="w-3 h-3" /> Clear
+              </Button>
+            )}
+          </div>
         </div>
-
-        {presetsByGroup.length === 0 && (
-          <p className="text-sm text-muted-foreground text-center py-8">
-            No presets match your filters.
-          </p>
-        )}
-
         {presetsByGroup.map(({ group, items }) => {
           const groupUploaded = items.filter((p) => meta[p.id]).length;
           return (
@@ -633,7 +558,7 @@ const PresetPreviewsSection = () => {
                               size="sm"
                               variant="default"
                               className="flex-1 gap-1.5"
-                              disabled={isGen || bulkRunning}
+                              disabled={isGen}
                               onClick={() => handleGenerateOne(preset.id)}
                             >
                               {isGen ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
