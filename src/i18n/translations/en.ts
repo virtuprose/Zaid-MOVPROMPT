@@ -134,6 +134,8 @@ export const en = {
   "scene.lock": "Lock",
   "scene.move": "Move",
   "scene.elements": "elements",
+  "scene.lockTooltip": "Keep this element static — it won't animate in the final video.",
+  "scene.moveTooltip": "Let this element animate — add a note below to direct the motion.",
   "scene.notePlaceholder": 'e.g. "make hair blow in wind", "add rain effect"...',
   "scene.mentionHint": "Type @ to reference an element (e.g. @2 should turn toward camera)",
   "scene.mentionPickerTitle": "Insert element reference",
