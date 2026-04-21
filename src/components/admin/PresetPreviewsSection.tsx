@@ -342,7 +342,7 @@ const PresetPreviewsSection = () => {
           Upload an MP4 for any preset to enable hover-play on the main page.
           Create custom presets to add your own cards.
         </p>
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3 pt-2">
+        <div className="flex flex-col sm:flex-row sm:items-end gap-3 pt-2">
           <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) resetForm(); }}>
             <DialogTrigger asChild>
               <Button type="button" variant="outline" className="gap-2">
