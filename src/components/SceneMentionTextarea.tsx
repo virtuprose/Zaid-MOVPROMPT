@@ -79,23 +79,25 @@ export const SceneMentionTextarea = forwardRef<SceneMentionTextareaHandle, Scene
     const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
       const next = e.target.value;
       onChange(next);
-      if (elements.length === 0) return;
+      if (elements.length === 0) {
+        triggerPosRef.current = null;
+        if (open) setOpen(false);
+        return;
+      }
       const caret = e.target.selectionStart ?? next.length;
       const prev = next[caret - 1];
       const after = next[caret];
-      const isTrigger =
+      const before = next[caret - 2];
+      const isFreshAt =
         prev === "@" &&
-        (caret === 1 || /\s/.test(next[caret - 2] ?? " ") || next[caret - 2] === "\n") &&
-        !/\d/.test(after ?? "");
-      if (isTrigger) {
+        !/\d/.test(after ?? "") &&
+        (caret === 1 || !/\w/.test(before ?? "") || before === "\n");
+      if (isFreshAt && !open) {
         triggerPosRef.current = caret - 1;
         setOpen(true);
-      } else if (open && triggerPosRef.current !== null) {
-        const tp = triggerPosRef.current;
-        if (next[tp] !== "@" || /\d/.test(next[tp + 1] ?? "")) {
-          setOpen(false);
-          triggerPosRef.current = null;
-        }
+      } else {
+        if (triggerPosRef.current !== null) triggerPosRef.current = null;
+        if (open) setOpen(false);
       }
     };
 
