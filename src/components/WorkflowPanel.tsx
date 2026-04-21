@@ -498,12 +498,12 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
             <p className="text-sm text-muted-foreground max-w-md mx-auto text-center">
               {t("wp.analyzeDesc")}
             </p>
-            <div className="flex justify-center gap-3">
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 items-stretch sm:items-center sm:justify-center">
               <Button
                 size="lg"
                 onClick={handleAnalyze}
                 disabled={isAnalyzing}
-                className="px-6 sm:px-8 font-display font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/25"
+                className="w-full sm:w-auto px-4 sm:px-8 font-display font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/25"
               >
                 {isAnalyzing ? (
                   <><Loader2 className="w-4 h-4 me-2 animate-spin" /> {t("wp.analyzingScene")}</>
@@ -515,7 +515,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
                 size="lg"
                 onClick={() => { setSceneFrames([]); setPhase("breakdown"); }}
                 disabled={isAnalyzing}
-                className="px-6 sm:px-8 font-display font-semibold bg-accent text-accent-foreground hover:bg-accent/90 shadow-lg shadow-accent/25"
+                className="w-full sm:w-auto px-4 sm:px-8 font-display font-semibold bg-accent text-accent-foreground hover:bg-accent/90 shadow-lg shadow-accent/25"
               >
                 <Zap className="w-4 h-4 me-2" /> {t("wp.skip")}
               </Button>
