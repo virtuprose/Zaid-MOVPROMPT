@@ -25,7 +25,7 @@ interface FileMeta {
   updated_at: string;
 }
 
-type CardStatus = "idle" | "generating" | "error";
+type CardStatus = "idle" | "generating" | "error" | "canceled";
 
 const MODEL_OPTIONS = [
   { value: "ltx-fast", label: "LTX — fastest (~20s)" },
@@ -60,6 +60,8 @@ const PresetPreviewsSection = () => {
   const [genStarts, setGenStarts] = useState<Record<string, number>>({});
   const [now, setNow] = useState(Date.now());
   const inputs = useRef<Record<string, HTMLInputElement | null>>({});
+  const cancelRequested = useRef<Record<string, boolean>>({});
+  const [canceling, setCanceling] = useState<Record<string, boolean>>({});
 
   const [model, setModel] = useState<ModelValue>(() => {
     if (typeof window === "undefined") return DEFAULT_MODEL;
@@ -246,6 +248,28 @@ const PresetPreviewsSection = () => {
       return next;
     });
     setGenStarts((g) => ({ ...g, [presetId]: Date.now() }));
+    cancelRequested.current[presetId] = false;
+    setCanceling((c) => {
+      const next = { ...c };
+      delete next[presetId];
+      return next;
+    });
+
+    const markCanceled = (): { ok: false; code: "canceled" } => {
+      cancelRequested.current[presetId] = false;
+      setCanceling((c) => {
+        const next = { ...c };
+        delete next[presetId];
+        return next;
+      });
+      setGenStarts((g) => {
+        const next = { ...g };
+        delete next[presetId];
+        return next;
+      });
+      setStatuses((s) => ({ ...s, [presetId]: "canceled" }));
+      return { ok: false, code: "canceled" };
+    };
 
     const preset = allPresets.find((p) => p.id === presetId);
     const { data: subData, error: subErr } = await supabase.functions.invoke(
@@ -263,6 +287,7 @@ const PresetPreviewsSection = () => {
       },
     );
     const sub = (subData as { ok?: boolean; code?: string; error?: string; statusUrl?: string; responseUrl?: string } | null) ?? null;
+    if (cancelRequested.current[presetId]) return markCanceled();
     if (subErr || !sub?.ok) {
       const code = sub?.code;
       if (code === "rate_limit" && attempt < 2) {
@@ -278,6 +303,7 @@ const PresetPreviewsSection = () => {
     const deadline = Date.now() + 6 * 60_000;
     while (Date.now() < deadline) {
       await new Promise((r) => setTimeout(r, 4_000));
+      if (cancelRequested.current[presetId]) return markCanceled();
       const { data: pData, error: pErr } = await supabase.functions.invoke(
         "generate-preset-preview",
         {
@@ -291,6 +317,7 @@ const PresetPreviewsSection = () => {
         },
       );
       const p = (pData as { ok?: boolean; status?: string; code?: string; error?: string } | null) ?? null;
+      if (cancelRequested.current[presetId]) return markCanceled();
       if (pErr || !p?.ok) {
         const msg = p?.error || pErr?.message || "Poll failed";
         setStatuses((s) => ({ ...s, [presetId]: "error" }));
@@ -312,8 +339,14 @@ const PresetPreviewsSection = () => {
   const handleGenerateOne = async (presetId: string) => {
     const res = await generateOne(presetId);
     if (res.ok) toast.success(`Generated ${presetId}`);
+    else if (res.code === "canceled") toast(`Canceled ${presetId}`);
     else if (res.code === "no_credits") toast.error("Fal.ai credits exhausted — top up at fal.ai/dashboard/billing");
     else toast.error(`Failed: ${res.error}`);
+  };
+
+  const requestCancel = (presetId: string) => {
+    cancelRequested.current[presetId] = true;
+    setCanceling((c) => ({ ...c, [presetId]: true }));
   };
 
 
