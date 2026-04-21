@@ -16,6 +16,7 @@ import Unsubscribe from "./pages/Unsubscribe.tsx";
 import Library from "./pages/Library.tsx";
 import Terms from "./pages/Terms.tsx";
 import PrivacyPolicy from "./pages/PrivacyPolicy.tsx";
+import QaMobile from "./pages/QaMobile.tsx";
 
 const queryClient = new QueryClient();
 
@@ -36,6 +37,7 @@ const AppRoutes = () => {
         <Route path="/unsubscribe" element={<Unsubscribe />} />
         <Route path="/terms" element={<Terms />} />
         <Route path="/privacy" element={<PrivacyPolicy />} />
+        <Route path="/qa/mobile" element={<QaMobile />} />
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
         <Route path="*" element={<NotFound />} />
       </Routes>
