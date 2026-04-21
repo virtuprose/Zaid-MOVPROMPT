@@ -168,14 +168,6 @@ export const SceneBreakdown = ({ frames, frameLabels, framePreviews, directions,
                         >
                           <Play className="w-3 h-3" /> {t("scene.move")}
                         </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => toggleNoteExpanded(el.id)}
-                          className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
-                        >
-                          {noteExpanded ? <X className="w-3 h-3" /> : <Plus className="w-3 h-3" />}
-                        </Button>
                       </div>
                     </div>
 
