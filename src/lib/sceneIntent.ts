@@ -82,26 +82,35 @@ export function detectIntent(text: string, mentionNumber: number): "move" | "loc
     if (/^@\d+$/.test(mentionForm[i])) { segEnd = i; break; }
   }
 
-  const findVerb = (): { kind: "move" | "lock"; idx: number } | null => {
-    for (let i = segStart; i < segEnd; i++) {
-      if (i === targetIdx) continue;
-      const w = plainForm[i];
-      if (!w) continue;
-      if (LOCK_SET.has(w)) return { kind: "lock", idx: i };
-      if (MOVE_SET.has(w)) return { kind: "move", idx: i };
+  const isNegated = (verbIdx: number): boolean => {
+    for (let j = Math.max(segStart, verbIdx - 2); j < verbIdx; j++) {
+      if (NEGATORS.has(plainForm[j])) return true;
     }
-    return null;
+    return false;
   };
 
-  const hit = findVerb();
-  if (!hit) return null;
-
-  // Check for a negator within the 2 words before the verb → flip
-  let negated = false;
-  for (let j = Math.max(segStart, hit.idx - 2); j < hit.idx; j++) {
-    if (NEGATORS.has(plainForm[j])) { negated = true; break; }
+  // Collect every verb hit in the segment, then prioritize:
+  // 1) any LOCK verb, 2) negated MOVE verb, 3) MOVE verb, 4) negated LOCK verb.
+  let firstMove = -1;
+  let firstNegatedMove = -1;
+  let firstNegatedLock = -1;
+  for (let i = segStart; i < segEnd; i++) {
+    if (i === targetIdx) continue;
+    const w = plainForm[i];
+    if (!w) continue;
+    if (LOCK_SET.has(w)) {
+      if (!isNegated(i)) return "lock";
+      if (firstNegatedLock === -1) firstNegatedLock = i;
+    } else if (MOVE_SET.has(w)) {
+      if (isNegated(i)) {
+        if (firstNegatedMove === -1) firstNegatedMove = i;
+      } else if (firstMove === -1) {
+        firstMove = i;
+      }
+    }
   }
-
-  if (hit.kind === "move") return negated ? "lock" : "move";
-  return negated ? "move" : "lock";
+  if (firstNegatedMove !== -1) return "lock";
+  if (firstMove !== -1) return "move";
+  if (firstNegatedLock !== -1) return "move";
+  return null;
 }
