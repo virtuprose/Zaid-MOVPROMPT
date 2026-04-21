@@ -632,6 +632,8 @@ const PresetPreviewsSection = () => {
                   const status = statuses[preset.id] ?? "idle";
                   const errMsg = errors[preset.id];
                   const isGen = status === "generating";
+                  const isCanceled = status === "canceled";
+                  const isCanceling = !!canceling[preset.id];
                   const isHero = HERO_PRESET_IDS.includes(preset.id);
                   const isCustom = customIds.has(preset.id);
                   return (
@@ -649,8 +651,18 @@ const PresetPreviewsSection = () => {
                               {genStarts[preset.id] ? formatElapsed(now - genStarts[preset.id]) : "0:00"}
                             </div>
                             <div className="text-[10px] text-muted-foreground px-2 text-center leading-tight">
-                              {MODEL_OPTIONS.find((o) => o.value === model)?.label}
+                              {isCanceling ? "Canceling…" : MODEL_OPTIONS.find((o) => o.value === model)?.label}
                             </div>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              className="h-6 px-2 gap-1 text-[10px]"
+                              disabled={isCanceling}
+                              onClick={() => requestCancel(preset.id)}
+                            >
+                              <X className="w-3 h-3" /> Cancel
+                            </Button>
                           </div>
                         )}
                         {isCustom && (
@@ -714,6 +726,12 @@ const PresetPreviewsSection = () => {
                             <span className="line-clamp-2">{errMsg}</span>
                           </div>
                         )}
+                        {isCanceled && (
+                          <div className="flex items-start gap-1.5 text-[11px] text-muted-foreground bg-muted/60 rounded px-2 py-1">
+                            <X className="w-3 h-3 mt-0.5 shrink-0" />
+                            <span className="line-clamp-2">Canceled — job may still complete server-side. Refresh to check.</span>
+                          </div>
+                        )}
                         <div className="flex flex-wrap gap-2 mt-auto">
                           <input
                             ref={(el) => (inputs.current[preset.id] = el)}
@@ -735,7 +753,7 @@ const PresetPreviewsSection = () => {
                             onClick={() => handleGenerateOne(preset.id)}
                           >
                             {isGen ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
-                            {isGen ? "Generating" : "Generate"}
+                            {isGen ? "Generating" : isCanceled ? "Generate again" : "Generate"}
                           </Button>
                           <Button
                             type="button"
