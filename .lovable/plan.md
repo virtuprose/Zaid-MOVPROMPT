@@ -1,67 +1,45 @@
 
-## Per-preset "Generate" button that matches the preset's exact effect
+## Make "Describe Your Vision (optional)" a clear, prominent section
 
-Add a **Generate** button to every preset card (not just the 12 hero ones). The generated 5s clip must demonstrate **that specific preset's** camera move/effect — e.g. "Push In" generates a push-in shot, "Whip Pan Right" generates a whip pan right, "Levitation" shows levitation. No generic clips.
+The current trigger is a small muted-foreground row with a chevron — easy to miss and doesn't read like an action or a labeled field. Promote it to an obvious labeled section so users understand this is where they tell the AI what they want from the scene.
 
-### What changes
+### What changes — `src/components/ConfigPanel.tsx`
 
-**1. `supabase/functions/generate-preset-preview/index.ts`**
+1. **Replace the muted collapsible trigger** with a proper labeled card header:
+   - Bold foreground title `Describe Your Vision` + small `Optional` pill badge.
+   - One-line helper underneath: `Tell the AI the mood, action, or style you want for this scene — or pick presets below.` (new i18n key `config.describeVisionHelper`, EN + AR).
+   - Keep it collapsible, but use a chevron on the right and a hover/background state so the whole row reads as clickable.
+   - Wrap the header + content in a bordered card (`rounded-lg border border-border/50 bg-card/40 p-4`) so it visually anchors as a real form section instead of a faint link.
 
-Today the function has a hard-coded `PROMPTS` map for 12 hero ids and rejects everything else. Replace that gate with a **deterministic, preset-aware prompt builder**:
+2. **Open by default** (`useState(true)`) so the textarea is visible on first paint — currently it's collapsed and users don't see the input at all.
 
-- Keep the existing 12 hero `PROMPTS` verbatim (already tuned).
-- For any other `presetId`, resolve metadata from one of two sources, in order:
-  1. **Client-provided** `label`, `description`, `bestFor`, `groupId` in the submit payload (built-in non-hero presets — read from `PRESETS` in `src/lib/presets.ts`).
-  2. **Database fallback** — `select label, description, best_for, group_id from custom_presets where id = $1` using the service-role client (custom presets created from the admin).
-- If neither source yields a label+description, return `bad_input`.
-- Build the Fal prompt from a strict template that puts the **camera move / effect itself as the subject of the shot**, so the model can't drift into a generic scene:
+3. **Upgrade the textarea**:
+   - Add a small inline label `Your description` above it.
+   - Replace the generic placeholder with a multi-line example to teach the format:
+     ```
+     e.g. "Slow push-in on a lone figure walking through a rainy
+     Tokyo alley at night, neon reflections, melancholic mood."
+     ```
+   - Show a live character counter `{n} chars` in the bottom-right of the textarea wrapper.
+   - Add a subtle `Clear` ghost button (only when `description.length > 0`).
 
-  ```
-  Cinematic 5-second video that clearly demonstrates a "{label}" {effectKind}.
-  The {effectKind} must be the visible focus of the shot.
+4. **Section divider** between the description block and the preset picker, with a small caption `Or augment with presets` so the relationship between the two is explicit.
 
-  Effect description: {description}
-  Best used for: {bestFor}
-
-  Scene: {sceneHint}
-
-  Style: 35mm anamorphic, dramatic lighting, shallow depth of field,
-  photoreal, high detail. Subject and framing chosen to make the
-  "{label}" {effectKind} unmistakable from the first frame.
-  ```
-
-  Where:
-  - `effectKind` = `"camera move"` if `groupId` ∈ {`basic`, `epic`}, else `"visual effect"`.
-  - `sceneHint` = a small deterministic per-group fallback subject (e.g. basic→"a lone figure walking down a city street at dusk", epic→"a vast canyon at golden hour", effects→"a dancer in a dark studio with a single key light", pulse→"a sports car drifting on a wet street at night", mix→"a rain-soaked alley with neon signs"). This guarantees a coherent backdrop while the **preset** dictates the motion.
-
-- Validation: `presetId` must match `^[a-z0-9-]+$`; reject otherwise.
-- Polling, Fal call, storage upload, and response shape stay exactly the same. Only the submit branch's prompt resolution changes.
-
-**2. `src/components/admin/PresetPreviewsSection.tsx`**
-
-- Remove the `HERO_PRESET_IDS.includes(preset.id)` gate around the Generate button — render it on every card (built-in + custom).
-- When invoking `action: "submit"`, pass the preset metadata so the backend doesn't need a DB roundtrip for built-ins:
-  ```ts
-  body: {
-    action: "submit",
-    presetId: preset.id,
-    label: preset.label,
-    description: preset.description,
-    bestFor: preset.bestFor,
-    groupId: preset.group,
-  }
-  ```
-- Keep all existing per-card states (`isGen`, polling, status text, error toasts) — just applied to the full grid.
-- Search, group filter, status filter, "New Preset" stay as-is.
-
-**3. No DB schema changes**
-`custom_presets` already stores `description`, `best_for`, `group_id`. No migration needed.
+### i18n
+Add to `src/i18n/translations/en.ts` and `ar.ts`:
+- `config.describeVision.optional` → `Optional`
+- `config.describeVisionHelper` → `Tell the AI the mood, action, or style you want for this scene — or pick presets below.`
+- `config.yourDescription` → `Your description`
+- `config.placeholder` → updated multi-line example above
+- `config.clear` → `Clear`
+- `config.augmentWithPresets` → `Or augment with presets`
+- `config.charsCount` → `{n} chars`
 
 ### Out of scope
-- Re-recording the 12 hero clips (their wording is unchanged).
-- Bulk generate (intentionally removed earlier).
-- Changing Fal model/aspect/duration (still Kling v1 standard, 5s, 16:9).
+- Preset picker layout, search, tabs — unchanged.
+- No backend or schema changes.
 
 ### Files touched
-- `supabase/functions/generate-preset-preview/index.ts`
-- `src/components/admin/PresetPreviewsSection.tsx`
+- `src/components/ConfigPanel.tsx`
+- `src/i18n/translations/en.ts`
+- `src/i18n/translations/ar.ts`
