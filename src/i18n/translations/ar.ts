@@ -149,6 +149,9 @@ export const ar: Record<TranslationKey, string> = {
   "scene.mentionHint": "اكتب @ للإشارة إلى عنصر (مثال: @2 يلتفت نحو الكاميرا)",
   "scene.mentionPickerTitle": "إدراج إشارة لعنصر",
   "scene.insertMention": "أشر إلى عنصر",
+  "scene.mentionEmptyTitle": "لا توجد عناصر بعد",
+  "scene.mentionEmptyHint": "قم بتحليل المشهد لاكتشاف العناصر، أو أدرج عنصرًا مؤقتًا للبدء في الكتابة.",
+  "scene.mentionEmptyCta": "أدرج العنصر @1",
 
   // InstallPrompt
   "install.title": "تثبيت MovPrompt",
