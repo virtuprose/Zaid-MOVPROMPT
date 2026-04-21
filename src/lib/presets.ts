@@ -180,10 +180,10 @@ export const getPresetsByGroup = (group: PresetGroupId) =>
   PRESETS.filter((p) => p.group === group);
 
 /**
- * Hero presets that ship with real looping video previews.
- * Adding more = upload <id>.mp4 to the `preset-previews` bucket and add the id here.
+ * Hero presets featured on the homepage hero row — these are the ones the admin
+ * can bulk auto-generate via Fal.ai. All other presets are upload-only.
  */
-export const PRESETS_WITH_VIDEO = new Set<string>([
+export const HERO_PRESET_IDS: string[] = [
   "dolly-zoom",
   "bullet-time",
   "orbit-360",
@@ -196,12 +196,12 @@ export const PRESETS_WITH_VIDEO = new Set<string>([
   "glitch",
   "lightning",
   "mix-bullet-slow",
-]);
+];
 
-export const HERO_PRESET_IDS = Array.from(PRESETS_WITH_VIDEO);
+/** Every preset is video-eligible — admin can upload an MP4 for any of them. */
+export const ALL_PRESET_IDS: string[] = PRESETS.map((p) => p.id);
 
 export const getPresetVideoUrl = (id: string): string | null => {
-  if (!PRESETS_WITH_VIDEO.has(id)) return null;
   const base = import.meta.env.VITE_SUPABASE_URL;
   if (!base) return null;
   return `${base}/storage/v1/object/public/preset-previews/${id}.mp4`;
