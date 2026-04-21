@@ -171,18 +171,45 @@ function buildDynamicPrompt(opts: {
   bestFor: string;
   groupId: string;
 }): string {
-  const effectKind = CAMERA_GROUPS.has(opts.groupId) ? "camera move" : "visual effect";
+  const isCameraMove = CAMERA_GROUPS.has(opts.groupId);
   const sceneHint = SCENE_HINTS[opts.groupId] ?? "a cinematic environment with dramatic lighting";
-  return `Cinematic 5-second video that clearly demonstrates a "${opts.label}" ${effectKind}.
-The ${effectKind} must be the visible focus of the shot.
+
+  if (isCameraMove) {
+    return `Continuous single-shot 5-second video. The camera performs ONE unbroken "${opts.label}" move from start to finish — no cuts, no edits, no shot changes, no transitions.
+
+Move definition: ${opts.description}
+What the audience should see: ${opts.bestFor}
+
+Scene: ${sceneHint}
+
+Constraints: single continuous physical camera move executed smoothly over the full 5 seconds, locked timing, 35mm anamorphic, dramatic lighting, photoreal, high detail. The "${opts.label}" motion must be unmistakable from the first frame and dominate the shot. Do not interpret "${opts.label}" as an editing term — render it as actual on-screen camera movement.`;
+  }
+
+  return `Cinematic 5-second video that clearly demonstrates a "${opts.label}" visual effect.
+The effect must be the visible focus of the shot.
 
 Effect description: ${opts.description}
 Best used for: ${opts.bestFor}
 
 Scene: ${sceneHint}
 
-Style: 35mm anamorphic, dramatic lighting, shallow depth of field, photoreal, high detail. Subject and framing chosen to make the "${opts.label}" ${effectKind} unmistakable from the first frame.`;
+Style: 35mm anamorphic, dramatic lighting, shallow depth of field, photoreal, high detail. Single continuous shot, no cuts, no edits. Subject and framing chosen to make the "${opts.label}" effect unmistakable from the first frame.`;
 }
+
+// Camera moves that LTX consistently mishandles (vertical moves, reverse
+// moves, dolly-zoom variants, focus pulls). When the admin selects LTX for
+// these, we transparently upgrade to Wan and surface the swap in the
+// response so the UI can show a small note.
+const HARD_FOR_LTX = new Set([
+  "dolly-out", "pull-out",
+  "tilt-up", "tilt-down",
+  "pedestal-up", "pedestal-down",
+  "crash-zoom-out",
+  "crane-up", "crane-down",
+  "jib-up", "jib-down",
+  "dolly-zoom", "dolly-zoom-in", "dolly-zoom-out",
+  "rack-focus",
+]);
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
