@@ -13,6 +13,16 @@ import { MentionTextarea } from "./MentionTextarea";
 import { SceneMentionTextarea, type SceneMentionTextareaHandle } from "./SceneMentionTextarea";
 import { extractVideoKeyframes, compressImageFile } from "@/lib/videoFrames";
 import { Sparkles, Loader2, ScanSearch, RotateCcw, RefreshCw, Info, Volume2, VolumeX, Zap } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
