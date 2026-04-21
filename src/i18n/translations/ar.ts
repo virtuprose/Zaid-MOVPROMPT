@@ -139,6 +139,7 @@ export const ar: Record<TranslationKey, string> = {
   "scene.lockTooltip": "اجعل هذا العنصر ثابتاً — لن يتحرك في الفيديو النهائي.",
   "scene.moveTooltip": "اجعل هذا العنصر متحركاً — أضف ملاحظة أدناه لتوجيه الحركة.",
   "scene.reviewHint": "راجع خيارات التحريك/التثبيت التلقائية وعدّلها إذا لزم الأمر.",
+  "scene.autoAssignedHint": "نصيحة: اذكر العناصر مع أفعال مثل 'keep' أو 'move' لضبط التثبيت/التحريك تلقائياً.",
   "wp.confirmTitle": "تأكيد التعديلات",
   "wp.confirmDesc": "راجع تعديلاتك قبل التوليد. بعد التأكيد، سيقوم المخرج الذكي ببناء أمرك السينمائي.",
   "wp.confirmSummary": "{locked} مثبّت · {moving} متحرّك",

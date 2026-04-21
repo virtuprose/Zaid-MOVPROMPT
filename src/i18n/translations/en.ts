@@ -137,6 +137,7 @@ export const en = {
   "scene.lockTooltip": "Keep this element static — it won't animate in the final video.",
   "scene.moveTooltip": "Let this element animate — add a note below to direct the motion.",
   "scene.reviewHint": "Review the auto-assigned Move/Lock choices and adjust if needed.",
+  "scene.autoAssignedHint": "Tip: mention elements with verbs like 'keep' or 'move' to auto-set Lock/Move.",
   "wp.confirmTitle": "Confirm your edits",
   "wp.confirmDesc": "Review your edits before generating. Once confirmed, the AI Director will build your cinematic prompt.",
   "wp.confirmSummary": "{locked} locked · {moving} moving",
