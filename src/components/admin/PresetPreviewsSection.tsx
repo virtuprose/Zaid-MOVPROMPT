@@ -87,7 +87,7 @@ const PresetPreviewsSection = () => {
     await refresh();
   };
 
-  /** Generate one preset. Returns a structured result the caller can act on. */
+  /** Generate one preset via submit + client-side polling. */
   const generateOne = async (
     presetId: string,
     attempt = 0,
@@ -98,41 +98,57 @@ const PresetPreviewsSection = () => {
       delete next[presetId];
       return next;
     });
-    const { data, error } = await supabase.functions.invoke("generate-preset-preview", {
-      body: { presetId },
-    });
 
-    // Network/Function error
-    if (error) {
-      // supabase-js wraps non-2xx responses; try to recover the body
-      const body = (data as { code?: string; error?: string } | null) ?? null;
-      const code = body?.code;
+    // 1. Submit
+    const { data: subData, error: subErr } = await supabase.functions.invoke(
+      "generate-preset-preview",
+      { body: { action: "submit", presetId } },
+    );
+    const sub = (subData as { ok?: boolean; code?: string; error?: string; statusUrl?: string; responseUrl?: string } | null) ?? null;
+    if (subErr || !sub?.ok) {
+      const code = sub?.code;
       if (code === "rate_limit" && attempt < 2) {
         await new Promise((r) => setTimeout(r, 10_000));
         return generateOne(presetId, attempt + 1);
       }
-      const msg = body?.error || error.message || "Generation failed";
+      const msg = sub?.error || subErr?.message || "Submit failed";
       setStatuses((s) => ({ ...s, [presetId]: "error" }));
       setErrors((e) => ({ ...e, [presetId]: msg }));
       return { ok: false, code, error: msg };
     }
 
-    const result = data as { ok: boolean; code?: string; error?: string } | null;
-    if (!result?.ok) {
-      const code = result?.code;
-      if (code === "rate_limit" && attempt < 2) {
-        await new Promise((r) => setTimeout(r, 10_000));
-        return generateOne(presetId, attempt + 1);
+    // 2. Poll up to 6 minutes
+    const deadline = Date.now() + 6 * 60_000;
+    while (Date.now() < deadline) {
+      await new Promise((r) => setTimeout(r, 8_000));
+      const { data: pData, error: pErr } = await supabase.functions.invoke(
+        "generate-preset-preview",
+        {
+          body: {
+            action: "poll",
+            presetId,
+            statusUrl: sub.statusUrl,
+            responseUrl: sub.responseUrl,
+          },
+        },
+      );
+      const p = (pData as { ok?: boolean; status?: string; code?: string; error?: string } | null) ?? null;
+      if (pErr || !p?.ok) {
+        const msg = p?.error || pErr?.message || "Poll failed";
+        setStatuses((s) => ({ ...s, [presetId]: "error" }));
+        setErrors((e) => ({ ...e, [presetId]: msg }));
+        return { ok: false, code: p?.code, error: msg };
       }
-      const msg = result?.error || "Generation failed";
-      setStatuses((s) => ({ ...s, [presetId]: "error" }));
-      setErrors((e) => ({ ...e, [presetId]: msg }));
-      return { ok: false, code, error: msg };
+      if (p.status === "done") {
+        setStatuses((s) => ({ ...s, [presetId]: "idle" }));
+        await refresh();
+        return { ok: true };
+      }
     }
-
-    setStatuses((s) => ({ ...s, [presetId]: "idle" }));
-    await refresh();
-    return { ok: true };
+    const msg = "Timed out after 6 minutes";
+    setStatuses((s) => ({ ...s, [presetId]: "error" }));
+    setErrors((e) => ({ ...e, [presetId]: msg }));
+    return { ok: false, code: "timeout", error: msg };
   };
 
   const handleGenerateOne = async (presetId: string) => {

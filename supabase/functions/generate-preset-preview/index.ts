@@ -14,8 +14,8 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const BUCKET = "preset-previews";
 const FAL_SUBMIT_URL =
   "https://queue.fal.run/fal-ai/kling-video/v1/standard/text-to-video";
+const FAL_QUEUE_BASE = "https://queue.fal.run/fal-ai/kling-video";
 
-// Hand-tuned cinematic prompts for the 12 hero presets.
 const PROMPTS: Record<string, string> = {
   "dolly-zoom":
     "Vertigo dolly zoom on a lone figure standing on a foggy cliff at sunset, background dramatically compresses while subject stays the same size, cinematic 35mm film, golden hour rim light, shallow depth of field",
@@ -52,32 +52,26 @@ function json(body: unknown, status = 200) {
   });
 }
 
-async function pollFal(statusUrl: string, responseUrl: string): Promise<any> {
-  const deadline = Date.now() + 130_000; // 130s budget
-  while (Date.now() < deadline) {
-    await new Promise((r) => setTimeout(r, 5000));
-    const res = await fetch(statusUrl, {
-      headers: { Authorization: `Key ${FAL_KEY}` },
-    });
-    if (!res.ok) {
-      const text = await res.text();
-      throw new Error(`Fal status check failed (${res.status}): ${text}`);
-    }
-    const data = await res.json();
-    if (data.status === "COMPLETED") {
-      const finalRes = await fetch(responseUrl, {
-        headers: { Authorization: `Key ${FAL_KEY}` },
-      });
-      if (!finalRes.ok) {
-        throw new Error(`Fal response fetch failed (${finalRes.status})`);
-      }
-      return await finalRes.json();
-    }
-    if (data.status === "FAILED" || data.status === "ERROR") {
-      throw new Error(`Fal job failed: ${JSON.stringify(data)}`);
-    }
+async function authAdmin(req: Request) {
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader?.startsWith("Bearer ")) {
+    return { error: json({ ok: false, error: "Unauthorized", code: "unauth" }, 401) };
   }
-  throw new Error("Fal job timed out after 130s");
+  const userClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    global: { headers: { Authorization: authHeader } },
+  });
+  const { data: userData, error: userError } = await userClient.auth.getUser();
+  if (userError || !userData?.user) {
+    return { error: json({ ok: false, error: "Unauthorized", code: "unauth" }, 401) };
+  }
+  const { data: isAdmin, error: roleErr } = await userClient.rpc("has_role", {
+    _user_id: userData.user.id,
+    _role: "admin",
+  });
+  if (roleErr || !isAdmin) {
+    return { error: json({ ok: false, error: "Admin only", code: "forbidden" }, 403) };
+  }
+  return { userId: userData.user.id };
 }
 
 Deno.serve(async (req) => {
@@ -90,145 +84,119 @@ Deno.serve(async (req) => {
       return json({ ok: false, error: "FAL_KEY not configured", code: "no_key" }, 500);
     }
 
-    // Auth
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
-      return json({ ok: false, error: "Unauthorized", code: "unauth" }, 401);
-    }
-    const userClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      global: { headers: { Authorization: authHeader } },
-    });
-    const { data: userData, error: userError } = await userClient.auth.getUser();
-    if (userError || !userData?.user) {
-      return json({ ok: false, error: "Unauthorized", code: "unauth" }, 401);
-    }
-    const userId = userData.user.id;
+    const auth = await authAdmin(req);
+    if (auth.error) return auth.error;
 
-    // Admin check
-    const { data: isAdmin, error: roleErr } = await userClient.rpc("has_role", {
-      _user_id: userId,
-      _role: "admin",
-    });
-    if (roleErr || !isAdmin) {
-      return json({ ok: false, error: "Admin only", code: "forbidden" }, 403);
-    }
-
-    // Input
     const body = await req.json().catch(() => ({}));
-    const presetId = String(body?.presetId ?? "");
-    if (!ALLOWED_IDS.includes(presetId)) {
-      return json(
-        { ok: false, error: `Unknown presetId: ${presetId}`, code: "bad_input" },
-        400,
-      );
+    const action = String(body?.action ?? "submit");
+
+    // === SUBMIT ===
+    if (action === "submit") {
+      const presetId = String(body?.presetId ?? "");
+      if (!ALLOWED_IDS.includes(presetId)) {
+        return json({ ok: false, error: `Unknown presetId: ${presetId}`, code: "bad_input" }, 400);
+      }
+      const submitRes = await fetch(FAL_SUBMIT_URL, {
+        method: "POST",
+        headers: {
+          Authorization: `Key ${FAL_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          prompt: PROMPTS[presetId],
+          duration: "5",
+          aspect_ratio: "16:9",
+        }),
+      });
+      if (submitRes.status === 401) {
+        return json({ ok: false, error: "Invalid FAL_KEY", code: "fal_unauth" }, 502);
+      }
+      if (submitRes.status === 402) {
+        return json({ ok: false, error: "Fal.ai credits exhausted", code: "no_credits" }, 402);
+      }
+      if (submitRes.status === 429) {
+        return json({ ok: false, error: "Fal.ai rate limit hit", code: "rate_limit" }, 429);
+      }
+      if (!submitRes.ok) {
+        const text = await submitRes.text();
+        return json({ ok: false, error: `Fal submit failed (${submitRes.status}): ${text}`, code: "fal_error" }, 502);
+      }
+      const submit = await submitRes.json();
+      return json({
+        ok: true,
+        requestId: submit.request_id,
+        statusUrl: submit.status_url,
+        responseUrl: submit.response_url,
+      });
     }
 
-    const prompt = PROMPTS[presetId];
+    // === POLL ===
+    if (action === "poll") {
+      const presetId = String(body?.presetId ?? "");
+      const statusUrl = String(body?.statusUrl ?? "");
+      const responseUrl = String(body?.responseUrl ?? "");
+      if (!ALLOWED_IDS.includes(presetId) || !statusUrl || !responseUrl) {
+        return json({ ok: false, error: "Missing fields", code: "bad_input" }, 400);
+      }
 
-    // Submit Fal job
-    const submitRes = await fetch(FAL_SUBMIT_URL, {
-      method: "POST",
-      headers: {
-        Authorization: `Key ${FAL_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        prompt,
-        duration: "5",
-        aspect_ratio: "16:9",
-      }),
-    });
+      const statusRes = await fetch(statusUrl, {
+        headers: { Authorization: `Key ${FAL_KEY}` },
+      });
+      if (!statusRes.ok) {
+        const text = await statusRes.text();
+        return json({ ok: false, error: `Status check failed (${statusRes.status}): ${text}`, code: "fal_error" }, 502);
+      }
+      const statusData = await statusRes.json();
 
-    if (submitRes.status === 401) {
-      return json({ ok: false, error: "Invalid FAL_KEY", code: "fal_unauth" }, 502);
-    }
-    if (submitRes.status === 402) {
-      return json(
-        { ok: false, error: "Fal.ai credits exhausted", code: "no_credits" },
-        402,
-      );
-    }
-    if (submitRes.status === 429) {
-      return json(
-        { ok: false, error: "Fal.ai rate limit hit", code: "rate_limit" },
-        429,
-      );
-    }
-    if (!submitRes.ok) {
-      const text = await submitRes.text();
-      return json(
-        { ok: false, error: `Fal submit failed (${submitRes.status}): ${text}`, code: "fal_error" },
-        502,
-      );
-    }
+      if (statusData.status === "FAILED" || statusData.status === "ERROR") {
+        return json({ ok: false, error: `Fal job failed: ${JSON.stringify(statusData)}`, code: "fal_error" }, 502);
+      }
+      if (statusData.status !== "COMPLETED") {
+        return json({ ok: true, status: "pending", falStatus: statusData.status });
+      }
 
-    const submit = await submitRes.json();
-    const statusUrl = submit.status_url;
-    const responseUrl = submit.response_url;
-    if (!statusUrl || !responseUrl) {
-      return json(
-        { ok: false, error: "Fal response missing URLs", code: "fal_error" },
-        502,
-      );
-    }
+      // COMPLETED — fetch result, download, upload
+      const finalRes = await fetch(responseUrl, {
+        headers: { Authorization: `Key ${FAL_KEY}` },
+      });
+      if (!finalRes.ok) {
+        return json({ ok: false, error: `Result fetch failed (${finalRes.status})`, code: "fal_error" }, 502);
+      }
+      const result = await finalRes.json();
+      const videoUrl = result?.video?.url;
+      if (!videoUrl) {
+        return json({ ok: false, error: "Fal result missing video.url", code: "fal_error" }, 502);
+      }
 
-    // Poll
-    let result: any;
-    try {
-      result = await pollFal(statusUrl, responseUrl);
-    } catch (e) {
-      return json(
-        { ok: false, error: (e as Error).message, code: "fal_poll" },
-        504,
-      );
-    }
+      const videoRes = await fetch(videoUrl);
+      if (!videoRes.ok) {
+        return json({ ok: false, error: `Video download failed (${videoRes.status})`, code: "download" }, 502);
+      }
+      const videoBytes = new Uint8Array(await videoRes.arrayBuffer());
 
-    const videoUrl = result?.video?.url;
-    if (!videoUrl) {
-      return json(
-        { ok: false, error: "Fal result missing video.url", code: "fal_error" },
-        502,
-      );
+      const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+      const path = `${presetId}.mp4`;
+      const { error: upErr } = await admin.storage.from(BUCKET).upload(path, videoBytes, {
+        upsert: true,
+        contentType: "video/mp4",
+        cacheControl: "3600",
+      });
+      if (upErr) {
+        return json({ ok: false, error: `Upload failed: ${upErr.message}`, code: "upload" }, 500);
+      }
+      const { data: pub } = admin.storage.from(BUCKET).getPublicUrl(path);
+      return json({
+        ok: true,
+        status: "done",
+        presetId,
+        sizeBytes: videoBytes.byteLength,
+        publicUrl: pub.publicUrl,
+      });
     }
 
-    // Download video bytes
-    const videoRes = await fetch(videoUrl);
-    if (!videoRes.ok) {
-      return json(
-        { ok: false, error: `Video download failed (${videoRes.status})`, code: "download" },
-        502,
-      );
-    }
-    const videoBytes = new Uint8Array(await videoRes.arrayBuffer());
-
-    // Upload to bucket
-    const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-    const path = `${presetId}.mp4`;
-    const { error: upErr } = await admin.storage.from(BUCKET).upload(path, videoBytes, {
-      upsert: true,
-      contentType: "video/mp4",
-      cacheControl: "3600",
-    });
-    if (upErr) {
-      return json(
-        { ok: false, error: `Upload failed: ${upErr.message}`, code: "upload" },
-        500,
-      );
-    }
-
-    const { data: pub } = admin.storage.from(BUCKET).getPublicUrl(path);
-
-    return json({
-      ok: true,
-      presetId,
-      sizeBytes: videoBytes.byteLength,
-      publicUrl: pub.publicUrl,
-    });
+    return json({ ok: false, error: `Unknown action: ${action}`, code: "bad_input" }, 400);
   } catch (e) {
     console.error("generate-preset-preview error", e);
-    return json(
-      { ok: false, error: (e as Error).message, code: "internal" },
-      500,
-    );
+    return json({ ok: false, error: (e as Error).message, code: "internal" }, 500);
   }
 });
