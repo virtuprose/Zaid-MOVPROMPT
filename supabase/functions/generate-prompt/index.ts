@@ -319,6 +319,16 @@ serve(async (req) => {
       userText += `\nRespect the user's lock/move directions precisely. Locked elements should remain static. Move elements should be animated.\n\n`;
     }
 
+    // Resolved @N mentions from the description (scene-breakdown elements)
+    if (validElementMentions.length > 0) {
+      userText += `\n═══ USER @-MENTIONED SCENE ELEMENTS ═══\n`;
+      userText += `In the user's creative vision above, every \`@N\` token refers to a specific analyzed scene element listed below. Apply the user's wording immediately following each \`@N\` to THAT element only — do not generalize the directive to the whole scene.\n`;
+      for (const m of validElementMentions) {
+        userText += `@${m.index} — ${m.category}: "${m.description}"\n`;
+      }
+      userText += `\n`;
+    }
+
     if (typeof audioEnabled === "boolean") {
       userText += audioEnabled
         ? `Audio: ENABLED — generate a synced audio direction (ambient sound, music cues, dialogue/SFX as appropriate). Populate the audioBlock field.\n\n`
