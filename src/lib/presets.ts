@@ -5,8 +5,26 @@ import {
   Wand2, Cloud, Sun, CircleDot, Rewind, FastForward, Pause,
   ArrowUpRight, ArrowDownRight, Orbit, Plane,
   Radio, Music, Trophy, Shirt, Swords, Drama, Layers, GitMerge,
+  Film, Heart, Gem, Bolt, Box,
   type LucideIcon,
 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+
+/** Whitelist of lucide icons selectable when creating a custom preset. */
+export const ICON_WHITELIST: Record<string, LucideIcon> = {
+  Camera, Move, MoveHorizontal, MoveVertical, ZoomIn, ZoomOut,
+  RefreshCw, RotateCw, Crosshair, Sparkles, Flame, Snowflake,
+  Droplets, Zap, Waves, Wind, Eye, Aperture, Hexagon, Star,
+  Wand2, Cloud, Sun, CircleDot, Rewind, FastForward, Pause,
+  ArrowUpRight, ArrowDownRight, Orbit, Plane,
+  Radio, Music, Trophy, Shirt, Swords, Drama, Layers, GitMerge,
+  Film, Heart, Gem, Bolt, Box,
+};
+
+export const ICON_NAMES = Object.keys(ICON_WHITELIST);
+export const getIconByName = (name: string): LucideIcon =>
+  ICON_WHITELIST[name] ?? Camera;
 
 export type PresetGroupId = "basic" | "epic" | "effects" | "pulse" | "mix";
 
