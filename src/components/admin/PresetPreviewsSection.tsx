@@ -27,6 +27,22 @@ interface FileMeta {
 
 type CardStatus = "idle" | "generating" | "error";
 
+const MODEL_OPTIONS = [
+  { value: "ltx-fast", label: "LTX — fastest (~20s)" },
+  { value: "wan-fast", label: "Wan 2.2 — fast (~30s)" },
+  { value: "kling-std", label: "Kling — best quality (~90s)" },
+] as const;
+type ModelValue = typeof MODEL_OPTIONS[number]["value"];
+const DEFAULT_MODEL: ModelValue = "ltx-fast";
+const MODEL_STORAGE_KEY = "preset-previews:model";
+
+const formatElapsed = (ms: number) => {
+  const s = Math.max(0, Math.floor(ms / 1000));
+  const m = Math.floor(s / 60);
+  const r = s % 60;
+  return `${m}:${r.toString().padStart(2, "0")}`;
+};
+
 const slugify = (s: string) =>
   s.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
 
@@ -41,7 +57,26 @@ const PresetPreviewsSection = () => {
   const [cacheBust, setCacheBust] = useState(Date.now());
   const [statuses, setStatuses] = useState<Record<string, CardStatus>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [genStarts, setGenStarts] = useState<Record<string, number>>({});
+  const [now, setNow] = useState(Date.now());
   const inputs = useRef<Record<string, HTMLInputElement | null>>({});
+
+  const [model, setModel] = useState<ModelValue>(() => {
+    if (typeof window === "undefined") return DEFAULT_MODEL;
+    const stored = window.localStorage.getItem(MODEL_STORAGE_KEY);
+    return MODEL_OPTIONS.some((o) => o.value === stored) ? (stored as ModelValue) : DEFAULT_MODEL;
+  });
+  useEffect(() => {
+    if (typeof window !== "undefined") window.localStorage.setItem(MODEL_STORAGE_KEY, model);
+  }, [model]);
+
+  // Tick a clock while any generation is running so per-card elapsed updates.
+  const anyGenerating = Object.values(statuses).some((s) => s === "generating");
+  useEffect(() => {
+    if (!anyGenerating) return;
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [anyGenerating]);
 
   // New preset dialog state
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -168,6 +203,7 @@ const PresetPreviewsSection = () => {
       delete next[presetId];
       return next;
     });
+    setGenStarts((g) => ({ ...g, [presetId]: Date.now() }));
 
     const preset = allPresets.find((p) => p.id === presetId);
     const { data: subData, error: subErr } = await supabase.functions.invoke(
@@ -176,6 +212,7 @@ const PresetPreviewsSection = () => {
         body: {
           action: "submit",
           presetId,
+          model,
           label: preset?.label,
           description: preset?.description,
           bestFor: preset?.bestFor,
@@ -198,13 +235,14 @@ const PresetPreviewsSection = () => {
 
     const deadline = Date.now() + 6 * 60_000;
     while (Date.now() < deadline) {
-      await new Promise((r) => setTimeout(r, 8_000));
+      await new Promise((r) => setTimeout(r, 4_000));
       const { data: pData, error: pErr } = await supabase.functions.invoke(
         "generate-preset-preview",
         {
           body: {
             action: "poll",
             presetId,
+            model,
             statusUrl: sub.statusUrl,
             responseUrl: sub.responseUrl,
           },
@@ -304,7 +342,7 @@ const PresetPreviewsSection = () => {
           Upload an MP4 for any preset to enable hover-play on the main page.
           Create custom presets to add your own cards.
         </p>
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3 pt-2">
+        <div className="flex flex-col sm:flex-row sm:items-end gap-3 pt-2">
           <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) resetForm(); }}>
             <DialogTrigger asChild>
               <Button type="button" variant="outline" className="gap-2">
@@ -424,6 +462,20 @@ const PresetPreviewsSection = () => {
               </DialogFooter>
             </DialogContent>
           </Dialog>
+          <div className="sm:ml-auto sm:max-w-xs w-full">
+            <Label htmlFor="pp-model" className="text-xs text-muted-foreground">Model</Label>
+            <Select value={model} onValueChange={(v) => setModel(v as ModelValue)}>
+              <SelectTrigger id="pp-model" className="h-9"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {MODEL_OPTIONS.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-[11px] text-muted-foreground mt-1">
+              LTX is fastest. Switch to Kling for the highest-quality reference clips.
+            </p>
+          </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-8">
@@ -506,8 +558,14 @@ const PresetPreviewsSection = () => {
                           <Icon size={40} className="text-muted-foreground/40" />
                         )}
                         {isGen && (
-                          <div className="absolute inset-0 bg-background/70 backdrop-blur-sm flex items-center justify-center">
+                          <div className="absolute inset-0 bg-background/70 backdrop-blur-sm flex flex-col items-center justify-center gap-1.5">
                             <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                            <div className="text-[10px] font-mono text-foreground/80 tabular-nums">
+                              {genStarts[preset.id] ? formatElapsed(now - genStarts[preset.id]) : "0:00"}
+                            </div>
+                            <div className="text-[10px] text-muted-foreground px-2 text-center leading-tight">
+                              {MODEL_OPTIONS.find((o) => o.value === model)?.label}
+                            </div>
                           </div>
                         )}
                         {isCustom && (
