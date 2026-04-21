@@ -353,6 +353,27 @@ export type Database = {
         }
         Relationships: []
       }
+      preset_preview_meta: {
+        Row: {
+          generated_at: string
+          generated_by: string | null
+          preset_id: string
+          preview_model: string | null
+        }
+        Insert: {
+          generated_at?: string
+          generated_by?: string | null
+          preset_id: string
+          preview_model?: string | null
+        }
+        Update: {
+          generated_at?: string
+          generated_by?: string | null
+          preset_id?: string
+          preview_model?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
