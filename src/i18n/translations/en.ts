@@ -147,6 +147,9 @@ export const en = {
   "scene.mentionHint": "Type @ to reference an element (e.g. @2 should turn toward camera)",
   "scene.mentionPickerTitle": "Insert element reference",
   "scene.insertMention": "Mention element",
+  "scene.mentionEmptyTitle": "No elements yet",
+  "scene.mentionEmptyHint": "Run scene analysis to detect elements, or insert a placeholder to start writing.",
+  "scene.mentionEmptyCta": "Insert @1 placeholder",
 
   // InstallPrompt
   "install.title": "Install MovPrompt",
