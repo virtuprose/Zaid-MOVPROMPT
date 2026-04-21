@@ -638,11 +638,32 @@ const PresetPreviewsSection = () => {
                           </p>
                           <p className="text-[11px] text-muted-foreground font-mono">{preset.id}</p>
                         </div>
-                        <div className="text-[11px] text-muted-foreground">
+                        <div className="text-[11px] text-muted-foreground flex items-center gap-1.5 flex-wrap">
                           {fileMeta ? (
                             <>
-                              {formatSize(fileMeta.size)} ·{" "}
-                              {fileMeta.updated_at ? new Date(fileMeta.updated_at).toLocaleDateString() : ""}
+                              <span>
+                                {formatSize(fileMeta.size)} ·{" "}
+                                {fileMeta.updated_at ? new Date(fileMeta.updated_at).toLocaleDateString() : ""}
+                              </span>
+                              {(() => {
+                                const pm = previewMeta[preset.id]?.preview_model;
+                                const label = pm ? (MODEL_OPTIONS.find((o) => o.value === pm)?.label ?? pm) : null;
+                                return label ? (
+                                  <span
+                                    className="text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-primary/10 text-primary font-medium"
+                                    title={`Generated with ${label}`}
+                                  >
+                                    {pm}
+                                  </span>
+                                ) : (
+                                  <span
+                                    className="text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-muted text-muted-foreground font-medium"
+                                    title="Source model unknown (uploaded manually or pre-tracking)"
+                                  >
+                                    unknown
+                                  </span>
+                                );
+                              })()}
                             </>
                           ) : (
                             <span className="italic">No video uploaded</span>
