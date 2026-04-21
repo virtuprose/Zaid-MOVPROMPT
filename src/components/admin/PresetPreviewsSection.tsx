@@ -226,39 +226,7 @@ const PresetPreviewsSection = () => {
     else toast.error(`Failed: ${res.error}`);
   };
 
-  const handleGenerateAll = async () => {
-    if (bulkRunning) return;
-    setBulkRunning(true);
-    cancelRef.current = false;
-    const total = HERO_PRESET_IDS.length;
-    let success = 0;
-    let failed = 0;
 
-    for (let i = 0; i < total; i++) {
-      if (cancelRef.current) {
-        toast.info(`Cancelled — ${success} done, ${total - i} skipped`);
-        break;
-      }
-      const presetId = HERO_PRESET_IDS[i];
-      setBulkProgress({ current: i + 1, total, presetId });
-      const res = await generateOne(presetId);
-      if (res.ok) success++;
-      else {
-        failed++;
-        if (res.code === "no_credits") {
-          toast.error("Fal.ai credits exhausted — stopping. Top up at fal.ai/dashboard/billing");
-          break;
-        }
-      }
-    }
-
-    setBulkProgress(null);
-    setBulkRunning(false);
-    if (!cancelRef.current) {
-      if (failed === 0) toast.success(`Generated all ${success} previews`);
-      else toast.warning(`Done — ${success} succeeded, ${failed} failed`);
-    }
-  };
 
   const resetForm = () => {
     setForm({
