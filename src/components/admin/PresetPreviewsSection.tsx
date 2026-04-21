@@ -196,6 +196,10 @@ const PresetPreviewsSection = () => {
       contentType: "video/mp4",
       cacheControl: "3600",
     });
+    if (!error) {
+      // Manual upload — drop any stale model attribution.
+      await supabase.from("preset_preview_meta").delete().eq("preset_id", presetId);
+    }
     setUploading(null);
     if (error) {
       toast.error(`Upload failed: ${error.message}`);
