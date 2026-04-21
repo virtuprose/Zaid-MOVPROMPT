@@ -1,59 +1,46 @@
 
 
-## Mobile UI QA checklist + regression test
+## Consistent icon-only button behavior on mobile
 
-### Goal
-Give the team a fast, repeatable way to verify the main flow (upload → breakdown → generate) renders correctly on 360–440px viewports without running the full auth/generation stack.
+### The problem
+On 360–440px viewports, several action rows use `Icon + text` buttons that wrap or push each other:
 
-### Scope
-Two additions — **no changes to existing app logic or routes that real users hit**:
+- **WorkflowPanel — upload phase** (line 501): `Analyze Scene` + `Skip` sit in a centered `flex gap-3` row. `Analyze Scene` is especially long in Arabic and when combined with `Skip` on 360px, they wrap awkwardly or clip.
+- **WorkflowPanel — breakdown header** (line 528): `Start Over` + `Re-analyze` in `justify-between` — same problem, both labels can wrap to two lines at 360px.
+- **ConfigPanel — describe header** (line 84): `Clear` button sitting next to the section label can wrap the label. Minor but visible in Arabic.
+- **SceneBreakdown — element card actions** (line 187): already uses `<span className="hidden sm:inline">` to hide labels on mobile (icon-only). This is the existing pattern we want to standardize everyone to.
 
-1. **`/qa/mobile` regression route** (dev-only in navigation, but reachable in prod by URL)
-   - A single page that renders the three critical UI surfaces back-to-back with mocked data, so a human can scroll and eyeball them at 360/390/414/440px without needing to sign in, upload images, or call edge functions.
-   - Sections:
-     1. **Top bar + ModelPicker** — renders `ModelPicker` with state, shows the new flash/selection feedback.
-     2. **Upload phase** — renders `ImageUploadZone` in its empty state + a mock "with image" state.
-     3. **Breakdown phase** — renders `SceneBreakdown` with 3 mock elements and `SceneMentionTextarea` wired to them (so the popover + empty-state can both be exercised by clearing elements).
-     4. **Generate / Results phase** — renders `ResultsPanel` with 2 mock `ShotResult`s (one expanded, one collapsed) to verify collapsible padding, copy buttons, and wrapping.
-   - Each section has a small sticky header with the section name + a viewport-width readout (`window.innerWidth`) updated on resize so testers can confirm they're at the intended breakpoint.
-   - A "QA checklist" card at the top lists the things to visually verify (below), with checkboxes (local state only) so a tester can tick them off during a pass.
+### The rule (already partially applied in `SceneBreakdown`)
+Secondary / tertiary action buttons that live inside dense rows become **icon-only on mobile, icon + text on ≥sm**. Primary CTAs (Analyze, Generate) keep their label but become **full-width on mobile** when they're alone, or stay side-by-side with **shrunk padding + responsive text**.
 
-2. **Vitest smoke test** `src/components/__tests__/ModelPicker.test.tsx`
-   - Renders `ModelPicker` inside the existing `LanguageProvider`, asserts the trigger is present, and asserts changing the model via `onModelChange` updates the selected label. This locks in the recent mobile polish changes (trigger min-height, flash state) against accidental regressions — the state logic and DOM structure must keep working.
-   - Uses the existing vitest setup (`src/test/setup.ts`, `vitest.config.ts`) — no new infra.
+Behavior pattern:
+1. **Secondary inline actions** (Start Over, Re-analyze, Clear): `<span className="hidden sm:inline">Label</span>` — square-ish tap target on mobile, full pill on desktop. Wrap with tooltip (on desktop) + `aria-label` (always) for a11y. Keep `size="sm"` and add `px-2 sm:px-3` so the mobile square is ~32px.
+2. **Primary CTAs in pairs** (Analyze Scene / Skip): keep the label, but:
+   - change wrapper to `flex flex-col sm:flex-row gap-2 sm:gap-3 items-stretch sm:items-center sm:justify-center`
+   - each button gets `w-full sm:w-auto` so they stack on mobile instead of wrapping mid-word
+   - tighten padding: `px-4 sm:px-8`
+3. **Existing `SceneBreakdown` pattern stays as-is** — this is the reference. No change there except adding the same `aria-label` + tooltip wrapping already present (good), and ensuring `flex-wrap` on the button row degrades gracefully (already there).
 
-### QA checklist (rendered on `/qa/mobile` and documented here)
+### Files & exact changes
 
-At 360px, 390px, 414px, 440px verify:
+**`src/components/WorkflowPanel.tsx`**
+- Lines 501–522 (upload CTAs): wrap in `flex flex-col sm:flex-row gap-2 sm:gap-3 justify-center`, add `w-full sm:w-auto` + `px-4 sm:px-8` to both buttons. Keep labels (they're primary). No icon-only collapse.
+- Lines 528–546 (breakdown header row): convert `Start Over` and `Re-analyze` to icon-only on mobile. Wrap each in `<Tooltip>` (component already imported elsewhere in this component? — check; if not, skip tooltip and rely on `aria-label` only to keep the diff small), and add `aria-label` + `hidden sm:inline` label span. Set `px-2 sm:px-3`. Keep icons at `w-3.5 h-3.5` — already fine.
+- Lines 607–615 (skip-phase `Start Over`): same icon-only-on-mobile treatment as above.
 
-- [ ] Top bar buttons don't wrap or overflow; no horizontal scroll on the page.
-- [ ] `ModelPicker` trigger shows selected model + description on two lines, no clipping.
-- [ ] Opening `ModelPicker` popover stays within viewport; list scrolls; sticky group headers visible; selected row has left accent bar.
-- [ ] Selecting a new model flashes the ring on the trigger briefly.
-- [ ] `ImageUploadZone` empty state: icon + copy centered, CTA full-width-ish but not overflowing.
-- [ ] `SceneBreakdown`: element cards don't overflow; action buttons wrap cleanly; long descriptions truncate / wrap without pushing layout.
-- [ ] `SceneMentionTextarea` pill row doesn't overflow; popover fits `calc(100vw-2rem)`; empty-state renders when elements are cleared.
-- [ ] `ResultsPanel`: header wraps cleanly; collapsibles expand/collapse; copy buttons reachable with thumb.
-- [ ] No text clipped by rounded card corners; no elements under the iOS home indicator area (bottom 24px padding respected where needed).
+**`src/components/ConfigPanel.tsx`**
+- Lines 84–94 (`Clear` button): wrap label in `<span className="hidden sm:inline">` and add `aria-label={t("config.clear")}` + a small `X` icon so it's still recognizable as a clear-action when collapsed. Import `X` from `lucide-react`.
 
-### Files
+**`src/components/SceneBreakdown.tsx`**
+- No structural change needed — already icon-only on mobile. Only tiny consistency tweak: ensure the button row (line 187) uses the same `gap-1 sm:gap-1.5` rhythm and keep `flex-wrap` so two buttons never overflow the card's right edge (already present). Confirm and leave untouched if already correct.
 
-**New**
-- `src/pages/QaMobile.tsx` — the QA page, entirely client-side, uses real components with mock data.
-- `src/components/__tests__/ModelPicker.test.tsx` — smoke test.
-
-**Edited**
-- `src/App.tsx` — add the `/qa/mobile` route (public, no `AuthGuard`). Keep it undiscoverable from the main UI (no nav link) so it doesn't leak into user-facing flows.
-
-### Mock data shape
-
-- **Elements** for `SceneBreakdown` / `SceneMentionTextarea`: 3 items with indices 1/2/3, mixed categories (`character`, `object`, `environment`), realistic 1–2 sentence descriptions.
-- **Shot results** for `ResultsPanel`: 2 items with varying `targetModel` (e.g. `"veo-3"`, `"any"`) and prompts of ~80 and ~400 chars to exercise truncation/wrap.
-- A "Reset / Clear elements" button on the breakdown section so the tester can toggle `elements=[]` and see the `SceneMentionTextarea` empty-state popover.
+### Tooltip decision
+WorkflowPanel does not currently import `Tooltip`. To keep the change focused and avoid a new dependency in that file, the icon-only buttons there will use `aria-label` + `title` (native browser tooltip) — sufficient for "Start Over" / "Re-analyze". SceneBreakdown already has proper Radix tooltips; it keeps them.
 
 ### Out of scope
-- No browser automation / visual regression snapshots (no Playwright, no Percy).
-- No changes to the real `/` flow, generation pipeline, auth, or i18n keys.
-- No backend, analytics, or RLS changes — the QA page is purely a static harness around existing components.
-- Desktop layout unaffected; the page itself is responsive but tuned for small viewports.
+- Icon selection changes (keep existing `RotateCcw`, `ScanSearch`, `Sparkles`, `Zap`).
+- Desktop (≥sm) layout — unchanged.
+- Any i18n key additions. We reuse existing `wp.startOver`, `wp.reAnalyze`, `config.clear`.
+- Changes to `ResultsPanel`, `ModelPicker`, `SceneMentionTextarea` button styles — recently polished.
+- Logic, state, generation flow, analytics, auth.
 
