@@ -11,10 +11,10 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Upload, Trash2, Film, Sparkles, Loader2, X, AlertCircle, Plus } from "lucide-react";
+import { Upload, Trash2, Film, Loader2, X, AlertCircle, Plus } from "lucide-react";
 import { toast } from "sonner";
 import {
-  HERO_PRESET_IDS, PRESETS, PRESET_GROUPS, getPresetVideoUrl,
+  PRESETS, PRESET_GROUPS, getPresetVideoUrl,
   useAllPresets, ICON_NAMES, getIconByName,
 } from "@/lib/presets";
 
