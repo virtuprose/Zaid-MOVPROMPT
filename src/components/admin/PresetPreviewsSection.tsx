@@ -553,6 +553,16 @@ const PresetPreviewsSection = () => {
               <SelectItem value="missing">Missing video</SelectItem>
             </SelectContent>
           </Select>
+          <Select value={modelFilter} onValueChange={setModelFilter}>
+            <SelectTrigger className="sm:w-[180px]"><SelectValue placeholder="All models" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All models</SelectItem>
+              {MODEL_OPTIONS.map((o) => (
+                <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+              ))}
+              <SelectItem value="unknown">Unknown / uploaded</SelectItem>
+            </SelectContent>
+          </Select>
           <div className="flex items-center gap-2 text-xs text-muted-foreground sm:ml-auto">
             <span>Showing {filteredPresets.length} of {allIds.length}</span>
             {filtersActive && (
