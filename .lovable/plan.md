@@ -1,50 +1,36 @@
 
 
-## Auto-switch Move/Lock based on mentions in the description
+## Fix: popover/caret jumping back to `@` after typing `@1 `
 
-### What changes
+### Root cause
 
-When the user types in the description box and mentions an element via `@N`, automatically set that element's action based on the surrounding verb/intent:
+In `SceneMentionTextarea.handleChange` the mention-picker trigger detector only checks "the character just typed was `@`". It doesn't verify that the `@` is actually at the caret as a *fresh* trigger, so two things go wrong after the user types `@1` + space:
 
-- Mentions near **motion verbs** (move, walk, run, fly, rotate, shift, travel, sweep, drift, pan, zoom, animate, morph, transform) → set action to **move**.
-- Mentions near **lock verbs** (keep, lock, freeze, hold, stay, fix, preserve, maintain, unchanged, still, static, same) → set action to **lock**.
-- Mentions with no nearby intent verb → leave the current action untouched (don't overwrite user manual clicks arbitrarily).
+1. **Stale `triggerPosRef`** — when the user first types `@`, `triggerPosRef` is set to that position and the popover opens. After `1` is typed, the close-branch runs (good), but `triggerPosRef` is cleared only inside that branch *if* the popover is currently open. On some keystroke orderings (fast typing, IME, or when the popover was already closed by a click-outside), `triggerPosRef` keeps pointing at the old `@`, and the next space keystroke re-enters the trigger path because `prev === "@"` is still true for the preceding `@` in `@1 ` when the caret happens to sit right after `@` (e.g. React re-rendering with the overlay/Popover anchor steals focus for one frame and the browser restores caret to `triggerPosRef` position).
 
-The detection runs live on every keystroke in the description textarea (debounced ~150ms) and updates `elementDirections` in state, which instantly re-renders the Lock/Move buttons in `SceneBreakdown` with their red-glow/cyan states.
+2. **Popover anchor focus steal** — `PopoverAnchor` wraps the textarea; when the popover opens, the anchor's layout shift + `onOpenAutoFocus` race causes a one-frame focus loss. On reopen (triggered by the space because of #1), the browser restores caret to the last known selection, which is right after `@` — visually "jumping back to the @ tag".
 
-### Detection rule
+### The fix
 
-For each `@N` token in the text:
-1. Grab a window of ~6 words before and ~6 words after the mention.
-2. Scan that window for any lock-verb → set `lock`. Else scan for any move-verb → set `move`. Else skip.
-3. Map `@N` → element id using the existing `globalIndexById` logic already used by `SceneBreakdown`.
+Tighten trigger detection + strictly gate reopening:
 
-Verb lists live in one place and are English-only in v1 (Arabic verbs out of scope unless asked; mentions still work in Arabic text, they just won't auto-switch).
-
-### Manual override behavior
-
-If the user clicks Lock/Move manually on an element, we record a `manualOverride` flag for that element id. Auto-detection will **skip** overridden elements so typing doesn't fight the user's explicit choice. Clicking the same button again (toggling) clears the override so auto-detect resumes.
-
-### Visual feedback
-
-Small transient indicator on each element card when its action is auto-changed by typing: a brief 600ms pulse on the active button (reusing existing primary/destructive colors). No new tooltips.
+1. **Detect a real fresh `@` trigger only**, by checking that the `@` at `caret - 1` is not immediately followed by a digit *anywhere* up to the next whitespace. If `@` is already part of an existing `@N` token, never open the popover.
+2. **Always clear `triggerPosRef` on any non-trigger keystroke** (not just when `open === true`), so a stale pointer can never survive into the next change event.
+3. **Guard against reopening** by also requiring `!open` state before setting `open = true` — only open on the keystroke that actually introduces the lone `@`.
+4. **Stop the caret-jump** by removing the `PopoverAnchor` wrapper around the textarea and switching to a virtual anchor (use `PopoverContent`'s `style`/positioning by anchoring to the textarea ref via `getBoundingClientRect`, or simply use the `PopoverTrigger` button as the anchor for the auto-opened popover too). This keeps the textarea DOM stable so focus/caret never leave it.
 
 ### Files touched
 
-- `src/components/WorkflowPanel.tsx`
-  - Add `useEffect` on the description value that parses `@N` tokens, inspects the word window, and calls `setElementDirections` for non-overridden elements. Debounced via `setTimeout`.
-  - Track a `manualOverrides: Record<string, boolean>` Set alongside `elementDirections`.
-  - Pass an `onManualToggle` callback to `SceneBreakdown` so manual clicks mark the override.
-- `src/components/SceneBreakdown.tsx`
-  - Accept optional `onManualToggle(id)` prop, call it inside the existing `toggleAction` handler before updating.
-  - Add a short pulse animation class on the active button when the action changes (`key`-based remount or a `useEffect` that toggles a class for 600ms).
-- `src/lib/sceneIntent.ts` *(new, small)*
-  - Export `MOVE_VERBS`, `LOCK_VERBS`, and `detectIntent(text, mentionIndex): "move" | "lock" | null`.
-- `src/i18n/translations/en.ts` & `ar.ts`
-  - `scene.autoAssignedHint` — "Tip: mention elements with verbs like 'keep' or 'move' to auto-set Lock/Move." (shown as a small muted line under the description box, breakdown phase only).
+- `src/components/SceneMentionTextarea.tsx`
+  - Rewrite `handleChange` trigger logic:
+    - Compute `isFreshAt = prev === "@" && !/\d/.test(next[caret] ?? "") && !/\w/.test(next[caret-2] ?? "")`.
+    - If `isFreshAt && !open`: set `triggerPosRef`, `setOpen(true)`.
+    - Else: unconditionally clear `triggerPosRef` and close popover if it was open.
+  - Replace the `PopoverAnchor`-wrapping-the-textarea pattern with keeping the anchor on the `PopoverTrigger` button; position the auto-opened popover by passing `sideOffset` and letting Radix anchor to the trigger button (which stays in the DOM). This eliminates the focus/caret race.
+  - Add an `onBlur` reset that clears `triggerPosRef` when focus truly leaves the textarea.
 
 ### Out of scope
-- Arabic verb detection.
-- Detecting ranges (`@1-@3`) or plural mentions.
-- Changing the confirmation dialog or skip path.
+- No changes to `detectIntent` / auto Move-Lock logic.
+- No changes to `MentionTextarea` (shots flow) — the bug is specific to `SceneMentionTextarea`.
+- No i18n changes.
 
