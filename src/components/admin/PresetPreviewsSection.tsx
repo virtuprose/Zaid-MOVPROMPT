@@ -169,9 +169,19 @@ const PresetPreviewsSection = () => {
       return next;
     });
 
+    const preset = allPresets.find((p) => p.id === presetId);
     const { data: subData, error: subErr } = await supabase.functions.invoke(
       "generate-preset-preview",
-      { body: { action: "submit", presetId } },
+      {
+        body: {
+          action: "submit",
+          presetId,
+          label: preset?.label,
+          description: preset?.description,
+          bestFor: preset?.bestFor,
+          groupId: preset?.group,
+        },
+      },
     );
     const sub = (subData as { ok?: boolean; code?: string; error?: string; statusUrl?: string; responseUrl?: string } | null) ?? null;
     if (subErr || !sub?.ok) {
@@ -552,24 +562,22 @@ const PresetPreviewsSection = () => {
                               e.target.value = "";
                             }}
                           />
-                          {isHero && (
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="default"
-                              className="flex-1 gap-1.5"
-                              disabled={isGen}
-                              onClick={() => handleGenerateOne(preset.id)}
-                            >
-                              {isGen ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
-                              {isGen ? "Generating" : "Generate"}
-                            </Button>
-                          )}
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="default"
+                            className="flex-1 gap-1.5"
+                            disabled={isGen}
+                            onClick={() => handleGenerateOne(preset.id)}
+                          >
+                            {isGen ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                            {isGen ? "Generating" : "Generate"}
+                          </Button>
                           <Button
                             type="button"
                             size="sm"
                             variant="outline"
-                            className={isHero ? "gap-1.5" : "flex-1 gap-1.5"}
+                            className="gap-1.5"
                             disabled={uploading === preset.id || isGen}
                             onClick={() => inputs.current[preset.id]?.click()}
                           >
