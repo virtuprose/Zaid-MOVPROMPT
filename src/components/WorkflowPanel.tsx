@@ -97,6 +97,31 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
     return out;
   }, [sceneFrames]);
 
+  // Auto-assign Move/Lock based on verbs near @N mentions in the description.
+  // Debounced 150ms. Skips elements the user has manually overridden.
+  useEffect(() => {
+    if (phase !== "breakdown") return;
+    if (flatSceneElements.length === 0) return;
+    const timer = setTimeout(() => {
+      setElementDirections((prev) => {
+        let changed = false;
+        const next = { ...prev };
+        for (const el of flatSceneElements) {
+          if (manualOverrides[el.id]) continue;
+          const intent = detectIntent(description, el.index);
+          if (!intent) continue;
+          const curr = prev[el.id];
+          if (curr?.action !== intent) {
+            next[el.id] = { action: intent, note: curr?.note || "" };
+            changed = true;
+          }
+        }
+        return changed ? next : prev;
+      });
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [description, flatSceneElements, manualOverrides, phase]);
+
   const contract = useMemo(() => getContract(selectedModel), [selectedModel]);
   const [twoFrameMode, setTwoFrameMode] = useState(false);
   const [multiShotMode, setMultiShotMode] = useState(false);
@@ -187,6 +212,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
         }
       }
       setElementDirections(dirs);
+      setManualOverrides({});
       setPhase("breakdown");
     } catch (err: any) {
       console.error("Analysis error:", err);
