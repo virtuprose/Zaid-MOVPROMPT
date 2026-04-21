@@ -85,12 +85,17 @@ const Index = () => {
           transition={{ duration: 0.6 }}
           className="text-center mb-8 sm:mb-12"
         >
-          <div className="flex items-center justify-center gap-3 mb-3 sm:mb-4">
+          <button
+            type="button"
+            onClick={() => { window.location.href = "/"; }}
+            aria-label={t("nav.goHome")}
+            className="flex items-center justify-center gap-3 mb-3 sm:mb-4 mx-auto cursor-pointer hover:opacity-80 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-md"
+          >
             <img src={logoMark} alt="MovPrompt" className="w-10 h-10 sm:w-14 sm:h-14" />
             <h1 className="text-3xl tracking-tight font-mono sm:text-5xl font-bold">
               Mov<span className="text-primary">Prompt</span>
             </h1>
-          </div>
+          </button>
           <p className="text-muted-foreground text-base sm:text-lg max-w-xl mx-auto">
             {t("hero.subtitle")}
           </p>

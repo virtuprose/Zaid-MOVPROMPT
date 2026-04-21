@@ -12,7 +12,7 @@ import { ElementGrid, type ElementItem } from "./ElementGrid";
 import { MentionTextarea } from "./MentionTextarea";
 import { SceneMentionTextarea, type SceneMentionTextareaHandle } from "./SceneMentionTextarea";
 import { extractVideoKeyframes, compressImageFile } from "@/lib/videoFrames";
-import { Sparkles, Loader2, ScanSearch, RotateCcw, RefreshCw, Info, Volume2, VolumeX } from "lucide-react";
+import { Sparkles, Loader2, ScanSearch, RotateCcw, RefreshCw, Info, Volume2, VolumeX, Zap } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -474,12 +474,11 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
               </Button>
               <Button
                 size="lg"
-                variant="ghost"
                 onClick={() => { setSceneFrames([]); setPhase("breakdown"); }}
                 disabled={isAnalyzing}
-                className="px-6 sm:px-8 font-display text-muted-foreground"
+                className="px-6 sm:px-8 font-display font-semibold bg-accent text-accent-foreground hover:bg-accent/90 shadow-lg shadow-accent/25"
               >
-                {t("wp.skip")}
+                <Zap className="w-4 h-4 me-2" /> {t("wp.skip")}
               </Button>
             </div>
           </motion.div>

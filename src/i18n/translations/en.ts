@@ -3,6 +3,7 @@ export const en = {
   "hero.title": "MovPrompt",
   "hero.subtitle": "Your AI Director of Photography. Turn any still image into a director-grade cinematic video prompt.",
   "footer": "MovPrompt — AI-powered cinematic prompts",
+  "nav.goHome": "Go to home",
 
   // Workflows
   "workflow.single": "Single Frame",
@@ -63,7 +64,7 @@ export const en = {
   "wp.analyzeDesc": "AI will break down your scene into individual elements (subject, background, lighting, atmosphere) so you can control exactly what stays still and what moves.",
   "wp.analyzeScene": "Analyze Scene",
   "wp.analyzingScene": "Analyzing Scene...",
-  "wp.skip": "Skip — Go Straight to Generate",
+  "wp.skip": "Skip & Generate Now",
   "wp.startOver": "Start Over",
   "wp.reAnalyze": "Re-analyze",
   "wp.generatePrompt": "Generate Cinematic Prompt",

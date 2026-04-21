@@ -5,6 +5,7 @@ export const ar: Record<TranslationKey, string> = {
   "hero.title": "MovPrompt",
   "hero.subtitle": "المخرج السينمائي الذكي: حوّل صورك الثابتة إلى كادرات سينمائية ملهمة",
   "footer": "MovPrompt — أوامر سينمائية بالذكاء الاصطناعي",
+  "nav.goHome": "الذهاب إلى الرئيسية",
 
   // Workflows
   "workflow.single": "إطار واحد",
@@ -65,7 +66,7 @@ export const ar: Record<TranslationKey, string> = {
   "wp.analyzeDesc": "سيقوم الذكاء الاصطناعي بتحليل مشهدك إلى عناصر فردية \n(الموضوع، الخلفية، الإضاءة، الأجواء) حتى تتحكم بدقة فيما يبقى ثابتاً وما يتحرك",
   "wp.analyzeScene": "تحليل المشهد",
   "wp.analyzingScene": "جاري تحليل المشهد...",
-  "wp.skip": "تخطي — انتقل مباشرة للتوليد",
+  "wp.skip": "تخطّى وأنشئ الآن",
   "wp.startOver": "البدء من جديد",
   "wp.reAnalyze": "إعادة التحليل",
   "wp.generatePrompt": "توليد أمر سينمائي",
