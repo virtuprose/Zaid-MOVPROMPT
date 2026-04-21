@@ -30,6 +30,7 @@ interface SceneBreakdownProps {
   framePreviews: (string | null)[];
   directions: ElementDirections;
   onDirectionsChange: (directions: ElementDirections) => void;
+  onInsertMention?: (n: number) => void;
 }
 
 const categoryIcons: Record<string, React.ElementType> = {
@@ -40,7 +41,16 @@ const categoryEmoji: Record<string, string> = {
   Subject: "🎯", Background: "🏙", Lighting: "💡", Atmosphere: "🌤", Objects: "📦", Colors: "🎨",
 };
 
-export const SceneBreakdown = ({ frames, frameLabels, framePreviews, directions, onDirectionsChange }: SceneBreakdownProps) => {
+export const SceneBreakdown = ({ frames, frameLabels, framePreviews, directions, onDirectionsChange, onInsertMention }: SceneBreakdownProps) => {
+  // Build a stable global 1-based index across all frames (left-to-right, frame-by-frame).
+  const globalIndexById = new Map<string, number>();
+  let counter = 0;
+  for (const frame of frames) {
+    for (const el of frame.elements) {
+      counter += 1;
+      globalIndexById.set(el.id, counter);
+    }
+  }
   const [expandedNotes, setExpandedNotes] = useState<Set<string>>(new Set());
   const { t } = useLanguage();
 
@@ -123,7 +133,16 @@ export const SceneBreakdown = ({ frames, frameLabels, framePreviews, directions,
                       </div>
 
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-0.5">
+                        <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                          <button
+                            type="button"
+                            onClick={() => onInsertMention?.(globalIndexById.get(el.id) ?? 0)}
+                            disabled={!onInsertMention}
+                            title={t("scene.insertMention" as any)}
+                            className="font-mono text-[11px] font-semibold text-primary bg-primary/15 hover:bg-primary/25 disabled:hover:bg-primary/15 disabled:cursor-default rounded px-1.5 py-0.5 transition-colors"
+                          >
+                            @{globalIndexById.get(el.id)}
+                          </button>
                           <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">
                             {categoryEmoji[el.category]} {el.category}
                           </span>

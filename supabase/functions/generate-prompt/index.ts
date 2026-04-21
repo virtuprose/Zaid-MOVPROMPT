@@ -91,7 +91,7 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { images, workflowType, description, targetModel, sceneBreakdown, audioEnabled, references, elements, autoInjectElements, multiShotCount } = body;
+    const { images, workflowType, description, targetModel, sceneBreakdown, audioEnabled, references, elements, autoInjectElements, multiShotCount, elementMentions } = body;
 
     // --- Input Validation ---
     // Allow 0 images when elements are provided (element-only mode, e.g. Seedance 2.0).
@@ -191,6 +191,27 @@ serve(async (req) => {
       }
       if (totalElBytes > 8_000_000) {
         return badRequest("Combined element images exceed 8MB");
+      }
+    }
+
+    // Validate elementMentions (resolved scene-breakdown @N references from the client)
+    const validElementMentions: { index: number; category: string; description: string }[] = [];
+    if (elementMentions !== undefined) {
+      if (!Array.isArray(elementMentions) || elementMentions.length > 50) {
+        return badRequest("elementMentions must be an array of at most 50 items");
+      }
+      for (const m of elementMentions) {
+        if (!m || typeof m !== "object") return badRequest("Invalid elementMention entry");
+        if (!Number.isInteger(m.index) || m.index < 1 || m.index > 200) {
+          return badRequest("elementMention.index must be an integer 1..200");
+        }
+        if (typeof m.category !== "string" || m.category.length > 60) {
+          return badRequest("elementMention.category invalid");
+        }
+        if (typeof m.description !== "string" || m.description.length > 500) {
+          return badRequest("elementMention.description invalid");
+        }
+        validElementMentions.push({ index: m.index, category: m.category, description: m.description });
       }
     }
 
@@ -296,6 +317,16 @@ serve(async (req) => {
         }
       }
       userText += `\nRespect the user's lock/move directions precisely. Locked elements should remain static. Move elements should be animated.\n\n`;
+    }
+
+    // Resolved @N mentions from the description (scene-breakdown elements)
+    if (validElementMentions.length > 0) {
+      userText += `\n═══ USER @-MENTIONED SCENE ELEMENTS ═══\n`;
+      userText += `In the user's creative vision above, every \`@N\` token refers to a specific analyzed scene element listed below. Apply the user's wording immediately following each \`@N\` to THAT element only — do not generalize the directive to the whole scene.\n`;
+      for (const m of validElementMentions) {
+        userText += `@${m.index} — ${m.category}: "${m.description}"\n`;
+      }
+      userText += `\n`;
     }
 
     if (typeof audioEnabled === "boolean") {

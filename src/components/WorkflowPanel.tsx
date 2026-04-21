@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ImageUploadZone } from "./ImageUploadZone";
@@ -10,6 +10,7 @@ import { ReferenceMediaPanel } from "./ReferenceMediaPanel";
 import type { ReferenceMediaItem } from "./ReferenceItem";
 import { ElementGrid, type ElementItem } from "./ElementGrid";
 import { MentionTextarea } from "./MentionTextarea";
+import { SceneMentionTextarea, type SceneMentionTextareaHandle } from "./SceneMentionTextarea";
 import { extractVideoKeyframes, compressImageFile } from "@/lib/videoFrames";
 import { Sparkles, Loader2, ScanSearch, RotateCcw, RefreshCw, Info, Volume2, VolumeX } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -68,6 +69,20 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [referenceItems, setReferenceItems] = useState<ReferenceMediaItem[]>([]);
   const [elementItems, setElementItems] = useState<ElementItem[]>([]);
+  const sceneMentionRef = useRef<SceneMentionTextareaHandle>(null);
+
+  // Flatten scene frames into a single 1-based indexed list (left-to-right, frame-by-frame).
+  const flatSceneElements = useMemo(() => {
+    const out: { index: number; category: string; description: string; id: string }[] = [];
+    let n = 0;
+    for (const frame of sceneFrames) {
+      for (const el of frame.elements) {
+        n += 1;
+        out.push({ index: n, category: el.category, description: el.description, id: el.id });
+      }
+    }
+    return out;
+  }, [sceneFrames]);
 
   const contract = useMemo(() => getContract(selectedModel), [selectedModel]);
   const [twoFrameMode, setTwoFrameMode] = useState(false);
@@ -237,6 +252,17 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
           }))
         : undefined;
 
+      // Resolve @N mentions from description against the flat scene element list
+      const mentionedNumbers = Array.from(new Set(
+        Array.from((description || "").matchAll(/(?:^|\s)@(\d+)\b/g))
+          .map((m) => Number(m[1]))
+          .filter((n) => Number.isInteger(n) && n >= 1 && n <= flatSceneElements.length),
+      ));
+      const elementMentions = mentionedNumbers
+        .map((n) => flatSceneElements.find((el) => el.index === n))
+        .filter((el): el is { index: number; category: string; description: string; id: string } => Boolean(el))
+        .map(({ index, category, description }) => ({ index, category, description }));
+
       const { data, error } = await supabase.functions.invoke("generate-prompt", {
         body: {
           images: imageBase64s,
@@ -248,6 +274,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
           references: referencesPayload.length > 0 ? referencesPayload : undefined,
           elements: elementsPayload.length > 0 ? elementsPayload : undefined,
           autoInjectElements: elementsPayload.length > 0 ? true : undefined,
+          elementMentions: elementMentions.length > 0 ? elementMentions : undefined,
           multiShotCount: workflowType === "multishot" && contract.supportsMultiShotToggle ? contract.multiShotCount : undefined,
         },
       });
@@ -466,6 +493,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
               framePreviews={images.map((img) => img?.preview || null)}
               directions={elementDirections}
               onDirectionsChange={setElementDirections}
+              onInsertMention={(n) => sceneMentionRef.current?.insertMention(n)}
             />
 
             <div className="flex justify-between">
@@ -496,7 +524,13 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
                 placeholder={t("config.placeholder")}
               />
             ) : (
-              <ConfigPanel description={description} onDescriptionChange={setDescription} />
+              <SceneMentionTextarea
+                ref={sceneMentionRef}
+                value={description}
+                onChange={setDescription}
+                elements={flatSceneElements.map(({ index, category, description }) => ({ index, category, description }))}
+                placeholder={t("config.placeholder")}
+              />
             )}
 
             <div className="flex justify-center">
