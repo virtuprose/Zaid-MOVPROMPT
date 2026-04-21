@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { render, screen, act } from "@testing-library/react";
+import { render, within, act } from "@testing-library/react";
 import { Button } from "@/components/ui/button";
 import { RotateCcw, ScanSearch, Sparkles, X } from "lucide-react";
 import { LanguageProvider, useLanguage } from "@/i18n/LanguageContext";
