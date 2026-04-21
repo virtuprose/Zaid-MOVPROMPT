@@ -156,7 +156,7 @@ export const SceneBreakdown = ({ frames, frameLabels, framePreviews, directions,
                           size="sm"
                           variant={isLocked ? "secondary" : "ghost"}
                           onClick={() => { if (!isLocked) toggleAction(el.id); }}
-                          className={`h-7 px-2 text-xs gap-1 ${isLocked ? "bg-secondary text-secondary-foreground" : ""}`}
+                          className={`h-7 px-2 text-xs gap-1 ${isLocked ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : ""}`}
                         >
                           <Lock className="w-3 h-3" /> {t("scene.lock")}
                         </Button>
