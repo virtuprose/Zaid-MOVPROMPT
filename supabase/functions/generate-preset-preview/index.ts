@@ -302,6 +302,14 @@ Deno.serve(async (req) => {
       if (upErr) {
         return json({ ok: false, error: `Upload failed: ${upErr.message}`, code: "upload" }, 500);
       }
+      // Record which model generated this preview (best-effort; don't fail the request).
+      const { error: metaErr } = await admin.from("preset_preview_meta").upsert({
+        preset_id: presetId,
+        preview_model: model,
+        generated_at: new Date().toISOString(),
+        generated_by: auth.userId ?? null,
+      });
+      if (metaErr) console.error("preset_preview_meta upsert failed", metaErr);
       const { data: pub } = admin.storage.from(BUCKET).getPublicUrl(path);
       return json({
         ok: true,

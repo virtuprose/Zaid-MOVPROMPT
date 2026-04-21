@@ -96,12 +96,27 @@ const PresetPreviewsSection = () => {
   const [search, setSearch] = useState("");
   const [groupFilter, setGroupFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<"all" | "uploaded" | "missing">("all");
+  const [modelFilter, setModelFilter] = useState<string>("all");
+
+  // Per-preset metadata: which model produced the current preview, when.
+  const [previewMeta, setPreviewMeta] = useState<
+    Record<string, { preview_model: string | null; generated_at: string | null }>
+  >({});
 
   const q = search.trim().toLowerCase();
   const filterPreset = (p: typeof allPresets[number]) => {
     if (groupFilter !== "all" && p.group !== groupFilter) return false;
     if (statusFilter === "uploaded" && !meta[p.id]) return false;
     if (statusFilter === "missing" && meta[p.id]) return false;
+    if (modelFilter !== "all") {
+      const m = previewMeta[p.id]?.preview_model ?? null;
+      if (modelFilter === "unknown") {
+        if (!meta[p.id]) return false;
+        if (m) return false;
+      } else if (m !== modelFilter) {
+        return false;
+      }
+    }
     if (q) {
       const hay = `${p.label} ${p.id} ${p.description ?? ""}`.toLowerCase();
       if (!hay.includes(q)) return false;
@@ -119,8 +134,28 @@ const PresetPreviewsSection = () => {
     .filter((g) => g.items.length > 0);
 
   const uploadedCount = allIds.filter((id) => meta[id]).length;
-  const filtersActive = q !== "" || groupFilter !== "all" || statusFilter !== "all";
-  const clearFilters = () => { setSearch(""); setGroupFilter("all"); setStatusFilter("all"); };
+  const filtersActive = q !== "" || groupFilter !== "all" || statusFilter !== "all" || modelFilter !== "all";
+  const clearFilters = () => {
+    setSearch(""); setGroupFilter("all"); setStatusFilter("all"); setModelFilter("all");
+  };
+
+  const refreshPreviewMeta = async () => {
+    const { data, error } = await supabase
+      .from("preset_preview_meta")
+      .select("preset_id, preview_model, generated_at");
+    if (error) {
+      console.error(error);
+      return;
+    }
+    const map: Record<string, { preview_model: string | null; generated_at: string | null }> = {};
+    (data || []).forEach((r) => {
+      map[r.preset_id] = {
+        preview_model: r.preview_model,
+        generated_at: r.generated_at,
+      };
+    });
+    setPreviewMeta(map);
+  };
 
   const refresh = async () => {
     const { data, error } = await supabase.storage.from(BUCKET).list("", { limit: 1000 });
@@ -141,6 +176,7 @@ const PresetPreviewsSection = () => {
     });
     setMeta(map);
     setCacheBust(Date.now());
+    await refreshPreviewMeta();
   };
 
   useEffect(() => {
@@ -160,6 +196,10 @@ const PresetPreviewsSection = () => {
       contentType: "video/mp4",
       cacheControl: "3600",
     });
+    if (!error) {
+      // Manual upload — drop any stale model attribution.
+      await supabase.from("preset_preview_meta").delete().eq("preset_id", presetId);
+    }
     setUploading(null);
     if (error) {
       toast.error(`Upload failed: ${error.message}`);
@@ -176,6 +216,7 @@ const PresetPreviewsSection = () => {
       toast.error(`Delete failed: ${error.message}`);
       return;
     }
+    await supabase.from("preset_preview_meta").delete().eq("preset_id", presetId);
     toast.success("Deleted");
     await refresh();
   };
@@ -183,6 +224,7 @@ const PresetPreviewsSection = () => {
   const handleDeleteCustomPreset = async (presetId: string) => {
     if (!confirm(`Delete custom preset "${presetId}"? This also removes its video.`)) return;
     await supabase.storage.from(BUCKET).remove([`${presetId}.mp4`]);
+    await supabase.from("preset_preview_meta").delete().eq("preset_id", presetId);
     const { error } = await supabase.from("custom_presets").delete().eq("id", presetId);
     if (error) {
       toast.error(`Delete failed: ${error.message}`);
@@ -517,6 +559,16 @@ const PresetPreviewsSection = () => {
               <SelectItem value="missing">Missing video</SelectItem>
             </SelectContent>
           </Select>
+          <Select value={modelFilter} onValueChange={setModelFilter}>
+            <SelectTrigger className="sm:w-[180px]"><SelectValue placeholder="All models" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All models</SelectItem>
+              {MODEL_OPTIONS.map((o) => (
+                <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+              ))}
+              <SelectItem value="unknown">Unknown / uploaded</SelectItem>
+            </SelectContent>
+          </Select>
           <div className="flex items-center gap-2 text-xs text-muted-foreground sm:ml-auto">
             <span>Showing {filteredPresets.length} of {allIds.length}</span>
             {filtersActive && (
@@ -592,11 +644,32 @@ const PresetPreviewsSection = () => {
                           </p>
                           <p className="text-[11px] text-muted-foreground font-mono">{preset.id}</p>
                         </div>
-                        <div className="text-[11px] text-muted-foreground">
+                        <div className="text-[11px] text-muted-foreground flex items-center gap-1.5 flex-wrap">
                           {fileMeta ? (
                             <>
-                              {formatSize(fileMeta.size)} ·{" "}
-                              {fileMeta.updated_at ? new Date(fileMeta.updated_at).toLocaleDateString() : ""}
+                              <span>
+                                {formatSize(fileMeta.size)} ·{" "}
+                                {fileMeta.updated_at ? new Date(fileMeta.updated_at).toLocaleDateString() : ""}
+                              </span>
+                              {(() => {
+                                const pm = previewMeta[preset.id]?.preview_model;
+                                const label = pm ? (MODEL_OPTIONS.find((o) => o.value === pm)?.label ?? pm) : null;
+                                return label ? (
+                                  <span
+                                    className="text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-primary/10 text-primary font-medium"
+                                    title={`Generated with ${label}`}
+                                  >
+                                    {pm}
+                                  </span>
+                                ) : (
+                                  <span
+                                    className="text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-muted text-muted-foreground font-medium"
+                                    title="Source model unknown (uploaded manually or pre-tracking)"
+                                  >
+                                    unknown
+                                  </span>
+                                );
+                              })()}
                             </>
                           ) : (
                             <span className="italic">No video uploaded</span>
