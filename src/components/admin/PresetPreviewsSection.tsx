@@ -382,7 +382,60 @@ const PresetPreviewsSection = () => {
     setCanceling((c) => ({ ...c, [presetId]: true }));
   };
 
+  const [batchRunning, setBatchRunning] = useState(false);
+  const batchCancel = useRef(false);
 
+  // Re-generate the camera-motion presets known to render poorly, plus any
+  // preset currently in error state. Runs sequentially to avoid hammering Fal.
+  const handleRegenerateLikelyWrong = async () => {
+    const errored = Object.entries(statuses)
+      .filter(([, s]) => s === "error")
+      .map(([id]) => id);
+    const allIdsSet = new Set(allPresets.map((p) => p.id));
+    const targets = Array.from(new Set([...LIKELY_WRONG_PRESET_IDS, ...errored]))
+      .filter((id) => allIdsSet.has(id));
+
+    if (targets.length === 0) {
+      toast("Nothing to re-generate");
+      return;
+    }
+    if (!confirm(
+      `Re-generate ${targets.length} preset preview${targets.length === 1 ? "" : "s"} ` +
+      `(camera-motion presets known to render poorly + any currently in error)?\n\n` +
+      `This runs sequentially and may take several minutes. Click Cancel on any ` +
+      `card to skip it; close this section to abort the queue.`
+    )) return;
+
+    setBatchRunning(true);
+    batchCancel.current = false;
+    let ok = 0;
+    let failed = 0;
+    let canceled = 0;
+    for (const id of targets) {
+      if (batchCancel.current) break;
+      const res = await generateOne(id);
+      if (res.ok) ok++;
+      else if (res.code === "canceled") canceled++;
+      else {
+        failed++;
+        if (res.code === "no_credits") {
+          toast.error("Fal.ai credits exhausted — stopping batch");
+          break;
+        }
+      }
+    }
+    setBatchRunning(false);
+    toast.success(
+      `Batch complete: ${ok} generated, ${failed} failed, ${canceled} canceled`,
+    );
+  };
+
+  const handleCancelBatch = () => {
+    batchCancel.current = true;
+    // Also cancel whichever preset is currently mid-flight.
+    const active = Object.entries(statuses).find(([, s]) => s === "generating");
+    if (active) requestCancel(active[0]);
+  };
 
   const resetForm = () => {
     setForm({
