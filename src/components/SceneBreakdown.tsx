@@ -41,7 +41,16 @@ const categoryEmoji: Record<string, string> = {
   Subject: "🎯", Background: "🏙", Lighting: "💡", Atmosphere: "🌤", Objects: "📦", Colors: "🎨",
 };
 
-export const SceneBreakdown = ({ frames, frameLabels, framePreviews, directions, onDirectionsChange }: SceneBreakdownProps) => {
+export const SceneBreakdown = ({ frames, frameLabels, framePreviews, directions, onDirectionsChange, onInsertMention }: SceneBreakdownProps) => {
+  // Build a stable global 1-based index across all frames (left-to-right, frame-by-frame).
+  const globalIndexById = new Map<string, number>();
+  let counter = 0;
+  for (const frame of frames) {
+    for (const el of frame.elements) {
+      counter += 1;
+      globalIndexById.set(el.id, counter);
+    }
+  }
   const [expandedNotes, setExpandedNotes] = useState<Set<string>>(new Set());
   const { t } = useLanguage();
 
