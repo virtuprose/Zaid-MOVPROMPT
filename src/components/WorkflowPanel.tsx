@@ -583,12 +583,12 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
               onManualToggle={(id) => setManualOverrides((prev) => ({ ...prev, [id]: true }))}
             />
 
-            <div className="flex justify-center">
+            <div className="sticky bottom-0 -mx-4 px-4 py-3 bg-background/95 backdrop-blur border-t border-border/40 pb-[calc(0.75rem+env(safe-area-inset-bottom))] flex justify-center sm:static sm:mx-0 sm:px-0 sm:py-0 sm:pb-0 sm:bg-transparent sm:backdrop-blur-none sm:border-0 z-20">
               <Button
                 size="lg"
                 onClick={handleGenerate}
                 disabled={isLoading}
-                className="px-6 sm:px-8 font-display font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/25"
+                className="w-full sm:w-auto px-6 sm:px-8 font-display font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/25"
               >
                 {isLoading ? (
                   <><Loader2 className="w-4 h-4 me-2 animate-spin" /> {t("wp.generatingPrompt")}</>
