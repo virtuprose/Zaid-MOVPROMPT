@@ -53,7 +53,7 @@ export const ConfigPanel = ({ description, onDescriptionChange }: ConfigPanelPro
   return (
     <div className="space-y-4">
       <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-        <div className="rounded-lg border border-border/50 bg-card/40 p-4 space-y-4">
+        <div className="rounded-lg border border-border/50 bg-card/40 p-3 sm:p-4 space-y-4">
           <CollapsibleTrigger className="group w-full flex items-start justify-between gap-3 text-start hover:bg-secondary/30 -m-2 p-2 rounded-md transition-colors">
             <div className="flex-1 space-y-1">
               <div className="flex items-center gap-2 flex-wrap">
