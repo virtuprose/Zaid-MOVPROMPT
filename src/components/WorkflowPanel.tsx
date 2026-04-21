@@ -586,10 +586,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
             <div className="flex justify-center">
               <Button
                 size="lg"
-                onClick={() => {
-                  if (isLoading) return;
-                  setConfirmOpen(true);
-                }}
+                onClick={handleGenerate}
                 disabled={isLoading}
                 className="px-6 sm:px-8 font-display font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/25"
               >
@@ -602,40 +599,6 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
                 )}
               </Button>
             </div>
-
-            <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>{t("wp.confirmTitle" as any)}</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    {t("wp.confirmDesc" as any)}
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                {(() => {
-                  const locked = Object.values(elementDirections).filter((d) => d?.action === "lock").length;
-                  const moving = Object.values(elementDirections).filter((d) => d?.action !== "lock").length;
-                  const summary = (t("wp.confirmSummary" as any) as string)
-                    .replace("{locked}", String(locked))
-                    .replace("{moving}", String(moving));
-                  return (
-                    <div className="text-sm text-foreground/80 rounded-md border border-border bg-secondary/40 px-3 py-2">
-                      {summary}
-                    </div>
-                  );
-                })()}
-                <AlertDialogFooter>
-                  <AlertDialogCancel>{t("wp.goBack" as any)}</AlertDialogCancel>
-                  <AlertDialogAction
-                    onClick={() => {
-                      setConfirmOpen(false);
-                      handleGenerate();
-                    }}
-                  >
-                    {t("wp.goAhead" as any)}
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
           </motion.div>
         )}
 
