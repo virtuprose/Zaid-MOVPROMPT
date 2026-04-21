@@ -27,6 +27,22 @@ interface FileMeta {
 
 type CardStatus = "idle" | "generating" | "error";
 
+const MODEL_OPTIONS = [
+  { value: "ltx-fast", label: "LTX — fastest (~20s)" },
+  { value: "wan-fast", label: "Wan 2.2 — fast (~30s)" },
+  { value: "kling-std", label: "Kling — best quality (~90s)" },
+] as const;
+type ModelValue = typeof MODEL_OPTIONS[number]["value"];
+const DEFAULT_MODEL: ModelValue = "ltx-fast";
+const MODEL_STORAGE_KEY = "preset-previews:model";
+
+const formatElapsed = (ms: number) => {
+  const s = Math.max(0, Math.floor(ms / 1000));
+  const m = Math.floor(s / 60);
+  const r = s % 60;
+  return `${m}:${r.toString().padStart(2, "0")}`;
+};
+
 const slugify = (s: string) =>
   s.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
 
