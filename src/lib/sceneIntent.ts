@@ -20,6 +20,10 @@ export const MOVE_VERBS = [
   "slide", "slides", "sliding", "slid",
   "dance", "dances", "dancing", "danced",
   "jump", "jumps", "jumping", "jumped",
+  "drive", "drives", "driving", "drove",
+  "glide", "glides", "gliding", "glided",
+  "sway", "sways", "swaying", "swayed",
+  "spin", "spins", "spinning", "spun",
 ];
 
 export const LOCK_VERBS = [
@@ -36,15 +40,23 @@ export const LOCK_VERBS = [
   "static",
   "same",
   "remain", "remains", "remaining", "remained",
+  "idle",
+  "motionless",
+  "stationary",
 ];
 
 const MOVE_SET = new Set(MOVE_VERBS.map((v) => v.toLowerCase()));
 const LOCK_SET = new Set(LOCK_VERBS.map((v) => v.toLowerCase()));
+const NEGATORS = new Set(["not", "no", "dont", "doesnt", "didnt", "wont", "never", "without"]);
 
-const WINDOW = 6;
+// Look farther ahead (after the mention) than behind — descriptions typically
+// read "@N ... verb", and stop at the next @M so mentions don't steal each other's verbs.
+const WINDOW_BEFORE = 4;
+const WINDOW_AFTER = 12;
 
 /**
  * Detect intent for a specific @N mention.
+ * Negation within 2 words before a verb flips the intent (e.g. "not moving" → lock).
  * @param text Full description text.
  * @param mentionNumber The N in @N to locate.
  * @returns "lock" | "move" | null
@@ -52,28 +64,44 @@ const WINDOW = 6;
 export function detectIntent(text: string, mentionNumber: number): "move" | "lock" | null {
   if (!text) return null;
   const token = `@${mentionNumber}`;
-  // Tokenize keeping positions. Find the index of the target @N (first occurrence used).
-  // Split on whitespace to get words with original punctuation; strip punctuation for lookup.
-  const words = text.split(/\s+/).filter(Boolean);
-  const stripped = words.map((w) => w.toLowerCase().replace(/[^a-z0-9@]+/g, ""));
-  const targetIdx = stripped.findIndex((w) => w === token || w === token.toLowerCase());
+  const rawWords = text.split(/\s+/).filter(Boolean);
+  // For each word keep an @-prefix variant (for mention detection) and a bare alpha variant (for verb lookup)
+  const mentionForm = rawWords.map((w) => w.toLowerCase().replace(/[^a-z0-9@]+/g, ""));
+  const plainForm = rawWords.map((w) => w.toLowerCase().replace(/[^a-z]+/g, ""));
+
+  const targetIdx = mentionForm.findIndex((w) => w === token.toLowerCase());
   if (targetIdx === -1) return null;
 
-  const start = Math.max(0, targetIdx - WINDOW);
-  const end = Math.min(stripped.length, targetIdx + WINDOW + 1);
-  const windowWords: string[] = [];
-  for (let i = start; i < end; i++) {
-    if (i === targetIdx) continue;
-    // re-strip to bare alpha for verb matching
-    windowWords.push(stripped[i].replace(/[^a-z]+/g, ""));
+  // Determine segment bounds — stop at the nearest other @M on either side.
+  let segStart = Math.max(0, targetIdx - WINDOW_BEFORE);
+  for (let i = targetIdx - 1; i >= segStart; i--) {
+    if (/^@\d+$/.test(mentionForm[i])) { segStart = i + 1; break; }
+  }
+  let segEnd = Math.min(rawWords.length, targetIdx + WINDOW_AFTER + 1);
+  for (let i = targetIdx + 1; i < segEnd; i++) {
+    if (/^@\d+$/.test(mentionForm[i])) { segEnd = i; break; }
   }
 
-  // Lock takes precedence when both appear in the window.
-  for (const w of windowWords) {
-    if (w && LOCK_SET.has(w)) return "lock";
+  const findVerb = (): { kind: "move" | "lock"; idx: number } | null => {
+    for (let i = segStart; i < segEnd; i++) {
+      if (i === targetIdx) continue;
+      const w = plainForm[i];
+      if (!w) continue;
+      if (LOCK_SET.has(w)) return { kind: "lock", idx: i };
+      if (MOVE_SET.has(w)) return { kind: "move", idx: i };
+    }
+    return null;
+  };
+
+  const hit = findVerb();
+  if (!hit) return null;
+
+  // Check for a negator within the 2 words before the verb → flip
+  let negated = false;
+  for (let j = Math.max(segStart, hit.idx - 2); j < hit.idx; j++) {
+    if (NEGATORS.has(plainForm[j])) { negated = true; break; }
   }
-  for (const w of windowWords) {
-    if (w && MOVE_SET.has(w)) return "move";
-  }
-  return null;
+
+  if (hit.kind === "move") return negated ? "lock" : "move";
+  return negated ? "move" : "lock";
 }
