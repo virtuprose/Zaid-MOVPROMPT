@@ -135,35 +135,36 @@ export const SceneMentionTextarea = forwardRef<SceneMentionTextareaHandle, Scene
     return (
       <div className="space-y-2">
         <Popover open={open} onOpenChange={handleOpenChange}>
-          <PopoverAnchor asChild>
-            <div className="relative">
-              <div
-                ref={overlayRef}
-                aria-hidden
-                className="absolute inset-0 px-3 py-2 text-sm leading-relaxed whitespace-pre-wrap break-words pointer-events-none text-transparent overflow-hidden"
-              >
-                {renderHighlighted()}
-                {"\u200b"}
-              </div>
-              <Textarea
-                ref={ref}
-                value={value}
-                onChange={handleChange}
-                placeholder={placeholder}
-                className="relative bg-transparent min-h-[120px] leading-relaxed"
-                onScroll={(e) => {
-                  if (overlayRef.current)
-                    overlayRef.current.scrollTop = (e.target as HTMLTextAreaElement).scrollTop;
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Escape" && open) {
-                    setOpen(false);
-                    triggerPosRef.current = null;
-                  }
-                }}
-              />
+          <div className="relative">
+            <div
+              ref={overlayRef}
+              aria-hidden
+              className="absolute inset-0 px-3 py-2 text-sm leading-relaxed whitespace-pre-wrap break-words pointer-events-none text-transparent overflow-hidden"
+            >
+              {renderHighlighted()}
+              {"\u200b"}
             </div>
-          </PopoverAnchor>
+            <Textarea
+              ref={ref}
+              value={value}
+              onChange={handleChange}
+              placeholder={placeholder}
+              className="relative bg-transparent min-h-[120px] leading-relaxed"
+              onScroll={(e) => {
+                if (overlayRef.current)
+                  overlayRef.current.scrollTop = (e.target as HTMLTextAreaElement).scrollTop;
+              }}
+              onBlur={() => {
+                triggerPosRef.current = null;
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Escape" && open) {
+                  setOpen(false);
+                  triggerPosRef.current = null;
+                }
+              }}
+            />
+          </div>
           <PopoverContent
             className="w-80 p-1"
             align="start"
