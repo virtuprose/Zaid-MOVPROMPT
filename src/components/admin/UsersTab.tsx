@@ -63,12 +63,15 @@ const UsersTab = () => {
 
   const fetchUsers = async () => {
     setLoading(true);
-    const [{ data: profiles }, { data: roles }, { data: events }, { data: history }] = await Promise.all([
-      supabase.from("profiles").select("*"),
-      supabase.from("user_roles").select("*"),
-      supabase.from("generation_events").select("user_id"),
-      supabase.from("prompt_history").select("user_id"),
-    ]);
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+    const [{ data: profiles }, { data: roles }, { data: events }, { data: history }, { data: recentEvents }] =
+      await Promise.all([
+        supabase.from("profiles").select("*"),
+        supabase.from("user_roles").select("*"),
+        supabase.from("generation_events").select("user_id"),
+        supabase.from("prompt_history").select("user_id"),
+        supabase.from("generation_events").select("user_id, created_at").gte("created_at", thirtyDaysAgo),
+      ]);
 
     const roleMap: Record<string, "admin" | "user"> = {};
     (roles || []).forEach((r) => {
@@ -88,6 +91,20 @@ const UsersTab = () => {
       genCount[uid] = Math.max(eventCount[uid] || 0, historyCount[uid] || 0);
     });
 
+    // Build per-user 30-day daily trend buckets
+    const now = new Date();
+    const todayKey = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const trendMap: Record<string, number[]> = {};
+    (recentEvents || []).forEach((e) => {
+      if (!e.user_id || !e.created_at) return;
+      const d = new Date(e.created_at);
+      const dayKey = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+      const idx = 29 - Math.floor((todayKey - dayKey) / (24 * 60 * 60 * 1000));
+      if (idx < 0 || idx > 29) return;
+      if (!trendMap[e.user_id]) trendMap[e.user_id] = new Array(30).fill(0);
+      trendMap[e.user_id][idx]++;
+    });
+
     const merged: UserRow[] = (profiles || []).map((p) => ({
       id: p.id,
       email: p.email,
@@ -97,6 +114,7 @@ const UsersTab = () => {
       role: roleMap[p.id] || "user",
       is_active: true,
       generations: genCount[p.id] || 0,
+      trend: trendMap[p.id] || new Array(30).fill(0),
     }));
 
     setUsers(merged);
