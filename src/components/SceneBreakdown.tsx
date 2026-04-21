@@ -158,9 +158,9 @@ export const SceneBreakdown = ({ frames, frameLabels, framePreviews, directions,
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: frameIdx * 0.15 + i * 0.08 }}
-                    className={`rounded-lg border p-3 transition-colors ${isLocked ? "border-destructive bg-destructive/5 shadow-[0_0_12px_hsl(var(--destructive)/0.35)]" : "border-primary/30 bg-primary/5"}`}
+                    className={`rounded-lg border p-2.5 sm:p-3 transition-colors ${isLocked ? "border-destructive bg-destructive/5 shadow-[0_0_12px_hsl(var(--destructive)/0.35)]" : "border-primary/30 bg-primary/5"}`}
                   >
-                    <div className="flex items-start gap-3">
+                    <div className="flex items-start gap-2 sm:gap-3">
                       <div className={`mt-0.5 flex-shrink-0 rounded-md p-1.5 ${isLocked ? "bg-destructive/15 text-destructive shadow-[0_0_10px_hsl(var(--destructive)/0.5)]" : "bg-primary/15 text-primary"}`}>
                         <Icon className="w-4 h-4" />
                       </div>
@@ -176,15 +176,15 @@ export const SceneBreakdown = ({ frames, frameLabels, framePreviews, directions,
                           >
                             @{globalIndexById.get(el.id)}
                           </button>
-                          <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">
+                          <span className="text-[10px] sm:text-xs text-muted-foreground font-medium uppercase tracking-wider">
                             {categoryEmoji[el.category]} {el.category}
                           </span>
                         </div>
-                        <p className="text-sm font-medium text-foreground">{el.description}</p>
-                        <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{el.details}</p>
+                        <p className="text-sm font-medium text-foreground break-words">{el.description}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed break-words line-clamp-3 sm:line-clamp-none">{el.details}</p>
                       </div>
 
-                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                      <div className="flex items-center gap-1 sm:gap-1.5 flex-shrink-0 flex-wrap justify-end">
                         <TooltipProvider delayDuration={200}>
                           <Tooltip>
                             <TooltipTrigger asChild>
@@ -192,9 +192,10 @@ export const SceneBreakdown = ({ frames, frameLabels, framePreviews, directions,
                                 size="sm"
                                 variant={isLocked ? "secondary" : "ghost"}
                                 onClick={() => { if (!isLocked) toggleAction(el.id); }}
-                                className={`h-7 px-2 text-xs gap-1 ${isLocked ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : ""} ${isLocked && pulsing[el.id] ? "animate-pulse-glow" : ""}`}
+                                aria-label={t("scene.lock")}
+                                className={`h-7 px-1.5 sm:px-2 text-xs gap-1 ${isLocked ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : ""} ${isLocked && pulsing[el.id] ? "animate-pulse-glow" : ""}`}
                               >
-                                <Lock className="w-3 h-3" /> {t("scene.lock")}
+                                <Lock className="w-3 h-3" /> <span className="hidden sm:inline">{t("scene.lock")}</span>
                               </Button>
                             </TooltipTrigger>
                             <TooltipContent side="top" className="max-w-[220px] text-xs">
@@ -207,9 +208,10 @@ export const SceneBreakdown = ({ frames, frameLabels, framePreviews, directions,
                                 size="sm"
                                 variant={!isLocked ? "secondary" : "ghost"}
                                 onClick={() => { if (isLocked) toggleAction(el.id); }}
-                                className={`h-7 px-2 text-xs gap-1 ${!isLocked ? "bg-primary/20 text-primary" : ""} ${!isLocked && pulsing[el.id] ? "animate-pulse-glow" : ""}`}
+                                aria-label={t("scene.move")}
+                                className={`h-7 px-1.5 sm:px-2 text-xs gap-1 ${!isLocked ? "bg-primary/20 text-primary" : ""} ${!isLocked && pulsing[el.id] ? "animate-pulse-glow" : ""}`}
                               >
-                                <Play className="w-3 h-3" /> {t("scene.move")}
+                                <Play className="w-3 h-3" /> <span className="hidden sm:inline">{t("scene.move")}</span>
                               </Button>
                             </TooltipTrigger>
                             <TooltipContent side="top" className="max-w-[220px] text-xs">
@@ -225,13 +227,13 @@ export const SceneBreakdown = ({ frames, frameLabels, framePreviews, directions,
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: "auto" }}
                         exit={{ opacity: 0, height: 0 }}
-                        className="mt-2 ms-9"
+                        className="mt-2 ms-7 sm:ms-9"
                       >
                         <Textarea
                           placeholder={t("scene.notePlaceholder")}
                           value={dir?.note || ""}
                           onChange={(e) => updateNote(el.id, e.target.value)}
-                          className="min-h-[60px] text-xs bg-background/50 border-border/50 resize-none"
+                          className="min-h-[56px] sm:min-h-[60px] text-xs bg-background/50 border-border/50 resize-none"
                           maxLength={300}
                         />
                       </motion.div>

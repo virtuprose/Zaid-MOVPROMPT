@@ -166,7 +166,7 @@ export const SceneMentionTextarea = forwardRef<SceneMentionTextareaHandle, Scene
             />
           </div>
           <PopoverContent
-            className="w-80 p-1"
+            className="w-[min(20rem,calc(100vw-2rem))] p-1"
             align="start"
             side="bottom"
             onOpenAutoFocus={(e) => e.preventDefault()}
@@ -209,7 +209,7 @@ export const SceneMentionTextarea = forwardRef<SceneMentionTextareaHandle, Scene
                 <AtSign className="w-3 h-3" /> {t("scene.insertMention" as any)}
               </button>
             </PopoverTrigger>
-            <span className="text-[11px] text-muted-foreground">
+            <span className="hidden sm:inline text-[11px] text-muted-foreground">
               {t("scene.mentionHint" as any)}
             </span>
           </div>

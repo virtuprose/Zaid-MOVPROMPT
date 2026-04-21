@@ -32,21 +32,21 @@ const Index = () => {
     : user?.email?.slice(0, 2).toUpperCase() || "?";
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-[env(safe-area-inset-bottom)]">
       {/* Ambient glow */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-primary/5 rounded-full blur-[120px] animate-pulse-glow" />
-        <div className="absolute bottom-0 right-0 w-[600px] h-[300px] bg-accent/5 rounded-full blur-[100px] animate-pulse-glow" style={{ animationDelay: "1.5s" }} />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[500px] h-[260px] sm:w-[800px] sm:h-[400px] bg-primary/5 rounded-full blur-[120px] animate-pulse-glow" />
+        <div className="absolute bottom-0 right-0 w-[400px] h-[220px] sm:w-[600px] sm:h-[300px] bg-accent/5 rounded-full blur-[100px] animate-pulse-glow" style={{ animationDelay: "1.5s" }} />
       </div>
 
-      <div className="relative z-10 container max-w-5xl mx-auto px-4 py-6 sm:py-12">
+      <div className="relative z-10 container max-w-5xl mx-auto px-4 py-4 sm:py-12">
         <AnnouncementBanner />
         {/* Top bar */}
-        <div className="flex justify-end gap-1.5 mb-4">
-          <LanguageToggle />
-          {!loading && user && <NotificationBell />}
+        <div className="flex flex-nowrap justify-end items-center gap-1 sm:gap-1.5 mb-4">
+          <div className="shrink-0"><LanguageToggle /></div>
+          {!loading && user && <div className="shrink-0"><NotificationBell /></div>}
           {!loading && user && (
-            <Button variant="ghost" size="sm" onClick={() => navigate("/library")} className="gap-1.5">
+            <Button variant="ghost" size="sm" onClick={() => navigate("/library")} className="gap-1.5 shrink-0 px-2 sm:px-3">
               <Library className="w-4 h-4" />
               <span className="hidden sm:inline text-sm">{t("library.title")}</span>
             </Button>
@@ -55,7 +55,7 @@ const Index = () => {
             user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="gap-2">
+                  <Button variant="ghost" size="sm" className="gap-2 shrink-0 px-2 sm:px-3">
                     <Avatar className="w-6 h-6">
                       <AvatarImage src={user.user_metadata?.avatar_url} />
                       <AvatarFallback className="text-[10px] bg-primary/20 text-primary">{initials}</AvatarFallback>
@@ -70,9 +70,9 @@ const Index = () => {
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <Button variant="outline" size="sm" onClick={() => navigate("/auth")}>
-                <User className="w-4 h-4 me-1.5" />
-                {t("auth.signIn")}
+              <Button variant="outline" size="sm" onClick={() => navigate("/auth")} className="shrink-0 px-2 sm:px-3">
+                <User className="w-4 h-4 sm:me-1.5" />
+                <span className="hidden sm:inline">{t("auth.signIn")}</span>
               </Button>
             )
           )}
@@ -83,20 +83,20 @@ const Index = () => {
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="text-center mb-8 sm:mb-12"
+          className="text-center mb-6 sm:mb-12"
         >
           <button
             type="button"
             onClick={() => { window.location.href = "/"; }}
             aria-label={t("nav.goHome")}
-            className="flex items-center justify-center gap-3 mb-3 sm:mb-4 mx-auto cursor-pointer hover:opacity-80 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-md"
+            className="flex items-center justify-center gap-2.5 sm:gap-3 mb-3 sm:mb-4 mx-auto cursor-pointer hover:opacity-80 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-md"
           >
-            <img src={logoMark} alt="MovPrompt" className="w-10 h-10 sm:w-14 sm:h-14" />
-            <h1 className="text-3xl tracking-tight font-mono sm:text-5xl font-bold">
+            <img src={logoMark} alt="MovPrompt" className="w-9 h-9 sm:w-14 sm:h-14" />
+            <h1 className="text-[26px] tracking-tight font-mono sm:text-5xl font-bold">
               Mov<span className="text-primary">Prompt</span>
             </h1>
           </button>
-          <p className="text-muted-foreground text-base sm:text-lg max-w-xl mx-auto">
+          <p className="text-muted-foreground text-sm sm:text-lg max-w-[20rem] sm:max-w-xl mx-auto px-2">
             {t("hero.subtitle")}
           </p>
         </motion.header>
