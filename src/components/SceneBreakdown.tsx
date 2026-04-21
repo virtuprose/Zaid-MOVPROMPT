@@ -125,10 +125,10 @@ export const SceneBreakdown = ({ frames, frameLabels, framePreviews, directions,
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: frameIdx * 0.15 + i * 0.08 }}
-                    className={`rounded-lg border p-3 transition-colors ${isLocked ? "border-border bg-card/50 opacity-75" : "border-primary/30 bg-primary/5"}`}
+                    className={`rounded-lg border p-3 transition-colors ${isLocked ? "border-destructive bg-destructive/5 shadow-[0_0_12px_hsl(var(--destructive)/0.35)]" : "border-primary/30 bg-primary/5"}`}
                   >
                     <div className="flex items-start gap-3">
-                      <div className={`mt-0.5 flex-shrink-0 rounded-md p-1.5 ${isLocked ? "bg-muted text-muted-foreground" : "bg-primary/15 text-primary"}`}>
+                      <div className={`mt-0.5 flex-shrink-0 rounded-md p-1.5 ${isLocked ? "bg-destructive/15 text-destructive shadow-[0_0_10px_hsl(var(--destructive)/0.5)]" : "bg-primary/15 text-primary"}`}>
                         <Icon className="w-4 h-4" />
                       </div>
 
