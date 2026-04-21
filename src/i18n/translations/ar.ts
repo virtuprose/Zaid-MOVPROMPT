@@ -136,6 +136,9 @@ export const ar: Record<TranslationKey, string> = {
   "scene.move": "تحريك",
   "scene.elements": "عناصر",
   "scene.notePlaceholder": 'مثال: "اجعل الشعر يتطاير مع الريح"، "أضف تأثير المطر"...',
+  "scene.mentionHint": "اكتب @ للإشارة إلى عنصر (مثال: @2 يلتفت نحو الكاميرا)",
+  "scene.mentionPickerTitle": "إدراج إشارة لعنصر",
+  "scene.insertMention": "أشر إلى عنصر",
 
   // InstallPrompt
   "install.title": "تثبيت MovPrompt",
