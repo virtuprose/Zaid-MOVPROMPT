@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { Lock, Play, Plus, X, User, Mountain, Sun, Cloud, Package, Palette, Film } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -32,6 +32,7 @@ interface SceneBreakdownProps {
   directions: ElementDirections;
   onDirectionsChange: (directions: ElementDirections) => void;
   onInsertMention?: (n: number) => void;
+  onManualToggle?: (id: string) => void;
 }
 
 const categoryIcons: Record<string, React.ElementType> = {
@@ -42,7 +43,7 @@ const categoryEmoji: Record<string, string> = {
   Subject: "🎯", Background: "🏙", Lighting: "💡", Atmosphere: "🌤", Objects: "📦", Colors: "🎨",
 };
 
-export const SceneBreakdown = ({ frames, frameLabels, framePreviews, directions, onDirectionsChange, onInsertMention }: SceneBreakdownProps) => {
+export const SceneBreakdown = ({ frames, frameLabels, framePreviews, directions, onDirectionsChange, onInsertMention, onManualToggle }: SceneBreakdownProps) => {
   // Build a stable global 1-based index across all frames (left-to-right, frame-by-frame).
   const globalIndexById = new Map<string, number>();
   let counter = 0;
@@ -53,9 +54,40 @@ export const SceneBreakdown = ({ frames, frameLabels, framePreviews, directions,
     }
   }
   const [expandedNotes, setExpandedNotes] = useState<Set<string>>(new Set());
+  const [pulsing, setPulsing] = useState<Record<string, number>>({});
+  const prevActionsRef = useRef<Record<string, string | undefined>>({});
   const { t } = useLanguage();
 
+  // Pulse the active button whenever an element's action changes (auto or manual).
+  useEffect(() => {
+    const prev = prevActionsRef.current;
+    const changed: string[] = [];
+    for (const id of Object.keys(directions)) {
+      const a = directions[id]?.action;
+      if (prev[id] !== undefined && prev[id] !== a) changed.push(id);
+      prev[id] = a;
+    }
+    if (changed.length === 0) return;
+    const now = Date.now();
+    setPulsing((p) => {
+      const next = { ...p };
+      for (const id of changed) next[id] = now;
+      return next;
+    });
+    const timer = setTimeout(() => {
+      setPulsing((p) => {
+        const next = { ...p };
+        for (const id of changed) {
+          if (next[id] === now) delete next[id];
+        }
+        return next;
+      });
+    }, 600);
+    return () => clearTimeout(timer);
+  }, [directions]);
+
   const toggleAction = (id: string) => {
+    onManualToggle?.(id);
     const current = directions[id];
     onDirectionsChange({
       ...directions,
