@@ -321,37 +321,50 @@ Deno.serve(async (req) => {
         return json({ ok: false, error: `Invalid presetId: ${presetId}`, code: "bad_input" }, 400);
       }
 
+      // Auto-upgrade LTX → Wan for camera moves LTX consistently mishandles.
+      const requestedModel: ModelKey = model;
+      const effectiveModel: ModelKey =
+        model === "ltx-fast" && HARD_FOR_LTX.has(presetId) ? "wan-fast" : model;
+      const upgraded = effectiveModel !== requestedModel;
+      const effectiveLabel = FAL_MODELS[effectiveModel].label;
+
       const resolved = await resolvePrompt(presetId, body);
       if ("error" in resolved) {
         return json({ ok: false, error: resolved.error, code: "bad_input" }, 400);
       }
 
-      const submitRes = await fetch(FAL_MODELS[model].url, {
+      const submitRes = await fetch(FAL_MODELS[effectiveModel].url, {
         method: "POST",
         headers: {
           Authorization: `Key ${FAL_KEY}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(buildFalBody(model, resolved.prompt)),
+        body: JSON.stringify(buildFalBody(effectiveModel, resolved.prompt)),
       });
       if (submitRes.status === 401) {
-        return json({ ok: false, error: "Invalid FAL_KEY", code: "fal_unauth", model }, 502);
+        return json({ ok: false, error: "Invalid FAL_KEY", code: "fal_unauth", model: effectiveModel }, 502);
       }
       if (submitRes.status === 402) {
-        return json({ ok: false, error: "Fal.ai credits exhausted", code: "no_credits", model }, 402);
+        return json({ ok: false, error: "Fal.ai credits exhausted", code: "no_credits", model: effectiveModel }, 402);
       }
       if (submitRes.status === 429) {
-        return json({ ok: false, error: "Fal.ai rate limit hit", code: "rate_limit", model }, 429);
+        return json({ ok: false, error: "Fal.ai rate limit hit", code: "rate_limit", model: effectiveModel }, 429);
       }
       if (!submitRes.ok) {
         const text = await submitRes.text();
-        return json({ ok: false, error: `Fal submit failed [${modelLabel}] (${submitRes.status}): ${text}`, code: "fal_error", model }, 502);
+        return json({ ok: false, error: `Fal submit failed [${effectiveLabel}] (${submitRes.status}): ${text}`, code: "fal_error", model: effectiveModel }, 502);
       }
       const submit = await submitRes.json();
       return json({
         ok: true,
-        model,
-        modelLabel,
+        model: effectiveModel,
+        modelLabel: effectiveLabel,
+        requestedModel,
+        effectiveModel,
+        upgraded,
+        upgradeReason: upgraded
+          ? "LTX struggles with this camera move; auto-upgraded to Wan for accuracy."
+          : null,
         requestId: submit.request_id,
         statusUrl: submit.status_url,
         responseUrl: submit.response_url,
