@@ -62,6 +62,9 @@ const PresetPreviewsSection = () => {
   const inputs = useRef<Record<string, HTMLInputElement | null>>({});
   const cancelRequested = useRef<Record<string, boolean>>({});
   const [canceling, setCanceling] = useState<Record<string, boolean>>({});
+  const [autoUpgrades, setAutoUpgrades] = useState<
+    Record<string, { effectiveModel: ModelValue; reason: string } | undefined>
+  >({});
 
   const [model, setModel] = useState<ModelValue>(() => {
     if (typeof window === "undefined") return DEFAULT_MODEL;
