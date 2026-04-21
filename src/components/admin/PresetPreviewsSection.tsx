@@ -2,10 +2,21 @@ import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Upload, Trash2, Film, Sparkles, Loader2, X, AlertCircle } from "lucide-react";
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import { Upload, Trash2, Film, Sparkles, Loader2, X, AlertCircle, Plus } from "lucide-react";
 import { toast } from "sonner";
-import { HERO_PRESET_IDS, ALL_PRESET_IDS, PRESETS, PRESET_GROUPS, getPresetVideoUrl } from "@/lib/presets";
-
+import {
+  HERO_PRESET_IDS, PRESETS, PRESET_GROUPS, getPresetVideoUrl,
+  useAllPresets, ICON_NAMES, getIconByName,
+} from "@/lib/presets";
 
 const BUCKET = "preset-previews";
 
@@ -16,7 +27,15 @@ interface FileMeta {
 
 type CardStatus = "idle" | "generating" | "error";
 
+const slugify = (s: string) =>
+  s.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+
 const PresetPreviewsSection = () => {
+  const { presets: allPresets, customs, refetch: refetchCustoms } = useAllPresets();
+  const customIds = new Set(customs.map((c) => c.id));
+  const builtinIds = new Set(PRESETS.map((p) => p.id));
+  const allIds = allPresets.map((p) => p.id);
+
   const [meta, setMeta] = useState<Record<string, FileMeta | null>>({});
   const [uploading, setUploading] = useState<string | null>(null);
   const [cacheBust, setCacheBust] = useState(Date.now());
@@ -27,12 +46,26 @@ const PresetPreviewsSection = () => {
   const cancelRef = useRef(false);
   const inputs = useRef<Record<string, HTMLInputElement | null>>({});
 
+  // New preset dialog state
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [form, setForm] = useState({
+    label: "",
+    id: "",
+    group_id: PRESET_GROUPS[0].id as string,
+    icon_name: "Camera",
+    description: "",
+    best_for: "",
+    anim_class: "",
+  });
+  const [idEdited, setIdEdited] = useState(false);
+
   const presetsByGroup = PRESET_GROUPS.map((g) => ({
     group: g,
-    items: PRESETS.filter((p) => p.group === g.id),
+    items: allPresets.filter((p) => p.group === g.id),
   })).filter((g) => g.items.length > 0);
 
-  const uploadedCount = ALL_PRESET_IDS.filter((id) => meta[id]).length;
+  const uploadedCount = allIds.filter((id) => meta[id]).length;
 
   const refresh = async () => {
     const { data, error } = await supabase.storage.from(BUCKET).list("", { limit: 1000 });
@@ -41,10 +74,10 @@ const PresetPreviewsSection = () => {
       return;
     }
     const map: Record<string, FileMeta | null> = {};
-    ALL_PRESET_IDS.forEach((id) => (map[id] = null));
+    allIds.forEach((id) => (map[id] = null));
     (data || []).forEach((f) => {
       const id = f.name.replace(/\.mp4$/, "");
-      if (ALL_PRESET_IDS.includes(id)) {
+      if (map[id] === null || allIds.includes(id)) {
         map[id] = {
           size: (f.metadata as { size?: number } | null)?.size ?? 0,
           updated_at: f.updated_at ?? f.created_at ?? "",
@@ -57,7 +90,8 @@ const PresetPreviewsSection = () => {
 
   useEffect(() => {
     refresh();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allPresets.length]);
 
   const handleUpload = async (presetId: string, file: File) => {
     if (!file.type.startsWith("video/")) {
@@ -91,7 +125,19 @@ const PresetPreviewsSection = () => {
     await refresh();
   };
 
-  /** Generate one preset via submit + client-side polling. */
+  const handleDeleteCustomPreset = async (presetId: string) => {
+    if (!confirm(`Delete custom preset "${presetId}"? This also removes its video.`)) return;
+    await supabase.storage.from(BUCKET).remove([`${presetId}.mp4`]);
+    const { error } = await supabase.from("custom_presets").delete().eq("id", presetId);
+    if (error) {
+      toast.error(`Delete failed: ${error.message}`);
+      return;
+    }
+    toast.success("Custom preset deleted");
+    await refetchCustoms();
+    await refresh();
+  };
+
   const generateOne = async (
     presetId: string,
     attempt = 0,
@@ -103,7 +149,6 @@ const PresetPreviewsSection = () => {
       return next;
     });
 
-    // 1. Submit
     const { data: subData, error: subErr } = await supabase.functions.invoke(
       "generate-preset-preview",
       { body: { action: "submit", presetId } },
@@ -121,7 +166,6 @@ const PresetPreviewsSection = () => {
       return { ok: false, code, error: msg };
     }
 
-    // 2. Poll up to 6 minutes
     const deadline = Date.now() + 6 * 60_000;
     while (Date.now() < deadline) {
       await new Promise((r) => setTimeout(r, 8_000));
@@ -157,13 +201,9 @@ const PresetPreviewsSection = () => {
 
   const handleGenerateOne = async (presetId: string) => {
     const res = await generateOne(presetId);
-    if (res.ok) {
-      toast.success(`Generated ${presetId}`);
-    } else if (res.code === "no_credits") {
-      toast.error("Fal.ai credits exhausted — top up at fal.ai/dashboard/billing");
-    } else {
-      toast.error(`Failed: ${res.error}`);
-    }
+    if (res.ok) toast.success(`Generated ${presetId}`);
+    else if (res.code === "no_credits") toast.error("Fal.ai credits exhausted — top up at fal.ai/dashboard/billing");
+    else toast.error(`Failed: ${res.error}`);
   };
 
   const handleGenerateAll = async () => {
@@ -182,9 +222,8 @@ const PresetPreviewsSection = () => {
       const presetId = HERO_PRESET_IDS[i];
       setBulkProgress({ current: i + 1, total, presetId });
       const res = await generateOne(presetId);
-      if (res.ok) {
-        success++;
-      } else {
+      if (res.ok) success++;
+      else {
         failed++;
         if (res.code === "no_credits") {
           toast.error("Fal.ai credits exhausted — stopping. Top up at fal.ai/dashboard/billing");
@@ -196,12 +235,52 @@ const PresetPreviewsSection = () => {
     setBulkProgress(null);
     setBulkRunning(false);
     if (!cancelRef.current) {
-      if (failed === 0) {
-        toast.success(`Generated all ${success} previews`);
-      } else {
-        toast.warning(`Done — ${success} succeeded, ${failed} failed`);
-      }
+      if (failed === 0) toast.success(`Generated all ${success} previews`);
+      else toast.warning(`Done — ${success} succeeded, ${failed} failed`);
     }
+  };
+
+  const resetForm = () => {
+    setForm({
+      label: "",
+      id: "",
+      group_id: PRESET_GROUPS[0].id as string,
+      icon_name: "Camera",
+      description: "",
+      best_for: "",
+      anim_class: "",
+    });
+    setIdEdited(false);
+  };
+
+  const handleCreatePreset = async () => {
+    const id = (form.id || slugify(form.label)).trim();
+    if (!form.label.trim()) return toast.error("Label is required");
+    if (!id) return toast.error("ID is required");
+    if (!/^[a-z0-9-]+$/.test(id)) return toast.error("ID must be lowercase letters, numbers, and dashes");
+    if (builtinIds.has(id) || customIds.has(id)) return toast.error(`ID "${id}" already exists`);
+
+    setCreating(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    const { error } = await supabase.from("custom_presets").insert({
+      id,
+      label: form.label.trim(),
+      group_id: form.group_id,
+      icon_name: form.icon_name,
+      description: form.description.trim(),
+      best_for: form.best_for.trim(),
+      anim_class: form.anim_class.trim() || null,
+      created_by: user?.id ?? null,
+    });
+    setCreating(false);
+    if (error) {
+      toast.error(`Create failed: ${error.message}`);
+      return;
+    }
+    toast.success(`Created "${form.label}"`);
+    resetForm();
+    setDialogOpen(false);
+    await refetchCustoms();
   };
 
   const formatSize = (bytes: number) => {
@@ -211,6 +290,8 @@ const PresetPreviewsSection = () => {
     return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
   };
 
+  const PreviewIcon = getIconByName(form.icon_name);
+
   return (
     <Card>
       <CardHeader>
@@ -218,27 +299,142 @@ const PresetPreviewsSection = () => {
           <Film className="w-5 h-5 text-primary" />
           Preset Previews
           <span className="ml-auto text-xs font-normal text-muted-foreground">
-            {uploadedCount} / {ALL_PRESET_IDS.length} uploaded
+            {uploadedCount} / {allIds.length} uploaded
           </span>
         </CardTitle>
         <p className="text-sm text-muted-foreground">
           Upload an MP4 for any preset to enable hover-play on the main page.
-          The 12 hero presets can also be auto-generated via Fal.ai Kling.
-          Public bucket — videos load instantly.
+          Create custom presets to add your own cards.
         </p>
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 pt-2">
+          <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) resetForm(); }}>
+            <DialogTrigger asChild>
+              <Button type="button" variant="outline" className="gap-2">
+                <Plus className="w-4 h-4" />
+                New Preset
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-lg">
+              <DialogHeader>
+                <DialogTitle>Create custom preset</DialogTitle>
+                <DialogDescription>
+                  Adds a new card to the main preset grid. Upload an MP4 after creation to enable hover-play.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-3">
+                <div>
+                  <Label htmlFor="cp-label">Label</Label>
+                  <Input
+                    id="cp-label"
+                    value={form.label}
+                    onChange={(e) => {
+                      const label = e.target.value;
+                      setForm((f) => ({
+                        ...f,
+                        label,
+                        id: idEdited ? f.id : slugify(label),
+                      }));
+                    }}
+                    placeholder="e.g. Cosmic Dust"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="cp-id">ID (slug)</Label>
+                  <Input
+                    id="cp-id"
+                    value={form.id}
+                    onChange={(e) => { setIdEdited(true); setForm((f) => ({ ...f, id: slugify(e.target.value) })); }}
+                    placeholder="cosmic-dust"
+                    className="font-mono text-sm"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label>Group</Label>
+                    <Select value={form.group_id} onValueChange={(v) => setForm((f) => ({ ...f, group_id: v }))}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {PRESET_GROUPS.map((g) => (
+                          <SelectItem key={g.id} value={g.id}>
+                            <span className="me-2">{g.icon}</span>{g.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Icon</Label>
+                    <Select value={form.icon_name} onValueChange={(v) => setForm((f) => ({ ...f, icon_name: v }))}>
+                      <SelectTrigger>
+                        <div className="flex items-center gap-2">
+                          <PreviewIcon className="w-4 h-4" />
+                          <span>{form.icon_name}</span>
+                        </div>
+                      </SelectTrigger>
+                      <SelectContent className="max-h-64">
+                        {ICON_NAMES.map((name) => {
+                          const I = getIconByName(name);
+                          return (
+                            <SelectItem key={name} value={name}>
+                              <div className="flex items-center gap-2">
+                                <I className="w-4 h-4" />
+                                <span>{name}</span>
+                              </div>
+                            </SelectItem>
+                          );
+                        })}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div>
+                  <Label htmlFor="cp-desc">Description</Label>
+                  <Textarea
+                    id="cp-desc"
+                    value={form.description}
+                    onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+                    placeholder="Short description shown on hover"
+                    rows={2}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="cp-best">Best for</Label>
+                  <Input
+                    id="cp-best"
+                    value={form.best_for}
+                    onChange={(e) => setForm((f) => ({ ...f, best_for: e.target.value }))}
+                    placeholder="e.g. Sci-fi reveals"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="cp-anim">Animation class (optional)</Label>
+                  <Input
+                    id="cp-anim"
+                    value={form.anim_class}
+                    onChange={(e) => setForm((f) => ({ ...f, anim_class: e.target.value }))}
+                    placeholder="preset-pulse"
+                    className="font-mono text-sm"
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button type="button" variant="ghost" onClick={() => setDialogOpen(false)}>Cancel</Button>
+                <Button type="button" onClick={handleCreatePreset} disabled={creating}>
+                  {creating ? <Loader2 className="w-4 h-4 animate-spin me-2" /> : <Plus className="w-4 h-4 me-2" />}
+                  Create
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
           <Button
             type="button"
             onClick={handleGenerateAll}
             disabled={bulkRunning}
             className="gap-2"
-            title="Bulk generation only covers the 12 hero presets. Other presets are upload-only."
+            title="Bulk generation only covers the 12 hero presets."
           >
-            {bulkRunning ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Sparkles className="w-4 h-4" />
-            )}
+            {bulkRunning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
             {bulkRunning ? "Generating…" : "Auto-generate 12 hero presets"}
           </Button>
           <p className="text-xs text-muted-foreground">
@@ -251,28 +447,13 @@ const PresetPreviewsSection = () => {
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium">
                 Generating {bulkProgress.current} / {bulkProgress.total}
-                <span className="text-muted-foreground font-mono ml-2">
-                  {bulkProgress.presetId}
-                </span>
+                <span className="text-muted-foreground font-mono ml-2">{bulkProgress.presetId}</span>
               </p>
               <div className="mt-1.5 h-1.5 w-full rounded-full bg-background overflow-hidden">
-                <div
-                  className="h-full bg-primary transition-all"
-                  style={{
-                    width: `${(bulkProgress.current / bulkProgress.total) * 100}%`,
-                  }}
-                />
+                <div className="h-full bg-primary transition-all" style={{ width: `${(bulkProgress.current / bulkProgress.total) * 100}%` }} />
               </div>
             </div>
-            <Button
-              type="button"
-              size="sm"
-              variant="ghost"
-              onClick={() => {
-                cancelRef.current = true;
-              }}
-              className="gap-1"
-            >
+            <Button type="button" size="sm" variant="ghost" onClick={() => { cancelRef.current = true; }} className="gap-1">
               <X className="w-3.5 h-3.5" />
               Cancel
             </Button>
@@ -302,22 +483,12 @@ const PresetPreviewsSection = () => {
                   const errMsg = errors[preset.id];
                   const isGen = status === "generating";
                   const isHero = HERO_PRESET_IDS.includes(preset.id);
+                  const isCustom = customIds.has(preset.id);
                   return (
-                    <div
-                      key={preset.id}
-                      className="rounded-lg border border-border/50 bg-secondary/30 overflow-hidden flex flex-col"
-                    >
+                    <div key={preset.id} className="rounded-lg border border-border/50 bg-secondary/30 overflow-hidden flex flex-col">
                       <div className="relative h-28 bg-gradient-to-b from-background/60 to-secondary/60 flex items-center justify-center overflow-hidden">
                         {url ? (
-                          <video
-                            key={url}
-                            src={url}
-                            autoPlay
-                            muted
-                            loop
-                            playsInline
-                            className="absolute inset-0 h-full w-full object-cover"
-                          />
+                          <video key={url} src={url} autoPlay muted loop playsInline className="absolute inset-0 h-full w-full object-cover" />
                         ) : (
                           <Icon size={40} className="text-muted-foreground/40" />
                         )}
@@ -326,15 +497,26 @@ const PresetPreviewsSection = () => {
                             <Loader2 className="w-6 h-6 animate-spin text-primary" />
                           </div>
                         )}
+                        {isCustom && (
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteCustomPreset(preset.id)}
+                            className="absolute top-1.5 right-1.5 p-1 rounded bg-background/70 backdrop-blur-sm hover:bg-destructive/80 hover:text-destructive-foreground transition-colors"
+                            title="Delete custom preset"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        )}
                       </div>
                       <div className="p-3 space-y-2 flex-1 flex flex-col">
                         <div>
-                          <p className="text-sm font-semibold flex items-center gap-1.5">
+                          <p className="text-sm font-semibold flex items-center gap-1.5 flex-wrap">
                             {preset.label}
                             {isHero && (
-                              <span className="text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-primary/15 text-primary font-medium">
-                                Hero
-                              </span>
+                              <span className="text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-primary/15 text-primary font-medium">Hero</span>
+                            )}
+                            {isCustom && (
+                              <span className="text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-accent/20 text-accent font-medium">Custom</span>
                             )}
                           </p>
                           <p className="text-[11px] text-muted-foreground font-mono">{preset.id}</p>
@@ -343,9 +525,7 @@ const PresetPreviewsSection = () => {
                           {fileMeta ? (
                             <>
                               {formatSize(fileMeta.size)} ·{" "}
-                              {fileMeta.updated_at
-                                ? new Date(fileMeta.updated_at).toLocaleDateString()
-                                : ""}
+                              {fileMeta.updated_at ? new Date(fileMeta.updated_at).toLocaleDateString() : ""}
                             </>
                           ) : (
                             <span className="italic">No video uploaded</span>
@@ -378,11 +558,7 @@ const PresetPreviewsSection = () => {
                               disabled={isGen || bulkRunning}
                               onClick={() => handleGenerateOne(preset.id)}
                             >
-                              {isGen ? (
-                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                              ) : (
-                                <Sparkles className="w-3.5 h-3.5" />
-                              )}
+                              {isGen ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
                               {isGen ? "Generating" : "Generate"}
                             </Button>
                           )}
