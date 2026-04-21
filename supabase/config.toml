@@ -13,3 +13,5 @@ project_id = "foaxkfpblyovbocvmtjj"
     verify_jwt = true
   [functions.send-transactional-email]
     verify_jwt = true
+  [functions.generate-preset-preview]
+    verify_jwt = false
