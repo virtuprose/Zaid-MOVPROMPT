@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useRef } from "react";
+import { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ImageUploadZone } from "./ImageUploadZone";
@@ -31,6 +31,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { getContract, deriveWorkflowType } from "@/lib/modelContracts";
 import { MODEL_GROUPS } from "@/lib/models";
+import { detectIntent } from "@/lib/sceneIntent";
 
 type Phase = "upload" | "breakdown" | "generate";
 
@@ -81,6 +82,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
   const [elementItems, setElementItems] = useState<ElementItem[]>([]);
   const sceneMentionRef = useRef<SceneMentionTextareaHandle>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [manualOverrides, setManualOverrides] = useState<Record<string, boolean>>({});
 
   // Flatten scene frames into a single 1-based indexed list (left-to-right, frame-by-frame).
   const flatSceneElements = useMemo(() => {
