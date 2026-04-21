@@ -474,12 +474,11 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
               </Button>
               <Button
                 size="lg"
-                variant="ghost"
                 onClick={() => { setSceneFrames([]); setPhase("breakdown"); }}
                 disabled={isAnalyzing}
-                className="px-6 sm:px-8 font-display text-muted-foreground"
+                className="px-6 sm:px-8 font-display font-semibold bg-accent text-accent-foreground hover:bg-accent/90 shadow-lg shadow-accent/25"
               >
-                {t("wp.skip")}
+                <Zap className="w-4 h-4 me-2" /> {t("wp.skip")}
               </Button>
             </div>
           </motion.div>

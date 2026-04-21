@@ -65,7 +65,7 @@ export const ar: Record<TranslationKey, string> = {
   "wp.analyzeDesc": "سيقوم الذكاء الاصطناعي بتحليل مشهدك إلى عناصر فردية \n(الموضوع، الخلفية، الإضاءة، الأجواء) حتى تتحكم بدقة فيما يبقى ثابتاً وما يتحرك",
   "wp.analyzeScene": "تحليل المشهد",
   "wp.analyzingScene": "جاري تحليل المشهد...",
-  "wp.skip": "تخطي — انتقل مباشرة للتوليد",
+  "wp.skip": "تخطّى وأنشئ الآن",
   "wp.startOver": "البدء من جديد",
   "wp.reAnalyze": "إعادة التحليل",
   "wp.generatePrompt": "توليد أمر سينمائي",

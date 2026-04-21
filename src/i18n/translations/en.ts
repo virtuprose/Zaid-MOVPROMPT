@@ -63,7 +63,7 @@ export const en = {
   "wp.analyzeDesc": "AI will break down your scene into individual elements (subject, background, lighting, atmosphere) so you can control exactly what stays still and what moves.",
   "wp.analyzeScene": "Analyze Scene",
   "wp.analyzingScene": "Analyzing Scene...",
-  "wp.skip": "Skip — Go Straight to Generate",
+  "wp.skip": "Skip & Generate Now",
   "wp.startOver": "Start Over",
   "wp.reAnalyze": "Re-analyze",
   "wp.generatePrompt": "Generate Cinematic Prompt",
