@@ -1,44 +1,38 @@
 
 
-## Empty-state inside mention popover
+## Mobile ModelPicker polish
 
-### What changes
+### Goal
+Make picking a model effortless on a phone held in one hand.
 
-When the mention popover in `SceneMentionTextarea` opens and `elements.length === 0`, render a friendly empty state instead of a blank list, and let the user "create" a placeholder first mention by clicking a CTA.
+### Changes (scope: `src/components/ModelPicker.tsx` only)
 
-### Behavior
+**1. Thumb-friendly trigger**
+- Bump trigger min-height from `3.75rem` → `4rem` on mobile and increase tap padding: `py-3 px-3.5 sm:py-2.5`.
+- Stack label + selected description vertically inside the trigger via custom render (use `SelectValue` children override pattern): show selected model name on line 1, description on line 2 (2-line clamp) for clearer at-a-glance feedback.
 
-- **Before breakdown runs / no detected elements**: popover shows empty state:
-  - Icon (AtSign) + title: "No elements yet"
-  - Muted line: "Run scene analysis to detect elements, or insert a placeholder to start writing."
-  - Primary CTA: **"Insert @1 placeholder"** — inserts `@1 ` at the caret using the same `insertMention` path.
-- **With elements**: existing list renders as today (no change).
-- The "Insert mention" pill (trigger button) is currently disabled when `elements.length === 0`. Enable it so the empty-state CTA is reachable; the popover now handles the empty case itself.
+**2. Mobile-optimized dropdown surface**
+- Replace fixed `max-h-[420px]` with `max-h-[min(70vh,420px)]` so the list always fits above the keyboard/home indicator.
+- Add `w-[min(22rem,calc(100vw-1.5rem))]` so the popover never overflows viewport on 360–440px.
+- Inner scroll area: `overscroll-contain` so scrolling the list doesn't bubble to the page.
 
-### Implementation details
+**3. Bigger, clearer rows**
+- `SelectItem`: `py-3 px-2.5` (up from `py-2`) and `min-h-[3.25rem]` — easier thumb targets.
+- Description: keep 2-line clamp but add `text-[11px] sm:text-xs` for tighter mobile density without feeling cramped.
+- Add a subtle left accent bar for the currently selected item using `data-[state=checked]:border-l-2 data-[state=checked]:border-primary data-[state=checked]:bg-primary/5`.
 
-`src/components/SceneMentionTextarea.tsx`
-- Remove `disabled={elements.length === 0}` from the `PopoverTrigger` button (keep the visual affordance the same).
-- Keep the `handleChange` auto-trigger gated on `elements.length > 0` so typing `@` on an empty scene does not auto-open the picker — only the explicit pill click opens it.
-- In `PopoverContent`, branch on `elements.length`:
-  - If 0: render empty-state block with icon, two lines of copy, and a CTA button that calls `insertMention(1)` (works because `insertMention` doesn't validate the index against `elements`).
-  - If >0: render existing list.
-- Keep popover width `w-[min(20rem,calc(100vw-2rem))]`.
+**4. Selection feedback**
+- When model changes, flash a brief `ring-2 ring-primary/40` on the trigger via a short-lived state (200 ms) so the user sees confirmation after the sheet closes.
+- Make the sparkles icon `text-primary animate-pulse` briefly on change (reuse the same 200 ms state).
 
-`src/i18n/translations/en.ts` & `ar.ts`
-- Add three keys under `scene.*`:
-  - `scene.mentionEmptyTitle` — "No elements yet" / "لا توجد عناصر بعد"
-  - `scene.mentionEmptyHint` — "Run scene analysis to detect elements, or insert a placeholder to start writing." / Arabic equivalent
-  - `scene.mentionEmptyCta` — "Insert @1 placeholder" / "أدرج العنصر @1"
+**5. Group headers sticky inside scroll**
+- Add `sticky top-0 bg-popover/95 backdrop-blur z-10` to `SelectLabel` so category labels stay visible while scrolling the long list.
 
-### Files touched
-
-- `src/components/SceneMentionTextarea.tsx`
-- `src/i18n/translations/en.ts`
-- `src/i18n/translations/ar.ts`
+**6. Safe spacing**
+- Card wrapper already `p-4 sm:p-5`; tighten inner gap to `space-y-2.5 sm:space-y-3` so the card isn't taller than needed on mobile.
 
 ### Out of scope
-- Triggering scene analysis from the popover.
-- Changes to `MentionTextarea` (shots flow).
-- Auto Move/Lock logic, breakdown parsing, or generation flow.
+- Adding search/filter inside the picker.
+- Changing the model list, contracts, or i18n keys.
+- Desktop layout (all changes are additive / mobile-first and preserved at `sm:`).
 
