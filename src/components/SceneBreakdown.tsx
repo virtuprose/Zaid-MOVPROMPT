@@ -192,7 +192,7 @@ export const SceneBreakdown = ({ frames, frameLabels, framePreviews, directions,
                                 size="sm"
                                 variant={isLocked ? "secondary" : "ghost"}
                                 onClick={() => { if (!isLocked) toggleAction(el.id); }}
-                                className={`h-7 px-2 text-xs gap-1 ${isLocked ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : ""}`}
+                                className={`h-7 px-2 text-xs gap-1 ${isLocked ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : ""} ${isLocked && pulsing[el.id] ? "animate-pulse-glow" : ""}`}
                               >
                                 <Lock className="w-3 h-3" /> {t("scene.lock")}
                               </Button>
@@ -207,7 +207,7 @@ export const SceneBreakdown = ({ frames, frameLabels, framePreviews, directions,
                                 size="sm"
                                 variant={!isLocked ? "secondary" : "ghost"}
                                 onClick={() => { if (isLocked) toggleAction(el.id); }}
-                                className={`h-7 px-2 text-xs gap-1 ${!isLocked ? "bg-primary/20 text-primary" : ""}`}
+                                className={`h-7 px-2 text-xs gap-1 ${!isLocked ? "bg-primary/20 text-primary" : ""} ${!isLocked && pulsing[el.id] ? "animate-pulse-glow" : ""}`}
                               >
                                 <Play className="w-3 h-3" /> {t("scene.move")}
                               </Button>
