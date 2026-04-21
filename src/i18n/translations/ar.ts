@@ -136,6 +136,8 @@ export const ar: Record<TranslationKey, string> = {
   "scene.lock": "تثبيت",
   "scene.move": "تحريك",
   "scene.elements": "عناصر",
+  "scene.lockTooltip": "اجعل هذا العنصر ثابتاً — لن يتحرك في الفيديو النهائي.",
+  "scene.moveTooltip": "اجعل هذا العنصر متحركاً — أضف ملاحظة أدناه لتوجيه الحركة.",
   "scene.notePlaceholder": 'مثال: "اجعل الشعر يتطاير مع الريح"، "أضف تأثير المطر"...',
   "scene.mentionHint": "اكتب @ للإشارة إلى عنصر (مثال: @2 يلتفت نحو الكاميرا)",
   "scene.mentionPickerTitle": "إدراج إشارة لعنصر",
