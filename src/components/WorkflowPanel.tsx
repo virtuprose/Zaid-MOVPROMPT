@@ -613,9 +613,11 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
                 size="sm"
                 variant="outline"
                 onClick={() => { setPhase("upload"); setResults(null); }}
-                className="gap-1.5 border-white/20 text-muted-foreground hover:text-foreground hover:border-primary/50"
+                aria-label={t("wp.startOver")}
+                title={t("wp.startOver")}
+                className="gap-1.5 px-2 sm:px-3 border-white/20 text-muted-foreground hover:text-foreground hover:border-primary/50"
               >
-                <RotateCcw className="w-3.5 h-3.5" /> {t("wp.startOver")}
+                <RotateCcw className="w-3.5 h-3.5" /> <span className="hidden sm:inline">{t("wp.startOver")}</span>
               </Button>
             </div>
             {contract.supportsElementReferences ? (
