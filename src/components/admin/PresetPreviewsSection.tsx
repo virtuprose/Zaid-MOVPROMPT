@@ -41,9 +41,6 @@ const PresetPreviewsSection = () => {
   const [cacheBust, setCacheBust] = useState(Date.now());
   const [statuses, setStatuses] = useState<Record<string, CardStatus>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [bulkRunning, setBulkRunning] = useState(false);
-  const [bulkProgress, setBulkProgress] = useState<{ current: number; total: number; presetId: string } | null>(null);
-  const cancelRef = useRef(false);
   const inputs = useRef<Record<string, HTMLInputElement | null>>({});
 
   // New preset dialog state
