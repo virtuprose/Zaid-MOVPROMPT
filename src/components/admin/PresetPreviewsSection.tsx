@@ -257,6 +257,11 @@ const PresetPreviewsSection = () => {
       delete next[presetId];
       return next;
     });
+    setAutoUpgrades((u) => {
+      const next = { ...u };
+      delete next[presetId];
+      return next;
+    });
 
     const markCanceled = (): { ok: false; code: "canceled" } => {
       cancelRequested.current[presetId] = false;
