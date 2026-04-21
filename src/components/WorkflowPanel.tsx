@@ -603,6 +603,8 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
             </AlertDialog>
           </motion.div>
         )}
+
+        {(phase === "breakdown" || phase === "generate") && sceneFrames.length === 0 && (
           <motion.div key="skip-phase" {...phaseTransition} className="space-y-4">
             <div className="flex justify-start">
               <Button
