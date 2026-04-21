@@ -695,6 +695,28 @@ const PresetPreviewsSection = () => {
                 <X className="w-3 h-3" /> Clear
               </Button>
             )}
+            {batchRunning ? (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={handleCancelBatch}
+                className="h-7 gap-1"
+              >
+                <X className="w-3 h-3" /> Cancel batch
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={handleRegenerateLikelyWrong}
+                className="h-7 gap-1"
+                title="Re-generate camera-motion presets known to render poorly + any currently in error"
+              >
+                <Sparkles className="w-3 h-3" /> Re-generate likely wrong
+              </Button>
+            )}
           </div>
         </div>
         {presetsByGroup.map(({ group, items }) => {
