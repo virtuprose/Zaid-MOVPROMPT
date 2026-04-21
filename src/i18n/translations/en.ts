@@ -87,8 +87,14 @@ export const en = {
   "frame.uploadConcept": "Upload concept image",
 
   // ConfigPanel
-  "config.describeVision": "Describe Your Vision (optional)",
-  "config.placeholder": "Describe your vision... e.g. 'dramatic slow-motion with rain and neon lights'",
+  "config.describeVision": "Describe Your Vision",
+  "config.describeVision.optional": "Optional",
+  "config.describeVisionHelper": "Tell the AI the mood, action, or style you want for this scene — or pick presets below.",
+  "config.yourDescription": "Your description",
+  "config.placeholder": "e.g. \"Slow push-in on a lone figure walking through a rainy Tokyo alley at night, neon reflections, melancholic mood.\"",
+  "config.clear": "Clear",
+  "config.augmentWithPresets": "Or augment with presets",
+  "config.charsCount": "{n} chars",
   "config.targetModel": "Target AI Model",
   "config.chooseModel": "Choose a model...",
   "config.anyModel": "Any Model — Universal Prompt",

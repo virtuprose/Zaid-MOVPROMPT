@@ -89,8 +89,14 @@ export const ar: Record<TranslationKey, string> = {
   "frame.uploadConcept": "ارفع صورة المفهوم",
 
   // ConfigPanel
-  "config.describeVision": "صِف رؤيتك (اختياري)",
-  "config.placeholder": "صِف رؤيتك... مثال: 'حركة بطيئة درامية مع مطر وأضواء نيون'",
+  "config.describeVision": "صِف رؤيتك",
+  "config.describeVision.optional": "اختياري",
+  "config.describeVisionHelper": "أخبر الذكاء الاصطناعي بالمزاج أو الحركة أو النمط الذي تريده لهذا المشهد — أو اختر من الإعدادات المسبقة أدناه.",
+  "config.yourDescription": "وصفك",
+  "config.placeholder": "مثال: \"تقريب بطيء على شخص وحيد يمشي في زقاق ممطر في طوكيو ليلاً، انعكاسات نيون، مزاج حزين.\"",
+  "config.clear": "مسح",
+  "config.augmentWithPresets": "أو أضف من الإعدادات المسبقة",
+  "config.charsCount": "{n} حرف",
   "config.targetModel": "نموذج الذكاء الاصطناعي المستهدف",
   "config.chooseModel": "اختر نموذجاً...",
   "config.anyModel": "أي نموذج — توجيه عام",
