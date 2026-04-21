@@ -676,7 +676,7 @@ const PresetPreviewsSection = () => {
                                   )?.label)}
                             </div>
                             {autoUpgrades[preset.id] && !isCanceling && (
-                              <div className="text-[9px] text-amber-300/90 px-2 text-center leading-tight max-w-[14rem]">
+                              <div className="text-[9px] text-accent px-2 text-center leading-tight max-w-[14rem]">
                                 Auto-upgraded for accuracy
                               </div>
                             )}
