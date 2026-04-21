@@ -86,10 +86,13 @@ export const ConfigPanel = ({ description, onDescriptionChange }: ConfigPanelPro
                     type="button"
                     variant="ghost"
                     size="sm"
-                    className="h-6 px-2 text-[11px] text-muted-foreground hover:text-foreground"
+                    aria-label={t("config.clear")}
+                    title={t("config.clear")}
+                    className="h-6 gap-1 px-2 text-[11px] text-muted-foreground hover:text-foreground"
                     onClick={() => onDescriptionChange("")}
                   >
-                    {t("config.clear")}
+                    <X className="w-3 h-3" />
+                    <span className="hidden sm:inline">{t("config.clear")}</span>
                   </Button>
                 )}
               </div>
