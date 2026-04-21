@@ -27,21 +27,24 @@ const PresetPreviewsSection = () => {
   const cancelRef = useRef(false);
   const inputs = useRef<Record<string, HTMLInputElement | null>>({});
 
-  const heroPresets = HERO_PRESET_IDS
-    .map((id) => PRESETS.find((p) => p.id === id))
-    .filter((p): p is NonNullable<typeof p> => Boolean(p));
+  const presetsByGroup = PRESET_GROUPS.map((g) => ({
+    group: g,
+    items: PRESETS.filter((p) => p.group === g.id),
+  })).filter((g) => g.items.length > 0);
+
+  const uploadedCount = ALL_PRESET_IDS.filter((id) => meta[id]).length;
 
   const refresh = async () => {
-    const { data, error } = await supabase.storage.from(BUCKET).list("", { limit: 200 });
+    const { data, error } = await supabase.storage.from(BUCKET).list("", { limit: 1000 });
     if (error) {
       console.error(error);
       return;
     }
     const map: Record<string, FileMeta | null> = {};
-    HERO_PRESET_IDS.forEach((id) => (map[id] = null));
+    ALL_PRESET_IDS.forEach((id) => (map[id] = null));
     (data || []).forEach((f) => {
       const id = f.name.replace(/\.mp4$/, "");
-      if (HERO_PRESET_IDS.includes(id)) {
+      if (ALL_PRESET_IDS.includes(id)) {
         map[id] = {
           size: (f.metadata as { size?: number } | null)?.size ?? 0,
           updated_at: f.updated_at ?? f.created_at ?? "",
