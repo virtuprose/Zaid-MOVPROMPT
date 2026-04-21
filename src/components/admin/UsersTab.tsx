@@ -288,6 +288,9 @@ const UsersTab = () => {
                     )}
                   </TableCell>
                   <TableCell>
+                    <Sparkline data={u.trend} />
+                  </TableCell>
+                  <TableCell>
                     {u.is_active ? (
                       <Badge variant="outline" className="text-xs border-emerald-500/50 text-emerald-400">
                         <ShieldCheck className="w-3 h-3 mr-1" />
