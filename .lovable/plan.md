@@ -1,36 +1,64 @@
 
 
-## Fix: popover/caret jumping back to `@` after typing `@1 `
+## Mobile UI polish pass
 
-### Root cause
+### Scope
 
-In `SceneMentionTextarea.handleChange` the mention-picker trigger detector only checks "the character just typed was `@`". It doesn't verify that the `@` is actually at the caret as a *fresh* trigger, so two things go wrong after the user types `@1` + space:
+Mobile viewport (≤440px) on the main flow: `/` → upload → breakdown → generate. Desktop stays unchanged.
 
-1. **Stale `triggerPosRef`** — when the user first types `@`, `triggerPosRef` is set to that position and the popover opens. After `1` is typed, the close-branch runs (good), but `triggerPosRef` is cleared only inside that branch *if* the popover is currently open. On some keystroke orderings (fast typing, IME, or when the popover was already closed by a click-outside), `triggerPosRef` keeps pointing at the old `@`, and the next space keystroke re-enters the trigger path because `prev === "@"` is still true for the preceding `@` in `@1 ` when the caret happens to sit right after `@` (e.g. React re-rendering with the overlay/Popover anchor steals focus for one frame and the browser restores caret to `triggerPosRef` position).
+### Issues observed & fixes
 
-2. **Popover anchor focus steal** — `PopoverAnchor` wraps the textarea; when the popover opens, the anchor's layout shift + `onOpenAutoFocus` race causes a one-frame focus loss. On reopen (triggered by the space because of #1), the browser restores caret to the last known selection, which is right after `@` — visually "jumping back to the @ tag".
+**1. Top bar crowding (`src/pages/Index.tsx`)**
+On 440px the top bar has 4–5 buttons that wrap or overflow. Fix:
+- Collapse the top-right row into a tighter group: reduce gap from `gap-1.5` to `gap-1`, keep icons-only on mobile (already hides labels), but shrink avatar button to `size="icon"` on mobile.
+- Ensure the row stays on one line by using `flex-nowrap` and `shrink-0` on each button.
+- Reduce top padding on mobile: `py-6` → `py-4`.
 
-### The fix
+**2. Hero sizing (`src/pages/Index.tsx`)**
+- Logo feels oversized next to the title on small screens: `w-10 h-10` → `w-9 h-9`, title `text-3xl` → `text-[26px]` on mobile to avoid the two-line wrap some users see at 360px.
+- Reduce hero bottom margin `mb-8` → `mb-6` on mobile.
+- Subtitle `text-base` → `text-sm` on mobile, tighter `max-w` so it doesn't hit the edges.
 
-Tighten trigger detection + strictly gate reopening:
+**3. Container padding (`src/pages/Index.tsx`)**
+`px-4` is fine, but inner cards (`WorkflowPanel`, `ModelPicker`, `ConfigPanel`, `SceneBreakdown`) use `p-6` which eats horizontal space. Drop to `p-4` on mobile via `p-4 sm:p-6` where currently `p-6`.
 
-1. **Detect a real fresh `@` trigger only**, by checking that the `@` at `caret - 1` is not immediately followed by a digit *anywhere* up to the next whitespace. If `@` is already part of an existing `@N` token, never open the popover.
-2. **Always clear `triggerPosRef` on any non-trigger keystroke** (not just when `open === true`), so a stale pointer can never survive into the next change event.
-3. **Guard against reopening** by also requiring `!open` state before setting `open = true` — only open on the keystroke that actually introduces the lone `@`.
-4. **Stop the caret-jump** by removing the `PopoverAnchor` wrapper around the textarea and switching to a virtual anchor (use `PopoverContent`'s `style`/positioning by anchoring to the textarea ref via `getBoundingClientRect`, or simply use the `PopoverTrigger` button as the anchor for the auto-opened popover too). This keeps the textarea DOM stable so focus/caret never leave it.
+**4. SceneBreakdown element cards (`src/components/SceneBreakdown.tsx`)**
+- Action buttons (Lock/Move) wrap awkwardly under 400px. Make the button row use `flex-wrap` with `gap-1.5` and shrink button labels to icon-only below `sm`.
+- Note textarea min-height too tall on mobile — reduce from default to `min-h-[64px]` on mobile.
+- Category chip + description currently overflow; add `min-w-0` and `truncate`/`line-clamp-2` to description text.
+
+**5. SceneMentionTextarea (`src/components/SceneMentionTextarea.tsx`)**
+- "Insert mention" pill + hint wrap to two lines on mobile; the hint text should drop to one line or hide below `sm`. Keep pill always visible, hide the inline hint on `< sm` (the toast-like muted text).
+- Popover width `w-80` (320px) is wider than the 440px viewport minus padding — already ok, but set `w-[min(20rem,calc(100vw-2rem))]` to be safe.
+
+**6. ModelPicker (`src/components/ModelPicker.tsx`)**
+- Verify cards on mobile stack cleanly; if grid is 2-col it should become 1-col `< sm`. Adjust to `grid-cols-1 sm:grid-cols-2` where applicable.
+
+**7. ResultsPanel (`src/components/ResultsPanel.tsx`)**
+- Copy/regenerate buttons wrap to two rows on mobile; make the header row `flex-wrap gap-2` with buttons `size="sm"` on mobile.
+- Collapsible refinement sections have oversized padding — reduce to `p-3 sm:p-4`.
+
+**8. Sticky Generate bar on mobile (`src/components/WorkflowPanel.tsx`)**
+Currently the Generate button sits at the bottom of a long scroll; easy to miss. Make it sticky at the bottom of the viewport on mobile only during the `breakdown` phase:
+- Wrapper: `sticky bottom-0 -mx-4 px-4 py-3 bg-background/95 backdrop-blur border-t border-border/40 sm:static sm:mx-0 sm:px-0 sm:py-0 sm:bg-transparent sm:backdrop-blur-none sm:border-0`.
+
+**9. Ambient glow (`src/pages/Index.tsx`)**
+The 800×400px blur circles cause slight horizontal overflow on mobile — ensure the parent has `overflow-hidden` (already set) and shrink the blur to `w-[500px] h-[260px]` on mobile.
+
+**10. Safe-area padding**
+Add `pb-[env(safe-area-inset-bottom)]` to the sticky generate bar and page root so iOS home indicator doesn't overlap.
 
 ### Files touched
 
-- `src/components/SceneMentionTextarea.tsx`
-  - Rewrite `handleChange` trigger logic:
-    - Compute `isFreshAt = prev === "@" && !/\d/.test(next[caret] ?? "") && !/\w/.test(next[caret-2] ?? "")`.
-    - If `isFreshAt && !open`: set `triggerPosRef`, `setOpen(true)`.
-    - Else: unconditionally clear `triggerPosRef` and close popover if it was open.
-  - Replace the `PopoverAnchor`-wrapping-the-textarea pattern with keeping the anchor on the `PopoverTrigger` button; position the auto-opened popover by passing `sideOffset` and letting Radix anchor to the trigger button (which stays in the DOM). This eliminates the focus/caret race.
-  - Add an `onBlur` reset that clears `triggerPosRef` when focus truly leaves the textarea.
+- `src/pages/Index.tsx` — top bar, hero, glow, safe-area.
+- `src/components/WorkflowPanel.tsx` — sticky Generate bar, inner padding.
+- `src/components/SceneBreakdown.tsx` — element card layout, button wrapping, truncation.
+- `src/components/SceneMentionTextarea.tsx` — pill/hint row, popover width.
+- `src/components/ModelPicker.tsx` — grid columns + padding.
+- `src/components/ResultsPanel.tsx` — header wrap, collapsible padding.
+- `src/components/ConfigPanel.tsx` — padding reduction only.
 
 ### Out of scope
-- No changes to `detectIntent` / auto Move-Lock logic.
-- No changes to `MentionTextarea` (shots flow) — the bug is specific to `SceneMentionTextarea`.
-- No i18n changes.
+- Desktop layout, dark theme tokens, copy/i18n, any logic changes (intent detection, generation flow, auth).
+- New components or icons.
 
