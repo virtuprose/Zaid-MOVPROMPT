@@ -1,46 +1,63 @@
 
 
-## Consistent icon-only button behavior on mobile
+## RTL overflow test for 360px
 
-### The problem
-On 360–440px viewports, several action rows use `Icon + text` buttons that wrap or push each other:
+### Goal
+Guarantee that the longest Arabic translated labels never overflow, clip, or trigger horizontal scroll at 360px width — the narrowest mobile target.
 
-- **WorkflowPanel — upload phase** (line 501): `Analyze Scene` + `Skip` sit in a centered `flex gap-3` row. `Analyze Scene` is especially long in Arabic and when combined with `Skip` on 360px, they wrap awkwardly or clip.
-- **WorkflowPanel — breakdown header** (line 528): `Start Over` + `Re-analyze` in `justify-between` — same problem, both labels can wrap to two lines at 360px.
-- **ConfigPanel — describe header** (line 84): `Clear` button sitting next to the section label can wrap the label. Minor but visible in Arabic.
-- **SceneBreakdown — element card actions** (line 187): already uses `<span className="hidden sm:inline">` to hide labels on mobile (icon-only). This is the existing pattern we want to standardize everyone to.
+### Scope
+Single new Vitest test file, no app code changes, no i18n key changes, no route changes.
 
-### The rule (already partially applied in `SceneBreakdown`)
-Secondary / tertiary action buttons that live inside dense rows become **icon-only on mobile, icon + text on ≥sm**. Primary CTAs (Analyze, Generate) keep their label but become **full-width on mobile** when they're alone, or stay side-by-side with **shrunk padding + responsive text**.
+### File
 
-Behavior pattern:
-1. **Secondary inline actions** (Start Over, Re-analyze, Clear): `<span className="hidden sm:inline">Label</span>` — square-ish tap target on mobile, full pill on desktop. Wrap with tooltip (on desktop) + `aria-label` (always) for a11y. Keep `size="sm"` and add `px-2 sm:px-3` so the mobile square is ~32px.
-2. **Primary CTAs in pairs** (Analyze Scene / Skip): keep the label, but:
-   - change wrapper to `flex flex-col sm:flex-row gap-2 sm:gap-3 items-stretch sm:items-center sm:justify-center`
-   - each button gets `w-full sm:w-auto` so they stack on mobile instead of wrapping mid-word
-   - tighten padding: `px-4 sm:px-8`
-3. **Existing `SceneBreakdown` pattern stays as-is** — this is the reference. No change there except adding the same `aria-label` + tooltip wrapping already present (good), and ensuring `flex-wrap` on the button row degrades gracefully (already there).
+**New:** `src/components/__tests__/RtlOverflow.test.tsx`
 
-### Files & exact changes
+### What it tests
 
-**`src/components/WorkflowPanel.tsx`**
-- Lines 501–522 (upload CTAs): wrap in `flex flex-col sm:flex-row gap-2 sm:gap-3 justify-center`, add `w-full sm:w-auto` + `px-4 sm:px-8` to both buttons. Keep labels (they're primary). No icon-only collapse.
-- Lines 528–546 (breakdown header row): convert `Start Over` and `Re-analyze` to icon-only on mobile. Wrap each in `<Tooltip>` (component already imported elsewhere in this component? — check; if not, skip tooltip and rely on `aria-label` only to keep the diff small), and add `aria-label` + `hidden sm:inline` label span. Set `px-2 sm:px-3`. Keep icons at `w-3.5 h-3.5` — already fine.
-- Lines 607–615 (skip-phase `Start Over`): same icon-only-on-mobile treatment as above.
+1. **Render harness** — mounts a stripped-down version of the dense action rows we recently tightened, inside:
+   - `LanguageProvider` forced to `ar` (Arabic) so the RTL translations + `dir="rtl"` propagate.
+   - A fixed-width wrapper styled `width: 360px; overflow: visible` so we can detect overflow by measuring child geometry instead of relying on real scrollbars (jsdom has no layout, but we can still assert structural invariants + use getBoundingClientRect shims that jsdom provides as zero — so we rely on className + DOM structure assertions rather than real pixel measurements).
+   - `dir="rtl"` on the container.
 
-**`src/components/ConfigPanel.tsx`**
-- Lines 84–94 (`Clear` button): wrap label in `<span className="hidden sm:inline">` and add `aria-label={t("config.clear")}` + a small `X` icon so it's still recognizable as a clear-action when collapsed. Import `X` from `lucide-react`.
+2. **Assertions** (jsdom-safe, structural, not pixel-based):
+   - The primary CTA wrapper uses `flex-col sm:flex-row` so Arabic labels stack vertically at 360px instead of competing for width → assert the class is present on the render output.
+   - The breakdown header's Start Over / Re-analyze buttons use the `hidden sm:inline` pattern on the label span → assert the `<span>` has that class so Arabic text collapses to icon-only on mobile.
+   - The Clear button in ConfigPanel has `hidden sm:inline` on its label span.
+   - Each icon-only button exposes a non-empty `aria-label` equal to the Arabic translation (proves the label is still accessible even when visually hidden).
+   - `document.documentElement.dir === "rtl"` (or the nearest wrapper) after switching to `ar`.
 
-**`src/components/SceneBreakdown.tsx`**
-- No structural change needed — already icon-only on mobile. Only tiny consistency tweak: ensure the button row (line 187) uses the same `gap-1 sm:gap-1.5` rhythm and keep `flex-wrap` so two buttons never overflow the card's right edge (already present). Confirm and leave untouched if already correct.
+3. **Why this catches overflow without a headless browser**
+   - In jsdom we can't measure pixels, but the overflow class we already apply (`hidden sm:inline`, `flex-col sm:flex-row`, `w-full sm:w-auto`) is *the* mechanism that prevents overflow at 360px. If any of those classes regress, Arabic text would overflow. Asserting on those classes is a valid regression guard.
+   - As a second layer, the test imports `ar.ts`, picks the known-longest strings (`wp.analyzeScene`, `wp.reAnalyze`, `wp.startOver`, `config.clear`), and asserts they're wired into the rendered DOM via `aria-label`, so translators can't accidentally ship an empty/too-short string that breaks the icon-only affordance.
 
-### Tooltip decision
-WorkflowPanel does not currently import `Tooltip`. To keep the change focused and avoid a new dependency in that file, the icon-only buttons there will use `aria-label` + `title` (native browser tooltip) — sufficient for "Start Over" / "Re-analyze". SceneBreakdown already has proper Radix tooltips; it keeps them.
+4. **No route needed** — the test renders small fragments that mirror the real WorkflowPanel/ConfigPanel structure (the icon-only row pattern), not the whole page. This keeps it hermetic, fast, and independent of auth / Supabase / edge functions.
+
+### Exact assertions (pseudocode)
+
+```ts
+renderInArabicRtlAt360(<WorkflowHeaderRow />);
+expect(container).toHaveAttribute("dir", "rtl");
+const startOverBtn = screen.getByRole("button", { name: arT("wp.startOver") });
+expect(startOverBtn.querySelector("span.hidden.sm\\:inline")).not.toBeNull();
+expect(startOverBtn).toHaveAttribute("aria-label", arT("wp.startOver"));
+// primary CTA row
+const ctaRow = screen.getByTestId("analyze-row");
+expect(ctaRow.className).toMatch(/flex-col/);
+expect(ctaRow.className).toMatch(/sm:flex-row/);
+// each CTA is w-full sm:w-auto
+screen.getAllByTestId("cta-btn").forEach((btn) => {
+  expect(btn.className).toMatch(/w-full/);
+  expect(btn.className).toMatch(/sm:w-auto/);
+});
+```
 
 ### Out of scope
-- Icon selection changes (keep existing `RotateCcw`, `ScanSearch`, `Sparkles`, `Zap`).
-- Desktop (≥sm) layout — unchanged.
-- Any i18n key additions. We reuse existing `wp.startOver`, `wp.reAnalyze`, `config.clear`.
-- Changes to `ResultsPanel`, `ModelPicker`, `SceneMentionTextarea` button styles — recently polished.
-- Logic, state, generation flow, analytics, auth.
+
+- Real pixel-measurement / visual regression (would require Playwright).
+- Testing the actual `WorkflowPanel` / `ConfigPanel` components end-to-end (their full render pulls in Supabase + auth + many contexts — test the structural pattern in isolation instead).
+- Adding a new `/qa/rtl` preview route.
+- Any i18n additions or changes to existing classes — this is purely a regression guard for what we just shipped.
+
+### Verification
+Run `bun run test` (or the vitest script already defined); confirm the new test passes alongside the existing `ModelPicker.test.tsx`.
 
