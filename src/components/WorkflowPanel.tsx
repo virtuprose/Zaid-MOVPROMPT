@@ -10,6 +10,8 @@ import { ReferenceMediaPanel } from "./ReferenceMediaPanel";
 import type { ReferenceMediaItem } from "./ReferenceItem";
 import { ElementGrid, type ElementItem } from "./ElementGrid";
 import { MentionTextarea } from "./MentionTextarea";
+import { SceneMentionTextarea, type SceneMentionTextareaHandle } from "./SceneMentionTextarea";
+import { useRef } from "react";
 import { extractVideoKeyframes, compressImageFile } from "@/lib/videoFrames";
 import { Sparkles, Loader2, ScanSearch, RotateCcw, RefreshCw, Info, Volume2, VolumeX } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
