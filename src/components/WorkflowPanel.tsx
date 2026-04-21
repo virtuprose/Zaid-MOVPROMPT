@@ -493,6 +493,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
               framePreviews={images.map((img) => img?.preview || null)}
               directions={elementDirections}
               onDirectionsChange={setElementDirections}
+              onInsertMention={(n) => sceneMentionRef.current?.insertMention(n)}
             />
 
             <div className="flex justify-between">
@@ -523,7 +524,13 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
                 placeholder={t("config.placeholder")}
               />
             ) : (
-              <ConfigPanel description={description} onDescriptionChange={setDescription} />
+              <SceneMentionTextarea
+                ref={sceneMentionRef}
+                value={description}
+                onChange={setDescription}
+                elements={flatSceneElements.map(({ index, category, description }) => ({ index, category, description }))}
+                placeholder={t("config.placeholder")}
+              />
             )}
 
             <div className="flex justify-center">
