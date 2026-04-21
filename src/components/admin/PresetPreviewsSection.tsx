@@ -414,9 +414,56 @@ const PresetPreviewsSection = () => {
               </DialogFooter>
             </DialogContent>
           </Dialog>
-
         </div>
-
+      </CardHeader>
+      <CardContent className="space-y-8">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+          <div className="relative flex-1 min-w-[180px]">
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search by name, id, or description…"
+              className="pr-8"
+            />
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch("")}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                aria-label="Clear search"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+          <Select value={groupFilter} onValueChange={setGroupFilter}>
+            <SelectTrigger className="sm:w-[180px]"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All groups</SelectItem>
+              {PRESET_GROUPS.map((g) => (
+                <SelectItem key={g.id} value={g.id}>
+                  <span className="me-2">{g.icon}</span>{g.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as "all" | "uploaded" | "missing")}>
+            <SelectTrigger className="sm:w-[160px]"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All statuses</SelectItem>
+              <SelectItem value="uploaded">Uploaded</SelectItem>
+              <SelectItem value="missing">Missing video</SelectItem>
+            </SelectContent>
+          </Select>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground sm:ml-auto">
+            <span>Showing {filteredPresets.length} of {allIds.length}</span>
+            {filtersActive && (
+              <Button type="button" size="sm" variant="ghost" onClick={clearFilters} className="h-7 gap-1">
+                <X className="w-3 h-3" /> Clear
+              </Button>
+            )}
+          </div>
+        </div>
         {presetsByGroup.map(({ group, items }) => {
           const groupUploaded = items.filter((p) => meta[p.id]).length;
           return (
