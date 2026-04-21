@@ -1,45 +1,47 @@
 
-## Make "Describe Your Vision (optional)" a clear, prominent section
+## Faster preset previews — switch model + add per-card model selector
 
-The current trigger is a small muted-foreground row with a chevron — easy to miss and doesn't read like an action or a labeled field. Promote it to an obvious labeled section so users understand this is where they tell the AI what they want from the scene.
+Default to a faster Fal model so most previews finish in **20–45s** instead of 60–180s, and let admins override per-generation when they want Kling's quality.
 
-### What changes — `src/components/ConfigPanel.tsx`
+### What changes
 
-1. **Replace the muted collapsible trigger** with a proper labeled card header:
-   - Bold foreground title `Describe Your Vision` + small `Optional` pill badge.
-   - One-line helper underneath: `Tell the AI the mood, action, or style you want for this scene — or pick presets below.` (new i18n key `config.describeVisionHelper`, EN + AR).
-   - Keep it collapsible, but use a chevron on the right and a hover/background state so the whole row reads as clickable.
-   - Wrap the header + content in a bordered card (`rounded-lg border border-border/50 bg-card/40 p-4`) so it visually anchors as a real form section instead of a faint link.
+**1. `supabase/functions/generate-preset-preview/index.ts`**
 
-2. **Open by default** (`useState(true)`) so the textarea is visible on first paint — currently it's collapsed and users don't see the input at all.
+- Add a small model registry at the top:
+  ```ts
+  const FAL_MODELS = {
+    "ltx-fast":   { url: "https://queue.fal.run/fal-ai/ltx-video",                 label: "LTX (fastest, ~20s)",  defaultDuration: "5", aspect: "16:9" },
+    "wan-fast":   { url: "https://queue.fal.run/fal-ai/wan/v2.2-5b/text-to-video", label: "Wan 2.2 5B (~30s)",   defaultDuration: "5", aspect: "16:9" },
+    "kling-std":  { url: "https://queue.fal.run/fal-ai/kling-video/v1/standard/text-to-video", label: "Kling v1 Standard (~90s, best quality)", defaultDuration: "5", aspect: "16:9" },
+  } as const;
+  type ModelKey = keyof typeof FAL_MODELS;
+  const DEFAULT_MODEL: ModelKey = "ltx-fast";
+  ```
+- `submit` action accepts an optional `model` field. Validate it's a known key; fall back to `DEFAULT_MODEL`. Return the chosen `model` in the submit response so the client can label the card.
+- Build the Fal request body per model (LTX/Wan accept `prompt` + `aspect_ratio`; some don't take `duration` — only include fields the model supports). Keep `prompt` resolution (`HERO_PROMPTS` / `buildDynamicPrompt`) unchanged.
+- `poll` action accepts the same `model` so it hits the right `statusUrl`/`responseUrl` (these are full URLs returned by Fal, so this is mostly a sanity field; no logic change needed beyond carrying it through error messages).
+- Surface the model in error/debug responses (`code: "fal_error"` messages) so admins can tell which engine failed.
+- No DB changes. No storage changes. Output path stays `<presetId>.mp4` (one canonical preview per preset, regardless of which model produced it — replacing on regeneration is the existing behavior).
 
-3. **Upgrade the textarea**:
-   - Add a small inline label `Your description` above it.
-   - Replace the generic placeholder with a multi-line example to teach the format:
-     ```
-     e.g. "Slow push-in on a lone figure walking through a rainy
-     Tokyo alley at night, neon reflections, melancholic mood."
-     ```
-   - Show a live character counter `{n} chars` in the bottom-right of the textarea wrapper.
-   - Add a subtle `Clear` ghost button (only when `description.length > 0`).
+**2. `src/components/admin/PresetPreviewsSection.tsx`**
 
-4. **Section divider** between the description block and the preset picker, with a small caption `Or augment with presets` so the relationship between the two is explicit.
+- Add a small `Select` in the card header (next to "New Preset") labeled **Model**, with three options matching the registry. Default: `ltx-fast`. Persist choice in `localStorage` (`preset-previews:model`) so it sticks across sessions.
+- Pass the selected `model` into the `submit` invoke body.
+- Per-card "Generating…" badge shows the model label + an elapsed-time counter (`0:23`) so the wait reads as intentional. No change to the existing polling loop or storage refresh.
+- Add a one-line caption under the selector: *"LTX is fastest. Switch to Kling for the highest-quality reference clips."*
 
-### i18n
-Add to `src/i18n/translations/en.ts` and `ar.ts`:
-- `config.describeVision.optional` → `Optional`
-- `config.describeVisionHelper` → `Tell the AI the mood, action, or style you want for this scene — or pick presets below.`
-- `config.yourDescription` → `Your description`
-- `config.placeholder` → updated multi-line example above
-- `config.clear` → `Clear`
-- `config.augmentWithPresets` → `Or augment with presets`
-- `config.charsCount` → `{n} chars`
+**3. i18n (EN + AR)**
+- `presetPreviews.model` → `Model`
+- `presetPreviews.modelHelper` → `LTX is fastest. Switch to Kling for the highest-quality reference clips.`
+- `presetPreviews.elapsed` → `{time} elapsed`
 
 ### Out of scope
-- Preset picker layout, search, tabs — unchanged.
-- No backend or schema changes.
+- Webhooks (declined earlier).
+- Storing per-preset "which model produced this" metadata.
+- Bulk generate.
 
 ### Files touched
-- `src/components/ConfigPanel.tsx`
+- `supabase/functions/generate-preset-preview/index.ts`
+- `src/components/admin/PresetPreviewsSection.tsx`
 - `src/i18n/translations/en.ts`
 - `src/i18n/translations/ar.ts`
