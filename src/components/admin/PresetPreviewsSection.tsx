@@ -36,6 +36,21 @@ type ModelValue = typeof MODEL_OPTIONS[number]["value"];
 const DEFAULT_MODEL: ModelValue = "ltx-fast";
 const MODEL_STORAGE_KEY = "preset-previews:model";
 
+// Camera-motion presets that historically render poorly on text-to-video
+// models (vertical moves, reverse moves, dolly-zoom variants, focus pulls).
+// Mirrors HARD_FOR_LTX in the edge function. Used by the "Re-generate likely
+// wrong" admin action to quickly refresh just these after prompt updates.
+const LIKELY_WRONG_PRESET_IDS = [
+  "dolly-out", "pull-out",
+  "tilt-up", "tilt-down",
+  "pedestal-up", "pedestal-down",
+  "crash-zoom-out",
+  "crane-up", "crane-down",
+  "jib-up", "jib-down",
+  "dolly-zoom", "dolly-zoom-in", "dolly-zoom-out",
+  "rack-focus",
+];
+
 const formatElapsed = (ms: number) => {
   const s = Math.max(0, Math.floor(ms / 1000));
   const m = Math.floor(s / 60);
