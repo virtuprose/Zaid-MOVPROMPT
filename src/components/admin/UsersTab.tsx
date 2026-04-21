@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Pencil, Download, Search, ChevronLeft, ChevronRight, ShieldCheck, ShieldOff } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import Sparkline from "./Sparkline";
 
 interface UserRow {
   id: string;
@@ -22,6 +23,7 @@ interface UserRow {
   role: "admin" | "user";
   is_active: boolean;
   generations: number;
+  trend: number[];
 }
 
 const UsersTab = () => {
