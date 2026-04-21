@@ -1,38 +1,59 @@
 
 
-## Mobile ModelPicker polish
+## Mobile UI QA checklist + regression test
 
 ### Goal
-Make picking a model effortless on a phone held in one hand.
+Give the team a fast, repeatable way to verify the main flow (upload → breakdown → generate) renders correctly on 360–440px viewports without running the full auth/generation stack.
 
-### Changes (scope: `src/components/ModelPicker.tsx` only)
+### Scope
+Two additions — **no changes to existing app logic or routes that real users hit**:
 
-**1. Thumb-friendly trigger**
-- Bump trigger min-height from `3.75rem` → `4rem` on mobile and increase tap padding: `py-3 px-3.5 sm:py-2.5`.
-- Stack label + selected description vertically inside the trigger via custom render (use `SelectValue` children override pattern): show selected model name on line 1, description on line 2 (2-line clamp) for clearer at-a-glance feedback.
+1. **`/qa/mobile` regression route** (dev-only in navigation, but reachable in prod by URL)
+   - A single page that renders the three critical UI surfaces back-to-back with mocked data, so a human can scroll and eyeball them at 360/390/414/440px without needing to sign in, upload images, or call edge functions.
+   - Sections:
+     1. **Top bar + ModelPicker** — renders `ModelPicker` with state, shows the new flash/selection feedback.
+     2. **Upload phase** — renders `ImageUploadZone` in its empty state + a mock "with image" state.
+     3. **Breakdown phase** — renders `SceneBreakdown` with 3 mock elements and `SceneMentionTextarea` wired to them (so the popover + empty-state can both be exercised by clearing elements).
+     4. **Generate / Results phase** — renders `ResultsPanel` with 2 mock `ShotResult`s (one expanded, one collapsed) to verify collapsible padding, copy buttons, and wrapping.
+   - Each section has a small sticky header with the section name + a viewport-width readout (`window.innerWidth`) updated on resize so testers can confirm they're at the intended breakpoint.
+   - A "QA checklist" card at the top lists the things to visually verify (below), with checkboxes (local state only) so a tester can tick them off during a pass.
 
-**2. Mobile-optimized dropdown surface**
-- Replace fixed `max-h-[420px]` with `max-h-[min(70vh,420px)]` so the list always fits above the keyboard/home indicator.
-- Add `w-[min(22rem,calc(100vw-1.5rem))]` so the popover never overflows viewport on 360–440px.
-- Inner scroll area: `overscroll-contain` so scrolling the list doesn't bubble to the page.
+2. **Vitest smoke test** `src/components/__tests__/ModelPicker.test.tsx`
+   - Renders `ModelPicker` inside the existing `LanguageProvider`, asserts the trigger is present, and asserts changing the model via `onModelChange` updates the selected label. This locks in the recent mobile polish changes (trigger min-height, flash state) against accidental regressions — the state logic and DOM structure must keep working.
+   - Uses the existing vitest setup (`src/test/setup.ts`, `vitest.config.ts`) — no new infra.
 
-**3. Bigger, clearer rows**
-- `SelectItem`: `py-3 px-2.5` (up from `py-2`) and `min-h-[3.25rem]` — easier thumb targets.
-- Description: keep 2-line clamp but add `text-[11px] sm:text-xs` for tighter mobile density without feeling cramped.
-- Add a subtle left accent bar for the currently selected item using `data-[state=checked]:border-l-2 data-[state=checked]:border-primary data-[state=checked]:bg-primary/5`.
+### QA checklist (rendered on `/qa/mobile` and documented here)
 
-**4. Selection feedback**
-- When model changes, flash a brief `ring-2 ring-primary/40` on the trigger via a short-lived state (200 ms) so the user sees confirmation after the sheet closes.
-- Make the sparkles icon `text-primary animate-pulse` briefly on change (reuse the same 200 ms state).
+At 360px, 390px, 414px, 440px verify:
 
-**5. Group headers sticky inside scroll**
-- Add `sticky top-0 bg-popover/95 backdrop-blur z-10` to `SelectLabel` so category labels stay visible while scrolling the long list.
+- [ ] Top bar buttons don't wrap or overflow; no horizontal scroll on the page.
+- [ ] `ModelPicker` trigger shows selected model + description on two lines, no clipping.
+- [ ] Opening `ModelPicker` popover stays within viewport; list scrolls; sticky group headers visible; selected row has left accent bar.
+- [ ] Selecting a new model flashes the ring on the trigger briefly.
+- [ ] `ImageUploadZone` empty state: icon + copy centered, CTA full-width-ish but not overflowing.
+- [ ] `SceneBreakdown`: element cards don't overflow; action buttons wrap cleanly; long descriptions truncate / wrap without pushing layout.
+- [ ] `SceneMentionTextarea` pill row doesn't overflow; popover fits `calc(100vw-2rem)`; empty-state renders when elements are cleared.
+- [ ] `ResultsPanel`: header wraps cleanly; collapsibles expand/collapse; copy buttons reachable with thumb.
+- [ ] No text clipped by rounded card corners; no elements under the iOS home indicator area (bottom 24px padding respected where needed).
 
-**6. Safe spacing**
-- Card wrapper already `p-4 sm:p-5`; tighten inner gap to `space-y-2.5 sm:space-y-3` so the card isn't taller than needed on mobile.
+### Files
+
+**New**
+- `src/pages/QaMobile.tsx` — the QA page, entirely client-side, uses real components with mock data.
+- `src/components/__tests__/ModelPicker.test.tsx` — smoke test.
+
+**Edited**
+- `src/App.tsx` — add the `/qa/mobile` route (public, no `AuthGuard`). Keep it undiscoverable from the main UI (no nav link) so it doesn't leak into user-facing flows.
+
+### Mock data shape
+
+- **Elements** for `SceneBreakdown` / `SceneMentionTextarea`: 3 items with indices 1/2/3, mixed categories (`character`, `object`, `environment`), realistic 1–2 sentence descriptions.
+- **Shot results** for `ResultsPanel`: 2 items with varying `targetModel` (e.g. `"veo-3"`, `"any"`) and prompts of ~80 and ~400 chars to exercise truncation/wrap.
+- A "Reset / Clear elements" button on the breakdown section so the tester can toggle `elements=[]` and see the `SceneMentionTextarea` empty-state popover.
 
 ### Out of scope
-- Adding search/filter inside the picker.
-- Changing the model list, contracts, or i18n keys.
-- Desktop layout (all changes are additive / mobile-first and preserved at `sm:`).
+- No browser automation / visual regression snapshots (no Playwright, no Percy).
+- No changes to the real `/` flow, generation pipeline, auth, or i18n keys.
+- No backend, analytics, or RLS changes — the QA page is purely a static harness around existing components.
+- Desktop layout unaffected; the page itself is responsive but tuned for small viewports.
 
