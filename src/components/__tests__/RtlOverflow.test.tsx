@@ -125,10 +125,10 @@ describe("RTL overflow regression at 360px", () => {
   });
 
   it("collapses Start Over / Re-analyze labels to icon-only on mobile with preserved aria-label", () => {
-    renderInArabicRtlAt360(<BreakdownHeaderRow />);
+    const { getByRole } = renderInArabicRtlAt360(<BreakdownHeaderRow />);
 
-    const startOver = screen.getByRole("button", { name: ar["wp.startOver"] });
-    const reAnalyze = screen.getByRole("button", { name: ar["wp.reAnalyze"] });
+    const startOver = getByRole("button", { name: ar["wp.startOver"] });
+    const reAnalyze = getByRole("button", { name: ar["wp.reAnalyze"] });
 
     // aria-label is non-empty and matches the Arabic translation.
     expect(startOver.getAttribute("aria-label")).toBe(ar["wp.startOver"]);
@@ -146,13 +146,13 @@ describe("RTL overflow regression at 360px", () => {
   });
 
   it("stacks primary CTAs vertically on mobile (flex-col sm:flex-row, w-full sm:w-auto)", () => {
-    renderInArabicRtlAt360(<AnalyzeCtaRow />);
+    const { getByTestId, getAllByTestId } = renderInArabicRtlAt360(<AnalyzeCtaRow />);
 
-    const row = screen.getByTestId("analyze-row");
+    const row = getByTestId("analyze-row");
     expect(row.className).toMatch(/flex-col/);
     expect(row.className).toMatch(/sm:flex-row/);
 
-    const ctas = screen.getAllByTestId("cta-btn");
+    const ctas = getAllByTestId("cta-btn");
     expect(ctas.length).toBeGreaterThanOrEqual(2);
     ctas.forEach((btn) => {
       expect(btn.className).toMatch(/w-full/);
@@ -161,8 +161,8 @@ describe("RTL overflow regression at 360px", () => {
   });
 
   it("collapses the Clear button label on mobile and preserves aria-label", () => {
-    renderInArabicRtlAt360(<ClearButtonRow />);
-    const clearBtn = screen.getByRole("button", { name: ar["config.clear"] });
+    const { getByRole } = renderInArabicRtlAt360(<ClearButtonRow />);
+    const clearBtn = getByRole("button", { name: ar["config.clear"] });
     expect(clearBtn.getAttribute("aria-label")).toBe(ar["config.clear"]);
     const labelSpan = clearBtn.querySelector("span");
     expect(labelSpan?.className).toMatch(/hidden/);
@@ -170,8 +170,8 @@ describe("RTL overflow regression at 360px", () => {
   });
 
   it("keeps the 360px RTL viewport wrapper intact (regression guard for overflow container)", () => {
-    renderInArabicRtlAt360(<BreakdownHeaderRow />);
-    const viewport = screen.getByTestId("viewport-360");
+    const { getByTestId } = renderInArabicRtlAt360(<BreakdownHeaderRow />);
+    const viewport = getByTestId("viewport-360");
     expect(viewport).toHaveAttribute("dir", "rtl");
     expect(viewport.style.width).toBe("360px");
   });
