@@ -69,6 +69,20 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [referenceItems, setReferenceItems] = useState<ReferenceMediaItem[]>([]);
   const [elementItems, setElementItems] = useState<ElementItem[]>([]);
+  const sceneMentionRef = useRef<SceneMentionTextareaHandle>(null);
+
+  // Flatten scene frames into a single 1-based indexed list (left-to-right, frame-by-frame).
+  const flatSceneElements = useMemo(() => {
+    const out: { index: number; category: string; description: string; id: string }[] = [];
+    let n = 0;
+    for (const frame of sceneFrames) {
+      for (const el of frame.elements) {
+        n += 1;
+        out.push({ index: n, category: el.category, description: el.description, id: el.id });
+      }
+    }
+    return out;
+  }, [sceneFrames]);
 
   const contract = useMemo(() => getContract(selectedModel), [selectedModel]);
   const [twoFrameMode, setTwoFrameMode] = useState(false);
