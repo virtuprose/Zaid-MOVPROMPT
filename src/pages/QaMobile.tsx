@@ -148,6 +148,8 @@ const QaMobileInner = () => {
     "Keep @2 locked while @1 walks forward into the frame.",
   );
   const [clearElements, setClearElements] = useState(false);
+  const [simulateSafeArea, setSimulateSafeArea] = useState(false);
+  const SAFE_AREA_PX = 34;
 
   const mentionElements = useMemo(() => {
     if (clearElements) return [];
@@ -164,7 +166,14 @@ const QaMobileInner = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground pb-12">
+    <div
+      className="min-h-screen bg-background text-foreground relative"
+      style={{
+        paddingBottom: simulateSafeArea
+          ? `calc(3rem + ${SAFE_AREA_PX}px)`
+          : "3rem",
+      }}
+    >
       <header className="px-4 pt-6 pb-2">
         <h1 className="text-xl font-display font-bold">Mobile QA — main flow</h1>
         <p className="text-xs text-muted-foreground mt-1">
@@ -174,6 +183,31 @@ const QaMobileInner = () => {
 
       <main className="px-4 space-y-8">
         <QaChecklist />
+
+        <section className="rounded-xl border border-border bg-card/60 p-4 space-y-2">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h2 className="text-sm font-display font-semibold text-foreground">
+                Simulate iOS safe-area
+              </h2>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Reserves {SAFE_AREA_PX}px at the bottom (home indicator). Verify ResultsPanel
+                bottom content stays reachable and isn't hidden under the overlay.
+              </p>
+            </div>
+            <Button
+              size="sm"
+              variant={simulateSafeArea ? "default" : "outline"}
+              onClick={() => setSimulateSafeArea((v) => !v)}
+              aria-pressed={simulateSafeArea}
+            >
+              {simulateSafeArea ? "On" : "Off"}
+            </Button>
+          </div>
+          <p className="text-[11px] font-mono text-muted-foreground">
+            simulated inset → {simulateSafeArea ? `${SAFE_AREA_PX}px` : "0px"}
+          </p>
+        </section>
 
         <section className="space-y-3">
           <SectionHeader title="1. Top bar + ModelPicker" />
@@ -231,6 +265,18 @@ const QaMobileInner = () => {
           />
         </section>
       </main>
+
+      {simulateSafeArea && (
+        <div
+          aria-hidden
+          className="fixed inset-x-0 bottom-0 z-[60] pointer-events-none border-t border-dashed border-primary/40 bg-primary/10 backdrop-blur-[1px] flex items-center justify-center"
+          style={{ height: `${SAFE_AREA_PX}px` }}
+        >
+          <span className="text-[10px] font-mono uppercase tracking-wider text-primary">
+            simulated safe-area ({SAFE_AREA_PX}px)
+          </span>
+        </div>
+      )}
     </div>
   );
 };
