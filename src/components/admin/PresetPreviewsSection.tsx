@@ -36,6 +36,21 @@ type ModelValue = typeof MODEL_OPTIONS[number]["value"];
 const DEFAULT_MODEL: ModelValue = "ltx-fast";
 const MODEL_STORAGE_KEY = "preset-previews:model";
 
+// Camera-motion presets that historically render poorly on text-to-video
+// models (vertical moves, reverse moves, dolly-zoom variants, focus pulls).
+// Mirrors HARD_FOR_LTX in the edge function. Used by the "Re-generate likely
+// wrong" admin action to quickly refresh just these after prompt updates.
+const LIKELY_WRONG_PRESET_IDS = [
+  "dolly-out", "pull-out",
+  "tilt-up", "tilt-down",
+  "pedestal-up", "pedestal-down",
+  "crash-zoom-out",
+  "crane-up", "crane-down",
+  "jib-up", "jib-down",
+  "dolly-zoom", "dolly-zoom-in", "dolly-zoom-out",
+  "rack-focus",
+];
+
 const formatElapsed = (ms: number) => {
   const s = Math.max(0, Math.floor(ms / 1000));
   const m = Math.floor(s / 60);
@@ -367,7 +382,60 @@ const PresetPreviewsSection = () => {
     setCanceling((c) => ({ ...c, [presetId]: true }));
   };
 
+  const [batchRunning, setBatchRunning] = useState(false);
+  const batchCancel = useRef(false);
 
+  // Re-generate the camera-motion presets known to render poorly, plus any
+  // preset currently in error state. Runs sequentially to avoid hammering Fal.
+  const handleRegenerateLikelyWrong = async () => {
+    const errored = Object.entries(statuses)
+      .filter(([, s]) => s === "error")
+      .map(([id]) => id);
+    const allIdsSet = new Set(allPresets.map((p) => p.id));
+    const targets = Array.from(new Set([...LIKELY_WRONG_PRESET_IDS, ...errored]))
+      .filter((id) => allIdsSet.has(id));
+
+    if (targets.length === 0) {
+      toast("Nothing to re-generate");
+      return;
+    }
+    if (!confirm(
+      `Re-generate ${targets.length} preset preview${targets.length === 1 ? "" : "s"} ` +
+      `(camera-motion presets known to render poorly + any currently in error)?\n\n` +
+      `This runs sequentially and may take several minutes. Click Cancel on any ` +
+      `card to skip it; close this section to abort the queue.`
+    )) return;
+
+    setBatchRunning(true);
+    batchCancel.current = false;
+    let ok = 0;
+    let failed = 0;
+    let canceled = 0;
+    for (const id of targets) {
+      if (batchCancel.current) break;
+      const res = await generateOne(id);
+      if (res.ok) ok++;
+      else if (res.code === "canceled") canceled++;
+      else {
+        failed++;
+        if (res.code === "no_credits") {
+          toast.error("Fal.ai credits exhausted — stopping batch");
+          break;
+        }
+      }
+    }
+    setBatchRunning(false);
+    toast.success(
+      `Batch complete: ${ok} generated, ${failed} failed, ${canceled} canceled`,
+    );
+  };
+
+  const handleCancelBatch = () => {
+    batchCancel.current = true;
+    // Also cancel whichever preset is currently mid-flight.
+    const active = Object.entries(statuses).find(([, s]) => s === "generating");
+    if (active) requestCancel(active[0]);
+  };
 
   const resetForm = () => {
     setForm({
@@ -625,6 +693,28 @@ const PresetPreviewsSection = () => {
             {filtersActive && (
               <Button type="button" size="sm" variant="ghost" onClick={clearFilters} className="h-7 gap-1">
                 <X className="w-3 h-3" /> Clear
+              </Button>
+            )}
+            {batchRunning ? (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={handleCancelBatch}
+                className="h-7 gap-1"
+              >
+                <X className="w-3 h-3" /> Cancel batch
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={handleRegenerateLikelyWrong}
+                className="h-7 gap-1"
+                title="Re-generate camera-motion presets known to render poorly + any currently in error"
+              >
+                <Sparkles className="w-3 h-3" /> Re-generate likely wrong
               </Button>
             )}
           </div>
