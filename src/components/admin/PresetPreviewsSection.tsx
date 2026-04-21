@@ -558,8 +558,14 @@ const PresetPreviewsSection = () => {
                           <Icon size={40} className="text-muted-foreground/40" />
                         )}
                         {isGen && (
-                          <div className="absolute inset-0 bg-background/70 backdrop-blur-sm flex items-center justify-center">
+                          <div className="absolute inset-0 bg-background/70 backdrop-blur-sm flex flex-col items-center justify-center gap-1.5">
                             <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                            <div className="text-[10px] font-mono text-foreground/80 tabular-nums">
+                              {genStarts[preset.id] ? formatElapsed(now - genStarts[preset.id]) : "0:00"}
+                            </div>
+                            <div className="text-[10px] text-muted-foreground px-2 text-center leading-tight">
+                              {MODEL_OPTIONS.find((o) => o.value === model)?.label}
+                            </div>
                           </div>
                         )}
                         {isCustom && (
