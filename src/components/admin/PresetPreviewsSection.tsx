@@ -57,7 +57,26 @@ const PresetPreviewsSection = () => {
   const [cacheBust, setCacheBust] = useState(Date.now());
   const [statuses, setStatuses] = useState<Record<string, CardStatus>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [genStarts, setGenStarts] = useState<Record<string, number>>({});
+  const [now, setNow] = useState(Date.now());
   const inputs = useRef<Record<string, HTMLInputElement | null>>({});
+
+  const [model, setModel] = useState<ModelValue>(() => {
+    if (typeof window === "undefined") return DEFAULT_MODEL;
+    const stored = window.localStorage.getItem(MODEL_STORAGE_KEY);
+    return MODEL_OPTIONS.some((o) => o.value === stored) ? (stored as ModelValue) : DEFAULT_MODEL;
+  });
+  useEffect(() => {
+    if (typeof window !== "undefined") window.localStorage.setItem(MODEL_STORAGE_KEY, model);
+  }, [model]);
+
+  // Tick a clock while any generation is running so per-card elapsed updates.
+  const anyGenerating = Object.values(statuses).some((s) => s === "generating");
+  useEffect(() => {
+    if (!anyGenerating) return;
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [anyGenerating]);
 
   // New preset dialog state
   const [dialogOpen, setDialogOpen] = useState(false);
