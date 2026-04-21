@@ -194,7 +194,27 @@ serve(async (req) => {
       }
     }
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    // Validate elementMentions (resolved scene-breakdown @N references from the client)
+    const validElementMentions: { index: number; category: string; description: string }[] = [];
+    if (elementMentions !== undefined) {
+      if (!Array.isArray(elementMentions) || elementMentions.length > 50) {
+        return badRequest("elementMentions must be an array of at most 50 items");
+      }
+      for (const m of elementMentions) {
+        if (!m || typeof m !== "object") return badRequest("Invalid elementMention entry");
+        if (!Number.isInteger(m.index) || m.index < 1 || m.index > 200) {
+          return badRequest("elementMention.index must be an integer 1..200");
+        }
+        if (typeof m.category !== "string" || m.category.length > 60) {
+          return badRequest("elementMention.category invalid");
+        }
+        if (typeof m.description !== "string" || m.description.length > 500) {
+          return badRequest("elementMention.description invalid");
+        }
+        validElementMentions.push({ index: m.index, category: m.category, description: m.description });
+      }
+    }
+
     if (!LOVABLE_API_KEY) {
       console.error("LOVABLE_API_KEY env var is missing");
       return new Response(JSON.stringify({ error: "Service misconfigured" }), {
