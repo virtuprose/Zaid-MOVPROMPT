@@ -13,6 +13,16 @@ import { MentionTextarea } from "./MentionTextarea";
 import { SceneMentionTextarea, type SceneMentionTextareaHandle } from "./SceneMentionTextarea";
 import { extractVideoKeyframes, compressImageFile } from "@/lib/videoFrames";
 import { Sparkles, Loader2, ScanSearch, RotateCcw, RefreshCw, Info, Volume2, VolumeX, Zap } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -70,6 +80,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
   const [referenceItems, setReferenceItems] = useState<ReferenceMediaItem[]>([]);
   const [elementItems, setElementItems] = useState<ElementItem[]>([]);
   const sceneMentionRef = useRef<SceneMentionTextareaHandle>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   // Flatten scene frames into a single 1-based indexed list (left-to-right, frame-by-frame).
   const flatSceneElements = useMemo(() => {
@@ -486,15 +497,6 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
 
         {(phase === "breakdown" || phase === "generate") && sceneFrames.length > 0 && (
           <motion.div key="breakdown-phase" {...phaseTransition} className="space-y-4">
-            <SceneBreakdown
-              frames={sceneFrames}
-              frameLabels={frameLabels}
-              framePreviews={images.map((img) => img?.preview || null)}
-              directions={elementDirections}
-              onDirectionsChange={setElementDirections}
-              onInsertMention={(n) => sceneMentionRef.current?.insertMention(n)}
-            />
-
             <div className="flex justify-between">
               <Button
                 size="sm"
@@ -532,10 +534,27 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
               />
             )}
 
+            <div className="flex items-start gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-xs text-foreground/80">
+              <Info className="w-3.5 h-3.5 text-primary mt-0.5 shrink-0" />
+              <span>{t("scene.reviewHint" as any)}</span>
+            </div>
+
+            <SceneBreakdown
+              frames={sceneFrames}
+              frameLabels={frameLabels}
+              framePreviews={images.map((img) => img?.preview || null)}
+              directions={elementDirections}
+              onDirectionsChange={setElementDirections}
+              onInsertMention={(n) => sceneMentionRef.current?.insertMention(n)}
+            />
+
             <div className="flex justify-center">
               <Button
                 size="lg"
-                onClick={handleGenerate}
+                onClick={() => {
+                  if (isLoading) return;
+                  setConfirmOpen(true);
+                }}
                 disabled={isLoading}
                 className="px-6 sm:px-8 font-display font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/25"
               >
@@ -548,6 +567,40 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
                 )}
               </Button>
             </div>
+
+            <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>{t("wp.confirmTitle" as any)}</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    {t("wp.confirmDesc" as any)}
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                {(() => {
+                  const locked = Object.values(elementDirections).filter((d) => d?.action === "lock").length;
+                  const moving = Object.values(elementDirections).filter((d) => d?.action !== "lock").length;
+                  const summary = (t("wp.confirmSummary" as any) as string)
+                    .replace("{locked}", String(locked))
+                    .replace("{moving}", String(moving));
+                  return (
+                    <div className="text-sm text-foreground/80 rounded-md border border-border bg-secondary/40 px-3 py-2">
+                      {summary}
+                    </div>
+                  );
+                })()}
+                <AlertDialogFooter>
+                  <AlertDialogCancel>{t("wp.goBack" as any)}</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() => {
+                      setConfirmOpen(false);
+                      handleGenerate();
+                    }}
+                  >
+                    {t("wp.goAhead" as any)}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </motion.div>
         )}
 
