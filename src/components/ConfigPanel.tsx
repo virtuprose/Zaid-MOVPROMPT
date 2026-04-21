@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
-import { ChevronDown, Search, Sparkles } from "lucide-react";
+import { ChevronDown, Search, Sparkles, X } from "lucide-react";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { PRESET_GROUPS, type PresetGroupId, type Preset, useAllPresets } from "@/lib/presets";
 import { PresetCard } from "@/components/PresetCard";
