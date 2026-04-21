@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Upload, Trash2, Film, Sparkles, Loader2, X, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { HERO_PRESET_IDS, ALL_PRESET_IDS, PRESETS, PRESET_GROUPS, getPresetVideoUrl } from "@/lib/presets";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+
 
 const BUCKET = "preset-previews";
 
