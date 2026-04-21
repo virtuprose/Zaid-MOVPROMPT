@@ -558,7 +558,7 @@ const PresetPreviewsSection = () => {
                               size="sm"
                               variant="default"
                               className="flex-1 gap-1.5"
-                              disabled={isGen || bulkRunning}
+                              disabled={isGen}
                               onClick={() => handleGenerateOne(preset.id)}
                             >
                               {isGen ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
