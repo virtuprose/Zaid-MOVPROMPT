@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { Lock, Play, Plus, X, User, Mountain, Sun, Cloud, Package, Palette, Film } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useLanguage } from "@/i18n/LanguageContext";
 
 export interface SceneElement {
@@ -152,22 +153,38 @@ export const SceneBreakdown = ({ frames, frameLabels, framePreviews, directions,
                       </div>
 
                       <div className="flex items-center gap-1.5 flex-shrink-0">
-                        <Button
-                          size="sm"
-                          variant={isLocked ? "secondary" : "ghost"}
-                          onClick={() => { if (!isLocked) toggleAction(el.id); }}
-                          className={`h-7 px-2 text-xs gap-1 ${isLocked ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : ""}`}
-                        >
-                          <Lock className="w-3 h-3" /> {t("scene.lock")}
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant={!isLocked ? "secondary" : "ghost"}
-                          onClick={() => { if (isLocked) toggleAction(el.id); }}
-                          className={`h-7 px-2 text-xs gap-1 ${!isLocked ? "bg-primary/20 text-primary" : ""}`}
-                        >
-                          <Play className="w-3 h-3" /> {t("scene.move")}
-                        </Button>
+                        <TooltipProvider delayDuration={200}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                size="sm"
+                                variant={isLocked ? "secondary" : "ghost"}
+                                onClick={() => { if (!isLocked) toggleAction(el.id); }}
+                                className={`h-7 px-2 text-xs gap-1 ${isLocked ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : ""}`}
+                              >
+                                <Lock className="w-3 h-3" /> {t("scene.lock")}
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="max-w-[220px] text-xs">
+                              {t("scene.lockTooltip" as any)}
+                            </TooltipContent>
+                          </Tooltip>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                size="sm"
+                                variant={!isLocked ? "secondary" : "ghost"}
+                                onClick={() => { if (isLocked) toggleAction(el.id); }}
+                                className={`h-7 px-2 text-xs gap-1 ${!isLocked ? "bg-primary/20 text-primary" : ""}`}
+                              >
+                                <Play className="w-3 h-3" /> {t("scene.move")}
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="max-w-[220px] text-xs">
+                              {t("scene.moveTooltip" as any)}
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       </div>
                     </div>
 
