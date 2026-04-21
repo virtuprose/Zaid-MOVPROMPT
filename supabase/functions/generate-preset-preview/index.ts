@@ -12,8 +12,33 @@ const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 const BUCKET = "preset-previews";
-const FAL_SUBMIT_URL =
-  "https://queue.fal.run/fal-ai/kling-video/v1/standard/text-to-video";
+
+// === Model registry ===
+// LTX/Wan are dramatically faster than Kling. Defaults to LTX.
+const FAL_MODELS = {
+  "ltx-fast": {
+    url: "https://queue.fal.run/fal-ai/ltx-video",
+    label: "LTX (fastest, ~20s)",
+    supportsDuration: false,
+    supportsAspect: true,
+  },
+  "wan-fast": {
+    url: "https://queue.fal.run/fal-ai/wan/v2.2-5b/text-to-video",
+    label: "Wan 2.2 5B (~30s)",
+    supportsDuration: false,
+    supportsAspect: true,
+  },
+  "kling-std": {
+    url: "https://queue.fal.run/fal-ai/kling-video/v1/standard/text-to-video",
+    label: "Kling v1 Standard (~90s, best quality)",
+    supportsDuration: true,
+    supportsAspect: true,
+  },
+} as const;
+type ModelKey = keyof typeof FAL_MODELS;
+const DEFAULT_MODEL: ModelKey = "ltx-fast";
+const isModelKey = (v: unknown): v is ModelKey =>
+  typeof v === "string" && v in FAL_MODELS;
 
 // Hand-tuned hero prompts (kept verbatim).
 const HERO_PROMPTS: Record<string, string> = {
@@ -149,6 +174,14 @@ async function resolvePrompt(
   };
 }
 
+function buildFalBody(model: ModelKey, prompt: string) {
+  const cfg = FAL_MODELS[model];
+  const body: Record<string, unknown> = { prompt };
+  if (cfg.supportsAspect) body.aspect_ratio = "16:9";
+  if (cfg.supportsDuration) body.duration = "5";
+  return body;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -164,6 +197,8 @@ Deno.serve(async (req) => {
 
     const body = await req.json().catch(() => ({}));
     const action = String(body?.action ?? "submit");
+    const model: ModelKey = isModelKey(body?.model) ? body.model : DEFAULT_MODEL;
+    const modelLabel = FAL_MODELS[model].label;
 
     // === SUBMIT ===
     if (action === "submit") {
@@ -177,34 +212,32 @@ Deno.serve(async (req) => {
         return json({ ok: false, error: resolved.error, code: "bad_input" }, 400);
       }
 
-      const submitRes = await fetch(FAL_SUBMIT_URL, {
+      const submitRes = await fetch(FAL_MODELS[model].url, {
         method: "POST",
         headers: {
           Authorization: `Key ${FAL_KEY}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          prompt: resolved.prompt,
-          duration: "5",
-          aspect_ratio: "16:9",
-        }),
+        body: JSON.stringify(buildFalBody(model, resolved.prompt)),
       });
       if (submitRes.status === 401) {
-        return json({ ok: false, error: "Invalid FAL_KEY", code: "fal_unauth" }, 502);
+        return json({ ok: false, error: "Invalid FAL_KEY", code: "fal_unauth", model }, 502);
       }
       if (submitRes.status === 402) {
-        return json({ ok: false, error: "Fal.ai credits exhausted", code: "no_credits" }, 402);
+        return json({ ok: false, error: "Fal.ai credits exhausted", code: "no_credits", model }, 402);
       }
       if (submitRes.status === 429) {
-        return json({ ok: false, error: "Fal.ai rate limit hit", code: "rate_limit" }, 429);
+        return json({ ok: false, error: "Fal.ai rate limit hit", code: "rate_limit", model }, 429);
       }
       if (!submitRes.ok) {
         const text = await submitRes.text();
-        return json({ ok: false, error: `Fal submit failed (${submitRes.status}): ${text}`, code: "fal_error" }, 502);
+        return json({ ok: false, error: `Fal submit failed [${modelLabel}] (${submitRes.status}): ${text}`, code: "fal_error", model }, 502);
       }
       const submit = await submitRes.json();
       return json({
         ok: true,
+        model,
+        modelLabel,
         requestId: submit.request_id,
         statusUrl: submit.status_url,
         responseUrl: submit.response_url,
@@ -225,32 +258,37 @@ Deno.serve(async (req) => {
       });
       if (!statusRes.ok) {
         const text = await statusRes.text();
-        return json({ ok: false, error: `Status check failed (${statusRes.status}): ${text}`, code: "fal_error" }, 502);
+        return json({ ok: false, error: `Status check failed [${modelLabel}] (${statusRes.status}): ${text}`, code: "fal_error", model }, 502);
       }
       const statusData = await statusRes.json();
 
       if (statusData.status === "FAILED" || statusData.status === "ERROR") {
-        return json({ ok: false, error: `Fal job failed: ${JSON.stringify(statusData)}`, code: "fal_error" }, 502);
+        return json({ ok: false, error: `Fal job failed [${modelLabel}]: ${JSON.stringify(statusData)}`, code: "fal_error", model }, 502);
       }
       if (statusData.status !== "COMPLETED") {
-        return json({ ok: true, status: "pending", falStatus: statusData.status });
+        return json({ ok: true, status: "pending", falStatus: statusData.status, model });
       }
 
       const finalRes = await fetch(responseUrl, {
         headers: { Authorization: `Key ${FAL_KEY}` },
       });
       if (!finalRes.ok) {
-        return json({ ok: false, error: `Result fetch failed (${finalRes.status})`, code: "fal_error" }, 502);
+        return json({ ok: false, error: `Result fetch failed [${modelLabel}] (${finalRes.status})`, code: "fal_error", model }, 502);
       }
       const result = await finalRes.json();
-      const videoUrl = result?.video?.url;
+      // Different models return slightly different shapes; try common locations.
+      const videoUrl: string | undefined =
+        result?.video?.url ??
+        result?.videos?.[0]?.url ??
+        result?.output?.video?.url ??
+        result?.output?.[0]?.url;
       if (!videoUrl) {
-        return json({ ok: false, error: "Fal result missing video.url", code: "fal_error" }, 502);
+        return json({ ok: false, error: `Fal result missing video url [${modelLabel}]`, code: "fal_error", model }, 502);
       }
 
       const videoRes = await fetch(videoUrl);
       if (!videoRes.ok) {
-        return json({ ok: false, error: `Video download failed (${videoRes.status})`, code: "download" }, 502);
+        return json({ ok: false, error: `Video download failed (${videoRes.status})`, code: "download", model }, 502);
       }
       const videoBytes = new Uint8Array(await videoRes.arrayBuffer());
 
@@ -269,6 +307,7 @@ Deno.serve(async (req) => {
         ok: true,
         status: "done",
         presetId,
+        model,
         sizeBytes: videoBytes.byteLength,
         publicUrl: pub.publicUrl,
       });
