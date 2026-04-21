@@ -1,79 +1,71 @@
 
-## Why some preset previews look wrong (dolly-out, tilt-up, etc.)
+## @-mention elements in the scene breakdown description
 
-### The root cause
+After scene analysis, number each detected element and let the user @-mention them in the description box. Mentions are highlighted inline; "Skip → Generate" path stays exactly as today.
 
-Text-to-video models like **LTX**, **Wan**, and **Kling** generate **one continuous shot**. They don't understand editing-room jargon like *"dolly out"* or *"tilt up"* as instructions — they interpret them as descriptions of edits to apply, then often ignore them or do the opposite.
+### What the user sees
 
-On top of that:
+1. User uploads image → clicks **Analyze Scene** → analysis returns frames + elements (already works).
+2. In `SceneBreakdown`, each element now shows a prominent **@N** badge (N = 1-based index across all elements, stable left-to-right, frame-by-frame).
+3. Below the breakdown, the description field becomes a **mention-aware textarea** with:
+   - A hint row: *"Tip: type `@` to reference a specific element (e.g. `@2 should slowly turn toward camera`)."*
+   - Inline highlighting: any `@N` that matches a real element is rendered with a colored pill (primary tint) in an overlay layer behind the textarea.
+   - Autocomplete: typing `@` opens a small popover listing elements (`@1 — subject: woman in red coat`, `@2 — midground: wooden table`, …). Arrow keys + Enter insert; Esc closes.
+   - A chip row above the textarea with clickable `@1 @2 @3 …` chips as a fallback for users who don't want to type `@`.
+4. On **Generate**, mentions are resolved server-side into explicit element references so the model knows which element the user is talking about.
+5. If the user clicks **Skip**, nothing changes — description stays a plain textarea, no mentions, identical to today.
 
-1. **Only 12 presets have hand-tuned `HERO_PROMPTS`** in `supabase/functions/generate-preset-preview/index.ts` (dolly-zoom, bullet-time, orbit-360, crash-zoom-in, whip-pan-right, fpv-drone, levitation, explosion, disintegration, glitch, lightning, mix-bullet-slow). Every other preset — including **dolly-out**, **dolly-in**, **tilt-up**, **tilt-down**, **pan-left/right**, **zoom-in/out**, etc. — falls through to `buildDynamicPrompt`, which just concatenates the label, description, and a generic scene hint. That's not enough motion guidance for the model.
-2. **LTX (the new default for speed) is the weakest** of the three at interpreting abstract camera terminology — it especially struggles with vertical moves (tilt/pedestal/crane) and reverse moves (dolly out, pull out, crash zoom out). Kling handles them noticeably better but is 4× slower.
-3. **The dynamic prompt doesn't translate the camera term into continuous motion language.** "Dolly Out" should become *"camera smoothly retreats backward away from the subject over 5 seconds, the subject growing smaller in frame as more environment is revealed on all sides"* — not just the label dropped into a sentence.
+### Technical changes
 
-### The fix
+**1. New component — `src/components/MentionTextarea.tsx`**
+- Wraps `Textarea` + an absolutely-positioned overlay `<div>` that mirrors content and highlights `@N` tokens matching known elements.
+- Props: `value`, `onChange`, `elements: { index: number; label: string; category: string }[]`, `placeholder`.
+- Popover (shadcn `Popover` + `Command`) triggered when caret is right after `@` with optional digits; filters by number or label.
+- Insert rule: inserts `@N ` (with trailing space). Regex for highlight: `/(^|\s)@(\d+)\b/g`.
+- Accessible: `aria-autocomplete="list"`, keyboard nav handled in `onKeyDown`.
 
-**1. Add hand-tuned `HERO_PROMPTS` for the camera-move presets that are currently failing** — `supabase/functions/generate-preset-preview/index.ts`
+**2. `src/components/SceneBreakdown.tsx`**
+- Flatten frames into a single indexed list; pass `globalIndex` (1-based) to each element.
+- Render a `@{globalIndex}` badge on each element card (mono font, primary color, same chip style already used elsewhere).
+- Add a "Click to insert" click handler on each badge that emits `onInsertMention(n)` up to `WorkflowPanel`.
+- New prop: `onInsertMention?: (n: number) => void`.
 
-Cover all `basic` and `epic` group presets that describe a **camera motion**. Each prompt:
-- Picks a clear subject + environment that makes the move visible (e.g. dolly-out works best when there's something to reveal around the subject).
-- Describes the move as **continuous physical camera motion over 5 seconds**, not as a cut/edit term.
-- States what the **frame should look like at start vs. end** so the model has a clear trajectory.
-- Avoids any wording the model might read as "two shots" or "a transition".
+**3. `src/components/WorkflowPanel.tsx`**
+- In the `breakdown → generate` phase, when `sceneFrames` exist, replace the current description `<Textarea>` with `<MentionTextarea elements={flatElements} … />`.
+- Maintain `flatElements` = `sceneFrames.flatMap(f => f.elements).map((el, i) => ({ index: i+1, label: el.description, category: el.category }))`.
+- Pass `onInsertMention` to `SceneBreakdown` → appends `@N ` to description state.
+- Skip path unchanged: if user clicks **Skip**, we render the existing plain `<Textarea>` (no elements context) exactly as today.
+- Build a `mentions` array before calling `generate-prompt`:
+  ```ts
+  const mentions = Array.from(description.matchAll(/(?:^|\s)@(\d+)\b/g))
+    .map(m => Number(m[1]))
+    .filter(n => n >= 1 && n <= flatElements.length);
+  ```
+  Pass `mentions` + `flatElements` in the `generate-prompt` payload under a new `elementMentions` field (array of `{ index, category, description, note? }`).
 
-Approx 30 new entries (dolly-in/out, push-in, pull-out, pan-left/right, tilt-up/down, pedestal-up/down, zoom-in/out, snap-zoom, tracking, follow, drift, reveal, arc-left/right, crane-up/down, jib-up/down, orbit-left/right, whip-pan-left, crash-zoom-out, dolly-zoom-in/out, dutch-angle, birds-eye, worms-eye, steadicam, rack-focus).
+**4. `supabase/functions/generate-prompt/index.ts`**
+- Accept optional `elementMentions: { index: number; category: string; description: string }[]`.
+- If present, append a block to the user prompt:
+  ```
+  User @-mentioned these specific elements in their directive. Treat each @N as a direct reference to the listed element and apply the user's wording to THAT element only:
+  @1 — {category}: {description}
+  @2 — {category}: {description}
+  …
+  ```
+- No schema/output changes.
 
-Example shape:
-```
-"dolly-out":
-  "Continuous dolly-out: camera smoothly retreats backward in one unbroken motion over 5 seconds, starting on a tight shot of a lone violinist in a candlelit cathedral, slowly revealing the empty pews, then the vaulted ceiling, ending wide. Locked horizon, steady glide on dolly tracks, no cuts, no edits, single continuous camera move, 35mm anamorphic, cinematic.",
-
-"tilt-up":
-  "Continuous tilt-up: camera body stays planted, lens angles smoothly upward in one unbroken 5-second motion, starting framed on the boots of a knight in armor, slowly revealing the chest plate, the helmet, then towering above into stormy sky. Single continuous tilt on a fixed pivot, no cuts, no zoom, 35mm anamorphic, cinematic.",
-```
-
-**2. Upgrade `buildDynamicPrompt` for any uncovered/custom presets** — same file
-
-Rewrite the template to enforce continuous-shot framing for camera-move groups (`basic`, `epic`):
-
-```
-Continuous single-shot 5-second video. The camera performs ONE unbroken {label} move from start to finish — no cuts, no edits, no shot changes.
-
-Move definition: {description}
-What the audience should see: {bestFor}
-
-Scene: {sceneHint}
-
-Constraints: single continuous camera move, locked timing, 35mm anamorphic, dramatic lighting, photoreal, high detail. The {label} motion must be unmistakable and dominate the shot.
-```
-
-For non-camera groups (`effects`, `pulse`, `mix`) keep the current shape but also add `single continuous shot, no cuts` to the constraints.
-
-**3. Auto-bump tricky moves to a stronger model** — same file
-
-Add a small per-preset model floor. Camera-motion presets that are most failure-prone on LTX get auto-upgraded to **wan-fast** (still ~30s) when the admin's selected model is `ltx-fast`:
-
-```ts
-const HARD_FOR_LTX = new Set([
-  "dolly-out","pull-out","tilt-up","tilt-down","pedestal-up","pedestal-down",
-  "crash-zoom-out","crane-up","crane-down","jib-up","jib-down",
-  "dolly-zoom","dolly-zoom-in","dolly-zoom-out","rack-focus",
-]);
-// after model resolution
-if (model === "ltx-fast" && HARD_FOR_LTX.has(presetId)) effectiveModel = "wan-fast";
-```
-
-The submit response returns `effectiveModel` so the admin card shows e.g. *"Auto-upgraded to Wan for accuracy"* instead of silently switching.
-
-**4. Surface the model swap in the UI** — `src/components/admin/PresetPreviewsSection.tsx`
-
-When `effectiveModel !== requestedModel`, show a small inline note on the card during generation: *"Using Wan for this preset (LTX struggles with vertical/reverse moves)."* No layout changes.
+**5. i18n — `src/i18n/translations/en.ts` + `ar.ts`**
+- `elements.mentionHint` → *"Type @ to reference an element (e.g. @2 turn toward camera)"* / Arabic equivalent.
+- `elements.mentionPickerTitle` → *"Insert element reference"* / Arabic.
 
 ### Out of scope
-- Re-generating every existing preset preview (admin can selectively regenerate the bad ones from the admin panel).
-- Changing the default model globally — LTX stays default for the ~80% of presets it handles fine.
-- Adding new preset groups or DB columns.
+- Persisting mentions in prompt history differently (they're already captured as plain text in the description).
+- Mention support in the `Skip → Generate` plain textarea (explicit user request: unchanged).
+- Renumbering after manual element deletion (not a current feature).
 
 ### Files touched
-- `supabase/functions/generate-preset-preview/index.ts` (HERO_PROMPTS additions, buildDynamicPrompt rewrite, HARD_FOR_LTX auto-upgrade, return `effectiveModel`)
-- `src/components/admin/PresetPreviewsSection.tsx` (display auto-upgrade note)
+- `src/components/MentionTextarea.tsx` *(new)*
+- `src/components/SceneBreakdown.tsx`
+- `src/components/WorkflowPanel.tsx`
+- `supabase/functions/generate-prompt/index.ts`
+- `src/i18n/translations/en.ts`, `src/i18n/translations/ar.ts`
