@@ -5,7 +5,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { ChevronRight, ChevronDown, Search } from "lucide-react";
 import { useLanguage } from "@/i18n/LanguageContext";
-import { PRESETS, PRESET_GROUPS, type PresetGroupId, type Preset } from "@/lib/presets";
+import { PRESET_GROUPS, type PresetGroupId, type Preset, useAllPresets } from "@/lib/presets";
 import { PresetCard } from "@/components/PresetCard";
 
 interface ConfigPanelProps {
@@ -23,17 +23,18 @@ export const ConfigPanel = ({ description, onDescriptionChange }: ConfigPanelPro
   const [activeTab, setActiveTab] = useState<PresetGroupId>("basic");
   const [search, setSearch] = useState("");
   const { t } = useLanguage();
+  const { presets } = useAllPresets();
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return PRESETS.filter((p) => p.group === activeTab);
-    return PRESETS.filter(
+    if (!q) return presets.filter((p) => p.group === activeTab);
+    return presets.filter(
       (p) =>
         p.label.toLowerCase().includes(q) ||
         p.description.toLowerCase().includes(q) ||
         p.bestFor.toLowerCase().includes(q),
     );
-  }, [activeTab, search]);
+  }, [activeTab, search, presets]);
 
   const togglePreset = (preset: Preset) => {
     const tokens = description.split(",").map((t) => t.trim()).filter(Boolean);
