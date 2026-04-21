@@ -5,6 +5,7 @@ export const ar: Record<TranslationKey, string> = {
   "hero.title": "MovPrompt",
   "hero.subtitle": "المخرج السينمائي الذكي: حوّل صورك الثابتة إلى كادرات سينمائية ملهمة",
   "footer": "MovPrompt — أوامر سينمائية بالذكاء الاصطناعي",
+  "nav.goHome": "الذهاب إلى الرئيسية",
 
   // Workflows
   "workflow.single": "إطار واحد",
