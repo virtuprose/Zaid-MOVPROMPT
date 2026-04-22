@@ -90,6 +90,8 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
   const [manualOverrides, setManualOverrides] = useState<Record<string, boolean>>({});
   const [resetSnapshot, setResetSnapshot] = useState<ElementDirections | null>(null);
   const resetSnapshotTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [confirmResetOpen, setConfirmResetOpen] = useState(false);
+  const [pendingResetCount, setPendingResetCount] = useState(0);
 
   const clearResetSnapshot = useCallback(() => {
     if (resetSnapshotTimerRef.current) {
@@ -114,6 +116,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
   useEffect(() => {
     if (phase !== "breakdown" && phase !== "generate") {
       clearResetSnapshot();
+      setConfirmResetOpen(false);
     }
   }, [phase, clearResetSnapshot]);
   const [hasGeneratedBefore, setHasGeneratedBefore] = useState<boolean>(() => {
@@ -153,37 +156,56 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
     return out;
   }, [sceneFrames]);
 
+  const performAutoReset = useCallback(() => {
+    setElementDirections((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      for (const el of flatSceneElements) {
+        if (manualOverrides[el.id]) continue;
+        const curr = prev[el.id];
+        if (curr?.action !== "move") {
+          next[el.id] = { action: "move", note: curr?.note || "" };
+          changed = true;
+        }
+      }
+      if (changed) {
+        setResetSnapshot(prev);
+        if (resetSnapshotTimerRef.current) clearTimeout(resetSnapshotTimerRef.current);
+        resetSnapshotTimerRef.current = setTimeout(() => {
+          setResetSnapshot(null);
+          resetSnapshotTimerRef.current = null;
+        }, 8000);
+      }
+      return changed ? next : prev;
+    });
+  }, [flatSceneElements, manualOverrides]);
+
   // Auto-assign Move/Lock based on verbs near @N mentions in the description.
   // Debounced 150ms. Skips elements the user has manually overridden.
   useEffect(() => {
     if (phase !== "breakdown") return;
     if (flatSceneElements.length === 0) return;
     if (description.trim() === "") {
-      setElementDirections((prev) => {
-        let changed = false;
-        const next = { ...prev };
-        for (const el of flatSceneElements) {
-          if (manualOverrides[el.id]) continue;
-          const curr = prev[el.id];
-          if (curr?.action !== "move") {
-            next[el.id] = { action: "move", note: curr?.note || "" };
-            changed = true;
-          }
-        }
-        if (changed) {
-          setResetSnapshot(prev);
-          if (resetSnapshotTimerRef.current) clearTimeout(resetSnapshotTimerRef.current);
-          resetSnapshotTimerRef.current = setTimeout(() => {
-            setResetSnapshot(null);
-            resetSnapshotTimerRef.current = null;
-          }, 8000);
-        }
-        return changed ? next : prev;
+      // Find elements that would be affected and have non-default state (lock or note).
+      const atRisk = flatSceneElements.filter((el) => {
+        if (manualOverrides[el.id]) return false;
+        const dir = elementDirections[el.id];
+        if (!dir) return false;
+        return dir.action === "lock" || (dir.note ?? "") !== "";
       });
+      if (atRisk.length === 0) {
+        // Silent reset path (no notable changes — won't capture snapshot since nothing is non-default).
+        performAutoReset();
+        return;
+      }
+      // Prompt user before wiping non-default auto-assigned state.
+      setPendingResetCount(atRisk.length);
+      setConfirmResetOpen(true);
       return;
     }
-    // User typed again — invalidate any pending undo snapshot.
+    // User typed again — invalidate any pending undo snapshot or open confirm dialog.
     if (resetSnapshot) clearResetSnapshot();
+    if (confirmResetOpen) setConfirmResetOpen(false);
     const timer = setTimeout(() => {
       const intents = detectAllIntents(description);
       setElementDirections((prev) => {
@@ -202,7 +224,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
       });
     }, 150);
     return () => clearTimeout(timer);
-  }, [description, flatSceneElements, manualOverrides, phase, resetSnapshot, clearResetSnapshot]);
+  }, [description, flatSceneElements, manualOverrides, phase, resetSnapshot, clearResetSnapshot, elementDirections, confirmResetOpen, performAutoReset]);
 
   const contract = useMemo(() => getContract(selectedModel), [selectedModel]);
   const [twoFrameMode, setTwoFrameMode] = useState(false);
@@ -826,6 +848,31 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
                 </Button>
               </motion.div>
             )}
+
+            <AlertDialog open={confirmResetOpen} onOpenChange={setConfirmResetOpen}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>{t("wp.confirmReset.title" as any)}</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    {(t("wp.confirmReset.description" as any) as string).replace("{count}", String(pendingResetCount))}
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel onClick={() => setConfirmResetOpen(false)}>
+                    {t("wp.confirmReset.cancel" as any)}
+                  </AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() => {
+                      performAutoReset();
+                      setConfirmResetOpen(false);
+                    }}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    {t("wp.confirmReset.confirm" as any)}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
 
             <SceneBreakdown
               frames={sceneFrames}
