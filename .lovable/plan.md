@@ -1,70 +1,58 @@
 
 
-## "Enhance my vision" — AI rewrite for the Describe textarea
+## Full new-user journey QA in the live preview
 
-A button beneath the Describe textarea sends the user's draft to Lovable AI, which rewrites it into a clearer, director-grade brief. The result opens in a side-by-side diff dialog: original vs enhanced. The user clicks **Apply** to replace, or **Keep original** to dismiss. Generic cinematic style — same prompt for all target models.
+End-to-end manual test of MovPrompt as a brand-new user, driven through the browser tool. I'll create a fresh email-based account, walk every primary flow, and report what works, what's broken, and what's confusing — with screenshots at each milestone.
 
-### UX flow
+### Scope
 
-1. Below the Describe textarea, render a small ghost button: `✨ Enhance my vision`.
-   - Disabled when `description.trim().length < 10` (tooltip: "Write a few words first").
-   - Shows spinner + "Enhancing…" while loading.
-2. On click → POST current `description` (and lightweight scene context) to a new edge function `enhance-description`.
-3. On success → open an `AlertDialog` showing two columns:
-   - **Your draft** (read-only, muted)
-   - **Enhanced** (read-only, primary border, slightly highlighted)
-   - Actions: `Keep original` (cancel) · `Apply enhanced` (primary).
-4. On Apply → `setDescription(enhanced)`, dialog closes, brief toast "Description enhanced — Undo" with an Undo button that restores the original (8s, mirrors existing Undo pattern).
-5. On error → toast with the error (handles 429 rate-limit and 402 credits clearly).
+The journey, in order:
 
-### Backend — new edge function
+1. **Landing (logged out)** — `/` loads, hero renders, language toggle works, Sign In button visible.
+2. **Sign up** — `/auth` → Sign Up tab → create account with a throwaway email (`qa+<timestamp>@movprompt.test`) and a strong password. Verify success state and whether email confirmation is required.
+3. **First login** — if confirmation is on, switch to Sign In tab and log in; otherwise confirm auto-redirect to `/`.
+4. **Welcome popup** — verify it appears once, closes, and doesn't re-appear after reload.
+5. **Top bar** — Language toggle (EN ↔ AR, including RTL flip), Notification bell opens, Library button navigates, avatar dropdown shows email + Sign out.
+6. **Workflow — Single frame**
+   - Upload one image (use a small generated test image written from the browser).
+   - Wait for scene analysis → Scene Breakdown renders elements with `@N` chips.
+   - Type a description (≥ 10 chars).
+   - **Enhance my vision** button — click, verify diff dialog opens with original vs enhanced, Apply replaces text, Undo toast restores it.
+   - Toggle a Move/Lock badge → verify manual override persists.
+   - Clear the Describe textarea → verify the **confirmation dialog** appears (since auto-assigned badges exist), confirm reset, then verify the **Undo badges** affordance restores them.
+   - Pick a target model in ModelPicker.
+   - Click Generate → verify Results panel renders prompt, copy button works.
+7. **Workflow — Two frames** — upload start + end frame, verify two-frame mode UI, generate.
+8. **Workflow — Multi-shot** — switch mode, verify storyboard UI shows.
+9. **Library** — navigate to `/library`, verify the just-generated prompt appears, open detail, copy.
+10. **Sign out** — from avatar dropdown, verify redirect to `/auth` or `/` logged-out state.
+11. **Re-login** — sign back in with the same credentials, verify Library still shows prior generation (persistence check).
+12. **Negative checks** along the way: invalid email, weak password, empty description Generate, oversized upload (if quick to test).
 
-`supabase/functions/enhance-description/index.ts`
-- POST `{ description: string, sceneSummary?: string }`.
-- Auth: requires Supabase JWT (same pattern as `analyze-scene` / `generate-prompt`).
-- IP rate limit (in-memory, same helper style as siblings).
-- Calls Lovable AI Gateway `https://ai.gateway.lovable.dev/v1/chat/completions`, model `google/gemini-3-flash-preview`, non-streaming, `temperature` low.
-- System prompt (generic cinematic, model-agnostic):
-  > You rewrite a user's short scene description into a clear, vivid director's brief for an AI video generator. Preserve the user's intent and any `@N` mentions verbatim. Add concrete cinematic details only where the draft is vague: subject action, camera move, framing, lighting quality + direction, mood, pacing. Keep it 2–4 sentences, plain prose, no lists, no headings, no emojis. Do not invent characters, locations, or objects the user didn't imply. Output only the rewritten description text — no preamble.
-- Optional `sceneSummary` (compact list of detected elements like "@1 woman, @2 window, @3 coffee cup") is appended as user-message context so the rewrite respects the scene.
-- Returns `{ enhanced: string }`. Surfaces 429/402 with structured error body.
+### What I will NOT do
 
-### Frontend changes
+- Not delete the test account (no self-serve delete in UI; would need DB access).
+- Not test admin routes (`/admin`) — out of scope for "new user".
+- Not test password reset email delivery (DNS-dependent, slow). I will trigger "Forgot password" and verify only the request UI + toast.
+- Not test payments, OAuth (Google/Apple) — OAuth pops external windows the browser tool can't drive reliably; I'll note it's available and skip.
+- Not run destructive admin actions.
 
-**`src/components/WorkflowPanel.tsx`**
-- New state: `enhanceOpen`, `enhanceLoading`, `enhancedDraft: string | null`, `enhanceUndoSnapshot: string | null` + 8s timer ref.
-- Build a compact `sceneSummary` from `flatSceneElements` (e.g. `@1 person, @2 window…`) when calling.
-- Render the **Enhance my vision** button as a small inline row immediately under the `descriptionBlock`, aligned end (mirrors in RTL).
-- Render an `AlertDialog` with the diff layout (responsive: side-by-side ≥ md, stacked < md).
-- Apply handler: snapshot current `description`, `setDescription(enhanced)`, open Undo toast (or render the existing Undo-row pattern if you prefer consistency — reuse the same component shape used for badges Undo).
+### Method
 
-**No new component file required**; the diff dialog is inline JSX inside `WorkflowPanel`.
+- Use `browser--navigate_to_sandbox` against the preview URL, viewport 1143×891 (matches user's current view) plus one mobile pass at 390×844 for the hero + top bar + dialog responsiveness.
+- `observe` → `act` per interaction; screenshots after each milestone (signup success, scene breakdown, enhance dialog, results, library).
+- For the image upload I'll generate a tiny PNG in `/tmp` and feed it to the file input via the file-upload action.
+- Console + network checks after Generate and after Enhance to catch silent edge-function errors (`enhance-description`, `analyze-scene`, `generate-prompt`).
+- One throwaway account per run; credentials reported back to you so you can clean up if you want.
 
-### Translations
+### Deliverable
 
-Add to `src/i18n/translations/en.ts` and `src/i18n/translations/ar.ts`:
+A single summary message with:
 
-| Key | EN | AR |
-|---|---|---|
-| `enhance.button` | Enhance my vision | حسّن رؤيتك |
-| `enhance.tooltip.short` | Write a few words first | اكتب بضع كلمات أولاً |
-| `enhance.loading` | Enhancing… | جارٍ التحسين… |
-| `enhance.dialog.title` | Compare your description | قارن الوصف |
-| `enhance.dialog.original` | Your draft | مسودتك |
-| `enhance.dialog.enhanced` | Enhanced | النسخة المحسّنة |
-| `enhance.apply` | Apply enhanced | تطبيق المحسّن |
-| `enhance.cancel` | Keep original | الاحتفاظ بالأصلي |
-| `enhance.applied` | Description enhanced | تم تحسين الوصف |
-| `enhance.undo` | Undo | تراجع |
-| `enhance.error.generic` | Couldn't enhance — try again | تعذّر التحسين — حاول مرة أخرى |
-| `enhance.error.rateLimit` | Too many requests — wait a moment | طلبات كثيرة — انتظر لحظة |
-| `enhance.error.credits` | AI credits exhausted | انتهت أرصدة الذكاء الاصطناعي |
+- ✅ / ⚠️ / ❌ per step above.
+- Screenshots of: signup success, scene breakdown, enhance diff dialog, generated result, library entry, RTL hero.
+- Any console or network errors with the failing function name + status code.
+- A short "first-impression friction" list (copy that confused, buttons that looked dead, slow steps).
 
-### Files touched
-
-- **New**: `supabase/functions/enhance-description/index.ts`
-- **Edit**: `src/components/WorkflowPanel.tsx` — button, dialog, handlers, Undo
-- **Edit**: `src/i18n/translations/en.ts`, `src/i18n/translations/ar.ts` — new keys
-
-No DB schema changes. No other components touched. `LOVABLE_API_KEY` is already provisioned via Lovable Cloud — no secrets prompt needed.
+If a step fails hard (e.g. signup blocked by email confirmation with no inbox access), I'll stop, report, and ask how you want to proceed (e.g. enable auto-confirm in Cloud, or provide an existing account).
 
