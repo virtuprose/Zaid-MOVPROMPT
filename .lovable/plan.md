@@ -1,14 +1,14 @@
 
 
-## Move presets below the Analyze Scene CTA
+## Hide the Augment with Presets panel
 
-Move the **Augment with Presets** collapsible from its current position (right after the "Describe Your Vision" textarea) to sit **below the Analyze / Skip CTA buttons** at the bottom of the left column.
+Temporarily hide the **Augment with Presets** collapsible from the left column without deleting the component, so it can be re-enabled later.
 
 ### Changes
 
 **`src/components/WorkflowPanel.tsx`**
-- Remove `<PresetPickerPanel />` from its current spot directly after `{descriptionBlock}`.
-- Re-render `<PresetPickerPanel />` after the Analyze Scene / Skip & Generate CTA block in the left column.
+- Comment out (or remove) the `<PresetPickerPanel />` render that currently sits below the Analyze / Skip CTA block.
+- Leave the `PresetPickerPanel` import in place (commented or kept) so re-enabling later is a one-line change.
 
 ### Resulting left column order
 1. Upload zone
@@ -17,10 +17,6 @@ Move the **Augment with Presets** collapsible from its current position (right a
 4. Describe Your Vision (textarea)
 5. Audio toggle
 6. Analyze Scene / Skip & Generate CTAs
-7. **Augment with Presets (collapsible)** ← moved here
 
-### Right column
-- Unchanged — empty state / generated prompts only.
-
-No new files, no styling changes, no translation changes — purely a placement move.
+No other files, styles, translations, or logic change. The `PresetPickerPanel.tsx` component file stays in the codebase untouched for future use.
 
