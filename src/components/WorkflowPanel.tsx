@@ -669,11 +669,6 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
       {modeToggleBlock}
       <ModelPicker model={selectedModel} onModelChange={(v) => onSwitchModel?.(v)} />
       {descriptionBlock}
-      <PresetPickerPanel
-        description={description}
-        onDescriptionChange={setDescription}
-        defaultOpen={false}
-      />
       {!contract.supportsElementReferences && sceneFrames.length > 0 && (phase === "breakdown" || phase === "generate") && (
         <p className="text-xs text-muted-foreground px-1 -mt-2">
           {t("scene.autoAssignedHint" as any)}
@@ -681,6 +676,11 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
       )}
       {audioToggleBlock}
       {ctaRowBlock}
+      <PresetPickerPanel
+        description={description}
+        onDescriptionChange={setDescription}
+        defaultOpen={false}
+      />
     </div>
   );
 
