@@ -38,6 +38,10 @@ import { OnboardingExamples, type OnboardingExample } from "./OnboardingExamples
 
 const ONBOARDING_DONE_KEY = "movprompt.firstGenerationDone";
 
+// Max number of scene elements to include in the AI enhance request.
+// Kept deterministic (sorted by @index) so model inputs stay consistent across calls.
+const ENHANCE_SCENE_SUMMARY_MAX_ELEMENTS = 20;
+
 type Phase = "upload" | "breakdown" | "generate";
 
 interface ShotResult {
@@ -190,8 +194,9 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
     setEnhanceLoading(true);
     try {
       const sceneSummary = flatSceneElements.length > 0
-        ? flatSceneElements
-            .slice(0, 12)
+        ? [...flatSceneElements]
+            .sort((a, b) => a.index - b.index)
+            .slice(0, ENHANCE_SCENE_SUMMARY_MAX_ELEMENTS)
             .map((el) => {
               const category = (el.category || "element").trim();
               const description = (el.description || "").trim();
