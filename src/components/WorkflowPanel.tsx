@@ -87,6 +87,29 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
   const sceneMentionRef = useRef<SceneMentionTextareaHandle>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [manualOverrides, setManualOverrides] = useState<Record<string, boolean>>({});
+  const [hasGeneratedBefore, setHasGeneratedBefore] = useState<boolean>(() => {
+    if (typeof window === "undefined") return true;
+    return localStorage.getItem(ONBOARDING_DONE_KEY) === "1";
+  });
+
+  const handlePickExample = useCallback(async (example: OnboardingExample) => {
+    try {
+      const res = await fetch(example.src);
+      const blob = await res.blob();
+      const file = new File([blob], `${example.alt.replace(/\s+/g, "-").toLowerCase()}.jpg`, { type: blob.type || "image/jpeg" });
+      // Reset modes to match the example's intended workflow
+      setMultiShotMode(example.workflow === "multishot");
+      setTwoFrameMode(example.workflow === "twoframe");
+      const preview = URL.createObjectURL(file);
+      setImages([{ file, preview }]);
+      setResults(null);
+      setPhase("upload");
+      setSceneFrames([]);
+      setElementDirections({});
+    } catch (e) {
+      console.error("Failed to load example image", e);
+    }
+  }, []);
 
   // Flatten scene frames into a single 1-based indexed list (left-to-right, frame-by-frame).
   const flatSceneElements = useMemo(() => {
