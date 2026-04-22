@@ -71,7 +71,14 @@ const Auth = () => {
     } else {
       // Mark this user for the first-time welcome popup (shown once on first signed-in load).
       try { localStorage.setItem("first_signup_pending", "1"); } catch {}
-      toast({ title: t("toast.checkEmail"), description: t("toast.verificationSent") });
+      // If a session is returned, the user is signed in immediately (auto-confirm).
+      // Otherwise, email verification is required before they can sign in.
+      const isSignedIn = !!data?.session;
+      if (isSignedIn) {
+        toast({ title: t("toast.accountCreated"), description: t("toast.welcomeAboard") });
+      } else {
+        toast({ title: t("toast.checkEmail"), description: t("toast.verificationSent") });
+      }
       if (data?.user?.email) {
         supabase.functions.invoke("send-transactional-email", {
           body: {

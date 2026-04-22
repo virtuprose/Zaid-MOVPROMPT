@@ -56,6 +56,8 @@ export const en = {
   "toast.resetLinkSent": "We sent you a password reset link.",
   "toast.signUpFailed": "Sign up failed",
   "toast.verificationSent": "We sent you a verification link.",
+  "toast.accountCreated": "Account created",
+  "toast.welcomeAboard": "You're signed in. Welcome aboard!",
   "toast.signInFailed": "Sign in failed",
   "toast.googleFailed": "Google sign-in failed",
   "toast.appleFailed": "Apple sign-in failed",
