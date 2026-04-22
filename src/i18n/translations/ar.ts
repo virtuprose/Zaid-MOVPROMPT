@@ -67,6 +67,7 @@ export const ar: Record<TranslationKey, string> = {
   "wp.analyzeScene": "تحليل المشهد",
   "wp.analyzingScene": "جاري تحليل المشهد...",
   "wp.skip": "تخطّى وأنشئ الآن",
+  "wp.skipHint": "أسرع ولكن بتحكم أقل",
   "wp.startOver": "البدء من جديد",
   "wp.reAnalyze": "إعادة التحليل",
   "wp.generatePrompt": "توليد أمر سينمائي",
