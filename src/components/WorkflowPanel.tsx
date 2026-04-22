@@ -170,10 +170,20 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
             changed = true;
           }
         }
+        if (changed) {
+          setResetSnapshot(prev);
+          if (resetSnapshotTimerRef.current) clearTimeout(resetSnapshotTimerRef.current);
+          resetSnapshotTimerRef.current = setTimeout(() => {
+            setResetSnapshot(null);
+            resetSnapshotTimerRef.current = null;
+          }, 8000);
+        }
         return changed ? next : prev;
       });
       return;
     }
+    // User typed again — invalidate any pending undo snapshot.
+    if (resetSnapshot) clearResetSnapshot();
     const timer = setTimeout(() => {
       const intents = detectAllIntents(description);
       setElementDirections((prev) => {
@@ -192,7 +202,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
       });
     }, 150);
     return () => clearTimeout(timer);
-  }, [description, flatSceneElements, manualOverrides, phase]);
+  }, [description, flatSceneElements, manualOverrides, phase, resetSnapshot, clearResetSnapshot]);
 
   const contract = useMemo(() => getContract(selectedModel), [selectedModel]);
   const [twoFrameMode, setTwoFrameMode] = useState(false);
