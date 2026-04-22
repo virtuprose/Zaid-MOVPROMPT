@@ -706,36 +706,33 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
     </div>
   );
 
-  const startOverButton = (phase === "breakdown" || phase === "generate") && (
-    <div className="flex justify-start">
-      <Button
-        size="sm"
-        variant="ghost"
-        onClick={() => {
-          setPhase("upload");
-          setSceneFrames([]);
-          setElementDirections({});
-          setResults(null);
-        }}
-        aria-label={t("wp.startOver")}
-        title={t("wp.startOver")}
-        className="gap-1.5 px-2 sm:px-3 text-muted-foreground hover:text-foreground"
-      >
-        <RotateCcw className="w-3.5 h-3.5" /> <span className="hidden sm:inline">{t("wp.startOver")}</span>
-      </Button>
-    </div>
+  const startOverBtn = (phase === "breakdown" || phase === "generate") && (
+    <Button
+      size="sm"
+      variant="ghost"
+      onClick={() => {
+        setPhase("upload");
+        setSceneFrames([]);
+        setElementDirections({});
+        setResults(null);
+      }}
+      aria-label={t("wp.startOver")}
+      title={t("wp.startOver")}
+      className="gap-1.5 px-2 sm:px-3 text-muted-foreground hover:text-foreground"
+    >
+      <RotateCcw className="w-3.5 h-3.5" /> <span className="hidden sm:inline">{t("wp.startOver")}</span>
+    </Button>
   );
 
   const showRightEmptyState = !results && !isLoading && !((phase === "breakdown" || phase === "generate") && sceneFrames.length > 0);
 
   const rightPanel = (
     <div className="space-y-4">
-      {startOverButton}
-
       <AnimatePresence mode="wait">
         {(phase === "breakdown" || phase === "generate") && sceneFrames.length > 0 && (
           <motion.div key="breakdown-content" {...phaseTransition} className="space-y-4">
-            <div className="flex justify-end">
+            <div className="flex items-center justify-between gap-2">
+              {startOverBtn}
               <Button
                 size="sm"
                 variant="outline"
@@ -764,6 +761,11 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
               onManualToggle={(id) => setManualOverrides((prev) => ({ ...prev, [id]: true }))}
             />
           </motion.div>
+        )}
+        {phase === "generate" && sceneFrames.length === 0 && startOverBtn && (
+          <div key="startover-fallback" className="flex justify-start">
+            {startOverBtn}
+          </div>
         )}
       </AnimatePresence>
 
