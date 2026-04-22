@@ -130,6 +130,22 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
   useEffect(() => {
     if (phase !== "breakdown") return;
     if (flatSceneElements.length === 0) return;
+    if (description.trim() === "") {
+      setElementDirections((prev) => {
+        let changed = false;
+        const next = { ...prev };
+        for (const el of flatSceneElements) {
+          if (manualOverrides[el.id]) continue;
+          const curr = prev[el.id];
+          if (curr?.action !== "move") {
+            next[el.id] = { action: "move", note: curr?.note || "" };
+            changed = true;
+          }
+        }
+        return changed ? next : prev;
+      });
+      return;
+    }
     const timer = setTimeout(() => {
       setElementDirections((prev) => {
         let changed = false;
