@@ -66,6 +66,7 @@ export const MentionTextarea = ({ value, onChange, elements, placeholder }: Ment
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const next = e.target.value;
     onChange(next);
+    recordCaret(e.target);
     if (elements.length === 0) return;
     const caret = e.target.selectionStart ?? next.length;
     const prev = next[caret - 1];
