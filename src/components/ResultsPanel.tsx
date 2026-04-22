@@ -152,7 +152,7 @@ const MainPromptHero = ({ value, result, modelLabel, onSwitchModel }: { value: s
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1.5 mb-1">
                 <Wand2 className="w-3.5 h-3.5 text-primary shrink-0" />
-                <span className="text-[11px] font-bold uppercase tracking-wider text-primary">
+                <span className="text-[11px] font-bold font-display uppercase tracking-wider text-primary">
                   {t("results.directorPick")}: {getModelLabel(result.recommendedModel)}
                 </span>
               </div>
