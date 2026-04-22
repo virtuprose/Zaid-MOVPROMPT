@@ -87,6 +87,21 @@ export const ar: Record<TranslationKey, string> = {
   "wp.somethingWrong": "حدث خطأ ما.",
   "wp.somethingWrongRetry": "حدث خطأ ما. يرجى المحاولة مرة أخرى.",
 
+  // Enhance my vision (AI rewrite of Describe)
+  "enhance.button": "حسّن رؤيتك",
+  "enhance.tooltip.short": "اكتب بضع كلمات أولاً",
+  "enhance.loading": "جارٍ التحسين…",
+  "enhance.dialog.title": "قارن الوصف",
+  "enhance.dialog.original": "مسودتك",
+  "enhance.dialog.enhanced": "النسخة المحسّنة",
+  "enhance.apply": "تطبيق المحسّن",
+  "enhance.cancel": "الاحتفاظ بالأصلي",
+  "enhance.applied": "تم تحسين الوصف",
+  "enhance.undo": "تراجع",
+  "enhance.error.generic": "تعذّر التحسين — حاول مرة أخرى",
+  "enhance.error.rateLimit": "طلبات كثيرة — انتظر لحظة",
+  "enhance.error.credits": "انتهت أرصدة الذكاء الاصطناعي",
+
   // Frame labels
   "frame.start": "إطار البداية",
   "frame.end": "إطار النهاية",

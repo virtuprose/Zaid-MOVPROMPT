@@ -93,6 +93,35 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
   const [confirmResetOpen, setConfirmResetOpen] = useState(false);
   const [pendingResetCount, setPendingResetCount] = useState(0);
 
+  // Enhance my vision (AI rewrite of Describe)
+  const [enhanceOpen, setEnhanceOpen] = useState(false);
+  const [enhanceLoading, setEnhanceLoading] = useState(false);
+  const [enhancedDraft, setEnhancedDraft] = useState<string | null>(null);
+  const [enhanceUndoSnapshot, setEnhanceUndoSnapshot] = useState<string | null>(null);
+  const enhanceUndoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearEnhanceUndo = useCallback(() => {
+    if (enhanceUndoTimerRef.current) {
+      clearTimeout(enhanceUndoTimerRef.current);
+      enhanceUndoTimerRef.current = null;
+    }
+    setEnhanceUndoSnapshot(null);
+  }, []);
+
+  const handleUndoEnhance = useCallback(() => {
+    if (enhanceUndoSnapshot === null) return;
+    setDescription(enhanceUndoSnapshot);
+    clearEnhanceUndo();
+  }, [enhanceUndoSnapshot, clearEnhanceUndo]);
+
+  useEffect(() => {
+    return () => {
+      if (enhanceUndoTimerRef.current) clearTimeout(enhanceUndoTimerRef.current);
+    };
+  }, []);
+
+  // handleEnhanceClick / handleApplyEnhanced are defined after flatSceneElements below.
+
   const clearResetSnapshot = useCallback(() => {
     if (resetSnapshotTimerRef.current) {
       clearTimeout(resetSnapshotTimerRef.current);
@@ -155,6 +184,59 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
     }
     return out;
   }, [sceneFrames]);
+
+  const handleEnhanceClick = useCallback(async () => {
+    if (description.trim().length < 10 || enhanceLoading) return;
+    setEnhanceLoading(true);
+    try {
+      const sceneSummary = flatSceneElements.length > 0
+        ? flatSceneElements
+            .slice(0, 12)
+            .map((el) => `@${el.index} ${el.category}: ${el.description}`)
+            .join("; ")
+        : undefined;
+
+      const { data, error } = await supabase.functions.invoke("enhance-description", {
+        body: { description, sceneSummary },
+      });
+
+      if (error) {
+        const status = (error as any)?.context?.status ?? (error as any)?.status;
+        if (status === 429) {
+          toast({ title: t("enhance.error.rateLimit" as any), variant: "destructive" });
+        } else if (status === 402) {
+          toast({ title: t("enhance.error.credits" as any), variant: "destructive" });
+        } else {
+          toast({ title: t("enhance.error.generic" as any), variant: "destructive" });
+        }
+        return;
+      }
+      if (data?.error || typeof data?.enhanced !== "string" || !data.enhanced.trim()) {
+        toast({ title: t("enhance.error.generic" as any), variant: "destructive" });
+        return;
+      }
+      setEnhancedDraft(data.enhanced.trim());
+      setEnhanceOpen(true);
+    } catch (err) {
+      console.error("Enhance error:", err);
+      toast({ title: t("enhance.error.generic" as any), variant: "destructive" });
+    } finally {
+      setEnhanceLoading(false);
+    }
+  }, [description, enhanceLoading, flatSceneElements, t, toast]);
+
+  const handleApplyEnhanced = useCallback(() => {
+    if (!enhancedDraft) return;
+    setEnhanceUndoSnapshot(description);
+    setDescription(enhancedDraft);
+    setEnhanceOpen(false);
+    setEnhancedDraft(null);
+    if (enhanceUndoTimerRef.current) clearTimeout(enhanceUndoTimerRef.current);
+    enhanceUndoTimerRef.current = setTimeout(() => {
+      setEnhanceUndoSnapshot(null);
+      enhanceUndoTimerRef.current = null;
+    }, 8000);
+  }, [enhancedDraft, description]);
 
   const performAutoReset = useCallback(() => {
     setElementDirections((prev) => {
@@ -647,25 +729,112 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
     <ElementGrid items={elementItems} onChange={setElementItems} max={contract.maxElements ?? 10} />
   );
 
+  const enhanceDisabled = description.trim().length < 10 || enhanceLoading;
+  const enhanceRow = (phase === "breakdown" || phase === "generate") && (
+    <div className="flex flex-col gap-2 -mt-2">
+      <div className="flex justify-end">
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          onClick={handleEnhanceClick}
+          disabled={enhanceDisabled}
+          title={description.trim().length < 10 ? t("enhance.tooltip.short" as any) : ""}
+          aria-label={t("enhance.button" as any)}
+          className="gap-1.5 h-8 px-2 text-xs text-muted-foreground hover:text-primary hover:bg-primary/5"
+        >
+          {enhanceLoading ? (
+            <><Loader2 className="w-3.5 h-3.5 animate-spin" /> {t("enhance.loading" as any)}</>
+          ) : (
+            <><Sparkles className="w-3.5 h-3.5" /> {t("enhance.button" as any)}</>
+          )}
+        </Button>
+      </div>
+      {enhanceUndoSnapshot !== null && (
+        <motion.div
+          initial={{ opacity: 0, y: -4 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -4 }}
+          className="flex items-center justify-between gap-2 rounded-md border border-border/60 bg-card/60 px-3 py-1.5 text-xs text-muted-foreground"
+        >
+          <div className="flex items-center gap-1.5">
+            <Sparkles className="w-3.5 h-3.5 text-primary" />
+            <span>{t("enhance.applied" as any)}</span>
+          </div>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={handleUndoEnhance}
+            className="h-6 px-2 text-xs text-foreground hover:text-primary"
+          >
+            {t("enhance.undo" as any)}
+          </Button>
+        </motion.div>
+      )}
+      <AlertDialog
+        open={enhanceOpen}
+        onOpenChange={(open) => {
+          setEnhanceOpen(open);
+          if (!open) setEnhancedDraft(null);
+        }}
+      >
+        <AlertDialogContent className="max-w-3xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("enhance.dialog.title" as any)}</AlertDialogTitle>
+          </AlertDialogHeader>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[60vh] overflow-y-auto">
+            <div className="rounded-md border border-border/60 bg-muted/30 p-3 space-y-1.5">
+              <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                {t("enhance.dialog.original" as any)}
+              </div>
+              <div className="text-sm whitespace-pre-wrap text-foreground/80 leading-relaxed">
+                {description}
+              </div>
+            </div>
+            <div className="rounded-md border border-primary/40 bg-primary/5 p-3 space-y-1.5">
+              <div className="text-[11px] font-semibold uppercase tracking-wider text-primary">
+                {t("enhance.dialog.enhanced" as any)}
+              </div>
+              <div className="text-sm whitespace-pre-wrap text-foreground leading-relaxed">
+                {enhancedDraft ?? ""}
+              </div>
+            </div>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => { setEnhanceOpen(false); setEnhancedDraft(null); }}>
+              {t("enhance.cancel" as any)}
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={handleApplyEnhanced}>
+              {t("enhance.apply" as any)}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+
   const descriptionBlock = (phase === "breakdown" || phase === "generate") && (
-    contract.supportsElementReferences ? (
-      <MentionTextarea
-        value={description}
-        onChange={setDescription}
-        elements={elementItems}
-        placeholder={t("config.placeholder")}
-      />
-    ) : sceneFrames.length > 0 ? (
-      <SceneMentionTextarea
-        ref={sceneMentionRef}
-        value={description}
-        onChange={setDescription}
-        elements={flatSceneElements.map(({ index, category, description }) => ({ index, category, description }))}
-        placeholder={t("config.placeholder")}
-      />
-    ) : (
-      <ConfigPanel description={description} onDescriptionChange={setDescription} />
-    )
+    <div className="space-y-2">
+      {contract.supportsElementReferences ? (
+        <MentionTextarea
+          value={description}
+          onChange={setDescription}
+          elements={elementItems}
+          placeholder={t("config.placeholder")}
+        />
+      ) : sceneFrames.length > 0 ? (
+        <SceneMentionTextarea
+          ref={sceneMentionRef}
+          value={description}
+          onChange={setDescription}
+          elements={flatSceneElements.map(({ index, category, description }) => ({ index, category, description }))}
+          placeholder={t("config.placeholder")}
+        />
+      ) : (
+        <ConfigPanel description={description} onDescriptionChange={setDescription} />
+      )}
+      {enhanceRow}
+    </div>
   );
 
   const ctaRowBlock = hasRequiredImages && phase === "upload" ? (
