@@ -12,7 +12,8 @@ import { ElementGrid, type ElementItem } from "./ElementGrid";
 import { MentionTextarea } from "./MentionTextarea";
 import { SceneMentionTextarea, type SceneMentionTextareaHandle } from "./SceneMentionTextarea";
 import { extractVideoKeyframes, compressImageFile } from "@/lib/videoFrames";
-import { Sparkles, Loader2, ScanSearch, RotateCcw, RefreshCw, Info, Volume2, VolumeX, Zap } from "lucide-react";
+import { Sparkles, Loader2, ScanSearch, RotateCcw, RefreshCw, Info, Volume2, VolumeX, Zap, Clapperboard } from "lucide-react";
+import { PresetPickerPanel } from "./PresetPickerPanel";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -647,6 +648,8 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
     </div>
   );
 
+  const showRightEmptyState = !results && !isLoading && !((phase === "breakdown" || phase === "generate") && sceneFrames.length > 0);
+
   const rightPanel = (
     <div className="space-y-4">
       {startOverButton}
@@ -708,11 +711,36 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
         )}
       </AnimatePresence>
 
-      {!results && !isLoading && phase === "upload" && (
-        <div className="hidden lg:flex items-center justify-center min-h-[300px] rounded-lg border border-dashed border-white/[0.08] text-sm text-muted-foreground/60 px-6 text-center">
-          {t("wp.analyzeDesc")}
+      {showRightEmptyState && (
+        <div
+          className="empty-state-pulse flex flex-col items-center justify-center text-center min-h-[280px] rounded-2xl px-6 py-10"
+          style={{
+            background: "rgba(0, 212, 255, 0.02)",
+            border: "1.5px solid rgba(0, 212, 255, 0.18)",
+          }}
+        >
+          <Clapperboard size={64} strokeWidth={1.5} style={{ color: "#00D4FF" }} />
+          <h3
+            className="font-display mt-5"
+            style={{ fontSize: "20px", color: "#F0F0F5", fontWeight: 600, letterSpacing: "-0.01em" }}
+          >
+            {t("rp.empty.title" as any)}
+          </h3>
+          <p
+            className="mt-2 max-w-sm"
+            style={{ fontSize: "13px", color: "#8888AA", lineHeight: 1.5 }}
+          >
+            {t("rp.empty.subtitle" as any)}
+          </p>
         </div>
       )}
+
+      {/* Preset motion picker — collapsible, lives in the right column */}
+      <PresetPickerPanel
+        description={description}
+        onDescriptionChange={setDescription}
+        defaultOpen={false}
+      />
     </div>
   );
 
@@ -720,7 +748,16 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
     <div className="w-full max-w-[1400px] mx-auto">
       <div className="lg:grid lg:grid-cols-[40fr_60fr] lg:gap-8 space-y-6 lg:space-y-0">
         <div>{leftPanel}</div>
-        <div className="lg:ps-8 lg:border-s lg:border-[hsl(190_100%_50%/0.1)]">{rightPanel}</div>
+        <div
+          style={{
+            background: "#1A1A2E",
+            border: "1px solid rgba(0,212,255,0.12)",
+            borderRadius: "16px",
+            padding: "24px",
+          }}
+        >
+          {rightPanel}
+        </div>
       </div>
     </div>
   );

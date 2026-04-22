@@ -96,7 +96,10 @@ const Index = () => {
               Mov<span className="text-primary">Prompt</span>
             </h1>
           </button>
-          <p className="text-muted-foreground text-sm sm:text-lg max-w-[20rem] sm:max-w-xl mx-auto px-2">
+          <p
+            className="text-muted-foreground text-sm sm:text-lg max-w-[20rem] sm:max-w-xl mx-auto px-2 font-display"
+            style={{ fontWeight: 500, letterSpacing: "-0.01em" }}
+          >
             {t("hero.subtitle")}
           </p>
         </motion.header>
