@@ -287,23 +287,32 @@ const Auth = () => {
                         <Label htmlFor="signup-password">{t("auth.password")}</Label>
                         <Input id="signup-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} />
                       </div>
-                      <div className="flex items-start gap-2">
-                        <Checkbox
-                          id="agree-terms"
-                          checked={agreedToTerms}
-                          onCheckedChange={(checked) => setAgreedToTerms(checked === true)}
-                          className="mt-0.5"
-                        />
-                        <label htmlFor="agree-terms" className="text-xs text-muted-foreground leading-relaxed cursor-pointer">
-                          {t("auth.agreeTerms")}{" "}
-                          <Link to="/terms" className="text-primary hover:underline" target="_blank">
-                            {t("auth.termsLink")}
-                          </Link>
-                          {" & "}
-                          <Link to="/privacy" className="text-primary hover:underline" target="_blank">
-                            {t("auth.privacyLink")}
-                          </Link>
-                        </label>
+                      <div className="space-y-1">
+                        <div className="flex items-start gap-2">
+                          <Checkbox
+                            id="agree-terms"
+                            checked={agreedToTerms}
+                            onCheckedChange={(checked) => setAgreedToTerms(checked === true)}
+                            className="mt-0.5"
+                            aria-invalid={!agreedToTerms}
+                            aria-describedby="agree-terms-error"
+                          />
+                          <label htmlFor="agree-terms" className="text-xs text-muted-foreground leading-relaxed cursor-pointer">
+                            {t("auth.agreeTerms")}{" "}
+                            <Link to="/terms" className="text-primary hover:underline" target="_blank">
+                              {t("auth.termsLink")}
+                            </Link>
+                            {" & "}
+                            <Link to="/privacy" className="text-primary hover:underline" target="_blank">
+                              {t("auth.privacyLink")}
+                            </Link>
+                          </label>
+                        </div>
+                        {!agreedToTerms && (
+                          <p id="agree-terms-error" className="text-xs text-destructive ps-6">
+                            {t("auth.mustAgreeTerms")}
+                          </p>
+                        )}
                       </div>
                       <Button type="submit" className="w-full h-11 hover:scale-[1.02] active:scale-[0.98]" disabled={loading || !agreedToTerms}>
                         {loading ? <Loader2 className="w-4 h-4 animate-spin me-2" /> : <Mail className="w-4 h-4 me-2" />}
