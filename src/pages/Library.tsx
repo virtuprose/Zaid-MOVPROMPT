@@ -105,7 +105,7 @@ function HistoryCard({ entry, t, onDelete }: { entry: HistoryEntry; t: (k: strin
     .join("\n\n");
 
   return (
-    <Card className="bg-card border-border overflow-hidden h-full flex flex-col">
+    <Card className="bg-card border-border overflow-hidden flex flex-col">
       <button
         onClick={() => setExpanded(!expanded)}
         className="w-full text-start p-3 sm:p-4 flex items-start gap-3 hover:bg-secondary/30 transition-colors flex-1"
