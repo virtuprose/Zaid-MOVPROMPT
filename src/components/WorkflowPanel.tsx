@@ -147,16 +147,16 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
       return;
     }
     const timer = setTimeout(() => {
+      const intents = detectAllIntents(description);
       setElementDirections((prev) => {
         let changed = false;
         const next = { ...prev };
         for (const el of flatSceneElements) {
           if (manualOverrides[el.id]) continue;
-          const intent = detectIntent(description, el.index);
-          if (!intent) continue;
+          const target = intents[el.index] ?? "move";
           const curr = prev[el.id];
-          if (curr?.action !== intent) {
-            next[el.id] = { action: intent, note: curr?.note || "" };
+          if (curr?.action !== target) {
+            next[el.id] = { action: target, note: curr?.note || "" };
             changed = true;
           }
         }
