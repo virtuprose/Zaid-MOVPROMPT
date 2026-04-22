@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Copy, ChevronDown, Sparkles, Check, Trash2, Search, X } from "lucide-react";
+import { ArrowLeft, Copy, ChevronDown, Sparkles, Check, Trash2, Search, X, Film } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 interface HistoryEntry {
