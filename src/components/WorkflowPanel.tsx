@@ -88,6 +88,34 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
   const sceneMentionRef = useRef<SceneMentionTextareaHandle>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [manualOverrides, setManualOverrides] = useState<Record<string, boolean>>({});
+  const [resetSnapshot, setResetSnapshot] = useState<ElementDirections | null>(null);
+  const resetSnapshotTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearResetSnapshot = useCallback(() => {
+    if (resetSnapshotTimerRef.current) {
+      clearTimeout(resetSnapshotTimerRef.current);
+      resetSnapshotTimerRef.current = null;
+    }
+    setResetSnapshot(null);
+  }, []);
+
+  const handleUndoReset = useCallback(() => {
+    if (!resetSnapshot) return;
+    setElementDirections(resetSnapshot);
+    clearResetSnapshot();
+  }, [resetSnapshot, clearResetSnapshot]);
+
+  useEffect(() => {
+    return () => {
+      if (resetSnapshotTimerRef.current) clearTimeout(resetSnapshotTimerRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (phase !== "breakdown" && phase !== "generate") {
+      clearResetSnapshot();
+    }
+  }, [phase, clearResetSnapshot]);
   const [hasGeneratedBefore, setHasGeneratedBefore] = useState<boolean>(() => {
     if (typeof window === "undefined") return true;
     return localStorage.getItem(ONBOARDING_DONE_KEY) === "1";
