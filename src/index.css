@@ -108,6 +108,23 @@
   .preset-dutch { animation: preset-dutch 2s ease-in-out infinite; }
 }
 
+.upload-zone-empty {
+  border: 2px dashed rgba(0, 212, 255, 0.2);
+  background: transparent;
+}
+.upload-zone-idle:hover {
+  animation: upload-border-pulse 1.5s ease-in-out infinite;
+}
+.upload-zone-dragging {
+  border: 2px solid #00D4FF !important;
+  background: rgba(0, 212, 255, 0.06) !important;
+  animation: none !important;
+}
+@keyframes upload-border-pulse {
+  0%, 100% { border-color: rgba(0, 212, 255, 0.2); }
+  50% { border-color: rgba(0, 212, 255, 0.5); }
+}
+
 .model-picker-content::-webkit-scrollbar { width: 8px; }
 .model-picker-content::-webkit-scrollbar-track { background: transparent; }
 .model-picker-content::-webkit-scrollbar-thumb {
