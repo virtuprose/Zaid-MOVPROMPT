@@ -4,7 +4,7 @@ import { trackPageVisit } from "@/lib/analytics";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { WorkflowPanel } from "@/components/WorkflowPanel";
-import { ModelPicker } from "@/components/ModelPicker";
+
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -39,7 +39,7 @@ const Index = () => {
         <div className="absolute bottom-0 right-0 w-[400px] h-[220px] sm:w-[600px] sm:h-[300px] bg-accent/5 rounded-full blur-[100px] animate-pulse-glow" style={{ animationDelay: "1.5s" }} />
       </div>
 
-      <div className="relative z-10 container max-w-5xl mx-auto px-4 py-4 sm:py-12">
+      <div className="relative z-10 container max-w-[1400px] mx-auto px-4 py-4 sm:py-12">
         <AnnouncementBanner />
         {/* Top bar */}
         <div className="flex flex-nowrap justify-end items-center gap-1 sm:gap-1.5 mb-4">
@@ -101,14 +101,12 @@ const Index = () => {
           </p>
         </motion.header>
 
-        {/* Model-First flow: pick model, then upload */}
+        {/* Model-First flow: pick model, then upload (ModelPicker now lives inside LeftPanel) */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.2 }}
-          className="space-y-4"
         >
-          <ModelPicker model={model} onModelChange={setModel} />
           <WorkflowPanel selectedModel={model} onSwitchModel={setModel} />
         </motion.div>
 

@@ -32,6 +32,7 @@ import { useLanguage } from "@/i18n/LanguageContext";
 import { getContract, deriveWorkflowType } from "@/lib/modelContracts";
 import { MODEL_GROUPS } from "@/lib/models";
 import { detectIntent } from "@/lib/sceneIntent";
+import { ModelPicker } from "./ModelPicker";
 
 type Phase = "upload" | "breakdown" | "generate";
 
@@ -386,156 +387,219 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
 
   const extrasHint = contract.extrasHintKey ? t(contract.extrasHintKey as any) : null;
 
-  return (
-    <div className="space-y-6">
-      {/* Extras hint */}
-      {extrasHint && (
-        <div className="max-w-2xl mx-auto flex items-start gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-xs text-foreground/80">
-          <Info className="w-3.5 h-3.5 text-primary mt-0.5 shrink-0" />
-          <span>{extrasHint}</span>
-        </div>
-      )}
+  // ============ Reusable JSX blocks ============
 
-      {/* Audio toggle (Veo 3.1, Seedance 2.0) */}
-      {contract.supportsAudio && (
-        <button
-          onClick={() => setAudioEnabled((v) => !v)}
-          className={`flex items-center justify-between gap-3 w-full max-w-xs mx-auto rounded-lg border px-3 py-2 transition-colors ${
-            audioEnabled
-              ? "border-primary/40 bg-primary/5 hover:bg-primary/10"
-              : "border-border bg-secondary/40 hover:bg-secondary/60"
+  const extrasHintBlock = extrasHint && (
+    <div className="flex items-start gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-xs text-foreground/80">
+      <Info className="w-3.5 h-3.5 text-primary mt-0.5 shrink-0" />
+      <span>{extrasHint}</span>
+    </div>
+  );
+
+  const audioToggleBlock = contract.supportsAudio && (
+    <button
+      onClick={() => setAudioEnabled((v) => !v)}
+      className={`flex items-center justify-between gap-3 w-full rounded-lg border px-3 py-2 transition-colors ${
+        audioEnabled
+          ? "border-primary/40 bg-primary/5 hover:bg-primary/10"
+          : "border-border bg-secondary/40 hover:bg-secondary/60"
+      }`}
+      aria-pressed={audioEnabled}
+    >
+      <span className="flex items-center gap-2 text-sm font-medium">
+        {audioEnabled ? (
+          <Volume2 className="w-4 h-4 text-primary" />
+        ) : (
+          <VolumeX className="w-4 h-4 text-muted-foreground" />
+        )}
+        {t("contract.audio.label" as any)}
+      </span>
+      <span
+        className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+          audioEnabled ? "bg-primary" : "bg-muted"
+        }`}
+      >
+        <span
+          className={`inline-block h-4 w-4 transform rounded-full bg-background transition-transform ${
+            audioEnabled ? "translate-x-4" : "translate-x-0.5"
           }`}
-          aria-pressed={audioEnabled}
-        >
-          <span className="flex items-center gap-2 text-sm font-medium">
-            {audioEnabled ? (
-              <Volume2 className="w-4 h-4 text-primary" />
-            ) : (
-              <VolumeX className="w-4 h-4 text-muted-foreground" />
-            )}
-            {t("contract.audio.label" as any)}
-          </span>
-          <span
-            className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
-              audioEnabled ? "bg-primary" : "bg-muted"
-            }`}
-          >
-            <span
-              className={`inline-block h-4 w-4 transform rounded-full bg-background transition-transform ${
-                audioEnabled ? "translate-x-4" : "translate-x-0.5"
-              }`}
-            />
-          </span>
+        />
+      </span>
+    </button>
+  );
+
+  const modeToggleBlock = (contract.supportsTwoFrameToggle || contract.supportsMultiShotToggle) && (() => {
+    const both = contract.supportsTwoFrameToggle && contract.supportsMultiShotToggle;
+    const multiLabel = contract.multiShotCount === 10
+      ? t("contract.toggle.multiShot10" as any)
+      : t("contract.toggle.multiShot3" as any);
+
+    const setMode = (mode: "single" | "twoframe" | "multishot") => {
+      setTwoFrameMode(mode === "twoframe");
+      setMultiShotMode(mode === "multishot");
+      setImages([]);
+      setResults(null);
+      setPhase("upload");
+    };
+    const currentMode: "single" | "twoframe" | "multishot" =
+      multiShotMode ? "multishot" : twoFrameMode ? "twoframe" : "single";
+
+    const widthClass = both ? "max-w-md" : "max-w-xs";
+    const btn = (active: boolean) =>
+      `flex-1 px-3 py-1.5 text-xs rounded-md font-medium transition-all ${
+        active ? "bg-card text-foreground shadow-sm ring-1 ring-primary/30" : "text-muted-foreground hover:text-foreground"
+      }`;
+
+    return (
+      <div className={`flex justify-center gap-1 rounded-lg bg-secondary/70 border border-border/60 shadow-inner p-1 ${widthClass} mx-auto`}>
+        <button onClick={() => setMode("single")} className={btn(currentMode === "single")}>
+          {contract.supportsMultiShotToggle && !contract.supportsTwoFrameToggle
+            ? t("contract.toggle.singleShot" as any)
+            : t("contract.toggle.single" as any)}
         </button>
+        {contract.supportsTwoFrameToggle && (
+          <button onClick={() => setMode("twoframe")} className={btn(currentMode === "twoframe")}>
+            {t("contract.toggle.startEnd" as any)}
+          </button>
+        )}
+        {contract.supportsMultiShotToggle && (
+          <button onClick={() => setMode("multishot")} className={btn(currentMode === "multishot")}>
+            {multiLabel}
+          </button>
+        )}
+      </div>
+    );
+  })();
+
+  const uploadBlock = !contract.supportsElementReferences ? (
+    <div className={`grid gap-4 ${activeSlots === 2 ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1"}`}>
+      {Array.from({ length: activeSlots }).map((_, i) => (
+        <ImageUploadZone
+          key={i}
+          label={slotLabels[i] || `Frame ${i + 1}`}
+          preview={images[i]?.preview || null}
+          onImageSelect={(file) => handleImageSelect(i, file)}
+          onImageRemove={() => handleImageRemove(i)}
+        />
+      ))}
+    </div>
+  ) : (
+    <ElementGrid items={elementItems} onChange={setElementItems} max={contract.maxElements ?? 10} />
+  );
+
+  const descriptionBlock = (phase === "breakdown" || phase === "generate") && (
+    contract.supportsElementReferences ? (
+      <MentionTextarea
+        value={description}
+        onChange={setDescription}
+        elements={elementItems}
+        placeholder={t("config.placeholder")}
+      />
+    ) : sceneFrames.length > 0 ? (
+      <SceneMentionTextarea
+        ref={sceneMentionRef}
+        value={description}
+        onChange={setDescription}
+        elements={flatSceneElements.map(({ index, category, description }) => ({ index, category, description }))}
+        placeholder={t("config.placeholder")}
+      />
+    ) : (
+      <ConfigPanel description={description} onDescriptionChange={setDescription} />
+    )
+  );
+
+  const ctaRowBlock = hasRequiredImages && phase === "upload" ? (
+    <div className="space-y-3 pt-6 mt-6 border-t border-white/[0.06]">
+      <p className="text-sm text-muted-foreground text-center">
+        {t("wp.analyzeDesc")}
+      </p>
+      <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 items-stretch sm:items-center sm:justify-center">
+        <Button
+          size="lg"
+          onClick={handleAnalyze}
+          disabled={isAnalyzing}
+          className="w-full sm:w-auto px-4 sm:px-8 font-display font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/25"
+        >
+          {isAnalyzing ? (
+            <><Loader2 className="w-4 h-4 me-2 animate-spin" /> {t("wp.analyzingScene")}</>
+          ) : (
+            <><ScanSearch className="w-4 h-4 me-2" /> {t("wp.analyzeScene")}</>
+          )}
+        </Button>
+        <Button
+          size="lg"
+          onClick={() => { setSceneFrames([]); setPhase("breakdown"); }}
+          disabled={isAnalyzing}
+          className="w-full sm:w-auto px-4 sm:px-8 font-display font-semibold bg-accent text-accent-foreground hover:bg-accent/90 shadow-lg shadow-accent/25"
+        >
+          <Zap className="w-4 h-4 me-2" /> {t("wp.skip")}
+        </Button>
+      </div>
+    </div>
+  ) : (phase === "breakdown" || phase === "generate") ? (
+    <div className="pt-6 mt-6 border-t border-white/[0.06] flex justify-center">
+      <Button
+        size="lg"
+        onClick={handleGenerate}
+        disabled={isLoading}
+        className="w-full sm:w-auto px-6 sm:px-8 font-display font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/25"
+      >
+        {isLoading ? (
+          <><Loader2 className="w-4 h-4 me-2 animate-spin" /> {t("wp.generatingPrompt")}</>
+        ) : results ? (
+          <><RefreshCw className="w-4 h-4 me-2" /> {t("wp.regeneratePrompt")}</>
+        ) : (
+          <><Sparkles className="w-4 h-4 me-2" /> {t("wp.generatePrompt")}</>
+        )}
+      </Button>
+    </div>
+  ) : null;
+
+  const leftPanel = (
+    <div className="space-y-6">
+      {extrasHintBlock}
+      {uploadBlock}
+      {modeToggleBlock}
+      <ModelPicker model={selectedModel} onModelChange={(v) => onSwitchModel?.(v)} />
+      {descriptionBlock}
+      {!contract.supportsElementReferences && sceneFrames.length > 0 && (phase === "breakdown" || phase === "generate") && (
+        <p className="text-xs text-muted-foreground px-1 -mt-2">
+          {t("scene.autoAssignedHint" as any)}
+        </p>
       )}
+      {audioToggleBlock}
+      {ctaRowBlock}
+    </div>
+  );
 
-      {/* Mode toggle: handles 1↔2 frame, single↔multishot, or 3-way (Single | 2 Frames | Multi-shot) */}
-      {(contract.supportsTwoFrameToggle || contract.supportsMultiShotToggle) && (() => {
-        const both = contract.supportsTwoFrameToggle && contract.supportsMultiShotToggle;
-        const multiLabel = contract.multiShotCount === 10
-          ? t("contract.toggle.multiShot10" as any)
-          : t("contract.toggle.multiShot3" as any);
-
-        const setMode = (mode: "single" | "twoframe" | "multishot") => {
-          setTwoFrameMode(mode === "twoframe");
-          setMultiShotMode(mode === "multishot");
-          setImages([]);
-          setResults(null);
+  const startOverButton = (phase === "breakdown" || phase === "generate") && (
+    <div className="flex justify-end">
+      <Button
+        size="sm"
+        variant="ghost"
+        onClick={() => {
           setPhase("upload");
-        };
-        const currentMode: "single" | "twoframe" | "multishot" =
-          multiShotMode ? "multishot" : twoFrameMode ? "twoframe" : "single";
+          setSceneFrames([]);
+          setElementDirections({});
+          setResults(null);
+        }}
+        aria-label={t("wp.startOver")}
+        title={t("wp.startOver")}
+        className="gap-1.5 px-2 sm:px-3 text-muted-foreground hover:text-foreground"
+      >
+        <RotateCcw className="w-3.5 h-3.5" /> <span className="hidden sm:inline">{t("wp.startOver")}</span>
+      </Button>
+    </div>
+  );
 
-        const widthClass = both ? "max-w-md" : "max-w-xs";
-        const btn = (active: boolean) =>
-          `flex-1 px-3 py-1.5 text-xs rounded-md font-medium transition-all ${
-            active ? "bg-card text-foreground shadow-sm ring-1 ring-primary/30" : "text-muted-foreground hover:text-foreground"
-          }`;
-
-        return (
-          <div className={`flex justify-center gap-1 rounded-lg bg-secondary/70 border border-border/60 shadow-inner p-1 ${widthClass} mx-auto`}>
-            <button onClick={() => setMode("single")} className={btn(currentMode === "single")}>
-              {contract.supportsMultiShotToggle && !contract.supportsTwoFrameToggle
-                ? t("contract.toggle.singleShot" as any)
-                : t("contract.toggle.single" as any)}
-            </button>
-            {contract.supportsTwoFrameToggle && (
-              <button onClick={() => setMode("twoframe")} className={btn(currentMode === "twoframe")}>
-                {t("contract.toggle.startEnd" as any)}
-              </button>
-            )}
-            {contract.supportsMultiShotToggle && (
-              <button onClick={() => setMode("multishot")} className={btn(currentMode === "multishot")}>
-                {multiLabel}
-              </button>
-            )}
-          </div>
-        );
-      })()}
-
-      {!contract.supportsElementReferences && (
-        <div className={`grid gap-4 ${activeSlots === 2 ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1 max-w-lg mx-auto"}`}>
-          {Array.from({ length: activeSlots }).map((_, i) => (
-            <ImageUploadZone
-              key={i}
-              label={slotLabels[i] || `Frame ${i + 1}`}
-              preview={images[i]?.preview || null}
-              onImageSelect={(file) => handleImageSelect(i, file)}
-              onImageRemove={() => handleImageRemove(i)}
-            />
-          ))}
-        </div>
-      )}
-
-      {contract.supportsElementReferences && (
-        <ElementGrid items={elementItems} onChange={setElementItems} max={contract.maxElements ?? 10} />
-      )}
-
+  const rightPanel = (
+    <div className="space-y-4">
+      {startOverButton}
 
       <AnimatePresence mode="wait">
-        {hasRequiredImages && phase === "upload" && (
-          <motion.div key="upload-phase" {...phaseTransition} className="space-y-3">
-            <p className="text-sm text-muted-foreground max-w-md mx-auto text-center">
-              {t("wp.analyzeDesc")}
-            </p>
-            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 items-stretch sm:items-center sm:justify-center">
-              <Button
-                size="lg"
-                onClick={handleAnalyze}
-                disabled={isAnalyzing}
-                className="w-full sm:w-auto px-4 sm:px-8 font-display font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/25"
-              >
-                {isAnalyzing ? (
-                  <><Loader2 className="w-4 h-4 me-2 animate-spin" /> {t("wp.analyzingScene")}</>
-                ) : (
-                  <><ScanSearch className="w-4 h-4 me-2" /> {t("wp.analyzeScene")}</>
-                )}
-              </Button>
-              <Button
-                size="lg"
-                onClick={() => { setSceneFrames([]); setPhase("breakdown"); }}
-                disabled={isAnalyzing}
-                className="w-full sm:w-auto px-4 sm:px-8 font-display font-semibold bg-accent text-accent-foreground hover:bg-accent/90 shadow-lg shadow-accent/25"
-              >
-                <Zap className="w-4 h-4 me-2" /> {t("wp.skip")}
-              </Button>
-            </div>
-          </motion.div>
-        )}
-
         {(phase === "breakdown" || phase === "generate") && sceneFrames.length > 0 && (
-          <motion.div key="breakdown-phase" {...phaseTransition} className="space-y-4">
-            <div className="flex justify-between gap-2">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => { setPhase("upload"); setSceneFrames([]); setElementDirections({}); setResults(null); }}
-                aria-label={t("wp.startOver")}
-                title={t("wp.startOver")}
-                className="gap-1.5 px-2 sm:px-3 border-white/20 text-muted-foreground hover:text-foreground hover:border-primary/50"
-              >
-                <RotateCcw className="w-3.5 h-3.5" /> <span className="hidden sm:inline">{t("wp.startOver")}</span>
-              </Button>
+          <motion.div key="breakdown-content" {...phaseTransition} className="space-y-4">
+            <div className="flex justify-end">
               <Button
                 size="sm"
                 variant="outline"
@@ -548,29 +612,6 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
                 <ScanSearch className="w-3.5 h-3.5" /> <span className="hidden sm:inline">{t("wp.reAnalyze")}</span>
               </Button>
             </div>
-
-            {contract.supportsElementReferences ? (
-              <MentionTextarea
-                value={description}
-                onChange={setDescription}
-                elements={elementItems}
-                placeholder={t("config.placeholder")}
-              />
-            ) : (
-              <SceneMentionTextarea
-                ref={sceneMentionRef}
-                value={description}
-                onChange={setDescription}
-                elements={flatSceneElements.map(({ index, category, description }) => ({ index, category, description }))}
-                placeholder={t("config.placeholder")}
-              />
-            )}
-
-            {!contract.supportsElementReferences && (
-              <p className="text-xs text-muted-foreground px-1 -mt-2">
-                {t("scene.autoAssignedHint" as any)}
-              </p>
-            )}
 
             <div className="flex items-start gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-xs text-foreground/80">
               <Info className="w-3.5 h-3.5 text-primary mt-0.5 shrink-0" />
@@ -586,67 +627,6 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
               onInsertMention={(n) => sceneMentionRef.current?.insertMention(n)}
               onManualToggle={(id) => setManualOverrides((prev) => ({ ...prev, [id]: true }))}
             />
-
-            <div className="sticky bottom-0 -mx-4 px-4 py-3 bg-background/95 backdrop-blur border-t border-border/40 pb-[calc(0.75rem+env(safe-area-inset-bottom))] flex justify-center sm:static sm:mx-0 sm:px-0 sm:py-0 sm:pb-0 sm:bg-transparent sm:backdrop-blur-none sm:border-0 z-20">
-              <Button
-                size="lg"
-                onClick={handleGenerate}
-                disabled={isLoading}
-                className="w-full sm:w-auto px-6 sm:px-8 font-display font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/25"
-              >
-                {isLoading ? (
-                  <><Loader2 className="w-4 h-4 me-2 animate-spin" /> {t("wp.generatingPrompt")}</>
-                ) : results ? (
-                  <><RefreshCw className="w-4 h-4 me-2" /> {t("wp.regeneratePrompt")}</>
-                ) : (
-                  <><Sparkles className="w-4 h-4 me-2" /> {t("wp.generatePrompt")}</>
-                )}
-              </Button>
-            </div>
-          </motion.div>
-        )}
-
-        {(phase === "breakdown" || phase === "generate") && sceneFrames.length === 0 && (
-          <motion.div key="skip-phase" {...phaseTransition} className="space-y-4">
-            <div className="flex justify-start">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => { setPhase("upload"); setResults(null); }}
-                aria-label={t("wp.startOver")}
-                title={t("wp.startOver")}
-                className="gap-1.5 px-2 sm:px-3 border-white/20 text-muted-foreground hover:text-foreground hover:border-primary/50"
-              >
-                <RotateCcw className="w-3.5 h-3.5" /> <span className="hidden sm:inline">{t("wp.startOver")}</span>
-              </Button>
-            </div>
-            {contract.supportsElementReferences ? (
-              <MentionTextarea
-                value={description}
-                onChange={setDescription}
-                elements={elementItems}
-                placeholder={t("config.placeholder")}
-              />
-            ) : (
-              <ConfigPanel description={description} onDescriptionChange={setDescription} />
-            )}
-
-            <div className="flex justify-center">
-              <Button
-                size="lg"
-                onClick={handleGenerate}
-                disabled={isLoading}
-                className="px-6 sm:px-8 font-display font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/25"
-              >
-                {isLoading ? (
-                  <><Loader2 className="w-4 h-4 me-2 animate-spin" /> {t("wp.generatingPrompt")}</>
-                ) : results ? (
-                  <><RefreshCw className="w-4 h-4 me-2" /> {t("wp.regeneratePrompt")}</>
-                ) : (
-                  <><Sparkles className="w-4 h-4 me-2" /> {t("wp.generatePrompt")}</>
-                )}
-              </Button>
-            </div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -668,6 +648,21 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
           />
         )}
       </AnimatePresence>
+
+      {!results && !isLoading && phase === "upload" && (
+        <div className="hidden lg:flex items-center justify-center min-h-[300px] rounded-lg border border-dashed border-white/[0.08] text-sm text-muted-foreground/60 px-6 text-center">
+          {t("wp.analyzeDesc")}
+        </div>
+      )}
+    </div>
+  );
+
+  return (
+    <div className="w-full max-w-[1400px] mx-auto">
+      <div className="lg:grid lg:grid-cols-[40fr_60fr] lg:gap-8 space-y-6 lg:space-y-0">
+        <div>{leftPanel}</div>
+        <div className="lg:ps-8 lg:border-s lg:border-[hsl(190_100%_50%/0.1)]">{rightPanel}</div>
+      </div>
     </div>
   );
 };
