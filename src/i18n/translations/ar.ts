@@ -168,6 +168,11 @@ export const ar: Record<TranslationKey, string> = {
   "upload.title": "أسقط أي صورة ثابتة",
   "upload.subtitle": "تعمل مع الصور والرسوم التوضيحية ولقطات الشاشة",
   "upload.release": "أفلت للرفع",
+  "loading.step1": "تحليل تكوين المشهد…",
+  "loading.step2": "تحديد الموضوع والحركة…",
+  "loading.step3": "صياغة توجيه الكاميرا…",
+  "loading.step4": "التحسين لـ {model}…",
+  "loading.step5": "كتابة برومبت سينمائي لك…",
 
   // Onboarding examples
   "onboarding.tryExample": "جرّب مثالاً ←",

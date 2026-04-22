@@ -687,7 +687,11 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
       </AnimatePresence>
 
       <AnimatePresence>
-        {isLoading && !results && <ResultsSkeleton />}
+        {isLoading && !results && (
+          <ResultsSkeleton
+            modelLabel={MODEL_GROUPS.flatMap(g => g.models).find(m => m.value === selectedModel)?.label ?? selectedModel}
+          />
+        )}
         {results && (
           <ResultsPanel
             results={results}
