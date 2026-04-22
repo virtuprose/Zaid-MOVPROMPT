@@ -90,6 +90,8 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
   const [manualOverrides, setManualOverrides] = useState<Record<string, boolean>>({});
   const [resetSnapshot, setResetSnapshot] = useState<ElementDirections | null>(null);
   const resetSnapshotTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [confirmResetOpen, setConfirmResetOpen] = useState(false);
+  const [pendingResetCount, setPendingResetCount] = useState(0);
 
   const clearResetSnapshot = useCallback(() => {
     if (resetSnapshotTimerRef.current) {
@@ -114,6 +116,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
   useEffect(() => {
     if (phase !== "breakdown" && phase !== "generate") {
       clearResetSnapshot();
+      setConfirmResetOpen(false);
     }
   }, [phase, clearResetSnapshot]);
   const [hasGeneratedBefore, setHasGeneratedBefore] = useState<boolean>(() => {
