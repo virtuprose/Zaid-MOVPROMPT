@@ -295,7 +295,7 @@ const Library = () => {
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-primary/5 rounded-full blur-[120px] animate-pulse-glow" />
       </div>
 
-      <div className="relative z-10 container max-w-3xl mx-auto px-4 py-6 sm:py-12">
+      <div className="relative z-10 container max-w-5xl mx-auto px-4 py-6 sm:py-12">
         {/* Top bar */}
         <div className="flex items-center justify-between mb-8">
           <Button variant="ghost" size="sm" onClick={() => navigate("/")} className="gap-1.5">
