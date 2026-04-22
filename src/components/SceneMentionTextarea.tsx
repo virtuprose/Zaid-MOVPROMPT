@@ -168,9 +168,9 @@ export const SceneMentionTextarea = forwardRef<SceneMentionTextareaHandle, Scene
                 if (overlayRef.current)
                   overlayRef.current.scrollTop = (e.target as HTMLTextAreaElement).scrollTop;
               }}
-              onBlur={() => {
-                triggerPosRef.current = null;
-              }}
+              onSelect={(e) => recordCaret(e.target as HTMLTextAreaElement)}
+              onKeyUp={(e) => recordCaret(e.target as HTMLTextAreaElement)}
+              onClick={(e) => recordCaret(e.target as HTMLTextAreaElement)}
               onKeyDown={(e) => {
                 if (e.key === "Escape" && open) {
                   setOpen(false);
