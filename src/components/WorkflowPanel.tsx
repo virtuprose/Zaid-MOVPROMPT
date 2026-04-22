@@ -12,7 +12,7 @@ import { ElementGrid, type ElementItem } from "./ElementGrid";
 import { MentionTextarea } from "./MentionTextarea";
 import { SceneMentionTextarea, type SceneMentionTextareaHandle } from "./SceneMentionTextarea";
 import { extractVideoKeyframes, compressImageFile } from "@/lib/videoFrames";
-import { Sparkles, Loader2, ScanSearch, RotateCcw, RefreshCw, Info, Volume2, VolumeX, Zap, Clapperboard, ArrowRight, ArrowDown } from "lucide-react";
+import { Sparkles, Loader2, ScanSearch, RotateCcw, RefreshCw, Info, Volume2, VolumeX, Zap, Clapperboard, ArrowRight, ArrowDown, Wand2 } from "lucide-react";
 import { PresetPickerPanel } from "./PresetPickerPanel";
 import {
   AlertDialog,
@@ -92,6 +92,88 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
   const resetSnapshotTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [confirmResetOpen, setConfirmResetOpen] = useState(false);
   const [pendingResetCount, setPendingResetCount] = useState(0);
+
+  // Enhance my vision (AI rewrite of Describe)
+  const [enhanceOpen, setEnhanceOpen] = useState(false);
+  const [enhanceLoading, setEnhanceLoading] = useState(false);
+  const [enhancedDraft, setEnhancedDraft] = useState<string | null>(null);
+  const [enhanceUndoSnapshot, setEnhanceUndoSnapshot] = useState<string | null>(null);
+  const enhanceUndoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearEnhanceUndo = useCallback(() => {
+    if (enhanceUndoTimerRef.current) {
+      clearTimeout(enhanceUndoTimerRef.current);
+      enhanceUndoTimerRef.current = null;
+    }
+    setEnhanceUndoSnapshot(null);
+  }, []);
+
+  const handleUndoEnhance = useCallback(() => {
+    if (enhanceUndoSnapshot === null) return;
+    setDescription(enhanceUndoSnapshot);
+    clearEnhanceUndo();
+  }, [enhanceUndoSnapshot, clearEnhanceUndo]);
+
+  useEffect(() => {
+    return () => {
+      if (enhanceUndoTimerRef.current) clearTimeout(enhanceUndoTimerRef.current);
+    };
+  }, []);
+
+  const handleEnhanceClick = useCallback(async () => {
+    if (description.trim().length < 10 || enhanceLoading) return;
+    setEnhanceLoading(true);
+    try {
+      // Build a compact scene summary if we have detected elements.
+      const sceneSummary = flatSceneElements.length > 0
+        ? flatSceneElements
+            .slice(0, 12)
+            .map((el) => `@${el.index} ${el.category}: ${el.description}`)
+            .join("; ")
+        : undefined;
+
+      const { data, error } = await supabase.functions.invoke("enhance-description", {
+        body: { description, sceneSummary },
+      });
+
+      if (error) {
+        // supabase.functions.invoke surfaces non-2xx as error; inspect status if available.
+        const status = (error as any)?.context?.status ?? (error as any)?.status;
+        if (status === 429) {
+          toast({ title: t("enhance.error.rateLimit" as any), variant: "destructive" });
+        } else if (status === 402) {
+          toast({ title: t("enhance.error.credits" as any), variant: "destructive" });
+        } else {
+          toast({ title: t("enhance.error.generic" as any), variant: "destructive" });
+        }
+        return;
+      }
+      if (data?.error || typeof data?.enhanced !== "string" || !data.enhanced.trim()) {
+        toast({ title: t("enhance.error.generic" as any), variant: "destructive" });
+        return;
+      }
+      setEnhancedDraft(data.enhanced.trim());
+      setEnhanceOpen(true);
+    } catch (err) {
+      console.error("Enhance error:", err);
+      toast({ title: t("enhance.error.generic" as any), variant: "destructive" });
+    } finally {
+      setEnhanceLoading(false);
+    }
+  }, [description, enhanceLoading, flatSceneElements, t, toast]);
+
+  const handleApplyEnhanced = useCallback(() => {
+    if (!enhancedDraft) return;
+    setEnhanceUndoSnapshot(description);
+    setDescription(enhancedDraft);
+    setEnhanceOpen(false);
+    setEnhancedDraft(null);
+    if (enhanceUndoTimerRef.current) clearTimeout(enhanceUndoTimerRef.current);
+    enhanceUndoTimerRef.current = setTimeout(() => {
+      setEnhanceUndoSnapshot(null);
+      enhanceUndoTimerRef.current = null;
+    }, 8000);
+  }, [enhancedDraft, description]);
 
   const clearResetSnapshot = useCallback(() => {
     if (resetSnapshotTimerRef.current) {
