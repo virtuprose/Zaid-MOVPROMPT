@@ -32,7 +32,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { getContract, deriveWorkflowType } from "@/lib/modelContracts";
 import { MODEL_GROUPS } from "@/lib/models";
-import { detectIntent } from "@/lib/sceneIntent";
+import { detectAllIntents } from "@/lib/sceneIntent";
 import { ModelPicker } from "./ModelPicker";
 import { OnboardingExamples, type OnboardingExample } from "./OnboardingExamples";
 
