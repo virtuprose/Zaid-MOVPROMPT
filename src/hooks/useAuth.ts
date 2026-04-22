@@ -22,6 +22,7 @@ export const useAuth = () => {
           const createdAt = new Date(u.created_at).getTime();
           const isNew = Date.now() - createdAt < 60_000; // created within last 60s
           if (isOAuth && isNew) {
+            try { localStorage.setItem("first_signup_pending", "1"); } catch {}
             const name = u.user_metadata?.full_name || u.email?.split("@")[0] || "";
             supabase.functions.invoke("send-transactional-email", {
               body: {
