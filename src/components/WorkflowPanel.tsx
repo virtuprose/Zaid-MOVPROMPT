@@ -476,13 +476,15 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
 
     const widthClass = both ? "max-w-md" : "max-w-xs";
     const btn = (active: boolean) =>
-      `flex-1 px-3 py-1.5 text-xs rounded-md font-medium transition-all ${
-        active ? "bg-card text-foreground shadow-sm ring-1 ring-primary/30" : "text-muted-foreground hover:text-foreground"
+      `flex-1 text-xs rounded-md transition-all ${
+        active
+          ? "bg-[rgba(0,212,255,0.15)] border-[1.5px] border-[#00D4FF] text-[#00D4FF] font-bold shadow-[0_0_12px_rgba(0,212,255,0.2)]"
+          : "bg-transparent border border-white/[0.12] text-[#8888AA] font-normal hover:border-white/25 hover:text-[#F0F0F5]"
       }`;
 
     return (
-      <div className={`flex justify-center gap-1 rounded-lg bg-secondary/70 border border-border/60 shadow-inner p-1 ${widthClass} mx-auto`}>
-        <button onClick={() => setMode("single")} className={btn(currentMode === "single")}>
+      <div className={`flex justify-center gap-2 ${widthClass} mx-auto`}>
+        <button onClick={() => setMode("single")} className={btn(currentMode === "single")} style={{ padding: "10px 20px" }}>
           {contract.supportsMultiShotToggle && !contract.supportsTwoFrameToggle
             ? t("contract.toggle.singleShot" as any)
             : t("contract.toggle.single" as any)}
