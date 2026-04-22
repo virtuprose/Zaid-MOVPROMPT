@@ -849,6 +849,31 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
               </motion.div>
             )}
 
+            <AlertDialog open={confirmResetOpen} onOpenChange={setConfirmResetOpen}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>{t("wp.confirmReset.title" as any)}</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    {(t("wp.confirmReset.description" as any) as string).replace("{count}", String(pendingResetCount))}
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel onClick={() => setConfirmResetOpen(false)}>
+                    {t("wp.confirmReset.cancel" as any)}
+                  </AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() => {
+                      performAutoReset();
+                      setConfirmResetOpen(false);
+                    }}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    {t("wp.confirmReset.confirm" as any)}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+
             <SceneBreakdown
               frames={sceneFrames}
               frameLabels={frameLabels}
