@@ -450,9 +450,11 @@ const Library = () => {
             <p className="text-xs text-muted-foreground/60">
               {filtered.length} {t("library.resultsCount")}
             </p>
-            {filtered.map((entry) => (
-              <HistoryCard key={entry.id} entry={entry} t={t} onDelete={handleDelete} />
-            ))}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {filtered.map((entry) => (
+                <HistoryCard key={entry.id} entry={entry} t={t} onDelete={handleDelete} />
+              ))}
+            </div>
           </motion.div>
         )}
       </div>
