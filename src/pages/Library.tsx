@@ -105,7 +105,7 @@ function HistoryCard({ entry, t, onDelete }: { entry: HistoryEntry; t: (k: strin
     .join("\n\n");
 
   return (
-    <Card className="bg-card border-border overflow-hidden h-full flex flex-col">
+    <Card className="bg-card border-border overflow-hidden flex flex-col">
       <button
         onClick={() => setExpanded(!expanded)}
         className="w-full text-start p-3 sm:p-4 flex items-start gap-3 hover:bg-secondary/30 transition-colors flex-1"
@@ -295,7 +295,7 @@ const Library = () => {
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-primary/5 rounded-full blur-[120px] animate-pulse-glow" />
       </div>
 
-      <div className="relative z-10 container max-w-5xl mx-auto px-4 py-6 sm:py-12">
+      <div className="relative z-10 container max-w-7xl mx-auto px-4 py-6 sm:py-12">
         {/* Top bar */}
         <div className="flex items-center justify-between mb-8">
           <Button variant="ghost" size="sm" onClick={() => navigate("/")} className="gap-1.5">
@@ -450,7 +450,7 @@ const Library = () => {
             <p className="text-xs text-muted-foreground/60">
               {filtered.length} {t("library.resultsCount")}
             </p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="gap-3 [column-fill:_balance] columns-1 md:columns-2 lg:columns-3 [&>*]:mb-3 [&>*]:break-inside-avoid">
               {filtered.map((entry) => (
                 <HistoryCard key={entry.id} entry={entry} t={t} onDelete={handleDelete} />
               ))}
