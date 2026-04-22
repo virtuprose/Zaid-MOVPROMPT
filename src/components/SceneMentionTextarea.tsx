@@ -216,6 +216,7 @@ export const SceneMentionTextarea = forwardRef<SceneMentionTextareaHandle, Scene
                     <button
                       key={el.index}
                       type="button"
+                      onMouseDown={(e) => e.preventDefault()}
                       onClick={() => insertMention(el.index)}
                       className="w-full flex items-start gap-2 px-2 py-1.5 rounded hover:bg-secondary text-left"
                     >
