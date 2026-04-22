@@ -144,6 +144,9 @@ export const MentionTextarea = ({ value, onChange, elements, placeholder }: Ment
               onScroll={(e) => {
                 if (overlayRef.current) overlayRef.current.scrollTop = (e.target as HTMLTextAreaElement).scrollTop;
               }}
+              onSelect={(e) => recordCaret(e.target as HTMLTextAreaElement)}
+              onKeyUp={(e) => recordCaret(e.target as HTMLTextAreaElement)}
+              onClick={(e) => recordCaret(e.target as HTMLTextAreaElement)}
               onKeyDown={(e) => {
                 if (e.key === "Escape" && open) {
                   setOpen(false);
