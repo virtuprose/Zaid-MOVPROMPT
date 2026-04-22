@@ -32,6 +32,7 @@ import { useLanguage } from "@/i18n/LanguageContext";
 import { getContract, deriveWorkflowType } from "@/lib/modelContracts";
 import { MODEL_GROUPS } from "@/lib/models";
 import { detectIntent } from "@/lib/sceneIntent";
+import { ModelPicker } from "./ModelPicker";
 
 type Phase = "upload" | "breakdown" | "generate";
 
