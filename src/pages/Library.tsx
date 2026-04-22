@@ -61,10 +61,25 @@ function CopyButton({ text, label, copiedLabel }: { text: string; label: string;
 function HistoryCard({ entry, t, onDelete }: { entry: HistoryEntry; t: (k: string) => string; onDelete: (id: string) => void }) {
   const [expanded, setExpanded] = useState(false);
   const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const [thumbUrl, setThumbUrl] = useState<string | null>(null);
   const workflowLabels = getWorkflowLabels(t);
   const wf = workflowLabels[entry.workflow_type] || workflowLabels.single;
   const results: any[] = Array.isArray(entry.results) ? entry.results : [entry.results];
-  const preview = results[0]?.mainPrompt?.slice(0, 120) || "";
+  const preview = results[0]?.mainPrompt?.slice(0, 200) || "";
+
+  // Eagerly resolve a thumbnail for the first reference image (if any).
+  useEffect(() => {
+    const firstPath = entry.image_paths?.[0];
+    if (!firstPath) return;
+    let cancelled = false;
+    supabase.storage
+      .from("generation-images")
+      .createSignedUrl(firstPath, 3600)
+      .then(({ data }) => {
+        if (!cancelled && data?.signedUrl) setThumbUrl(data.signedUrl);
+      });
+    return () => { cancelled = true; };
+  }, [entry.image_paths]);
 
   useEffect(() => {
     if (!expanded || !entry.image_paths?.length) return;
@@ -90,21 +105,44 @@ function HistoryCard({ entry, t, onDelete }: { entry: HistoryEntry; t: (k: strin
     .join("\n\n");
 
   return (
-    <Card className="bg-card border-border overflow-hidden">
+    <Card className="bg-card border-border overflow-hidden h-full flex flex-col">
       <button
         onClick={() => setExpanded(!expanded)}
-        className="w-full text-start p-4 flex items-start gap-3 hover:bg-secondary/30 transition-colors"
+        className="w-full text-start p-3 sm:p-4 flex items-start gap-3 hover:bg-secondary/30 transition-colors flex-1"
       >
-        <div className="flex-1 min-w-0 space-y-2">
-          <div className="flex items-center gap-2 flex-wrap">
-            <Badge variant="outline" className={`text-[10px] ${wf.color}`}>{wf.label}</Badge>
-            <span className="text-[11px] text-muted-foreground">{entry.target_model}</span>
+        {/* Thumbnail (64x64) */}
+        {thumbUrl ? (
+          <img
+            src={thumbUrl}
+            alt={t("library.referenceThumb" as any) || "Reference"}
+            className="w-16 h-16 rounded-lg object-cover shrink-0 border border-border"
+            loading="lazy"
+          />
+        ) : (
+          <div
+            className="w-16 h-16 rounded-lg shrink-0 flex items-center justify-center bg-secondary/40"
+            style={{ border: "1px solid rgba(0,212,255,0.2)" }}
+            aria-label="No reference image"
+          >
+            <Film className="w-5 h-5 text-primary/60" />
+          </div>
+        )}
+
+        {/* Right side: badge + preview + meta */}
+        <div className="flex-1 min-w-0 flex flex-col gap-1.5 self-stretch">
+          <div className="flex items-start justify-between gap-2">
+            <p className="text-sm text-foreground/85 line-clamp-2 leading-snug flex-1 min-w-0">
+              {preview}{preview.length >= 200 ? "…" : ""}
+            </p>
+            <Badge variant="outline" className={`text-[10px] shrink-0 ${wf.color}`}>{wf.label}</Badge>
+          </div>
+          <div className="mt-auto flex items-center gap-2 flex-wrap">
+            <span className="text-[11px] text-muted-foreground truncate">{entry.target_model}</span>
             <span className="text-[11px] text-muted-foreground/60">·</span>
             <span className="text-[11px] text-muted-foreground/60">{timeAgo(entry.created_at, t)}</span>
+            <ChevronDown className={`w-4 h-4 ms-auto shrink-0 text-muted-foreground transition-transform ${expanded ? "rotate-180" : ""}`} />
           </div>
-          <p className="text-sm text-foreground/80 line-clamp-2">{preview}{preview.length >= 120 ? "…" : ""}</p>
         </div>
-        <ChevronDown className={`w-4 h-4 mt-1 shrink-0 text-muted-foreground transition-transform ${expanded ? "rotate-180" : ""}`} />
       </button>
 
       <AnimatePresence>
