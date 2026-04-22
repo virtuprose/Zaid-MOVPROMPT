@@ -646,9 +646,13 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
             boxShadow: "0 2px 12px rgba(230, 160, 32, 0.3)",
             height: "auto",
           }}
-          className="w-full hover:brightness-110 hover:shadow-[0_4px_18px_rgba(230,160,32,0.4)] focus-visible:ring-2 focus-visible:ring-[#E6A020] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0A0A0F] transition-all"
+          className="w-full hover:brightness-110 hover:shadow-[0_4px_18px_rgba(230,160,32,0.4)] focus-visible:ring-2 focus-visible:ring-[#E6A020] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0A0A0F] transition-all disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:brightness-100"
         >
-          {t("wp.skip")} <span aria-hidden="true">→</span>
+          {isAnalyzing ? (
+            <><Loader2 className="w-5 h-5 me-2 animate-spin" aria-hidden="true" /> {t("wp.analyzingScene")}</>
+          ) : (
+            <>{t("wp.skip")} <span aria-hidden="true">→</span></>
+          )}
         </Button>
       </div>
     </div>
