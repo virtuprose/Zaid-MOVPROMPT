@@ -19,6 +19,15 @@ export const MentionTextarea = ({ value, onChange, elements, placeholder }: Ment
   // When set, picker was opened by an inline "@" trigger at this caret position.
   // Selecting a number will replace that "@" instead of inserting a new token.
   const triggerPosRef = useRef<number | null>(null);
+  const lastCaretRef = useRef<{ start: number; end: number }>({ start: 0, end: 0 });
+
+  const recordCaret = (el: HTMLTextAreaElement | null) => {
+    if (!el) return;
+    lastCaretRef.current = {
+      start: el.selectionStart ?? 0,
+      end: el.selectionEnd ?? 0,
+    };
+  };
 
   const insertMention = (n: number) => {
     const el = ref.current;
@@ -29,19 +38,19 @@ export const MentionTextarea = ({ value, onChange, elements, placeholder }: Ment
       triggerPosRef.current = null;
       return;
     }
-    const caret = el.selectionStart ?? value.length;
-    const end = el.selectionEnd ?? caret;
+    const trigger = triggerPosRef.current;
+    const fallbackStart = lastCaretRef.current.start ?? value.length;
+    const fallbackEnd = lastCaretRef.current.end ?? fallbackStart;
 
     // If opened via inline "@" trigger, replace that "@" character.
-    const trigger = triggerPosRef.current;
     let next: string;
     let newCaret: number;
     if (trigger !== null && trigger >= 0 && value[trigger] === "@") {
       next = value.slice(0, trigger) + token + value.slice(trigger + 1);
       newCaret = trigger + token.length;
     } else {
-      next = value.slice(0, caret) + token + value.slice(end);
-      newCaret = caret + token.length;
+      next = value.slice(0, fallbackStart) + token + value.slice(fallbackEnd);
+      newCaret = fallbackStart + token.length;
     }
     onChange(next);
     setOpen(false);
