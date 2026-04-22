@@ -69,6 +69,8 @@ const Auth = () => {
     if (error) {
       toast({ title: t("toast.signUpFailed"), description: error.message, variant: "destructive" });
     } else {
+      // Mark this user for the first-time welcome popup (shown once on first signed-in load).
+      try { localStorage.setItem("first_signup_pending", "1"); } catch {}
       toast({ title: t("toast.checkEmail"), description: t("toast.verificationSent") });
       if (data?.user?.email) {
         supabase.functions.invoke("send-transactional-email", {
