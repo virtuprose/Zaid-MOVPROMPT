@@ -633,14 +633,14 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
           onClick={() => { setSceneFrames([]); setPhase("breakdown"); }}
           disabled={isAnalyzing}
           style={{
-            backgroundColor: "#8B5CF6",
+            backgroundColor: "#E6A020",
             color: "#FFFFFF",
             fontFamily: "'Space Grotesk', sans-serif",
             fontWeight: 600,
             fontSize: "15px",
             padding: "14px 24px",
             borderRadius: "12px",
-            boxShadow: "0 2px 12px rgba(139, 92, 246, 0.25)",
+            boxShadow: "0 2px 12px rgba(230, 160, 32, 0.25)",
             height: "auto",
           }}
           className="w-full hover:brightness-110"
