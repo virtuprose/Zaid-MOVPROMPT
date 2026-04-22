@@ -61,7 +61,20 @@ export const ModelPicker = ({ model, onModelChange }: ModelPickerProps) => {
         >
           <SelectValue placeholder={t("config.chooseModel")} />
         </SelectTrigger>
-        <SelectContent className="max-h-[min(70vh,420px)] w-[min(22rem,calc(100vw-1.5rem))] overscroll-contain">
+        <SelectContent
+          className="model-picker-content w-[min(22rem,calc(100vw-1.5rem))] overscroll-contain"
+          style={{
+            zIndex: 1000,
+            maxHeight: 360,
+            overflowY: "auto",
+            backgroundColor: "#141420",
+            border: "1px solid rgba(0,212,255,0.2)",
+            borderRadius: 12,
+            boxShadow: "0 8px 40px rgba(0,0,0,0.8)",
+            scrollbarColor: "rgba(0,212,255,0.3) transparent",
+            scrollbarWidth: "thin",
+          }}
+        >
           <ModelRow
             value="any"
             label={t("config.anyModel")}
