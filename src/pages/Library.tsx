@@ -450,7 +450,7 @@ const Library = () => {
             <p className="text-xs text-muted-foreground/60">
               {filtered.length} {t("library.resultsCount")}
             </p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="gap-3 [column-fill:_balance] columns-1 md:columns-2 lg:columns-3 [&>*]:mb-3 [&>*]:break-inside-avoid">
               {filtered.map((entry) => (
                 <HistoryCard key={entry.id} entry={entry} t={t} onDelete={handleDelete} />
               ))}
