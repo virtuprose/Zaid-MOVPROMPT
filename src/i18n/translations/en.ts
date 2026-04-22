@@ -104,6 +104,8 @@ export const en = {
   "presets.empty": "No presets match your search.",
   "rp.empty.title": "Your cinematic prompt appears here",
   "rp.empty.subtitle": "Upload an image and click Analyze Scene or Skip & Generate to start.",
+  "upload.startFrame": "Start Frame",
+  "upload.endFrame": "End Frame",
 
   // ResultsPanel
   "results.title": "Generated Prompts",

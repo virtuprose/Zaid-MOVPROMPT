@@ -12,7 +12,7 @@ import { ElementGrid, type ElementItem } from "./ElementGrid";
 import { MentionTextarea } from "./MentionTextarea";
 import { SceneMentionTextarea, type SceneMentionTextareaHandle } from "./SceneMentionTextarea";
 import { extractVideoKeyframes, compressImageFile } from "@/lib/videoFrames";
-import { Sparkles, Loader2, ScanSearch, RotateCcw, RefreshCw, Info, Volume2, VolumeX, Zap, Clapperboard } from "lucide-react";
+import { Sparkles, Loader2, ScanSearch, RotateCcw, RefreshCw, Info, Volume2, VolumeX, Zap, Clapperboard, ArrowRight, ArrowDown } from "lucide-react";
 import { PresetPickerPanel } from "./PresetPickerPanel";
 import {
   AlertDialog,
@@ -505,17 +505,68 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
   })();
 
   const uploadBlock = !contract.supportsElementReferences ? (
-    <div className={`grid gap-4 ${activeSlots === 2 ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1"}`}>
-      {Array.from({ length: activeSlots }).map((_, i) => (
-        <ImageUploadZone
-          key={i}
-          label={slotLabels[i] || `Frame ${i + 1}`}
-          preview={images[i]?.preview || null}
-          onImageSelect={(file) => handleImageSelect(i, file)}
-          onImageRemove={() => handleImageRemove(i)}
-        />
-      ))}
-    </div>
+    activeSlots === 2 ? (
+      <div className="flex flex-col sm:flex-row sm:items-stretch gap-4 sm:gap-4">
+        {[0, 1].map((i) => (
+          <div key={i} className="flex-1 flex flex-col">
+            <span
+              className="block"
+              style={{
+                fontSize: 11,
+                color: "#00D4FF",
+                fontWeight: 700,
+                letterSpacing: "0.12em",
+                textTransform: "uppercase",
+                marginBottom: 8,
+              }}
+            >
+              {i === 0 ? t("upload.startFrame" as any) : t("upload.endFrame" as any)}
+            </span>
+            <ImageUploadZone
+              label={slotLabels[i] || `Frame ${i + 1}`}
+              preview={images[i]?.preview || null}
+              onImageSelect={(file) => handleImageSelect(i, file)}
+              onImageRemove={() => handleImageRemove(i)}
+            />
+            {i === 0 && (
+              <div
+                className="flex sm:hidden items-center justify-center"
+                style={{ marginTop: 8, marginBottom: -8 }}
+                aria-hidden="true"
+              >
+                <ArrowDown size={24} style={{ color: "#8888AA" }} />
+              </div>
+            )}
+          </div>
+        )).reduce<React.ReactNode[]>((acc, node, idx) => {
+          acc.push(node);
+          if (idx === 0) {
+            acc.push(
+              <div
+                key="arrow"
+                className="hidden sm:flex items-center justify-center self-center"
+                aria-hidden="true"
+              >
+                <ArrowRight size={24} style={{ color: "#8888AA" }} />
+              </div>
+            );
+          }
+          return acc;
+        }, [])}
+      </div>
+    ) : (
+      <div className="grid gap-4 grid-cols-1">
+        {Array.from({ length: activeSlots }).map((_, i) => (
+          <ImageUploadZone
+            key={i}
+            label={slotLabels[i] || `Frame ${i + 1}`}
+            preview={images[i]?.preview || null}
+            onImageSelect={(file) => handleImageSelect(i, file)}
+            onImageRemove={() => handleImageRemove(i)}
+          />
+        ))}
+      </div>
+    )
   ) : (
     <ElementGrid items={elementItems} onChange={setElementItems} max={contract.maxElements ?? 10} />
   );
