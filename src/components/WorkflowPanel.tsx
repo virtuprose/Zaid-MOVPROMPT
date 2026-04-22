@@ -88,6 +88,34 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
   const sceneMentionRef = useRef<SceneMentionTextareaHandle>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [manualOverrides, setManualOverrides] = useState<Record<string, boolean>>({});
+  const [resetSnapshot, setResetSnapshot] = useState<ElementDirections | null>(null);
+  const resetSnapshotTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearResetSnapshot = useCallback(() => {
+    if (resetSnapshotTimerRef.current) {
+      clearTimeout(resetSnapshotTimerRef.current);
+      resetSnapshotTimerRef.current = null;
+    }
+    setResetSnapshot(null);
+  }, []);
+
+  const handleUndoReset = useCallback(() => {
+    if (!resetSnapshot) return;
+    setElementDirections(resetSnapshot);
+    clearResetSnapshot();
+  }, [resetSnapshot, clearResetSnapshot]);
+
+  useEffect(() => {
+    return () => {
+      if (resetSnapshotTimerRef.current) clearTimeout(resetSnapshotTimerRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (phase !== "breakdown" && phase !== "generate") {
+      clearResetSnapshot();
+    }
+  }, [phase, clearResetSnapshot]);
   const [hasGeneratedBefore, setHasGeneratedBefore] = useState<boolean>(() => {
     if (typeof window === "undefined") return true;
     return localStorage.getItem(ONBOARDING_DONE_KEY) === "1";
@@ -142,10 +170,20 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
             changed = true;
           }
         }
+        if (changed) {
+          setResetSnapshot(prev);
+          if (resetSnapshotTimerRef.current) clearTimeout(resetSnapshotTimerRef.current);
+          resetSnapshotTimerRef.current = setTimeout(() => {
+            setResetSnapshot(null);
+            resetSnapshotTimerRef.current = null;
+          }, 8000);
+        }
         return changed ? next : prev;
       });
       return;
     }
+    // User typed again — invalidate any pending undo snapshot.
+    if (resetSnapshot) clearResetSnapshot();
     const timer = setTimeout(() => {
       const intents = detectAllIntents(description);
       setElementDirections((prev) => {
@@ -164,7 +202,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
       });
     }, 150);
     return () => clearTimeout(timer);
-  }, [description, flatSceneElements, manualOverrides, phase]);
+  }, [description, flatSceneElements, manualOverrides, phase, resetSnapshot, clearResetSnapshot]);
 
   const contract = useMemo(() => getContract(selectedModel), [selectedModel]);
   const [twoFrameMode, setTwoFrameMode] = useState(false);
@@ -766,6 +804,28 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
               <Info className="w-3.5 h-3.5 text-primary mt-0.5 shrink-0" />
               <span>{t("scene.reviewHint" as any)}</span>
             </div>
+
+            {resetSnapshot && (
+              <motion.div
+                initial={{ opacity: 0, y: -4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
+                className="flex items-center justify-between gap-2 rounded-md border border-border/60 bg-card/60 px-3 py-1.5 text-xs text-muted-foreground"
+              >
+                <div className="flex items-center gap-1.5">
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span>{t("wp.badgesReset" as any)}</span>
+                </div>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={handleUndoReset}
+                  className="h-6 px-2 text-xs text-foreground hover:text-primary"
+                >
+                  {t("wp.undo" as any)}
+                </Button>
+              </motion.div>
+            )}
 
             <SceneBreakdown
               frames={sceneFrames}

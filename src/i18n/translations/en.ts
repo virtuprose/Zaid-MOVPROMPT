@@ -67,6 +67,8 @@ export const en = {
   "wp.skip": "Skip & Generate Now",
   "wp.skipHint": "Faster but less control",
   "wp.startOver": "Start Over",
+  "wp.badgesReset": "Badges reset",
+  "wp.undo": "Undo",
   "wp.reAnalyze": "Re-analyze",
   "wp.generatePrompt": "Generate Cinematic Prompt",
   "wp.regeneratePrompt": "Regenerate Prompt",

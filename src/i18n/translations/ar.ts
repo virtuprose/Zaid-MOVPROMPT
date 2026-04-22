@@ -69,6 +69,8 @@ export const ar: Record<TranslationKey, string> = {
   "wp.skip": "تخطّى وأنشئ الآن",
   "wp.skipHint": "أسرع ولكن بتحكم أقل",
   "wp.startOver": "البدء من جديد",
+  "wp.badgesReset": "تمت إعادة ضبط الحالات",
+  "wp.undo": "تراجع",
   "wp.reAnalyze": "إعادة التحليل",
   "wp.generatePrompt": "توليد أمر سينمائي",
   "wp.regeneratePrompt": "إعادة توليد التوجيه",
