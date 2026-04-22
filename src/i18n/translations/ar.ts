@@ -370,6 +370,17 @@ export const ar: Record<TranslationKey, string> = {
   "welcomePopup.empty": "لم يتم إعداد نافذة ترحيب بعد",
   "welcomePopup.learnMore": "اعرف المزيد",
 
+  // First-signup onboarding
+  "onboarding.title": "مرحباً بك في MovPrompt",
+  "onboarding.subtitle": "ثلاث خطوات للوصول إلى أول برومبت سينمائي لك.",
+  "onboarding.step1.title": "اختر لقطة",
+  "onboarding.step1.desc": "ارفع أي صورة ثابتة — صورة شخصية أو لقطة شاشة أو أي شيء.",
+  "onboarding.step2.title": "دع الذكاء الاصطناعي يخرج",
+  "onboarding.step2.desc": "نحلل المشهد ونصمم برومبت بمستوى مخرج محترف.",
+  "onboarding.step3.title": "انسخ وأبدع",
+  "onboarding.step3.desc": "الصق في Kling أو Runway أو Wan أو أي أداة فيديو بالذكاء الاصطناعي.",
+  "onboarding.cta": "هيا نبدأ",
+
   // Reference media
   "references.title": "وسائط مرجعية (اختياري)",
   "references.desc": "أضف صورًا أو فيديوهات أو ملفات صوتية إضافية لتوجيه الأسلوب أو الإضاءة أو الحركة أو المزاج. سيستخدمها الذكاء الاصطناعي كإشارات فقط ولن ينسخ محتواها.",
