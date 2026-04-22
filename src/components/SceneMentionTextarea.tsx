@@ -198,6 +198,7 @@ export const SceneMentionTextarea = forwardRef<SceneMentionTextareaHandle, Scene
                 </div>
                 <button
                   type="button"
+                  onMouseDown={(e) => e.preventDefault()}
                   onClick={() => insertMention(1)}
                   className="mt-1 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors"
                 >
