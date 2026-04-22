@@ -593,21 +593,34 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
   );
 
   const ctaRowBlock = hasRequiredImages && phase === "upload" ? (
-    <div className="space-y-3 pt-6 mt-6 border-t border-white/[0.06]">
-      <p className="text-sm text-muted-foreground text-center">
+    <div className="pt-6 mt-6">
+      <p
+        className="text-center mx-auto"
+        style={{
+          fontSize: "13px",
+          color: "#8888AA",
+          maxWidth: "440px",
+          marginBottom: "20px",
+        }}
+      >
         {t("wp.analyzeDesc")}
       </p>
-      <div className="flex flex-col gap-3 items-stretch">
+      <div className="flex flex-col items-center" style={{ gap: "12px" }}>
         <Button
-          size="lg"
           onClick={handleAnalyze}
           disabled={isAnalyzing}
           style={{
-            backgroundColor: "#E6A020",
-            color: "#1a1208",
-            boxShadow: "0 0 20px rgba(230,160,32,0.3)",
+            backgroundColor: "#00D4FF",
+            color: "#0A0A0F",
+            fontFamily: "'Space Grotesk', sans-serif",
+            fontWeight: 600,
+            fontSize: "15px",
+            padding: "14px 24px",
+            borderRadius: "12px",
+            boxShadow: "0 2px 12px rgba(0, 212, 255, 0.25)",
+            height: "auto",
           }}
-          className="w-full font-display font-semibold text-base hover:brightness-110 transition-all"
+          className="w-full hover:brightness-110 hover:shadow-[0_4px_18px_rgba(0,212,255,0.35)] transition-all"
         >
           {isAnalyzing ? (
             <><Loader2 className="w-5 h-5 me-2 animate-spin" /> {t("wp.analyzingScene")}</>
@@ -615,24 +628,17 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
             <><Sparkles className="w-5 h-5 me-2" /> {t("wp.analyzeScene")}</>
           )}
         </Button>
-        <div className="flex flex-col items-center gap-1">
-          <Button
-            size="default"
-            variant="ghost"
+        <div className="text-center" style={{ fontSize: "14px", color: "#8888AA", fontFamily: "'Inter', sans-serif", fontWeight: 500 }}>
+          {t("wp.or" as any) || "or"}{" "}
+          <button
+            type="button"
             onClick={() => { setSceneFrames([]); setPhase("breakdown"); }}
             disabled={isAnalyzing}
-            style={{
-              border: "1.5px solid #00D4FF",
-              color: "#00D4FF",
-              backgroundColor: "transparent",
-            }}
-            className="w-auto px-5 font-display font-medium hover:bg-[#00D4FF]/10"
+            className="hover:underline disabled:opacity-50 bg-transparent border-0 p-0 cursor-pointer"
+            style={{ color: "#8888AA", fontSize: "14px", fontFamily: "'Inter', sans-serif", fontWeight: 500 }}
           >
-            <Zap className="w-4 h-4 me-2" /> {t("wp.skip")}
-          </Button>
-          <span className="text-slate-400" style={{ fontSize: "11px" }}>
-            {t("wp.skipHint" as any)}
-          </span>
+            {t("wp.skip")} →
+          </button>
         </div>
       </div>
     </div>
