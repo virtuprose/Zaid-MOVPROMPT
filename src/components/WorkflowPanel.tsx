@@ -352,6 +352,10 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
       setAgentName(data.agentName ?? null);
       setPhase("generate");
       trackGeneration(workflowType, selectedModel);
+      try {
+        localStorage.setItem(ONBOARDING_DONE_KEY, "1");
+        setHasGeneratedBefore(true);
+      } catch {}
 
       if (user) {
         supabase.from("prompt_history").insert({
