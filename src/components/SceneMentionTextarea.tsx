@@ -88,6 +88,7 @@ export const SceneMentionTextarea = forwardRef<SceneMentionTextareaHandle, Scene
     const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
       const next = e.target.value;
       onChange(next);
+      recordCaret(e.target);
       if (elements.length === 0) {
         triggerPosRef.current = null;
         if (open) setOpen(false);
@@ -104,9 +105,13 @@ export const SceneMentionTextarea = forwardRef<SceneMentionTextareaHandle, Scene
       if (isFreshAt && !open) {
         triggerPosRef.current = caret - 1;
         setOpen(true);
-      } else {
-        if (triggerPosRef.current !== null) triggerPosRef.current = null;
-        if (open) setOpen(false);
+      } else if (triggerPosRef.current !== null) {
+        // Only clear trigger if user destroyed the @ or typed a digit after it
+        const tp = triggerPosRef.current;
+        if (next[tp] !== "@" || /\d/.test(next[tp + 1] ?? "")) {
+          triggerPosRef.current = null;
+          if (open) setOpen(false);
+        }
       }
     };
 
