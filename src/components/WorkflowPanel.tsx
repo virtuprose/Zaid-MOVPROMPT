@@ -609,6 +609,8 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
         <Button
           onClick={handleAnalyze}
           disabled={isAnalyzing}
+          aria-label={isAnalyzing ? t("wp.analyzingScene") : t("wp.analyzeScene")}
+          aria-busy={isAnalyzing}
           style={{
             backgroundColor: "#00D4FF",
             color: "#0A0A0F",
@@ -620,32 +622,33 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
             boxShadow: "0 2px 12px rgba(0, 212, 255, 0.25)",
             height: "auto",
           }}
-          className="w-full hover:brightness-110 hover:shadow-[0_4px_18px_rgba(0,212,255,0.35)] transition-all"
+          className="w-full hover:brightness-110 hover:shadow-[0_4px_18px_rgba(0,212,255,0.35)] focus-visible:ring-2 focus-visible:ring-[#00D4FF] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0A0A0F] transition-all"
         >
           {isAnalyzing ? (
-            <><Loader2 className="w-5 h-5 me-2 animate-spin" /> {t("wp.analyzingScene")}</>
+            <><Loader2 className="w-5 h-5 me-2 animate-spin" aria-hidden="true" /> {t("wp.analyzingScene")}</>
           ) : (
-            <><Sparkles className="w-5 h-5 me-2" /> {t("wp.analyzeScene")}</>
+            <><Sparkles className="w-5 h-5 me-2" aria-hidden="true" /> {t("wp.analyzeScene")}</>
           )}
         </Button>
         <Button
           type="button"
           onClick={() => { setSceneFrames([]); setPhase("breakdown"); }}
           disabled={isAnalyzing}
+          aria-label={t("wp.skip")}
           style={{
             backgroundColor: "#E6A020",
-            color: "#FFFFFF",
+            color: "#0A0A0F",
             fontFamily: "'Space Grotesk', sans-serif",
             fontWeight: 600,
             fontSize: "15px",
             padding: "14px 24px",
             borderRadius: "12px",
-            boxShadow: "0 2px 12px rgba(230, 160, 32, 0.25)",
+            boxShadow: "0 2px 12px rgba(230, 160, 32, 0.3)",
             height: "auto",
           }}
-          className="w-full hover:brightness-110"
+          className="w-full hover:brightness-110 hover:shadow-[0_4px_18px_rgba(230,160,32,0.4)] focus-visible:ring-2 focus-visible:ring-[#E6A020] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0A0A0F] transition-all"
         >
-          {t("wp.skip")} →
+          {t("wp.skip")} <span aria-hidden="true">→</span>
         </Button>
       </div>
     </div>
