@@ -1,49 +1,44 @@
 
 
-## Confirm before auto-resetting badges on Describe clear
+## "Enhance my vision" — AI rewrite for the Describe textarea
 
-When the user empties the Describe textarea and at least one element is currently auto-assigned (not in `manualOverrides`) with a non-default state (`lock`, or `move` with a note), show a confirmation dialog before wiping the badges. Manually overridden elements are never touched, so they don't count toward the prompt.
+A button beneath the Describe textarea sends the user's draft to Lovable AI, which rewrites it into a clearer, director-grade brief. The result opens in a side-by-side diff dialog: original vs enhanced. The user clicks **Apply** to replace, or **Keep original** to dismiss. Generic cinematic style — same prompt for all target models.
 
-### Behavior
+### UX flow
 
-- User clears Describe → effect detects `description.trim() === ""`.
-- Compute "at-risk" elements: non-overridden elements whose current `elementDirections[id].action === "lock"` **or** whose `note` is non-empty.
-  - If zero at-risk → reset silently as today (no dialog, no Undo snapshot needed).
-  - If ≥1 at-risk → open an `AlertDialog` asking the user to confirm.
-- Dialog actions:
-  - **Reset badges** (destructive): performs the existing reset, captures the Undo snapshot (existing behavior), closes dialog.
-  - **Keep them** (cancel): closes dialog, leaves `elementDirections` untouched. No snapshot, no Undo row.
-- If the user types again into Describe while the dialog is open, auto-dismiss the dialog (the reset is no longer relevant).
-- The dialog only appears once per "clear event" — after the user decides, it won't re-prompt until they type something and clear again.
+1. Below the Describe textarea, render a small ghost button: `✨ Enhance my vision`.
+   - Disabled when `description.trim().length < 10` (tooltip: "Write a few words first").
+   - Shows spinner + "Enhancing…" while loading.
+2. On click → POST current `description` (and lightweight scene context) to a new edge function `enhance-description`.
+3. On success → open an `AlertDialog` showing two columns:
+   - **Your draft** (read-only, muted)
+   - **Enhanced** (read-only, primary border, slightly highlighted)
+   - Actions: `Keep original` (cancel) · `Apply enhanced` (primary).
+4. On Apply → `setDescription(enhanced)`, dialog closes, brief toast "Description enhanced — Undo" with an Undo button that restores the original (8s, mirrors existing Undo pattern).
+5. On error → toast with the error (handles 429 rate-limit and 402 credits clearly).
 
-### UI
+### Backend — new edge function
 
-Use existing `AlertDialog` from `src/components/ui/alert-dialog.tsx` (already in the project, matches dark cinematic theme). Rendered inside `WorkflowPanel`, controlled by local state.
+`supabase/functions/enhance-description/index.ts`
+- POST `{ description: string, sceneSummary?: string }`.
+- Auth: requires Supabase JWT (same pattern as `analyze-scene` / `generate-prompt`).
+- IP rate limit (in-memory, same helper style as siblings).
+- Calls Lovable AI Gateway `https://ai.gateway.lovable.dev/v1/chat/completions`, model `google/gemini-3-flash-preview`, non-streaming, `temperature` low.
+- System prompt (generic cinematic, model-agnostic):
+  > You rewrite a user's short scene description into a clear, vivid director's brief for an AI video generator. Preserve the user's intent and any `@N` mentions verbatim. Add concrete cinematic details only where the draft is vague: subject action, camera move, framing, lighting quality + direction, mood, pacing. Keep it 2–4 sentences, plain prose, no lists, no headings, no emojis. Do not invent characters, locations, or objects the user didn't imply. Output only the rewritten description text — no preamble.
+- Optional `sceneSummary` (compact list of detected elements like "@1 woman, @2 window, @3 coffee cup") is appended as user-message context so the rewrite respects the scene.
+- Returns `{ enhanced: string }`. Surfaces 429/402 with structured error body.
 
-```
-Reset element badges?
-You have N element(s) with custom Move/Lock or notes that
-weren't set manually. Clearing the description will reset them
-to default Move.
+### Frontend changes
 
-[ Keep them ]   [ Reset badges ]
-```
+**`src/components/WorkflowPanel.tsx`**
+- New state: `enhanceOpen`, `enhanceLoading`, `enhancedDraft: string | null`, `enhanceUndoSnapshot: string | null` + 8s timer ref.
+- Build a compact `sceneSummary` from `flatSceneElements` (e.g. `@1 person, @2 window…`) when calling.
+- Render the **Enhance my vision** button as a small inline row immediately under the `descriptionBlock`, aligned end (mirrors in RTL).
+- Render an `AlertDialog` with the diff layout (responsive: side-by-side ≥ md, stacked < md).
+- Apply handler: snapshot current `description`, `setDescription(enhanced)`, open Undo toast (or render the existing Undo-row pattern if you prefer consistency — reuse the same component shape used for badges Undo).
 
-### Implementation outline (`src/components/WorkflowPanel.tsx`)
-
-1. New state:
-   - `const [confirmResetOpen, setConfirmResetOpen] = useState(false);`
-   - `const [pendingResetCount, setPendingResetCount] = useState(0);`
-2. Refactor the existing empty-text branch of the auto-assign `useEffect`:
-   - Compute `atRisk = flatSceneElements.filter(el => !manualOverrides[el.id] && (elementDirections[el.id]?.action === "lock" || (elementDirections[el.id]?.note ?? "") !== ""))`.
-   - If `atRisk.length === 0` → run the existing silent reset path (with snapshot+Undo only if anything actually changed, same as today).
-   - If `atRisk.length > 0` → set `pendingResetCount = atRisk.length`, `setConfirmResetOpen(true)`, and **return early** without touching state.
-3. Extract the current reset logic into a helper `performAutoReset()` that builds `next`, sets `elementDirections`, and starts the Undo snapshot timer.
-4. Confirm handler → `performAutoReset(); setConfirmResetOpen(false);`
-5. Cancel handler → `setConfirmResetOpen(false);` (no state mutation).
-6. In the non-empty branch (top of effect), if `confirmResetOpen` is true, close it (`setConfirmResetOpen(false)`) — typing supersedes the dialog.
-7. Cleanup: close dialog on unmount and on `phase` change away from `generate`.
-8. Render `<AlertDialog open={confirmResetOpen} onOpenChange={setConfirmResetOpen}>` near the existing Undo row, with translated title/description/actions.
+**No new component file required**; the diff dialog is inline JSX inside `WorkflowPanel`.
 
 ### Translations
 
@@ -51,17 +46,25 @@ Add to `src/i18n/translations/en.ts` and `src/i18n/translations/ar.ts`:
 
 | Key | EN | AR |
 |---|---|---|
-| `wp.confirmReset.title` | `Reset element badges?` | `إعادة ضبط حالات العناصر؟` |
-| `wp.confirmReset.description` | `You have {count} element(s) with custom Move/Lock or notes that weren't set manually. Clearing the description will reset them to default Move.` | `لديك {count} عنصر/عناصر بحالات أو ملاحظات لم يتم ضبطها يدويًا. مسح الوصف سيعيدها إلى الحركة الافتراضية.` |
-| `wp.confirmReset.confirm` | `Reset badges` | `إعادة الضبط` |
-| `wp.confirmReset.cancel` | `Keep them` | `الاحتفاظ بها` |
-
-(`{count}` is interpolated with `pendingResetCount` at render time.)
+| `enhance.button` | Enhance my vision | حسّن رؤيتك |
+| `enhance.tooltip.short` | Write a few words first | اكتب بضع كلمات أولاً |
+| `enhance.loading` | Enhancing… | جارٍ التحسين… |
+| `enhance.dialog.title` | Compare your description | قارن الوصف |
+| `enhance.dialog.original` | Your draft | مسودتك |
+| `enhance.dialog.enhanced` | Enhanced | النسخة المحسّنة |
+| `enhance.apply` | Apply enhanced | تطبيق المحسّن |
+| `enhance.cancel` | Keep original | الاحتفاظ بالأصلي |
+| `enhance.applied` | Description enhanced | تم تحسين الوصف |
+| `enhance.undo` | Undo | تراجع |
+| `enhance.error.generic` | Couldn't enhance — try again | تعذّر التحسين — حاول مرة أخرى |
+| `enhance.error.rateLimit` | Too many requests — wait a moment | طلبات كثيرة — انتظر لحظة |
+| `enhance.error.credits` | AI credits exhausted | انتهت أرصدة الذكاء الاصطناعي |
 
 ### Files touched
 
-- `src/components/WorkflowPanel.tsx` — confirm dialog state, refactored reset path, `AlertDialog` JSX.
-- `src/i18n/translations/en.ts` and `src/i18n/translations/ar.ts` — four new keys.
+- **New**: `supabase/functions/enhance-description/index.ts`
+- **Edit**: `src/components/WorkflowPanel.tsx` — button, dialog, handlers, Undo
+- **Edit**: `src/i18n/translations/en.ts`, `src/i18n/translations/ar.ts` — new keys
 
-No other components, styles, or backend changes. Existing Undo flow remains intact and only fires after a confirmed reset.
+No DB schema changes. No other components touched. `LOVABLE_API_KEY` is already provisioned via Lovable Cloud — no secrets prompt needed.
 
