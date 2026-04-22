@@ -1,22 +1,24 @@
 
 
-## Align Start Over + Re-analyze in one header row
+## Auto-reset Move/Lock badges when Describe text is cleared
 
-Currently Start Over sits in its own row above the breakdown, and Re-analyze sits in another row below it. They're stacked with extra vertical space between them and look disconnected.
+When the user empties the Describe textarea (post-Analyze), every element that hasn't been manually toggled resets to the default `move` action. Manually overridden elements stay as the user left them.
 
-### Fix
+### Change
 
-In `src/components/WorkflowPanel.tsx` (around lines 709–750):
+In `src/components/WorkflowPanel.tsx`, the existing auto-assign `useEffect` that watches `description`:
 
-- Remove the standalone `startOverButton` block from the top of `rightPanel`.
-- Inside the breakdown `motion.div`, replace the single right-aligned Re-analyze row with a single flex row containing **both** buttons:
-  - `Start Over` on the leading edge (left in LTR, right in RTL — uses `justify-between`)
-  - `Re-analyze` on the trailing edge
-  - Row uses `flex items-center justify-between gap-2` so they stay on one line and align to the same baseline.
-- Keep both buttons at `size="sm"` with matching height; normalize spacing so the icon + label gap is consistent (`gap-1.5`), and both buttons sit flush with the Info hint below (single `space-y-4` rhythm in the parent — no extra wrapper margins).
-- When `phase === "generate"` but `sceneFrames.length === 0` (Start Over previously showed alone), keep a fallback: render just the Start Over button left-aligned in a thin row so the user can still reset.
+- At the top of the effect, check `description.trim() === ""`.
+- If empty: build a new `elementDirections` map where every element id whose `manualOverrides[id]` is **not** `true` is set back to `{ action: "move", note: prevNote ?? "" }`. Preserve existing notes and preserve any manually-overridden actions untouched.
+- Call `setElementDirections(next)` and `return` early so the verb-detection branch doesn't run on empty text.
+- Leave the rest of the effect (verb scanning) unchanged for the non-empty case.
 
-Visual result: one tidy header row above the scene breakdown — `[Start Over]                    [Re-analyze]` — with consistent spacing, no orphan row, and proper RTL mirroring (already handled by flex + logical sides).
+### Behavior
 
-No translations, styles, or other components change.
+- Type a sentence with "lock" / "move" verbs → badges auto-assign as today.
+- Manually click a badge to flip it → that element is marked overridden and won't be touched by auto logic.
+- Clear the textarea → all non-overridden badges snap back to `move`; overridden badges stay.
+- Scene frames, elements, notes, and references are untouched.
+
+No UI, translations, or other files change.
 
