@@ -92,7 +92,7 @@ const Index = () => {
             className="flex items-center justify-center gap-2.5 sm:gap-3 mb-3 sm:mb-4 mx-auto cursor-pointer hover:opacity-80 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-md"
           >
             <img src={logoMark} alt="MovPrompt" className="w-9 h-9 sm:w-14 sm:h-14" />
-            <h1 className="text-[26px] tracking-tight font-mono sm:text-5xl font-bold">
+            <h1 className="text-[26px] tracking-tight font-display sm:text-5xl font-bold">
               Mov<span className="text-primary">Prompt</span>
             </h1>
           </button>

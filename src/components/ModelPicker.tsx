@@ -55,7 +55,7 @@ export const ModelPicker = ({ model, onModelChange }: ModelPickerProps) => {
       <Select value={model} onValueChange={onModelChange}>
         <SelectTrigger
           className={cn(
-            "bg-secondary border-border min-h-[4rem] sm:min-h-[3.75rem] h-auto py-3 px-3.5 sm:py-2.5 text-base text-start [&>span]:line-clamp-none [&>span]:w-full transition-shadow",
+            "bg-secondary border-border min-h-[4rem] sm:min-h-[3.75rem] h-auto py-3 px-3.5 sm:py-2.5 text-base font-display text-start [&>span]:line-clamp-none [&>span]:w-full transition-shadow",
             flash && "ring-2 ring-primary/40"
           )}
         >

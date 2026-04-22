@@ -312,7 +312,7 @@ const Library = () => {
           animate={{ opacity: 1, y: 0 }}
           className="text-center mb-6"
         >
-          <h1 className="text-2xl sm:text-3xl font-bold font-mono">
+          <h1 className="text-2xl sm:text-3xl font-bold font-display">
             {t("library.title")}
           </h1>
         </motion.div>
