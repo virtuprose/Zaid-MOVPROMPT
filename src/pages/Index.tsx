@@ -4,7 +4,7 @@ import { trackPageVisit } from "@/lib/analytics";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { WorkflowPanel } from "@/components/WorkflowPanel";
-import { ModelPicker } from "@/components/ModelPicker";
+
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
