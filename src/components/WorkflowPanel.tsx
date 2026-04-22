@@ -12,7 +12,7 @@ import { ElementGrid, type ElementItem } from "./ElementGrid";
 import { MentionTextarea } from "./MentionTextarea";
 import { SceneMentionTextarea, type SceneMentionTextareaHandle } from "./SceneMentionTextarea";
 import { extractVideoKeyframes, compressImageFile } from "@/lib/videoFrames";
-import { Sparkles, Loader2, ScanSearch, RotateCcw, RefreshCw, Info, Volume2, VolumeX, Zap, Clapperboard, ArrowRight, ArrowDown, Wand2 } from "lucide-react";
+import { Sparkles, Loader2, ScanSearch, RotateCcw, RefreshCw, Info, Volume2, VolumeX, Zap, Clapperboard, ArrowRight, ArrowDown } from "lucide-react";
 import { PresetPickerPanel } from "./PresetPickerPanel";
 import {
   AlertDialog,
