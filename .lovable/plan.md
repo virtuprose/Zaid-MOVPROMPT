@@ -1,47 +1,53 @@
 
 
-## Fix `@N` mention → Move/Lock badge for all numbers
+## Add Undo for auto-reset of Move/Lock badges
 
-Today the auto-assign only flips the badge for the **first** `@N` after a verb. Saying *"lock @1 and @2 and @3"* sets only @1 to Lock; @2 and @3 stay on Move. Verbs after a long gap, or numbers mentioned without a nearby verb, also get missed. And once a badge is auto-set to Lock, removing the verb but keeping `@N` leaves it stuck on Lock.
+When the Describe textarea is cleared, all non-overridden badges snap back to `move`. Add an Undo affordance so the user can restore the previous Move/Lock state in one click.
 
-### Root causes (in `src/lib/sceneIntent.ts` and the auto-assign effect)
+### Behavior
 
-1. The segment for each `@N` stops at the next `@M`. So verbs that appear **before** a chain like `@1 @2 @3` only land on the first mention — the next mentions have no verb in their bounded window.
-2. Conjunction chains (`@1 and @2`, `@1, @2, @3`) aren't recognized as sharing the verb of the lead mention.
-3. The effect only writes when `intent` is non-null — if the user removes the verb but leaves `@N`, the previous Lock/Move sticks instead of falling back to default `move`.
+- The moment the auto-reset fires (description becomes empty and at least one badge actually changed), capture a snapshot of the **previous** `elementDirections` and show an Undo control.
+- Clicking **Undo** restores `elementDirections` to that snapshot exactly (including notes), and dismisses the Undo control.
+- The Undo control auto-dismisses after ~8 seconds, or as soon as the user types anything back into Describe (so a stale snapshot can't overwrite new intent).
+- Manual badge toggles and `manualOverrides` are unaffected — Undo only restores what the auto-reset wiped.
+- Re-clearing the textarea after typing again captures a fresh snapshot (the previous one is replaced, never stacked).
 
-### Fix
+### UI
 
-**A. Smarter intent detection (`src/lib/sceneIntent.ts`)**
-- Keep the current per-mention window scan, but also implement **chain inheritance**:
-  - Walk the text once, tokenized. When a verb (Move or Lock, with negation) is found, it "owns" the next mention `@N` within ~12 tokens.
-  - If that owned mention is followed by a connector chain (`and`, `&`, `,`, `+`, `with`, `plus`, Arabic `و`, `،`) and another `@M` with no intervening verb, `@M` inherits the same intent. Repeat across the chain until a non-connector / new verb breaks it.
-- Also support the reverse pattern *"@1, @2, @3 are locked"* — if a chain of mentions is followed (within ~6 tokens) by a verb with no other verb in between, apply that verb to all mentions in the chain.
-- Export a single helper `detectAllIntents(text, maxIndex): Record<number, "move"|"lock">` that returns intents for every `@N` in one pass. Keep `detectIntent` as a thin wrapper for back-compat (looks up in the map).
+In `src/components/WorkflowPanel.tsx`, render the Undo control as a small inline toast-style row directly above the scene breakdown (same column as the Describe textarea), only while a snapshot exists:
 
-**B. Reset stale badges (`src/components/WorkflowPanel.tsx`, the effect at lines 130–167)**
-- Replace the per-element loop with one call to `detectAllIntents(description, flatSceneElements.length)`.
-- For every non-overridden element:
-  - If the map has an entry → set that intent.
-  - If the map has **no** entry (verb removed, or `@N` never typed) → reset to default `"move"` so the badge isn't stuck on a stale Lock.
-- Keep the 150ms debounce, the `manualOverrides` skip, and the empty-text branch as-is.
+```
+[ ↶ Badges reset · Undo ]
+```
 
-**C. Smoothness**
-- Keep debounce at 150ms (already smooth).
-- Continue using the functional `setElementDirections((prev) => …)` with the `changed` short-circuit so unchanged states don't re-render and don't restart pulse animations in `SceneBreakdown`.
+- Style: `text-xs text-muted-foreground`, subtle border, `bg-card/60`, `rounded-md px-3 py-1.5`, with a ghost-styled "Undo" button on the trailing edge. Mirrors automatically in RTL via flex.
+- Uses existing `RotateCcw` icon (already imported for Start Over) — no new icons.
 
-### Verification
-- `"lock @1 @2 @3"` → all three become Lock.
-- `"@1, @2 and @3 move"` → all three become Move (reverse chain).
-- `"keep @1 still, @2 walks, @3 stays"` → @1 Lock, @2 Move, @3 Lock.
-- `"don't move @1"` → @1 Lock (negation, unchanged behavior).
-- Type `"lock @1"` → @1 Lock; delete the word `lock` (keep `@1`) → @1 returns to Move.
-- Manually flipped element stays manual regardless of text changes (unchanged).
-- Clearing the textarea still resets all non-overridden to Move (unchanged).
+### Implementation outline
+
+In `src/components/WorkflowPanel.tsx`:
+
+1. Add state: `const [resetSnapshot, setResetSnapshot] = useState<Record<string, ElementDirection> | null>(null);` and a ref for the auto-dismiss timer.
+2. In the existing empty-text branch of the auto-assign `useEffect`:
+   - Compute the candidate `next` map as today.
+   - If `changed` is true, call `setResetSnapshot(prev)` (the pre-reset map) before returning the new state.
+   - Start/refresh an 8s timer that clears the snapshot.
+3. In the non-empty branch (top of the same effect, before debounce work), if `resetSnapshot` exists, clear it and the timer — typing invalidates the undo.
+4. Render the Undo row conditionally between the Describe textarea block and the `SceneBreakdown` motion.div.
+5. Undo handler: `setElementDirections(resetSnapshot)`, then `setResetSnapshot(null)` and clear the timer.
+6. Cleanup: clear the timer on unmount and on `phase` change away from `generate`.
+
+### Translations
+
+Add two keys to both `src/i18n/translations/en.ts` and `src/i18n/translations/ar.ts`:
+
+- `wp.badgesReset` → EN: `"Badges reset"` · AR: `"تمت إعادة ضبط الحالات"`
+- `wp.undo` → EN: `"Undo"` · AR: `"تراجع"`
 
 ### Files touched
-- `src/lib/sceneIntent.ts` — add chain inheritance + reverse pattern + `detectAllIntents`.
-- `src/components/WorkflowPanel.tsx` — switch the effect to use `detectAllIntents` and reset to `move` when a mention has no intent.
 
-No UI, translations, or other components change.
+- `src/components/WorkflowPanel.tsx` — snapshot state, Undo row, handlers, timer cleanup.
+- `src/i18n/translations/en.ts` and `src/i18n/translations/ar.ts` — two new keys.
+
+No other components, styles, or backend changes.
 
