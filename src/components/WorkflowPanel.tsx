@@ -676,11 +676,13 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
       )}
       {audioToggleBlock}
       {ctaRowBlock}
+      {/* Hidden for now — will be re-enabled in a future iteration
       <PresetPickerPanel
         description={description}
         onDescriptionChange={setDescription}
         defaultOpen={false}
       />
+      */}
     </div>
   );
 
