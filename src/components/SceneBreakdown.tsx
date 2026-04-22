@@ -158,10 +158,28 @@ export const SceneBreakdown = ({ frames, frameLabels, framePreviews, directions,
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: frameIdx * 0.15 + i * 0.08 }}
-                    className={`rounded-lg border p-2.5 sm:p-3 transition-colors ${isLocked ? "border-destructive bg-destructive/5 shadow-[0_0_12px_hsl(var(--destructive)/0.35)]" : "border-primary/30 bg-primary/5"}`}
+                    className="rounded-lg p-2.5 sm:p-3 transition-colors"
+                    style={
+                      isLocked
+                        ? {
+                            border: "1.5px solid rgba(0,212,255,0.4)",
+                            background: "rgba(0,212,255,0.04)",
+                          }
+                        : {
+                            border: "1px solid rgba(255,255,255,0.08)",
+                            background: "transparent",
+                          }
+                    }
                   >
                     <div className="flex items-start gap-2 sm:gap-3">
-                      <div className={`mt-0.5 flex-shrink-0 rounded-md p-1.5 ${isLocked ? "bg-destructive/15 text-destructive shadow-[0_0_10px_hsl(var(--destructive)/0.5)]" : "bg-primary/15 text-primary"}`}>
+                      <div
+                        className="mt-0.5 flex-shrink-0 rounded-md p-1.5"
+                        style={
+                          isLocked
+                            ? { background: "rgba(0,212,255,0.15)", color: "#00D4FF" }
+                            : { background: "rgba(255,255,255,0.05)", color: "#8888AA" }
+                        }
+                      >
                         <Icon className="w-4 h-4" />
                       </div>
 
@@ -190,12 +208,18 @@ export const SceneBreakdown = ({ frames, frameLabels, framePreviews, directions,
                             <TooltipTrigger asChild>
                               <Button
                                 size="sm"
-                                variant={isLocked ? "secondary" : "ghost"}
+                                variant="ghost"
                                 onClick={() => { if (!isLocked) toggleAction(el.id); }}
                                 aria-label={t("scene.lock")}
-                                className={`h-7 px-1.5 sm:px-2 text-xs gap-1 ${isLocked ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : ""} ${isLocked && pulsing[el.id] ? "animate-pulse-glow" : ""}`}
+                                style={
+                                  isLocked
+                                    ? { backgroundColor: "#00D4FF", color: "#0A0A0F" }
+                                    : undefined
+                                }
+                                className={`h-7 px-1.5 sm:px-2 text-xs gap-1 ${isLocked ? "hover:brightness-110" : ""} ${isLocked && pulsing[el.id] ? "animate-pulse-glow" : ""}`}
                               >
-                                <Lock className="w-3 h-3" /> <span className="hidden sm:inline">{t("scene.lock")}</span>
+                                <Lock className="w-3 h-3" style={isLocked ? { color: "#ffffff" } : undefined} />
+                                <span className="hidden sm:inline">{t("scene.lock")}</span>
                               </Button>
                             </TooltipTrigger>
                             <TooltipContent side="top" className="max-w-[220px] text-xs">
@@ -206,10 +230,19 @@ export const SceneBreakdown = ({ frames, frameLabels, framePreviews, directions,
                             <TooltipTrigger asChild>
                               <Button
                                 size="sm"
-                                variant={!isLocked ? "secondary" : "ghost"}
+                                variant="ghost"
                                 onClick={() => { if (isLocked) toggleAction(el.id); }}
                                 aria-label={t("scene.move")}
-                                className={`h-7 px-1.5 sm:px-2 text-xs gap-1 ${!isLocked ? "bg-primary/20 text-primary" : ""} ${!isLocked && pulsing[el.id] ? "animate-pulse-glow" : ""}`}
+                                style={
+                                  !isLocked
+                                    ? {
+                                        border: "1px solid rgba(255,255,255,0.15)",
+                                        color: "#8888AA",
+                                        backgroundColor: "transparent",
+                                      }
+                                    : undefined
+                                }
+                                className={`h-7 px-1.5 sm:px-2 text-xs gap-1 ${!isLocked && pulsing[el.id] ? "animate-pulse-glow" : ""}`}
                               >
                                 <Play className="w-3 h-3" /> <span className="hidden sm:inline">{t("scene.move")}</span>
                               </Button>
