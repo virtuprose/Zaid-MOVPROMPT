@@ -102,6 +102,8 @@ export const en = {
   "config.anyModel": "Any Model — Universal Prompt",
   "presets.search.placeholder": "Search 118 presets…",
   "presets.empty": "No presets match your search.",
+  "rp.empty.title": "Your cinematic prompt appears here",
+  "rp.empty.subtitle": "Upload an image and click Analyze Scene or Skip & Generate to start.",
 
   // ResultsPanel
   "results.title": "Generated Prompts",

@@ -164,3 +164,9 @@
 @keyframes preset-burst { 0% { transform: scale(0.7); opacity: 0.6; } 60% { transform: scale(1.25); opacity: 1; } 100% { transform: scale(1.4); opacity: 0; } }
 @keyframes preset-disintegrate { 0%,100% { opacity: 1; filter: blur(0); } 50% { opacity: 0.4; filter: blur(2px); } }
 @keyframes preset-dutch { 0%,100% { transform: rotate(-12deg); } 50% { transform: rotate(12deg); } }
+
+@keyframes empty-border-pulse {
+  0%, 100% { border-color: rgba(0, 212, 255, 0.12); box-shadow: 0 0 0 rgba(0, 212, 255, 0); }
+  50% { border-color: rgba(0, 212, 255, 0.45); box-shadow: 0 0 24px rgba(0, 212, 255, 0.12); }
+}
+.empty-state-pulse { animation: empty-border-pulse 2s ease-in-out infinite; }

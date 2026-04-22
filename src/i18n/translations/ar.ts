@@ -104,6 +104,8 @@ export const ar: Record<TranslationKey, string> = {
   "config.anyModel": "أي نموذج — توجيه عام",
   "presets.search.placeholder": "ابحث في 118 إعدادًا مسبقًا…",
   "presets.empty": "لا توجد إعدادات مطابقة لبحثك.",
+  "rp.empty.title": "موجّهك السينمائي سيظهر هنا",
+  "rp.empty.subtitle": "ارفع صورة واضغط «تحليل المشهد» أو «تخطّي والتوليد» للبدء.",
 
   // ResultsPanel
   "results.title": "الاوامر المُولّدة",
