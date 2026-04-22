@@ -628,14 +628,14 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
             <><Sparkles className="w-5 h-5 me-2" /> {t("wp.analyzeScene")}</>
           )}
         </Button>
-        <div className="text-center" style={{ fontSize: "14px", color: "#8888AA", fontFamily: "'Inter', sans-serif", fontWeight: 500 }}>
+        <div className="text-center" style={{ fontSize: "14px", color: "#B8B8D0", fontFamily: "'Inter', sans-serif", fontWeight: 500 }}>
           or{" "}
           <button
             type="button"
             onClick={() => { setSceneFrames([]); setPhase("breakdown"); }}
             disabled={isAnalyzing}
             className="hover:underline bg-transparent border-0 p-0 cursor-pointer opacity-100"
-            style={{ color: "#8888AA", fontSize: "14px", fontFamily: "'Inter', sans-serif", fontWeight: 500 }}
+            style={{ color: "#00D4FF", fontSize: "14px", fontFamily: "'Inter', sans-serif", fontWeight: 600 }}
           >
             {t("wp.skip")} →
           </button>
