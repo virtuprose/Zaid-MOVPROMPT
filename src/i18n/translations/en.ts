@@ -166,6 +166,11 @@ export const en = {
   "upload.title": "Drop any still image",
   "upload.subtitle": "Works with photos, illustrations, screenshots, stills",
   "upload.release": "Release to upload",
+  "loading.step1": "Analyzing scene composition…",
+  "loading.step2": "Identifying subject and motion…",
+  "loading.step3": "Crafting camera direction…",
+  "loading.step4": "Optimizing for {model}…",
+  "loading.step5": "Writing your cinematic prompt…",
 
   // Onboarding examples
   "onboarding.tryExample": "Try an example →",
