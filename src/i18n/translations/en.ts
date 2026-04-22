@@ -65,6 +65,7 @@ export const en = {
   "wp.analyzeScene": "Analyze Scene",
   "wp.analyzingScene": "Analyzing Scene...",
   "wp.skip": "Skip & Generate Now",
+  "wp.skipHint": "Faster but less control",
   "wp.startOver": "Start Over",
   "wp.reAnalyze": "Re-analyze",
   "wp.generatePrompt": "Generate Cinematic Prompt",

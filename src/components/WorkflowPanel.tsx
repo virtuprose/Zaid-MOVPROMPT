@@ -543,27 +543,43 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
       <p className="text-sm text-muted-foreground text-center">
         {t("wp.analyzeDesc")}
       </p>
-      <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 items-stretch sm:items-center sm:justify-center">
+      <div className="flex flex-col gap-3 items-stretch">
         <Button
           size="lg"
           onClick={handleAnalyze}
           disabled={isAnalyzing}
-          className="w-full sm:w-auto px-4 sm:px-8 font-display font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/25"
+          style={{
+            backgroundColor: "#E6A020",
+            color: "#1a1208",
+            boxShadow: "0 0 20px rgba(230,160,32,0.3)",
+          }}
+          className="w-full font-display font-semibold text-base hover:brightness-110 transition-all"
         >
           {isAnalyzing ? (
-            <><Loader2 className="w-4 h-4 me-2 animate-spin" /> {t("wp.analyzingScene")}</>
+            <><Loader2 className="w-5 h-5 me-2 animate-spin" /> {t("wp.analyzingScene")}</>
           ) : (
-            <><ScanSearch className="w-4 h-4 me-2" /> {t("wp.analyzeScene")}</>
+            <><Sparkles className="w-5 h-5 me-2" /> {t("wp.analyzeScene")}</>
           )}
         </Button>
-        <Button
-          size="lg"
-          onClick={() => { setSceneFrames([]); setPhase("breakdown"); }}
-          disabled={isAnalyzing}
-          className="w-full sm:w-auto px-4 sm:px-8 font-display font-semibold bg-accent text-accent-foreground hover:bg-accent/90 shadow-lg shadow-accent/25"
-        >
-          <Zap className="w-4 h-4 me-2" /> {t("wp.skip")}
-        </Button>
+        <div className="flex flex-col items-center gap-1">
+          <Button
+            size="default"
+            variant="ghost"
+            onClick={() => { setSceneFrames([]); setPhase("breakdown"); }}
+            disabled={isAnalyzing}
+            style={{
+              border: "1.5px solid #00D4FF",
+              color: "#00D4FF",
+              backgroundColor: "transparent",
+            }}
+            className="w-auto px-5 font-display font-medium hover:bg-[#00D4FF]/10"
+          >
+            <Zap className="w-4 h-4 me-2" /> {t("wp.skip")}
+          </Button>
+          <span className="text-slate-400" style={{ fontSize: "11px" }}>
+            {t("wp.skipHint" as any)}
+          </span>
+        </div>
       </div>
     </div>
   ) : (phase === "breakdown" || phase === "generate") ? (
