@@ -163,6 +163,11 @@ export const en = {
   // ImageUploadZone
   "upload.dragDrop": "Drag & drop or click to upload",
 
+  // Onboarding examples
+  "onboarding.tryExample": "Try an example →",
+  "onboarding.useExample": "Use this example",
+  "onboarding.description": "Upload any still image. Get a production-ready cinematic video prompt optimized for your chosen AI model — in seconds.",
+
   // Library
   "library.title": "Prompt Library",
   "library.empty": "No prompts yet. Generate your first cinematic prompt!",
