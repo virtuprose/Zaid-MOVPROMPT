@@ -35,7 +35,7 @@ export const ImageUploadZone = ({ label, onImageSelect, onImageRemove, preview }
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
-            className="relative rounded-lg overflow-hidden border border-border bg-muted/30"
+            className="relative rounded-xl overflow-hidden border border-border bg-muted/30"
           >
             <img src={preview} alt={label} className="w-full max-h-[250px] sm:max-h-[400px] object-contain" />
             <button
@@ -57,7 +57,7 @@ export const ImageUploadZone = ({ label, onImageSelect, onImageRemove, preview }
             onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
             onDragLeave={() => setIsDragging(false)}
             onDrop={handleDrop}
-            className={`upload-zone-empty group flex flex-col items-center justify-center gap-3 p-5 sm:p-8 rounded-lg cursor-pointer transition-all duration-200 min-h-[180px] sm:aspect-video ${
+            className={`upload-zone-empty group flex flex-col items-center justify-center gap-3 p-5 sm:p-8 rounded-xl cursor-pointer transition-all duration-200 min-h-[180px] sm:aspect-video ${
               isDragging ? "upload-zone-dragging" : "upload-zone-idle"
             }`}
           >

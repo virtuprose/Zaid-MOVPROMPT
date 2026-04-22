@@ -106,6 +106,8 @@ export const ar: Record<TranslationKey, string> = {
   "presets.empty": "لا توجد إعدادات مطابقة لبحثك.",
   "rp.empty.title": "موجّهك السينمائي سيظهر هنا",
   "rp.empty.subtitle": "ارفع صورة واضغط «تحليل المشهد» أو «تخطّي والتوليد» للبدء.",
+  "upload.startFrame": "الإطار الأول",
+  "upload.endFrame": "الإطار الأخير",
 
   // ResultsPanel
   "results.title": "الاوامر المُولّدة",
