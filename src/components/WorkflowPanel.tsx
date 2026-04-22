@@ -707,7 +707,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
   );
 
   const startOverButton = (phase === "breakdown" || phase === "generate") && (
-    <div className="flex justify-end">
+    <div className="flex justify-start">
       <Button
         size="sm"
         variant="ghost"
