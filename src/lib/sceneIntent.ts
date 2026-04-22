@@ -1,5 +1,6 @@
 // Detects whether an @N mention in a description implies Move or Lock
-// based on nearby English verbs. Returns null when no intent verb is near.
+// based on nearby English (and Arabic connector) verbs. Supports chain
+// inheritance ("lock @1 and @2 and @3") and reverse patterns ("@1, @2 are locked").
 
 export const MOVE_VERBS = [
   "move", "moves", "moving", "moved",
@@ -48,69 +49,136 @@ export const LOCK_VERBS = [
 const MOVE_SET = new Set(MOVE_VERBS.map((v) => v.toLowerCase()));
 const LOCK_SET = new Set(LOCK_VERBS.map((v) => v.toLowerCase()));
 const NEGATORS = new Set(["not", "no", "dont", "doesnt", "didnt", "wont", "never", "without"]);
+// Connectors that bind mentions into a shared-intent chain.
+const CONNECTORS = new Set(["and", "&", "+", "with", "plus", "،", "و"]);
 
-// Look farther ahead (after the mention) than behind — descriptions typically
-// read "@N ... verb", and stop at the next @M so mentions don't steal each other's verbs.
-const WINDOW_BEFORE = 4;
-const WINDOW_AFTER = 12;
+const FORWARD_WINDOW = 12; // tokens after a verb that it can "own"
+const REVERSE_WINDOW = 6;  // tokens after a chain that a trailing verb can apply
+
+type Intent = "move" | "lock";
+
+interface Token {
+  raw: string;
+  plain: string;       // alpha-only lowercase
+  mention: number | null; // N for "@N", else null
+  isComma: boolean;
+}
+
+function tokenize(text: string): Token[] {
+  // Split on whitespace AND keep commas as their own tokens (they act as connectors).
+  const parts = text
+    .replace(/,/g, " , ")
+    .replace(/،/g, " ، ")
+    .split(/\s+/)
+    .filter(Boolean);
+  return parts.map((raw) => {
+    const lower = raw.toLowerCase();
+    const mentionMatch = lower.match(/^@(\d+)/);
+    return {
+      raw,
+      plain: lower.replace(/[^a-z]+/g, ""),
+      mention: mentionMatch ? parseInt(mentionMatch[1], 10) : null,
+      isComma: raw === "," || raw === "،",
+    };
+  });
+}
+
+function isNegated(tokens: Token[], verbIdx: number): boolean {
+  for (let j = Math.max(0, verbIdx - 2); j < verbIdx; j++) {
+    if (NEGATORS.has(tokens[j].plain)) return true;
+  }
+  return false;
+}
+
+function classifyVerb(tokens: Token[], i: number): Intent | null {
+  const w = tokens[i].plain;
+  if (!w) return null;
+  if (LOCK_SET.has(w)) return isNegated(tokens, i) ? "move" : "lock";
+  if (MOVE_SET.has(w)) return isNegated(tokens, i) ? "lock" : "move";
+  return null;
+}
+
+function isConnector(t: Token): boolean {
+  return t.isComma || CONNECTORS.has(t.plain) || CONNECTORS.has(t.raw.toLowerCase());
+}
 
 /**
- * Detect intent for a specific @N mention.
- * Negation within 2 words before a verb flips the intent (e.g. "not moving" → lock).
- * @param text Full description text.
- * @param mentionNumber The N in @N to locate.
- * @returns "lock" | "move" | null
+ * Detect intent for every @N mention in one pass.
+ * - Forward: a verb owns the next mention within FORWARD_WINDOW tokens.
+ *   Subsequent mentions joined by connectors (and/&/,/+/with/plus/و/،) inherit.
+ * - Reverse: a chain of mentions followed within REVERSE_WINDOW tokens by a verb
+ *   (with no other verb between) applies that verb to all chain members.
+ * Later assignments win (so explicit per-mention verbs override earlier inheritance).
  */
-export function detectIntent(text: string, mentionNumber: number): "move" | "lock" | null {
-  if (!text) return null;
-  const token = `@${mentionNumber}`;
-  const rawWords = text.split(/\s+/).filter(Boolean);
-  // For each word keep an @-prefix variant (for mention detection) and a bare alpha variant (for verb lookup)
-  const mentionForm = rawWords.map((w) => w.toLowerCase().replace(/[^a-z0-9@]+/g, ""));
-  const plainForm = rawWords.map((w) => w.toLowerCase().replace(/[^a-z]+/g, ""));
+export function detectAllIntents(text: string, _maxIndex?: number): Record<number, Intent> {
+  const result: Record<number, Intent> = {};
+  if (!text) return result;
+  const tokens = tokenize(text);
+  const n = tokens.length;
 
-  const targetIdx = mentionForm.findIndex((w) => w === token.toLowerCase());
-  if (targetIdx === -1) return null;
-
-  // Determine segment bounds — stop at the nearest other @M on either side.
-  let segStart = Math.max(0, targetIdx - WINDOW_BEFORE);
-  for (let i = targetIdx - 1; i >= segStart; i--) {
-    if (/^@\d+$/.test(mentionForm[i])) { segStart = i + 1; break; }
-  }
-  let segEnd = Math.min(rawWords.length, targetIdx + WINDOW_AFTER + 1);
-  for (let i = targetIdx + 1; i < segEnd; i++) {
-    if (/^@\d+$/.test(mentionForm[i])) { segEnd = i; break; }
-  }
-
-  const isNegated = (verbIdx: number): boolean => {
-    for (let j = Math.max(segStart, verbIdx - 2); j < verbIdx; j++) {
-      if (NEGATORS.has(plainForm[j])) return true;
+  // Pass 1: forward propagation from verbs.
+  for (let i = 0; i < n; i++) {
+    const intent = classifyVerb(tokens, i);
+    if (!intent) continue;
+    // Find first mention within FORWARD_WINDOW after this verb, stopping if another verb appears.
+    let firstMentionIdx = -1;
+    for (let j = i + 1; j < Math.min(n, i + 1 + FORWARD_WINDOW); j++) {
+      if (j !== i && classifyVerb(tokens, j)) break;
+      if (tokens[j].mention !== null) { firstMentionIdx = j; break; }
     }
-    return false;
-  };
-
-  // Collect every verb hit in the segment, then prioritize:
-  // 1) any LOCK verb, 2) negated MOVE verb, 3) MOVE verb, 4) negated LOCK verb.
-  let firstMove = -1;
-  let firstNegatedMove = -1;
-  let firstNegatedLock = -1;
-  for (let i = segStart; i < segEnd; i++) {
-    if (i === targetIdx) continue;
-    const w = plainForm[i];
-    if (!w) continue;
-    if (LOCK_SET.has(w)) {
-      if (!isNegated(i)) return "lock";
-      if (firstNegatedLock === -1) firstNegatedLock = i;
-    } else if (MOVE_SET.has(w)) {
-      if (isNegated(i)) {
-        if (firstNegatedMove === -1) firstNegatedMove = i;
-      } else if (firstMove === -1) {
-        firstMove = i;
-      }
+    if (firstMentionIdx === -1) continue;
+    result[tokens[firstMentionIdx].mention!] = intent;
+    // Continue chain: connector → mention, repeat until break.
+    let k = firstMentionIdx + 1;
+    while (k < n) {
+      // Skip connectors
+      let sawConnector = false;
+      while (k < n && isConnector(tokens[k])) { sawConnector = true; k++; }
+      if (!sawConnector) break;
+      if (k >= n) break;
+      // Next token must be a mention with no intervening verb
+      if (classifyVerb(tokens, k)) break;
+      if (tokens[k].mention === null) break;
+      result[tokens[k].mention!] = intent;
+      k++;
     }
   }
-  if (firstNegatedMove !== -1) return "lock";
-  if (firstMove !== -1) return "move";
-  if (firstNegatedLock !== -1) return "move";
-  return null;
+
+  // Pass 2: reverse pattern. For each mention, look ahead for a chain followed by a verb.
+  for (let i = 0; i < n; i++) {
+    if (tokens[i].mention === null) continue;
+    // Build chain starting at i: mention (connector mention)*
+    const chain: number[] = [tokens[i].mention!];
+    let j = i + 1;
+    while (j < n) {
+      let sawConnector = false;
+      while (j < n && isConnector(tokens[j])) { sawConnector = true; j++; }
+      if (!sawConnector) break;
+      if (j >= n || tokens[j].mention === null) break;
+      chain.push(tokens[j].mention!);
+      j++;
+    }
+    if (chain.length < 2) continue; // single mention handled by pass 1
+    // Look ahead up to REVERSE_WINDOW tokens for a verb, with no other verb between.
+    let trailingIntent: Intent | null = null;
+    for (let k = j; k < Math.min(n, j + REVERSE_WINDOW); k++) {
+      const v = classifyVerb(tokens, k);
+      if (v) { trailingIntent = v; break; }
+    }
+    if (!trailingIntent) continue;
+    for (const m of chain) {
+      // Reverse pattern only fills in mentions that pass 1 didn't already explicitly set.
+      if (result[m] === undefined) result[m] = trailingIntent;
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Back-compat: detect intent for a single @N. Uses the full-pass map.
+ */
+export function detectIntent(text: string, mentionNumber: number): Intent | null {
+  const all = detectAllIntents(text);
+  return all[mentionNumber] ?? null;
 }
