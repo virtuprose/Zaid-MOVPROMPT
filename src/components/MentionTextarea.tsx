@@ -170,6 +170,7 @@ export const MentionTextarea = ({ value, onChange, elements, placeholder }: Ment
               <button
                 key={el.id}
                 type="button"
+                onMouseDown={(e) => e.preventDefault()}
                 onClick={() => insertMention(idx + 1)}
                 className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-secondary text-left text-sm"
               >
