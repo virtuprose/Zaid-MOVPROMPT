@@ -192,7 +192,13 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
       const sceneSummary = flatSceneElements.length > 0
         ? flatSceneElements
             .slice(0, 12)
-            .map((el) => `@${el.index} ${el.category}: ${el.description}`)
+            .map((el) => {
+              const category = (el.category || "element").trim();
+              const description = (el.description || "").trim();
+              return description
+                ? `@${el.index} ${category}: ${description}`
+                : `@${el.index} ${category}`;
+            })
             .join("; ")
         : undefined;
 
