@@ -33,6 +33,9 @@ import { getContract, deriveWorkflowType } from "@/lib/modelContracts";
 import { MODEL_GROUPS } from "@/lib/models";
 import { detectIntent } from "@/lib/sceneIntent";
 import { ModelPicker } from "./ModelPicker";
+import { OnboardingExamples, type OnboardingExample } from "./OnboardingExamples";
+
+const ONBOARDING_DONE_KEY = "movprompt.firstGenerationDone";
 
 type Phase = "upload" | "breakdown" | "generate";
 
