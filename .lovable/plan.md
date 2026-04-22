@@ -1,53 +1,67 @@
 
 
-## Add Undo for auto-reset of Move/Lock badges
+## Confirm before auto-resetting badges on Describe clear
 
-When the Describe textarea is cleared, all non-overridden badges snap back to `move`. Add an Undo affordance so the user can restore the previous Move/Lock state in one click.
+When the user empties the Describe textarea and at least one element is currently auto-assigned (not in `manualOverrides`) with a non-default state (`lock`, or `move` with a note), show a confirmation dialog before wiping the badges. Manually overridden elements are never touched, so they don't count toward the prompt.
 
 ### Behavior
 
-- The moment the auto-reset fires (description becomes empty and at least one badge actually changed), capture a snapshot of the **previous** `elementDirections` and show an Undo control.
-- Clicking **Undo** restores `elementDirections` to that snapshot exactly (including notes), and dismisses the Undo control.
-- The Undo control auto-dismisses after ~8 seconds, or as soon as the user types anything back into Describe (so a stale snapshot can't overwrite new intent).
-- Manual badge toggles and `manualOverrides` are unaffected — Undo only restores what the auto-reset wiped.
-- Re-clearing the textarea after typing again captures a fresh snapshot (the previous one is replaced, never stacked).
+- User clears Describe → effect detects `description.trim() === ""`.
+- Compute "at-risk" elements: non-overridden elements whose current `elementDirections[id].action === "lock"` **or** whose `note` is non-empty.
+  - If zero at-risk → reset silently as today (no dialog, no Undo snapshot needed).
+  - If ≥1 at-risk → open an `AlertDialog` asking the user to confirm.
+- Dialog actions:
+  - **Reset badges** (destructive): performs the existing reset, captures the Undo snapshot (existing behavior), closes dialog.
+  - **Keep them** (cancel): closes dialog, leaves `elementDirections` untouched. No snapshot, no Undo row.
+- If the user types again into Describe while the dialog is open, auto-dismiss the dialog (the reset is no longer relevant).
+- The dialog only appears once per "clear event" — after the user decides, it won't re-prompt until they type something and clear again.
 
 ### UI
 
-In `src/components/WorkflowPanel.tsx`, render the Undo control as a small inline toast-style row directly above the scene breakdown (same column as the Describe textarea), only while a snapshot exists:
+Use existing `AlertDialog` from `src/components/ui/alert-dialog.tsx` (already in the project, matches dark cinematic theme). Rendered inside `WorkflowPanel`, controlled by local state.
 
 ```
-[ ↶ Badges reset · Undo ]
+Reset element badges?
+You have N element(s) with custom Move/Lock or notes that
+weren't set manually. Clearing the description will reset them
+to default Move.
+
+[ Keep them ]   [ Reset badges ]
 ```
 
-- Style: `text-xs text-muted-foreground`, subtle border, `bg-card/60`, `rounded-md px-3 py-1.5`, with a ghost-styled "Undo" button on the trailing edge. Mirrors automatically in RTL via flex.
-- Uses existing `RotateCcw` icon (already imported for Start Over) — no new icons.
+### Implementation outline (`src/components/WorkflowPanel.tsx`)
 
-### Implementation outline
-
-In `src/components/WorkflowPanel.tsx`:
-
-1. Add state: `const [resetSnapshot, setResetSnapshot] = useState<Record<string, ElementDirection> | null>(null);` and a ref for the auto-dismiss timer.
-2. In the existing empty-text branch of the auto-assign `useEffect`:
-   - Compute the candidate `next` map as today.
-   - If `changed` is true, call `setResetSnapshot(prev)` (the pre-reset map) before returning the new state.
-   - Start/refresh an 8s timer that clears the snapshot.
-3. In the non-empty branch (top of the same effect, before debounce work), if `resetSnapshot` exists, clear it and the timer — typing invalidates the undo.
-4. Render the Undo row conditionally between the Describe textarea block and the `SceneBreakdown` motion.div.
-5. Undo handler: `setElementDirections(resetSnapshot)`, then `setResetSnapshot(null)` and clear the timer.
-6. Cleanup: clear the timer on unmount and on `phase` change away from `generate`.
+1. New state:
+   - `const [confirmResetOpen, setConfirmResetOpen] = useState(false);`
+   - `const [pendingResetCount, setPendingResetCount] = useState(0);`
+2. Refactor the existing empty-text branch of the auto-assign `useEffect`:
+   - Compute `atRisk = flatSceneElements.filter(el => !manualOverrides[el.id] && (elementDirections[el.id]?.action === "lock" || (elementDirections[el.id]?.note ?? "") !== ""))`.
+   - If `atRisk.length === 0` → run the existing silent reset path (with snapshot+Undo only if anything actually changed, same as today).
+   - If `atRisk.length > 0` → set `pendingResetCount = atRisk.length`, `setConfirmResetOpen(true)`, and **return early** without touching state.
+3. Extract the current reset logic into a helper `performAutoReset()` that builds `next`, sets `elementDirections`, and starts the Undo snapshot timer.
+4. Confirm handler → `performAutoReset(); setConfirmResetOpen(false);`
+5. Cancel handler → `setConfirmResetOpen(false);` (no state mutation).
+6. In the non-empty branch (top of effect), if `confirmResetOpen` is true, close it (`setConfirmResetOpen(false)`) — typing supersedes the dialog.
+7. Cleanup: close dialog on unmount and on `phase` change away from `generate`.
+8. Render `<AlertDialog open={confirmResetOpen} onOpenChange={setConfirmResetOpen}>` near the existing Undo row, with translated title/description/actions.
 
 ### Translations
 
-Add two keys to both `src/i18n/translations/en.ts` and `src/i18n/translations/ar.ts`:
+Add to `src/i18n/translations/en.ts` and `src/i18n/translations/ar.ts`:
 
-- `wp.badgesReset` → EN: `"Badges reset"` · AR: `"تمت إعادة ضبط الحالات"`
-- `wp.undo` → EN: `"Undo"` · AR: `"تراجع"`
+| Key | EN | AR |
+|---|---|---|
+| `wp.confirmReset.title` | `Reset element badges?` | `إعادة ضبط حالات العناصر؟` |
+| `wp.confirmReset.description` | `You have {count} element(s) with custom Move/Lock or notes that weren't set manually. Clearing the description will reset them to default Move.` | `لديك {count} عنصر/عناصر بحالات أو ملاحظات لم يتم ضبطها يدويًا. مسح الوصف سيعيدها إلى الحركة الافتراضية.` |
+| `wp.confirmReset.confirm` | `Reset badges` | `إعادة الضبط` |
+| `wp.confirmReset.cancel` | `Keep them` | `الاحتفاظ بها` |
+
+(`{count}` is interpolated with `pendingResetCount` at render time.)
 
 ### Files touched
 
-- `src/components/WorkflowPanel.tsx` — snapshot state, Undo row, handlers, timer cleanup.
-- `src/i18n/translations/en.ts` and `src/i18n/translations/ar.ts` — two new keys.
+- `src/components/WorkflowPanel.tsx` — confirm dialog state, refactored reset path, `AlertDialog` JSX.
+- `src/i18n/translations/en.ts` and `src/i18n/translations/ar.ts` — four new keys.
 
-No other components, styles, or backend changes.
+No other components, styles, or backend changes. Existing Undo flow remains intact and only fires after a confirmed reset.
 
