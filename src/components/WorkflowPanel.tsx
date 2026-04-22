@@ -791,12 +791,6 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
         </div>
       )}
 
-      {/* Preset motion picker — collapsible, lives in the right column */}
-      <PresetPickerPanel
-        description={description}
-        onDescriptionChange={setDescription}
-        defaultOpen={false}
-      />
     </div>
   );
 
