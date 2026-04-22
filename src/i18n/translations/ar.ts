@@ -165,6 +165,11 @@ export const ar: Record<TranslationKey, string> = {
   // ImageUploadZone
   "upload.dragDrop": "بانتظارك! ارفع الصورة الآن، وسأقوم فوراً بتحليل",
 
+  // Onboarding examples
+  "onboarding.tryExample": "جرّب مثالاً ←",
+  "onboarding.useExample": "استخدم هذا المثال",
+  "onboarding.description": "ارفع أي صورة ثابتة. واحصل على برومبت فيديو سينمائي جاهز للإنتاج، مُحسَّن لنموذج الذكاء الاصطناعي الذي تختاره — في ثوانٍ.",
+
   // Library
   "library.title": "مكتبة الأوامر",
   "library.empty": "لا توجد اوامر بعد. أنشئ أول امر سينمائي!",

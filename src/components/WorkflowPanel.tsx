@@ -33,6 +33,9 @@ import { getContract, deriveWorkflowType } from "@/lib/modelContracts";
 import { MODEL_GROUPS } from "@/lib/models";
 import { detectIntent } from "@/lib/sceneIntent";
 import { ModelPicker } from "./ModelPicker";
+import { OnboardingExamples, type OnboardingExample } from "./OnboardingExamples";
+
+const ONBOARDING_DONE_KEY = "movprompt.firstGenerationDone";
 
 type Phase = "upload" | "breakdown" | "generate";
 
@@ -84,6 +87,29 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
   const sceneMentionRef = useRef<SceneMentionTextareaHandle>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [manualOverrides, setManualOverrides] = useState<Record<string, boolean>>({});
+  const [hasGeneratedBefore, setHasGeneratedBefore] = useState<boolean>(() => {
+    if (typeof window === "undefined") return true;
+    return localStorage.getItem(ONBOARDING_DONE_KEY) === "1";
+  });
+
+  const handlePickExample = useCallback(async (example: OnboardingExample) => {
+    try {
+      const res = await fetch(example.src);
+      const blob = await res.blob();
+      const file = new File([blob], `${example.alt.replace(/\s+/g, "-").toLowerCase()}.jpg`, { type: blob.type || "image/jpeg" });
+      // Reset modes to match the example's intended workflow
+      setMultiShotMode(example.workflow === "multishot");
+      setTwoFrameMode(example.workflow === "twoframe");
+      const preview = URL.createObjectURL(file);
+      setImages([{ file, preview }]);
+      setResults(null);
+      setPhase("upload");
+      setSceneFrames([]);
+      setElementDirections({});
+    } catch (e) {
+      console.error("Failed to load example image", e);
+    }
+  }, []);
 
   // Flatten scene frames into a single 1-based indexed list (left-to-right, frame-by-frame).
   const flatSceneElements = useMemo(() => {
@@ -326,6 +352,10 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
       setAgentName(data.agentName ?? null);
       setPhase("generate");
       trackGeneration(workflowType, selectedModel);
+      try {
+        localStorage.setItem(ONBOARDING_DONE_KEY, "1");
+        setHasGeneratedBefore(true);
+      } catch {}
 
       if (user) {
         supabase.from("prompt_history").insert({
@@ -555,9 +585,16 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
     </div>
   ) : null;
 
+  const showOnboarding =
+    !hasGeneratedBefore &&
+    phase === "upload" &&
+    !contract.supportsElementReferences &&
+    images.filter(Boolean).length === 0;
+
   const leftPanel = (
     <div className="space-y-6">
       {extrasHintBlock}
+      {showOnboarding && <OnboardingExamples onPick={handlePickExample} />}
       {uploadBlock}
       {modeToggleBlock}
       <ModelPicker model={selectedModel} onModelChange={(v) => onSwitchModel?.(v)} />
