@@ -85,6 +85,21 @@ export const en = {
   "wp.somethingWrong": "Something went wrong.",
   "wp.somethingWrongRetry": "Something went wrong. Please try again.",
 
+  // Enhance my vision (AI rewrite of Describe)
+  "enhance.button": "Enhance my vision",
+  "enhance.tooltip.short": "Write a few words first",
+  "enhance.loading": "Enhancing…",
+  "enhance.dialog.title": "Compare your description",
+  "enhance.dialog.original": "Your draft",
+  "enhance.dialog.enhanced": "Enhanced",
+  "enhance.apply": "Apply enhanced",
+  "enhance.cancel": "Keep original",
+  "enhance.applied": "Description enhanced",
+  "enhance.undo": "Undo",
+  "enhance.error.generic": "Couldn't enhance — try again",
+  "enhance.error.rateLimit": "Too many requests — wait a moment",
+  "enhance.error.credits": "AI credits exhausted",
+
   // Frame labels
   "frame.start": "Start Frame",
   "frame.end": "End Frame",
