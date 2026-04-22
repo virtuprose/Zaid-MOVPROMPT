@@ -368,6 +368,17 @@ export const en = {
   "welcomePopup.empty": "No welcome popups configured",
   "welcomePopup.learnMore": "Learn More",
 
+  // First-signup onboarding
+  "onboarding.title": "Welcome to MovPrompt",
+  "onboarding.subtitle": "Three steps to your first cinematic prompt.",
+  "onboarding.step1.title": "Drop a frame",
+  "onboarding.step1.desc": "Upload any still image — a photo, a screenshot, anything.",
+  "onboarding.step2.title": "Let AI direct",
+  "onboarding.step2.desc": "We break down the scene and craft a director-grade prompt.",
+  "onboarding.step3.title": "Copy & create",
+  "onboarding.step3.desc": "Paste into Kling, Runway, Wan, or any AI video tool.",
+  "onboarding.cta": "Let's go",
+
   // Reference media
   "references.title": "Reference media (optional)",
   "references.desc": "Attach extra images, videos or audio to guide style, lighting, motion or mood. The AI uses these only as cues — it won't copy their content.",
