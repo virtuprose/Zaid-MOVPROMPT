@@ -43,6 +43,15 @@ export const SceneMentionTextarea = forwardRef<SceneMentionTextareaHandle, Scene
     const overlayRef = useRef<HTMLDivElement>(null);
     const [open, setOpen] = useState(false);
     const triggerPosRef = useRef<number | null>(null);
+    const lastCaretRef = useRef<{ start: number; end: number }>({ start: 0, end: 0 });
+
+    const recordCaret = (el: HTMLTextAreaElement | null) => {
+      if (!el) return;
+      lastCaretRef.current = {
+        start: el.selectionStart ?? 0,
+        end: el.selectionEnd ?? 0,
+      };
+    };
 
     const insertMention = (n: number) => {
       const el = ref.current;
@@ -53,17 +62,17 @@ export const SceneMentionTextarea = forwardRef<SceneMentionTextareaHandle, Scene
         triggerPosRef.current = null;
         return;
       }
-      const caret = el.selectionStart ?? value.length;
-      const end = el.selectionEnd ?? caret;
       const trigger = triggerPosRef.current;
+      const fallbackStart = lastCaretRef.current.start ?? value.length;
+      const fallbackEnd = lastCaretRef.current.end ?? fallbackStart;
       let next: string;
       let newCaret: number;
       if (trigger !== null && trigger >= 0 && value[trigger] === "@") {
         next = value.slice(0, trigger) + token + value.slice(trigger + 1);
         newCaret = trigger + token.length;
       } else {
-        next = value.slice(0, caret) + token + value.slice(end);
-        newCaret = caret + token.length;
+        next = value.slice(0, fallbackStart) + token + value.slice(fallbackEnd);
+        newCaret = fallbackStart + token.length;
       }
       onChange(next);
       setOpen(false);
@@ -79,6 +88,7 @@ export const SceneMentionTextarea = forwardRef<SceneMentionTextareaHandle, Scene
     const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
       const next = e.target.value;
       onChange(next);
+      recordCaret(e.target);
       if (elements.length === 0) {
         triggerPosRef.current = null;
         if (open) setOpen(false);
@@ -95,9 +105,13 @@ export const SceneMentionTextarea = forwardRef<SceneMentionTextareaHandle, Scene
       if (isFreshAt && !open) {
         triggerPosRef.current = caret - 1;
         setOpen(true);
-      } else {
-        if (triggerPosRef.current !== null) triggerPosRef.current = null;
-        if (open) setOpen(false);
+      } else if (triggerPosRef.current !== null) {
+        // Only clear trigger if user destroyed the @ or typed a digit after it
+        const tp = triggerPosRef.current;
+        if (next[tp] !== "@" || /\d/.test(next[tp + 1] ?? "")) {
+          triggerPosRef.current = null;
+          if (open) setOpen(false);
+        }
       }
     };
 
@@ -154,9 +168,9 @@ export const SceneMentionTextarea = forwardRef<SceneMentionTextareaHandle, Scene
                 if (overlayRef.current)
                   overlayRef.current.scrollTop = (e.target as HTMLTextAreaElement).scrollTop;
               }}
-              onBlur={() => {
-                triggerPosRef.current = null;
-              }}
+              onSelect={(e) => recordCaret(e.target as HTMLTextAreaElement)}
+              onKeyUp={(e) => recordCaret(e.target as HTMLTextAreaElement)}
+              onClick={(e) => recordCaret(e.target as HTMLTextAreaElement)}
               onKeyDown={(e) => {
                 if (e.key === "Escape" && open) {
                   setOpen(false);
@@ -184,6 +198,7 @@ export const SceneMentionTextarea = forwardRef<SceneMentionTextareaHandle, Scene
                 </div>
                 <button
                   type="button"
+                  onMouseDown={(e) => e.preventDefault()}
                   onClick={() => insertMention(1)}
                   className="mt-1 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors"
                 >
@@ -201,6 +216,7 @@ export const SceneMentionTextarea = forwardRef<SceneMentionTextareaHandle, Scene
                     <button
                       key={el.index}
                       type="button"
+                      onMouseDown={(e) => e.preventDefault()}
                       onClick={() => insertMention(el.index)}
                       className="w-full flex items-start gap-2 px-2 py-1.5 rounded hover:bg-secondary text-left"
                     >
