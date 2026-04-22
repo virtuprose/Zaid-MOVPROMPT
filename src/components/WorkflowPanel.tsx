@@ -644,17 +644,17 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
     const currentMode: "single" | "twoframe" | "multishot" =
       multiShotMode ? "multishot" : twoFrameMode ? "twoframe" : "single";
 
-    const widthClass = both ? "max-w-md" : "max-w-xs";
+    const widthClass = both ? "sm:max-w-md" : "sm:max-w-xs";
     const btn = (active: boolean) =>
-      `flex-1 text-xs rounded-md transition-all ${
+      `flex-1 min-w-0 basis-[140px] sm:basis-0 px-3 py-2 sm:px-5 sm:py-2.5 text-xs whitespace-normal break-words leading-tight rounded-md transition-all ${
         active
           ? "bg-[rgba(0,212,255,0.15)] border-[1.5px] border-[#00D4FF] text-[#00D4FF] font-bold shadow-[0_0_12px_rgba(0,212,255,0.2)]"
           : "bg-transparent border border-white/[0.12] text-[#8888AA] font-normal hover:border-white/25 hover:text-[#F0F0F5]"
       }`;
 
     return (
-      <div className={`flex justify-center gap-2 ${widthClass} mx-auto`}>
-        <button onClick={() => setMode("single")} className={btn(currentMode === "single")} style={{ padding: "10px 20px" }}>
+      <div className={`flex flex-wrap justify-center gap-2 ${widthClass} mx-auto`}>
+        <button onClick={() => setMode("single")} className={btn(currentMode === "single")}>
           {contract.supportsMultiShotToggle && !contract.supportsTwoFrameToggle
             ? t("contract.toggle.singleShot" as any)
             : t("contract.toggle.single" as any)}
