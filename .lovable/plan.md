@@ -1,31 +1,26 @@
 
 
-## Move presets next to "Describe Your Vision"
+## Move presets below the Analyze Scene CTA
 
-Currently the preset motion grid (Pan, Tilt, Zoom, etc.) lives in the **right column** below the empty state / generated prompts card. You want it moved to sit **with** the "Describe Your Vision" textarea in the **left column**, so users see the description input and the preset chips together as one unified vision-building block.
+Move the **Augment with Presets** collapsible from its current position (right after the "Describe Your Vision" textarea) to sit **below the Analyze / Skip CTA buttons** at the bottom of the left column.
 
 ### Changes
 
-1. **`src/components/WorkflowPanel.tsx`**
-   - Remove `<PresetPickerPanel />` from the right-column card container.
-   - Render `<PresetPickerPanel />` in the left column, immediately after `<ConfigPanel />` (the "Describe Your Vision" block), so they appear stacked together.
-   - Keep the right column focused on the empty state / generated prompts only.
-
-2. **`src/components/PresetPickerPanel.tsx`**
-   - Keep `defaultOpen={false}` so it stays collapsed by default and doesn't overwhelm the left column.
-   - No structural changes — it already toggles tokens into the same `description` string used by `ConfigPanel`, so the two will stay in sync automatically.
+**`src/components/WorkflowPanel.tsx`**
+- Remove `<PresetPickerPanel />` from its current spot directly after `{descriptionBlock}`.
+- Re-render `<PresetPickerPanel />` after the Analyze Scene / Skip & Generate CTA block in the left column.
 
 ### Resulting left column order
 1. Upload zone
 2. Workflow tabs
 3. Model picker
 4. Describe Your Vision (textarea)
-5. **Augment with Presets (collapsible)** ← moved here
-6. Audio toggle
-7. Analyze / Skip CTAs
+5. Audio toggle
+6. Analyze Scene / Skip & Generate CTAs
+7. **Augment with Presets (collapsible)** ← moved here
 
-### Resulting right column
-- Just the unified card with the empty state, or later the Generated Prompts / Scene Elements.
+### Right column
+- Unchanged — empty state / generated prompts only.
 
-No new files, no translation changes, no styling changes — purely a placement move.
+No new files, no styling changes, no translation changes — purely a placement move.
 
