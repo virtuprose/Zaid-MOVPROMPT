@@ -585,9 +585,16 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
     </div>
   ) : null;
 
+  const showOnboarding =
+    !hasGeneratedBefore &&
+    phase === "upload" &&
+    !contract.supportsElementReferences &&
+    images.filter(Boolean).length === 0;
+
   const leftPanel = (
     <div className="space-y-6">
       {extrasHintBlock}
+      {showOnboarding && <OnboardingExamples onPick={handlePickExample} />}
       {uploadBlock}
       {modeToggleBlock}
       <ModelPicker model={selectedModel} onModelChange={(v) => onSwitchModel?.(v)} />
