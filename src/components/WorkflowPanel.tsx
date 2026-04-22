@@ -805,6 +805,28 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
               <span>{t("scene.reviewHint" as any)}</span>
             </div>
 
+            {resetSnapshot && (
+              <motion.div
+                initial={{ opacity: 0, y: -4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
+                className="flex items-center justify-between gap-2 rounded-md border border-border/60 bg-card/60 px-3 py-1.5 text-xs text-muted-foreground"
+              >
+                <div className="flex items-center gap-1.5">
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span>{t("wp.badgesReset" as any)}</span>
+                </div>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={handleUndoReset}
+                  className="h-6 px-2 text-xs text-foreground hover:text-primary"
+                >
+                  {t("wp.undo" as any)}
+                </Button>
+              </motion.div>
+            )}
+
             <SceneBreakdown
               frames={sceneFrames}
               frameLabels={frameLabels}
