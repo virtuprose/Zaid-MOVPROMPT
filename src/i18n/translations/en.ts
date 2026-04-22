@@ -163,6 +163,9 @@ export const en = {
 
   // ImageUploadZone
   "upload.dragDrop": "Drag & drop or click to upload",
+  "upload.title": "Drop any still image",
+  "upload.subtitle": "Works with photos, illustrations, screenshots, stills",
+  "upload.release": "Release to upload",
 
   // Onboarding examples
   "onboarding.tryExample": "Try an example →",

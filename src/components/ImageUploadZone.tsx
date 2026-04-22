@@ -57,19 +57,31 @@ export const ImageUploadZone = ({ label, onImageSelect, onImageRemove, preview }
             onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
             onDragLeave={() => setIsDragging(false)}
             onDrop={handleDrop}
-            className={`flex flex-col items-center justify-center gap-2 sm:gap-3 p-5 sm:p-8 rounded-lg border-2 border-dashed cursor-pointer transition-all duration-300 min-h-[180px] sm:aspect-video ${
-              isDragging
-                ? "border-primary bg-primary/10"
-                : "border-border hover:border-primary/50 hover:bg-secondary/50"
+            className={`upload-zone-empty group flex flex-col items-center justify-center gap-3 p-5 sm:p-8 rounded-lg cursor-pointer transition-all duration-200 min-h-[180px] sm:aspect-video ${
+              isDragging ? "upload-zone-dragging" : "upload-zone-idle"
             }`}
           >
             <input type="file" accept="image/*" onChange={handleFileInput} className="hidden" />
-            <div className="p-3 rounded-full bg-secondary">
-              {isDragging ? <ImageIcon className="w-6 h-6 text-primary" /> : <Upload className="w-6 h-6 text-muted-foreground" />}
-            </div>
+            {isDragging ? (
+              <ImageIcon style={{ width: 48, height: 48, color: "#00D4FF" }} />
+            ) : (
+              <Upload style={{ width: 48, height: 48, color: "#00D4FF" }} />
+            )}
             <div className="text-center">
-              <p className="text-sm font-medium text-foreground">{label}</p>
-              <p className="text-xs text-muted-foreground mt-1">{t("upload.dragDrop")}</p>
+              {isDragging ? (
+                <p style={{ fontSize: 16, color: "#00D4FF", fontWeight: 600 }}>
+                  {t("upload.release" as any)}
+                </p>
+              ) : (
+                <>
+                  <p style={{ fontSize: 16, color: "#F0F0F5", fontWeight: 600 }}>
+                    {t("upload.title" as any)}
+                  </p>
+                  <p style={{ fontSize: 12, color: "#8888AA", marginTop: 4 }}>
+                    {t("upload.subtitle" as any)}
+                  </p>
+                </>
+              )}
             </div>
           </motion.label>
         )}

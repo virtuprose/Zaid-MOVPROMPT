@@ -165,6 +165,9 @@ export const ar: Record<TranslationKey, string> = {
 
   // ImageUploadZone
   "upload.dragDrop": "بانتظارك! ارفع الصورة الآن، وسأقوم فوراً بتحليل",
+  "upload.title": "أسقط أي صورة ثابتة",
+  "upload.subtitle": "تعمل مع الصور والرسوم التوضيحية ولقطات الشاشة",
+  "upload.release": "أفلت للرفع",
 
   // Onboarding examples
   "onboarding.tryExample": "جرّب مثالاً ←",
