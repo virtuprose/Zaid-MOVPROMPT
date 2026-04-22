@@ -58,6 +58,8 @@ export const ar: Record<TranslationKey, string> = {
   "toast.resetLinkSent": "أرسلنا لك رابط إعادة تعيين كلمة المرور.",
   "toast.signUpFailed": "فشل التسجيل",
   "toast.verificationSent": "أرسلنا لك رابط التحقق.",
+  "toast.accountCreated": "تم إنشاء الحساب",
+  "toast.welcomeAboard": "تم تسجيل دخولك. أهلاً بك!",
   "toast.signInFailed": "فشل تسجيل الدخول",
   "toast.googleFailed": "فشل تسجيل الدخول بـ Google",
   "toast.appleFailed": "فشل تسجيل الدخول بـ Apple",
