@@ -68,6 +68,7 @@ export const en = {
   "wp.analyzingScene": "Analyzing Scene...",
   "wp.skip": "Skip & Generate Now",
   "wp.skipHint": "Faster but less control",
+  "wp.skipNoFramesHint": "You skipped scene analysis, so there are no frames to review. Your prompt is shown below — go Back to analyze the scene for finer control.",
   "wp.startOver": "Start Over",
   "wp.back": "Back",
   "wp.badgesReset": "Badges reset",
