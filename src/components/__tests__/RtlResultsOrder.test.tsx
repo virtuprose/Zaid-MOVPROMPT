@@ -73,6 +73,11 @@ const renderInArabicRtl = (ui: React.ReactElement) => {
   return utils;
 };
 
+// jsdom doesn't implement scrollIntoView; install a no-op so the effect runs.
+if (!(HTMLElement.prototype as any).scrollIntoView) {
+  (HTMLElement.prototype as any).scrollIntoView = function () {};
+}
+
 describe("RTL right-panel results ordering and scroll guard", () => {
   beforeEach(() => {
     localStorage.clear();
