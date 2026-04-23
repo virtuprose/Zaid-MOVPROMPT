@@ -68,6 +68,8 @@ const WelcomePopup = () => {
       localStorage.setItem(`${ONBOARDING_SEEN_KEY}_${user.id}`, "1");
       localStorage.removeItem(FIRST_SIGNUP_FLAG);
     }
+    // Signal the tour can start now that the welcome popup is dismissed
+    try { sessionStorage.setItem("movprompt.welcomeDismissed", "1"); } catch { /* ignore */ }
     setOpen(false);
   };
 

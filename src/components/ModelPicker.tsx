@@ -47,7 +47,7 @@ export const ModelPicker = ({ model, onModelChange }: ModelPickerProps) => {
   }, [model]);
 
   return (
-    <div className="rounded-xl border border-border bg-card/60 backdrop-blur-sm p-4 sm:p-5 space-y-2.5 sm:space-y-3 shadow-md">
+    <div data-tour="model-picker" className="rounded-xl border border-border bg-card/60 backdrop-blur-sm p-4 sm:p-5 space-y-2.5 sm:space-y-3 shadow-md">
       <div className="flex items-center gap-2">
         <Sparkles className={cn("w-4 h-4 text-primary", flash && "animate-pulse")} />
         <Label className="text-sm font-medium font-display">{t("modelPicker.title" as any)}</Label>
