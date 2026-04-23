@@ -12,7 +12,7 @@ import { ElementGrid, type ElementItem } from "./ElementGrid";
 import { MentionTextarea } from "./MentionTextarea";
 import { SceneMentionTextarea, type SceneMentionTextareaHandle } from "./SceneMentionTextarea";
 import { extractVideoKeyframes, compressImageFile } from "@/lib/videoFrames";
-import { Sparkles, Loader2, ScanSearch, RotateCcw, RefreshCw, Info, Volume2, VolumeX, Zap, Clapperboard, ArrowRight, ArrowDown } from "lucide-react";
+import { Sparkles, Loader2, ScanSearch, RotateCcw, RefreshCw, Info, Volume2, VolumeX, Zap, Clapperboard, ArrowRight, ArrowDown, ArrowLeft } from "lucide-react";
 import { PresetPickerPanel } from "./PresetPickerPanel";
 import {
   AlertDialog,
@@ -988,7 +988,10 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
         {(phase === "breakdown" || phase === "generate") && sceneFrames.length > 0 && (
           <motion.div key="breakdown-content" {...phaseTransition} className="space-y-4">
             <div className="flex items-center justify-between gap-2">
-              {startOverBtn}
+              <div className="flex items-center gap-1.5">
+                {backBtn}
+                {startOverBtn}
+              </div>
               <Button
                 size="sm"
                 variant="outline"
@@ -1066,7 +1069,8 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
           </motion.div>
         )}
         {phase === "generate" && sceneFrames.length === 0 && startOverBtn && (
-          <div key="startover-fallback" className="flex justify-start">
+          <div key="startover-fallback" className="flex items-center justify-start gap-1.5">
+            {backBtn}
             {startOverBtn}
           </div>
         )}
