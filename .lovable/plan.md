@@ -1,32 +1,29 @@
 
 
-## Disable email verification on signup
+## Replace "frame-to-film-whisperer" with "MOV" in system emails
 
-Right now, after sign-up the app shows a "Check your email" toast and Supabase requires email confirmation before the user can sign in. You want signup to log users in immediately — no email check required.
+System emails currently show `frame-to-film-whisperer` (the old project slug) in the sender name and URLs. Replace with `MOV`.
 
 ### Changes
 
-**1. Auth setting (Lovable Cloud)**
-- Enable **auto-confirm signups** so new users get a session immediately and don't receive a confirmation email.
+**1. `supabase/functions/auth-email-hook/index.ts`**
+- `SITE_NAME = "frame-to-film-whisperer"` → `SITE_NAME = "MOV"`
+- `SAMPLE_PROJECT_URL = "https://frame-to-film-whisperer.lovable.app"` → `"https://movprompt.com"`
 
-**2. `src/pages/Auth.tsx` — `handleEmailSignUp`**
-- Remove the `else` branch that toasts `toast.checkEmail` / `toast.verificationSent`.
-- Always show the `accountCreated` / `welcomeAboard` toast on success (a session is now guaranteed).
-- Keep the existing `welcome` transactional email send (that's the in-app welcome, not a verification).
-- Keep the `first_signup_pending` flag so the WelcomePopup + tour still chain correctly.
+**2. `supabase/functions/send-transactional-email/index.ts`**
+- `SITE_NAME = "frame-to-film-whisperer"` → `SITE_NAME = "MOV"`
 
-**3. No other files need changes**
-- `useAuth.ts` already handles the immediate `SIGNED_IN` event and welcome email for OAuth — unaffected.
-- Auth email templates (`signup.tsx`) stay in place but won't be triggered anymore. Leaving them doesn't hurt.
+**3. `supabase/functions/_shared/transactional-email-templates/welcome.tsx`**
+- `SITE_URL = "https://frame-to-film-whisperer.lovable.app"` → `"https://movprompt.com"`
+- (Leaves `SITE_NAME = "MovPrompt"` as-is since the welcome email already shows the proper brand name.)
+
+**4. Redeploy edge functions** — `auth-email-hook` and `send-transactional-email` so the changes take effect.
 
 ### Out of scope
-- Password reset emails — still active (different flow, you didn't ask to remove).
-- OAuth flows — unchanged.
-- Removing the `signup` email template file — keeping it in case you re-enable confirmation later.
+- Email branding/styling — unchanged.
+- The `MovPrompt` brand name in the welcome email body — already correct.
 
 ### Verification
-1. Sign up with email + password → no "check your email" toast, user is signed in and redirected to `/`.
-2. WelcomePopup appears on first load, then tour starts.
-3. No confirmation email lands in inbox.
-4. Existing accounts unaffected; sign-in still works.
+1. Trigger a password reset or signup → "From" name shows `MOV`, not `frame-to-film-whisperer`.
+2. Welcome email CTA link points to `movprompt.com`.
 
