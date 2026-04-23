@@ -546,6 +546,10 @@ serve(async (req) => {
 
     const parsed = JSON.parse(toolCall.function.arguments);
 
+    if (isSeedance20 && workflowType !== "multishot" && Array.isArray(parsed.results) && parsed.results.length > 1) {
+      parsed.results = parsed.results.slice(0, 1);
+    }
+
     return new Response(JSON.stringify({ ...parsed, agent: agent.id, agentName: displayName }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
