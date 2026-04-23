@@ -376,6 +376,9 @@ export type Database = {
       }
       profiles: {
         Row: {
+          admin_notes: string | null
+          admin_notes_updated_at: string | null
+          admin_notes_updated_by: string | null
           avatar_url: string | null
           created_at: string | null
           display_name: string | null
@@ -383,6 +386,9 @@ export type Database = {
           id: string
         }
         Insert: {
+          admin_notes?: string | null
+          admin_notes_updated_at?: string | null
+          admin_notes_updated_by?: string | null
           avatar_url?: string | null
           created_at?: string | null
           display_name?: string | null
@@ -390,6 +396,9 @@ export type Database = {
           id: string
         }
         Update: {
+          admin_notes?: string | null
+          admin_notes_updated_at?: string | null
+          admin_notes_updated_by?: string | null
           avatar_url?: string | null
           created_at?: string | null
           display_name?: string | null
