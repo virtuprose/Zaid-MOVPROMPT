@@ -44,9 +44,9 @@ Deno.serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        template: "welcome",
-        to: email,
-        data: { name: name || undefined },
+        templateName: "welcome",
+        recipientEmail: email,
+        templateData: { name: name || undefined },
       }),
     });
 
