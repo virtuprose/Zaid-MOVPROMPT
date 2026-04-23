@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Pencil, Download, Search, ChevronLeft, ChevronRight, ShieldCheck, ShieldOff, LogOut, Loader2 } from "lucide-react";
 import Sparkline from "./Sparkline";
 import UserDetailDrawer, { type DrawerUser } from "./UserDetailDrawer";
+import AdminActivityFeed from "./AdminActivityFeed";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -361,6 +362,10 @@ const UsersTab = () => {
           </div>
         </div>
       )}
+
+      <div className="mt-6">
+        <AdminActivityFeed />
+      </div>
 
       <UserDetailDrawer
         user={activeUser}
