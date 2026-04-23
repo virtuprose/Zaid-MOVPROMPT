@@ -1,42 +1,45 @@
 
 
-## Add Back button above the Generate CTA
+## Seedance 2.0: return only ONE detailed prompt
 
-**Problem:** After Skip, the user lands on the breakdown phase but the existing Back button is nested inside the right-panel scene-frames toolbar (`WorkflowPanel.tsx` line 1010), which only renders when `sceneFrames.length > 0`. With no analyzed frames, that toolbar never shows — so there's no visible way back to the Analyze / Skip choice from the screen in your screenshot.
+**Problem:** Seedance 2.0 / 2.0 Fast currently returns multiple result cards that look like duplicates. Cause: the model interprets the multi-cut "shooting script" structure in the Seedance system prompt as multiple `results[]` entries. The response schema doesn't cap the array length, so 4–6 near-identical entries flow through to the UI.
 
-### Change (single file: `src/components/WorkflowPanel.tsx`)
+**Scope:** Only Seedance 2.0 and 2.0 Fast (single-image workflow, no multi-shot toggle). All other models — including Seedance Pro / Pro Fast multi-shot (5 stitched shots) and Any-Model multi-shot (10 variants) — keep current behavior.
 
-Add the Back button to the left-column CTA block, directly above the **Generate Cinematic Prompt** button, so it's always reachable from the same scroll position as the primary action.
+### Change (single file: `supabase/functions/generate-prompt/index.ts`)
 
-**Where:** Inside the `ctaRowBlock` "generate" branch (lines 915–932), wrap the existing Generate button in a vertical stack and prepend the Back button.
+**1. Add an instruction clause** right after line 414, before building `userContent`:
 
-**Layout:**
+```ts
+const isSeedance20 = targetModel === "seedance-2.0" || targetModel === "seedance-2.0-fast";
+if (isSeedance20 && workflowType !== "multishot") {
+  userText += ` Return EXACTLY ONE entry in the results array. The full shooting script — every sequence block and numbered cut — lives INSIDE the single mainPrompt of that one entry. Do NOT split cuts into separate results.`;
+}
 ```
-─────────────────────  (existing top border)
-        [ ← Back ]              ← new, ghost / muted, small
-   [ Generate Cinematic Prompt ] ← unchanged
+
+**2. Defensive trim after parse** (right after line 542):
+
+```ts
+if (isSeedance20 && workflowType !== "multishot" && Array.isArray(parsed.results) && parsed.results.length > 1) {
+  parsed.results = parsed.results.slice(0, 1);
+}
 ```
 
-- Use the **existing `backBtn` constant** (already defined at line 988 with correct visibility rules: hidden during analyze/generate spinners and after successful generation) — no new logic needed.
-- Center it above the Generate button with a small gap (`gap-3`).
-- Keep the existing top border + `pt-6 mt-6` spacing on the wrapper.
-- Show label on all sizes here (drop the `hidden sm:inline` for this instance) so it reads "← Back" clearly even on mobile, since it's the only navigation cue on this screen.
-
-**Implementation note:** To avoid duplicating the button JSX, render `backBtn` inline in the CTA block with a wrapper that overrides the `hidden sm:inline` on its label — simplest path is to inline a second small Back button (size="sm", ghost) in `ctaRowBlock` rather than reusing `backBtn`, since the right-toolbar version should keep its compact styling. Roughly 8 lines added.
-
-**Right-toolbar Back button (line 1010):** unchanged — still appears when scene frames exist, for users who took the Analyze path.
+That's the entire change — ~6 lines added, surgically gated to Seedance 2.0 single-workflow only. No other model, no schema-wide changes, no client changes.
 
 ### Out of scope
 
-- No change to Start Over, Skip, Analyze, or Generate logic.
-- No change to phase state model — Back still just calls `setPhase("upload")`.
-- No translation changes (`wp.back` already exists in EN/AR).
-- No restyle of the Generate button itself.
+- No edit to `experts/seedance.ts` (keeps the rich shooting-script format intact).
+- No change to Seedance Pro multi-shot (still emits 5 stitched shots).
+- No change to Any-Model multi-shot (still emits 10 variants).
+- No change to Kling, Veo, or other specialist agents.
+- No client / UI changes.
 
 ### Verification
 
-1. Upload image → Skip → see **Back** centered above **Generate Cinematic Prompt** → click Back → returns to Analyze / Skip choice with image preserved.
-2. Upload image → Analyze → Back appears in both the right-panel toolbar (above scene frames) AND above Generate in the left column.
-3. While generating (spinner), Back disappears from above Generate.
-4. RTL: arrow flips correctly (existing `rtl:rotate-180` class).
+1. Seedance 2.0 + 1 image → exactly **1** result card with the full multi-cut shooting script inside its `mainPrompt`.
+2. Seedance 2.0 Fast + @Element references → exactly **1** result, all `@Element N` tokens preserved inside the single `mainPrompt`.
+3. Seedance Pro + multi-shot toggle (5 shots) → still **5** distinct result cards.
+4. Any-Model + multi-shot (10) → still **10** results.
+5. Kling 3.0 / Veo 3.1 single-frame → unchanged, 1 result as before.
 
