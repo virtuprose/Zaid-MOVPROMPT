@@ -1135,32 +1135,13 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
           </motion.div>
         )}
         {phase === "generate" && sceneFrames.length === 0 && startOverBtn && (
-          <div key="startover-fallback" className="flex items-center justify-start gap-1.5">
-            {backBtn}
-            {startOverBtn}
+          <div key="startover-fallback" className="space-y-4">
+            <div className="flex items-center justify-start gap-1.5">
+              {backBtn}
+              {startOverBtn}
+            </div>
+            {resultsBlock}
           </div>
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {isLoading && !results && (
-          <ResultsSkeleton
-            modelLabel={MODEL_GROUPS.flatMap(g => g.models).find(m => m.value === selectedModel)?.label ?? selectedModel}
-          />
-        )}
-        {results && (
-          <ResultsPanel
-            results={results}
-            onRegenerate={handleGenerate}
-            isLoading={isLoading}
-            agentName={agentName ?? undefined}
-            modelLabel={MODEL_GROUPS.flatMap(g => g.models).find(m => m.value === selectedModel)?.label ?? selectedModel}
-            stitchHint={workflowType === "multishot" && contract.supportsMultiShotToggle && (contract.multiShotCount ?? 0) > 1}
-            elementsLegend={contract.supportsElementReferences && elementItems.length > 0
-              ? elementItems.map((el, idx) => ({ index: idx + 1, kind: el.kind, preview: el.preview }))
-              : undefined}
-            onSwitchModel={selectedModel === "any" ? onSwitchModel : undefined}
-          />
         )}
       </AnimatePresence>
 
