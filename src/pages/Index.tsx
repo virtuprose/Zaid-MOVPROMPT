@@ -7,14 +7,16 @@ import { WorkflowPanel } from "@/components/WorkflowPanel";
 
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { motion } from "framer-motion";
-import { User, LogOut, Library } from "lucide-react";
+import { User, LogOut, Library, BookOpen, PlayCircle } from "lucide-react";
 import AnnouncementBanner from "@/components/AnnouncementBanner";
 import NotificationBell from "@/components/NotificationBell";
 import { InstallPrompt } from "@/components/InstallPrompt";
 import WelcomePopup from "@/components/WelcomePopup";
+import { TourOverlay } from "@/components/tour/TourOverlay";
+import { useTour } from "@/components/tour/TourProvider";
 import logoMark from "@/assets/logo-mark.svg";
 
 const Index = () => {
@@ -22,10 +24,22 @@ const Index = () => {
   const { user, loading, signOut } = useAuth();
   const navigate = useNavigate();
   const { t } = useLanguage();
+  const { start: startTour, isDone: tourDone } = useTour();
 
   useEffect(() => {
     trackPageVisit("/");
   }, []);
+
+  // If user came from Learn page asking to start the tour
+  useEffect(() => {
+    try {
+      if (sessionStorage.getItem("movprompt.tour.requestStart") === "1") {
+        sessionStorage.removeItem("movprompt.tour.requestStart");
+        const t = setTimeout(() => startTour(), 600);
+        return () => clearTimeout(t);
+      }
+    } catch { /* ignore */ }
+  }, [startTour]);
 
   const initials = user?.user_metadata?.full_name
     ? user.user_metadata.full_name.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase()
@@ -43,10 +57,27 @@ const Index = () => {
         <AnnouncementBanner />
         {/* Top bar */}
         <div className="flex flex-nowrap justify-end items-center gap-1 sm:gap-1.5 mb-4">
+          {!loading && user && !tourDone && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={startTour}
+              className="hidden sm:inline-flex gap-1.5 shrink-0 px-2 sm:px-3 text-primary hover:text-primary"
+            >
+              <PlayCircle className="w-4 h-4" />
+              <span className="text-sm">{t("tour.takeTourShort" as any)}</span>
+            </Button>
+          )}
           <div className="shrink-0"><LanguageToggle /></div>
           {!loading && user && <div className="shrink-0"><NotificationBell /></div>}
           {!loading && user && (
-            <Button variant="ghost" size="sm" onClick={() => navigate("/library")} className="gap-1.5 shrink-0 px-2 sm:px-3">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate("/library")}
+              className="gap-1.5 shrink-0 px-2 sm:px-3"
+              data-tour="library-link"
+            >
               <Library className="w-4 h-4" />
               <span className="hidden sm:inline text-sm">{t("library.title")}</span>
             </Button>
@@ -64,6 +95,13 @@ const Index = () => {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={startTour}>
+                    <PlayCircle className="w-4 h-4 me-2" /> {t("tour.takeTour" as any)}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate("/learn")}>
+                    <BookOpen className="w-4 h-4 me-2" /> {t("learn.menuLabel" as any)}
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={signOut}>
                     <LogOut className="w-4 h-4 me-2" /> {t("auth.signOut")}
                   </DropdownMenuItem>
@@ -122,6 +160,7 @@ const Index = () => {
       </div>
       <InstallPrompt />
       {!loading && user && <WelcomePopup />}
+      <TourOverlay />
     </div>
   );
 };
