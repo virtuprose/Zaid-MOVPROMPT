@@ -913,7 +913,18 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
       </div>
     </div>
   ) : (phase === "breakdown" || phase === "generate") ? (
-    <div className="pt-6 mt-6 border-t border-white/[0.06] flex justify-center">
+    <div className="pt-6 mt-6 border-t border-white/[0.06] flex flex-col items-center gap-3">
+      {!isAnalyzing && !isLoading && !(phase === "generate" && results) && (
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={() => setPhase("upload")}
+          aria-label={t("wp.back" as any)}
+          className="gap-1.5 text-muted-foreground hover:text-foreground"
+        >
+          <ArrowLeft className="w-3.5 h-3.5 rtl:rotate-180" /> {t("wp.back" as any)}
+        </Button>
+      )}
       <Button
         size="lg"
         onClick={handleGenerate}
