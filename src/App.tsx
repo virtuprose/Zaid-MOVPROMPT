@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthGuard } from "@/components/AuthGuard";
 import { OfflineFallback } from "@/components/OfflineFallback";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
+import { TourProvider } from "@/components/tour/TourProvider";
 import Index from "./pages/Index.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import Analytics from "./pages/Analytics.tsx";
@@ -14,6 +15,7 @@ import ResetPassword from "./pages/ResetPassword.tsx";
 import AdminLogin from "./pages/AdminLogin.tsx";
 import Unsubscribe from "./pages/Unsubscribe.tsx";
 import Library from "./pages/Library.tsx";
+import Learn from "./pages/Learn.tsx";
 import Terms from "./pages/Terms.tsx";
 import PrivacyPolicy from "./pages/PrivacyPolicy.tsx";
 import QaMobile from "./pages/QaMobile.tsx";
@@ -27,20 +29,23 @@ const AppRoutes = () => {
 
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<AuthGuard><Index /></AuthGuard>} />
-        <Route path="/auth" element={<Auth />} />
-        <Route path="/reset-password" element={<ResetPassword />} />
-        <Route path="/admin/login" element={<AdminLogin />} />
-        <Route path="/admin" element={<AuthGuard requireAdmin><Analytics /></AuthGuard>} />
-        <Route path="/library" element={<AuthGuard><Library /></AuthGuard>} />
-        <Route path="/unsubscribe" element={<Unsubscribe />} />
-        <Route path="/terms" element={<Terms />} />
-        <Route path="/privacy" element={<PrivacyPolicy />} />
-        <Route path="/qa/mobile" element={<QaMobile />} />
-        {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-        <Route path="*" element={<NotFound />} />
-      </Routes>
+      <TourProvider>
+        <Routes>
+          <Route path="/" element={<AuthGuard><Index /></AuthGuard>} />
+          <Route path="/auth" element={<Auth />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/admin/login" element={<AdminLogin />} />
+          <Route path="/admin" element={<AuthGuard requireAdmin><Analytics /></AuthGuard>} />
+          <Route path="/library" element={<AuthGuard><Library /></AuthGuard>} />
+          <Route path="/learn" element={<Learn />} />
+          <Route path="/unsubscribe" element={<Unsubscribe />} />
+          <Route path="/terms" element={<Terms />} />
+          <Route path="/privacy" element={<PrivacyPolicy />} />
+          <Route path="/qa/mobile" element={<QaMobile />} />
+          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </TourProvider>
     </BrowserRouter>
   );
 };

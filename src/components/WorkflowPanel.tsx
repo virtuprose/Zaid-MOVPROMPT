@@ -825,7 +825,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
   );
 
   const descriptionBlock = (phase === "breakdown" || phase === "generate") && (
-    <div className="space-y-2">
+    <div className="space-y-2" data-tour="describe-textarea">
       {contract.supportsElementReferences ? (
         <MentionTextarea
           value={description}
@@ -863,6 +863,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
       </p>
       <div className="flex flex-col items-center" style={{ gap: "12px" }}>
         <Button
+          data-tour="analyze-button"
           onClick={handleAnalyze}
           disabled={isAnalyzing}
           aria-label={isAnalyzing ? t("wp.analyzingScene") : t("wp.analyzeScene")}
@@ -926,6 +927,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
         </Button>
       )}
       <Button
+        data-tour="generate-button"
         size="lg"
         onClick={handleGenerate}
         disabled={isLoading}
