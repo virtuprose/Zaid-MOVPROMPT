@@ -1162,6 +1162,10 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
               {backBtn}
               {startOverBtn}
             </div>
+            <div className="flex items-start gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-xs text-foreground/80">
+              <Info className="w-3.5 h-3.5 text-primary mt-0.5 shrink-0" />
+              <span>{t("wp.skipNoFramesHint" as any)}</span>
+            </div>
             {resultsBlock}
           </div>
         )}

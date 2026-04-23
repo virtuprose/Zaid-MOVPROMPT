@@ -70,6 +70,7 @@ export const ar: Record<TranslationKey, string> = {
   "wp.analyzingScene": "جاري تحليل المشهد...",
   "wp.skip": "تخطّى وأنشئ الآن",
   "wp.skipHint": "أسرع ولكن بتحكم أقل",
+  "wp.skipNoFramesHint": "لقد تخطيت تحليل المشهد، لذا لا توجد لقطات لمراجعتها. يظهر موجّهك أدناه — ارجع لتحليل المشهد للحصول على تحكم أدق.",
   "wp.startOver": "البدء من جديد",
   "wp.back": "رجوع",
   "wp.badgesReset": "تمت إعادة ضبط الحالات",
