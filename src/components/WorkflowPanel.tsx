@@ -1027,33 +1027,46 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
     return () => cancelAnimationFrame(id);
   }, [results]);
 
-  const resultsBlock = (
-    <AnimatePresence>
-      {isLoading && !results && (
-        <div ref={resultsRef}>
-          <ResultsSkeleton
-            modelLabel={MODEL_GROUPS.flatMap(g => g.models).find(m => m.value === selectedModel)?.label ?? selectedModel}
-          />
-        </div>
-      )}
-      {results && (
-        <div ref={resultsRef}>
-          <ResultsPanel
-            results={results}
-            onRegenerate={handleGenerate}
-            isLoading={isLoading}
-            agentName={agentName ?? undefined}
-            modelLabel={MODEL_GROUPS.flatMap(g => g.models).find(m => m.value === selectedModel)?.label ?? selectedModel}
-            stitchHint={workflowType === "multishot" && contract.supportsMultiShotToggle && (contract.multiShotCount ?? 0) > 1}
-            elementsLegend={contract.supportsElementReferences && elementItems.length > 0
-              ? elementItems.map((el, idx) => ({ index: idx + 1, kind: el.kind, preview: el.preview }))
-              : undefined}
-            onSwitchModel={selectedModel === "any" ? onSwitchModel : undefined}
-          />
-        </div>
-      )}
-    </AnimatePresence>
-  );
+  const resultsBlock = (isLoading && !results) || results ? (
+    <div ref={resultsRef} className="relative">
+      <AnimatePresence mode="wait" initial={false}>
+        {results ? (
+          <motion.div
+            key="results-panel"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18, ease: "easeOut" }}
+          >
+            <ResultsPanel
+              results={results}
+              onRegenerate={handleGenerate}
+              isLoading={isLoading}
+              agentName={agentName ?? undefined}
+              modelLabel={MODEL_GROUPS.flatMap(g => g.models).find(m => m.value === selectedModel)?.label ?? selectedModel}
+              stitchHint={workflowType === "multishot" && contract.supportsMultiShotToggle && (contract.multiShotCount ?? 0) > 1}
+              elementsLegend={contract.supportsElementReferences && elementItems.length > 0
+                ? elementItems.map((el, idx) => ({ index: idx + 1, kind: el.kind, preview: el.preview }))
+                : undefined}
+              onSwitchModel={selectedModel === "any" ? onSwitchModel : undefined}
+            />
+          </motion.div>
+        ) : (
+          <motion.div
+            key="results-skeleton"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18, ease: "easeOut" }}
+          >
+            <ResultsSkeleton
+              modelLabel={MODEL_GROUPS.flatMap(g => g.models).find(m => m.value === selectedModel)?.label ?? selectedModel}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  ) : null;
 
   const rightPanel = (
     <div className="space-y-4">
