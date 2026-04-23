@@ -1012,10 +1012,19 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
   const showRightEmptyState = !results && !isLoading && !((phase === "breakdown" || phase === "generate") && sceneFrames.length > 0);
 
   const resultsRef = useRef<HTMLDivElement>(null);
+  const scrolledResultsKeyRef = useRef<unknown>(null);
   useEffect(() => {
-    if (results && resultsRef.current) {
-      resultsRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    if (!results) {
+      scrolledResultsKeyRef.current = null;
+      return;
     }
+    if (scrolledResultsKeyRef.current === results) return;
+    if (!resultsRef.current) return;
+    scrolledResultsKeyRef.current = results;
+    const id = requestAnimationFrame(() => {
+      resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+    return () => cancelAnimationFrame(id);
   }, [results]);
 
   const resultsBlock = (
