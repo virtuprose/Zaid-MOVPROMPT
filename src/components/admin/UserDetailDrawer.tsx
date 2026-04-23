@@ -244,7 +244,7 @@ const UserDetailDrawer = ({ user, open, onOpenChange, onUserUpdated, onUserDelet
       const { data, error } = await supabase.functions.invoke(fn, { body });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
-      toast({ title: t(successKey) });
+      toast({ title: t(successKey as any) });
       return true;
     } catch (e: any) {
       toast({ title: t("admin.userDrawer.error"), description: e.message, variant: "destructive" });
