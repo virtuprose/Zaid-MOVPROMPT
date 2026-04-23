@@ -5,7 +5,7 @@ import {
 import type { TemplateEntry } from './registry.ts'
 
 const SITE_NAME = "MovPrompt"
-const SITE_URL = "https://frame-to-film-whisperer.lovable.app"
+const SITE_URL = "https://movprompt.com"
 
 interface WelcomeProps {
   name?: string
