@@ -5,36 +5,23 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { Pencil, Download, Search, ChevronLeft, ChevronRight, ShieldCheck, ShieldOff } from "lucide-react";
-import { toast } from "@/hooks/use-toast";
 import Sparkline from "./Sparkline";
+import UserDetailDrawer, { type DrawerUser } from "./UserDetailDrawer";
 
-interface UserRow {
-  id: string;
-  email: string | null;
-  display_name: string | null;
-  avatar_url: string | null;
-  created_at: string | null;
-  role: "admin" | "user";
-  is_active: boolean;
-  generations: number;
+interface UserRow extends DrawerUser {
+  last_30d: number;
   trend: number[];
 }
 
 const UsersTab = () => {
   const [users, setUsers] = useState<UserRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [editUser, setEditUser] = useState<UserRow | null>(null);
-  const [editName, setEditName] = useState("");
-  const [editRole, setEditRole] = useState<"admin" | "user">("user");
-  const [editActive, setEditActive] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [togglingStatus, setTogglingStatus] = useState(false);
+  const [activeUser, setActiveUser] = useState<UserRow | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState<"all" | "admin" | "user">("all");
   const [currentPage, setCurrentPage] = useState(1);
@@ -59,19 +46,27 @@ const UsersTab = () => {
 
   useEffect(() => {
     fetchUsers();
+    supabase.auth.getUser().then(({ data }) => setCurrentUserId(data.user?.id ?? null));
   }, []);
 
   const fetchUsers = async () => {
     setLoading(true);
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-    const [{ data: profiles }, { data: roles }, { data: events }, { data: history }, { data: recentEvents }] =
-      await Promise.all([
-        supabase.from("profiles").select("*"),
-        supabase.from("user_roles").select("*"),
-        supabase.from("generation_events").select("user_id"),
-        supabase.from("prompt_history").select("user_id"),
-        supabase.from("generation_events").select("user_id, created_at").gte("created_at", thirtyDaysAgo),
-      ]);
+    const [
+      { data: profiles },
+      { data: roles },
+      { data: events },
+      { data: history },
+      { data: recentEvents },
+      metaResp,
+    ] = await Promise.all([
+      supabase.from("profiles").select("*"),
+      supabase.from("user_roles").select("*"),
+      supabase.from("generation_events").select("user_id"),
+      supabase.from("prompt_history").select("user_id"),
+      supabase.from("generation_events").select("user_id, created_at").gte("created_at", thirtyDaysAgo),
+      supabase.functions.invoke("admin-list-users-meta", { body: {} }),
+    ]);
 
     const roleMap: Record<string, "admin" | "user"> = {};
     (roles || []).forEach((r) => {
@@ -91,10 +86,10 @@ const UsersTab = () => {
       genCount[uid] = Math.max(eventCount[uid] || 0, historyCount[uid] || 0);
     });
 
-    // Build per-user 30-day daily trend buckets
     const now = new Date();
     const todayKey = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
     const trendMap: Record<string, number[]> = {};
+    const last30Map: Record<string, number> = {};
     (recentEvents || []).forEach((e) => {
       if (!e.user_id || !e.created_at) return;
       const d = new Date(e.created_at);
@@ -103,98 +98,63 @@ const UsersTab = () => {
       if (idx < 0 || idx > 29) return;
       if (!trendMap[e.user_id]) trendMap[e.user_id] = new Array(30).fill(0);
       trendMap[e.user_id][idx]++;
+      last30Map[e.user_id] = (last30Map[e.user_id] || 0) + 1;
     });
 
-    const merged: UserRow[] = (profiles || []).map((p) => ({
-      id: p.id,
-      email: p.email,
-      display_name: p.display_name,
-      avatar_url: p.avatar_url,
-      created_at: p.created_at,
-      role: roleMap[p.id] || "user",
-      is_active: true,
-      generations: genCount[p.id] || 0,
-      trend: trendMap[p.id] || new Array(30).fill(0),
-    }));
+    const metaMap: Record<string, {
+      last_sign_in_at: string | null;
+      email_confirmed_at: string | null;
+      provider: string | null;
+      is_active: boolean;
+    }> = {};
+    const metaUsers = (metaResp?.data?.users as any[] | undefined) ?? [];
+    metaUsers.forEach((m) => {
+      metaMap[m.id] = {
+        last_sign_in_at: m.last_sign_in_at,
+        email_confirmed_at: m.email_confirmed_at,
+        provider: m.provider,
+        is_active: !m.banned_until || new Date(m.banned_until) <= new Date(),
+      };
+    });
+
+    const merged: UserRow[] = (profiles || []).map((p: any) => {
+      const meta = metaMap[p.id];
+      return {
+        id: p.id,
+        email: p.email,
+        display_name: p.display_name,
+        avatar_url: p.avatar_url,
+        created_at: p.created_at,
+        role: roleMap[p.id] || "user",
+        is_active: meta?.is_active ?? true,
+        generations: genCount[p.id] || 0,
+        last_30d: last30Map[p.id] || 0,
+        trend: trendMap[p.id] || new Array(30).fill(0),
+        last_sign_in_at: meta?.last_sign_in_at ?? null,
+        email_confirmed_at: meta?.email_confirmed_at ?? null,
+        provider: meta?.provider ?? null,
+        admin_notes: p.admin_notes ?? null,
+        admin_notes_updated_at: p.admin_notes_updated_at ?? null,
+        admin_notes_updated_by: p.admin_notes_updated_by ?? null,
+      };
+    });
 
     setUsers(merged);
     setLoading(false);
   };
 
-  const openEdit = (user: UserRow) => {
-    setEditUser(user);
-    setEditName(user.display_name || "");
-    setEditRole(user.role);
-    setEditActive(user.is_active);
+  const openDrawer = (user: UserRow) => {
+    setActiveUser(user);
+    setDrawerOpen(true);
   };
 
-  const handleToggleStatus = async (activate: boolean) => {
-    if (!editUser) return;
-    setTogglingStatus(true);
-
-    try {
-      const { data, error } = await supabase.functions.invoke("toggle-user-status", {
-        body: { userId: editUser.id, ban: !activate },
-      });
-
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-
-      setEditActive(activate);
-      setUsers((prev) =>
-        prev.map((u) => (u.id === editUser.id ? { ...u, is_active: activate } : u))
-      );
-      setEditUser((prev) => prev ? { ...prev, is_active: activate } : prev);
-
-      toast({
-        title: activate ? "User activated" : "User deactivated",
-        description: activate
-          ? "The user can now sign in."
-          : "The user has been blocked from signing in.",
-      });
-    } catch (e: any) {
-      toast({ title: "Error", description: e.message, variant: "destructive" });
-    } finally {
-      setTogglingStatus(false);
-    }
+  const handleUserUpdated = (patch: Partial<DrawerUser> & { id: string }) => {
+    setUsers((prev) => prev.map((u) => (u.id === patch.id ? { ...u, ...patch } : u)));
+    setActiveUser((prev) => (prev && prev.id === patch.id ? { ...prev, ...patch } as UserRow : prev));
   };
 
-  const handleSave = async () => {
-    if (!editUser) return;
-    setSaving(true);
-
-    try {
-      const { error: profileError } = await supabase
-        .from("profiles")
-        .update({ display_name: editName })
-        .eq("id", editUser.id);
-
-      if (profileError) throw profileError;
-
-      if (editRole !== editUser.role) {
-        if (editRole === "admin") {
-          const { error } = await supabase
-            .from("user_roles")
-            .insert({ user_id: editUser.id, role: "admin" });
-          if (error) throw error;
-        } else {
-          const { error } = await supabase
-            .from("user_roles")
-            .delete()
-            .eq("user_id", editUser.id)
-            .eq("role", "admin");
-          if (error) throw error;
-        }
-      }
-
-      toast({ title: "User updated" });
-      setEditUser(null);
-      fetchUsers();
-    } catch (e: any) {
-      toast({ title: "Error", description: e.message, variant: "destructive" });
-    } finally {
-      setSaving(false);
-    }
+  const handleUserDeleted = (id: string) => {
+    setUsers((prev) => prev.filter((u) => u.id !== id));
   };
 
   if (loading) {
@@ -307,7 +267,7 @@ const UsersTab = () => {
                     {u.created_at ? new Date(u.created_at).toLocaleDateString() : "—"}
                   </TableCell>
                   <TableCell>
-                    <Button variant="ghost" size="icon" onClick={() => openEdit(u)}>
+                    <Button variant="ghost" size="icon" onClick={() => openDrawer(u)}>
                       <Pencil className="h-4 w-4" />
                     </Button>
                   </TableCell>
@@ -337,61 +297,14 @@ const UsersTab = () => {
         </div>
       )}
 
-      <Dialog open={!!editUser} onOpenChange={(open) => !open && setEditUser(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit User</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div>
-              <Label>Email</Label>
-              <p className="text-sm text-muted-foreground mt-1">{editUser?.email}</p>
-            </div>
-            <div>
-              <Label htmlFor="edit-name">Display Name</Label>
-              <Input id="edit-name" value={editName} onChange={(e) => setEditName(e.target.value)} className="mt-1" />
-            </div>
-            <div>
-              <Label>Role</Label>
-              <Select value={editRole} onValueChange={(v) => setEditRole(v as "admin" | "user")}>
-                <SelectTrigger className="mt-1">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="user">User</SelectItem>
-                  <SelectItem value="admin">Admin</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex items-center justify-between rounded-lg border border-border p-4">
-              <div className="space-y-0.5">
-                <Label className="text-sm font-medium">Account Status</Label>
-                <p className="text-xs text-muted-foreground">
-                  {editActive
-                    ? "User can sign in and use the app."
-                    : "User is blocked from signing in."}
-                </p>
-              </div>
-              <div className="flex items-center gap-3">
-                <span className={`text-xs font-medium ${editActive ? "text-emerald-400" : "text-destructive"}`}>
-                  {editActive ? "Active" : "Deactivated"}
-                </span>
-                <Switch
-                  checked={editActive}
-                  onCheckedChange={(checked) => handleToggleStatus(checked)}
-                  disabled={togglingStatus}
-                />
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditUser(null)}>Cancel</Button>
-            <Button onClick={handleSave} disabled={saving}>
-              {saving ? "Saving..." : "Save"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <UserDetailDrawer
+        user={activeUser}
+        open={drawerOpen}
+        onOpenChange={setDrawerOpen}
+        onUserUpdated={handleUserUpdated}
+        onUserDeleted={handleUserDeleted}
+        currentUserId={currentUserId}
+      />
     </>
   );
 };
