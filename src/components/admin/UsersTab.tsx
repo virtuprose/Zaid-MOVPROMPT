@@ -232,7 +232,7 @@ const UsersTab = () => {
             <AlertDialogHeader>
               <AlertDialogTitle>Sign out all users?</AlertDialogTitle>
               <AlertDialogDescription>
-                This will revoke every active session, including admins. You will be signed out too and redirected to the login page.
+                Approximately <span className="font-semibold text-foreground">{users.filter((u) => !!u.last_sign_in_at).length}</span> user{users.filter((u) => !!u.last_sign_in_at).length === 1 ? "" : "s"} have an active or recent session and will be signed out (estimated from sign-in history). This includes admins — you will be signed out too and redirected to the login page.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
