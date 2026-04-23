@@ -1011,6 +1011,41 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
 
   const showRightEmptyState = !results && !isLoading && !((phase === "breakdown" || phase === "generate") && sceneFrames.length > 0);
 
+  const resultsRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (results && resultsRef.current) {
+      resultsRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [results]);
+
+  const resultsBlock = (
+    <AnimatePresence>
+      {isLoading && !results && (
+        <div ref={resultsRef}>
+          <ResultsSkeleton
+            modelLabel={MODEL_GROUPS.flatMap(g => g.models).find(m => m.value === selectedModel)?.label ?? selectedModel}
+          />
+        </div>
+      )}
+      {results && (
+        <div ref={resultsRef}>
+          <ResultsPanel
+            results={results}
+            onRegenerate={handleGenerate}
+            isLoading={isLoading}
+            agentName={agentName ?? undefined}
+            modelLabel={MODEL_GROUPS.flatMap(g => g.models).find(m => m.value === selectedModel)?.label ?? selectedModel}
+            stitchHint={workflowType === "multishot" && contract.supportsMultiShotToggle && (contract.multiShotCount ?? 0) > 1}
+            elementsLegend={contract.supportsElementReferences && elementItems.length > 0
+              ? elementItems.map((el, idx) => ({ index: idx + 1, kind: el.kind, preview: el.preview }))
+              : undefined}
+            onSwitchModel={selectedModel === "any" ? onSwitchModel : undefined}
+          />
+        </div>
+      )}
+    </AnimatePresence>
+  );
+
   const rightPanel = (
     <div className="space-y-4">
       <AnimatePresence mode="wait">
@@ -1033,6 +1068,8 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
                 <ScanSearch className="w-3.5 h-3.5" /> <span className="hidden sm:inline">{t("wp.reAnalyze")}</span>
               </Button>
             </div>
+
+            {resultsBlock}
 
             <div className="flex items-start gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-xs text-foreground/80">
               <Info className="w-3.5 h-3.5 text-primary mt-0.5 shrink-0" />
@@ -1098,32 +1135,13 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
           </motion.div>
         )}
         {phase === "generate" && sceneFrames.length === 0 && startOverBtn && (
-          <div key="startover-fallback" className="flex items-center justify-start gap-1.5">
-            {backBtn}
-            {startOverBtn}
+          <div key="startover-fallback" className="space-y-4">
+            <div className="flex items-center justify-start gap-1.5">
+              {backBtn}
+              {startOverBtn}
+            </div>
+            {resultsBlock}
           </div>
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {isLoading && !results && (
-          <ResultsSkeleton
-            modelLabel={MODEL_GROUPS.flatMap(g => g.models).find(m => m.value === selectedModel)?.label ?? selectedModel}
-          />
-        )}
-        {results && (
-          <ResultsPanel
-            results={results}
-            onRegenerate={handleGenerate}
-            isLoading={isLoading}
-            agentName={agentName ?? undefined}
-            modelLabel={MODEL_GROUPS.flatMap(g => g.models).find(m => m.value === selectedModel)?.label ?? selectedModel}
-            stitchHint={workflowType === "multishot" && contract.supportsMultiShotToggle && (contract.multiShotCount ?? 0) > 1}
-            elementsLegend={contract.supportsElementReferences && elementItems.length > 0
-              ? elementItems.map((el, idx) => ({ index: idx + 1, kind: el.kind, preview: el.preview }))
-              : undefined}
-            onSwitchModel={selectedModel === "any" ? onSwitchModel : undefined}
-          />
         )}
       </AnimatePresence>
 
