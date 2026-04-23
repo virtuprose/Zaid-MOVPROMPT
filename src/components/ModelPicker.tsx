@@ -23,11 +23,11 @@ interface ModelRowProps {
 const ModelRow = ({ value, label, description, isAny }: ModelRowProps) => (
   <SelectItem
     value={value}
-    className="py-3 px-2.5 min-h-[3.25rem] data-[state=checked]:border-l-2 data-[state=checked]:border-primary data-[state=checked]:bg-primary/5"
+    className="py-3 px-2.5 min-h-[3.25rem] data-[state=checked]:border-l-2 data-[state=checked]:border-primary data-[state=checked]:bg-primary/5 data-[highlighted]:[&_*]:text-inherit"
   >
-    <div className="flex flex-col gap-0.5 w-full">
-      <span className={`truncate ${isAny ? "font-semibold" : "font-medium"}`}>{label}</span>
-      <span className="text-[11px] sm:text-xs text-muted-foreground line-clamp-2 leading-snug">
+    <div className="flex flex-col gap-0.5 w-full min-w-0 pr-2">
+      <span className={`block w-full truncate ${isAny ? "font-semibold" : "font-medium"}`}>{label}</span>
+      <span className="block w-full text-[11px] sm:text-xs text-muted-foreground whitespace-normal break-words line-clamp-3 leading-snug">
         {description}
       </span>
     </div>
@@ -62,7 +62,10 @@ export const ModelPicker = ({ model, onModelChange }: ModelPickerProps) => {
           <SelectValue placeholder={t("config.chooseModel")} />
         </SelectTrigger>
         <SelectContent
-          className="model-picker-content w-[min(22rem,calc(100vw-1.5rem))] overscroll-contain"
+          side="bottom"
+          align="start"
+          collisionPadding={12}
+          className="model-picker-content w-[min(28rem,calc(100vw-1.5rem))] sm:w-[28rem] overscroll-contain"
           style={{
             zIndex: 1000,
             maxHeight: 360,
@@ -84,7 +87,7 @@ export const ModelPicker = ({ model, onModelChange }: ModelPickerProps) => {
           <SelectSeparator />
           {MODEL_GROUPS.map((group) => (
             <SelectGroup key={group.label}>
-              <SelectLabel className="sticky top-0 z-10 px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider bg-popover/95 backdrop-blur">
+              <SelectLabel className="sticky top-0 z-10 px-2 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider bg-popover/95 backdrop-blur shadow-[0_1px_0_hsl(var(--border))]">
                 {group.label}
               </SelectLabel>
               {group.models.map((m) => (
