@@ -1,33 +1,44 @@
 
 
-## Fix ModelPicker dropdown text clipping
+## Add a "Back" button after Skip / Analyze Scene
 
-**Problem (visible in your screenshot):** Inside the open Model picker, long descriptions get cut mid-word ("choreographe…", "Best f…"). Two things cause it together:
+**Problem:** Once the user clicks **Skip** or **Analyze Scene**, the workflow advances to the `breakdown` phase. The only way back is **Start Over**, which wipes uploaded images, scene frames, and any direction work. There's no lightweight way to return to the Skip / Analyze choice and pick the other option.
 
-1. The `SelectItem` row uses Radix's default item layout, which renders the children inside a flex row with an indicator slot. Our inner `<div>` has `w-full` but the parent flex item has no `min-w-0`, so the text container ends up overflowing its column instead of wrapping. The `line-clamp-2` then truncates the visible part horizontally as well as vertically.
-2. The popover width `w-[min(22rem,calc(100vw-1.5rem))]` is fine on phones, but on the user's 1144px viewport it stays a hard 22rem (352px) even though there's plenty of room — so descriptions like the Seedance 2.0 one only get ~2 short lines and clip.
+### Change (single file: `src/components/WorkflowPanel.tsx`)
 
-### Changes (single file: `src/components/ModelPicker.tsx`)
+Add a **Back** button next to the existing **Start Over** / **Re-analyze** row at the top of the right panel (the `phase === "breakdown" | "generate"` toolbar around lines 988–1003).
 
-**1. Make item text actually wrap to the available width**
-- Add `pr-2` and `w-full min-w-0` to the inner column wrapper, and add `block w-full` to both `<span>`s so they take the full row width before clamping.
-- Replace the description's `line-clamp-2` with `whitespace-normal break-words` plus `line-clamp-3` so long sentences wrap onto a third line instead of being cut. Keep `truncate` only on the bold label (single line is fine for names).
-- Add `data-[highlighted]:[&_*]:text-inherit` so highlighted (amber) row keeps the description readable instead of staying muted-blue on amber.
+**Behavior:**
+- Returns the user to `phase: "upload"` so the Analyze Scene / Skip CTA pair becomes visible again.
+- **Preserves** uploaded images, model selection, description text, and any element directions — only resets `phase`. (This is what differentiates it from Start Over, which resets everything.)
+- Also clears `sceneFrames` only when the user came from Skip (frames empty) — if they had analyzed, keep the frames so re-entering breakdown via Skip-then-Analyze isn't required; clicking Analyze again will refresh them, and clicking Skip will set frames to `[]` as it already does.
+- Hidden when `isAnalyzing` or `isLoading` is true to avoid mid-request navigation.
+- Disabled / hidden if `phase === "generate"` AND `results` exist (going back after a successful generation should use Start Over to avoid confusion); only show Back when `phase === "breakdown"` or `phase === "generate" && !results`.
 
-**2. Give the popover room to breathe on tablet/desktop**
-- Change `w-[min(22rem,calc(100vw-1.5rem))]` to `w-[min(28rem,calc(100vw-1.5rem))] sm:w-[28rem]` so on ≥640px the panel is 448px wide — enough to render the longest Seedance/Kling description on two lines without clipping. Mobile behavior unchanged (still capped by viewport minus gutter).
-- Add `side="bottom"` and `align="start"` props on `SelectContent`, plus `collisionPadding={12}` so when Radix flips it upward (drop-up), it still respects the wider width and doesn't get pinned against the right edge of the trigger.
+**Placement & styling:**
+- Insert it as the first item in the existing flex row at line 990, before `startOverBtn`:
+  ```
+  [ ← Back ]   [ ↺ Start Over ]                          [ 🔍 Re-analyze ]
+  ```
+- Match the ghost variant + small size already used by Start Over for visual consistency. Use `ArrowLeft` icon from `lucide-react` (already imported elsewhere — verify and add if missing). Label hidden on `<sm` like the others (`hidden sm:inline`).
+- RTL: use the logical `me-`/`ms-` Tailwind utilities the file already follows; the `ArrowLeft` icon should flip to point right under RTL — handle with `rtl:rotate-180` on the icon.
 
-**3. Sticky group label readability**
-- The "BYTEDANCE (SEEDANCE)" sticky header currently overlaps the first row's top text on scroll. Add `shadow-[0_1px_0_hsl(var(--border))]` and bump padding to `py-2` so it sits cleanly above content.
+### Translations
+
+Add a new key in both translation files:
+- `src/i18n/translations/en.ts`: `"wp.back": "Back"`
+- `src/i18n/translations/ar.ts`: `"wp.back": "رجوع"`
 
 ### Out of scope
 
-- No changes to `MODEL_GROUPS`, translations, or contract logic.
-- No restyle of colors, fonts, or the trigger card itself.
-- No new dependencies.
+- No change to Start Over, Re-analyze, Skip, or Analyze Scene logic.
+- No change to upload-phase UI.
+- No state model refactor — Back simply flips `phase` back to `"upload"`.
 
-### Verification after implementation
+### Verification
 
-Re-open the picker at 360, 414, 820, 1144, and 1280 widths in both LTR and RTL; confirm every Kling/Seedance/Veo description renders fully (≤3 lines, no mid-word ellipsis), the highlighted row stays readable, and the panel doesn't overflow the viewport on mobile.
+1. Upload an image → click **Skip** → land on breakdown with empty scene frames → click **Back** → CTA pair reappears with image still mounted → click **Analyze Scene** → scene frames populate normally.
+2. Same flow but Analyze first → Back → Skip → confirm phase transitions and image persists.
+3. Confirm Back is hidden during analyze/generate spinners and after a successful generation.
+4. Toggle Arabic — confirm the arrow icon flips and label reads "رجوع".
 
