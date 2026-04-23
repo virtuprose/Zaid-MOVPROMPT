@@ -14,8 +14,8 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
-  Activity, Calendar, Clock, Mail, MailCheck, MailWarning, ShieldAlert,
-  KeyRound, Send, LogOut, Trash2, Copy, Image as ImageIcon, ExternalLink,
+  Activity, Calendar, Clock, MailCheck, MailWarning, ShieldAlert,
+  KeyRound, Send, LogOut, Trash2, Copy, Image as ImageIcon,
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { useLanguage } from "@/i18n/LanguageContext";
