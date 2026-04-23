@@ -7,9 +7,22 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Pencil, Download, Search, ChevronLeft, ChevronRight, ShieldCheck, ShieldOff } from "lucide-react";
+import { Pencil, Download, Search, ChevronLeft, ChevronRight, ShieldCheck, ShieldOff, LogOut, Loader2 } from "lucide-react";
 import Sparkline from "./Sparkline";
 import UserDetailDrawer, { type DrawerUser } from "./UserDetailDrawer";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 
 interface UserRow extends DrawerUser {
   last_30d: number;
@@ -25,7 +38,27 @@ const UsersTab = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState<"all" | "admin" | "user">("all");
   const [currentPage, setCurrentPage] = useState(1);
+  const [revoking, setRevoking] = useState(false);
+  const [revokeDialogOpen, setRevokeDialogOpen] = useState(false);
+  const navigate = useNavigate();
   const pageSize = 10;
+
+  const handleRevokeAllSessions = async () => {
+    setRevoking(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("admin-revoke-all-sessions", { body: {} });
+      if (error) throw error;
+      const count = data?.count ?? 0;
+      toast.success(`Revoked ${count} session${count === 1 ? "" : "s"}`);
+      setRevokeDialogOpen(false);
+      // Caller's own session is now invalid — sign out locally and redirect
+      await supabase.auth.signOut();
+      navigate("/auth");
+    } catch (e: any) {
+      toast.error(e?.message || "Failed to revoke sessions");
+      setRevoking(false);
+    }
+  };
 
   const filteredUsers = useMemo(() => {
     return users.filter((u) => {
@@ -183,6 +216,38 @@ const UsersTab = () => {
             <SelectItem value="user">User</SelectItem>
           </SelectContent>
         </Select>
+        <AlertDialog open={revokeDialogOpen} onOpenChange={setRevokeDialogOpen}>
+          <AlertDialogTrigger asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2 text-destructive border-destructive/40 hover:bg-destructive/10 hover:text-destructive"
+              disabled={revoking}
+            >
+              {revoking ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogOut className="w-4 h-4" />}
+              Revoke all sessions
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Sign out all users?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will revoke every active session, including admins. You will be signed out too and redirected to the login page.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={revoking}>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={(e) => { e.preventDefault(); handleRevokeAllSessions(); }}
+                disabled={revoking}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {revoking ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                Revoke all
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
         <Button variant="outline" size="sm" onClick={() => {
           const lines: string[] = [
             "=== MovPrompt Users Report ===", "",
