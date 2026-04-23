@@ -980,6 +980,24 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
     </Button>
   );
 
+  const canShowBack =
+    !isAnalyzing &&
+    !isLoading &&
+    (phase === "breakdown" || (phase === "generate" && !results));
+
+  const backBtn = canShowBack && (
+    <Button
+      size="sm"
+      variant="ghost"
+      onClick={() => setPhase("upload")}
+      aria-label={t("wp.back" as any)}
+      title={t("wp.back" as any)}
+      className="gap-1.5 px-2 sm:px-3 text-muted-foreground hover:text-foreground"
+    >
+      <ArrowLeft className="w-3.5 h-3.5 rtl:rotate-180" /> <span className="hidden sm:inline">{t("wp.back" as any)}</span>
+    </Button>
+  );
+
   const showRightEmptyState = !results && !isLoading && !((phase === "breakdown" || phase === "generate") && sceneFrames.length > 0);
 
   const rightPanel = (
