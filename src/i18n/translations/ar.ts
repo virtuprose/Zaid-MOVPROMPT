@@ -71,6 +71,7 @@ export const ar: Record<TranslationKey, string> = {
   "wp.skip": "تخطّى وأنشئ الآن",
   "wp.skipHint": "أسرع ولكن بتحكم أقل",
   "wp.startOver": "البدء من جديد",
+  "wp.back": "رجوع",
   "wp.badgesReset": "تمت إعادة ضبط الحالات",
   "wp.undo": "تراجع",
   "wp.confirmReset.title": "إعادة ضبط حالات العناصر؟",

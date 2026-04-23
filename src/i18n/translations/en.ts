@@ -69,6 +69,7 @@ export const en = {
   "wp.skip": "Skip & Generate Now",
   "wp.skipHint": "Faster but less control",
   "wp.startOver": "Start Over",
+  "wp.back": "Back",
   "wp.badgesReset": "Badges reset",
   "wp.undo": "Undo",
   "wp.confirmReset.title": "Reset element badges?",
