@@ -413,6 +413,11 @@ serve(async (req) => {
       }
     }
 
+    const isSeedance20 = targetModel === "seedance-2.0" || targetModel === "seedance-2.0-fast";
+    if (isSeedance20 && workflowType !== "multishot") {
+      userText += ` Return EXACTLY ONE entry in the results array. The full shooting script — every sequence block and numbered cut — lives INSIDE the single mainPrompt of that one entry. Do NOT split cuts into separate results.`;
+    }
+
     const userContent: any[] = [{ type: "text", text: userText }];
     for (const img of images) {
       userContent.push({
@@ -540,6 +545,10 @@ serve(async (req) => {
     }
 
     const parsed = JSON.parse(toolCall.function.arguments);
+
+    if (isSeedance20 && workflowType !== "multishot" && Array.isArray(parsed.results) && parsed.results.length > 1) {
+      parsed.results = parsed.results.slice(0, 1);
+    }
 
     return new Response(JSON.stringify({ ...parsed, agent: agent.id, agentName: displayName }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
