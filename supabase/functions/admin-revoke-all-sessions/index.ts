@@ -55,6 +55,19 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Record audit log entry
+    await adminClient.from("admin_audit_log").insert({
+      actor_id: caller.id,
+      actor_email: caller.email ?? null,
+      action: "revoke_all_sessions",
+      target_count: count,
+      metadata: {
+        total_users: allUserIds.length,
+        failure_count: failures.length,
+        failures: failures.slice(0, 20),
+      },
+    });
+
     return new Response(JSON.stringify({ success: true, count, failures }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
