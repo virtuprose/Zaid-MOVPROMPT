@@ -79,21 +79,32 @@ Deno.serve(async (req) => {
       ? `Scene elements: ${sceneSummary}\n\nUser's draft:\n${description}`
       : `User's draft:\n${description}`;
 
-    const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
-        temperature: 0.4,
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: userContent },
-        ],
-      }),
-    });
+    const callAi = (model: string) =>
+      fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model,
+          temperature: 0.4,
+          messages: [
+            { role: "system", content: SYSTEM_PROMPT },
+            { role: "user", content: userContent },
+          ],
+        }),
+      });
+
+    const PRIMARY_MODEL = "google/gemini-3-flash-preview";
+    const FALLBACK_MODEL = "google/gemini-2.5-flash";
+    let aiResp = await callAi(PRIMARY_MODEL);
+    let usedFallback = false;
+    if (aiResp.status === 429 || aiResp.status === 402) {
+      console.warn(`enhance: primary ${PRIMARY_MODEL} returned ${aiResp.status}, retrying with ${FALLBACK_MODEL}`);
+      aiResp = await callAi(FALLBACK_MODEL);
+      usedFallback = true;
+    }
 
     if (aiResp.status === 429) {
       return new Response(JSON.stringify({ error: "Rate limit exceeded" }), {
@@ -110,8 +121,8 @@ Deno.serve(async (req) => {
     if (!aiResp.ok) {
       const text = await aiResp.text();
       console.error("AI gateway error:", aiResp.status, text);
-      return new Response(JSON.stringify({ error: "AI gateway error" }), {
-        status: 500,
+      return new Response(JSON.stringify({ error: `AI gateway error (${aiResp.status})` }), {
+        status: 502,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -125,9 +136,9 @@ Deno.serve(async (req) => {
       });
     }
 
-    return new Response(JSON.stringify({ enhanced }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    const headers: Record<string, string> = { ...corsHeaders, "Content-Type": "application/json" };
+    if (usedFallback) headers["X-Used-Fallback"] = "1";
+    return new Response(JSON.stringify({ enhanced, usedFallback }), { headers });
   } catch (err) {
     console.error("enhance-description error:", err);
     return new Response(
