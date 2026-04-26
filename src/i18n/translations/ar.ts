@@ -231,6 +231,11 @@ export const ar: Record<TranslationKey, string> = {
   "library.negative": "سلبي",
   "library.camera": "كاميرا",
   "library.notes": "ملاحظات",
+  "library.viewPrompts": "عرض الأوامر",
+  "library.hidePrompts": "إخفاء الأوامر",
+  "library.morePhotos": "+{n}",
+  "library.subtitle": "{count} امر محفوظ",
+  "library.noReference": "لا توجد صورة مرجعية",
 
   // Terms & Conditions
   "terms.back": "رجوع",

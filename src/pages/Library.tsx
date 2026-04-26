@@ -105,45 +105,84 @@ function HistoryCard({ entry, t, onDelete }: { entry: HistoryEntry; t: (k: strin
     .join("\n\n");
 
   return (
-    <Card className="bg-card border-border overflow-hidden flex flex-col">
-      <button
-        onClick={() => setExpanded(!expanded)}
-        className="w-full text-start p-3 sm:p-4 flex items-start gap-3 hover:bg-secondary/30 transition-colors flex-1"
-      >
-        {/* Thumbnail (64x64) */}
+    <Card className="bg-card border-border overflow-hidden flex flex-col group">
+      {/* Media banner */}
+      <div className="relative aspect-video w-full overflow-hidden bg-gradient-to-br from-primary/10 via-secondary/40 to-accent/10">
         {thumbUrl ? (
           <img
             src={thumbUrl}
             alt={t("library.referenceThumb" as any) || "Reference"}
-            className="w-16 h-16 rounded-lg object-cover shrink-0 border border-border"
+            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
             loading="lazy"
           />
         ) : (
-          <div
-            className="w-16 h-16 rounded-lg shrink-0 flex items-center justify-center bg-secondary/40"
-            style={{ border: "1px solid rgba(0,212,255,0.2)" }}
-            aria-label="No reference image"
-          >
-            <Film className="w-5 h-5 text-primary/60" />
+          <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-muted-foreground/60">
+            <Film className="w-8 h-8" />
+            <span className="text-[10px] uppercase tracking-wider">{t("library.noReference" as any)}</span>
           </div>
         )}
 
-        {/* Right side: badge + preview + meta */}
-        <div className="flex-1 min-w-0 flex flex-col gap-1.5 self-stretch">
-          <div className="flex items-start justify-between gap-2">
-            <p className="text-sm text-foreground/85 line-clamp-2 leading-snug flex-1 min-w-0">
-              {preview}{preview.length >= 200 ? "…" : ""}
-            </p>
-            <Badge variant="outline" className={`text-[10px] shrink-0 ${wf.color}`}>{wf.label}</Badge>
-          </div>
-          <div className="mt-auto flex items-center gap-2 flex-wrap">
-            <span className="text-[11px] text-muted-foreground truncate">{entry.target_model}</span>
-            <span className="text-[11px] text-muted-foreground/60">·</span>
-            <span className="text-[11px] text-muted-foreground/60">{timeAgo(entry.created_at, t)}</span>
-            <ChevronDown className={`w-4 h-4 ms-auto shrink-0 text-muted-foreground transition-transform ${expanded ? "rotate-180" : ""}`} />
-          </div>
+        {/* Top-left: workflow badge */}
+        <div className="absolute top-2 start-2">
+          <Badge
+            variant="outline"
+            className={`text-[10px] backdrop-blur-md bg-background/60 ${wf.color}`}
+          >
+            {wf.label}
+          </Badge>
         </div>
-      </button>
+
+        {/* Top-right: time */}
+        <div className="absolute top-2 end-2">
+          <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-background/60 backdrop-blur-md text-foreground/90 border border-border/40">
+            {timeAgo(entry.created_at, t)}
+          </span>
+        </div>
+
+        {/* Bottom-right: +N more photos */}
+        {entry.image_paths && entry.image_paths.length > 1 && (
+          <div className="absolute bottom-2 end-2">
+            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-background/70 backdrop-blur-md text-foreground border border-border/40">
+              +{entry.image_paths.length - 1}
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* Body */}
+      <div className="p-4 flex flex-col gap-2 flex-1">
+        <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-primary">
+          {entry.target_model}
+        </span>
+        <p className="text-sm text-foreground/85 leading-relaxed line-clamp-2 min-h-[2.6rem]">
+          {preview}{preview.length >= 200 ? "…" : ""}
+        </p>
+      </div>
+
+      {/* Footer */}
+      <div className="flex items-center justify-between gap-2 px-3 py-2 border-t border-border bg-secondary/20">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setExpanded(!expanded)}
+          className="h-7 px-2 text-xs gap-1"
+        >
+          <ChevronDown className={`w-3.5 h-3.5 transition-transform ${expanded ? "rotate-180" : ""}`} />
+          {expanded ? t("library.hidePrompts" as any) : t("library.viewPrompts" as any)}
+        </Button>
+        <div className="flex items-center gap-1">
+          <CopyButton text={allText} label={t("library.copyAll")} copiedLabel={t("library.copied")} />
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 w-7 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+            onClick={(e) => { e.stopPropagation(); onDelete(entry.id); }}
+            aria-label={t("library.delete")}
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </Button>
+        </div>
+      </div>
 
       <AnimatePresence>
         {expanded && (
@@ -154,8 +193,8 @@ function HistoryCard({ entry, t, onDelete }: { entry: HistoryEntry; t: (k: strin
             transition={{ duration: 0.25 }}
             className="overflow-hidden"
           >
-            <div className="px-4 pb-4 space-y-4 border-t border-border pt-3">
-              {/* Reference images */}
+            <div className="px-4 pb-4 pt-3 space-y-4 border-t border-border">
+              {/* Reference images strip */}
               {imageUrls.length > 0 && (
                 <div className="flex gap-2 overflow-x-auto pb-1">
                   {imageUrls.map((url, i) => (
@@ -168,18 +207,6 @@ function HistoryCard({ entry, t, onDelete }: { entry: HistoryEntry; t: (k: strin
                   ))}
                 </div>
               )}
-              <div className="flex justify-end gap-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 px-2 text-xs gap-1 text-destructive hover:text-destructive hover:bg-destructive/10"
-                  onClick={(e) => { e.stopPropagation(); onDelete(entry.id); }}
-                >
-                  <Trash2 className="w-3 h-3" />
-                  {t("library.delete")}
-                </Button>
-                <CopyButton text={allText} label={t("library.copyAll")} copiedLabel={t("library.copied")} />
-              </div>
               {results.map((shot: any, i: number) => (
                 <div key={i} className="space-y-2">
                   {results.length > 1 && (
@@ -310,11 +337,16 @@ const Library = () => {
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-6"
+          className="text-center mb-6 space-y-1"
         >
           <h1 className="text-2xl sm:text-3xl font-bold font-display">
             {t("library.title")}
           </h1>
+          {!loading && history.length > 0 && (
+            <p className="text-xs text-muted-foreground">
+              {t("library.subtitle" as any).replace("{count}", String(history.length))}
+            </p>
+          )}
         </motion.div>
 
         {/* Search & Filters */}
@@ -407,9 +439,9 @@ const Library = () => {
 
         {/* Content */}
         {loading ? (
-          <div className="space-y-3">
-            {[1, 2, 3].map((i) => (
-              <Skeleton key={i} className="h-24 rounded-lg" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <Skeleton key={i} className="aspect-[4/3] rounded-lg" />
             ))}
           </div>
         ) : history.length === 0 ? (
@@ -450,7 +482,7 @@ const Library = () => {
             <p className="text-xs text-muted-foreground/60">
               {filtered.length} {t("library.resultsCount")}
             </p>
-            <div className="gap-3 [column-fill:_balance] columns-1 md:columns-2 lg:columns-3 [&>*]:mb-3 [&>*]:break-inside-avoid">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {filtered.map((entry) => (
                 <HistoryCard key={entry.id} entry={entry} t={t} onDelete={handleDelete} />
               ))}
