@@ -124,6 +124,16 @@ serve(async (req) => {
       resolvedShotCount = multiShotCount;
     }
 
+    // If user is in multishot AND uploaded multiple elements, scale shot count to match
+    // (one shot per element, capped 3..10). Server-side guard so the AI is told the right count
+    // even if the client forgot to pass it.
+    if (workflowType === "multishot" && hasElements) {
+      const elementCount = (elements as unknown[]).length;
+      if (elementCount >= 3) {
+        resolvedShotCount = Math.max(resolvedShotCount, Math.min(10, elementCount));
+      }
+    }
+
     // Validate references (optional, max 10, ~8MB combined image payload)
     const ALLOWED_REF_KINDS = new Set(["image", "video", "audio"]);
     const ALLOWED_REF_ROLES = new Set(["style", "lighting", "composition", "motion", "mood"]);
@@ -495,6 +505,9 @@ serve(async (req) => {
 
     const buildAiBody = (model: string) => JSON.stringify({
       model,
+      // Generous output budget so multi-shot tool calls (up to 10 detailed shots,
+      // each with several long string fields) don't get silently truncated.
+      max_tokens: 16000,
       messages: [
         { role: "system", content: composedSystemPrompt },
         { role: "user", content: userContent },
@@ -588,6 +601,22 @@ serve(async (req) => {
 
     if (isSeedance20 && workflowType !== "multishot" && Array.isArray(parsed.results) && parsed.results.length > 1) {
       parsed.results = parsed.results.slice(0, 1);
+    }
+
+    // Truncation guard: warn the user if the AI returned fewer shots than requested.
+    if (
+      workflowType === "multishot" &&
+      Array.isArray(parsed.results) &&
+      parsed.results.length < resolvedShotCount
+    ) {
+      console.warn(
+        `generate-prompt: requested ${resolvedShotCount} shots but received ${parsed.results.length} (possible AI output truncation).`,
+      );
+      const last = parsed.results[parsed.results.length - 1];
+      if (last && typeof last === "object") {
+        const note = `\n\n⚠ Output truncated: requested ${resolvedShotCount} shots but the AI returned only ${parsed.results.length}. Try Regenerate, or upload fewer elements.`;
+        last.modelNotes = (typeof last.modelNotes === "string" ? last.modelNotes : "") + note;
+      }
     }
 
     // Server-side safety net: hard-trim mainPrompt to the model's documented input cap.
