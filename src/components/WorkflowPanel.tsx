@@ -1045,7 +1045,8 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
           >
             <ResultsPanel
               results={results}
-              onRegenerate={handleGenerate}
+              onRegenerate={() => handleGenerate()}
+              onRegenerateCompact={() => handleGenerate({ compact: true })}
               isLoading={isLoading}
               agentName={agentName ?? undefined}
               modelLabel={MODEL_GROUPS.flatMap(g => g.models).find(m => m.value === selectedModel)?.label ?? selectedModel}
