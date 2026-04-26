@@ -655,9 +655,8 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
 
   const modeToggleBlock = (contract.supportsTwoFrameToggle || contract.supportsMultiShotToggle) && (() => {
     const both = contract.supportsTwoFrameToggle && contract.supportsMultiShotToggle;
-    const multiLabel = contract.multiShotCount === 10
-      ? t("contract.toggle.multiShot10" as any)
-      : t("contract.toggle.multiShot3" as any);
+    const multiCount = contract.multiShotCount ?? 3;
+    const multiLabel = (t("contract.toggle.multiShotN" as any) || "Multi-shot ({count})").replace("{count}", String(multiCount));
 
     const setMode = (mode: "single" | "twoframe" | "multishot") => {
       setTwoFrameMode(mode === "twoframe");
