@@ -160,6 +160,8 @@ export const en = {
  "results.chars": "chars",
  "results.charLimitHint": "Recommended character limit for this model — stay under to avoid truncation when pasting.",
  "results.overLimit": "Prompt exceeds this model's input limit. The server has auto-trimmed it; consider regenerating for a tighter result.",
+ "results.regenerateCompact": "Regenerate compact",
+ "results.regenerateCompactHint": "Re-run with a stricter character budget so the prompt fits without trimming.",
 
   // SceneBreakdown
   "scene.title": "Scene Elements",

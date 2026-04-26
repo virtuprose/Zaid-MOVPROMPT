@@ -419,7 +419,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
     }
   };
 
-  const handleGenerate = async () => {
+  const handleGenerate = async (opts?: { compact?: boolean }) => {
     if (!hasRequiredImages) return;
     if (!user) {
       toast({ title: t("wp.signInRequired"), description: t("wp.signInGenerate"), variant: "destructive" });
@@ -512,6 +512,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
           autoInjectElements: elementsPayload.length > 0 ? true : undefined,
           elementMentions: elementMentions.length > 0 ? elementMentions : undefined,
           multiShotCount: workflowType === "multishot" && contract.supportsMultiShotToggle ? contract.multiShotCount : undefined,
+          compactMode: opts?.compact === true ? true : undefined,
         },
       });
 
@@ -931,7 +932,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
       <Button
         data-tour="generate-button"
         size="lg"
-        onClick={handleGenerate}
+        onClick={() => handleGenerate()}
         disabled={isLoading}
         className="w-full sm:w-auto px-6 sm:px-8 font-display font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/25"
       >
@@ -1044,7 +1045,8 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
           >
             <ResultsPanel
               results={results}
-              onRegenerate={handleGenerate}
+              onRegenerate={() => handleGenerate()}
+              onRegenerateCompact={() => handleGenerate({ compact: true })}
               isLoading={isLoading}
               agentName={agentName ?? undefined}
               modelLabel={MODEL_GROUPS.flatMap(g => g.models).find(m => m.value === selectedModel)?.label ?? selectedModel}

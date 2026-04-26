@@ -91,7 +91,8 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { images, workflowType, description, targetModel, sceneBreakdown, audioEnabled, references, elements, autoInjectElements, multiShotCount, elementMentions } = body;
+    const { images, workflowType, description, targetModel, sceneBreakdown, audioEnabled, references, elements, autoInjectElements, multiShotCount, elementMentions, compactMode } = body;
+    const isCompact = compactMode === true;
 
     // --- Input Validation ---
     // Allow 0 images when elements are provided (element-only mode, e.g. Seedance 2.0).
@@ -418,7 +419,22 @@ serve(async (req) => {
       userText += ` Return EXACTLY ONE entry in the results array. The full shooting script — every sequence block and numbered cut — lives INSIDE the single mainPrompt of that one entry. Do NOT split cuts into separate results.`;
     }
 
-    const userContent: any[] = [{ type: "text", text: userText }];
+    if (isCompact) {
+      const targetLimit = ({
+        "seedance-2.0-fast": 1800, "seedance-2.0": 1800, "seedance-1.5-pro": 1800, "seedance-pro": 1800, "seedance-pro-fast": 1800,
+        "hailuo-2.3-fast": 1800, "hailuo-2.3": 1800, "hailuo-02-fast": 1800, "hailuo-02": 1800,
+        "sora-2": 950, "sora-2-pro": 950, "sora-2-max": 950, "sora-2-pro-max": 950,
+        "higgsfield-lite": 500, "higgsfield-standard": 500, "higgsfield-turbo": 500,
+        "veo-3.1-lite": 1500, "veo-3.1-fast": 1500, "veo-3.1": 1500, "veo-3-fast": 1500, "veo-3": 1500,
+        "kling-3.0": 2000, "kling-3.0-omni": 2000, "kling-3.0-omni-edit": 1200, "kling-2.6": 2000,
+        "kling-o1-video": 2000, "kling-o1-video-edit": 1200, "kling-motion-control": 2000, "kling-3.0-motion-control": 2000,
+        "wan-2.7": 1500, "wan-2.6": 1500, "wan-2.5": 1500, "wan-2.5-fast": 1500, "wan-2.2": 1500, "wan-2.2-fast": 1500,
+        "grok-imagine": 1200, "grok-imagine-edit": 1200, "any": 1500,
+      } as Record<string, number>)[targetModel] ?? 1500;
+      const tight = Math.floor(targetLimit * 0.7);
+      userText += `\n\nCOMPACT MODE — STRICT LENGTH BUDGET: Each \`mainPrompt\` MUST stay under ${tight} characters (≈${Math.floor(tight/6)} words). Cut every redundant adjective, merge sentences, drop optional flavor lines, and keep only the load-bearing scene/subject/camera/motion beats. Do NOT exceed ${tight} chars even if it means dropping a section. Treat this as a hard ceiling.`;
+    }
+
     for (const img of images) {
       userContent.push({
         type: "image_url",
@@ -563,7 +579,8 @@ serve(async (req) => {
       "wan-2.7": 1500, "wan-2.6": 1500, "wan-2.5": 1500, "wan-2.5-fast": 1500, "wan-2.2": 1500, "wan-2.2-fast": 1500,
       "grok-imagine": 1200, "grok-imagine-edit": 1200, "any": 1500,
     };
-    const limit = MODEL_CHAR_LIMITS[targetModel];
+    const baseLimit = MODEL_CHAR_LIMITS[targetModel];
+    const limit = baseLimit && isCompact ? Math.floor(baseLimit * 0.7) : baseLimit;
     if (limit && Array.isArray(parsed.results)) {
       for (const shot of parsed.results) {
         if (typeof shot?.mainPrompt === "string" && shot.mainPrompt.length > limit) {
