@@ -435,6 +435,10 @@ serve(async (req) => {
       userText += `\n\nCOMPACT MODE — STRICT LENGTH BUDGET: Each \`mainPrompt\` MUST stay under ${tight} characters (≈${Math.floor(tight/6)} words). Cut every redundant adjective, merge sentences, drop optional flavor lines, and keep only the load-bearing scene/subject/camera/motion beats. Do NOT exceed ${tight} chars even if it means dropping a section. Treat this as a hard ceiling.`;
     }
 
+    const userContent: Array<{ type: string; text?: string; image_url?: { url: string } }> = [
+      { type: "text", text: userText },
+    ];
+
     for (const img of images) {
       userContent.push({
         type: "image_url",
