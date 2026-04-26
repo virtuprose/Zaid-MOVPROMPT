@@ -53,5 +53,6 @@ export function pickErrorKey(parsed: ParsedFnError): string {
   if (parsed.status === 429) return "errors.aiRateLimit";
   if (parsed.status === 402) return "errors.aiCreditsExhausted";
   if (parsed.status === 504 || parsed.status === 408) return "errors.aiTimeout";
+  if (parsed.status === 503 || parsed.status === 502 || parsed.status === 500) return "errors.aiServiceUnavailable";
   return "errors.aiUnknown";
 }
