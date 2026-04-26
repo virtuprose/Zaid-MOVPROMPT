@@ -58,7 +58,7 @@ function parseJwtClaims(token: string): Record<string, unknown> | null {
 
 // Move a message to the dead letter queue and log the reason.
 async function moveToDlq(
-  supabase: ReturnType<typeof createClient>,
+  supabase: AnySupabaseClient,
   queue: string,
   msg: { msg_id: number; message: Record<string, unknown> },
   reason: string
