@@ -579,7 +579,8 @@ serve(async (req) => {
       "wan-2.7": 1500, "wan-2.6": 1500, "wan-2.5": 1500, "wan-2.5-fast": 1500, "wan-2.2": 1500, "wan-2.2-fast": 1500,
       "grok-imagine": 1200, "grok-imagine-edit": 1200, "any": 1500,
     };
-    const limit = MODEL_CHAR_LIMITS[targetModel];
+    const baseLimit = MODEL_CHAR_LIMITS[targetModel];
+    const limit = baseLimit && isCompact ? Math.floor(baseLimit * 0.7) : baseLimit;
     if (limit && Array.isArray(parsed.results)) {
       for (const shot of parsed.results) {
         if (typeof shot?.mainPrompt === "string" && shot.mainPrompt.length > limit) {
