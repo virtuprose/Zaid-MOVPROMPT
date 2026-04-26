@@ -23,11 +23,11 @@ interface ModelRowProps {
 const ModelRow = ({ value, label, description, isAny }: ModelRowProps) => (
   <SelectItem
     value={value}
-    className="py-3 px-2.5 min-h-[3.25rem] data-[state=checked]:border-l-2 data-[state=checked]:border-primary data-[state=checked]:bg-primary/5 data-[highlighted]:[&_*]:text-inherit"
+    className="py-3 ps-7 pe-3 min-h-[3.25rem] data-[state=checked]:border-l-2 data-[state=checked]:border-primary data-[state=checked]:bg-primary/5 data-[highlighted]:[&_*]:text-inherit [&>span]:block [&>span]:w-full [&>span]:min-w-0"
   >
-    <div className="flex flex-col gap-0.5 w-full min-w-0 pr-2">
+    <div className="flex flex-col gap-0.5 w-full min-w-0">
       <span className={`block w-full truncate ${isAny ? "font-semibold" : "font-medium"}`}>{label}</span>
-      <span className="block w-full text-[11px] sm:text-xs text-muted-foreground whitespace-normal break-words line-clamp-3 leading-snug">
+      <span className="block w-full text-[11px] sm:text-xs text-muted-foreground whitespace-normal break-words leading-snug">
         {description}
       </span>
     </div>

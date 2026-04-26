@@ -1,42 +1,29 @@
+## Fix: Model picker dropdown descriptions cut off at the right edge
 
-## Add "Revoke all sessions" button to Users toolbar
+### What's happening
+In the model dropdown (Seedance / Veo / Kling groups), description lines like *"Best for choreographe…"* and *"Best f…"* are clipped mid-word. Two compounding causes:
 
-A new button next to the **All Roles** filter that signs every user out globally (forces them to re-login on next request). Useful after security incidents, role changes at scale, or before a major release.
+1. **Radix `SelectPrimitive.ItemText` is an inline span** — it doesn't stretch to the row's full width, so the inner `flex flex-col w-full` div can't actually fill the row. Long text overflows horizontally and gets clipped by `overflow-hidden` on `SelectContent`.
+2. **Tight horizontal budget** — each item has `pl-8 pr-2` (checkmark gutter) + the row's own `px-2.5` + `pr-2` on the inner div. Combined with the popover width and the inline-span issue above, descriptions don't get enough room to wrap cleanly.
 
-### UI
-- Location: `src/components/admin/UsersTab.tsx`, in the toolbar row, placed between the role `Select` and the existing **Download Report** button.
-- Label: **"Revoke all sessions"** with a `LogOut` icon (lucide-react), `variant="outline"`, destructive-colored text (`text-destructive border-destructive/40 hover:bg-destructive/10`).
-- Click → `AlertDialog` confirm: "Sign out all users? This will revoke every active session, including admins. You will be signed out too."
-  - Confirm button: "Revoke all" (destructive)
-  - Cancel button
-- During execution: button shows spinner + disabled state.
-- On success: toast `"Revoked N sessions"`, then redirect current admin to `/auth` (since their own session is gone too).
+### Fix
 
-### Backend
-- New edge function: `supabase/functions/admin-revoke-all-sessions/index.ts`
-  - Verifies caller is admin (same pattern as `admin-force-signout`).
-  - Uses `adminClient.auth.admin.listUsers()` (paginate through all pages).
-  - For each user, calls `adminClient.auth.admin.signOut(user.id, "global")`.
-  - Returns `{ success: true, count: N }`.
-  - Logs failures per-user but continues; returns `failures` array if any.
-- Deploy via `deploy_edge_functions`.
+**File: `src/components/ModelPicker.tsx`**
 
-### Self-protection
-Unlike `admin-force-signout`, this intentionally signs the caller out too (that's the point — "all sessions"). The frontend handles the redirect gracefully after the toast.
+Force the `ItemText` wrapper to behave as a block-level, full-width container so the flex column inside can wrap properly. Apply the layout styles directly to the `SelectItem`'s text slot via a child selector, and reduce the inner `pr-2` so wrapped lines have breathing room.
 
-### i18n
-Add keys under `admin.users.*`:
-- `revokeAllSessions`, `revokeAllConfirmTitle`, `revokeAllConfirmDescription`, `revokeAllConfirmAction`, `revokeAllSuccess` (with `{count}` placeholder), `revokeAllError`
-- EN + AR translations in `src/i18n/translations/{en,ar}.ts`
+Specifically:
+- Add `[&>span]:block [&>span]:w-full [&>span]:min-w-0` to the `SelectItem`'s `className` so Radix's internal ItemText span becomes a full-width block.
+- Remove the redundant `pr-2` on the inner `<div>` (the row already has `px-2.5`); keep `min-w-0 w-full`.
+- Keep `whitespace-normal break-words` on the description; remove `line-clamp-3` since the row's `min-h-[3.25rem]` is already a soft floor and we'd rather show the full sentence than truncate.
+- Tighten left padding from `pl-8` to `pl-7` on the SelectItem (via override) — Radix's check icon sits at `left-2` w-3.5, so `pl-7` is enough and gives ~4px back to the text column.
 
 ### Files touched
-- `src/components/admin/UsersTab.tsx` — add button + AlertDialog + handler
-- `supabase/functions/admin-revoke-all-sessions/index.ts` — new
-- `src/i18n/translations/en.ts`, `src/i18n/translations/ar.ts` — new keys
+- `src/components/ModelPicker.tsx` — only the `ModelRow` component (~10 lines).
 
 ### Verification
-1. Click **Revoke all sessions** → confirm dialog appears.
-2. Confirm → toast "Revoked N sessions" → admin redirected to `/auth`.
-3. Open a second browser logged in as another user → next request returns 401, user redirected to login.
-4. Cancel button closes dialog with no action.
-5. AR layout: button label mirrors, dialog reads RTL.
+1. Open the model dropdown on desktop (1144px) and mobile widths.
+2. Confirm long descriptions (Seedance 2.0, Seedance Pro, Kling Omni) wrap fully — no trailing "…" mid-word, no horizontal clipping.
+3. Confirm the highlighted/selected row (amber bg) shows the same full text.
+4. Switch to Arabic (RTL): descriptions should wrap cleanly mirrored, no overflow on the left edge.
+5. Trigger label still renders; selection still works.
