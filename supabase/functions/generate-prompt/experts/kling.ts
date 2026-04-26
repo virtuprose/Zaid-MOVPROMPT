@@ -211,7 +211,7 @@ Camera vocabulary (bracketed, snake_case, ONE primary tag per shot):
 [camera:pan_left|pan_right|dolly_in|dolly_out|crane_up|crane_down|zoom_in|zoom_out|tilt_up|tilt_down|tracking_left|tracking_right|orbit_left|orbit_right]`,
 
   systemAddendum: `═══ TARGET MODEL: KLING (Kling AI Skill v1.1.0) ═══
-- mainPrompt: 80–180 words (O1 may extend to 220). START with subject + action verb in present tense.
+- mainPrompt: 80–180 words / max 2,000 characters (O1 may extend to 220 words but still ≤2,000 chars; Omni-EDIT must stay ≤1,200 chars). START with subject + action verb in present tense. Never exceed the cap — Kling's UI rejects very long prompts.
 - Embed exactly ONE primary [camera:*] tag inline, snake_case (pan_left, dolly_in, crane_up, …).
 - Be explicit about motion speed: "gradually", "sudden", "continuous", "slow-burn".
 - Audio rules:
