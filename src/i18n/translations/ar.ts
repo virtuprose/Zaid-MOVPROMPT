@@ -386,6 +386,12 @@ export const ar: Record<TranslationKey, string> = {
   // ResultsPanel
   "results.failedCopy": "فشل النسخ",
 
+  // Generic AI / edge function errors
+  "errors.aiRateLimit": "طلبات الذكاء الاصطناعي كثيرة — انتظر دقيقة ثم حاول مجدداً.",
+  "errors.aiCreditsExhausted": "نفذ رصيد الذكاء الاصطناعي. أضف رصيداً من الإعدادات ← مساحة العمل ← الاستخدام.",
+  "errors.aiTimeout": "استغرق الذكاء الاصطناعي وقتاً طويلاً. حاول مجدداً أو بسّط الطلب.",
+  "errors.aiUnknown": "حدث خطأ أثناء استدعاء الذكاء الاصطناعي. يرجى المحاولة مرة أخرى.",
+
   // Notifications
   "notifications.title": "الإشعارات",
   "notifications.markAllRead": "تعليم الكل كمقروء",

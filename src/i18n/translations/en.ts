@@ -384,6 +384,12 @@ export const en = {
   // ResultsPanel
   "results.failedCopy": "Failed to copy",
 
+  // Generic AI / edge function errors (used by enhance + generate flows)
+  "errors.aiRateLimit": "Too many AI requests — please wait a minute and try again.",
+  "errors.aiCreditsExhausted": "AI credits exhausted on the workspace. Add funds in Settings → Workspace → Usage.",
+  "errors.aiTimeout": "The AI took too long to respond. Try again, or simplify your request.",
+  "errors.aiUnknown": "Something went wrong calling the AI. Please try again.",
+
   // Notifications
   "notifications.title": "Notifications",
   "notifications.markAllRead": "Mark all read",

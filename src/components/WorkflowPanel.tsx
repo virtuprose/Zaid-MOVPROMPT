@@ -32,6 +32,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { getContract, deriveWorkflowType } from "@/lib/modelContracts";
 import { MODEL_GROUPS } from "@/lib/models";
+import { parseEdgeFnError, pickErrorKey } from "@/lib/edgeFnError";
 import { detectAllIntents } from "@/lib/sceneIntent";
 import { ModelPicker } from "./ModelPicker";
 import { OnboardingExamples, type OnboardingExample } from "./OnboardingExamples";
@@ -212,25 +213,28 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
       });
 
       if (error) {
-        const status = (error as any)?.context?.status ?? (error as any)?.status;
-        if (status === 429) {
-          toast({ title: t("enhance.error.rateLimit" as any), variant: "destructive" });
-        } else if (status === 402) {
-          toast({ title: t("enhance.error.credits" as any), variant: "destructive" });
-        } else {
-          toast({ title: t("enhance.error.generic" as any), variant: "destructive" });
-        }
+        const parsed = await parseEdgeFnError(error);
+        const key = pickErrorKey(parsed);
+        toast({
+          title: t(key as any),
+          description: parsed.serverMessage,
+          variant: "destructive",
+        });
         return;
       }
       if (data?.error || typeof data?.enhanced !== "string" || !data.enhanced.trim()) {
-        toast({ title: t("enhance.error.generic" as any), variant: "destructive" });
+        toast({
+          title: t("errors.aiUnknown" as any),
+          description: data?.error,
+          variant: "destructive",
+        });
         return;
       }
       setEnhancedDraft(data.enhanced.trim());
       setEnhanceOpen(true);
     } catch (err) {
       console.error("Enhance error:", err);
-      toast({ title: t("enhance.error.generic" as any), variant: "destructive" });
+      toast({ title: t("errors.aiUnknown" as any), variant: "destructive" });
     } finally {
       setEnhanceLoading(false);
     }
@@ -516,8 +520,24 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
         },
       });
 
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
+      if (error) {
+        const parsed = await parseEdgeFnError(error);
+        const key = pickErrorKey(parsed);
+        toast({
+          title: t(key as any),
+          description: parsed.serverMessage || t("wp.somethingWrongRetry"),
+          variant: "destructive",
+        });
+        return;
+      }
+      if (data?.error) {
+        toast({
+          title: t("wp.generationFailed"),
+          description: data.error,
+          variant: "destructive",
+        });
+        return;
+      }
 
       setResults(data.results);
       setAgentName(data.agentName ?? null);

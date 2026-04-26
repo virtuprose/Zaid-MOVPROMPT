@@ -493,42 +493,54 @@ serve(async (req) => {
         : ["mainPrompt", "negativePrompt", "cameraSuggestions", "modelNotes", "suggestedAspectRatio", "suggestedDuration"],
     };
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const buildAiBody = (model: string) => JSON.stringify({
+      model,
+      messages: [
+        { role: "system", content: composedSystemPrompt },
+        { role: "user", content: userContent },
+      ],
+      tools: [
+        {
+          type: "function",
+          function: {
+            name: "generate_cinematic_prompts",
+            description: "Generate structured cinematic video prompts from analyzed images",
+            parameters: {
+              type: "object",
+              properties: {
+                results: {
+                  type: "array",
+                  items: shotSchema,
+                  description: "Array of shot results. 1 for single/twoframe; for multishot, exactly the number of shots requested in the user message (default 10, may be 3 for stitched-sequence mode).",
+                },
+              },
+              required: ["results"],
+              additionalProperties: false,
+            },
+          },
+        },
+      ],
+      tool_choice: { type: "function", function: { name: "generate_cinematic_prompts" } },
+    });
+
+    const callAi = (model: string) => fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${LOVABLE_API_KEY}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-pro",
-        messages: [
-          { role: "system", content: composedSystemPrompt },
-          { role: "user", content: userContent },
-        ],
-        tools: [
-          {
-            type: "function",
-            function: {
-              name: "generate_cinematic_prompts",
-              description: "Generate structured cinematic video prompts from analyzed images",
-              parameters: {
-                type: "object",
-                properties: {
-                  results: {
-                    type: "array",
-                    items: shotSchema,
-                    description: "Array of shot results. 1 for single/twoframe; for multishot, exactly the number of shots requested in the user message (default 10, may be 3 for stitched-sequence mode).",
-                  },
-                },
-                required: ["results"],
-                additionalProperties: false,
-              },
-            },
-          },
-        ],
-        tool_choice: { type: "function", function: { name: "generate_cinematic_prompts" } },
-      }),
+      body: buildAiBody(model),
     });
+
+    const PRIMARY_MODEL = "google/gemini-2.5-pro";
+    const FALLBACK_MODEL = "google/gemini-2.5-flash";
+    let response = await callAi(PRIMARY_MODEL);
+    let usedFallback = false;
+    if (response.status === 429 || response.status === 402) {
+      console.warn(`generate-prompt: primary ${PRIMARY_MODEL} returned ${response.status}, retrying with ${FALLBACK_MODEL}`);
+      response = await callAi(FALLBACK_MODEL);
+      usedFallback = true;
+    }
 
     if (!response.ok) {
       const errText = await response.text();
@@ -547,8 +559,8 @@ serve(async (req) => {
         });
       }
 
-      return new Response(JSON.stringify({ error: "AI generation failed" }), {
-        status: 500,
+      return new Response(JSON.stringify({ error: `AI generation failed (${response.status})` }), {
+        status: 502,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -598,7 +610,14 @@ serve(async (req) => {
       }
     }
 
-    return new Response(JSON.stringify({ ...parsed, agent: agent.id, agentName: displayName }), {
+    if (usedFallback && Array.isArray(parsed.results)) {
+      for (const shot of parsed.results) {
+        const note = "\n\n⚠ Generated with fallback model (primary was rate-limited).";
+        shot.modelNotes = (typeof shot.modelNotes === "string" ? shot.modelNotes : "") + note;
+      }
+    }
+
+    return new Response(JSON.stringify({ ...parsed, agent: agent.id, agentName: displayName, usedFallback }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
