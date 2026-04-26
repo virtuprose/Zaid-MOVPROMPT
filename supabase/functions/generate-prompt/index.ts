@@ -610,7 +610,14 @@ serve(async (req) => {
       }
     }
 
-    return new Response(JSON.stringify({ ...parsed, agent: agent.id, agentName: displayName }), {
+    if (usedFallback && Array.isArray(parsed.results)) {
+      for (const shot of parsed.results) {
+        const note = "\n\n⚠ Generated with fallback model (primary was rate-limited).";
+        shot.modelNotes = (typeof shot.modelNotes === "string" ? shot.modelNotes : "") + note;
+      }
+    }
+
+    return new Response(JSON.stringify({ ...parsed, agent: agent.id, agentName: displayName, usedFallback }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
