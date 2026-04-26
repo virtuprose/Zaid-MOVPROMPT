@@ -366,6 +366,8 @@ const ShotCard = ({
   modelLabel,
   modelValue,
   onSwitchModel,
+  onRegenerateCompact,
+  isRegenerating,
 }: {
   result: ShotResult;
   idx: number;
@@ -374,6 +376,8 @@ const ShotCard = ({
   modelLabel?: string;
   modelValue?: string;
   onSwitchModel?: (value: string) => void;
+  onRegenerateCompact?: () => void;
+  isRegenerating?: boolean;
 }) => {
   const { t } = useLanguage();
   const [refinementsOpen, setRefinementsOpen] = useState(false);
