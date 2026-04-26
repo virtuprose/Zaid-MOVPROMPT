@@ -512,6 +512,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
           autoInjectElements: elementsPayload.length > 0 ? true : undefined,
           elementMentions: elementMentions.length > 0 ? elementMentions : undefined,
           multiShotCount: workflowType === "multishot" && contract.supportsMultiShotToggle ? contract.multiShotCount : undefined,
+          compactMode: opts?.compact === true ? true : undefined,
         },
       });
 
