@@ -423,6 +423,7 @@ export const ar: Record<TranslationKey, string> = {
   "contract.toggle.singleShot": "لقطة واحدة",
   "contract.toggle.multiShot3": "متعدد اللقطات (5)",
   "contract.toggle.multiShot10": "متعدد اللقطات (10)",
+  "contract.toggle.multiShotN": "متعدد اللقطات ({count})",
   "contract.hint.seedanceMultiShot": "يولّد 5 لقطات متصلة مصممة لتُدمج معاً في فيديو واحد متواصل.",
   "contract.hint.klingMultiShot": "يولّد 10 لقطات متصلة من Kling 3.0 مع تثبيت الموضوع والإضاءة والتدرج اللوني — اعرض كل لقطة منفصلة ثم ادمجها.",
   "contract.hint.anyModel": "«أي موديل» يختار المتخصص الأنسب لمشهدك. اختر سير العمل: لقطة واحدة، أو انتقال من البداية للنهاية، أو لوحة قصصية من 10 لقطات.",

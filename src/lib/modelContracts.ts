@@ -105,7 +105,7 @@ export function getContract(model: string): ModelContract {
 
   // Seedance — non-Fast and non-2.0 variants support 1↔2 frame toggle
   if (model.startsWith("seedance")) {
-    if (model.includes("fast")) return STD;
+    // Seedance 2.0 / 2.0 Fast: @Element references + Single ↔ Multi-shot toggle (default 9 shots)
     if (model === "seedance-2.0" || model === "seedance-2.0-fast") {
       return {
         slots: 1,
@@ -114,9 +114,12 @@ export function getContract(model: string): ModelContract {
         supportsAudio: true,
         supportsElementReferences: true,
         maxElements: 10,
+        supportsMultiShotToggle: true,
+        multiShotCount: 9,
         workflowType: "single",
       };
     }
+    if (model.includes("fast")) return STD;
     return {
       slots: 1,
       slotLabels: ["contract.slot.reference"],
