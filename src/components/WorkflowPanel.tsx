@@ -419,7 +419,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
     }
   };
 
-  const handleGenerate = async () => {
+  const handleGenerate = async (opts?: { compact?: boolean }) => {
     if (!hasRequiredImages) return;
     if (!user) {
       toast({ title: t("wp.signInRequired"), description: t("wp.signInGenerate"), variant: "destructive" });
