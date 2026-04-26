@@ -203,7 +203,42 @@ const MainPromptHero = ({ value, result, modelLabel, modelValue, onSwitchModel, 
           )}
         </>
       )}
-      <p className="text-xs text-muted-foreground italic mb-3">{t("results.pasteHint")}</p>
+      {(() => {
+        const limit = modelValue ? getCharLimit(modelValue) : undefined;
+        const len = value.length;
+        const over = !!limit && len > limit;
+        if (!limit) return <p className="text-xs text-muted-foreground italic mb-3">{t("results.pasteHint")}</p>;
+        return (
+          <div className="mb-3 space-y-2">
+            <div className="flex items-center justify-between gap-2 flex-wrap text-xs">
+              <span className={`font-mono inline-flex items-center gap-1.5 ${over ? "text-destructive font-semibold" : "text-muted-foreground"}`}>
+                {over && <AlertTriangle className="w-3.5 h-3.5" />}
+                {len.toLocaleString()} / {limit.toLocaleString()} {t("results.chars")}
+              </span>
+              <span className="text-muted-foreground italic">{t("results.pasteHint")}</span>
+            </div>
+            {over && (
+              <div className="rounded-md border border-destructive/40 bg-destructive/10 p-2.5 flex items-start justify-between gap-2 flex-wrap">
+                <p className="text-xs text-foreground/90 leading-relaxed flex-1 min-w-[12rem]">
+                  {t("results.overLimit")}
+                </p>
+                {onRegenerateCompact && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={onRegenerateCompact}
+                    disabled={isRegenerating}
+                    className="gap-1.5 border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive shrink-0"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isRegenerating ? "animate-spin" : ""}`} />
+                    {t("results.regenerateCompact")}
+                  </Button>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })()}
       <Button
         onClick={handleCopy}
         size="lg"
