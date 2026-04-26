@@ -1,4 +1,4 @@
-import { Copy, Check, RefreshCw, Sparkles, ChevronDown, ClipboardCheck, Wand2 } from "lucide-react";
+import { Copy, Check, RefreshCw, Sparkles, ChevronDown, ClipboardCheck, Wand2, AlertTriangle } from "lucide-react";
 import { getModelLabel } from "@/lib/models";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,6 +8,7 @@ import { useState, forwardRef } from "react";
 import { motion } from "framer-motion";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { toast } from "sonner";
+import { getCharLimit } from "@/lib/modelLimits";
 
 interface ShotResult {
   shotName?: string;
