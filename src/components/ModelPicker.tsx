@@ -23,10 +23,10 @@ interface ModelRowProps {
 const ModelRow = ({ value, label, description, isAny }: ModelRowProps) => (
   <SelectItem
     value={value}
-    className="py-3 ps-7 pe-3 min-h-[3.25rem] data-[state=checked]:border-l-2 data-[state=checked]:border-primary data-[state=checked]:bg-primary/5 data-[highlighted]:[&_*]:text-inherit [&>span]:block [&>span]:w-full [&>span]:min-w-0"
+    className="items-start py-3 ps-7 pe-5 min-h-[3.25rem] data-[state=checked]:border-l-2 data-[state=checked]:border-primary data-[state=checked]:bg-primary/5 data-[highlighted]:[&_*]:text-inherit [&>span:last-child]:block [&>span:last-child]:w-full [&>span:last-child]:min-w-0 [&>span:last-child]:flex-1"
   >
-    <div className="flex flex-col gap-0.5 w-full min-w-0">
-      <span className={`block w-full truncate ${isAny ? "font-semibold" : "font-medium"}`}>{label}</span>
+    <div className="flex flex-col gap-0.5 w-full min-w-0 pe-1">
+      <span className={`block w-full break-words ${isAny ? "font-semibold" : "font-medium"}`}>{label}</span>
       <span className="block w-full text-[11px] sm:text-xs text-muted-foreground whitespace-normal break-words leading-snug">
         {description}
       </span>
@@ -65,7 +65,7 @@ export const ModelPicker = ({ model, onModelChange }: ModelPickerProps) => {
           side="bottom"
           align="start"
           collisionPadding={12}
-          className="model-picker-content w-[min(28rem,calc(100vw-1.5rem))] sm:w-[28rem] overscroll-contain"
+          className="model-picker-content w-[min(32rem,calc(100vw-1.5rem))] sm:w-[32rem] max-w-[calc(100vw-1.5rem)] overscroll-contain"
           style={{
             zIndex: 1000,
             maxHeight: 360,
