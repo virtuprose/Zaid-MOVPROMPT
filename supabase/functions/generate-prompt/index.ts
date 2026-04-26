@@ -111,8 +111,8 @@ serve(async (req) => {
     if (!targetModel || !ALLOWED_MODELS.has(targetModel)) {
       return badRequest("Invalid targetModel");
     }
-    if (description && (typeof description !== "string" || description.length > 2000)) {
-      return badRequest("Description must be a string under 2000 characters");
+    if (description && (typeof description !== "string" || description.length > 4000)) {
+      return badRequest("Description must be a string under 4000 characters");
     }
 
     // Validate multiShotCount: integer 3..10 (default 10 only used in multishot)
