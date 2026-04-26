@@ -560,6 +560,13 @@ serve(async (req) => {
         });
       }
 
+      if (response.status === 503 || response.status === 502 || response.status === 500 || response.status === 504) {
+        return new Response(JSON.stringify({ error: "AI service is temporarily unavailable. Please try again in a moment." }), {
+          status: 503,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
       return new Response(JSON.stringify({ error: `AI generation failed (${response.status})` }), {
         status: 502,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
