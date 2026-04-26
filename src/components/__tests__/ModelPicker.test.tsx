@@ -38,4 +38,16 @@ describe("ModelPicker", () => {
     const trigger = getByRole("combobox");
     expect(trigger.className).toMatch(/min-h-\[4rem\]/);
   });
+
+  it("does not truncate item labels (regression guard for clipped descriptions)", () => {
+    // The dropdown rows must allow wrapping, not truncate, so long
+    // descriptions remain fully readable on the right edge.
+    const src = require("fs").readFileSync(
+      require("path").resolve(__dirname, "../ModelPicker.tsx"),
+      "utf8",
+    );
+    expect(src).not.toMatch(/truncate/);
+    expect(src).toMatch(/break-words/);
+    expect(src).toMatch(/items-start/);
+  });
 });
