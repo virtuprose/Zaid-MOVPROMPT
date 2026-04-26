@@ -91,7 +91,8 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { images, workflowType, description, targetModel, sceneBreakdown, audioEnabled, references, elements, autoInjectElements, multiShotCount, elementMentions } = body;
+    const { images, workflowType, description, targetModel, sceneBreakdown, audioEnabled, references, elements, autoInjectElements, multiShotCount, elementMentions, compactMode } = body;
+    const isCompact = compactMode === true;
 
     // --- Input Validation ---
     // Allow 0 images when elements are provided (element-only mode, e.g. Seedance 2.0).
