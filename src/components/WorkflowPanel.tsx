@@ -553,9 +553,11 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
               }
             }
             if (paths.length > 0) {
-              await supabase.from("prompt_history")
+              const { error: updateErr } = await supabase
+                .from("prompt_history")
                 .update({ image_paths: paths } as any)
                 .eq("id", row.id);
+              if (updateErr) console.error("History image_paths update failed:", updateErr);
             }
           } catch (e) {
             console.error("Image upload failed:", e);
