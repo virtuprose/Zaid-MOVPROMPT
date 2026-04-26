@@ -603,6 +603,22 @@ serve(async (req) => {
       parsed.results = parsed.results.slice(0, 1);
     }
 
+    // Truncation guard: warn the user if the AI returned fewer shots than requested.
+    if (
+      workflowType === "multishot" &&
+      Array.isArray(parsed.results) &&
+      parsed.results.length < resolvedShotCount
+    ) {
+      console.warn(
+        `generate-prompt: requested ${resolvedShotCount} shots but received ${parsed.results.length} (possible AI output truncation).`,
+      );
+      const last = parsed.results[parsed.results.length - 1];
+      if (last && typeof last === "object") {
+        const note = `\n\n⚠ Output truncated: requested ${resolvedShotCount} shots but the AI returned only ${parsed.results.length}. Try Regenerate, or upload fewer elements.`;
+        last.modelNotes = (typeof last.modelNotes === "string" ? last.modelNotes : "") + note;
+      }
+    }
+
     // Server-side safety net: hard-trim mainPrompt to the model's documented input cap.
     // Mirrors src/lib/modelLimits.ts so the UI counter and the trim agree.
     const MODEL_CHAR_LIMITS: Record<string, number> = {
