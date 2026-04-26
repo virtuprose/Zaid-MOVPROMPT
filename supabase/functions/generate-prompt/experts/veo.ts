@@ -20,7 +20,7 @@ export const veoAgent: ExpertAgent = {
 - 3.1 specifically: emphasize sustained motion across the full clip — describe what continues, not what cuts.`,
 
   systemAddendum: `═══ TARGET MODEL: VEO (all variants) ═══
-- mainPrompt: 150–250 words (100–150 for Fast/Lite). Structure as flowing prose in order: SCENE → ACTION → CAMERA → LIGHTING.
+- mainPrompt: 150–230 words / max 1,500 characters (100–150 words for Fast/Lite). Structure as flowing prose in order: SCENE → ACTION → CAMERA → LIGHTING. NEVER exceed 1,500 characters — Veo's prompt window is generous but pastes get truncated above this.
 - Reference real focal lengths and, when fitting, named director/DP styles.
 - ALWAYS populate audioBlock with three sub-lines: DIALOGUE (lip-synced lines in quotes, or "(none)"), SFX (specific diegetic sounds with rough timing), AMBIENT (background sound bed). Veo generates native audio — this is critical.
 - Populate referenceGuidance explaining how the uploaded image anchors the start frame, character likeness, and lighting setup.

@@ -1,4 +1,4 @@
-import { Copy, Check, RefreshCw, Sparkles, ChevronDown, ClipboardCheck, Wand2 } from "lucide-react";
+import { Copy, Check, RefreshCw, Sparkles, ChevronDown, ClipboardCheck, Wand2, AlertTriangle } from "lucide-react";
 import { getModelLabel } from "@/lib/models";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,6 +8,7 @@ import { useState, forwardRef } from "react";
 import { motion } from "framer-motion";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { toast } from "sonner";
+import { getCharLimit } from "@/lib/modelLimits";
 
 interface ShotResult {
   shotName?: string;
@@ -31,6 +32,7 @@ interface ResultsPanelProps {
   isLoading: boolean;
   agentName?: string;
   modelLabel?: string;
+  modelValue?: string;
   stitchHint?: boolean;
   elementsLegend?: { index: number; kind: "image" | "video" | "audio"; preview?: string }[];
   onSwitchModel?: (value: string) => void;
@@ -116,7 +118,7 @@ const ScriptedPrompt = ({ sections }: { sections: { header: string; body: string
   );
 };
 
-const MainPromptHero = ({ value, result, modelLabel, onSwitchModel }: { value: string; result: ShotResult; modelLabel?: string; onSwitchModel?: (value: string) => void }) => {
+const MainPromptHero = ({ value, result, modelLabel, modelValue, onSwitchModel }: { value: string; result: ShotResult; modelLabel?: string; modelValue?: string; onSwitchModel?: (value: string) => void }) => {
   const { t } = useLanguage();
   const [copied, setCopied] = useState(false);
   const buildFullPrompt = () => {
@@ -229,7 +231,7 @@ const SectionToggle = ({ label, count, open }: { label: string; count?: number; 
   </CollapsibleTrigger>
 );
 
-export const ResultsPanel = forwardRef<HTMLDivElement, ResultsPanelProps>(({ results, onRegenerate, isLoading, agentName, modelLabel, stitchHint, elementsLegend, onSwitchModel }, ref) => {
+export const ResultsPanel = forwardRef<HTMLDivElement, ResultsPanelProps>(({ results, onRegenerate, isLoading, agentName, modelLabel, modelValue, stitchHint, elementsLegend, onSwitchModel }, ref) => {
   const { t } = useLanguage();
   const [allCopied, setAllCopied] = useState(false);
 
@@ -313,7 +315,7 @@ export const ResultsPanel = forwardRef<HTMLDivElement, ResultsPanelProps>(({ res
           if (isMeaningful(result.cameraTags)) refinements.push({ label: t("results.cameraTags"), value: result.cameraTags! });
           if (isMeaningful(result.referenceGuidance)) refinements.push({ label: t("results.referenceGuidance"), value: result.referenceGuidance! });
 
-          return <ShotCard key={idx} result={result} idx={idx} total={results.length} refinements={refinements} modelLabel={modelLabel} onSwitchModel={idx === 0 ? onSwitchModel : undefined} />;
+          return <ShotCard key={idx} result={result} idx={idx} total={results.length} refinements={refinements} modelLabel={modelLabel} modelValue={modelValue} onSwitchModel={idx === 0 ? onSwitchModel : undefined} />;
         })}
       </motion.div>
     </TooltipProvider>
@@ -326,6 +328,7 @@ const ShotCard = ({
   total,
   refinements,
   modelLabel,
+  modelValue,
   onSwitchModel,
 }: {
   result: ShotResult;
@@ -333,6 +336,7 @@ const ShotCard = ({
   total: number;
   refinements: { label: string; value: string }[];
   modelLabel?: string;
+  modelValue?: string;
   onSwitchModel?: (value: string) => void;
 }) => {
   const { t } = useLanguage();
@@ -368,7 +372,7 @@ const ShotCard = ({
             </div>
           )}
 
-          <MainPromptHero value={result.mainPrompt} result={result} modelLabel={modelLabel} onSwitchModel={onSwitchModel} />
+          <MainPromptHero value={result.mainPrompt} result={result} modelLabel={modelLabel} modelValue={modelValue} onSwitchModel={onSwitchModel} />
 
           {refinements.length > 0 && (
             <Collapsible open={refinementsOpen} onOpenChange={setRefinementsOpen}>

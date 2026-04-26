@@ -158,7 +158,10 @@ export const ar: Record<TranslationKey, string> = {
   "results.directorsNotes": "ملاحظات المخرج (للمرجع فقط)",
   "results.copyFullPackage": "نسخ الحزمة الكاملة",
   "results.copyFullPackageHint": "ينسخ كل شيء منسقاً — الأمر الرئيسي والتحسينات والملاحظات.",
-  "results.multishotStitchHint": "هذه اللقطات الثلاث مصممة لتُدمج معاً في فيديو واحد متواصل — حافظ على ترتيبها.",
+ "results.multishotStitchHint": "هذه اللقطات الثلاث مصممة لتُدمج معاً في فيديو واحد متواصل — حافظ على ترتيبها.",
+ "results.chars": "حرفاً",
+ "results.charLimitHint": "الحد الموصى به لعدد الأحرف لهذا النموذج — ابقَ تحت الحد لتجنب الاقتطاع عند اللصق.",
+ "results.overLimit": "يتجاوز النص حد الإدخال لهذا النموذج. تم اقتطاعه تلقائياً من الخادم؛ يُفضّل إعادة التوليد لنتيجة أكثر إيجازاً.",
 
   // SceneBreakdown
   "scene.title": "عناصر المشهد",

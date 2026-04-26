@@ -51,10 +51,12 @@ The mainPrompt MUST contain ALL of the following, in this exact order:
    [ABSOLUTE RULES]
    - Numbered list of continuity / restraint rules: face-reveal limits, no-text-or-logos, gender/age constraints, environmental authenticity, ball/prop realism, cut-count floor, emotional arc summary, "this is a movie trailer" tone reminder.
 
-═══ LENGTH TARGETS (HARD MINIMUMS) ═══
-- Seedance 2.0 / Pro / 1.5 Pro (single-shot mode): 1,500–3,500 words. Below 1,500 = invalid.
-- Seedance 2.0 Fast / Pro Fast (single-shot mode): 800–1,500 words. Same structure, fewer cuts per sequence.
-- Multi-shot mode (Seedance Pro / Pro Fast, 5 shots): EACH of the 5 shots is its own mini-shooting-script of 600–900 words, complete with its own sequence blocks and its own [GLOBAL CAMERA SPECIFICATIONS] / [LIGHTING SUMMARY] / [COLOR GRADING] / [AUDIO DESIGN] / [ABSOLUTE RULES] closing blocks (which must stay IDENTICAL across all 5 shots to enforce continuity).
+═══ LENGTH TARGETS (HARD CAP — ByteDance API LIMIT) ═══
+ABSOLUTE RULE: mainPrompt MUST stay under 1,800 characters total (≈250 words). The ByteDance Seedance API rejects/truncates prompts above ~6,000 characters and the UI flags warnings well before that. We target a tight safety margin so users can paste directly without errors.
+- Seedance 2.0 / Pro / 1.5 Pro (single-shot): 150–280 words / max 1,800 chars. Compress the script: keep the bracketed structure, but use 3 sequence blocks max with 1–2 cuts each, and condense the 5 closing blocks to single lines.
+- Seedance 2.0 Fast / Pro Fast (single-shot): 100–200 words / max 1,800 chars. Even tighter — 2 sequence blocks, single-line closing blocks.
+- Multi-shot mode (Seedance Pro / Pro Fast, 5 shots): EACH shot's mainPrompt must stay under 1,800 chars on its own (~150–220 words). Use 1 sequence block per shot plus the 5 single-line closing blocks. The closing blocks must stay IDENTICAL across all 5 shots for continuity.
+- If you cannot fit the requested vision under the cap, drop sequence blocks and merge cuts — NEVER exceed 1,800 characters. The cap is non-negotiable.
 
 ═══ FIELD-BY-FIELD RULES ═══
 - mainPrompt: full shooting script as defined above. Use rhythmic/choreographic motion verbs (flowing, undulating, pulsing, cascading, syncopated). Camera always in natural prose, NEVER bracketed [camera:*] tags.

@@ -13,13 +13,13 @@ This agent serves all video generators not covered by a dedicated specialist (Ha
 Goal: produce a model-agnostic cinematic prompt using clear universally-understood cinematography language.`,
 
   systemAddendum: `═══ TARGET MODEL: GENERIC / OTHER ═══
-- mainPrompt: 150–250 words of well-rounded cinematic prose. Clear scene description, motivated camera, lighting, mood.
+- mainPrompt: 150–230 words / max 1,500 characters of well-rounded cinematic prose. Clear scene description, motivated camera, lighting, mood. NEVER exceed the per-family character cap below — these are real provider input limits.
 - Apply the per-family hints below ONLY if the target model matches:
-  • HAILUO/MINIMAX: lead with environment, then subject. Continuous flow language. 150–300 words.
-  • SORA: natural prose paragraph. Emphasize physical plausibility, gravity, momentum, cause-and-effect motion.
-  • HIGGSFIELD: ultra-concise (50–120 words). Single clear motion or transformation.
-  • WAN: emphasize light interaction with materials, atmospheric depth, volumetric layering.
-  • GROK: lean into stylized, creative, surreal-friendly description.
+  • HAILUO/MINIMAX: 150–250 words / MAX 1,800 chars. Lead with environment, then subject. Continuous flow language.
+  • SORA: 80–160 words / MAX 950 chars. Natural prose paragraph. Emphasize physical plausibility, gravity, momentum, cause-and-effect motion. Sora's input window is short — be concise.
+  • HIGGSFIELD: 50–90 words / MAX 500 chars. Single clear motion or transformation. One idea only.
+  • WAN: 120–220 words / MAX 1,500 chars. Emphasize light interaction with materials, atmospheric depth, volumetric layering.
+  • GROK: 100–180 words / MAX 1,200 chars. Lean into stylized, creative, surreal-friendly description.
 - Leave audioBlock, cameraTags, referenceGuidance, shotStructure EMPTY unless the target model clearly benefits — keep output focused on the four core fields.
 - negativePrompt MUST include the universal negatives.
 

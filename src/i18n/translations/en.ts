@@ -156,7 +156,10 @@ export const en = {
   "results.directorsNotes": "Director's notes (reference only)",
   "results.copyFullPackage": "Copy full package",
   "results.copyFullPackageHint": "Copies everything formatted — main prompt, refinements and notes.",
-  "results.multishotStitchHint": "These 3 shots are designed to be stitched into one continuous video — keep them in order.",
+ "results.multishotStitchHint": "These 3 shots are designed to be stitched into one continuous video — keep them in order.",
+ "results.chars": "chars",
+ "results.charLimitHint": "Recommended character limit for this model — stay under to avoid truncation when pasting.",
+ "results.overLimit": "Prompt exceeds this model's input limit. The server has auto-trimmed it; consider regenerating for a tighter result.",
 
   // SceneBreakdown
   "scene.title": "Scene Elements",
