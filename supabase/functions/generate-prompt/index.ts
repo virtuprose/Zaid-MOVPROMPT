@@ -550,6 +550,33 @@ serve(async (req) => {
       parsed.results = parsed.results.slice(0, 1);
     }
 
+    // Server-side safety net: hard-trim mainPrompt to the model's documented input cap.
+    // Mirrors src/lib/modelLimits.ts so the UI counter and the trim agree.
+    const MODEL_CHAR_LIMITS: Record<string, number> = {
+      "seedance-2.0-fast": 1800, "seedance-2.0": 1800, "seedance-1.5-pro": 1800, "seedance-pro": 1800, "seedance-pro-fast": 1800,
+      "hailuo-2.3-fast": 1800, "hailuo-2.3": 1800, "hailuo-02-fast": 1800, "hailuo-02": 1800,
+      "sora-2": 950, "sora-2-pro": 950, "sora-2-max": 950, "sora-2-pro-max": 950,
+      "higgsfield-lite": 500, "higgsfield-standard": 500, "higgsfield-turbo": 500,
+      "veo-3.1-lite": 1500, "veo-3.1-fast": 1500, "veo-3.1": 1500, "veo-3-fast": 1500, "veo-3": 1500,
+      "kling-3.0": 2000, "kling-3.0-omni": 2000, "kling-3.0-omni-edit": 1200, "kling-2.6": 2000,
+      "kling-o1-video": 2000, "kling-o1-video-edit": 1200, "kling-motion-control": 2000, "kling-3.0-motion-control": 2000,
+      "wan-2.7": 1500, "wan-2.6": 1500, "wan-2.5": 1500, "wan-2.5-fast": 1500, "wan-2.2": 1500, "wan-2.2-fast": 1500,
+      "grok-imagine": 1200, "grok-imagine-edit": 1200, "any": 1500,
+    };
+    const limit = MODEL_CHAR_LIMITS[targetModel];
+    if (limit && Array.isArray(parsed.results)) {
+      for (const shot of parsed.results) {
+        if (typeof shot?.mainPrompt === "string" && shot.mainPrompt.length > limit) {
+          // Trim at last sentence boundary inside the cap to keep the prompt clean.
+          const slice = shot.mainPrompt.slice(0, limit);
+          const lastBoundary = Math.max(slice.lastIndexOf(". "), slice.lastIndexOf("\n"));
+          shot.mainPrompt = (lastBoundary > limit * 0.6 ? slice.slice(0, lastBoundary + 1) : slice).trimEnd();
+          const warn = `\n\n⚠ Auto-trimmed to fit ${modelLabels[targetModel] || targetModel} input limit (${limit} chars).`;
+          shot.modelNotes = (typeof shot.modelNotes === "string" ? shot.modelNotes : "") + warn;
+        }
+      }
+    }
+
     return new Response(JSON.stringify({ ...parsed, agent: agent.id, agentName: displayName }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
