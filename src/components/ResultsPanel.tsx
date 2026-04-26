@@ -119,7 +119,7 @@ const ScriptedPrompt = ({ sections }: { sections: { header: string; body: string
   );
 };
 
-const MainPromptHero = ({ value, result, modelLabel, modelValue, onSwitchModel }: { value: string; result: ShotResult; modelLabel?: string; modelValue?: string; onSwitchModel?: (value: string) => void }) => {
+const MainPromptHero = ({ value, result, modelLabel, modelValue, onSwitchModel, onRegenerateCompact, isRegenerating }: { value: string; result: ShotResult; modelLabel?: string; modelValue?: string; onSwitchModel?: (value: string) => void; onRegenerateCompact?: () => void; isRegenerating?: boolean }) => {
   const { t } = useLanguage();
   const [copied, setCopied] = useState(false);
   const buildFullPrompt = () => {
