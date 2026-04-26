@@ -29,6 +29,7 @@ interface ShotResult {
 interface ResultsPanelProps {
   results: ShotResult[];
   onRegenerate: () => void;
+  onRegenerateCompact?: () => void;
   isLoading: boolean;
   agentName?: string;
   modelLabel?: string;
