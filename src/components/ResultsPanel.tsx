@@ -412,7 +412,7 @@ const ShotCard = ({
             </div>
           )}
 
-          <MainPromptHero value={result.mainPrompt} result={result} modelLabel={modelLabel} modelValue={modelValue} onSwitchModel={onSwitchModel} />
+          <MainPromptHero value={result.mainPrompt} result={result} modelLabel={modelLabel} modelValue={modelValue} onSwitchModel={onSwitchModel} onRegenerateCompact={onRegenerateCompact} isRegenerating={isRegenerating} />
 
           {refinements.length > 0 && (
             <Collapsible open={refinementsOpen} onOpenChange={setRefinementsOpen}>
