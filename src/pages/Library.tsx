@@ -307,6 +307,19 @@ const Library = () => {
   const [search, setSearch] = useState("");
   const [workflowFilter, setWorkflowFilter] = useState(() => new Set<string>());
   const [modelFilter, setModelFilter] = useState(() => new Set<string>());
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const isMobile = useIsMobile();
+  // Tailwind: grid-cols-1 (mobile), sm:grid-cols-2 (>=640), lg:grid-cols-3 (>=1024)
+  const [cols, setCols] = useState(3);
+  useEffect(() => {
+    const compute = () => {
+      const w = window.innerWidth;
+      setCols(w >= 1024 ? 3 : w >= 640 ? 2 : 1);
+    };
+    compute();
+    window.addEventListener("resize", compute);
+    return () => window.removeEventListener("resize", compute);
+  }, []);
 
   useEffect(() => {
     trackPageVisit("/library");
