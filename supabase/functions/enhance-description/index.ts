@@ -98,9 +98,10 @@ Deno.serve(async (req) => {
 
     const PRIMARY_MODEL = "google/gemini-3-flash-preview";
     const FALLBACK_MODEL = "google/gemini-2.5-flash";
+    const SHOULD_FALLBACK = (s: number) => s === 429 || s === 402 || s === 500 || s === 502 || s === 503 || s === 504;
     let aiResp = await callAi(PRIMARY_MODEL);
     let usedFallback = false;
-    if (aiResp.status === 429 || aiResp.status === 402) {
+    if (SHOULD_FALLBACK(aiResp.status)) {
       console.warn(`enhance: primary ${PRIMARY_MODEL} returned ${aiResp.status}, retrying with ${FALLBACK_MODEL}`);
       aiResp = await callAi(FALLBACK_MODEL);
       usedFallback = true;
@@ -121,8 +122,9 @@ Deno.serve(async (req) => {
     if (!aiResp.ok) {
       const text = await aiResp.text();
       console.error("AI gateway error:", aiResp.status, text);
-      return new Response(JSON.stringify({ error: `AI gateway error (${aiResp.status})` }), {
-        status: 502,
+      const isUnavailable = aiResp.status === 503 || aiResp.status === 502 || aiResp.status === 500 || aiResp.status === 504;
+      return new Response(JSON.stringify({ error: isUnavailable ? "AI service is temporarily unavailable. Please try again in a moment." : `AI gateway error (${aiResp.status})` }), {
+        status: isUnavailable ? 503 : 502,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
