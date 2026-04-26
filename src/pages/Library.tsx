@@ -59,9 +59,19 @@ function CopyButton({ text, label, copiedLabel }: { text: string; label: string;
   );
 }
 
-function HistoryCard({ entry, t, onDelete }: { entry: HistoryEntry; t: (k: string) => string; onDelete: (id: string) => void }) {
-  const [expanded, setExpanded] = useState(false);
-  const [imageUrls, setImageUrls] = useState<string[]>([]);
+function HistoryCard({
+  entry,
+  t,
+  onDelete,
+  isExpanded,
+  onToggle,
+}: {
+  entry: HistoryEntry;
+  t: (k: string) => string;
+  onDelete: (id: string) => void;
+  isExpanded: boolean;
+  onToggle: () => void;
+}) {
   const [thumbUrl, setThumbUrl] = useState<string | null>(null);
   const workflowLabels = getWorkflowLabels(t);
   const wf = workflowLabels[entry.workflow_type] || workflowLabels.single;
@@ -82,19 +92,6 @@ function HistoryCard({ entry, t, onDelete }: { entry: HistoryEntry; t: (k: strin
     return () => { cancelled = true; };
   }, [entry.image_paths]);
 
-  useEffect(() => {
-    if (!expanded || !entry.image_paths?.length) return;
-    const loadUrls = async () => {
-      const urls: string[] = [];
-      for (const path of entry.image_paths!) {
-        const { data } = await supabase.storage.from("generation-images").createSignedUrl(path, 3600);
-        if (data?.signedUrl) urls.push(data.signedUrl);
-      }
-      setImageUrls(urls);
-    };
-    loadUrls();
-  }, [expanded, entry.image_paths]);
-
   const allText = results
     .map((r: any, i: number) => {
       let s = `${t("library.shot")} ${i + 1}\n${r.mainPrompt || ""}`;
@@ -106,7 +103,11 @@ function HistoryCard({ entry, t, onDelete }: { entry: HistoryEntry; t: (k: strin
     .join("\n\n");
 
   return (
-    <Card className="bg-card border-border overflow-hidden flex flex-col group">
+    <Card
+      className={`bg-card border-border overflow-hidden flex flex-col group transition-shadow ${
+        isExpanded ? "ring-2 ring-primary/40 shadow-lg" : ""
+      }`}
+    >
       {/* Media banner */}
       <div className="relative aspect-video w-full overflow-hidden bg-gradient-to-br from-primary/10 via-secondary/40 to-accent/10">
         {thumbUrl ? (
@@ -123,24 +124,18 @@ function HistoryCard({ entry, t, onDelete }: { entry: HistoryEntry; t: (k: strin
           </div>
         )}
 
-        {/* Top-left: workflow badge */}
         <div className="absolute top-2 start-2">
-          <Badge
-            variant="outline"
-            className={`text-[10px] backdrop-blur-md bg-background/60 ${wf.color}`}
-          >
+          <Badge variant="outline" className={`text-[10px] backdrop-blur-md bg-background/60 ${wf.color}`}>
             {wf.label}
           </Badge>
         </div>
 
-        {/* Top-right: time */}
         <div className="absolute top-2 end-2">
           <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-background/60 backdrop-blur-md text-foreground/90 border border-border/40">
             {timeAgo(entry.created_at, t)}
           </span>
         </div>
 
-        {/* Bottom-right: +N more photos */}
         {entry.image_paths && entry.image_paths.length > 1 && (
           <div className="absolute bottom-2 end-2">
             <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-background/70 backdrop-blur-md text-foreground border border-border/40">
@@ -150,7 +145,6 @@ function HistoryCard({ entry, t, onDelete }: { entry: HistoryEntry; t: (k: strin
         )}
       </div>
 
-      {/* Body */}
       <div className="p-4 flex flex-col gap-2 flex-1">
         <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-primary">
           {entry.target_model}
@@ -160,16 +154,10 @@ function HistoryCard({ entry, t, onDelete }: { entry: HistoryEntry; t: (k: strin
         </p>
       </div>
 
-      {/* Footer */}
       <div className="flex items-center justify-between gap-2 px-3 py-2 border-t border-border bg-secondary/20">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setExpanded(!expanded)}
-          className="h-7 px-2 text-xs gap-1"
-        >
-          <ChevronDown className={`w-3.5 h-3.5 transition-transform ${expanded ? "rotate-180" : ""}`} />
-          {expanded ? t("library.hidePrompts" as any) : t("library.viewPrompts" as any)}
+        <Button variant="ghost" size="sm" onClick={onToggle} className="h-7 px-2 text-xs gap-1">
+          <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isExpanded ? "rotate-180" : ""}`} />
+          {isExpanded ? t("library.hidePrompts" as any) : t("library.viewPrompts" as any)}
         </Button>
         <div className="flex items-center gap-1">
           <CopyButton text={allText} label={t("library.copyAll")} copiedLabel={t("library.copied")} />
@@ -184,34 +172,91 @@ function HistoryCard({ entry, t, onDelete }: { entry: HistoryEntry; t: (k: strin
           </Button>
         </div>
       </div>
+    </Card>
+  );
+}
 
-      <AnimatePresence>
-        {expanded && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.25 }}
-            className="overflow-hidden"
+function ExpandedPromptPanel({
+  entry,
+  t,
+  onClose,
+  arrowOffsetPct,
+}: {
+  entry: HistoryEntry;
+  t: (k: string) => string;
+  onClose: () => void;
+  arrowOffsetPct: number;
+}) {
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const results: any[] = Array.isArray(entry.results) ? entry.results : [entry.results];
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!entry.image_paths?.length) return;
+    let cancelled = false;
+    const loadUrls = async () => {
+      const urls: string[] = [];
+      for (const path of entry.image_paths!) {
+        const { data } = await supabase.storage.from("generation-images").createSignedUrl(path, 3600);
+        if (data?.signedUrl) urls.push(data.signedUrl);
+      }
+      if (!cancelled) setImageUrls(urls);
+    };
+    loadUrls();
+    return () => { cancelled = true; };
+  }, [entry.image_paths]);
+
+  useEffect(() => {
+    ref.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }, []);
+
+  return (
+    <motion.div
+      ref={ref}
+      layout
+      initial={{ height: 0, opacity: 0 }}
+      animate={{ height: "auto", opacity: 1 }}
+      exit={{ height: 0, opacity: 0 }}
+      transition={{ duration: 0.25 }}
+      className="col-span-full overflow-hidden"
+    >
+      <div className="relative pt-3">
+        {/* Arrow tick pointing to source card */}
+        <div
+          className="absolute -top-0 w-3 h-3 rotate-45 bg-card border-t border-s border-border"
+          style={{ insetInlineStart: `calc(${arrowOffsetPct}% - 6px)` }}
+          aria-hidden
+        />
+        <Card className="bg-card border-border p-5 sm:p-6 relative">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onClose}
+            className="absolute top-2 end-2 h-7 w-7 p-0"
+            aria-label={t("library.hidePrompts" as any)}
           >
-            <div className="px-4 pb-4 pt-3 space-y-4 border-t border-border">
-              {/* Reference images strip */}
-              {imageUrls.length > 0 && (
-                <div className="flex gap-2 overflow-x-auto pb-1">
-                  {imageUrls.map((url, i) => (
-                    <img
-                      key={i}
-                      src={url}
-                      alt={`Reference frame ${i + 1}`}
-                      className="w-20 h-20 rounded-md object-cover border border-border shrink-0"
-                    />
-                  ))}
-                </div>
-              )}
+            <X className="w-4 h-4" />
+          </Button>
+
+          <div className="max-w-5xl mx-auto space-y-5">
+            {imageUrls.length > 0 && (
+              <div className="flex gap-2 overflow-x-auto pb-1">
+                {imageUrls.map((url, i) => (
+                  <img
+                    key={i}
+                    src={url}
+                    alt={`Reference frame ${i + 1}`}
+                    className="w-24 h-24 rounded-md object-cover border border-border shrink-0"
+                  />
+                ))}
+              </div>
+            )}
+
+            <div className={`grid gap-4 ${results.length > 1 ? "lg:grid-cols-2" : "grid-cols-1"}`}>
               {results.map((shot: any, i: number) => (
                 <div key={i} className="space-y-2">
                   {results.length > 1 && (
-                    <p className="text-xs font-medium text-primary">{t("library.shot")} {i + 1}</p>
+                    <p className="text-xs font-semibold text-primary">{t("library.shot")} {i + 1}</p>
                   )}
                   {shot.mainPrompt && (
                     <div className="space-y-1">
@@ -219,7 +264,7 @@ function HistoryCard({ entry, t, onDelete }: { entry: HistoryEntry; t: (k: strin
                         <span className="text-[11px] font-medium text-muted-foreground">{t("results.mainPrompt")}</span>
                         <CopyButton text={shot.mainPrompt} label={t("library.copy")} copiedLabel={t("library.copied")} />
                       </div>
-                      <p className="text-sm bg-secondary/40 rounded-md p-2.5 leading-relaxed">{shot.mainPrompt}</p>
+                      <p className="text-sm bg-secondary/40 rounded-md p-3 leading-relaxed whitespace-pre-wrap">{shot.mainPrompt}</p>
                     </div>
                   )}
                   {shot.negativePrompt && (
@@ -228,28 +273,28 @@ function HistoryCard({ entry, t, onDelete }: { entry: HistoryEntry; t: (k: strin
                         <span className="text-[11px] font-medium text-muted-foreground">{t("results.negativePrompt")}</span>
                         <CopyButton text={shot.negativePrompt} label={t("library.copy")} copiedLabel={t("library.copied")} />
                       </div>
-                      <p className="text-xs bg-secondary/40 rounded-md p-2.5 text-muted-foreground">{shot.negativePrompt}</p>
+                      <p className="text-xs bg-secondary/40 rounded-md p-3 text-muted-foreground whitespace-pre-wrap">{shot.negativePrompt}</p>
                     </div>
                   )}
                   {shot.cameraSuggestions && (
                     <div className="space-y-1">
                       <span className="text-[11px] font-medium text-muted-foreground">{t("results.cameraSuggestions")}</span>
-                      <p className="text-xs bg-secondary/40 rounded-md p-2.5 text-muted-foreground">{shot.cameraSuggestions}</p>
+                      <p className="text-xs bg-secondary/40 rounded-md p-3 text-muted-foreground whitespace-pre-wrap">{shot.cameraSuggestions}</p>
                     </div>
                   )}
                   {shot.modelNotes && (
                     <div className="space-y-1">
                       <span className="text-[11px] font-medium text-muted-foreground">{t("results.modelNotes")}</span>
-                      <p className="text-xs bg-secondary/40 rounded-md p-2.5 text-muted-foreground">{shot.modelNotes}</p>
+                      <p className="text-xs bg-secondary/40 rounded-md p-3 text-muted-foreground whitespace-pre-wrap">{shot.modelNotes}</p>
                     </div>
                   )}
                 </div>
               ))}
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </Card>
+          </div>
+        </Card>
+      </div>
+    </motion.div>
   );
 }
 
