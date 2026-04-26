@@ -267,7 +267,7 @@ const SectionToggle = ({ label, count, open }: { label: string; count?: number; 
   </CollapsibleTrigger>
 );
 
-export const ResultsPanel = forwardRef<HTMLDivElement, ResultsPanelProps>(({ results, onRegenerate, isLoading, agentName, modelLabel, modelValue, stitchHint, elementsLegend, onSwitchModel }, ref) => {
+export const ResultsPanel = forwardRef<HTMLDivElement, ResultsPanelProps>(({ results, onRegenerate, onRegenerateCompact, isLoading, agentName, modelLabel, modelValue, stitchHint, elementsLegend, onSwitchModel }, ref) => {
   const { t } = useLanguage();
   const [allCopied, setAllCopied] = useState(false);
 
