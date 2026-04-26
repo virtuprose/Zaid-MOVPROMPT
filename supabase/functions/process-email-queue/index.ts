@@ -1,5 +1,9 @@
 import { sendLovableEmail } from 'npm:@lovable.dev/email-js'
-import { createClient } from 'npm:@supabase/supabase-js@2'
+import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2'
+
+// Loose client type so Postgrest/RPC calls aren't inferred as `never`/`undefined`
+// (this function uses pgmq RPCs and tables not in the generated Database types).
+type AnySupabaseClient = SupabaseClient<any, any, any>
 
 const MAX_RETRIES = 5
 const DEFAULT_BATCH_SIZE = 10
