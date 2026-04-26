@@ -534,9 +534,10 @@ serve(async (req) => {
 
     const PRIMARY_MODEL = "google/gemini-2.5-pro";
     const FALLBACK_MODEL = "google/gemini-2.5-flash";
+    const SHOULD_FALLBACK = (s: number) => s === 429 || s === 402 || s === 500 || s === 502 || s === 503 || s === 504;
     let response = await callAi(PRIMARY_MODEL);
     let usedFallback = false;
-    if (response.status === 429 || response.status === 402) {
+    if (SHOULD_FALLBACK(response.status)) {
       console.warn(`generate-prompt: primary ${PRIMARY_MODEL} returned ${response.status}, retrying with ${FALLBACK_MODEL}`);
       response = await callAi(FALLBACK_MODEL);
       usedFallback = true;
