@@ -337,11 +337,16 @@ const Library = () => {
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-6"
+          className="text-center mb-6 space-y-1"
         >
           <h1 className="text-2xl sm:text-3xl font-bold font-display">
             {t("library.title")}
           </h1>
+          {!loading && history.length > 0 && (
+            <p className="text-xs text-muted-foreground">
+              {t("library.subtitle" as any).replace("{count}", String(history.length))}
+            </p>
+          )}
         </motion.div>
 
         {/* Search & Filters */}
