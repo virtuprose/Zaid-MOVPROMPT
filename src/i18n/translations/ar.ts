@@ -162,6 +162,8 @@ export const ar: Record<TranslationKey, string> = {
  "results.chars": "حرفاً",
  "results.charLimitHint": "الحد الموصى به لعدد الأحرف لهذا النموذج — ابقَ تحت الحد لتجنب الاقتطاع عند اللصق.",
  "results.overLimit": "يتجاوز النص حد الإدخال لهذا النموذج. تم اقتطاعه تلقائياً من الخادم؛ يُفضّل إعادة التوليد لنتيجة أكثر إيجازاً.",
+ "results.regenerateCompact": "إعادة توليد مختصرة",
+ "results.regenerateCompactHint": "أعد التوليد بميزانية أحرف أكثر صرامة ليلائم الحد دون اقتطاع.",
 
   // SceneBreakdown
   "scene.title": "عناصر المشهد",
