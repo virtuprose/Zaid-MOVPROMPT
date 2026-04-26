@@ -534,9 +534,10 @@ serve(async (req) => {
 
     const PRIMARY_MODEL = "google/gemini-2.5-pro";
     const FALLBACK_MODEL = "google/gemini-2.5-flash";
+    const SHOULD_FALLBACK = (s: number) => s === 429 || s === 402 || s === 500 || s === 502 || s === 503 || s === 504;
     let response = await callAi(PRIMARY_MODEL);
     let usedFallback = false;
-    if (response.status === 429 || response.status === 402) {
+    if (SHOULD_FALLBACK(response.status)) {
       console.warn(`generate-prompt: primary ${PRIMARY_MODEL} returned ${response.status}, retrying with ${FALLBACK_MODEL}`);
       response = await callAi(FALLBACK_MODEL);
       usedFallback = true;
@@ -555,6 +556,13 @@ serve(async (req) => {
       if (response.status === 402) {
         return new Response(JSON.stringify({ error: "AI credits exhausted. Please add funds in Settings > Workspace > Usage." }), {
           status: 402,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      if (response.status === 503 || response.status === 502 || response.status === 500 || response.status === 504) {
+        return new Response(JSON.stringify({ error: "AI service is temporarily unavailable. Please try again in a moment." }), {
+          status: 503,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }

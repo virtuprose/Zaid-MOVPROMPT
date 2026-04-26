@@ -390,6 +390,7 @@ export const ar: Record<TranslationKey, string> = {
   "errors.aiRateLimit": "طلبات الذكاء الاصطناعي كثيرة — انتظر دقيقة ثم حاول مجدداً.",
   "errors.aiCreditsExhausted": "نفذ رصيد الذكاء الاصطناعي. أضف رصيداً من الإعدادات ← مساحة العمل ← الاستخدام.",
   "errors.aiTimeout": "استغرق الذكاء الاصطناعي وقتاً طويلاً. حاول مجدداً أو بسّط الطلب.",
+  "errors.aiServiceUnavailable": "خدمة الذكاء الاصطناعي غير متاحة مؤقتاً. حاول مجدداً بعد لحظات.",
   "errors.aiUnknown": "حدث خطأ أثناء استدعاء الذكاء الاصطناعي. يرجى المحاولة مرة أخرى.",
 
   // Notifications

@@ -388,6 +388,7 @@ export const en = {
   "errors.aiRateLimit": "Too many AI requests — please wait a minute and try again.",
   "errors.aiCreditsExhausted": "AI credits exhausted on the workspace. Add funds in Settings → Workspace → Usage.",
   "errors.aiTimeout": "The AI took too long to respond. Try again, or simplify your request.",
+  "errors.aiServiceUnavailable": "AI service is temporarily unavailable. Please try again in a moment.",
   "errors.aiUnknown": "Something went wrong calling the AI. Please try again.",
 
   // Notifications
