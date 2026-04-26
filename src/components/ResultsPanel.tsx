@@ -351,7 +351,7 @@ export const ResultsPanel = forwardRef<HTMLDivElement, ResultsPanelProps>(({ res
           if (isMeaningful(result.cameraTags)) refinements.push({ label: t("results.cameraTags"), value: result.cameraTags! });
           if (isMeaningful(result.referenceGuidance)) refinements.push({ label: t("results.referenceGuidance"), value: result.referenceGuidance! });
 
-          return <ShotCard key={idx} result={result} idx={idx} total={results.length} refinements={refinements} modelLabel={modelLabel} modelValue={modelValue} onSwitchModel={idx === 0 ? onSwitchModel : undefined} />;
+          return <ShotCard key={idx} result={result} idx={idx} total={results.length} refinements={refinements} modelLabel={modelLabel} modelValue={modelValue} onSwitchModel={idx === 0 ? onSwitchModel : undefined} onRegenerateCompact={onRegenerateCompact} isRegenerating={isLoading} />;
         })}
       </motion.div>
     </TooltipProvider>
