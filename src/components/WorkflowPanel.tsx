@@ -932,7 +932,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
       <Button
         data-tour="generate-button"
         size="lg"
-        onClick={handleGenerate}
+        onClick={() => handleGenerate()}
         disabled={isLoading}
         className="w-full sm:w-auto px-6 sm:px-8 font-display font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/25"
       >
