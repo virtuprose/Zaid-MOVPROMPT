@@ -328,6 +328,7 @@ const ShotCard = ({
   total,
   refinements,
   modelLabel,
+  modelValue,
   onSwitchModel,
 }: {
   result: ShotResult;
@@ -335,6 +336,7 @@ const ShotCard = ({
   total: number;
   refinements: { label: string; value: string }[];
   modelLabel?: string;
+  modelValue?: string;
   onSwitchModel?: (value: string) => void;
 }) => {
   const { t } = useLanguage();
@@ -370,7 +372,7 @@ const ShotCard = ({
             </div>
           )}
 
-          <MainPromptHero value={result.mainPrompt} result={result} modelLabel={modelLabel} onSwitchModel={onSwitchModel} />
+          <MainPromptHero value={result.mainPrompt} result={result} modelLabel={modelLabel} modelValue={modelValue} onSwitchModel={onSwitchModel} />
 
           {refinements.length > 0 && (
             <Collapsible open={refinementsOpen} onOpenChange={setRefinementsOpen}>
