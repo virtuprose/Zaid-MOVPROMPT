@@ -1195,16 +1195,20 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
             />
           </motion.div>
         )}
-        {phase === "generate" && sceneFrames.length === 0 && startOverBtn && (
+        {(phase === "breakdown" || phase === "generate") && sceneFrames.length === 0 && (isLoading || results || startOverBtn) && (
           <div key="startover-fallback" className="space-y-4">
-            <div className="flex items-center justify-start gap-1.5">
-              {backBtn}
-              {startOverBtn}
-            </div>
-            <div className="flex items-start gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-xs text-foreground/80">
-              <Info className="w-3.5 h-3.5 text-primary mt-0.5 shrink-0" />
-              <span>{t("wp.skipNoFramesHint" as any)}</span>
-            </div>
+            {startOverBtn && (
+              <div className="flex items-center justify-start gap-1.5">
+                {backBtn}
+                {startOverBtn}
+              </div>
+            )}
+            {phase === "generate" && !isLoading && !results && (
+              <div className="flex items-start gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-xs text-foreground/80">
+                <Info className="w-3.5 h-3.5 text-primary mt-0.5 shrink-0" />
+                <span>{t("wp.skipNoFramesHint" as any)}</span>
+              </div>
+            )}
             {resultsBlock}
           </div>
         )}
