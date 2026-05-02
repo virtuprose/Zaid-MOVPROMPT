@@ -1,92 +1,334 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { motion, AnimatePresence } from "framer-motion";
-import { Loader2 } from "lucide-react";
+import { Check, Film, Lightbulb } from "lucide-react";
 import { useLanguage } from "@/i18n/LanguageContext";
 
 interface ResultsSkeletonProps {
   modelLabel?: string;
 }
 
+const CHECKLIST_KEYS = [
+  "loading.checklist.read",
+  "loading.checklist.block",
+  "loading.checklist.light",
+  "loading.checklist.lens",
+  "loading.checklist.camera",
+  "loading.checklist.model",
+  "loading.checklist.shotlist",
+  "loading.checklist.polish",
+] as const;
+
+const TRIVIA_KEYS = [
+  "loading.trivia.deakins",
+  "loading.trivia.goldenHour",
+  "loading.trivia.dutchTilt",
+  "loading.trivia.kubrick",
+  "loading.trivia.rule180",
+  "loading.trivia.lensChoice",
+  "loading.trivia.eyeLevel",
+  "loading.trivia.colorTemp",
+  "loading.trivia.depth",
+  "loading.trivia.threePoint",
+  "loading.trivia.movement",
+  "loading.trivia.frameRate",
+] as const;
+
+const STEP_INTERVAL_MS = 1600;
+const TRIVIA_INTERVAL_MS = 4500;
+
 export const ResultsSkeleton = ({ modelLabel }: ResultsSkeletonProps) => {
   const { t } = useLanguage();
-  const [stepIdx, setStepIdx] = useState(0);
+  const [completedCount, setCompletedCount] = useState(0);
   const [progress, setProgress] = useState(0);
+  const [triviaIdx, setTriviaIdx] = useState(0);
+  const [clap, setClap] = useState(false);
 
-  const steps = [
-    t("loading.step1" as any),
-    t("loading.step2" as any),
-    t("loading.step3" as any),
-    (t("loading.step4" as any) as string).replace("{model}", modelLabel || "model"),
-    t("loading.step5" as any),
-  ];
+  // Pre-pick a random starting trivia so it varies per generation
+  const startTriviaIdx = useMemo(() => Math.floor(Math.random() * TRIVIA_KEYS.length), []);
+  useEffect(() => {
+    setTriviaIdx(startTriviaIdx);
+  }, [startTriviaIdx]);
 
+  // Advance checklist (last item keeps pulsing)
   useEffect(() => {
     const id = setInterval(() => {
-      setStepIdx((i) => (i + 1) % steps.length);
-    }, 1500);
+      setCompletedCount((c) => Math.min(c + 1, CHECKLIST_KEYS.length - 1));
+    }, STEP_INTERVAL_MS);
     return () => clearInterval(id);
-  }, [steps.length]);
+  }, []);
 
+  // Rotate trivia
   useEffect(() => {
-    // Animate progress to 90% over ~8s using ease-out curve
+    const id = setInterval(() => {
+      setTriviaIdx((i) => (i + 1) % TRIVIA_KEYS.length);
+    }, TRIVIA_INTERVAL_MS);
+    return () => clearInterval(id);
+  }, []);
+
+  // Clapperboard "clap" animation
+  useEffect(() => {
+    const id = setInterval(() => {
+      setClap(true);
+      const t = setTimeout(() => setClap(false), 220);
+      return () => clearTimeout(t);
+    }, 2400);
+    return () => clearInterval(id);
+  }, []);
+
+  // Eased progress to ~92%
+  useEffect(() => {
     const start = performance.now();
-    const duration = 8000;
+    const duration = 12000;
     let raf = 0;
     const tick = (now: number) => {
       const t = Math.min(1, (now - start) / duration);
       const eased = 1 - Math.pow(1 - t, 3);
-      setProgress(eased * 90);
+      setProgress(eased * 92);
       if (t < 1) raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
   }, []);
 
+  const renderChecklistLine = (key: string, idx: number) => {
+    const done = idx < completedCount;
+    const active = idx === completedCount;
+    let label = t(key as any) as string;
+    if (key === "loading.checklist.model" && modelLabel) {
+      label = label.replace("{model}", modelLabel);
+    }
+    return (
+      <motion.li
+        key={key}
+        initial={{ opacity: 0, x: -8 }}
+        animate={{ opacity: done || active ? 1 : 0.35, x: 0 }}
+        transition={{ duration: 0.35, delay: idx * 0.05 }}
+        className="flex items-center gap-2.5 text-sm"
+      >
+        <span
+          className="relative flex items-center justify-center shrink-0"
+          style={{ width: 18, height: 18 }}
+        >
+          {done ? (
+            <motion.span
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ type: "spring", stiffness: 400, damping: 18 }}
+              className="flex items-center justify-center rounded-full"
+              style={{
+                width: 18,
+                height: 18,
+                backgroundColor: "hsl(190 90% 50% / 0.18)",
+                border: "1px solid hsl(190 90% 50% / 0.5)",
+              }}
+            >
+              <Check style={{ width: 11, height: 11, color: "hsl(190 90% 60%)" }} strokeWidth={3} />
+            </motion.span>
+          ) : active ? (
+            <span className="relative">
+              <span
+                className="absolute inset-0 rounded-full animate-ping"
+                style={{ backgroundColor: "hsl(190 90% 50% / 0.4)" }}
+              />
+              <span
+                className="relative block rounded-full"
+                style={{
+                  width: 10,
+                  height: 10,
+                  backgroundColor: "hsl(190 90% 55%)",
+                  boxShadow: "0 0 8px hsl(190 90% 55% / 0.8)",
+                }}
+              />
+            </span>
+          ) : (
+            <span
+              className="block rounded-full"
+              style={{ width: 8, height: 8, backgroundColor: "hsl(0 0% 100% / 0.12)" }}
+            />
+          )}
+        </span>
+        <span
+          className="font-display"
+          style={{
+            color: done
+              ? "hsl(0 0% 95%)"
+              : active
+                ? "hsl(190 90% 70%)"
+                : "hsl(0 0% 60%)",
+            fontWeight: active ? 500 : 400,
+            letterSpacing: "-0.01em",
+          }}
+        >
+          {label}
+        </span>
+      </motion.li>
+    );
+  };
+
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35 }}
       className="space-y-4"
     >
-      {/* Top progress bar */}
-      <div className="relative h-[2px] w-full bg-white/5 rounded-full overflow-hidden">
+      {/* Director header card */}
+      <Card
+        className="relative overflow-hidden border-border/60"
+        style={{
+          background:
+            "linear-gradient(135deg, hsl(190 90% 50% / 0.06) 0%, hsl(220 25% 8%) 50%, hsl(35 90% 55% / 0.05) 100%)",
+        }}
+      >
+        {/* subtle scanline overlay */}
         <div
-          className="h-full transition-[width] duration-200 ease-out"
+          className="pointer-events-none absolute inset-0 opacity-[0.04]"
           style={{
-            width: `${progress}%`,
-            backgroundColor: "#00D4FF",
-            boxShadow: "0 0 8px rgba(0,212,255,0.7)",
+            backgroundImage:
+              "repeating-linear-gradient(0deg, hsl(190 90% 80%) 0px, hsl(190 90% 80%) 1px, transparent 1px, transparent 3px)",
           }}
         />
-      </div>
+        <CardContent className="relative pt-5 pb-5 space-y-4">
+          <div className="flex items-center gap-3">
+            {/* Animated clapperboard */}
+            <div
+              className="relative shrink-0 flex items-center justify-center rounded-md"
+              style={{
+                width: 40,
+                height: 40,
+                backgroundColor: "hsl(190 90% 50% / 0.12)",
+                border: "1px solid hsl(190 90% 50% / 0.3)",
+              }}
+            >
+              <motion.div
+                animate={{ rotate: clap ? -18 : 0 }}
+                transition={{ duration: 0.18, ease: "easeOut" }}
+                style={{ originX: 0.1, originY: 0.9 }}
+              >
+                <Film style={{ width: 22, height: 22, color: "hsl(190 90% 60%)" }} />
+              </motion.div>
+              <motion.span
+                aria-hidden
+                animate={{ opacity: clap ? 1 : 0, scale: clap ? 1.4 : 0.8 }}
+                transition={{ duration: 0.25 }}
+                className="absolute -top-1 -right-1 rounded-full"
+                style={{
+                  width: 8,
+                  height: 8,
+                  backgroundColor: "hsl(35 90% 55%)",
+                  boxShadow: "0 0 8px hsl(35 90% 55% / 0.9)",
+                }}
+              />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div
+                className="font-display text-base sm:text-lg font-semibold flex items-center gap-1"
+                style={{ color: "hsl(0 0% 98%)", letterSpacing: "-0.02em" }}
+              >
+                <span>{t("loading.directorTitle" as any)}</span>
+                <span
+                  className="inline-block animate-pulse"
+                  style={{
+                    width: 2,
+                    height: "1em",
+                    backgroundColor: "hsl(190 90% 60%)",
+                    transform: "translateY(2px)",
+                  }}
+                />
+              </div>
+              <div className="text-xs sm:text-sm" style={{ color: "hsl(0 0% 65%)" }}>
+                {(t("loading.directorSubtitle" as any) as string).replace(
+                  "{model}",
+                  modelLabel || "your model",
+                )}
+              </div>
+            </div>
+            <div
+              className="shrink-0 font-mono tabular-nums text-xs"
+              style={{ color: "hsl(190 90% 65%)" }}
+            >
+              {Math.round(progress)}%
+            </div>
+          </div>
 
-      {/* Cycling status label */}
-      <div className="flex items-center justify-center gap-2 min-h-[24px]">
-        <Loader2 className="animate-spin" style={{ width: 16, height: 16, color: "#00D4FF" }} />
-        <AnimatePresence mode="wait">
-          <motion.span
-            key={stepIdx}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.4 }}
-            style={{ fontSize: 14, color: "#8888AA", fontStyle: "italic" }}
+          {/* Shimmer progress bar */}
+          <div
+            className="relative h-[6px] w-full rounded-full overflow-hidden"
+            style={{ backgroundColor: "hsl(0 0% 100% / 0.06)" }}
           >
-            {steps[stepIdx]}
-          </motion.span>
-        </AnimatePresence>
-      </div>
+            <div
+              className="h-full transition-[width] duration-200 ease-out rounded-full"
+              style={{
+                width: `${progress}%`,
+                background:
+                  "linear-gradient(90deg, hsl(190 90% 50%) 0%, hsl(190 90% 65%) 50%, hsl(35 90% 55%) 100%)",
+                boxShadow: "0 0 10px hsl(190 90% 50% / 0.6)",
+              }}
+            />
+            {/* sweeping shimmer */}
+            <div
+              className="absolute inset-y-0 w-1/3 pointer-events-none"
+              style={{
+                background:
+                  "linear-gradient(90deg, transparent, hsl(0 0% 100% / 0.35), transparent)",
+                animation: "shimmer-sweep 1.6s linear infinite",
+              }}
+            />
+          </div>
 
-      <div className="flex items-center justify-between">
-        <Skeleton className="h-6 w-44" />
-        <div className="flex gap-2">
-          <Skeleton className="h-8 w-24 rounded-md" />
-          <Skeleton className="h-8 w-28 rounded-md" />
-        </div>
-      </div>
+          {/* Director's checklist */}
+          <ul className="space-y-2 pt-1">
+            {CHECKLIST_KEYS.map((k, i) => renderChecklistLine(k, i))}
+          </ul>
+        </CardContent>
 
+        <style>{`
+          @keyframes shimmer-sweep {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(400%); }
+          }
+        `}</style>
+      </Card>
+
+      {/* Trivia card */}
+      <Card
+        className="border-border/50"
+        style={{ backgroundColor: "hsl(220 25% 7% / 0.6)" }}
+      >
+        <CardContent className="py-3 px-4">
+          <div className="flex items-start gap-2.5">
+            <Lightbulb
+              className="shrink-0 mt-0.5"
+              style={{ width: 14, height: 14, color: "hsl(35 90% 60%)" }}
+            />
+            <div className="flex-1 min-w-0">
+              <div
+                className="text-[10px] uppercase tracking-wider font-display mb-1"
+                style={{ color: "hsl(35 90% 60%)", letterSpacing: "0.1em" }}
+              >
+                {t("loading.triviaLabel" as any)}
+              </div>
+              <AnimatePresence mode="wait">
+                <motion.p
+                  key={triviaIdx}
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -6 }}
+                  transition={{ duration: 0.4 }}
+                  className="text-xs sm:text-sm italic"
+                  style={{ color: "hsl(0 0% 80%)", lineHeight: 1.5 }}
+                >
+                  {t(TRIVIA_KEYS[triviaIdx] as any)}
+                </motion.p>
+              </AnimatePresence>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Card-shaped placeholders (so layout doesn't shift when results arrive) */}
       <Card className="bg-card border-border">
         <CardHeader className="pb-3">
           <Skeleton className="h-5 w-32" />
@@ -103,18 +345,6 @@ export const ResultsSkeleton = ({ modelLabel }: ResultsSkeletonProps) => {
               <Skeleton className="h-3 w-28" />
               <Skeleton className="h-4 w-full" />
               <Skeleton className="h-4 w-2/3" />
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="rounded-lg p-4 bg-secondary/50 border border-border space-y-2">
-                <Skeleton className="h-3 w-32" />
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-1/2" />
-              </div>
-              <div className="rounded-lg p-4 bg-secondary/50 border border-border space-y-2">
-                <Skeleton className="h-3 w-28" />
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-2/3" />
-              </div>
             </div>
           </div>
         </CardContent>
