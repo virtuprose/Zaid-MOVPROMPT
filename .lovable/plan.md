@@ -1,38 +1,66 @@
-## Goal
-Add a Single ↔ Multi-shot toggle to **Seedance 2.0** and **Seedance 2.0 Fast**, with a default of **9 shots** in multi-shot mode (matching what users typically upload as elements).
+## Problem
 
-## Current behavior
-- Seedance 2.0 uses `@Element` references (3–10) and auto-scales shot count to the element count.
-- It has no Single↔Multi-shot toggle, so users can't get multi-shot output without uploading elements.
+When you click **Generate**, nothing visibly happens — even though a loading skeleton already exists in the code. Two reasons:
 
-## Changes
+1. **No auto-scroll on loading start.** The page only auto-scrolls to the results area *after* results arrive. While generating, the skeleton renders below the fold and you never see it.
+2. **The current skeleton is plain.** A thin progress bar + one rotating line of text doesn't feel like "something is happening" — especially for a 10–30s wait.
 
-### 1. `src/lib/modelContracts.ts`
-In the `seedance-2.0 / seedance-2.0-fast` branch, add multi-shot support alongside the existing element references:
-```ts
-supportsMultiShotToggle: true,
-multiShotCount: 9,
-```
-Keep `supportsElementReferences: true` and `maxElements: 10` so both flows still work.
+## Solution
 
-### 2. `src/components/WorkflowPanel.tsx` (no logic rewrite needed)
-The existing multi-shot toggle UI (`modeToggleBlock`) already renders whenever `contract.supportsMultiShotToggle` is true. The element-count auto-scaling we added last turn already does `max(contract.multiShotCount, elementsPayload.length)`, so:
-- 0 elements + multi-shot ON → 9 shots
-- 9 elements + multi-shot ON → 9 shots
-- 10 elements + multi-shot ON → 10 shots (capped)
+### 1. Scroll the skeleton into view the moment generation starts
+Trigger the existing scroll-into-view behavior on `isLoading` becoming true (not just on `results` arriving), so the loading UI is immediately visible after clicking Generate.
 
-Verify the toggle and elements grid don't visually collide; if they do, hide the multi-shot toggle when `elements.length > 0` (elements implicitly drive the count anyway).
+### 2. Replace `ResultsSkeleton` with a cinematic "Director at work" loading experience
+Keep the same component name and props (drop-in replacement) but make it feel alive and on-brand (dark cinematic, cyan/amber, Space Grotesk).
 
-### 3. Edge function `supabase/functions/generate-prompt/index.ts`
-No changes needed — `resolvedShotCount` already honors the `multiShotCount` sent from the client and the `max_tokens: 16000` budget covers 9 shots.
+New elements, all stacked in the results area:
 
-### 4. Verify
-- Open Seedance 2.0 → confirm new "Single / Multi-shot" toggle appears.
-- Toggle Multi-shot, no elements uploaded, generate → expect 9 shots in results.
-- Upload 4 elements + Multi-shot → expect 9 shots (9 > 4).
-- Upload 10 elements → expect 10 shots.
-- Spot-check an Edge Function log entry to confirm `resolvedShotCount=9`.
+- **Film-strip / clapperboard header**
+  - Animated clapperboard SVG icon that "claps" once every ~2s (subtle rotate of the top arm).
+  - Headline: *"Your AI Director is on set…"* with a typing-cursor blink.
 
-### Files to edit
-- `src/lib/modelContracts.ts`
-- `src/components/WorkflowPanel.tsx` (only if visual conflict between toggle and elements grid)
+- **Progress bar — upgraded**
+  - Same eased 0→90% curve, but with a moving cyan "scanline" highlight sweeping across it (gradient shimmer) so it never looks frozen even when paused near 90%.
+  - Small percentage label on the right.
+
+- **Director's checklist (the entertainment piece)**
+  - A vertical list of 6–8 cinematic tasks, each revealed in sequence as the wait progresses. Each line animates from gray → cyan with a check icon when "completed":
+    1. *Reading the scene…*
+    2. *Blocking the subject…*
+    3. *Setting up the key light…*
+    4. *Choosing the lens (35mm? 85mm?)…*
+    5. *Choreographing camera movement…*
+    6. *Calling for {modelLabel}…*
+    7. *Writing the shot list…*
+    8. *Final polish on the prompt…*
+  - Items advance on a timer (~1.6s each) and the last item keeps pulsing until results arrive — so even a long wait still feels like progress.
+
+- **Rotating cinematography trivia card** (below the checklist)
+  - A small muted card showing one of ~12 short film-craft facts, rotating every 4s. Examples:
+    - *"Roger Deakins shot Blade Runner 2049 mostly with a single 21mm Master Prime."*
+    - *"The 'golden hour' lasts about 40 minutes — and great DPs plan their day around it."*
+    - *"A Dutch tilt is named after German Expressionist cinema, not the Netherlands."*
+    - *"Kubrick used a NASA f/0.7 lens to shoot Barry Lyndon by candlelight."*
+  - Purely decorative; gives users something to read instead of staring.
+
+- **Existing card-shaped skeleton placeholders** stay below the trivia card so the spatial layout doesn't jump when real results replace it.
+
+### 3. Copy & i18n
+Add new translation keys for the checklist items and trivia (English + Arabic), under namespaces `loading.checklist.*` and `loading.trivia.*`. Existing `loading.step1–5` keys stay so nothing else breaks.
+
+### 4. Quietly fix the auth-token "lock stolen" runtime warnings
+Unrelated to this request but visible in runtime errors — caused by overlapping `getSession()` calls. Will dedupe the session calls in `useAuth` so the console stays clean.
+
+## Files to touch
+
+- `src/components/ResultsSkeleton.tsx` — rewrite with clapperboard, checklist, trivia, shimmer progress.
+- `src/components/WorkflowPanel.tsx` — also auto-scroll `resultsRef` into view when `isLoading` flips true.
+- `src/i18n/translations/en.ts` and `src/i18n/translations/ar.ts` — add `loading.checklist.*` and `loading.trivia.*` keys.
+- `src/hooks/useAuth.ts` — small dedupe fix for the lock-stolen warning.
+
+No backend, schema, or contract changes.
+
+## Out of scope
+
+- Showing real backend progress events (the edge function doesn't stream progress today; the timed checklist is the closest we can do without a streaming refactor).
+- Changing how long generation actually takes.
