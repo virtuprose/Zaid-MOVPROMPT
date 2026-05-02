@@ -1053,6 +1053,17 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
     return () => cancelAnimationFrame(id);
   }, [results]);
 
+  // Also scroll the loading skeleton into view the moment generation starts,
+  // so users immediately see the "Director at work" UI instead of staring at the button.
+  useEffect(() => {
+    if (!isLoading || results) return;
+    if (!resultsRef.current) return;
+    const id = requestAnimationFrame(() => {
+      resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+    return () => cancelAnimationFrame(id);
+  }, [isLoading, results]);
+
   const resultsBlock = (isLoading && !results) || results ? (
     <div ref={resultsRef} className="relative">
       <AnimatePresence mode="wait" initial={false}>
