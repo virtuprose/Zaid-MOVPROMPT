@@ -231,6 +231,20 @@ export const ar: Record<TranslationKey, string> = {
   "loading.trivia.movement": "كل حركة كاميرا مدروسة تجيب عن سؤال: 'لماذا تتحرك الكاميرا الآن؟'",
   "loading.trivia.frameRate": "أصبحت 24 إطارًا/ثانية معيارًا لأنها أبطأ معدل لا يزال يبدو كحركة حقيقية.",
 
+  // Analyzing scene loader
+  "analyzing.title": "نحلّل مشهدك",
+  "analyzing.subtitle": "ندرس التكوين والشخصيات والإضاءة وإشارات الحركة.",
+  "analyzing.triviaLabel": "بينما تنتظر",
+  "analyzing.checklist.read": "قراءة الإطارات…",
+  "analyzing.checklist.detect": "رصد الشخصيات والعناصر…",
+  "analyzing.checklist.compose": "تحليل التكوين والعمق…",
+  "analyzing.checklist.light": "استنتاج الإضاءة والمزاج…",
+  "analyzing.checklist.draft": "صياغة تفصيل المشهد…",
+  "analyzing.trivia.continuity": "الاستمرارية حرفة خفية — لا يلاحظها المشاهد إلا حين تنكسر.",
+  "analyzing.trivia.blocking": "تحريك الممثلين تصميم رقص للكاميرا تمامًا كما هو للممثلين.",
+  "analyzing.trivia.eyeline": "تطابق خطوط النظر هو ما يجعل شخصيتين تتقاسمان العالم نفسه.",
+  "analyzing.trivia.coverage": "المشاهد العظيمة تُبنى من تغطية متعددة: واسعة، متوسطة، قريبة — ثم تأتي الاختيارات.",
+
   // Onboarding examples
   "onboarding.tryExample": "جرّب مثالاً ←",
   "onboarding.useExample": "استخدم هذا المثال",
