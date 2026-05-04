@@ -5,6 +5,7 @@ import { ImageUploadZone } from "./ImageUploadZone";
 import { ConfigPanel } from "./ConfigPanel";
 import { ResultsPanel } from "./ResultsPanel";
 import { ResultsSkeleton } from "./ResultsSkeleton";
+import { AnalyzingSkeleton } from "./AnalyzingSkeleton";
 import { SceneBreakdown, type SceneFrame, type ElementDirections } from "./SceneBreakdown";
 import { ReferenceMediaPanel } from "./ReferenceMediaPanel";
 import type { ReferenceMediaItem } from "./ReferenceItem";
