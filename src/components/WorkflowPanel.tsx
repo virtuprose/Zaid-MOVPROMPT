@@ -1225,6 +1225,12 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
         )}
       </AnimatePresence>
 
+      {isAnalyzing && sceneFrames.length === 0 && (
+        <div ref={analyzingRef}>
+          <AnalyzingSkeleton framePreviews={images.map((img) => img?.preview || null)} />
+        </div>
+      )}
+
       {showRightEmptyState && (
         <div
           className="empty-state-pulse flex flex-col items-center justify-center text-center min-h-[280px] rounded-2xl px-6 py-10"
