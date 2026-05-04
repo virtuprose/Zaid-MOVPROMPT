@@ -1036,7 +1036,17 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
     </Button>
   );
 
-  const showRightEmptyState = !results && !isLoading && !((phase === "breakdown" || phase === "generate") && sceneFrames.length > 0);
+  const showRightEmptyState = !results && !isLoading && !isAnalyzing && !((phase === "breakdown" || phase === "generate") && sceneFrames.length > 0);
+
+  const analyzingRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!isAnalyzing) return;
+    if (!analyzingRef.current) return;
+    const id = requestAnimationFrame(() => {
+      analyzingRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+    return () => cancelAnimationFrame(id);
+  }, [isAnalyzing]);
 
   const resultsRef = useRef<HTMLDivElement>(null);
   const scrolledResultsKeyRef = useRef<unknown>(null);
