@@ -229,6 +229,20 @@ export const en = {
   "loading.trivia.movement": "A motivated camera move always answers the question 'why does the camera move now?'",
   "loading.trivia.frameRate": "24fps became standard because it was the slowest rate that still felt like motion.",
 
+  // Analyzing scene loader
+  "analyzing.title": "Analyzing your scene",
+  "analyzing.subtitle": "Studying composition, subjects, lighting, and motion cues.",
+  "analyzing.triviaLabel": "While you wait",
+  "analyzing.checklist.read": "Reading frames…",
+  "analyzing.checklist.detect": "Detecting subjects & objects…",
+  "analyzing.checklist.compose": "Mapping composition & depth…",
+  "analyzing.checklist.light": "Inferring lighting & mood…",
+  "analyzing.checklist.draft": "Drafting the scene breakdown…",
+  "analyzing.trivia.continuity": "Continuity is the invisible craft — viewers only notice when it breaks.",
+  "analyzing.trivia.blocking": "Blocking is choreography for the camera as much as for the actors.",
+  "analyzing.trivia.eyeline": "Matching eyelines is what makes two characters share the same world.",
+  "analyzing.trivia.coverage": "Great scenes are built from coverage: wide, medium, close — then choices.",
+
   // Onboarding examples
   "onboarding.tryExample": "Try an example →",
   "onboarding.useExample": "Use this example",
