@@ -5,6 +5,7 @@ import { ImageUploadZone } from "./ImageUploadZone";
 import { ConfigPanel } from "./ConfigPanel";
 import { ResultsPanel } from "./ResultsPanel";
 import { ResultsSkeleton } from "./ResultsSkeleton";
+import { AnalyzingSkeleton } from "./AnalyzingSkeleton";
 import { SceneBreakdown, type SceneFrame, type ElementDirections } from "./SceneBreakdown";
 import { ReferenceMediaPanel } from "./ReferenceMediaPanel";
 import type { ReferenceMediaItem } from "./ReferenceItem";
@@ -1035,7 +1036,17 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
     </Button>
   );
 
-  const showRightEmptyState = !results && !isLoading && !((phase === "breakdown" || phase === "generate") && sceneFrames.length > 0);
+  const showRightEmptyState = !results && !isLoading && !isAnalyzing && !((phase === "breakdown" || phase === "generate") && sceneFrames.length > 0);
+
+  const analyzingRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!isAnalyzing) return;
+    if (!analyzingRef.current) return;
+    const id = requestAnimationFrame(() => {
+      analyzingRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+    return () => cancelAnimationFrame(id);
+  }, [isAnalyzing]);
 
   const resultsRef = useRef<HTMLDivElement>(null);
   const scrolledResultsKeyRef = useRef<unknown>(null);
@@ -1213,6 +1224,12 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
           </div>
         )}
       </AnimatePresence>
+
+      {isAnalyzing && sceneFrames.length === 0 && (
+        <div ref={analyzingRef}>
+          <AnalyzingSkeleton framePreviews={images.map((img) => img?.preview || null)} />
+        </div>
+      )}
 
       {showRightEmptyState && (
         <div
