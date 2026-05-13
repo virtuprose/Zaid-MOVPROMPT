@@ -243,6 +243,21 @@ export const en = {
   "analyzing.trivia.eyeline": "Matching eyelines is what makes two characters share the same world.",
   "analyzing.trivia.coverage": "Great scenes are built from coverage: wide, medium, close — then choices.",
 
+  // Storyboard loader (multi-shot generation)
+  "storyboard.title": "Storyboarding {count} shots",
+  "storyboard.subtitle": "Drafting coverage, blocking, and continuity for {model}.",
+  "storyboard.shotLabel": "Shot {n}",
+  "storyboard.triviaLabel": "Director's note",
+  "storyboard.status.compose": "Composing…",
+  "storyboard.status.light": "Lighting…",
+  "storyboard.status.frame": "Framing…",
+  "storyboard.status.lock": "Locking shot…",
+  "storyboard.status.locked": "Shot locked",
+  "storyboard.trivia.shotlist": "A shot list is the director's compass — it turns intention into a plan.",
+  "storyboard.trivia.coverage": "Coverage gives the editor choices; choices give the scene rhythm.",
+  "storyboard.trivia.axis": "Crossing the axis disorients the viewer — unless you do it on purpose.",
+  "storyboard.trivia.montage": "Montage isn't a sequence of shots — it's a sequence of ideas.",
+
   // Onboarding examples
   "onboarding.tryExample": "Try an example →",
   "onboarding.useExample": "Use this example",
