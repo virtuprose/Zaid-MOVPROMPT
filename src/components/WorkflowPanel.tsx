@@ -85,6 +85,16 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
   const [results, setResults] = useState<ShotResult[] | null>(null);
   const [agentName, setAgentName] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [regeneratingShotIdx, setRegeneratingShotIdx] = useState<number | null>(null);
+  const [history, setHistory] = useState<Array<{
+    id: string;
+    results: ShotResult[];
+    agentName: string | null;
+    modelValue: string;
+    modelLabel: string;
+    workflowType: string;
+    createdAt: number;
+  }>>([]);
 
   const [phase, setPhase] = useState<Phase>("upload");
   const [sceneFrames, setSceneFrames] = useState<SceneFrame[]>([]);
