@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Check, Copy, Link2, Loader2, Twitter } from "lucide-react";
+import { Check, Copy, Link2, Loader2, Share2 } from "lucide-react";
 import { toast } from "sonner";
 import { createSharedPrompt, type CreateSharePayload } from "@/lib/sharePrompt";
 
@@ -102,7 +102,7 @@ export const ShareDialog = ({ open, onOpenChange, payload }: ShareDialogProps) =
               </Button>
               <Button asChild variant="outline" className="flex-1">
                 <a href={tweetHref} target="_blank" rel="noopener noreferrer">
-                  <Twitter className="w-4 h-4 me-1.5" />
+                  <Share2 className="w-4 h-4 me-1.5" />
                   Tweet
                 </a>
               </Button>
