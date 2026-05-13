@@ -435,15 +435,20 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
     }
   };
 
-  const handleGenerate = async (opts?: { compact?: boolean }) => {
+  const handleGenerate = async (opts?: { compact?: boolean; replaceShotIdx?: number }) => {
     if (!hasRequiredImages) return;
     if (!user) {
       toast({ title: t("wp.signInRequired"), description: t("wp.signInGenerate"), variant: "destructive" });
       navigate("/auth");
       return;
     }
-    setIsLoading(true);
-    setResults(null);
+    const isShotRegen = typeof opts?.replaceShotIdx === "number" && results && results[opts.replaceShotIdx];
+    if (isShotRegen) {
+      setRegeneratingShotIdx(opts!.replaceShotIdx!);
+    } else {
+      setIsLoading(true);
+      setResults(null);
+    }
 
     try {
       const imageBase64s = await Promise.all(images.filter(Boolean).map((img) => compressImage(img.file)));
