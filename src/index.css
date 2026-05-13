@@ -234,7 +234,6 @@
 .empty-state-pulse { animation: empty-border-pulse 2s ease-in-out infinite; }
 
 /* Hide Radix select chevron scroll buttons inside the model picker (gradient fade is the affordance) */
-.model-picker-content [data-radix-select-scroll-up-button],
-.model-picker-content [data-radix-select-scroll-down-button] {
+.model-picker-content .select-scroll-button {
   display: none !important;
 }
