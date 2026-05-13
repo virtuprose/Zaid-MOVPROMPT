@@ -553,6 +553,12 @@ const ShotCard = ({
   isRegenerating,
   onRegenerateShot,
   isThisShotRegenerating,
+  feedback,
+  onFeedbackChange,
+  critique,
+  onRunCritique,
+  onApplyAddendum,
+  applyingAddendum,
 }: {
   result: ShotResult;
   idx: number;
@@ -565,10 +571,37 @@ const ShotCard = ({
   isRegenerating?: boolean;
   onRegenerateShot?: () => void;
   isThisShotRegenerating?: boolean;
+  feedback: ShotFeedback;
+  onFeedbackChange?: (next: ShotFeedback) => void;
+  critique: ShotCritiqueState | null;
+  onRunCritique?: () => void;
+  onApplyAddendum?: (addendum: string) => void;
+  applyingAddendum: string | null;
 }) => {
   const { t } = useLanguage();
   const [refinementsOpen, setRefinementsOpen] = useState(false);
   const [notesOpen, setNotesOpen] = useState(false);
+  const [critiqueOpen, setCritiqueOpen] = useState(false);
+
+  const fixChips: FixChip[] = useMemo(
+    () =>
+      detectMissingDimensions({
+        mainPrompt: result.mainPrompt,
+        cameraSuggestions: result.cameraSuggestions,
+        cameraTags: result.cameraTags,
+        shotStructure: result.shotStructure,
+      }),
+    [result.mainPrompt, result.cameraSuggestions, result.cameraTags, result.shotStructure],
+  );
+
+  const handleApplyFix = (addendum: string) => {
+    if (!onApplyAddendum) return;
+    onApplyAddendum(addendum);
+  };
+  const handleOpenCritique = () => {
+    setCritiqueOpen(true);
+    if (!critique?.result && !critique?.loading && onRunCritique) onRunCritique();
+  };
 
   return (
     <Card className={`bg-card border-border relative ${isThisShotRegenerating ? "opacity-70" : ""}`}>
