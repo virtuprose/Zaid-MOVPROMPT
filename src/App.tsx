@@ -23,6 +23,7 @@ import QaMobile from "./pages/QaMobile.tsx";
 import SharedPrompt from "./pages/SharedPrompt.tsx";
 import Gallery from "./pages/Gallery.tsx";
 import ModelLanding from "./pages/ModelLanding.tsx";
+import Referrals from "./pages/Referrals.tsx";
 
 const queryClient = new QueryClient();
 
@@ -49,6 +50,7 @@ const AppRoutes = () => {
           <Route path="/p/:slug" element={<SharedPrompt />} />
           <Route path="/gallery" element={<Gallery />} />
           <Route path="/models/:slug" element={<ModelLanding />} />
+          <Route path="/referrals" element={<AuthGuard><Referrals /></AuthGuard>} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
