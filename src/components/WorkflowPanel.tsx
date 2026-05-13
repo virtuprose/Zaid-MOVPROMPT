@@ -588,6 +588,9 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
         const idx = opts!.replaceShotIdx!;
         const newShot = data.results[idx] ?? data.results[0];
         finalResults = results.map((r, i) => (i === idx ? newShot : r));
+        // Reset critique + clear feedback for the regenerated shot since the prompt changed.
+        setCritiqueByShot((prev) => { const n = { ...prev }; delete n[idx]; return n; });
+        setFeedbackByShot((prev) => { const n = { ...prev }; delete n[idx]; return n; });
       }
       setResults(finalResults);
       setAgentName(data.agentName ?? null);
