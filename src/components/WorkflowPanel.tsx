@@ -1145,24 +1145,30 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
     <ModelPicker model={selectedModel} onModelChange={(v) => onSwitchModel?.(v)} />
   );
 
+  const backLinkTop = isBreakdownLike && !isAnalyzing && !isLoading && !(phase === "generate" && results) ? (
+    <button
+      type="button"
+      onClick={() => setPhase("upload")}
+      className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors self-start"
+      aria-label={t("wp.back" as any)}
+    >
+      <ArrowLeft className="w-3 h-3 rtl:rotate-180" /> {t("wp.back" as any)}
+    </button>
+  ) : null;
+
   const leftPanel = (
     <div className="space-y-5">
+      {backLinkTop}
       {workflowHeaderBlock}
       {modeToggleBlock}
       {showOnboarding && <OnboardingExamples onPick={handlePickExample} />}
       {uploadBlock}
       {modelBlock}
-      {/* On breakdown/generate: textarea first, then back/Generate at the bottom. */}
+      {/* On breakdown/generate: textarea first, then Generate at the bottom. */}
       {isBreakdownLike && descriptionBlock}
-      {!contract.supportsElementReferences && sceneFrames.length > 0 && isBreakdownLike && (
-        <p className="text-xs text-muted-foreground px-1 -mt-2">
-          {t("scene.autoAssignedHint" as any)}
-        </p>
-      )}
       {ctaRowBlock}
       {/* On upload phase, description block (if any) renders after the CTA. */}
       {!isBreakdownLike && descriptionBlock}
-      {audioToggleBlock}
     </div>
   );
 
