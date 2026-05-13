@@ -27,7 +27,7 @@ export const ImageUploadZone = ({ label, onImageSelect, onImageRemove, preview }
   }, [onImageSelect]);
 
   return (
-    <div className="relative" data-tour="image-upload">
+    <div className="relative w-full min-w-0" data-tour="image-upload">
       <AnimatePresence mode="wait">
         {preview ? (
           <motion.div
