@@ -722,8 +722,8 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
   // ============ Reusable JSX blocks ============
 
   const extrasHintBlock = extrasHint && (
-    <div className="flex items-start gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-xs text-foreground/80">
-      <Info className="w-3.5 h-3.5 text-primary mt-0.5 shrink-0" />
+    <div className="flex items-start gap-2 rounded-lg border border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+      <Info className="w-3.5 h-3.5 text-muted-foreground mt-0.5 shrink-0" />
       <span>{extrasHint}</span>
     </div>
   );
@@ -733,14 +733,14 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
       onClick={() => setAudioEnabled((v) => !v)}
       className={`flex items-center justify-between gap-3 w-full rounded-lg border px-3 py-2 transition-colors ${
         audioEnabled
-          ? "border-primary/40 bg-primary/5 hover:bg-primary/10"
+          ? "border-border bg-secondary/60 hover:bg-secondary"
           : "border-border bg-secondary/40 hover:bg-secondary/60"
       }`}
       aria-pressed={audioEnabled}
     >
       <span className="flex items-center gap-2 text-sm font-medium">
         {audioEnabled ? (
-          <Volume2 className="w-4 h-4 text-primary" />
+          <Volume2 className="w-4 h-4 text-foreground" />
         ) : (
           <VolumeX className="w-4 h-4 text-muted-foreground" />
         )}
@@ -901,7 +901,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
           className="flex items-center justify-between gap-2 rounded-md border border-border/60 bg-card/60 px-3 py-1.5 text-xs text-muted-foreground"
         >
           <div className="flex items-center gap-1.5">
-            <Sparkles className="w-3.5 h-3.5 text-primary" />
+            <Sparkles className="w-3.5 h-3.5 text-muted-foreground" />
             <span>{t("enhance.applied" as any)}</span>
           </div>
           <Button
@@ -934,8 +934,8 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
                 {description}
               </div>
             </div>
-            <div className="rounded-md border border-primary/40 bg-primary/5 p-3 space-y-1.5">
-              <div className="text-[11px] font-semibold uppercase tracking-wider text-primary">
+            <div className="rounded-md border border-border bg-muted/40 p-3 space-y-1.5">
+              <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                 {t("enhance.dialog.enhanced" as any)}
               </div>
               <div className="text-sm whitespace-pre-wrap text-foreground leading-relaxed">
@@ -1287,8 +1287,8 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
 
             {resultsBlock}
 
-            <div className="flex items-start gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-xs text-foreground/80">
-              <Info className="w-3.5 h-3.5 text-primary mt-0.5 shrink-0" />
+            <div className="flex items-start gap-2 rounded-lg border border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+              <Info className="w-3.5 h-3.5 text-muted-foreground mt-0.5 shrink-0" />
               <span>{t("scene.reviewHint" as any)}</span>
             </div>
 
@@ -1359,8 +1359,8 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
               </div>
             )}
             {phase === "generate" && !isLoading && !results && (
-              <div className="flex items-start gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-xs text-foreground/80">
-                <Info className="w-3.5 h-3.5 text-primary mt-0.5 shrink-0" />
+              <div className="flex items-start gap-2 rounded-lg border border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+                <Info className="w-3.5 h-3.5 text-muted-foreground mt-0.5 shrink-0" />
                 <span>{t("wp.skipNoFramesHint" as any)}</span>
               </div>
             )}

@@ -448,14 +448,14 @@ export const ResultsPanel = forwardRef<HTMLDivElement, ResultsPanelProps>(({ res
         )}
 
         {elementsLegend && elementsLegend.length > 0 && (
-          <div className="rounded-lg border border-primary/30 bg-primary/5 px-3 py-2.5 space-y-2">
-            <div className="text-[11px] font-semibold uppercase tracking-wider text-primary">
+          <div className="rounded-lg border border-border bg-muted/30 px-3 py-2.5 space-y-2">
+            <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
               {t("elements.legend" as any)}
             </div>
             <div className="flex flex-wrap gap-2">
               {elementsLegend.map((el) => (
                 <div key={el.index} className="flex items-center gap-1.5 rounded-md border border-border bg-card px-1.5 py-1">
-                  <span className="text-[10px] font-mono font-bold text-primary">@Element {el.index}</span>
+                  <span className="text-[10px] font-mono font-bold text-foreground">@Element {el.index}</span>
                   <div className="w-6 h-6 rounded overflow-hidden bg-secondary flex items-center justify-center">
                     {el.kind === "image" && el.preview && <img src={el.preview} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />}
                     {el.kind === "video" && el.preview && <video src={el.preview} preload="metadata" className="w-full h-full object-cover" muted />}
@@ -620,7 +620,7 @@ const ShotCard = ({
     <Card className={`bg-card border-border relative ${isThisShotRegenerating ? "opacity-70" : ""}`}>
       {isThisShotRegenerating && (
         <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-background/40 backdrop-blur-[1px] pointer-events-none">
-          <div className="flex items-center gap-2 rounded-full border border-primary/40 bg-card/90 px-3 py-1.5 text-xs text-primary shadow">
+          <div className="flex items-center gap-2 rounded-full border border-border bg-card/90 px-3 py-1.5 text-xs text-foreground shadow">
             <RefreshCw className="w-3.5 h-3.5 animate-spin" />
             {t("results.shotRegen.inProgress" as any)}
           </div>
@@ -680,7 +680,7 @@ const ShotCard = ({
           {(result.suggestedAspectRatio || result.suggestedDuration) && (
             <div className="flex items-center gap-3 flex-wrap">
               {result.suggestedAspectRatio && (
-                <span className="text-xs font-mono bg-primary/10 text-primary border border-primary/20 px-2.5 py-1 rounded-md">
+                <span className="text-xs font-mono bg-muted/50 text-muted-foreground border border-border px-2.5 py-1 rounded-md">
                   📐 {result.suggestedAspectRatio}
                 </span>
               )}
