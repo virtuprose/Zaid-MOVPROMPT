@@ -629,6 +629,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
       toast({ title: t("wp.generationFailed"), description: err.message || t("wp.somethingWrongRetry"), variant: "destructive" });
     } finally {
       setIsLoading(false);
+      setRegeneratingShotIdx(null);
     }
   };
 
