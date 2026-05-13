@@ -159,6 +159,15 @@ export default function Landing() {
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-primary/5 rounded-full blur-[120px] animate-pulse-glow" />
         <div className="absolute bottom-0 right-0 w-[600px] h-[300px] bg-brand/5 rounded-full blur-[100px]" />
       </div>
+      {/* Hero radial wash — subtle amber from top-center */}
+      <div
+        className="absolute top-0 left-0 right-0 h-[900px] pointer-events-none -z-0"
+        style={{
+          background:
+            "radial-gradient(ellipse 1100px 600px at 50% 0%, hsl(var(--accent) / 0.03), transparent 70%)",
+        }}
+        aria-hidden="true"
+      />
 
       {/* NAV */}
       <header className="relative z-20 border-b border-border/40">
@@ -184,7 +193,7 @@ export default function Landing() {
 
       <main className="relative z-10">
         {/* HERO */}
-        <section className="container max-w-[1200px] mx-auto px-4 pt-16 sm:pt-24 pb-16 sm:pb-24 text-center">
+        <section className="container max-w-[1200px] mx-auto px-4 pt-20 pb-16 sm:pb-24 text-center" style={{ paddingTop: "80px" }}>
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -192,7 +201,7 @@ export default function Landing() {
           >
             <h1
               className="font-display font-bold tracking-tight text-foreground leading-[1.05]"
-              style={{ fontSize: "clamp(44px, 7vw, 76px)" }}
+              style={{ fontSize: "clamp(48px, 8vw, 84px)" }}
             >
               Turn Stills Into Cinema
             </h1>
@@ -200,18 +209,18 @@ export default function Landing() {
               Drop a frame. Pick a model. Get a director-grade video prompt ready to paste into Kling, Veo, Runway, Seedance, or any AI video tool.
             </p>
             {/* 32px gap to CTA row */}
-            <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6">
+            <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-6 sm:gap-8">
               <Button size="lg" onClick={() => navigate("/auth")} className="min-w-[180px]">
                 Try It Free
               </Button>
-              <Button
-                size="lg"
-                variant="ghost"
+              <button
+                type="button"
                 onClick={() => navigate("/gallery")}
-                className="min-w-[180px] bg-transparent text-foreground border border-foreground/30 hover:bg-foreground/5 hover:border-foreground/50"
+                className="group inline-flex items-center gap-1.5 text-[16px] text-foreground/80 hover:text-foreground transition-colors"
               >
                 See Examples
-              </Button>
+                <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
+              </button>
             </div>
             {/* 16px gap to microcopy */}
             <p className="mt-4 text-xs text-muted-foreground/70">No credit card required</p>
@@ -252,7 +261,7 @@ export default function Landing() {
                 transition={{ duration: 0.5, delay: i * 0.1 }}
                 className="flex flex-col gap-3"
               >
-                <div className="aspect-video w-full overflow-hidden rounded-lg border border-border bg-muted">
+                <div className="aspect-video w-full overflow-hidden rounded-lg bg-muted transition-shadow duration-300 hover:shadow-[0_0_24px_hsl(var(--accent)/0.2)]" style={{ border: "1px solid #27272A", borderRadius: "8px" }}>
                   <img src={p.img} alt="" className="w-full h-full object-cover" />
                 </div>
                 <CodeSnippet text={p.snippet}>{highlight(p.snippet)}</CodeSnippet>
@@ -271,27 +280,20 @@ export default function Landing() {
           <div className="grid sm:grid-cols-3 gap-6">
             {/* Single Frame */}
             <div className="rounded-xl border border-border bg-card/40 p-6 flex flex-col gap-4 hover:border-border/80 transition-colors">
-              <div className="w-10 h-10 rounded-lg bg-muted/60 flex items-center justify-center">
-                <Film className="w-5 h-5 text-foreground" />
-              </div>
-              <div>
-                <h3 className="font-display font-semibold text-lg">Single Frame</h3>
-                <p className="text-sm text-muted-foreground mt-1">One image. One cinematic shot.</p>
-              </div>
               <div className="aspect-video w-full rounded-md overflow-hidden border border-border bg-muted">
                 <img src={exampleDesert} alt="" className="w-full h-full object-cover" />
               </div>
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-md bg-muted/60 flex items-center justify-center">
+                  <Film className="w-4 h-4 text-foreground" />
+                </div>
+                <h3 className="font-display font-semibold text-lg">Single Frame</h3>
+              </div>
+              <p className="text-sm text-muted-foreground -mt-1">One image. One cinematic shot.</p>
             </div>
 
             {/* Start + End */}
             <div className="rounded-xl border border-border bg-card/40 p-6 flex flex-col gap-4 hover:border-border/80 transition-colors">
-              <div className="w-10 h-10 rounded-lg bg-muted/60 flex items-center justify-center">
-                <Layers className="w-5 h-5 text-foreground" />
-              </div>
-              <div>
-                <h3 className="font-display font-semibold text-lg">Start + End</h3>
-                <p className="text-sm text-muted-foreground mt-1">Two frames. A seamless transition.</p>
-              </div>
               <div className="aspect-video w-full rounded-md overflow-hidden border border-border bg-muted/40 flex items-center gap-2 p-2">
                 <div className="flex-1 h-full rounded overflow-hidden">
                   <img src={examplePortrait} alt="" className="w-full h-full object-cover" />
@@ -301,17 +303,17 @@ export default function Landing() {
                   <img src={exampleTokyo} alt="" className="w-full h-full object-cover" />
                 </div>
               </div>
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-md bg-muted/60 flex items-center justify-center">
+                  <Layers className="w-4 h-4 text-foreground" />
+                </div>
+                <h3 className="font-display font-semibold text-lg">Start + End</h3>
+              </div>
+              <p className="text-sm text-muted-foreground -mt-1">Two frames. A seamless transition.</p>
             </div>
 
             {/* Multi-Shot */}
             <div className="rounded-xl border border-border bg-card/40 p-6 flex flex-col gap-4 hover:border-border/80 transition-colors">
-              <div className="w-10 h-10 rounded-lg bg-muted/60 flex items-center justify-center">
-                <Clapperboard className="w-5 h-5 text-foreground" />
-              </div>
-              <div>
-                <h3 className="font-display font-semibold text-lg">Multi-Shot</h3>
-                <p className="text-sm text-muted-foreground mt-1">One image. A full storyboard.</p>
-              </div>
               <div className="aspect-video w-full rounded-md overflow-hidden border border-border bg-muted/40 p-2 flex items-center gap-1">
                 {Array.from({ length: 8 }).map((_, idx) => (
                   <div key={idx} className="flex-1 h-full rounded-sm overflow-hidden">
@@ -324,13 +326,20 @@ export default function Landing() {
                   </div>
                 ))}
               </div>
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-md bg-muted/60 flex items-center justify-center">
+                  <Clapperboard className="w-4 h-4 text-foreground" />
+                </div>
+                <h3 className="font-display font-semibold text-lg">Multi-Shot</h3>
+              </div>
+              <p className="text-sm text-muted-foreground -mt-1">One image. A full storyboard.</p>
             </div>
           </div>
         </section>
 
         {/* SCENE ELEMENTS BLOCK */}
         <section className="container max-w-[1200px] mx-auto px-4 py-16 sm:py-24">
-          <div className="grid md:grid-cols-2 gap-10 items-center">
+          <div className="grid md:[grid-template-columns:50%_45%] md:gap-[5%] gap-10 items-stretch">
             <div className="rounded-xl border border-border bg-card/60 p-5 order-2 md:order-1">
               {/* Source thumbnail */}
               <div className="aspect-video w-full rounded-md overflow-hidden border border-border bg-muted mb-4">
@@ -359,7 +368,7 @@ export default function Landing() {
                 ))}
               </div>
             </div>
-            <div className="order-1 md:order-2">
+            <div className="order-1 md:order-2 flex flex-col justify-center">
               <h2 className="font-display font-bold text-3xl sm:text-4xl tracking-tight">
                 Direct every element in your shot
               </h2>
@@ -367,14 +376,22 @@ export default function Landing() {
                 MovPrompt breaks your scene into subject, background, lighting, and atmosphere.
                 Lock what stays. Move what animates. Full directorial control.
               </p>
+              <button
+                type="button"
+                onClick={() => navigate("/auth")}
+                className="group mt-6 inline-flex items-center gap-1.5 text-sm text-accent hover:text-accent/80 transition-colors self-start"
+              >
+                See it in action
+                <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
+              </button>
             </div>
           </div>
         </section>
 
         {/* DIRECTOR'S PICK BLOCK */}
         <section className="container max-w-[1200px] mx-auto px-4 py-16 sm:py-24">
-          <div className="grid md:grid-cols-2 gap-10 items-center">
-            <div>
+          <div className="grid md:grid-cols-2 gap-10 items-stretch">
+            <div className="flex flex-col justify-center">
               <h2 className="font-display font-bold text-3xl sm:text-4xl tracking-tight">
                 Your AI Director picks the right model
               </h2>
@@ -383,7 +400,7 @@ export default function Landing() {
                 One click to copy. Ready to paste.
               </p>
             </div>
-            <div className="rounded-xl border border-border bg-card/60 p-5">
+            <div className="rounded-xl border border-border bg-card/60 p-8 flex flex-col justify-center min-h-[340px]">
               <div className="flex items-center gap-2 mb-3">
                 <Wand2 className="w-4 h-4 text-primary" />
                 <span className="text-[11px] uppercase tracking-wider text-muted-foreground">
@@ -414,6 +431,17 @@ export default function Landing() {
                 </div>
               </div>
             </div>
+          </div>
+        </section>
+
+        {/* STATS STRIP */}
+        <section className="container max-w-[1200px] mx-auto px-4 py-12">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 text-center" style={{ color: "#A1A1AA", fontSize: "14px", letterSpacing: "0.05em" }}>
+            <span className="uppercase">2,400+ creators using MovPrompt</span>
+            <span className="hidden sm:inline opacity-50">·</span>
+            <span className="uppercase">47,000+ prompts generated</span>
+            <span className="hidden sm:inline opacity-50">·</span>
+            <span className="uppercase">8 supported AI video models</span>
           </div>
         </section>
 
@@ -453,6 +481,14 @@ export default function Landing() {
           <p className="mt-4 text-muted-foreground text-base sm:text-lg">
             Join filmmakers and AI creators using MovPrompt every day.
           </p>
+          <ul className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-6 text-sm" style={{ color: "#A1A1AA" }}>
+            {["No credit card required", "Free forever tier", "Cancel anytime"].map((item) => (
+              <li key={item} className="flex items-center gap-2">
+                <Check className="w-4 h-4 text-accent" />
+                <span>{item}</span>
+              </li>
+            ))}
+          </ul>
           <div className="mt-8">
             <Button size="lg" onClick={() => navigate("/auth")} className="min-w-[200px]">
               Get Started Free
@@ -464,8 +500,8 @@ export default function Landing() {
       {/* FOOTER */}
       <footer className="relative z-10 border-t border-border/40">
         <div className="container max-w-[1200px] mx-auto px-4 py-12">
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-8">
-            <div className="col-span-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-8 text-center sm:text-left">
+            <div className="md:col-span-2 flex flex-col items-center sm:items-start">
               <Logo size={24} />
               <p className="text-xs text-muted-foreground mt-3 max-w-xs">
                 The AI Director of Photography for generative video prompts.
