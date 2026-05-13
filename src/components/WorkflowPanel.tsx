@@ -811,8 +811,8 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
       <div className="flex flex-col sm:flex-row sm:items-stretch gap-4 sm:gap-4">
         {[0, 1].map((i) => (
           <div key={i} className="flex-1 flex flex-col">
-            <span className="block text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground mb-2">
-              {i === 0 ? t("upload.startFrame" as any) : t("upload.endFrame" as any)}
+            <span className="block text-[11px] font-bold uppercase tracking-[0.14em] text-primary mb-2">
+              {i === 0 ? t("upload.startFrame" as any) : `${t("upload.endFrame" as any)} (Optional)`}
             </span>
             <ImageUploadZone
               label={slotLabels[i] || `Frame ${i + 1}`}
