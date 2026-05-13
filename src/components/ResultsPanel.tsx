@@ -41,6 +41,12 @@ interface GenerationSnapshot {
   createdAt: number;
 }
 
+interface ShotCritiqueState {
+  result: CritiqueResult | null;
+  loading: boolean;
+  error: string | null;
+}
+
 interface ResultsPanelProps {
   results: ShotResult[];
   onRegenerate: () => void;
@@ -57,6 +63,13 @@ interface ResultsPanelProps {
   isMultiShot?: boolean;
   regeneratingShotIdx?: number | null;
   onRegenerateShot?: (shotIdx: number) => void;
+  // Quality & evaluation loop
+  feedbackByShot?: Record<number, ShotFeedback>;
+  onFeedbackChange?: (shotIdx: number, next: ShotFeedback) => void;
+  critiqueByShot?: Record<number, ShotCritiqueState>;
+  onRunCritique?: (shotIdx: number) => void;
+  onApplyAddendum?: (shotIdx: number, addendum: string) => void;
+  applyingAddendumByShot?: Record<number, string | null>;
 }
 
 const CopyButton = ({ text }: { text: string }) => {
