@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { motion, AnimatePresence } from "framer-motion";
-import { Check, ScanSearch, Lightbulb } from "lucide-react";
+import { Check, ScanSearch, Lightbulb, X } from "lucide-react";
 import { useLanguage } from "@/i18n/LanguageContext";
 
 interface AnalyzingSkeletonProps {
   framePreviews?: (string | null)[];
+  onCancel?: () => void;
 }
 
 const CHECKLIST_KEYS = [
@@ -16,21 +17,23 @@ const CHECKLIST_KEYS = [
   "analyzing.checklist.draft",
 ] as const;
 
-const TRIVIA_KEYS = [
-  "analyzing.trivia.continuity",
-  "analyzing.trivia.blocking",
-  "analyzing.trivia.eyeline",
-  "analyzing.trivia.coverage",
-] as const;
+// Cinematography quote library — rotates every 6s with fade transition.
+const TIPS = [
+  "Continuity is the invisible craft — viewers only notice when it breaks.",
+  "The 180-degree rule keeps your audience oriented in the scene.",
+  "Light shapes mood. Shadow shapes story.",
+  "A tripod is patience. A handheld is urgency. Choose your camera's posture intentionally.",
+  "Wide for context. Medium for action. Close for emotion.",
+];
 
 const STEP_INTERVAL_MS = 1400;
-const TRIVIA_INTERVAL_MS = 4200;
+const TIP_INTERVAL_MS = 6000;
 
-export const AnalyzingSkeleton = ({ framePreviews = [] }: AnalyzingSkeletonProps) => {
+export const AnalyzingSkeleton = ({ framePreviews = [], onCancel }: AnalyzingSkeletonProps) => {
   const { t } = useLanguage();
   const [completedCount, setCompletedCount] = useState(0);
   const [progress, setProgress] = useState(0);
-  const [triviaIdx, setTriviaIdx] = useState(0);
+  const [tipIdx, setTipIdx] = useState(0);
   const [activeFrame, setActiveFrame] = useState(0);
 
   const frames = useMemo(
@@ -38,8 +41,8 @@ export const AnalyzingSkeleton = ({ framePreviews = [] }: AnalyzingSkeletonProps
     [framePreviews],
   );
 
-  const startTriviaIdx = useMemo(() => Math.floor(Math.random() * TRIVIA_KEYS.length), []);
-  useEffect(() => setTriviaIdx(startTriviaIdx), [startTriviaIdx]);
+  const startTipIdx = useMemo(() => Math.floor(Math.random() * TIPS.length), []);
+  useEffect(() => setTipIdx(startTipIdx), [startTipIdx]);
 
   useEffect(() => {
     const id = setInterval(() => {
@@ -50,8 +53,8 @@ export const AnalyzingSkeleton = ({ framePreviews = [] }: AnalyzingSkeletonProps
 
   useEffect(() => {
     const id = setInterval(() => {
-      setTriviaIdx((i) => (i + 1) % TRIVIA_KEYS.length);
-    }, TRIVIA_INTERVAL_MS);
+      setTipIdx((i) => (i + 1) % TIPS.length);
+    }, TIP_INTERVAL_MS);
     return () => clearInterval(id);
   }, []);
 
@@ -155,11 +158,12 @@ export const AnalyzingSkeleton = ({ framePreviews = [] }: AnalyzingSkeletonProps
             "linear-gradient(135deg, hsl(38 91% 55% / 0.06) 0%, hsl(220 25% 8%) 50%, hsl(35 90% 55% / 0.05) 100%)",
         }}
       >
+        {/* Soft amber perimeter glow — replaces the horizontal scan line */}
         <div
-          className="pointer-events-none absolute inset-0 opacity-[0.04]"
+          className="pointer-events-none absolute inset-0 rounded-lg"
           style={{
-            backgroundImage:
-              "repeating-linear-gradient(0deg, hsl(38 91% 70%) 0px, hsl(38 91% 70%) 1px, transparent 1px, transparent 3px)",
+            boxShadow: "inset 0 0 60px hsl(38 91% 55% / 0.18)",
+            animation: "perimeter-breath 2.4s ease-in-out infinite",
           }}
         />
         <CardContent className="relative pt-5 pb-5 space-y-4">
@@ -201,14 +205,14 @@ export const AnalyzingSkeleton = ({ framePreviews = [] }: AnalyzingSkeletonProps
               </div>
             </div>
             <div
-              className="shrink-0 font-mono tabular-nums text-xs"
+              className="shrink-0 font-mono tabular-nums text-sm font-semibold"
               style={{ color: "hsl(38 91% 60%)" }}
             >
               {Math.round(progress)}%
             </div>
           </div>
 
-          {/* Frame strip with sweeping scan line */}
+          {/* Frame strip — refined: subject-area amber spotlight on active frame */}
           {frames.length > 0 && (
             <div className="flex gap-2">
               {frames.map((src, i) => {
@@ -234,13 +238,11 @@ export const AnalyzingSkeleton = ({ framePreviews = [] }: AnalyzingSkeletonProps
                     />
                     {isActive && (
                       <div
-                        className="absolute inset-x-0 pointer-events-none"
+                        className="absolute inset-0 pointer-events-none"
                         style={{
-                          height: 2,
                           background:
-                            "linear-gradient(90deg, transparent, hsl(38 91% 60%), transparent)",
-                          boxShadow: "0 0 10px hsl(38 91% 60%)",
-                          animation: "scan-sweep 1.1s linear infinite",
+                            "radial-gradient(circle at 50% 50%, hsl(38 91% 55% / 0.18) 0%, transparent 55%)",
+                          animation: "spotlight-pulse 1.6s ease-in-out infinite",
                         }}
                       />
                     )}
@@ -250,32 +252,51 @@ export const AnalyzingSkeleton = ({ framePreviews = [] }: AnalyzingSkeletonProps
             </div>
           )}
 
-          {/* Shimmer progress bar */}
-          <div
-            className="relative h-[6px] w-full rounded-full overflow-hidden"
-            style={{ backgroundColor: "hsl(0 0% 100% / 0.06)" }}
-          >
+          {/* Progress bar — 4px, amber fill with shimmer, percentage already in header */}
+          <div className="space-y-1.5">
             <div
-              className="h-full transition-[width] duration-200 ease-out rounded-full"
-              style={{
-                width: `${progress}%`,
-                background:
-                  "linear-gradient(90deg, hsl(38 91% 55%) 0%, hsl(38 91% 60%) 50%, hsl(35 90% 55%) 100%)",
-                boxShadow: "0 0 10px hsl(38 91% 55% / 0.6)",
-              }}
-            />
-            <div
-              className="absolute inset-y-0 w-1/3 pointer-events-none"
-              style={{
-                background: "linear-gradient(90deg, transparent, hsl(0 0% 100% / 0.35), transparent)",
-                animation: "shimmer-sweep 1.6s linear infinite",
-              }}
-            />
+              className="relative w-full rounded-full overflow-hidden"
+              style={{ height: 4, backgroundColor: "#27272A" }}
+            >
+              <div
+                className="h-full transition-[width] duration-200 ease-out rounded-full relative overflow-hidden"
+                style={{
+                  width: `${progress}%`,
+                  backgroundColor: "#F5A524",
+                  boxShadow: "0 0 10px hsl(38 91% 55% / 0.7), inset 0 0 4px hsl(38 91% 75% / 0.6)",
+                }}
+              >
+                <div
+                  className="absolute inset-y-0 w-1/3 pointer-events-none"
+                  style={{
+                    background:
+                      "linear-gradient(90deg, transparent, hsl(0 0% 100% / 0.55), transparent)",
+                    animation: "shimmer-sweep 1.5s linear infinite",
+                  }}
+                />
+              </div>
+            </div>
+            <div className="text-[11px] font-mono" style={{ color: "#71717A" }}>
+              Usually takes 15–30 seconds
+            </div>
           </div>
 
           <ul className="space-y-2 pt-1">
             {CHECKLIST_KEYS.map((k, i) => renderChecklistLine(k, i))}
           </ul>
+
+          {onCancel && (
+            <div className="flex justify-center pt-1">
+              <button
+                type="button"
+                onClick={onCancel}
+                className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground"
+                style={{ fontSize: 13, color: "#71717A" }}
+              >
+                <X size={13} /> Cancel
+              </button>
+            </div>
+          )}
         </CardContent>
 
         <style>{`
@@ -283,37 +304,57 @@ export const AnalyzingSkeleton = ({ framePreviews = [] }: AnalyzingSkeletonProps
             0% { transform: translateX(-100%); }
             100% { transform: translateX(400%); }
           }
-          @keyframes scan-sweep {
-            0% { top: 0%; }
-            100% { top: 100%; }
+          @keyframes perimeter-breath {
+            0%, 100% { box-shadow: inset 0 0 40px hsl(38 91% 55% / 0.10); }
+            50% { box-shadow: inset 0 0 70px hsl(38 91% 55% / 0.28); }
+          }
+          @keyframes spotlight-pulse {
+            0%, 100% { opacity: 0.55; }
+            50% { opacity: 1; }
           }
         `}</style>
       </Card>
 
-      {/* Trivia card */}
-      <Card className="border-[#27272A]" style={{ backgroundColor: "#161618" }}>
-        <CardContent className="py-3 px-4">
+      {/* "While you wait" — callout-styled tip with rotating cinematography quotes */}
+      <Card
+        className="border-[#27272A] overflow-hidden"
+        style={{
+          background:
+            "linear-gradient(90deg, hsl(38 91% 55% / 0.06) 0%, #161618 35%)",
+          borderLeft: "2px solid #F5A524",
+        }}
+      >
+        <CardContent className="py-4 px-4">
           <div className="flex items-start gap-2.5">
-            <Lightbulb className="shrink-0 mt-0.5" style={{ width: 14, height: 14, color: "hsl(35 90% 60%)" }} />
+            <Lightbulb className="shrink-0 mt-1" style={{ width: 14, height: 14, color: "hsl(35 90% 60%)" }} />
             <div className="flex-1 min-w-0">
               <div
-                className="text-[10px] uppercase tracking-wider font-display mb-1"
+                className="text-[10px] uppercase tracking-wider font-display mb-2"
                 style={{ color: "hsl(35 90% 60%)", letterSpacing: "0.1em" }}
               >
-                {t("analyzing.triviaLabel" as any)}
+                While you wait
               </div>
               <AnimatePresence mode="wait">
-                <motion.p
-                  key={triviaIdx}
+                <motion.div
+                  key={tipIdx}
                   initial={{ opacity: 0, y: 6 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -6 }}
                   transition={{ duration: 0.4 }}
-                  className="text-xs sm:text-sm italic"
-                  style={{ color: "hsl(0 0% 80%)", lineHeight: 1.5 }}
                 >
-                  {t(TRIVIA_KEYS[triviaIdx] as any)}
-                </motion.p>
+                  <p
+                    className="font-display"
+                    style={{ fontSize: 16, color: "hsl(0 0% 98%)", lineHeight: 1.45 }}
+                  >
+                    “{TIPS[tipIdx]}”
+                  </p>
+                  <p
+                    className="mt-2 text-[11px]"
+                    style={{ color: "hsl(0 0% 55%)", letterSpacing: "0.02em" }}
+                  >
+                    — MovPrompt cinematography library
+                  </p>
+                </motion.div>
               </AnimatePresence>
             </div>
           </div>
