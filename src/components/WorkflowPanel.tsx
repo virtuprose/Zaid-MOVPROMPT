@@ -1059,12 +1059,13 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
     images.filter(Boolean).length === 0;
 
   const leftPanel = (
-    <div className="space-y-6">
-      {extrasHintBlock}
+    <div className="space-y-5">
+      {workflowHeaderBlock}
+      {modeToggleBlock}
       {showOnboarding && <OnboardingExamples onPick={handlePickExample} />}
       {uploadBlock}
-      {modeToggleBlock}
       <ModelPicker model={selectedModel} onModelChange={(v) => onSwitchModel?.(v)} />
+      {ctaRowBlock}
       {descriptionBlock}
       {!contract.supportsElementReferences && sceneFrames.length > 0 && (phase === "breakdown" || phase === "generate") && (
         <p className="text-xs text-muted-foreground px-1 -mt-2">
@@ -1072,14 +1073,6 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
         </p>
       )}
       {audioToggleBlock}
-      {ctaRowBlock}
-      {/* Hidden for now — will be re-enabled in a future iteration
-      <PresetPickerPanel
-        description={description}
-        onDescriptionChange={setDescription}
-        defaultOpen={false}
-      />
-      */}
     </div>
   );
 
