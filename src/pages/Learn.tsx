@@ -81,6 +81,11 @@ const Learn = () => {
 
   return (
     <div className="min-h-screen bg-background" dir={isAr ? "rtl" : "ltr"}>
+      <Seo
+        title="Learn — MovPrompt cinematic prompt guide"
+        description="A practical guide to writing director-grade AI video prompts: workflows, models, scene analysis, references, and pro tips."
+        path="/learn"
+      />
       {/* Ambient glow */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-primary/5 rounded-full blur-[120px]" />
