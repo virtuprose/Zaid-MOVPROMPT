@@ -39,7 +39,7 @@ export const en = {
   "auth.mobileBrand": "Sign in to save your prompts & unlock full access",
   "auth.heroTitle": "Turn Stills Into",
   "auth.heroCinema": "Cinema",
-  "auth.heroDesc": "Drop a frame. Pick a style. Get a cinematic prompt ready to paste into Kling, Seedance, VEO or any AI video tool — in seconds.",
+  "auth.heroDesc": "Drop a frame. Pick a style. Get a cinematic prompt ready to paste into Kling, Seedance, Veo, or any AI video tool — in seconds.",
   "auth.trusted": "Used by filmmakers, creators, and AI video artists worldwide",
 
   // Auth features
