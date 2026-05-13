@@ -5,6 +5,7 @@ import { ImageUploadZone } from "./ImageUploadZone";
 import { ConfigPanel } from "./ConfigPanel";
 import { ResultsPanel } from "./ResultsPanel";
 import { ResultsSkeleton } from "./ResultsSkeleton";
+import { StoryboardSkeleton } from "./StoryboardSkeleton";
 import { AnalyzingSkeleton } from "./AnalyzingSkeleton";
 import { SceneBreakdown, type SceneFrame, type ElementDirections } from "./SceneBreakdown";
 import { ReferenceMediaPanel } from "./ReferenceMediaPanel";
@@ -1109,9 +1110,16 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
             exit={{ opacity: 0 }}
             transition={{ duration: 0.18, ease: "easeOut" }}
           >
-            <ResultsSkeleton
-              modelLabel={MODEL_GROUPS.flatMap(g => g.models).find(m => m.value === selectedModel)?.label ?? selectedModel}
-            />
+            {workflowType === "multishot" ? (
+              <StoryboardSkeleton
+                shotCount={Math.min(10, Math.max(contract.multiShotCount ?? 3, elementItems.length, 2))}
+                modelLabel={MODEL_GROUPS.flatMap(g => g.models).find(m => m.value === selectedModel)?.label ?? selectedModel}
+              />
+            ) : (
+              <ResultsSkeleton
+                modelLabel={MODEL_GROUPS.flatMap(g => g.models).find(m => m.value === selectedModel)?.label ?? selectedModel}
+              />
+            )}
           </motion.div>
         )}
       </AnimatePresence>
