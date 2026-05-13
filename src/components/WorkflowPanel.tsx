@@ -658,8 +658,47 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
     } finally {
       setIsLoading(false);
       setRegeneratingShotIdx(null);
+      if (typeof opts?.replaceShotIdx === "number") {
+        setApplyingAddendumByShot((prev) => { const n = { ...prev }; delete n[opts.replaceShotIdx!]; return n; });
+      }
     }
   };
+
+  const handleRunCritique = useCallback(async (shotIdx: number) => {
+    if (!results || !results[shotIdx]) return;
+    setCritiqueByShot((prev) => ({ ...prev, [shotIdx]: { result: null, loading: true, error: null } }));
+    try {
+      const { data, error } = await supabase.functions.invoke("critique-prompt", {
+        body: {
+          result: results[shotIdx],
+          targetModel: selectedModel,
+          workflowType,
+          description,
+        },
+      });
+      if (error) {
+        const parsed = await parseEdgeFnError(error);
+        setCritiqueByShot((prev) => ({ ...prev, [shotIdx]: { result: null, loading: false, error: parsed.serverMessage || t("results.critique.failed" as any) } }));
+        return;
+      }
+      if (data?.error || typeof data?.score !== "number") {
+        setCritiqueByShot((prev) => ({ ...prev, [shotIdx]: { result: null, loading: false, error: data?.error || t("results.critique.failed" as any) } }));
+        return;
+      }
+      setCritiqueByShot((prev) => ({ ...prev, [shotIdx]: { result: data, loading: false, error: null } }));
+    } catch (err: any) {
+      setCritiqueByShot((prev) => ({ ...prev, [shotIdx]: { result: null, loading: false, error: err?.message || "Unknown error" } }));
+    }
+  }, [results, selectedModel, workflowType, description, t]);
+
+  const handleApplyAddendum = useCallback((shotIdx: number, addendum: string) => {
+    handleGenerate({ replaceShotIdx: shotIdx, addendum });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [results, selectedModel, workflowType, description, feedbackByShot]);
+
+  const handleFeedbackChange = useCallback((shotIdx: number, next: ShotFeedback) => {
+    setFeedbackByShot((prev) => ({ ...prev, [shotIdx]: next }));
+  }, []);
 
   // Slot labels from contract (translation keys)
   const slotLabels: string[] = (() => {
