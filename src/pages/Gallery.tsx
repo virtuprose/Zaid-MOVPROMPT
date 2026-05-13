@@ -97,8 +97,8 @@ export const GalleryView = ({ family }: GalleryPageProps) => {
     ? `Curated cinematic video prompts written for ${family.name} (${family.vendor}). Browse, copy, and remix shots crafted with MovPrompt's AI Director of Photography.`
     : "A curated, public gallery of cinematic video prompts crafted by MovPrompt's AI Director of Photography. Copy any prompt, then paste it into Veo, Kling, Seedance and more.";
   const canonical = family
-    ? `${typeof window !== 'undefined' ? window.location.origin : ''}/models/${family.slug}`
-    : `${typeof window !== 'undefined' ? window.location.origin : ''}/gallery`;
+    ? `https://movprompt.com/models/${family.slug}`
+    : "https://movprompt.com/gallery";
 
   const filterOptions = useMemo(() => {
     if (family) {
