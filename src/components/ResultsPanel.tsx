@@ -214,7 +214,7 @@ const MainPromptHero = ({ value, result, modelLabel, modelValue, onSwitchModel, 
         </div>
       )}
       <div className="flex items-center justify-between gap-2 mb-2">
-        <span className="text-[11px] font-semibold uppercase tracking-wider text-primary flex items-center gap-1.5">
+        <span className="text-[11px] font-semibold uppercase tracking-[0.1em] text-primary flex items-center gap-1.5">
           <Sparkles className="w-3.5 h-3.5" /> {t("results.mainPrompt")}
           {totalSections > 0 && (
             <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-primary/15 text-primary">
