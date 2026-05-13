@@ -378,6 +378,12 @@ const Library = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <Seo
+        title="Your prompt library — MovPrompt"
+        description="Browse, search, and reuse every cinematic AI video prompt you've generated with MovPrompt."
+        path="/library"
+        noindex
+      />
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-primary/5 rounded-full blur-[120px] animate-pulse-glow" />
       </div>
