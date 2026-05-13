@@ -1,9 +1,12 @@
-import { Copy, Check, RefreshCw, Sparkles, ChevronDown, ClipboardCheck, Wand2, AlertTriangle } from "lucide-react";
+import { Copy, Check, RefreshCw, Sparkles, ChevronDown, ClipboardCheck, Wand2, AlertTriangle, History as HistoryIcon, GitCompare, Repeat } from "lucide-react";
 import { getModelLabel } from "@/lib/models";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState, forwardRef } from "react";
 import { motion } from "framer-motion";
 import { useLanguage } from "@/i18n/LanguageContext";
