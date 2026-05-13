@@ -1,73 +1,71 @@
 ## Goal
 
-After clicking **Analyze Scene**, show an entertaining cinematic loader in the right panel (instead of leaving the empty "Clapperboard" placeholder) while the `analyze-scene` edge function runs.
+Replace the generic `ResultsSkeleton` with a dedicated **storyboard loader** when the user generates in **multi-shot** mode, so the longest wait in the app feels like watching a director assemble each shot in turn.
 
 ## Current behavior
 
-In `src/components/WorkflowPanel.tsx`:
-- Clicking Analyze sets `isAnalyzing = true`, but `phase` stays `"upload"` and `sceneFrames` is still empty.
-- The right panel's gates therefore render `showRightEmptyState` (the static Clapperboard "empty" card) — no progress feedback at all while waiting 5–15s for the API.
-- Only the small spinner inside the left-side Analyze button moves.
+In `src/components/WorkflowPanel.tsx` the `resultsBlock` always renders `<ResultsSkeleton />` while `isLoading` is true — even when `workflowType === "multishot"` and the request returns 3–10 shots. There is no per-shot affordance, so the user can't tell how many shots are coming or that progress is being made.
+
+The generation API is a **single call** that returns all shots together (line 507 `supabase.functions.invoke("generate-prompt", …)`). We can't surface real per-shot progress, but we can simulate it in a way that matches what the model is doing under the hood (drafting one shot at a time).
 
 ## Plan
 
-### 1. New component: `src/components/AnalyzingSkeleton.tsx`
-
-A focused, lighter sibling of `ResultsSkeleton`, themed for the **scene analysis** step:
-
-- Animated `ScanSearch` icon with a sweeping scan-line over a small frame thumbnail strip (one tile per uploaded image, taken from `images[i].preview`).
-- Title: "Analyzing your scene…" with a blinking cursor (matches `ResultsSkeleton` style).
-- Subtitle: "Studying composition, subjects, lighting, and motion cues."
-- Shimmer progress bar (eased to ~92% over ~8s) reusing the same `shimmer-sweep` keyframes pattern.
-- Sequential checklist (4–5 items, ~1.4s each):
-  - Reading frames
-  - Detecting subjects & objects
-  - Mapping composition & depth
-  - Inferring lighting & mood
-  - Drafting scene breakdown
-- Rotating "Did you know?" trivia card (3–4 short cinematography facts about scene analysis / continuity / blocking).
-- Same dark cinematic palette and `framer-motion` entrance as `ResultsSkeleton` — visually consistent.
+### 1. New component: `src/components/StoryboardSkeleton.tsx`
 
 Props:
 ```ts
-{ framePreviews?: (string | null)[] }
+{ shotCount: number; modelLabel?: string }
 ```
 
-### 2. Wire it into `src/components/WorkflowPanel.tsx`
+Layout (top to bottom, same dark cinematic palette as `ResultsSkeleton`):
 
-- Import `AnalyzingSkeleton`.
-- Add an `analyzingRef` and a `useEffect` that calls `scrollIntoView({ behavior: "smooth", block: "start" })` when `isAnalyzing` becomes true (mirrors the existing loading auto-scroll).
-- In `rightPanel`, before the `showRightEmptyState` block, render:
+- **Director header card** — reuses the gradient + scanline overlay, animated `Clapperboard` icon, title `storyboard.title` (e.g. "Storyboarding {count} shots…"), subtitle `storyboard.subtitle`, eased shimmer progress bar (~14s to 92%), live `n / total` counter on the right.
+- **Storyboard strip** — a responsive grid (`grid-cols-2 sm:grid-cols-3 lg:grid-cols-4`) of `shotCount` shot tiles. Each tile:
+  - `aspect-video` panel with film-grain background and a `Shot N` label.
+  - One of three states driven by an interval (~1800ms per shot, looping the last one as "polishing"):
+    - **Pending**: dim, 8% opacity icon, dotted border.
+    - **Active**: glowing cyan border, animated `Camera` icon panning left↔right, mini progress sub-bar with `shimmer-sweep`, status line cycling through `storyboard.status.compose → light → frame → lock` every ~450ms.
+    - **Done**: solid border, checkmark badge, status `storyboard.status.locked` in cyan, frozen mini-bar at 100%.
+- **Trivia card** — same component shape as `ResultsSkeleton`/`AnalyzingSkeleton`, but with 4 storyboard-specific cinematography facts (shot list, coverage, axis of action, montage).
+
+Animation primitives reuse the existing `shimmer-sweep` keyframe pattern; `framer-motion` for tile state transitions and trivia crossfade.
+
+### 2. Wire into `src/components/WorkflowPanel.tsx`
+
+- Import `StoryboardSkeleton`.
+- In the `resultsBlock` `AnimatePresence` (around line 1104, the `key="results-skeleton"` branch), branch on `workflowType`:
   ```tsx
-  {isAnalyzing && sceneFrames.length === 0 && (
-    <div ref={analyzingRef}>
-      <AnalyzingSkeleton framePreviews={images.map(i => i?.preview || null)} />
-    </div>
+  {workflowType === "multishot" ? (
+    <StoryboardSkeleton
+      shotCount={Math.min(10, Math.max(contract.multiShotCount ?? 3, elementItems.length, 2))}
+      modelLabel={…}
+    />
+  ) : (
+    <ResultsSkeleton modelLabel={…} />
   )}
   ```
-- Update the `showRightEmptyState` condition to also exclude `isAnalyzing`, so the static empty card is hidden during analysis:
-  ```ts
-  const showRightEmptyState =
-    !results && !isLoading && !isAnalyzing &&
-    !((phase === "breakdown" || phase === "generate") && sceneFrames.length > 0);
-  ```
+- No other render gates change — the existing auto-scroll on `isLoading` already targets the same container.
 
 ### 3. i18n keys
 
-Add to `src/i18n/translations/en.ts` and `src/i18n/translations/ar.ts` under a new `analyzing.*` namespace:
-- `analyzing.title`, `analyzing.subtitle`, `analyzing.triviaLabel`
-- `analyzing.checklist.read`, `.detect`, `.compose`, `.light`, `.draft`
-- `analyzing.trivia.continuity`, `.blocking`, `.eyeline`, `.coverage`
+Add to `src/i18n/translations/en.ts` and `src/i18n/translations/ar.ts` under `storyboard.*`:
+
+- `storyboard.title` — "Storyboarding {count} shots…"
+- `storyboard.subtitle` — "Drafting coverage, blocking, and continuity for {model}."
+- `storyboard.shotLabel` — "Shot {n}"
+- `storyboard.status.compose`, `.light`, `.frame`, `.lock`, `.locked`
+- `storyboard.triviaLabel`
+- `storyboard.trivia.shotlist`, `.coverage`, `.axis`, `.montage`
 
 ## Files to touch
 
-- **New:** `src/components/AnalyzingSkeleton.tsx`
-- **Edit:** `src/components/WorkflowPanel.tsx` (import, ref + scroll effect, render block, update `showRightEmptyState`)
-- **Edit:** `src/i18n/translations/en.ts` (+ `analyzing.*` keys)
+- **New:** `src/components/StoryboardSkeleton.tsx`
+- **Edit:** `src/components/WorkflowPanel.tsx` (import + branch in skeleton renderer)
+- **Edit:** `src/i18n/translations/en.ts` (+ `storyboard.*`)
 - **Edit:** `src/i18n/translations/ar.ts` (+ Arabic versions)
 
 ## Out of scope
 
-- The existing **Generate** loader (`ResultsSkeleton`) — already in place from previous turn.
-- Changing the analyze API or its timing.
-- Restructuring the empty-state placeholder beyond hiding it during analysis.
+- Single-frame and two-frame loaders (already handled by `ResultsSkeleton`).
+- Real per-shot streaming from the edge function — the API returns all shots at once.
+- Layout shift on results arrival — `ResultsPanel` already renders into the same container, so the existing exit transition handles it.

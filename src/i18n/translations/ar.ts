@@ -245,6 +245,21 @@ export const ar: Record<TranslationKey, string> = {
   "analyzing.trivia.eyeline": "تطابق خطوط النظر هو ما يجعل شخصيتين تتقاسمان العالم نفسه.",
   "analyzing.trivia.coverage": "المشاهد العظيمة تُبنى من تغطية متعددة: واسعة، متوسطة، قريبة — ثم تأتي الاختيارات.",
 
+  // Storyboard loader (multi-shot generation)
+  "storyboard.title": "تجهيز ستوري‑بورد من {count} لقطات",
+  "storyboard.subtitle": "صياغة التغطية والحركة والاستمرارية لنموذج {model}.",
+  "storyboard.shotLabel": "لقطة {n}",
+  "storyboard.triviaLabel": "ملاحظة المخرج",
+  "storyboard.status.compose": "تركيب الكادر…",
+  "storyboard.status.light": "ضبط الإضاءة…",
+  "storyboard.status.frame": "تأطير اللقطة…",
+  "storyboard.status.lock": "تثبيت اللقطة…",
+  "storyboard.status.locked": "تم تثبيت اللقطة",
+  "storyboard.trivia.shotlist": "قائمة اللقطات هي بوصلة المخرج — تحوّل النية إلى خطة.",
+  "storyboard.trivia.coverage": "التغطية تمنح المونتير خيارات، والخيارات تمنح المشهد إيقاعه.",
+  "storyboard.trivia.axis": "تجاوز خط الحركة يربك المشاهد — إلا إذا كان مقصودًا.",
+  "storyboard.trivia.montage": "المونتاج ليس تتابع لقطات — بل تتابع أفكار.",
+
   // Onboarding examples
   "onboarding.tryExample": "جرّب مثالاً ←",
   "onboarding.useExample": "استخدم هذا المثال",
