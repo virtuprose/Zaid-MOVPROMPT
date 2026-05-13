@@ -75,6 +75,7 @@ export const InstallPrompt = () => {
         <div className="bg-card border border-border/60 rounded-xl p-4 shadow-lg shadow-black/30 backdrop-blur-sm">
           <button
             onClick={handleDismiss}
+            aria-label="Dismiss install prompt"
             className="absolute top-2 end-2 p-1 text-muted-foreground hover:text-foreground transition-colors"
           >
             <X className="w-4 h-4" />

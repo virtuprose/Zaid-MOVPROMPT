@@ -85,11 +85,28 @@ const SharedPrompt = () => {
   const modelLabel = useMemo(() => (record ? getModelLabel(record.target_model) : ""), [record]);
   const shotCount = record?.results?.length ?? 0;
   const pageTitle = record
-    ? `${record.title || `${shotCount} cinematic prompt${shotCount === 1 ? "" : "s"}`} · VidoPrompt`
-    : "Shared prompts · VidoPrompt";
+    ? `${record.title || `${shotCount} cinematic prompt${shotCount === 1 ? "" : "s"}`} · MovPrompt`
+    : "Shared prompts · MovPrompt";
   const pageDesc = record
-    ? `${shotCount} ${shotCount === 1 ? "shot" : "shots"} for ${modelLabel}, generated with VidoPrompt's AI Director of Photography.`
-    : "A shared cinematic prompt set from VidoPrompt.";
+    ? `${shotCount} ${shotCount === 1 ? "shot" : "shots"} for ${modelLabel}, generated with MovPrompt's AI Director of Photography.`
+    : "A shared cinematic prompt set from MovPrompt.";
+
+  const canonical = `https://movprompt.com/p/${slug}`;
+  const ogImage = "https://movprompt.com/og-image.jpg";
+  const jsonLd = record
+    ? {
+        "@context": "https://schema.org",
+        "@type": "CreativeWork",
+        name: record.title || `Cinematic prompt set for ${modelLabel}`,
+        description: pageDesc,
+        url: canonical,
+        dateCreated: record.created_at,
+        author: record.agent_name
+          ? { "@type": "Person", name: record.agent_name }
+          : { "@type": "Organization", name: "MovPrompt" },
+        about: modelLabel,
+      }
+    : undefined;
 
   return (
     <div className="min-h-screen" style={{ background: "hsl(220 25% 4%)" }}>
@@ -99,17 +116,23 @@ const SharedPrompt = () => {
         <meta property="og:title" content={pageTitle} />
         <meta property="og:description" content={pageDesc} />
         <meta property="og:type" content="article" />
+        <meta property="og:url" content={canonical} />
+        <meta property="og:image" content={ogImage} />
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content={pageTitle} />
         <meta name="twitter:description" content={pageDesc} />
-        <link rel="canonical" href={`${window.location.origin}/p/${slug}`} />
+        <meta name="twitter:image" content={ogImage} />
+        <link rel="canonical" href={canonical} />
+        {jsonLd && (
+          <script type="application/ld+json">{JSON.stringify(jsonLd)}</script>
+        )}
       </Helmet>
 
       <header className="border-b border-border/40 sticky top-0 z-10 backdrop-blur" style={{ backgroundColor: "hsl(220 25% 4% / 0.85)" }}>
         <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
           <Link to="/" className="flex items-center gap-2 group">
             <Clapperboard className="w-5 h-5 text-brand group-hover:scale-110 transition-transform" />
-            <span className="font-display font-semibold text-sm">VidoPrompt</span>
+            <span className="font-display font-semibold text-sm">MovPrompt</span>
           </Link>
           <Button asChild size="sm" variant="default">
             <Link to="/">
@@ -136,7 +159,7 @@ const SharedPrompt = () => {
               <Button asChild variant="default" className="mt-2">
                 <Link to="/">
                   <ArrowLeft className="w-4 h-4 me-1.5" />
-                  Go to VidoPrompt
+                  Go to MovPrompt
                 </Link>
               </Button>
             </CardContent>
@@ -166,7 +189,7 @@ const SharedPrompt = () => {
                 {record.title || `Cinematic prompt set for ${modelLabel}`}
               </h1>
               <p className="text-sm text-muted-foreground">
-                Shared from VidoPrompt — copy any prompt and paste straight into {modelLabel}.
+                Shared from MovPrompt — copy any prompt and paste straight into {modelLabel}.
               </p>
             </div>
 
@@ -182,7 +205,7 @@ const SharedPrompt = () => {
                   <CardContent className="space-y-4 text-sm">
                     <section className="space-y-1.5">
                       <div className="flex items-center justify-between">
-                        <h3 className="text-[11px] font-display uppercase tracking-wider text-primary">Main prompt</h3>
+                        <h2 className="text-[11px] font-display uppercase tracking-wider text-primary">Main prompt</h2>
                         <CopyBtn text={shot.mainPrompt} />
                       </div>
                       <pre className="whitespace-pre-wrap font-mono text-xs leading-relaxed rounded-md border border-border bg-muted/40 p-3 text-foreground/90">
@@ -193,7 +216,7 @@ const SharedPrompt = () => {
                     {shot.negativePrompt && (
                       <section className="space-y-1.5">
                         <div className="flex items-center justify-between">
-                          <h3 className="text-[11px] font-display uppercase tracking-wider text-muted-foreground">Negative</h3>
+                          <h2 className="text-[11px] font-display uppercase tracking-wider text-muted-foreground">Negative</h2>
                           <CopyBtn text={shot.negativePrompt} />
                         </div>
                         <pre className="whitespace-pre-wrap font-mono text-xs leading-relaxed rounded-md border border-border bg-muted/30 p-3 text-foreground/80">
@@ -244,12 +267,12 @@ const SharedPrompt = () => {
               <CardContent className="py-5 flex items-center justify-between gap-3 flex-wrap">
                 <div>
                   <h2 className="font-display text-base font-semibold">Want prompts like these?</h2>
-                  <p className="text-xs text-muted-foreground">Upload any frame — VidoPrompt's AI Director of Photography handles the rest.</p>
+                  <p className="text-xs text-muted-foreground">Upload any frame — MovPrompt's AI Director of Photography handles the rest.</p>
                 </div>
                 <Button asChild>
                   <Link to="/">
                     <Sparkles className="w-4 h-4 me-1.5" />
-                    Try VidoPrompt
+                    Try MovPrompt
                   </Link>
                 </Button>
               </CardContent>

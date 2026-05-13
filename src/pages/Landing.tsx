@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { ArrowDown, Film, Layers, Clapperboard, Lock, Wand2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LanguageToggle } from "@/components/LanguageToggle";
+import { Seo } from "@/components/Seo";
 import logoMark from "@/assets/logo-mark.svg";
 import exampleDesert from "@/assets/example-desert.jpg";
 import examplePortrait from "@/assets/example-portrait.jpg";
@@ -51,6 +52,35 @@ export default function Landing() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
+      <Seo
+        title="MovPrompt — Turn stills into cinematic AI video prompts"
+        description="Drop a frame, pick a model, get a director-grade video prompt for Kling, Veo, Runway, Seedance, Sora, and more."
+        path="/"
+        jsonLd={[
+          {
+            "@context": "https://schema.org",
+            "@type": "Organization",
+            name: "MovPrompt",
+            url: "https://movprompt.com",
+            logo: "https://movprompt.com/logo.png",
+            sameAs: [
+              "https://twitter.com/movprompt",
+              "https://instagram.com/movprompt",
+            ],
+          },
+          {
+            "@context": "https://schema.org",
+            "@type": "WebSite",
+            name: "MovPrompt",
+            url: "https://movprompt.com",
+            potentialAction: {
+              "@type": "SearchAction",
+              target: "https://movprompt.com/gallery?model={search_term_string}",
+              "query-input": "required name=search_term_string",
+            },
+          },
+        ]}
+      />
       {/* Ambient glow */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-primary/5 rounded-full blur-[120px] animate-pulse-glow" />
@@ -61,7 +91,7 @@ export default function Landing() {
       <header className="relative z-20 border-b border-border/40">
         <div className="container max-w-[1200px] mx-auto px-4 h-14 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2">
-            <img src={logoMark} alt="MovPrompt" className="w-7 h-7" />
+            <img src={logoMark} alt="" className="w-7 h-7" />
             <span className="font-display font-bold text-lg tracking-tight">
               <span className="text-primary">Mov</span>Prompt
             </span>
@@ -295,7 +325,7 @@ export default function Landing() {
       <footer className="relative z-10 border-t border-border/40">
         <div className="container max-w-[1200px] mx-auto px-4 py-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
           <Link to="/" className="flex items-center gap-2">
-            <img src={logoMark} alt="MovPrompt" className="w-5 h-5" />
+            <img src={logoMark} alt="" className="w-5 h-5" />
             <span className="font-display font-semibold">
               <span className="text-primary">Mov</span>Prompt
             </span>

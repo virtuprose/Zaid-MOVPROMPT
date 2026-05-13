@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { LanguageToggle } from "@/components/LanguageToggle";
+import { Seo } from "@/components/Seo";
 
 const PrivacyPolicy = () => {
   const navigate = useNavigate();
@@ -10,6 +11,11 @@ const PrivacyPolicy = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <Seo
+        title="Privacy policy — MovPrompt"
+        description="How MovPrompt collects, uses, and protects your data."
+        path="/privacy"
+      />
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-primary/5 rounded-full blur-[120px]" />
       </div>
