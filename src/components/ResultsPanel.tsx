@@ -7,11 +7,13 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useState, forwardRef } from "react";
+import { useState, forwardRef, useMemo } from "react";
 import { motion } from "framer-motion";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { toast } from "sonner";
 import { getCharLimit } from "@/lib/modelLimits";
+import { detectMissingDimensions, type FixChip } from "@/lib/promptHeuristics";
+import { AutoFixChips, FeedbackBar, CritiqueDialog, type CritiqueResult, type CritiqueSuggestion, type ShotFeedback } from "./CritiquePanel";
 
 interface ShotResult {
   shotName?: string;
