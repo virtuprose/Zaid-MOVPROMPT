@@ -1,3 +1,4 @@
+import { ArrowRight } from "lucide-react";
 import exampleTokyo from "@/assets/example-tokyo.jpg";
 import exampleDesert from "@/assets/example-desert.jpg";
 import examplePortrait from "@/assets/example-portrait.jpg";
@@ -37,16 +38,17 @@ const EXAMPLES: ExampleItem[] = [
 export const EmptyStateExamples = () => {
   return (
     <div className="space-y-3">
-      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/80 px-1">
-        Examples — Try one of these or upload your own
+      <p className="text-[13px] text-muted-foreground px-1">
+        Examples · Try one or upload your own
       </p>
-      <div className="space-y-2.5">
+      <div className="space-y-2">
         {EXAMPLES.map((ex, i) => (
-          <div
+          <button
             key={i}
-            className="group flex items-stretch gap-3 rounded-xl border border-border bg-card/40 p-2.5 hover:border-border/80 hover:bg-card/60 transition-colors"
+            type="button"
+            className="group flex w-full items-center gap-3 h-[120px] rounded-xl border border-border/60 bg-card/40 p-2.5 text-left transition-colors cursor-pointer hover:border-primary/40 hover:bg-[#161618]"
           >
-            <div className="w-20 h-20 sm:w-24 sm:h-24 shrink-0 rounded-lg overflow-hidden bg-muted/40">
+            <div className="w-[140px] aspect-video shrink-0 rounded-md overflow-hidden bg-muted/40">
               <img
                 src={ex.thumb}
                 alt={ex.alt}
@@ -54,7 +56,7 @@ export const EmptyStateExamples = () => {
                 className="w-full h-full object-cover"
               />
             </div>
-            <div className="flex-1 min-w-0 flex flex-col justify-center gap-1.5 py-0.5">
+            <div className="flex-1 min-w-0 flex flex-col justify-center gap-1.5">
               <p className="text-sm font-medium text-foreground leading-snug line-clamp-2">
                 {ex.title}
               </p>
@@ -67,7 +69,10 @@ export const EmptyStateExamples = () => {
                 </span>
               </div>
             </div>
-          </div>
+            <span className="shrink-0 text-xs font-medium text-primary opacity-0 group-hover:opacity-100 transition-opacity inline-flex items-center gap-1 pe-1">
+              Use this <ArrowRight className="w-3 h-3" />
+            </span>
+          </button>
         ))}
       </div>
     </div>
