@@ -844,7 +844,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
                 style={{ marginTop: 8, marginBottom: -8 }}
                 aria-hidden="true"
               >
-                <ArrowDown size={24} style={{ color: "#8888AA" }} />
+                <ArrowDown size={32} className="text-primary animate-pulse-glow" />
               </div>
             )}
           </div>
