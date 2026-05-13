@@ -1,4 +1,4 @@
-import { Copy, Check, RefreshCw, Sparkles, ChevronDown, ClipboardCheck, Wand2, AlertTriangle, History as HistoryIcon, GitCompare, Repeat } from "lucide-react";
+import { Copy, Check, RefreshCw, Sparkles, ChevronDown, ClipboardCheck, Wand2, AlertTriangle, History as HistoryIcon, GitCompare, Repeat, Share2 } from "lucide-react";
 import { getModelLabel } from "@/lib/models";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -70,6 +70,7 @@ interface ResultsPanelProps {
   onRunCritique?: (shotIdx: number) => void;
   onApplyAddendum?: (shotIdx: number, addendum: string) => void;
   applyingAddendumByShot?: Record<number, string | null>;
+  onShare?: () => void;
 }
 
 const CopyButton = ({ text }: { text: string }) => {
