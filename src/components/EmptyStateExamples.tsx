@@ -30,7 +30,7 @@ const EXAMPLES: ExampleItem[] = [
     thumb: examplePortrait,
     alt: "Rainy window portrait",
     title: "Tight portrait, rain on window, rack focus",
-    model: "Sora",
+    model: "Seedance",
     duration: "6s",
   },
 ];

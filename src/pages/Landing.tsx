@@ -126,7 +126,7 @@ export default function Landing() {
     <div className="min-h-screen bg-background text-foreground">
       <Seo
         title="MovPrompt — Turn stills into cinematic AI video prompts"
-        description="Drop a frame, pick a model, get a director-grade video prompt for Kling, Veo, Runway, Seedance, Sora, and more."
+        description="Drop a frame, pick a model, get a director-grade video prompt for Kling, Veo, Runway, and Seedance."
         path="/"
         jsonLd={[
           {
