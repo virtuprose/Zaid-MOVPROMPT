@@ -57,7 +57,7 @@ const Index = () => {
       <div className="relative z-10 container max-w-[1400px] mx-auto px-4 py-3 sm:py-4">
         <AnnouncementBanner />
         {/* Top bar */}
-        <div className="flex flex-nowrap items-center gap-1 sm:gap-1.5 mb-4 sm:mb-6">
+        <div className="flex flex-nowrap items-center gap-1 sm:gap-1.5 mb-2">
           <button
             type="button"
             onClick={() => { window.location.href = "/"; }}
