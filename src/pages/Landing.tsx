@@ -52,6 +52,35 @@ export default function Landing() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
+      <Seo
+        title="MovPrompt — Turn stills into cinematic AI video prompts"
+        description="Drop a frame, pick a model, get a director-grade video prompt for Kling, Veo, Runway, Seedance, Sora, and more."
+        path="/"
+        jsonLd={[
+          {
+            "@context": "https://schema.org",
+            "@type": "Organization",
+            name: "MovPrompt",
+            url: "https://movprompt.com",
+            logo: "https://movprompt.com/logo.png",
+            sameAs: [
+              "https://twitter.com/movprompt",
+              "https://instagram.com/movprompt",
+            ],
+          },
+          {
+            "@context": "https://schema.org",
+            "@type": "WebSite",
+            name: "MovPrompt",
+            url: "https://movprompt.com",
+            potentialAction: {
+              "@type": "SearchAction",
+              target: "https://movprompt.com/gallery?model={search_term_string}",
+              "query-input": "required name=search_term_string",
+            },
+          },
+        ]}
+      />
       {/* Ambient glow */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-primary/5 rounded-full blur-[120px] animate-pulse-glow" />
