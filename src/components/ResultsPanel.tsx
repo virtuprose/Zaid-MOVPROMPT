@@ -29,6 +29,16 @@ interface ShotResult {
   recommendedModelReason?: string;
 }
 
+interface GenerationSnapshot {
+  id: string;
+  results: ShotResult[];
+  agentName: string | null;
+  modelValue: string;
+  modelLabel: string;
+  workflowType: string;
+  createdAt: number;
+}
+
 interface ResultsPanelProps {
   results: ShotResult[];
   onRegenerate: () => void;
@@ -40,6 +50,11 @@ interface ResultsPanelProps {
   stitchHint?: boolean;
   elementsLegend?: { index: number; kind: "image" | "video" | "audio"; preview?: string }[];
   onSwitchModel?: (value: string) => void;
+  history?: GenerationSnapshot[];
+  onRestoreSnapshot?: (id: string) => void;
+  isMultiShot?: boolean;
+  regeneratingShotIdx?: number | null;
+  onRegenerateShot?: (shotIdx: number) => void;
 }
 
 const CopyButton = ({ text }: { text: string }) => {
