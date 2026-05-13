@@ -427,6 +427,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
             return data;
           })();
 
+      if (analysisCancelledRef.current) return;
       const frames: SceneFrame[] = data.frames || [];
       setSceneFrames(frames);
 
@@ -440,10 +441,11 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
       setManualOverrides({});
       setPhase("breakdown");
     } catch (err: any) {
+      if (analysisCancelledRef.current) return;
       console.error("Analysis error:", err);
       toast({ title: t("wp.analysisFailed"), description: err.message || t("wp.somethingWrong"), variant: "destructive" });
     } finally {
-      setIsAnalyzing(false);
+      if (!analysisCancelledRef.current) setIsAnalyzing(false);
     }
   };
 
