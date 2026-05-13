@@ -91,8 +91,20 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { images, workflowType, description, targetModel, sceneBreakdown, audioEnabled, references, elements, autoInjectElements, multiShotCount, elementMentions, compactMode } = body;
+    const { images, workflowType, description, targetModel, sceneBreakdown, audioEnabled, references, elements, autoInjectElements, multiShotCount, elementMentions, compactMode, addendum, feedback } = body;
     const isCompact = compactMode === true;
+    const refinementAddendum: string =
+      typeof addendum === "string" ? addendum.trim().slice(0, 600) : "";
+    const feedbackLiked: boolean | null =
+      feedback && typeof feedback.liked === "boolean" ? feedback.liked : null;
+    const feedbackReasons: string[] = Array.isArray(feedback?.reasons)
+      ? (feedback.reasons as unknown[])
+          .filter((r): r is string => typeof r === "string" && r.trim().length > 0)
+          .map((r) => r.trim().slice(0, 60))
+          .slice(0, 6)
+      : [];
+    const feedbackNote: string =
+      feedback && typeof feedback.note === "string" ? feedback.note.trim().slice(0, 300) : "";
 
     // --- Input Validation ---
     // Allow 0 images when elements are provided (element-only mode, e.g. Seedance 2.0).
