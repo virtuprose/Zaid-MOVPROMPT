@@ -250,9 +250,19 @@ const Auth = () => {
 
                 {/* Email tabs */}
                 <Tabs defaultValue="signin" className="w-full">
-                  <TabsList className="grid grid-cols-2 w-full">
-                    <TabsTrigger value="signin" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">{t("auth.signIn")}</TabsTrigger>
-                    <TabsTrigger value="signup">{t("auth.signUp")}</TabsTrigger>
+                  <TabsList className="grid grid-cols-2 w-full bg-transparent p-0 h-auto rounded-none border-b border-[#27272A]">
+                    <TabsTrigger
+                      value="signin"
+                      className="rounded-none bg-transparent text-muted-foreground data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none border-b-2 border-transparent data-[state=active]:border-primary -mb-px py-2"
+                    >
+                      {t("auth.signIn")}
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="signup"
+                      className="rounded-none bg-transparent text-muted-foreground data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none border-b-2 border-transparent data-[state=active]:border-primary -mb-px py-2"
+                    >
+                      {t("auth.signUp")}
+                    </TabsTrigger>
                   </TabsList>
 
                   <TabsContent value="signin">
