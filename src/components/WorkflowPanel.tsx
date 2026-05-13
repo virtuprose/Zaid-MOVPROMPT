@@ -1216,6 +1216,12 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
               isMultiShot={workflowType === "multishot"}
               regeneratingShotIdx={regeneratingShotIdx}
               onRegenerateShot={workflowType === "multishot" ? (idx) => handleGenerate({ replaceShotIdx: idx }) : undefined}
+              feedbackByShot={feedbackByShot}
+              onFeedbackChange={handleFeedbackChange}
+              critiqueByShot={critiqueByShot}
+              onRunCritique={handleRunCritique}
+              onApplyAddendum={handleApplyAddendum}
+              applyingAddendumByShot={applyingAddendumByShot}
             />
           </motion.div>
         ) : (
