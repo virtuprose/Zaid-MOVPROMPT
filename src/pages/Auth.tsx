@@ -146,7 +146,7 @@ const Auth = () => {
           
           <h1 className="text-3xl lg:text-5xl font-display font-bold leading-tight mb-3">
             {t("auth.heroTitle")}{" "}
-            <span className="text-brand">{t("auth.heroCinema")}</span>
+            <span className="text-primary">{t("auth.heroCinema")}</span>
           </h1>
           <p className="text-muted-foreground text-base lg:text-lg mb-8 max-w-md">
             {t("auth.heroDesc")}
