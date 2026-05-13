@@ -215,13 +215,15 @@ const SiteFooter = () => (
           <ul className="space-y-2 text-sm">
             <li><Link to="/" className="text-muted-foreground hover:text-foreground transition-colors">Studio</Link></li>
             <li><Link to="/gallery" className="text-muted-foreground hover:text-foreground transition-colors">Gallery</Link></li>
-            <li><Link to="/learn" className="text-muted-foreground hover:text-foreground transition-colors">Learn</Link></li>
+            <li><Link to="/learn" className="text-muted-foreground hover:text-foreground transition-colors">Tutorials</Link></li>
           </ul>
         </div>
         <div>
           <div className="text-[11px] uppercase tracking-wider text-muted-foreground mb-3 font-semibold">Company</div>
           <ul className="space-y-2 text-sm">
             <li><Link to="/learn" className="text-muted-foreground hover:text-foreground transition-colors">About</Link></li>
+            <li><Link to="/learn" className="text-muted-foreground hover:text-foreground transition-colors">Blog</Link></li>
+            <li><Link to="/learn" className="text-muted-foreground hover:text-foreground transition-colors">Careers</Link></li>
             <li><a href="mailto:hello@movprompt.com" className="text-muted-foreground hover:text-foreground transition-colors">Contact</a></li>
           </ul>
         </div>
@@ -338,7 +340,7 @@ export const GalleryView = ({ family }: GalleryPageProps) => {
           <Wordmark />
           {user ? (
             <div className="flex items-center gap-1 sm:gap-2">
-              <Button asChild size="sm" variant="ghost"><Link to="/">Tool</Link></Button>
+              <Button asChild size="sm" variant="ghost"><Link to="/">Studio</Link></Button>
               <Button asChild size="sm" variant="ghost"><Link to="/gallery">Gallery</Link></Button>
               <Button asChild size="sm" variant="ghost"><Link to="/library">Prompt Library</Link></Button>
               <NotificationBell />
@@ -403,8 +405,8 @@ export const GalleryView = ({ family }: GalleryPageProps) => {
                     onClick={() => setFormatFilter(f)}
                     className={`text-[11px] uppercase tracking-wider font-display px-2.5 py-1 rounded-full border transition-colors ${
                       active
-                        ? "border-primary/50 bg-primary/10 text-primary"
-                        : "border-border bg-muted/30 text-muted-foreground hover:text-foreground"
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-primary/40 bg-transparent text-primary hover:bg-primary/10"
                     }`}
                   >
                     {f}
@@ -441,37 +443,56 @@ export const GalleryView = ({ family }: GalleryPageProps) => {
           <GalleryGrid items={visibleItems} sampleMode={visibleItems.length === 0} />
         )}
 
-        {/* BROWSE BY MODEL */}
-        {!family && (
-          <section className="pt-6 border-t border-border/40">
-            <h2 className="font-display text-lg font-semibold mb-4">Browse by model</h2>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
-              {PROVIDER_CARDS.map((p) => {
-                const inner = (
-                  <div className="rounded-xl border border-border/60 hover:border-primary/40 bg-card/40 hover:bg-card/70 transition-colors p-4 flex items-center gap-3 h-full">
-                    <div className="shrink-0 w-10 h-10 rounded-lg bg-primary/10 border border-primary/30 text-primary flex items-center justify-center font-display font-bold">
-                      {p.initial}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-display truncate">{p.vendor}</div>
-                      <div className="font-display font-semibold text-sm truncate">{p.name}</div>
-                      <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-1">{p.description}</p>
-                      <div className="text-[10px] text-primary mt-1 font-medium">
-                        {p.count > 0 ? `${p.count} prompts` : "Coming soon"}
+        {/* BROWSE BY MODEL — split into Available / Coming soon */}
+        {!family && (() => {
+          const available = PROVIDER_CARDS.filter((p) => p.count > 0);
+          const upcoming = PROVIDER_CARDS.filter((p) => p.count === 0);
+          return (
+            <section className="pt-6 border-t border-border/40 space-y-6">
+              <div>
+                <h2 className="font-display text-lg font-semibold mb-4">Available now</h2>
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {available.map((p) => (
+                    <Link key={p.key} to={`/models/${p.slug}`}>
+                      <div className="rounded-xl border border-border/60 hover:border-primary/40 bg-card/40 hover:bg-card/70 transition-colors p-4 flex items-center gap-3 h-full">
+                        <div className="shrink-0 w-10 h-10 rounded-lg bg-primary/10 border border-primary/30 text-primary flex items-center justify-center font-display font-bold text-xs">
+                          {p.initial}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-display truncate">{p.vendor}</div>
+                          <div className="font-display font-semibold text-sm truncate">{p.name}</div>
+                          <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-1">{p.description}</p>
+                          <div className="text-[10px] text-primary mt-1 font-medium">{p.count} prompts</div>
+                        </div>
+                        <ArrowRight className="w-4 h-4 text-muted-foreground shrink-0" />
                       </div>
-                    </div>
-                    <ArrowRight className="w-4 h-4 text-muted-foreground shrink-0" />
+                    </Link>
+                  ))}
+                </div>
+              </div>
+
+              {upcoming.length > 0 && (
+                <div>
+                  <h3 className="font-display text-xs uppercase tracking-wider text-muted-foreground mb-3">Coming soon</h3>
+                  <div className="flex flex-wrap gap-2 opacity-60">
+                    {upcoming.map((p) => (
+                      <div
+                        key={p.key}
+                        className="rounded-full border border-border/60 bg-card/40 px-3 py-1.5 flex items-center gap-2 text-xs"
+                      >
+                        <span className="w-5 h-5 rounded-full bg-primary/10 border border-primary/20 text-primary flex items-center justify-center text-[9px] font-display font-bold">
+                          {p.initial}
+                        </span>
+                        <span className="font-display font-medium">{p.name}</span>
+                        <span className="text-muted-foreground text-[10px]">· {p.vendor}</span>
+                      </div>
+                    ))}
                   </div>
-                );
-                return p.slug ? (
-                  <Link key={p.key} to={`/models/${p.slug}`}>{inner}</Link>
-                ) : (
-                  <div key={p.key} className="opacity-70 cursor-not-allowed">{inner}</div>
-                );
-              })}
-            </div>
-          </section>
-        )}
+                </div>
+              )}
+            </section>
+          );
+        })()}
 
         {/* CTA */}
         <Card className="border-primary/30 bg-primary/5">
