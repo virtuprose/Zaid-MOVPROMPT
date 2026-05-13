@@ -291,7 +291,7 @@ export const AnalyzingSkeleton = ({ framePreviews = [] }: AnalyzingSkeletonProps
       </Card>
 
       {/* Trivia card */}
-      <Card className="border-border/50" style={{ backgroundColor: "hsl(220 25% 7% / 0.6)" }}>
+      <Card className="border-[#27272A]" style={{ backgroundColor: "#161618" }}>
         <CardContent className="py-3 px-4">
           <div className="flex items-start gap-2.5">
             <Lightbulb className="shrink-0 mt-0.5" style={{ width: 14, height: 14, color: "hsl(35 90% 60%)" }} />
