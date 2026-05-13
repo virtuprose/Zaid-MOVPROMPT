@@ -1333,17 +1333,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
         </div>
       )}
 
-      {showRightEmptyState && (
-        <div className="empty-state-pulse flex flex-col items-center justify-center text-center min-h-[280px] rounded-2xl px-6 py-10 border border-border bg-muted/20">
-          <Clapperboard size={64} strokeWidth={1.5} className="text-muted-foreground" />
-          <h3 className="font-display mt-5 text-xl font-semibold text-foreground tracking-tight">
-            {t("rp.empty.title" as any)}
-          </h3>
-          <p className="mt-2 max-w-sm text-sm text-muted-foreground leading-relaxed">
-            {t("rp.empty.subtitle" as any)}
-          </p>
-        </div>
-      )}
+      {showRightEmptyState && <EmptyStateExamples />}
 
     </div>
   );
