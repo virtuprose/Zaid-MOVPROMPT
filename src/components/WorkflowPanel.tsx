@@ -400,11 +400,22 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
     setIsAnalyzing(true);
     try {
       const imageBase64s = await Promise.all(images.filter(Boolean).map((img) => compressImage(img.file)));
-      const { data, error } = await supabase.functions.invoke("analyze-scene", {
-        body: { images: imageBase64s },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
+
+      // Session cache: re-analyzing the same uploads (e.g. after navigating
+      // back) is instant and skips a full vision-model round-trip.
+      const cacheKey = imageBase64s.map(hashBase64);
+      const cached = getCachedAnalysis<{ frames: SceneFrame[] }>(cacheKey);
+      const data = cached
+        ? cached
+        : await (async () => {
+            const { data, error } = await supabase.functions.invoke("analyze-scene", {
+              body: { images: imageBase64s },
+            });
+            if (error) throw error;
+            if (data?.error) throw new Error(data.error);
+            setCachedAnalysis(cacheKey, { frames: data.frames || [] });
+            return data;
+          })();
 
       const frames: SceneFrame[] = data.frames || [];
       setSceneFrames(frames);
