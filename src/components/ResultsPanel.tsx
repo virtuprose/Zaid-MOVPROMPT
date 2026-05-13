@@ -285,9 +285,31 @@ const SectionToggle = ({ label, count, open }: { label: string; count?: number; 
   </CollapsibleTrigger>
 );
 
-export const ResultsPanel = forwardRef<HTMLDivElement, ResultsPanelProps>(({ results, onRegenerate, onRegenerateCompact, isLoading, agentName, modelLabel, modelValue, stitchHint, elementsLegend, onSwitchModel }, ref) => {
+export const ResultsPanel = forwardRef<HTMLDivElement, ResultsPanelProps>(({ results, onRegenerate, onRegenerateCompact, isLoading, agentName, modelLabel, modelValue, stitchHint, elementsLegend, onSwitchModel, history, onRestoreSnapshot, isMultiShot, regeneratingShotIdx, onRegenerateShot }, ref) => {
   const { t } = useLanguage();
   const [allCopied, setAllCopied] = useState(false);
+  const [compareOpen, setCompareOpen] = useState(false);
+  const [compareLeftId, setCompareLeftId] = useState<string | null>(null);
+  const [compareRightId, setCompareRightId] = useState<string | null>(null);
+
+  const formatRelative = (ts: number) => {
+    const diff = Math.max(0, Date.now() - ts);
+    const s = Math.floor(diff / 1000);
+    if (s < 60) return `${s}s ${t("results.history.ago" as any)}`;
+    const m = Math.floor(s / 60);
+    if (m < 60) return `${m}m ${t("results.history.ago" as any)}`;
+    const h = Math.floor(m / 60);
+    return `${h}h ${t("results.history.ago" as any)}`;
+  };
+
+  const openCompare = () => {
+    if (!history || history.length < 2) return;
+    setCompareLeftId(history[1].id);
+    setCompareRightId(history[0].id);
+    setCompareOpen(true);
+  };
+  const leftSnap = history?.find((h) => h.id === compareLeftId) ?? null;
+  const rightSnap = history?.find((h) => h.id === compareRightId) ?? null;
 
   const handleCopyAll = async () => {
     const allText = results.map((r, i) => {
