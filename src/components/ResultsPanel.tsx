@@ -136,7 +136,7 @@ const ScriptedPrompt = ({ sections }: { sections: { header: string; body: string
       {sections.map((s, i) => (
         <Collapsible key={i} open={!!openMap[i]} onOpenChange={() => toggle(i)}>
           <CollapsibleTrigger className="flex w-full items-center justify-between gap-2 rounded-md px-3 py-2 bg-background/60 hover:bg-background border border-primary/20 transition-colors group">
-            <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-primary font-mono text-start">
+            <span className="text-[11px] font-bold uppercase tracking-[0.1em] text-primary font-mono text-start">
               [{s.header}]
             </span>
             <div className="flex items-center gap-1.5 shrink-0">
@@ -182,9 +182,9 @@ const MainPromptHero = ({ value, result, modelLabel, modelValue, onSwitchModel, 
   if (isMeaningful(result.cameraSuggestions)) appended.push({ header: "CAMERA SUGGESTIONS", body: result.cameraSuggestions });
   const totalSections = (parsed?.length ?? 0) + appended.length;
   return (
-    <div className="relative rounded-xl p-4 sm:p-5 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border-2 border-primary/40 shadow-[0_0_30px_-10px_hsl(var(--primary)/0.5)]">
+    <div className="relative rounded-xl p-4 sm:p-5 bg-card border border-primary/40">
       {result.recommendedModel && (
-        <div className="mb-3 rounded-lg border-s-4 border-primary bg-primary/10 border border-primary/30 px-3 py-2.5 shadow-[0_0_20px_-8px_hsl(var(--primary)/0.6)]">
+        <div className="mb-3 rounded-lg border-s-4 border-primary bg-primary/5 border border-primary/30 px-3 py-2.5">
           <div className="flex items-start justify-between gap-3 flex-wrap">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1.5 mb-1">
@@ -214,7 +214,7 @@ const MainPromptHero = ({ value, result, modelLabel, modelValue, onSwitchModel, 
         </div>
       )}
       <div className="flex items-center justify-between gap-2 mb-2">
-        <span className="text-[11px] font-semibold uppercase tracking-wider text-primary flex items-center gap-1.5">
+        <span className="text-[11px] font-semibold uppercase tracking-[0.1em] text-primary flex items-center gap-1.5">
           <Sparkles className="w-3.5 h-3.5" /> {t("results.mainPrompt")}
           {totalSections > 0 && (
             <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-primary/15 text-primary">
@@ -242,10 +242,16 @@ const MainPromptHero = ({ value, result, modelLabel, modelValue, onSwitchModel, 
         const len = value.length;
         const over = !!limit && len > limit;
         if (!limit) return <p className="text-xs text-muted-foreground italic mb-3">{t("results.pasteHint")}</p>;
+        const ratio = len / limit;
+        const counterColor = ratio > 0.95
+          ? "text-destructive font-semibold"
+          : ratio >= 0.8
+            ? "text-primary font-medium"
+            : "text-muted-foreground";
         return (
           <div className="mb-3 space-y-2">
             <div className="flex items-center justify-between gap-2 flex-wrap text-xs">
-              <span className={`font-mono inline-flex items-center gap-1.5 ${over ? "text-destructive font-semibold" : "text-muted-foreground"}`}>
+              <span className={`font-mono inline-flex items-center gap-1.5 ${counterColor}`}>
                 {over && <AlertTriangle className="w-3.5 h-3.5" />}
                 {len.toLocaleString()} / {limit.toLocaleString()} {t("results.chars")}
               </span>
