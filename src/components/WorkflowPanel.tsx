@@ -1000,7 +1000,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
         aria-busy={isAnalyzing}
         className={!hasRequiredImages
           ? "w-full font-display font-medium bg-transparent border border-dashed border-[#3F3F46] text-[#71717A] hover:bg-transparent hover:text-[#71717A] disabled:opacity-100"
-          : "w-full font-display font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/25"}
+          : "w-full font-display font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-md shadow-primary/[0.15]"}
       >
         {!hasRequiredImages ? (
           <>Upload an image to continue</>
