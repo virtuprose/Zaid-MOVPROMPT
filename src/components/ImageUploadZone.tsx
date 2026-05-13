@@ -44,9 +44,6 @@ export const ImageUploadZone = ({ label, onImageSelect, onImageRemove, preview }
             >
               <X className="w-4 h-4" />
             </button>
-            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-background/80 to-transparent p-3">
-              <p className="text-xs text-muted-foreground">{label}</p>
-            </div>
           </motion.div>
         ) : (
           <motion.label
