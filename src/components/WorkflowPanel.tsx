@@ -1016,7 +1016,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
           onClick={() => { setSceneFrames([]); setPhase("breakdown"); }}
           disabled={isAnalyzing}
           aria-label="Skip & Generate Now"
-          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50 disabled:pointer-events-none focus:outline-none focus-visible:underline"
+          className="inline-flex items-center gap-1.5 text-sm text-[#A1A1AA] hover:text-foreground transition-colors disabled:opacity-50 disabled:pointer-events-none focus:outline-none focus-visible:underline"
         >
           Skip &amp; Generate Now <ArrowRight className="w-3.5 h-3.5 rtl:rotate-180" aria-hidden="true" />
         </button>
