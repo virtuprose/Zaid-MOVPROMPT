@@ -108,38 +108,51 @@ const SAMPLE_CARDS = [
 const GalleryGrid = ({ items, sampleMode }: { items: GalleryItem[]; sampleMode: boolean }) => {
   if (sampleMode) {
     return (
-      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {SAMPLE_CARDS.map((c, i) => (
-          <article
-            key={i}
-            className="group relative overflow-hidden rounded-xl border border-border/60 bg-card/40 hover:border-primary/40 hover:bg-card/70 transition-colors flex flex-col"
-          >
-            <div className="relative aspect-video w-full overflow-hidden">
-              <img src={c.image} alt={c.title} loading="lazy" className="w-full h-full object-cover" />
-              <span className="absolute top-2 right-2 inline-flex items-center px-2 py-0.5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold uppercase tracking-wider">
-                Featured
-              </span>
-            </div>
-            <div className="p-4 flex flex-col gap-2 flex-1">
-              <div className="flex items-center gap-2 text-[10px] uppercase tracking-wider font-display">
-                <span className="rounded-full border border-primary/30 bg-primary/10 text-primary px-2 py-0.5">
-                  {c.model}
+      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 auto-rows-fr">
+        {SAMPLE_CARDS.map((c, i) => {
+          const isFlagship = FLAGSHIP_MODELS.has(c.model);
+          return (
+            <article
+              key={i}
+              className="group relative overflow-hidden rounded-xl border border-border/60 bg-card/40 hover:border-primary/40 hover:bg-card/70 transition-colors flex flex-col min-h-[420px] h-full"
+            >
+              <div className="relative aspect-video w-full overflow-hidden">
+                <img src={c.image} alt={c.title} loading="lazy" className="w-full h-full object-cover" />
+                <span className="absolute top-2 right-2 inline-flex items-center px-2 py-0.5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold uppercase tracking-wider">
+                  Featured
                 </span>
-                <span className="text-muted-foreground normal-case tracking-normal">@movprompt</span>
               </div>
-              <h3 className="font-display text-sm font-semibold leading-snug line-clamp-2 group-hover:text-primary transition-colors">
-                {c.title}
-              </h3>
-              <p className="text-xs text-muted-foreground line-clamp-3 font-mono leading-relaxed flex-1">
-                {c.snippet}
-              </p>
-              <div className="flex items-center gap-3 text-[11px] text-muted-foreground pt-1.5 border-t border-border/40">
-                <span className="inline-flex items-center gap-1"><Heart className="w-3 h-3" /> {c.likes}</span>
-                <span className="inline-flex items-center gap-1"><Copy className="w-3 h-3" /> {c.copies}</span>
+              <div className="p-4 flex flex-col gap-2 flex-1">
+                <div className="flex items-center gap-2 text-[10px] uppercase tracking-wider font-display">
+                  <span
+                    className={`rounded-full px-2 py-0.5 ${
+                      isFlagship
+                        ? "bg-primary text-primary-foreground border border-primary"
+                        : "border border-primary/40 text-primary bg-transparent"
+                    }`}
+                  >
+                    {c.model}
+                  </span>
+                  <span className="text-muted-foreground normal-case tracking-normal">@movprompt</span>
+                </div>
+                <h3 className="font-display text-sm font-semibold leading-snug line-clamp-2 text-foreground">
+                  {c.title}
+                </h3>
+                <p
+                  className="font-mono leading-relaxed flex-1 break-words"
+                  style={{ fontSize: "12px", color: "#A1A1AA", display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden", wordBreak: "normal", overflowWrap: "break-word" }}
+                >
+                  {c.snippet}
+                </p>
+                <div className="flex items-center gap-2 text-[11px] text-muted-foreground pt-2 mt-auto border-t border-border/40">
+                  <span className="inline-flex items-center gap-1"><Heart className="w-3 h-3" /> {c.likes} likes</span>
+                  <span className="opacity-50">·</span>
+                  <span className="inline-flex items-center gap-1"><Copy className="w-3 h-3" /> {c.copies} copies</span>
+                </div>
               </div>
-            </div>
-          </article>
-        ))}
+            </article>
+          );
+        })}
       </div>
     );
   }
