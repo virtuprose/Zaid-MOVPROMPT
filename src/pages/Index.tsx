@@ -10,7 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { motion } from "framer-motion";
-import { User, LogOut, Library, BookOpen, PlayCircle } from "lucide-react";
+import { User, LogOut, Library, BookOpen, PlayCircle, Sparkles } from "lucide-react";
 import AnnouncementBanner from "@/components/AnnouncementBanner";
 import NotificationBell from "@/components/NotificationBell";
 import { InstallPrompt } from "@/components/InstallPrompt";
@@ -100,6 +100,9 @@ const Index = () => {
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => navigate("/learn")}>
                     <BookOpen className="w-4 h-4 me-2" /> {t("learn.menuLabel" as any)}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate("/gallery")}>
+                    <Sparkles className="w-4 h-4 me-2" /> Public gallery
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={signOut}>
