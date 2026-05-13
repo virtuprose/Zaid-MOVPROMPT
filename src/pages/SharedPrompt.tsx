@@ -91,6 +91,23 @@ const SharedPrompt = () => {
     ? `${shotCount} ${shotCount === 1 ? "shot" : "shots"} for ${modelLabel}, generated with MovPrompt's AI Director of Photography.`
     : "A shared cinematic prompt set from MovPrompt.";
 
+  const canonical = `https://movprompt.com/p/${slug}`;
+  const ogImage = "https://movprompt.com/og-image.jpg";
+  const jsonLd = record
+    ? {
+        "@context": "https://schema.org",
+        "@type": "CreativeWork",
+        name: record.title || `Cinematic prompt set for ${modelLabel}`,
+        description: pageDesc,
+        url: canonical,
+        dateCreated: record.created_at,
+        author: record.agent_name
+          ? { "@type": "Person", name: record.agent_name }
+          : { "@type": "Organization", name: "MovPrompt" },
+        about: modelLabel,
+      }
+    : undefined;
+
   return (
     <div className="min-h-screen" style={{ background: "hsl(220 25% 4%)" }}>
       <Helmet>
@@ -99,10 +116,16 @@ const SharedPrompt = () => {
         <meta property="og:title" content={pageTitle} />
         <meta property="og:description" content={pageDesc} />
         <meta property="og:type" content="article" />
+        <meta property="og:url" content={canonical} />
+        <meta property="og:image" content={ogImage} />
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content={pageTitle} />
         <meta name="twitter:description" content={pageDesc} />
-        <link rel="canonical" href={`${window.location.origin}/p/${slug}`} />
+        <meta name="twitter:image" content={ogImage} />
+        <link rel="canonical" href={canonical} />
+        {jsonLd && (
+          <script type="application/ld+json">{JSON.stringify(jsonLd)}</script>
+        )}
       </Helmet>
 
       <header className="border-b border-border/40 sticky top-0 z-10 backdrop-blur" style={{ backgroundColor: "hsl(220 25% 4% / 0.85)" }}>
