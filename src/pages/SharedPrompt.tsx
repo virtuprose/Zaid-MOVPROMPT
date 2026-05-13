@@ -85,11 +85,11 @@ const SharedPrompt = () => {
   const modelLabel = useMemo(() => (record ? getModelLabel(record.target_model) : ""), [record]);
   const shotCount = record?.results?.length ?? 0;
   const pageTitle = record
-    ? `${record.title || `${shotCount} cinematic prompt${shotCount === 1 ? "" : "s"}`} · VidoPrompt`
-    : "Shared prompts · VidoPrompt";
+    ? `${record.title || `${shotCount} cinematic prompt${shotCount === 1 ? "" : "s"}`} · MovPrompt`
+    : "Shared prompts · MovPrompt";
   const pageDesc = record
-    ? `${shotCount} ${shotCount === 1 ? "shot" : "shots"} for ${modelLabel}, generated with VidoPrompt's AI Director of Photography.`
-    : "A shared cinematic prompt set from VidoPrompt.";
+    ? `${shotCount} ${shotCount === 1 ? "shot" : "shots"} for ${modelLabel}, generated with MovPrompt's AI Director of Photography.`
+    : "A shared cinematic prompt set from MovPrompt.";
 
   return (
     <div className="min-h-screen" style={{ background: "hsl(220 25% 4%)" }}>
@@ -109,7 +109,7 @@ const SharedPrompt = () => {
         <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
           <Link to="/" className="flex items-center gap-2 group">
             <Clapperboard className="w-5 h-5 text-brand group-hover:scale-110 transition-transform" />
-            <span className="font-display font-semibold text-sm">VidoPrompt</span>
+            <span className="font-display font-semibold text-sm">MovPrompt</span>
           </Link>
           <Button asChild size="sm" variant="default">
             <Link to="/">
@@ -136,7 +136,7 @@ const SharedPrompt = () => {
               <Button asChild variant="default" className="mt-2">
                 <Link to="/">
                   <ArrowLeft className="w-4 h-4 me-1.5" />
-                  Go to VidoPrompt
+                  Go to MovPrompt
                 </Link>
               </Button>
             </CardContent>
@@ -166,7 +166,7 @@ const SharedPrompt = () => {
                 {record.title || `Cinematic prompt set for ${modelLabel}`}
               </h1>
               <p className="text-sm text-muted-foreground">
-                Shared from VidoPrompt — copy any prompt and paste straight into {modelLabel}.
+                Shared from MovPrompt — copy any prompt and paste straight into {modelLabel}.
               </p>
             </div>
 
@@ -244,12 +244,12 @@ const SharedPrompt = () => {
               <CardContent className="py-5 flex items-center justify-between gap-3 flex-wrap">
                 <div>
                   <h2 className="font-display text-base font-semibold">Want prompts like these?</h2>
-                  <p className="text-xs text-muted-foreground">Upload any frame — VidoPrompt's AI Director of Photography handles the rest.</p>
+                  <p className="text-xs text-muted-foreground">Upload any frame — MovPrompt's AI Director of Photography handles the rest.</p>
                 </div>
                 <Button asChild>
                   <Link to="/">
                     <Sparkles className="w-4 h-4 me-1.5" />
-                    Try VidoPrompt
+                    Try MovPrompt
                   </Link>
                 </Button>
               </CardContent>

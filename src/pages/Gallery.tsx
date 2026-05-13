@@ -94,8 +94,8 @@ export const GalleryView = ({ family }: GalleryPageProps) => {
 
   const heading = family ? `${family.name} prompt gallery` : "Public prompt gallery";
   const desc = family
-    ? `Curated cinematic video prompts written for ${family.name} (${family.vendor}). Browse, copy, and remix shots crafted with VidoPrompt's AI Director of Photography.`
-    : "A curated, public gallery of cinematic video prompts crafted by VidoPrompt's AI Director of Photography. Copy any prompt, then paste it into Veo, Kling, Seedance and more.";
+    ? `Curated cinematic video prompts written for ${family.name} (${family.vendor}). Browse, copy, and remix shots crafted with MovPrompt's AI Director of Photography.`
+    : "A curated, public gallery of cinematic video prompts crafted by MovPrompt's AI Director of Photography. Copy any prompt, then paste it into Veo, Kling, Seedance and more.";
   const canonical = family
     ? `${typeof window !== 'undefined' ? window.location.origin : ''}/models/${family.slug}`
     : `${typeof window !== 'undefined' ? window.location.origin : ''}/gallery`;
@@ -110,9 +110,9 @@ export const GalleryView = ({ family }: GalleryPageProps) => {
   return (
     <div className="min-h-screen" style={{ background: "hsl(220 25% 4%)" }}>
       <Helmet>
-        <title>{heading} · VidoPrompt</title>
+        <title>{heading} · MovPrompt</title>
         <meta name="description" content={desc} />
-        <meta property="og:title" content={`${heading} · VidoPrompt`} />
+        <meta property="og:title" content={`${heading} · MovPrompt`} />
         <meta property="og:description" content={desc} />
         <meta property="og:type" content="website" />
         <meta name="twitter:card" content="summary_large_image" />
@@ -123,7 +123,7 @@ export const GalleryView = ({ family }: GalleryPageProps) => {
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
           <Link to="/" className="flex items-center gap-2 group">
             <Clapperboard className="w-5 h-5 text-brand group-hover:scale-110 transition-transform" />
-            <span className="font-display font-semibold text-sm">VidoPrompt</span>
+            <span className="font-display font-semibold text-sm">MovPrompt</span>
           </Link>
           <div className="flex items-center gap-2">
             <Button asChild size="sm" variant="ghost"><Link to="/gallery">Gallery</Link></Button>
@@ -226,7 +226,7 @@ export const GalleryView = ({ family }: GalleryPageProps) => {
               <h2 className="font-display text-base font-semibold">Make a prompt that lands here.</h2>
               <p className="text-xs text-muted-foreground">Upload any frame, generate, then submit your share page to the gallery.</p>
             </div>
-            <Button asChild><Link to="/"><Sparkles className="w-4 h-4 me-1.5" />Try VidoPrompt</Link></Button>
+            <Button asChild><Link to="/"><Sparkles className="w-4 h-4 me-1.5" />Try MovPrompt</Link></Button>
           </CardContent>
         </Card>
       </main>
