@@ -40,6 +40,7 @@ type Tier = "lite" | "fast" | "flagship" | "turbo" | "default";
 const TIER_OVERRIDES: Record<string, Tier> = {
   "veo-3.1": "flagship",
   "veo-3": "flagship",
+  "kling-3.0": "flagship",
   "kling-3.0-omni": "flagship",
   "kling-3.0-omni-edit": "flagship",
   "seedance-2.0": "flagship",
