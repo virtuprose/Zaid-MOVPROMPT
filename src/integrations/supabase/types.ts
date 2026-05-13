@@ -472,6 +472,8 @@ export type Database = {
           agent_name: string | null
           created_at: string
           expires_at: string | null
+          featured: boolean
+          featured_at: string | null
           id: string
           results: Json
           slug: string
@@ -486,6 +488,8 @@ export type Database = {
           agent_name?: string | null
           created_at?: string
           expires_at?: string | null
+          featured?: boolean
+          featured_at?: string | null
           id?: string
           results: Json
           slug: string
@@ -500,6 +504,8 @@ export type Database = {
           agent_name?: string | null
           created_at?: string
           expires_at?: string | null
+          featured?: boolean
+          featured_at?: string | null
           id?: string
           results?: Json
           slug?: string
