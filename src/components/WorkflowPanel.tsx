@@ -857,7 +857,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
                 className="hidden sm:flex items-center justify-center self-center"
                 aria-hidden="true"
               >
-                <ArrowRight size={24} style={{ color: "#8888AA" }} />
+                <ArrowRight size={32} className="text-primary animate-pulse-glow" />
               </div>
             );
           }
