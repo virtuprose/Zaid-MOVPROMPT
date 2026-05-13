@@ -998,7 +998,9 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
         disabled={!hasRequiredImages || isAnalyzing}
         aria-label={hasRequiredImages ? (isAnalyzing ? t("wp.analyzingScene") : t("wp.analyzeScene")) : "Upload an image to continue"}
         aria-busy={isAnalyzing}
-        className="w-full font-display font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/25 disabled:opacity-60 disabled:shadow-none"
+        className={!hasRequiredImages
+          ? "w-full font-display font-medium bg-transparent border border-dashed border-[#3F3F46] text-[#71717A] hover:bg-transparent hover:text-[#71717A] disabled:opacity-100"
+          : "w-full font-display font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/25"}
       >
         {!hasRequiredImages ? (
           <>Upload an image to continue</>
