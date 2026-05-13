@@ -112,6 +112,11 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
   const [sceneFrames, setSceneFrames] = useState<SceneFrame[]>([]);
   const [elementDirections, setElementDirections] = useState<ElementDirections>({});
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const analysisCancelledRef = useRef(false);
+  const handleCancelAnalysis = () => {
+    analysisCancelledRef.current = true;
+    setIsAnalyzing(false);
+  };
   const [referenceItems, setReferenceItems] = useState<ReferenceMediaItem[]>([]);
   const [elementItems, setElementItems] = useState<ElementItem[]>([]);
   const sceneMentionRef = useRef<SceneMentionTextareaHandle>(null);
