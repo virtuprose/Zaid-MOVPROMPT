@@ -1245,8 +1245,8 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
 
             {resultsBlock}
 
-            <div className="flex items-start gap-2 rounded-lg border border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
-              <Info className="w-3.5 h-3.5 text-muted-foreground mt-0.5 shrink-0" />
+            <div className="flex items-start gap-2 rounded-lg border border-[#27272A] bg-[#161618] px-3 py-2 text-xs text-foreground/90">
+              <Info className="w-3.5 h-3.5 text-primary mt-0.5 shrink-0" />
               <span>{t("scene.reviewHint" as any)}</span>
             </div>
 
