@@ -158,27 +158,19 @@ export const SceneBreakdown = ({ frames, frameLabels, framePreviews, directions,
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: frameIdx * 0.15 + i * 0.08 }}
-                    className="rounded-lg p-2.5 sm:p-3 transition-colors"
-                    style={
+                    className={`rounded-lg p-2.5 sm:p-3 transition-colors border ${
                       isLocked
-                        ? {
-                            border: "1.5px solid rgba(0,212,255,0.4)",
-                            background: "rgba(0,212,255,0.04)",
-                          }
-                        : {
-                            border: "1px solid rgba(255,255,255,0.08)",
-                            background: "transparent",
-                          }
-                    }
+                        ? "border-primary/40 bg-primary/5"
+                        : "border-border/50 bg-transparent"
+                    }`}
                   >
                     <div className="flex items-start gap-2 sm:gap-3">
                       <div
-                        className="mt-0.5 flex-shrink-0 rounded-md p-1.5"
-                        style={
+                        className={`mt-0.5 flex-shrink-0 rounded-md p-1.5 ${
                           isLocked
-                            ? { background: "rgba(0,212,255,0.15)", color: "#00D4FF" }
-                            : { background: "rgba(255,255,255,0.05)", color: "#8888AA" }
-                        }
+                            ? "bg-primary/15 text-primary"
+                            : "bg-muted/40 text-muted-foreground"
+                        }`}
                       >
                         <Icon className="w-4 h-4" />
                       </div>
@@ -211,14 +203,13 @@ export const SceneBreakdown = ({ frames, frameLabels, framePreviews, directions,
                                 variant="ghost"
                                 onClick={() => { if (!isLocked) toggleAction(el.id); }}
                                 aria-label={t("scene.lock")}
-                                style={
+                                className={`h-7 px-1.5 sm:px-2 text-xs gap-1 ${
                                   isLocked
-                                    ? { backgroundColor: "#00D4FF", color: "#0A0A0F" }
-                                    : undefined
-                                }
-                                className={`h-7 px-1.5 sm:px-2 text-xs gap-1 ${isLocked ? "hover:brightness-110" : ""} ${isLocked && pulsing[el.id] ? "animate-pulse-glow" : ""}`}
+                                    ? "bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground"
+                                    : ""
+                                } ${isLocked && pulsing[el.id] ? "animate-pulse-glow" : ""}`}
                               >
-                                <Lock className="w-3 h-3" style={isLocked ? { color: "#ffffff" } : undefined} />
+                                <Lock className="w-3 h-3" />
                                 <span className="hidden sm:inline">{t("scene.lock")}</span>
                               </Button>
                             </TooltipTrigger>

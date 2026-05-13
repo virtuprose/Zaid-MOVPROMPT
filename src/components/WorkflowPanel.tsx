@@ -780,8 +780,8 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
     const btn = (active: boolean) =>
       `flex-1 min-w-0 basis-[140px] sm:basis-0 px-3 py-2 sm:px-5 sm:py-2.5 text-xs whitespace-normal break-words leading-tight rounded-md transition-all ${
         active
-          ? "bg-[rgba(0,212,255,0.15)] border-[1.5px] border-[#00D4FF] text-[#00D4FF] font-bold shadow-[0_0_12px_rgba(0,212,255,0.2)]"
-          : "bg-transparent border border-white/[0.12] text-[#8888AA] font-normal hover:border-white/25 hover:text-[#F0F0F5]"
+          ? "bg-secondary border border-border text-foreground font-semibold shadow-sm"
+          : "bg-transparent border border-border/50 text-muted-foreground font-normal hover:border-border hover:text-foreground"
       }`;
 
     return (
@@ -810,17 +810,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
       <div className="flex flex-col sm:flex-row sm:items-stretch gap-4 sm:gap-4">
         {[0, 1].map((i) => (
           <div key={i} className="flex-1 flex flex-col">
-            <span
-              className="block"
-              style={{
-                fontSize: 11,
-                color: "#00D4FF",
-                fontWeight: 700,
-                letterSpacing: "0.12em",
-                textTransform: "uppercase",
-                marginBottom: 8,
-              }}
-            >
+            <span className="block text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground mb-2">
               {i === 0 ? t("upload.startFrame" as any) : t("upload.endFrame" as any)}
             </span>
             <ImageUploadZone
@@ -996,22 +986,12 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
       <div className="flex flex-col items-center" style={{ gap: "12px" }}>
         <Button
           data-tour="analyze-button"
+          size="lg"
           onClick={handleAnalyze}
           disabled={isAnalyzing}
           aria-label={isAnalyzing ? t("wp.analyzingScene") : t("wp.analyzeScene")}
           aria-busy={isAnalyzing}
-          style={{
-            backgroundColor: "#00D4FF",
-            color: "#0A0A0F",
-            fontFamily: "'Space Grotesk', sans-serif",
-            fontWeight: 600,
-            fontSize: "15px",
-            padding: "14px 24px",
-            borderRadius: "12px",
-            boxShadow: "0 2px 12px rgba(0, 212, 255, 0.25)",
-            height: "auto",
-          }}
-          className="w-full hover:brightness-110 hover:shadow-[0_4px_18px_rgba(0,212,255,0.35)] focus-visible:ring-2 focus-visible:ring-[#00D4FF] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0A0A0F] transition-all"
+          className="w-full font-display font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/25"
         >
           {isAnalyzing ? (
             <><Loader2 className="w-5 h-5 me-2 animate-spin" aria-hidden="true" /> {t("wp.analyzingScene")}</>
@@ -1376,24 +1356,12 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
       )}
 
       {showRightEmptyState && (
-        <div
-          className="empty-state-pulse flex flex-col items-center justify-center text-center min-h-[280px] rounded-2xl px-6 py-10"
-          style={{
-            background: "rgba(0, 212, 255, 0.02)",
-            border: "1.5px solid rgba(0, 212, 255, 0.18)",
-          }}
-        >
-          <Clapperboard size={64} strokeWidth={1.5} style={{ color: "#00D4FF" }} />
-          <h3
-            className="font-display mt-5"
-            style={{ fontSize: "20px", color: "#F0F0F5", fontWeight: 600, letterSpacing: "-0.01em" }}
-          >
+        <div className="empty-state-pulse flex flex-col items-center justify-center text-center min-h-[280px] rounded-2xl px-6 py-10 border border-border bg-muted/20">
+          <Clapperboard size={64} strokeWidth={1.5} className="text-muted-foreground" />
+          <h3 className="font-display mt-5 text-xl font-semibold text-foreground tracking-tight">
             {t("rp.empty.title" as any)}
           </h3>
-          <p
-            className="mt-2 max-w-sm"
-            style={{ fontSize: "13px", color: "#8888AA", lineHeight: 1.5 }}
-          >
+          <p className="mt-2 max-w-sm text-sm text-muted-foreground leading-relaxed">
             {t("rp.empty.subtitle" as any)}
           </p>
         </div>
@@ -1406,14 +1374,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
     <div className="w-full max-w-[1400px] mx-auto">
       <div className="lg:grid lg:grid-cols-[40fr_60fr] lg:gap-8 space-y-6 lg:space-y-0">
         <div>{leftPanel}</div>
-        <div
-          style={{
-            background: "#1A1A2E",
-            border: "1px solid rgba(0,212,255,0.12)",
-            borderRadius: "16px",
-            padding: "24px",
-          }}
-        >
+        <div className="rounded-2xl border border-border bg-card/40 p-6">
           {rightPanel}
         </div>
       </div>
