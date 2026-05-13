@@ -793,12 +793,12 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
             : t("contract.toggle.single" as any)}
         </button>
         {contract.supportsTwoFrameToggle && (
-          <button onClick={() => setMode("twoframe")} className={btn(currentMode === "twoframe")}>
+          <button onClick={() => setMode("twoframe")} className={`${btn(currentMode === "twoframe")} snap-start shrink-0`}>
             {t("contract.toggle.startEnd" as any)}
           </button>
         )}
         {contract.supportsMultiShotToggle && (
-          <button onClick={() => setMode("multishot")} className={btn(currentMode === "multishot")}>
+          <button onClick={() => setMode("multishot")} className={`${btn(currentMode === "multishot")} snap-start shrink-0`}>
             {multiLabel}
           </button>
         )}
