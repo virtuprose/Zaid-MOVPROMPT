@@ -14,6 +14,7 @@ import { ElementGrid, type ElementItem } from "./ElementGrid";
 import { MentionTextarea } from "./MentionTextarea";
 import { SceneMentionTextarea, type SceneMentionTextareaHandle } from "./SceneMentionTextarea";
 import { extractVideoKeyframes, compressImageFile } from "@/lib/videoFrames";
+import { hashBase64, getCachedAnalysis, setCachedAnalysis } from "@/lib/imageCache";
 import { Sparkles, Loader2, ScanSearch, RotateCcw, RefreshCw, Info, Volume2, VolumeX, Zap, Clapperboard, ArrowRight, ArrowDown, ArrowLeft } from "lucide-react";
 import { PresetPickerPanel } from "./PresetPickerPanel";
 import {
@@ -377,29 +378,10 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
     ? elementItems.length >= 1
     : images.filter(Boolean).length >= 1;
 
-  const compressImage = (file: File, maxWidth = 1024, quality = 0.7): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement("canvas");
-        let w = img.width;
-        let h = img.height;
-        if (w > maxWidth) {
-          h = (h * maxWidth) / w;
-          w = maxWidth;
-        }
-        canvas.width = w;
-        canvas.height = h;
-        const ctx = canvas.getContext("2d")!;
-        ctx.drawImage(img, 0, 0, w, h);
-        const dataUrl = canvas.toDataURL("image/jpeg", quality);
-        resolve(dataUrl.split(",")[1]);
-        URL.revokeObjectURL(img.src);
-      };
-      img.onerror = reject;
-      img.src = URL.createObjectURL(file);
-    });
-  };
+  // Compression is centralized in `lib/videoFrames.compressImageFile`, which
+  // memoizes per-File so analyze → generate → re-roll reuses one base64 payload.
+  const compressImage = compressImageFile;
+
 
   const handleAnalyze = async () => {
     if (!hasRequiredImages) return;
