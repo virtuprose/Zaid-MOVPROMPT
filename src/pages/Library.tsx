@@ -14,6 +14,7 @@ import { LanguageToggle } from "@/components/LanguageToggle";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Copy, ChevronDown, Sparkles, Check, Trash2, Search, X, Film } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { Seo } from "@/components/Seo";
 
 interface HistoryEntry {
   id: string;
