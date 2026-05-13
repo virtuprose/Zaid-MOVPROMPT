@@ -53,10 +53,21 @@ const Index = () => {
         <div className="absolute bottom-0 right-0 w-[400px] h-[220px] sm:w-[600px] sm:h-[300px] bg-accent/5 rounded-full blur-[100px] animate-pulse-glow" style={{ animationDelay: "1.5s" }} />
       </div>
 
-      <div className="relative z-10 container max-w-[1400px] mx-auto px-4 py-4 sm:py-12">
+      <div className="relative z-10 container max-w-[1400px] mx-auto px-4 py-3 sm:py-4">
         <AnnouncementBanner />
         {/* Top bar */}
-        <div className="flex flex-nowrap justify-end items-center gap-1 sm:gap-1.5 mb-4">
+        <div className="flex flex-nowrap items-center gap-1 sm:gap-1.5 mb-4 sm:mb-6">
+          <button
+            type="button"
+            onClick={() => { window.location.href = "/"; }}
+            aria-label={t("nav.goHome")}
+            className="flex items-center gap-2 me-auto cursor-pointer hover:opacity-80 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-md py-1"
+          >
+            <img src={logoMark} alt="MovPrompt" className="w-5 h-5 sm:w-6 sm:h-6" />
+            <h1 className="text-[14px] sm:text-[17px] tracking-tight font-display font-bold leading-none">
+              <span className="text-primary">Mov</span>Prompt
+            </h1>
+          </button>
           {!loading && user && !tourDone && (
             <Button
               variant="ghost"
