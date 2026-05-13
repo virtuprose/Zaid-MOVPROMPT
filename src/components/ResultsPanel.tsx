@@ -698,8 +698,37 @@ const ShotCard = ({
               <ResultCard label={t("results.modelNotes")} value={result.modelNotes} />
             </CollapsibleContent>
           </Collapsible>
+
+          {onApplyAddendum && (
+            <AutoFixChips
+              chips={fixChips}
+              onApply={(c) => handleApplyFix(c.addendum)}
+              applyingDim={applyingAddendum && fixChips.find((c) => c.addendum === applyingAddendum)?.dimension || null}
+              disabled={isRegenerating || isThisShotRegenerating}
+            />
+          )}
+
+          {onFeedbackChange && (
+            <FeedbackBar feedback={feedback} onChange={onFeedbackChange} />
+          )}
         </div>
       </CardContent>
+
+      {onRunCritique && (
+        <CritiqueDialog
+          open={critiqueOpen}
+          onOpenChange={setCritiqueOpen}
+          critique={critique?.result ?? null}
+          loading={!!critique?.loading}
+          error={critique?.error ?? null}
+          onRun={onRunCritique}
+          onApply={(s) => {
+            setCritiqueOpen(false);
+            handleApplyFix(s.addendum);
+          }}
+          applyingAddendum={applyingAddendum}
+        />
+      )}
     </Card>
   );
 };
