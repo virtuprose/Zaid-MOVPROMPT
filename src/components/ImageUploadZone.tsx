@@ -1,5 +1,5 @@
-import { useCallback, useState } from "react";
-import { Upload, X, Image as ImageIcon } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Upload, X, Image as ImageIcon, RefreshCw } from "lucide-react";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -10,21 +10,39 @@ interface ImageUploadZoneProps {
   preview: string | null;
 }
 
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 export const ImageUploadZone = ({ label, onImageSelect, onImageRemove, preview }: ImageUploadZoneProps) => {
   const [isDragging, setIsDragging] = useState(false);
+  const [meta, setMeta] = useState<{ name: string; size: number } | null>(null);
+  const replaceInputRef = useRef<HTMLInputElement>(null);
   const { t } = useLanguage();
+
+  useEffect(() => {
+    if (!preview) setMeta(null);
+  }, [preview]);
+
+  const select = useCallback((file: File) => {
+    setMeta({ name: file.name, size: file.size });
+    onImageSelect(file);
+  }, [onImageSelect]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
     const file = e.dataTransfer.files[0];
-    if (file && file.type.startsWith("image/")) onImageSelect(file);
-  }, [onImageSelect]);
+    if (file && file.type.startsWith("image/")) select(file);
+  }, [select]);
 
   const handleFileInput = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) onImageSelect(file);
-  }, [onImageSelect]);
+    if (file) select(file);
+    e.target.value = "";
+  }, [select]);
 
   return (
     <div className="relative w-full min-w-0" data-tour="image-upload">
@@ -35,15 +53,52 @@ export const ImageUploadZone = ({ label, onImageSelect, onImageRemove, preview }
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
-            className="relative rounded-xl overflow-hidden border border-border bg-muted/30"
+            className="flex flex-col gap-2"
           >
-            <img src={preview} alt={label} loading="lazy" decoding="async" className="w-full max-h-[250px] sm:max-h-[400px] object-contain" />
-            <button
-              onClick={onImageRemove}
-              className="absolute top-2 right-2 p-1.5 rounded-full bg-background/80 backdrop-blur-sm hover:bg-destructive/80 transition-colors"
+            <div
+              className="relative rounded-xl"
+              style={{ background: "#0F0F11", border: "1px solid #27272A", padding: 12 }}
             >
-              <X className="w-4 h-4" />
-            </button>
+              <img
+                src={preview}
+                alt={label}
+                loading="lazy"
+                decoding="async"
+                className="w-full max-h-[400px] object-contain rounded-md"
+              />
+              <button
+                onClick={() => { setMeta(null); onImageRemove(); }}
+                aria-label="Remove image"
+                className="absolute top-3 right-3 inline-flex items-center justify-center w-8 h-8 rounded-full text-white transition-colors"
+                style={{ background: "rgba(0,0,0,0.6)" }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(245,165,36,0.2)")}
+                onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(0,0,0,0.6)")}
+              >
+                <X size={16} />
+              </button>
+            </div>
+            {meta && (
+              <p className="text-[13px] text-center" style={{ color: "#71717A" }}>
+                {meta.name} · {formatBytes(meta.size)}
+              </p>
+            )}
+            <div className="flex justify-center">
+              <input
+                ref={replaceInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleFileInput}
+                className="hidden"
+              />
+              <button
+                type="button"
+                onClick={() => replaceInputRef.current?.click()}
+                className="inline-flex items-center gap-1.5 text-[13px] font-medium hover:opacity-80 transition-opacity"
+                style={{ color: "#F5A524" }}
+              >
+                <RefreshCw size={13} /> Replace image
+              </button>
+            </div>
           </motion.div>
         ) : (
           <motion.label
