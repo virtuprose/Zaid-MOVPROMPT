@@ -621,6 +621,28 @@ const ShotCard = ({
             </span>
           )}
           <span className="text-accent flex-1">{result.shotName || `${t("library.shot")} ${idx + 1}`}</span>
+          {onRunCritique && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleOpenCritique}
+                  disabled={isThisShotRegenerating}
+                  className="h-7 px-2 text-xs text-muted-foreground hover:text-primary"
+                >
+                  <Sparkles className="w-3.5 h-3.5 sm:me-1" />
+                  <span className="hidden sm:inline">{t("results.critique.button" as any)}</span>
+                  {critique?.result && (
+                    <span className="ms-1 text-[10px] font-mono px-1 rounded bg-primary/15 text-primary">
+                      {critique.result.score}
+                    </span>
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent><p className="max-w-xs">{t("results.critique.hint" as any)}</p></TooltipContent>
+            </Tooltip>
+          )}
           {onRegenerateShot && (
             <Tooltip>
               <TooltipTrigger asChild>
