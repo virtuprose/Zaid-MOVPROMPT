@@ -188,7 +188,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
       const preview = URL.createObjectURL(file);
       setImages([{ file, preview }]);
       setResults(null);
-      setHistory([]);
+      setHistory([]); setFeedbackByShot({}); setCritiqueByShot({});
       setPhase("upload");
       setSceneFrames([]);
       setElementDirections({});
@@ -361,7 +361,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
     setPhase("upload");
     setSceneFrames([]);
     setElementDirections({});
-    setHistory([]);
+    setHistory([]); setFeedbackByShot({}); setCritiqueByShot({});
   }, []);
 
   const handleImageRemove = useCallback((index: number) => {
@@ -768,7 +768,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
       setMultiShotMode(mode === "multishot");
       setImages([]);
       setResults(null);
-      setHistory([]);
+      setHistory([]); setFeedbackByShot({}); setCritiqueByShot({});
       setPhase("upload");
     };
     const currentMode: "single" | "twoframe" | "multishot" =
@@ -1114,7 +1114,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
         setSceneFrames([]);
         setElementDirections({});
         setResults(null);
-        setHistory([]);
+        setHistory([]); setFeedbackByShot({}); setCritiqueByShot({});
       }}
       aria-label={t("wp.startOver")}
       title={t("wp.startOver")}
