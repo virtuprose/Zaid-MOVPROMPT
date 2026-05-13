@@ -725,7 +725,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
 
   const workflowHeaderBlock = (
     <div className="flex items-center gap-1.5">
-      <h2 className="text-sm font-medium text-foreground">Choose your workflow</h2>
+      <h2 className="text-base font-normal text-foreground">Choose your workflow</h2>
       {extrasHint && (
         <TooltipProvider delayDuration={150}>
           <Tooltip>
