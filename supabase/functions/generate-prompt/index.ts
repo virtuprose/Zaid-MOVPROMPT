@@ -91,8 +91,20 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { images, workflowType, description, targetModel, sceneBreakdown, audioEnabled, references, elements, autoInjectElements, multiShotCount, elementMentions, compactMode } = body;
+    const { images, workflowType, description, targetModel, sceneBreakdown, audioEnabled, references, elements, autoInjectElements, multiShotCount, elementMentions, compactMode, addendum, feedback } = body;
     const isCompact = compactMode === true;
+    const refinementAddendum: string =
+      typeof addendum === "string" ? addendum.trim().slice(0, 600) : "";
+    const feedbackLiked: boolean | null =
+      feedback && typeof feedback.liked === "boolean" ? feedback.liked : null;
+    const feedbackReasons: string[] = Array.isArray(feedback?.reasons)
+      ? (feedback.reasons as unknown[])
+          .filter((r): r is string => typeof r === "string" && r.trim().length > 0)
+          .map((r) => r.trim().slice(0, 60))
+          .slice(0, 6)
+      : [];
+    const feedbackNote: string =
+      feedback && typeof feedback.note === "string" ? feedback.note.trim().slice(0, 300) : "";
 
     // --- Input Validation ---
     // Allow 0 images when elements are provided (element-only mode, e.g. Seedance 2.0).
@@ -344,6 +356,27 @@ serve(async (req) => {
       userText += audioEnabled
         ? `Audio: ENABLED — generate a synced audio direction (ambient sound, music cues, dialogue/SFX as appropriate). Populate the audioBlock field.\n\n`
         : `Audio: DISABLED — produce a SILENT video. Do not include any audio direction. Set audioBlock to "Silent — no audio".\n\n`;
+    }
+
+    // Refinement guidance: from auto-fix chips, AI critique suggestions, or thumbs-down feedback.
+    // These are USER-DIRECTED corrections to the previous attempt. Honor them precisely without rewriting other parts.
+    if (refinementAddendum || feedbackLiked === false || feedbackReasons.length > 0 || feedbackNote) {
+      userText += `═══ REFINEMENT GUIDANCE (highest priority) ═══\nThis is a refinement of a previous attempt. Apply these corrections precisely without weakening already-good elements.\n`;
+      if (refinementAddendum) {
+        userText += `- Required adjustment: ${refinementAddendum}\n`;
+      }
+      if (feedbackLiked === false) {
+        userText += `- The previous output was marked DISLIKED by the user. Materially change the approach, do not produce a near-duplicate.\n`;
+      } else if (feedbackLiked === true) {
+        userText += `- The previous output was marked LIKED. Preserve its strengths; refine only what the guidance below targets.\n`;
+      }
+      if (feedbackReasons.length > 0) {
+        userText += `- Specific complaints to fix: ${feedbackReasons.join("; ")}\n`;
+      }
+      if (feedbackNote) {
+        userText += `- User's free-text note: "${feedbackNote}"\n`;
+      }
+      userText += `\n`;
     }
 
     // Build a Reference Brief if user attached references

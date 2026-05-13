@@ -7,11 +7,13 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useState, forwardRef } from "react";
+import { useState, forwardRef, useMemo } from "react";
 import { motion } from "framer-motion";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { toast } from "sonner";
 import { getCharLimit } from "@/lib/modelLimits";
+import { detectMissingDimensions, type FixChip } from "@/lib/promptHeuristics";
+import { AutoFixChips, FeedbackBar, CritiqueDialog, type CritiqueResult, type CritiqueSuggestion, type ShotFeedback } from "./CritiquePanel";
 
 interface ShotResult {
   shotName?: string;
@@ -39,6 +41,12 @@ interface GenerationSnapshot {
   createdAt: number;
 }
 
+interface ShotCritiqueState {
+  result: CritiqueResult | null;
+  loading: boolean;
+  error: string | null;
+}
+
 interface ResultsPanelProps {
   results: ShotResult[];
   onRegenerate: () => void;
@@ -55,6 +63,13 @@ interface ResultsPanelProps {
   isMultiShot?: boolean;
   regeneratingShotIdx?: number | null;
   onRegenerateShot?: (shotIdx: number) => void;
+  // Quality & evaluation loop
+  feedbackByShot?: Record<number, ShotFeedback>;
+  onFeedbackChange?: (shotIdx: number, next: ShotFeedback) => void;
+  critiqueByShot?: Record<number, ShotCritiqueState>;
+  onRunCritique?: (shotIdx: number) => void;
+  onApplyAddendum?: (shotIdx: number, addendum: string) => void;
+  applyingAddendumByShot?: Record<number, string | null>;
 }
 
 const CopyButton = ({ text }: { text: string }) => {
@@ -285,7 +300,7 @@ const SectionToggle = ({ label, count, open }: { label: string; count?: number; 
   </CollapsibleTrigger>
 );
 
-export const ResultsPanel = forwardRef<HTMLDivElement, ResultsPanelProps>(({ results, onRegenerate, onRegenerateCompact, isLoading, agentName, modelLabel, modelValue, stitchHint, elementsLegend, onSwitchModel, history, onRestoreSnapshot, isMultiShot, regeneratingShotIdx, onRegenerateShot }, ref) => {
+export const ResultsPanel = forwardRef<HTMLDivElement, ResultsPanelProps>(({ results, onRegenerate, onRegenerateCompact, isLoading, agentName, modelLabel, modelValue, stitchHint, elementsLegend, onSwitchModel, history, onRestoreSnapshot, isMultiShot, regeneratingShotIdx, onRegenerateShot, feedbackByShot, onFeedbackChange, critiqueByShot, onRunCritique, onApplyAddendum, applyingAddendumByShot }, ref) => {
   const { t } = useLanguage();
   const [allCopied, setAllCopied] = useState(false);
   const [compareOpen, setCompareOpen] = useState(false);
@@ -457,6 +472,12 @@ export const ResultsPanel = forwardRef<HTMLDivElement, ResultsPanelProps>(({ res
             isRegenerating={isLoading}
             onRegenerateShot={isMultiShot && results.length > 1 && onRegenerateShot ? () => onRegenerateShot(idx) : undefined}
             isThisShotRegenerating={regeneratingShotIdx === idx}
+            feedback={feedbackByShot?.[idx] ?? { liked: null, reasons: [], note: "" }}
+            onFeedbackChange={onFeedbackChange ? (next) => onFeedbackChange(idx, next) : undefined}
+            critique={critiqueByShot?.[idx] ?? null}
+            onRunCritique={onRunCritique ? () => onRunCritique(idx) : undefined}
+            onApplyAddendum={onApplyAddendum ? (text) => onApplyAddendum(idx, text) : undefined}
+            applyingAddendum={applyingAddendumByShot?.[idx] ?? null}
           />;
         })}
       </motion.div>
@@ -532,6 +553,12 @@ const ShotCard = ({
   isRegenerating,
   onRegenerateShot,
   isThisShotRegenerating,
+  feedback,
+  onFeedbackChange,
+  critique,
+  onRunCritique,
+  onApplyAddendum,
+  applyingAddendum,
 }: {
   result: ShotResult;
   idx: number;
@@ -544,10 +571,37 @@ const ShotCard = ({
   isRegenerating?: boolean;
   onRegenerateShot?: () => void;
   isThisShotRegenerating?: boolean;
+  feedback: ShotFeedback;
+  onFeedbackChange?: (next: ShotFeedback) => void;
+  critique: ShotCritiqueState | null;
+  onRunCritique?: () => void;
+  onApplyAddendum?: (addendum: string) => void;
+  applyingAddendum: string | null;
 }) => {
   const { t } = useLanguage();
   const [refinementsOpen, setRefinementsOpen] = useState(false);
   const [notesOpen, setNotesOpen] = useState(false);
+  const [critiqueOpen, setCritiqueOpen] = useState(false);
+
+  const fixChips: FixChip[] = useMemo(
+    () =>
+      detectMissingDimensions({
+        mainPrompt: result.mainPrompt,
+        cameraSuggestions: result.cameraSuggestions,
+        cameraTags: result.cameraTags,
+        shotStructure: result.shotStructure,
+      }),
+    [result.mainPrompt, result.cameraSuggestions, result.cameraTags, result.shotStructure],
+  );
+
+  const handleApplyFix = (addendum: string) => {
+    if (!onApplyAddendum) return;
+    onApplyAddendum(addendum);
+  };
+  const handleOpenCritique = () => {
+    setCritiqueOpen(true);
+    if (!critique?.result && !critique?.loading && onRunCritique) onRunCritique();
+  };
 
   return (
     <Card className={`bg-card border-border relative ${isThisShotRegenerating ? "opacity-70" : ""}`}>
@@ -567,6 +621,28 @@ const ShotCard = ({
             </span>
           )}
           <span className="text-accent flex-1">{result.shotName || `${t("library.shot")} ${idx + 1}`}</span>
+          {onRunCritique && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleOpenCritique}
+                  disabled={isThisShotRegenerating}
+                  className="h-7 px-2 text-xs text-muted-foreground hover:text-primary"
+                >
+                  <Sparkles className="w-3.5 h-3.5 sm:me-1" />
+                  <span className="hidden sm:inline">{t("results.critique.button" as any)}</span>
+                  {critique?.result && (
+                    <span className="ms-1 text-[10px] font-mono px-1 rounded bg-primary/15 text-primary">
+                      {critique.result.score}
+                    </span>
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent><p className="max-w-xs">{t("results.critique.hint" as any)}</p></TooltipContent>
+            </Tooltip>
+          )}
           {onRegenerateShot && (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -622,8 +698,37 @@ const ShotCard = ({
               <ResultCard label={t("results.modelNotes")} value={result.modelNotes} />
             </CollapsibleContent>
           </Collapsible>
+
+          {onApplyAddendum && (
+            <AutoFixChips
+              chips={fixChips}
+              onApply={(c) => handleApplyFix(c.addendum)}
+              applyingDim={applyingAddendum && fixChips.find((c) => c.addendum === applyingAddendum)?.dimension || null}
+              disabled={isRegenerating || isThisShotRegenerating}
+            />
+          )}
+
+          {onFeedbackChange && (
+            <FeedbackBar feedback={feedback} onChange={onFeedbackChange} />
+          )}
         </div>
       </CardContent>
+
+      {onRunCritique && (
+        <CritiqueDialog
+          open={critiqueOpen}
+          onOpenChange={setCritiqueOpen}
+          critique={critique?.result ?? null}
+          loading={!!critique?.loading}
+          error={critique?.error ?? null}
+          onRun={onRunCritique}
+          onApply={(s) => {
+            setCritiqueOpen(false);
+            handleApplyFix(s.addendum);
+          }}
+          applyingAddendum={applyingAddendum}
+        />
+      )}
     </Card>
   );
 };

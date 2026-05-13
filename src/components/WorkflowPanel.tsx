@@ -96,6 +96,13 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
     createdAt: number;
   }>>([]);
 
+  // Quality & evaluation loop — per-shot state, reset whenever results object identity changes.
+  type ShotFeedback = { liked: boolean | null; reasons: string[]; note: string };
+  type ShotCritique = { result: any | null; loading: boolean; error: string | null };
+  const [feedbackByShot, setFeedbackByShot] = useState<Record<number, ShotFeedback>>({});
+  const [critiqueByShot, setCritiqueByShot] = useState<Record<number, ShotCritique>>({});
+  const [applyingAddendumByShot, setApplyingAddendumByShot] = useState<Record<number, string | null>>({});
+
   const [phase, setPhase] = useState<Phase>("upload");
   const [sceneFrames, setSceneFrames] = useState<SceneFrame[]>([]);
   const [elementDirections, setElementDirections] = useState<ElementDirections>({});
@@ -181,7 +188,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
       const preview = URL.createObjectURL(file);
       setImages([{ file, preview }]);
       setResults(null);
-      setHistory([]);
+      setHistory([]); setFeedbackByShot({}); setCritiqueByShot({});
       setPhase("upload");
       setSceneFrames([]);
       setElementDirections({});
@@ -354,7 +361,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
     setPhase("upload");
     setSceneFrames([]);
     setElementDirections({});
-    setHistory([]);
+    setHistory([]); setFeedbackByShot({}); setCritiqueByShot({});
   }, []);
 
   const handleImageRemove = useCallback((index: number) => {
@@ -437,7 +444,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
     }
   };
 
-  const handleGenerate = async (opts?: { compact?: boolean; replaceShotIdx?: number }) => {
+  const handleGenerate = async (opts?: { compact?: boolean; replaceShotIdx?: number; addendum?: string }) => {
     if (!hasRequiredImages) return;
     if (!user) {
       toast({ title: t("wp.signInRequired"), description: t("wp.signInGenerate"), variant: "destructive" });
@@ -445,12 +452,26 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
       return;
     }
     const isShotRegen = typeof opts?.replaceShotIdx === "number" && results && results[opts.replaceShotIdx];
+    const addendum = opts?.addendum?.trim() || undefined;
     if (isShotRegen) {
       setRegeneratingShotIdx(opts!.replaceShotIdx!);
+      if (addendum) {
+        setApplyingAddendumByShot((prev) => ({ ...prev, [opts!.replaceShotIdx!]: addendum }));
+      }
     } else {
       setIsLoading(true);
       setResults(null);
+      // Full regenerate clears per-shot critiques; feedback is preserved (it's intentional bias).
+      setCritiqueByShot({});
     }
+
+    // Resolve feedback to send: per-shot if regenerating one shot, else first-shot feedback as a hint.
+    const feedbackPayload = (() => {
+      const target = isShotRegen ? opts!.replaceShotIdx! : 0;
+      const fb = feedbackByShot[target];
+      if (!fb || (fb.liked === null && fb.reasons.length === 0 && !fb.note)) return undefined;
+      return { liked: fb.liked, reasons: fb.reasons, note: fb.note || undefined };
+    })();
 
     try {
       const imageBase64s = await Promise.all(images.filter(Boolean).map((img) => compressImage(img.file)));
@@ -538,6 +559,8 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
             ? Math.min(10, Math.max(contract.multiShotCount ?? 0, elementsPayload.length))
             : undefined,
           compactMode: opts?.compact === true ? true : undefined,
+          addendum,
+          feedback: feedbackPayload,
         },
       });
 
@@ -565,6 +588,9 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
         const idx = opts!.replaceShotIdx!;
         const newShot = data.results[idx] ?? data.results[0];
         finalResults = results.map((r, i) => (i === idx ? newShot : r));
+        // Reset critique + clear feedback for the regenerated shot since the prompt changed.
+        setCritiqueByShot((prev) => { const n = { ...prev }; delete n[idx]; return n; });
+        setFeedbackByShot((prev) => { const n = { ...prev }; delete n[idx]; return n; });
       }
       setResults(finalResults);
       setAgentName(data.agentName ?? null);
@@ -632,8 +658,47 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
     } finally {
       setIsLoading(false);
       setRegeneratingShotIdx(null);
+      if (typeof opts?.replaceShotIdx === "number") {
+        setApplyingAddendumByShot((prev) => { const n = { ...prev }; delete n[opts.replaceShotIdx!]; return n; });
+      }
     }
   };
+
+  const handleRunCritique = useCallback(async (shotIdx: number) => {
+    if (!results || !results[shotIdx]) return;
+    setCritiqueByShot((prev) => ({ ...prev, [shotIdx]: { result: null, loading: true, error: null } }));
+    try {
+      const { data, error } = await supabase.functions.invoke("critique-prompt", {
+        body: {
+          result: results[shotIdx],
+          targetModel: selectedModel,
+          workflowType,
+          description,
+        },
+      });
+      if (error) {
+        const parsed = await parseEdgeFnError(error);
+        setCritiqueByShot((prev) => ({ ...prev, [shotIdx]: { result: null, loading: false, error: parsed.serverMessage || t("results.critique.failed" as any) } }));
+        return;
+      }
+      if (data?.error || typeof data?.score !== "number") {
+        setCritiqueByShot((prev) => ({ ...prev, [shotIdx]: { result: null, loading: false, error: data?.error || t("results.critique.failed" as any) } }));
+        return;
+      }
+      setCritiqueByShot((prev) => ({ ...prev, [shotIdx]: { result: data, loading: false, error: null } }));
+    } catch (err: any) {
+      setCritiqueByShot((prev) => ({ ...prev, [shotIdx]: { result: null, loading: false, error: err?.message || "Unknown error" } }));
+    }
+  }, [results, selectedModel, workflowType, description, t]);
+
+  const handleApplyAddendum = useCallback((shotIdx: number, addendum: string) => {
+    handleGenerate({ replaceShotIdx: shotIdx, addendum });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [results, selectedModel, workflowType, description, feedbackByShot]);
+
+  const handleFeedbackChange = useCallback((shotIdx: number, next: ShotFeedback) => {
+    setFeedbackByShot((prev) => ({ ...prev, [shotIdx]: next }));
+  }, []);
 
   // Slot labels from contract (translation keys)
   const slotLabels: string[] = (() => {
@@ -703,7 +768,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
       setMultiShotMode(mode === "multishot");
       setImages([]);
       setResults(null);
-      setHistory([]);
+      setHistory([]); setFeedbackByShot({}); setCritiqueByShot({});
       setPhase("upload");
     };
     const currentMode: "single" | "twoframe" | "multishot" =
@@ -1049,7 +1114,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
         setSceneFrames([]);
         setElementDirections({});
         setResults(null);
-        setHistory([]);
+        setHistory([]); setFeedbackByShot({}); setCritiqueByShot({});
       }}
       aria-label={t("wp.startOver")}
       title={t("wp.startOver")}
@@ -1151,6 +1216,12 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
               isMultiShot={workflowType === "multishot"}
               regeneratingShotIdx={regeneratingShotIdx}
               onRegenerateShot={workflowType === "multishot" ? (idx) => handleGenerate({ replaceShotIdx: idx }) : undefined}
+              feedbackByShot={feedbackByShot}
+              onFeedbackChange={handleFeedbackChange}
+              critiqueByShot={critiqueByShot}
+              onRunCritique={handleRunCritique}
+              onApplyAddendum={handleApplyAddendum}
+              applyingAddendumByShot={applyingAddendumByShot}
             />
           </motion.div>
         ) : (
