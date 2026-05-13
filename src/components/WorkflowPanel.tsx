@@ -40,6 +40,7 @@ import { parseEdgeFnError, pickErrorKey } from "@/lib/edgeFnError";
 import { detectAllIntents } from "@/lib/sceneIntent";
 import { ModelPicker } from "./ModelPicker";
 import { OnboardingExamples, type OnboardingExample } from "./OnboardingExamples";
+import { EmptyStateExamples } from "./EmptyStateExamples";
 
 const ONBOARDING_DONE_KEY = "movprompt.firstGenerationDone";
 
