@@ -11,9 +11,9 @@ import {
   Sparkles,
   Copy,
   Check,
-  Twitter,
-  Instagram,
-  Youtube,
+  Twitter as TwitterIcon,
+  Instagram as InstagramIcon,
+  Youtube as YoutubeIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LanguageToggle } from "@/components/LanguageToggle";
