@@ -91,7 +91,7 @@ export default function Landing() {
       <header className="relative z-20 border-b border-border/40">
         <div className="container max-w-[1200px] mx-auto px-4 h-14 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2">
-            <img src={logoMark} alt="MovPrompt" className="w-7 h-7" />
+            <img src={logoMark} alt="" className="w-7 h-7" />
             <span className="font-display font-bold text-lg tracking-tight">
               <span className="text-primary">Mov</span>Prompt
             </span>
@@ -325,7 +325,7 @@ export default function Landing() {
       <footer className="relative z-10 border-t border-border/40">
         <div className="container max-w-[1200px] mx-auto px-4 py-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
           <Link to="/" className="flex items-center gap-2">
-            <img src={logoMark} alt="MovPrompt" className="w-5 h-5" />
+            <img src={logoMark} alt="" className="w-5 h-5" />
             <span className="font-display font-semibold">
               <span className="text-primary">Mov</span>Prompt
             </span>
