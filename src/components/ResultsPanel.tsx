@@ -184,7 +184,7 @@ const MainPromptHero = ({ value, result, modelLabel, modelValue, onSwitchModel, 
   return (
     <div className="relative rounded-xl p-4 sm:p-5 bg-card border border-primary/40">
       {result.recommendedModel && (
-        <div className="mb-3 rounded-lg border-s-4 border-primary bg-primary/10 border border-primary/30 px-3 py-2.5 shadow-[0_0_20px_-8px_hsl(var(--primary)/0.6)]">
+        <div className="mb-3 rounded-lg border-s-4 border-primary bg-primary/5 border border-primary/30 px-3 py-2.5">
           <div className="flex items-start justify-between gap-3 flex-wrap">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1.5 mb-1">
