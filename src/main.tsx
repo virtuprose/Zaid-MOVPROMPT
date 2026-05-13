@@ -2,6 +2,9 @@ import { createRoot } from "react-dom/client";
 import { LanguageProvider } from "./i18n/LanguageContext";
 import App from "./App.tsx";
 import "./index.css";
+import { captureRefFromUrl } from "./lib/referrals";
+
+captureRefFromUrl();
 
 // Hide splash screen once React mounts
 const splash = document.getElementById("splash");
