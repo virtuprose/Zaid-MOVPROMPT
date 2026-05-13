@@ -854,10 +854,20 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
             acc.push(
               <div
                 key="arrow"
-                className="hidden sm:flex items-center justify-center self-center"
+                className="hidden sm:flex items-center justify-center self-center relative"
+                style={{ width: 64, height: 32 }}
                 aria-hidden="true"
               >
-                <ArrowRight size={32} className="text-primary animate-pulse-glow" />
+                <div
+                  className="absolute left-0 right-0 top-1/2 -translate-y-1/2"
+                  style={{ borderTop: "1px dashed hsl(var(--primary))", opacity: 0.6 }}
+                />
+                <div
+                  className="relative inline-flex items-center justify-center rounded-full bg-background"
+                  style={{ width: 32, height: 32, border: "1px dashed hsl(var(--primary))" }}
+                >
+                  <ArrowRight size={18} className="text-primary" />
+                </div>
               </div>
             );
           }
@@ -1388,7 +1398,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
     <div className="w-full max-w-[1400px] mx-auto">
       <div className="lg:grid lg:grid-cols-[40fr_60fr] lg:gap-8 space-y-6 lg:space-y-0 pb-24 lg:pb-0">
         <div>{leftPanel}</div>
-        <div className="rounded-2xl border border-border bg-card/40 p-4 sm:p-6">
+        <div className="rounded-2xl border border-border bg-card/40 p-4 sm:p-6 lg:self-start">
           {rightPanel}
         </div>
       </div>

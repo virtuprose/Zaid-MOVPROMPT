@@ -45,7 +45,7 @@ export const ImageUploadZone = ({ label, onImageSelect, onImageRemove, preview }
   }, [select]);
 
   return (
-    <div className="relative w-full min-w-0" data-tour="image-upload">
+    <div className="relative w-full h-full min-w-0 flex" data-tour="image-upload">
       <AnimatePresence mode="wait">
         {preview ? (
           <motion.div
@@ -53,18 +53,18 @@ export const ImageUploadZone = ({ label, onImageSelect, onImageRemove, preview }
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
-            className="flex flex-col gap-2"
+            className="flex flex-col gap-2 w-full h-full"
           >
             <div
-              className="relative rounded-xl"
-              style={{ background: "#0F0F11", border: "1px solid #27272A", padding: 12 }}
+              className="relative rounded-xl flex items-center justify-center flex-1 min-h-0"
+              style={{ background: "#0F0F11", border: "1px solid #27272A", padding: 12, minHeight: 240 }}
             >
               <img
                 src={preview}
                 alt={label}
                 loading="lazy"
                 decoding="async"
-                className="w-full max-h-[400px] object-contain rounded-md"
+                className="max-w-full max-h-[380px] w-auto h-auto object-contain rounded-md"
               />
               <button
                 onClick={() => { setMeta(null); onImageRemove(); }}
@@ -78,7 +78,11 @@ export const ImageUploadZone = ({ label, onImageSelect, onImageRemove, preview }
               </button>
             </div>
             {meta && (
-              <p className="text-[13px] text-center" style={{ color: "#71717A" }}>
+              <p
+                className="text-[13px] text-center truncate whitespace-nowrap overflow-hidden max-w-full px-2"
+                style={{ color: "#71717A" }}
+                title={`${meta.name} · ${formatBytes(meta.size)}`}
+              >
                 {meta.name} · {formatBytes(meta.size)}
               </p>
             )}
