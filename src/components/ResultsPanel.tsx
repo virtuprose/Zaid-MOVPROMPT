@@ -242,10 +242,16 @@ const MainPromptHero = ({ value, result, modelLabel, modelValue, onSwitchModel, 
         const len = value.length;
         const over = !!limit && len > limit;
         if (!limit) return <p className="text-xs text-muted-foreground italic mb-3">{t("results.pasteHint")}</p>;
+        const ratio = len / limit;
+        const counterColor = ratio > 0.95
+          ? "text-destructive font-semibold"
+          : ratio >= 0.8
+            ? "text-primary font-medium"
+            : "text-muted-foreground";
         return (
           <div className="mb-3 space-y-2">
             <div className="flex items-center justify-between gap-2 flex-wrap text-xs">
-              <span className={`font-mono inline-flex items-center gap-1.5 ${over ? "text-destructive font-semibold" : "text-muted-foreground"}`}>
+              <span className={`font-mono inline-flex items-center gap-1.5 ${counterColor}`}>
                 {over && <AlertTriangle className="w-3.5 h-3.5" />}
                 {len.toLocaleString()} / {limit.toLocaleString()} {t("results.chars")}
               </span>
