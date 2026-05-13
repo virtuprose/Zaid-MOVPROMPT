@@ -104,6 +104,9 @@ const Index = () => {
                   <DropdownMenuItem onClick={() => navigate("/gallery")}>
                     <Sparkles className="w-4 h-4 me-2" /> Public gallery
                   </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate("/referrals")}>
+                    <Gift className="w-4 h-4 me-2" /> Refer friends
+                  </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={signOut}>
                     <LogOut className="w-4 h-4 me-2" /> {t("auth.signOut")}
