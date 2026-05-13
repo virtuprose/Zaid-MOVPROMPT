@@ -808,9 +808,9 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
 
   const uploadBlock = !contract.supportsElementReferences ? (
     activeSlots === 2 ? (
-      <div className="flex flex-col sm:flex-row sm:items-stretch gap-4 sm:gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-stretch gap-4 sm:gap-4 w-full min-w-0">
         {[0, 1].map((i) => (
-          <div key={i} className="flex-1 flex flex-col">
+          <div key={i} className="flex-1 min-w-0 flex flex-col">
             <span className="block text-[11px] font-bold uppercase tracking-[0.14em] text-primary mb-2">
               {i === 0 ? t("upload.startFrame" as any) : `${t("upload.endFrame" as any)} (Optional)`}
             </span>
