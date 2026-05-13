@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 120" fill="none">
-  <path d="M76 14 L100 14 L52 106 L20 106 Z" fill="#E89B3C"/>
-  <text x="118" y="78" font-family="'Space Grotesk','Trebuchet MS',sans-serif" font-weight="700" font-size="56" letter-spacing="-1.5" fill="#F0F0F5">Mov<tspan fill="#E89B3C">Prompt</tspan></text>
-  <text x="120" y="102" font-family="'Inter','Calibri',sans-serif" font-size="10" letter-spacing="3" fill="#8888AA">AI CINEMATOGRAPHY PROMPT PLATFORM</text>
+  <path d="M52 20 L88 20 L32 100 Z" fill="#E89B3C"/>
+  <text x="110" y="78" font-family="'Space Grotesk','Trebuchet MS',sans-serif" font-weight="700" font-size="56" letter-spacing="-1.5" fill="#F0F0F5">Mov<tspan fill="#E89B3C">Prompt</tspan></text>
+  <text x="112" y="102" font-family="'Inter','Calibri',sans-serif" font-size="10" letter-spacing="3" fill="#8888AA">AI CINEMATOGRAPHY PROMPT PLATFORM</text>
 </svg>

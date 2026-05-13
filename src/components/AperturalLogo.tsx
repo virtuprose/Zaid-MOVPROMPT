@@ -4,7 +4,8 @@ interface Props {
 }
 
 /**
- * MovPrompt mark: an amber slanted wedge / cinematic slash.
+ * MovPrompt mark: amber asymmetric triangular wedge.
+ * Top edge horizontal, sharp point at lower-left.
  */
 export const AperturalLogo = ({ size = 28, className }: Props) => (
   <svg
@@ -17,7 +18,7 @@ export const AperturalLogo = ({ size = 28, className }: Props) => (
     aria-hidden="true"
   >
     <path
-      d="M22 3.5 L26 3.5 L12.5 28.5 L6 28.5 Z"
+      d="M14 7 L23 7 L9 27 Z"
       fill="hsl(var(--accent))"
     />
   </svg>
