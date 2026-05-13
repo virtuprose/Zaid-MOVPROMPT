@@ -20,7 +20,7 @@ import exampleDesert from "@/assets/example-desert.jpg";
 import examplePortrait from "@/assets/example-portrait.jpg";
 import exampleTokyo from "@/assets/example-tokyo.jpg";
 
-const MODELS = ["Kling", "Veo", "Runway", "Seedance", "Sora", "Wan", "Hailuo"];
+const MODELS = ["Kling", "Veo", "Runway", "Seedance", "Sora", "Wan"];
 
 // Cinematography keywords highlighted in amber inside prompt snippets.
 const CINE_KEYWORDS = [
