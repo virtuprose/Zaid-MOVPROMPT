@@ -17,6 +17,9 @@ import NotificationBell from "@/components/NotificationBell";
 import exampleTokyo from "@/assets/example-tokyo.jpg";
 import exampleDesert from "@/assets/example-desert.jpg";
 import examplePortrait from "@/assets/example-portrait.jpg";
+import exampleKitchen from "@/assets/example-kitchen.jpg";
+import exampleCyberpunk from "@/assets/example-cyberpunk.jpg";
+import exampleUnderwater from "@/assets/example-underwater.jpg";
 
 interface GalleryPageProps {
   family?: typeof MODEL_FAMILIES[number];
