@@ -28,9 +28,9 @@ const Auth = () => {
   const [agreedToTerms, setAgreedToTerms] = useState(false);
 
   const FEATURES = [
-    { icon: Camera, title: t("auth.feat.dop.title"), description: t("auth.feat.dop.desc"), color: "text-muted-foreground" },
-    { icon: Layers, title: t("auth.feat.workflows.title"), description: t("auth.feat.workflows.desc"), color: "text-muted-foreground" },
-    { icon: History, title: t("auth.feat.save.title"), description: t("auth.feat.save.desc"), color: "text-muted-foreground" },
+    { icon: Camera, title: t("auth.feat.dop.title"), description: t("auth.feat.dop.desc"), color: "text-primary" },
+    { icon: Layers, title: t("auth.feat.workflows.title"), description: t("auth.feat.workflows.desc"), color: "text-[#F97316]" },
+    { icon: History, title: t("auth.feat.save.title"), description: t("auth.feat.save.desc"), color: "text-primary" },
   ];
 
   useEffect(() => {
@@ -146,7 +146,7 @@ const Auth = () => {
           
           <h1 className="text-3xl lg:text-5xl font-display font-bold leading-tight mb-3">
             {t("auth.heroTitle")}{" "}
-            <span className="text-brand">{t("auth.heroCinema")}</span>
+            <span className="text-primary">{t("auth.heroCinema")}</span>
           </h1>
           <p className="text-muted-foreground text-base lg:text-lg mb-8 max-w-md">
             {t("auth.heroDesc")}
@@ -237,7 +237,7 @@ const Auth = () => {
                 {/* Email tabs */}
                 <Tabs defaultValue="signin" className="w-full">
                   <TabsList className="grid grid-cols-2 w-full">
-                    <TabsTrigger value="signin" className="data-[state=active]:bg-brand data-[state=active]:text-brand-foreground">{t("auth.signIn")}</TabsTrigger>
+                    <TabsTrigger value="signin" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">{t("auth.signIn")}</TabsTrigger>
                     <TabsTrigger value="signup">{t("auth.signUp")}</TabsTrigger>
                   </TabsList>
 
