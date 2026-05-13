@@ -127,7 +127,7 @@ const Auth = () => {
     <div className="min-h-screen bg-background relative overflow-hidden">
       <Seo
         title="Sign in or sign up — MovPrompt"
-        description="Sign in to MovPrompt to turn any still into a director-grade cinematic video prompt for Veo, Kling, Seedance, Runway, Sora and more."
+        description="Sign in to MovPrompt to turn any still into a director-grade cinematic video prompt for Veo, Kling, Runway, and Seedance."
         path="/auth"
       />
       <h1 className="sr-only">Sign in to MovPrompt</h1>
