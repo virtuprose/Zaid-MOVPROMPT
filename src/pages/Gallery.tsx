@@ -45,15 +45,18 @@ type ProviderCard = {
 };
 
 const PROVIDER_CARDS: ProviderCard[] = [
-  { key: "veo", name: "Veo", vendor: "Google DeepMind", description: "Cinematic prompts for Veo 3 and Veo 3.1.", count: 142, slug: "google-veo", initial: "V" },
-  { key: "kling", name: "Kling", vendor: "Kuaishou", description: "Director-grade prompts for Kling 2.5 → 3.0 Omni.", count: 98, slug: "kling", initial: "K" },
-  { key: "seedance", name: "Seedance", vendor: "ByteDance", description: "Fast, punchy prompts for Seedance Pro and 2.0.", count: 76, slug: "seedance", initial: "S" },
-  { key: "sora", name: "Sora", vendor: "OpenAI", description: "Long-form, story-driven prompts for Sora.", count: 0, initial: "S" },
-  { key: "runway", name: "Runway", vendor: "Runway ML", description: "Motion-focused prompts for Gen-3 Alpha.", count: 0, initial: "R" },
-  { key: "wan", name: "Wan", vendor: "Alibaba", description: "Stylised prompts for Wan 2.1.", count: 0, initial: "W" },
-  { key: "hailuo", name: "Hailuo", vendor: "MiniMax", description: "Character animation prompts for Hailuo.", count: 0, initial: "H" },
-  { key: "pika", name: "Pika", vendor: "Pika Labs", description: "Quick experimental prompts for Pika 2.0.", count: 0, initial: "P" },
+  { key: "veo", name: "Veo", vendor: "Google DeepMind", description: "Cinematic prompts for Veo 3 and Veo 3.1.", count: 142, slug: "google-veo", initial: "Ve" },
+  { key: "kling", name: "Kling", vendor: "Kuaishou", description: "Director-grade prompts for Kling 2.5 → 3.0 Omni.", count: 98, slug: "kling", initial: "Kl" },
+  { key: "seedance", name: "Seedance", vendor: "ByteDance", description: "Fast, punchy prompts for Seedance Pro and 2.0.", count: 76, slug: "seedance", initial: "Se" },
+  { key: "sora", name: "Sora", vendor: "OpenAI", description: "Long-form, story-driven prompts for Sora.", count: 0, initial: "So" },
+  { key: "runway", name: "Runway", vendor: "Runway ML", description: "Motion-focused prompts for Gen-3 Alpha.", count: 0, initial: "Ru" },
+  { key: "wan", name: "Wan", vendor: "Alibaba", description: "Stylised prompts for Wan 2.1.", count: 0, initial: "Wa" },
+  { key: "hailuo", name: "Hailuo", vendor: "MiniMax", description: "Character animation prompts for Hailuo.", count: 0, initial: "Ha" },
+  { key: "pika", name: "Pika", vendor: "Pika Labs", description: "Quick experimental prompts for Pika 2.0.", count: 0, initial: "Pi" },
 ];
+
+// Flagship models get amber-FILLED pills; older variants get amber-OUTLINE pills.
+const FLAGSHIP_MODELS = new Set(["Veo 3.1", "Kling 3.0 Omni", "Seedance Pro"]);
 
 // ─────────────────────────────────────── Sample showcase data
 const SAMPLE_CARDS = [
@@ -79,24 +82,24 @@ const SAMPLE_CARDS = [
     likes: 167, copies: 72,
   },
   {
-    image: exampleTokyo,
+    image: exampleKitchen,
     model: "Veo 3",
-    title: "Rainy street reflections, vintage car pulls up",
-    snippet: "Static low-angle, puddle reflections of moving neon, classic sedan eases into frame headlights blooming, droplets streak windshield…",
+    title: "Steam-lit kitchen, sizzling pan close-up",
+    snippet: "Macro push-in on a sizzling pan, billowing steam catching warm tungsten light, shallow focus, anamorphic flare grazing the rim, amber/teal grade…",
     likes: 134, copies: 58,
   },
   {
-    image: exampleDesert,
+    image: exampleCyberpunk,
     model: "Kling 2.5 Turbo",
-    title: "Desert convoy, drone reveal",
-    snippet: "Aerial drone reveal pulling back from a single jeep cresting a dune, golden hour, long shadows raking across rippled sand…",
+    title: "Cyberpunk rooftop, neon skyline reveal",
+    snippet: "Slow crane-up behind a lone figure on a rain-slick rooftop, magenta and cyan holographic billboards bloom across the skyline, anamorphic widescreen…",
     likes: 121, copies: 49,
   },
   {
-    image: examplePortrait,
+    image: exampleUnderwater,
     model: "Seedance 2.0",
-    title: "Close-up — eyes open, slow blink",
-    snippet: "Extreme close-up on subject's eye, ambient practical light, soft slow blink revealing iris detail, faint bokeh of city lights behind…",
+    title: "Underwater diver, god-rays piercing the deep",
+    snippet: "Wide silhouette of a scuba diver suspended mid-water, volumetric god-rays slicing through deep blue, particles drifting, IMAX-style framing…",
     likes: 98, copies: 41,
   },
 ];
