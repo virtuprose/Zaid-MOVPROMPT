@@ -137,7 +137,7 @@ const Index = () => {
           >
             <img src={logoMark} alt="MovPrompt" className="w-9 h-9 sm:w-14 sm:h-14" />
             <h1 className="text-[26px] tracking-tight font-display sm:text-5xl font-bold">
-              Mov<span className="text-primary">Prompt</span>
+              Mov<span className="text-brand">Prompt</span>
             </h1>
           </button>
           <p
