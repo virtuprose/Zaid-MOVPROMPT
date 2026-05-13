@@ -1140,6 +1140,17 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
                 ? elementItems.map((el, idx) => ({ index: idx + 1, kind: el.kind, preview: el.preview }))
                 : undefined}
               onSwitchModel={selectedModel === "any" ? onSwitchModel : undefined}
+              history={history}
+              onRestoreSnapshot={(id) => {
+                const snap = history.find((h) => h.id === id);
+                if (!snap) return;
+                setResults(snap.results);
+                setAgentName(snap.agentName);
+                toast({ title: t("results.history.restored" as any) });
+              }}
+              isMultiShot={workflowType === "multishot"}
+              regeneratingShotIdx={regeneratingShotIdx}
+              onRegenerateShot={workflowType === "multishot" ? (idx) => handleGenerate({ replaceShotIdx: idx }) : undefined}
             />
           </motion.div>
         ) : (
