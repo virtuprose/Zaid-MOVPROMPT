@@ -28,9 +28,9 @@ const Auth = () => {
   const [agreedToTerms, setAgreedToTerms] = useState(false);
 
   const FEATURES = [
-    { icon: Camera, title: t("auth.feat.dop.title"), description: t("auth.feat.dop.desc"), color: "text-accent" },
-    { icon: Layers, title: t("auth.feat.workflows.title"), description: t("auth.feat.workflows.desc"), color: "text-accent" },
-    { icon: History, title: t("auth.feat.save.title"), description: t("auth.feat.save.desc"), color: "text-accent" },
+    { icon: Camera, title: t("auth.feat.dop.title"), description: t("auth.feat.dop.desc"), color: "text-muted-foreground" },
+    { icon: Layers, title: t("auth.feat.workflows.title"), description: t("auth.feat.workflows.desc"), color: "text-muted-foreground" },
+    { icon: History, title: t("auth.feat.save.title"), description: t("auth.feat.save.desc"), color: "text-muted-foreground" },
   ];
 
   useEffect(() => {
@@ -146,7 +146,7 @@ const Auth = () => {
           
           <h1 className="text-3xl lg:text-5xl font-display font-bold leading-tight mb-3">
             {t("auth.heroTitle")}{" "}
-            <span className="text-accent">{t("auth.heroCinema")}</span>
+            <span className="text-brand">{t("auth.heroCinema")}</span>
           </h1>
           <p className="text-muted-foreground text-base lg:text-lg mb-8 max-w-md">
             {t("auth.heroDesc")}
@@ -190,7 +190,7 @@ const Auth = () => {
             <div className="text-center mb-6">
               <img src="/logo-mark.svg" alt="" className="w-12 h-12 mx-auto mb-2" />
               <h2 className="text-2xl font-mono font-bold mb-1">
-                Mov<span className="text-primary">Prompt</span>
+                Mov<span className="text-brand">Prompt</span>
               </h2>
               <p className="text-sm text-muted-foreground">
                 {t("auth.mobileBrand")}
@@ -237,7 +237,7 @@ const Auth = () => {
                 {/* Email tabs */}
                 <Tabs defaultValue="signin" className="w-full">
                   <TabsList className="grid grid-cols-2 w-full">
-                    <TabsTrigger value="signin" className="data-[state=active]:bg-accent data-[state=active]:text-white">{t("auth.signIn")}</TabsTrigger>
+                    <TabsTrigger value="signin" className="data-[state=active]:bg-brand data-[state=active]:text-brand-foreground">{t("auth.signIn")}</TabsTrigger>
                     <TabsTrigger value="signup">{t("auth.signUp")}</TabsTrigger>
                   </TabsList>
 
@@ -267,7 +267,7 @@ const Auth = () => {
                           <Label htmlFor="signin-password">{t("auth.password")}</Label>
                           <Input id="signin-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
                         </div>
-                        <Button type="submit" className="w-full h-11 bg-accent text-white hover:bg-accent/90 hover:scale-[1.02] active:scale-[0.98]" disabled={loading}>
+                        <Button type="submit" className="w-full h-11 hover:scale-[1.02] active:scale-[0.98]" disabled={loading}>
                           {loading ? <Loader2 className="w-4 h-4 animate-spin me-2" /> : <Mail className="w-4 h-4 me-2" />}
                           {t("auth.signIn")}
                         </Button>
