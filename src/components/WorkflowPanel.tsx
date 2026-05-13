@@ -14,6 +14,7 @@ import { ElementGrid, type ElementItem } from "./ElementGrid";
 import { MentionTextarea } from "./MentionTextarea";
 import { SceneMentionTextarea, type SceneMentionTextareaHandle } from "./SceneMentionTextarea";
 import { extractVideoKeyframes, compressImageFile } from "@/lib/videoFrames";
+import { hashBase64, getCachedAnalysis, setCachedAnalysis } from "@/lib/imageCache";
 import { Sparkles, Loader2, ScanSearch, RotateCcw, RefreshCw, Info, Volume2, VolumeX, Zap, Clapperboard, ArrowRight, ArrowDown, ArrowLeft } from "lucide-react";
 import { PresetPickerPanel } from "./PresetPickerPanel";
 import {
@@ -377,29 +378,10 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
     ? elementItems.length >= 1
     : images.filter(Boolean).length >= 1;
 
-  const compressImage = (file: File, maxWidth = 1024, quality = 0.7): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement("canvas");
-        let w = img.width;
-        let h = img.height;
-        if (w > maxWidth) {
-          h = (h * maxWidth) / w;
-          w = maxWidth;
-        }
-        canvas.width = w;
-        canvas.height = h;
-        const ctx = canvas.getContext("2d")!;
-        ctx.drawImage(img, 0, 0, w, h);
-        const dataUrl = canvas.toDataURL("image/jpeg", quality);
-        resolve(dataUrl.split(",")[1]);
-        URL.revokeObjectURL(img.src);
-      };
-      img.onerror = reject;
-      img.src = URL.createObjectURL(file);
-    });
-  };
+  // Compression is centralized in `lib/videoFrames.compressImageFile`, which
+  // memoizes per-File so analyze → generate → re-roll reuses one base64 payload.
+  const compressImage = compressImageFile;
+
 
   const handleAnalyze = async () => {
     if (!hasRequiredImages) return;
@@ -418,11 +400,22 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
     setIsAnalyzing(true);
     try {
       const imageBase64s = await Promise.all(images.filter(Boolean).map((img) => compressImage(img.file)));
-      const { data, error } = await supabase.functions.invoke("analyze-scene", {
-        body: { images: imageBase64s },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
+
+      // Session cache: re-analyzing the same uploads (e.g. after navigating
+      // back) is instant and skips a full vision-model round-trip.
+      const cacheKey = imageBase64s.map(hashBase64);
+      const cached = getCachedAnalysis<{ frames: SceneFrame[] }>(cacheKey);
+      const data = cached
+        ? cached
+        : await (async () => {
+            const { data, error } = await supabase.functions.invoke("analyze-scene", {
+              body: { images: imageBase64s },
+            });
+            if (error) throw error;
+            if (data?.error) throw new Error(data.error);
+            setCachedAnalysis(cacheKey, { frames: data.frames || [] });
+            return data;
+          })();
 
       const frames: SceneFrame[] = data.frames || [];
       setSceneFrames(frames);
@@ -474,10 +467,12 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
     })();
 
     try {
-      const imageBase64s = await Promise.all(images.filter(Boolean).map((img) => compressImage(img.file)));
+      // Run all upload-prep stages truly in parallel — main images, references,
+      // and @Element items used to chain sequentially (3 awaits). With per-File
+      // memoization (lib/imageCache) re-runs become near-instant.
+      const imagesP = Promise.all(images.filter(Boolean).map((img) => compressImage(img.file)));
 
-      // Process references: images → resized base64; videos → keyframes; audio → metadata only
-      const referencesPayload = await Promise.all(
+      const referencesP = Promise.all(
         referenceItems.map(async (ref) => {
           if (ref.kind === "image") {
             const b64 = await compressImageFile(ref.file);
@@ -493,12 +488,11 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
             }
           }
           return { kind: "audio", role: ref.role, note: ref.note || undefined, filename: ref.file.name };
-        })
+        }),
       );
 
-      // Process @Element references (Seedance 2.0 / 2.0 Fast). Treated like references on the wire.
-      const elementsPayload = contract.supportsElementReferences
-        ? await Promise.all(
+      const elementsP = contract.supportsElementReferences
+        ? Promise.all(
             elementItems.map(async (el, idx) => {
               const base = { role: "style" as const, note: el.note || undefined, filename: el.file.name, index: idx + 1 };
               if (el.kind === "image") {
@@ -517,7 +511,13 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
               return { ...base, kind: "audio" };
             }),
           )
-        : [];
+        : Promise.resolve([] as any[]);
+
+      const [imageBase64s, referencesPayload, elementsPayload] = await Promise.all([
+        imagesP,
+        referencesP,
+        elementsP,
+      ]);
 
       const sceneBreakdown = sceneFrames.length > 0
         ? sceneFrames.map((frame) => ({

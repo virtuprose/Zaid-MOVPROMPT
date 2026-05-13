@@ -242,10 +242,10 @@ export const ElementGrid = ({ items, onChange, max = 10 }: ElementGridProps) => 
               }`}
             >
               {item.kind === "image" && item.preview && (
-                <img src={item.preview} alt="" className="w-full h-full object-cover" />
+                <img src={item.preview} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />
               )}
               {item.kind === "video" && item.preview && (
-                <video src={item.preview} className="w-full h-full object-cover" muted playsInline />
+                <video src={item.preview} preload="metadata" className="w-full h-full object-cover" muted playsInline />
               )}
               {item.kind === "audio" && (
                 <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-accent/20 to-primary/20">

@@ -444,8 +444,8 @@ export const ResultsPanel = forwardRef<HTMLDivElement, ResultsPanelProps>(({ res
                 <div key={el.index} className="flex items-center gap-1.5 rounded-md border border-border bg-card px-1.5 py-1">
                   <span className="text-[10px] font-mono font-bold text-primary">@Element {el.index}</span>
                   <div className="w-6 h-6 rounded overflow-hidden bg-secondary flex items-center justify-center">
-                    {el.kind === "image" && el.preview && <img src={el.preview} alt="" className="w-full h-full object-cover" />}
-                    {el.kind === "video" && el.preview && <video src={el.preview} className="w-full h-full object-cover" muted />}
+                    {el.kind === "image" && el.preview && <img src={el.preview} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />}
+                    {el.kind === "video" && el.preview && <video src={el.preview} preload="metadata" className="w-full h-full object-cover" muted />}
                     {el.kind === "audio" && <span className="text-[9px]">🔊</span>}
                   </div>
                 </div>

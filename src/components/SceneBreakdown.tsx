@@ -134,7 +134,7 @@ export const SceneBreakdown = ({ frames, frameLabels, framePreviews, directions,
                 className="flex items-center gap-3 pt-2 pb-1 border-b border-border/50"
               >
                 {preview ? (
-                  <img src={preview} alt={label} className="w-10 h-10 rounded-md object-cover border border-border/50 flex-shrink-0" />
+                  <img src={preview} alt={label} loading="lazy" decoding="async" className="w-10 h-10 rounded-md object-cover border border-border/50 flex-shrink-0" />
                 ) : (
                   <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center flex-shrink-0">
                     <Film className="w-4 h-4 text-muted-foreground" />

@@ -69,9 +69,17 @@ export async function extractVideoKeyframes(file: File, count = 3, maxWidth = 10
   });
 }
 
+import { getCachedCompression, setCachedCompression } from "./imageCache";
+
 export function compressImageFile(file: File, maxWidth = 1024, quality = 0.75): Promise<string> {
-  return new Promise((resolve, reject) => {
+  // Per-File cache: same upload reused across analyze + generate + regen
+  // skips canvas re-encoding entirely (typical save: 100-400ms per image).
+  const cached = getCachedCompression(file);
+  if (cached) return cached;
+
+  const promise = new Promise<string>((resolve, reject) => {
     const img = new Image();
+    const url = URL.createObjectURL(file);
     img.onload = () => {
       const canvas = document.createElement("canvas");
       let w = img.width;
@@ -85,10 +93,16 @@ export function compressImageFile(file: File, maxWidth = 1024, quality = 0.75): 
       const ctx = canvas.getContext("2d")!;
       ctx.drawImage(img, 0, 0, w, h);
       const dataUrl = canvas.toDataURL("image/jpeg", quality);
+      URL.revokeObjectURL(url);
       resolve(dataUrl.split(",")[1]);
-      URL.revokeObjectURL(img.src);
     };
-    img.onerror = reject;
-    img.src = URL.createObjectURL(file);
+    img.onerror = (e) => {
+      URL.revokeObjectURL(url);
+      reject(e);
+    };
+    img.src = url;
   });
+
+  setCachedCompression(file, promise);
+  return promise;
 }
