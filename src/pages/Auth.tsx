@@ -203,7 +203,6 @@ const Auth = () => {
           <div className="w-full max-w-sm">
             {/* Mobile brand header */}
             <div className="text-center mb-6">
-              <img src="/logo-mark.svg" alt="" className="w-12 h-12 mx-auto mb-2" />
               <h2 className="text-2xl font-mono font-bold mb-1">
                 <span className="text-primary">Mov</span>Prompt
               </h2>
@@ -212,7 +211,7 @@ const Auth = () => {
               </p>
             </div>
 
-            <Card className="bg-card border-border/60 shadow-lg shadow-black/20">
+            <Card className="bg-card border border-[#27272A] shadow-[inset_0_0_40px_0_hsl(38_91%_55%/0.08)]">
               <CardContent className="p-5 sm:p-6 space-y-5">
                 {/* Google */}
                 <Button
