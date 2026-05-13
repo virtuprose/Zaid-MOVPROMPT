@@ -530,6 +530,8 @@ const ShotCard = ({
   onSwitchModel,
   onRegenerateCompact,
   isRegenerating,
+  onRegenerateShot,
+  isThisShotRegenerating,
 }: {
   result: ShotResult;
   idx: number;
@@ -540,21 +542,48 @@ const ShotCard = ({
   onSwitchModel?: (value: string) => void;
   onRegenerateCompact?: () => void;
   isRegenerating?: boolean;
+  onRegenerateShot?: () => void;
+  isThisShotRegenerating?: boolean;
 }) => {
   const { t } = useLanguage();
   const [refinementsOpen, setRefinementsOpen] = useState(false);
   const [notesOpen, setNotesOpen] = useState(false);
 
   return (
-    <Card className="bg-card border-border">
+    <Card className={`bg-card border-border relative ${isThisShotRegenerating ? "opacity-70" : ""}`}>
+      {isThisShotRegenerating && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-background/40 backdrop-blur-[1px] pointer-events-none">
+          <div className="flex items-center gap-2 rounded-full border border-primary/40 bg-card/90 px-3 py-1.5 text-xs text-primary shadow">
+            <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+            {t("results.shotRegen.inProgress" as any)}
+          </div>
+        </div>
+      )}
       <CardHeader className="pb-3">
-        <CardTitle className="text-base font-display flex items-center gap-2">
+        <CardTitle className="text-base font-display flex items-center gap-2 flex-wrap">
           {total > 1 && (
             <span className="text-xs font-mono text-muted-foreground bg-secondary px-2 py-0.5 rounded">
               {idx + 1}/{total}
             </span>
           )}
-          <span className="text-accent">{result.shotName || `${t("library.shot")} ${idx + 1}`}</span>
+          <span className="text-accent flex-1">{result.shotName || `${t("library.shot")} ${idx + 1}`}</span>
+          {onRegenerateShot && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={onRegenerateShot}
+                  disabled={isRegenerating || isThisShotRegenerating}
+                  className="h-7 px-2 text-xs text-muted-foreground hover:text-primary"
+                >
+                  <Repeat className={`w-3.5 h-3.5 sm:me-1 ${isThisShotRegenerating ? "animate-spin" : ""}`} />
+                  <span className="hidden sm:inline">{t("results.shotRegen.label" as any)}</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent><p className="max-w-xs">{t("results.shotRegen.hint" as any)}</p></TooltipContent>
+            </Tooltip>
+          )}
         </CardTitle>
       </CardHeader>
       <CardContent>
