@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
-import { Eye, Loader2, Sparkles, Search, ArrowRight, Heart, Copy, ChevronDown, Bell } from "lucide-react";
+import { Eye, Loader2, Sparkles, Search, ArrowRight, Heart, Copy, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
