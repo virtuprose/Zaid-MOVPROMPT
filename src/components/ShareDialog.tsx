@@ -16,12 +16,14 @@ export const ShareDialog = ({ open, onOpenChange, payload }: ShareDialogProps) =
   const [creating, setCreating] = useState(false);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [submitToGallery, setSubmitToGallery] = useState(false);
 
   // Reset when dialog opens with a fresh payload.
   const handleOpen = (next: boolean) => {
     if (!next) {
       setShareUrl(null);
       setCopied(false);
+      setSubmitToGallery(false);
     }
     onOpenChange(next);
   };
@@ -30,8 +32,9 @@ export const ShareDialog = ({ open, onOpenChange, payload }: ShareDialogProps) =
     if (!payload) return;
     setCreating(true);
     try {
-      const { url } = await createSharedPrompt(payload);
+      const { url } = await createSharedPrompt({ ...payload, featured: submitToGallery });
       setShareUrl(url);
+      if (submitToGallery) toast.success("Submitted to public gallery");
     } catch (e: any) {
       console.error(e);
       toast.error(e?.message || "Could not create share link");
@@ -74,6 +77,18 @@ export const ShareDialog = ({ open, onOpenChange, payload }: ShareDialogProps) =
               <div>• Uploaded images are <span className="text-foreground">not</span> shared.</div>
               <div>• You can revoke the link anytime from this dialog.</div>
             </div>
+            <label className="flex items-start gap-2.5 rounded-md border border-border bg-card/40 p-3 cursor-pointer hover:border-primary/40 transition-colors">
+              <input
+                type="checkbox"
+                checked={submitToGallery}
+                onChange={(e) => setSubmitToGallery(e.target.checked)}
+                className="mt-0.5 h-4 w-4 accent-primary cursor-pointer"
+              />
+              <div className="text-xs leading-relaxed">
+                <div className="font-display font-semibold text-foreground">Submit to public gallery</div>
+                <div className="text-muted-foreground">Feature this prompt set on the VidoPrompt gallery and the matching model landing page.</div>
+              </div>
+            </label>
             <Button onClick={handleCreate} disabled={creating} className="w-full">
               {creating ? (
                 <>
