@@ -136,7 +136,7 @@ const ScriptedPrompt = ({ sections }: { sections: { header: string; body: string
       {sections.map((s, i) => (
         <Collapsible key={i} open={!!openMap[i]} onOpenChange={() => toggle(i)}>
           <CollapsibleTrigger className="flex w-full items-center justify-between gap-2 rounded-md px-3 py-2 bg-background/60 hover:bg-background border border-primary/20 transition-colors group">
-            <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-primary font-mono text-start">
+            <span className="text-[11px] font-bold uppercase tracking-[0.1em] text-primary font-mono text-start">
               [{s.header}]
             </span>
             <div className="flex items-center gap-1.5 shrink-0">
