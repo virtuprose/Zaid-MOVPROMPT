@@ -467,6 +467,51 @@ export type Database = {
         }
         Relationships: []
       }
+      shared_prompts: {
+        Row: {
+          agent_name: string | null
+          created_at: string
+          expires_at: string | null
+          id: string
+          results: Json
+          slug: string
+          target_model: string
+          title: string | null
+          updated_at: string
+          user_id: string
+          view_count: number
+          workflow_type: string
+        }
+        Insert: {
+          agent_name?: string | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          results: Json
+          slug: string
+          target_model: string
+          title?: string | null
+          updated_at?: string
+          user_id: string
+          view_count?: number
+          workflow_type: string
+        }
+        Update: {
+          agent_name?: string | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          results?: Json
+          slug?: string
+          target_model?: string
+          title?: string | null
+          updated_at?: string
+          user_id?: string
+          view_count?: number
+          workflow_type?: string
+        }
+        Relationships: []
+      }
       suppressed_emails: {
         Row: {
           created_at: string
@@ -587,6 +632,10 @@ export type Database = {
             }
             Returns: boolean
           }
+      increment_shared_prompt_views: {
+        Args: { _slug: string }
+        Returns: undefined
+      }
       move_to_dlq: {
         Args: {
           dlq_name: string

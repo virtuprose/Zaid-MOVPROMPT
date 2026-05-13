@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { ImageUploadZone } from "./ImageUploadZone";
 import { ConfigPanel } from "./ConfigPanel";
 import { ResultsPanel } from "./ResultsPanel";
+import { ShareDialog } from "./ShareDialog";
 import { ResultsSkeleton } from "./ResultsSkeleton";
 import { StoryboardSkeleton } from "./StoryboardSkeleton";
 import { AnalyzingSkeleton } from "./AnalyzingSkeleton";
@@ -87,6 +88,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
   const [agentName, setAgentName] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [regeneratingShotIdx, setRegeneratingShotIdx] = useState<number | null>(null);
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [history, setHistory] = useState<Array<{
     id: string;
     results: ShotResult[];
@@ -1222,6 +1224,18 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
               onRunCritique={handleRunCritique}
               onApplyAddendum={handleApplyAddendum}
               applyingAddendumByShot={applyingAddendumByShot}
+              onShare={user ? () => setShareDialogOpen(true) : undefined}
+            />
+            <ShareDialog
+              open={shareDialogOpen}
+              onOpenChange={setShareDialogOpen}
+              payload={user && results ? {
+                userId: user.id,
+                workflowType,
+                targetModel: selectedModel,
+                agentName,
+                results,
+              } : null}
             />
           </motion.div>
         ) : (
