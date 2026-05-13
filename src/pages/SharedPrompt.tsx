@@ -205,7 +205,7 @@ const SharedPrompt = () => {
                   <CardContent className="space-y-4 text-sm">
                     <section className="space-y-1.5">
                       <div className="flex items-center justify-between">
-                        <h3 className="text-[11px] font-display uppercase tracking-wider text-primary">Main prompt</h3>
+                        <h2 className="text-[11px] font-display uppercase tracking-wider text-primary">Main prompt</h2>
                         <CopyBtn text={shot.mainPrompt} />
                       </div>
                       <pre className="whitespace-pre-wrap font-mono text-xs leading-relaxed rounded-md border border-border bg-muted/40 p-3 text-foreground/90">
@@ -216,7 +216,7 @@ const SharedPrompt = () => {
                     {shot.negativePrompt && (
                       <section className="space-y-1.5">
                         <div className="flex items-center justify-between">
-                          <h3 className="text-[11px] font-display uppercase tracking-wider text-muted-foreground">Negative</h3>
+                          <h2 className="text-[11px] font-display uppercase tracking-wider text-muted-foreground">Negative</h2>
                           <CopyBtn text={shot.negativePrompt} />
                         </div>
                         <pre className="whitespace-pre-wrap font-mono text-xs leading-relaxed rounded-md border border-border bg-muted/30 p-3 text-foreground/80">
