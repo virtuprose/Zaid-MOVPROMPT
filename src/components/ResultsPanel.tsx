@@ -301,7 +301,7 @@ const SectionToggle = ({ label, count, open }: { label: string; count?: number; 
   </CollapsibleTrigger>
 );
 
-export const ResultsPanel = forwardRef<HTMLDivElement, ResultsPanelProps>(({ results, onRegenerate, onRegenerateCompact, isLoading, agentName, modelLabel, modelValue, stitchHint, elementsLegend, onSwitchModel, history, onRestoreSnapshot, isMultiShot, regeneratingShotIdx, onRegenerateShot, feedbackByShot, onFeedbackChange, critiqueByShot, onRunCritique, onApplyAddendum, applyingAddendumByShot }, ref) => {
+export const ResultsPanel = forwardRef<HTMLDivElement, ResultsPanelProps>(({ results, onRegenerate, onRegenerateCompact, isLoading, agentName, modelLabel, modelValue, stitchHint, elementsLegend, onSwitchModel, history, onRestoreSnapshot, isMultiShot, regeneratingShotIdx, onRegenerateShot, feedbackByShot, onFeedbackChange, critiqueByShot, onRunCritique, onApplyAddendum, applyingAddendumByShot, onShare }, ref) => {
   const { t } = useLanguage();
   const [allCopied, setAllCopied] = useState(false);
   const [compareOpen, setCompareOpen] = useState(false);
@@ -419,6 +419,18 @@ export const ResultsPanel = forwardRef<HTMLDivElement, ResultsPanelProps>(({ res
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent><p className="max-w-xs">{t("results.compare.hint" as any)}</p></TooltipContent>
+              </Tooltip>
+            )}
+
+            {onShare && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="outline" size="sm" onClick={onShare} className="px-2 sm:px-3">
+                    <Share2 className="w-3.5 h-3.5 sm:me-1.5" />
+                    <span className="hidden sm:inline">{t("results.share.label" as any) || "Share"}</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent><p className="max-w-xs">{t("results.share.hint" as any) || "Create a public link to these prompts"}</p></TooltipContent>
               </Tooltip>
             )}
 
