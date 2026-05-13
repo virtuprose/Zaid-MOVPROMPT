@@ -472,6 +472,12 @@ export const ResultsPanel = forwardRef<HTMLDivElement, ResultsPanelProps>(({ res
             isRegenerating={isLoading}
             onRegenerateShot={isMultiShot && results.length > 1 && onRegenerateShot ? () => onRegenerateShot(idx) : undefined}
             isThisShotRegenerating={regeneratingShotIdx === idx}
+            feedback={feedbackByShot?.[idx] ?? { liked: null, reasons: [], note: "" }}
+            onFeedbackChange={onFeedbackChange ? (next) => onFeedbackChange(idx, next) : undefined}
+            critique={critiqueByShot?.[idx] ?? null}
+            onRunCritique={onRunCritique ? () => onRunCritique(idx) : undefined}
+            onApplyAddendum={onApplyAddendum ? (text) => onApplyAddendum(idx, text) : undefined}
+            applyingAddendum={applyingAddendumByShot?.[idx] ?? null}
           />;
         })}
       </motion.div>
