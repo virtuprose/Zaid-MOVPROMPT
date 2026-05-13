@@ -271,7 +271,7 @@ const Auth = () => {
                         <p className="text-sm text-muted-foreground">{t("auth.resetDesc")}</p>
                         <div className="space-y-1.5">
                           <Label htmlFor="forgot-email">{t("auth.email")}</Label>
-                          <Input id="forgot-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                          <Input className="bg-[#161618] border border-[#27272A] text-foreground placeholder:text-[#71717A] rounded-lg px-4 py-[14px] h-auto focus-visible:border-primary/60 focus-visible:ring-0 focus-visible:ring-offset-0" id="forgot-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
                         </div>
                         <Button type="submit" className="w-full h-11 hover:scale-[1.02] active:scale-[0.98]" disabled={loading}>
                           {loading ? <Loader2 className="w-4 h-4 animate-spin me-2" /> : <Mail className="w-4 h-4 me-2" />}
@@ -285,11 +285,11 @@ const Auth = () => {
                       <form onSubmit={handleEmailSignIn} className="space-y-3 mt-3">
                         <div className="space-y-1.5">
                           <Label htmlFor="signin-email">{t("auth.email")}</Label>
-                          <Input id="signin-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                          <Input className="bg-[#161618] border border-[#27272A] text-foreground placeholder:text-[#71717A] rounded-lg px-4 py-[14px] h-auto focus-visible:border-primary/60 focus-visible:ring-0 focus-visible:ring-offset-0" id="signin-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
                         </div>
                         <div className="space-y-1.5">
                           <Label htmlFor="signin-password">{t("auth.password")}</Label>
-                          <Input id="signin-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                          <Input className="bg-[#161618] border border-[#27272A] text-foreground placeholder:text-[#71717A] rounded-lg px-4 py-[14px] h-auto focus-visible:border-primary/60 focus-visible:ring-0 focus-visible:ring-offset-0" id="signin-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
                         </div>
                         <Button type="submit" className="w-full h-11 hover:scale-[1.02] active:scale-[0.98]" disabled={loading}>
                           {loading ? <Loader2 className="w-4 h-4 animate-spin me-2" /> : <Mail className="w-4 h-4 me-2" />}
@@ -306,11 +306,11 @@ const Auth = () => {
                     <form onSubmit={handleEmailSignUp} className="space-y-3 mt-3">
                       <div className="space-y-1.5">
                         <Label htmlFor="signup-email">{t("auth.email")}</Label>
-                        <Input id="signup-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                        <Input className="bg-[#161618] border border-[#27272A] text-foreground placeholder:text-[#71717A] rounded-lg px-4 py-[14px] h-auto focus-visible:border-primary/60 focus-visible:ring-0 focus-visible:ring-offset-0" id="signup-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
                       </div>
                       <div className="space-y-1.5">
                         <Label htmlFor="signup-password">{t("auth.password")}</Label>
-                        <Input id="signup-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} />
+                        <Input className="bg-[#161618] border border-[#27272A] text-foreground placeholder:text-[#71717A] rounded-lg px-4 py-[14px] h-auto focus-visible:border-primary/60 focus-visible:ring-0 focus-visible:ring-offset-0" id="signup-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} />
                       </div>
                       <div className="space-y-1">
                         <div className="flex items-start gap-2">
