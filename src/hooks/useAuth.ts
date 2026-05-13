@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
+import { attributeStoredRefIfAny } from "@/lib/referrals";
 
 export const useAuth = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -17,6 +18,9 @@ export const useAuth = () => {
 
         // Send welcome email for first-time OAuth signups
         if (event === "SIGNED_IN" && session?.user) {
+          // Best-effort referral attribution (idempotent server-side)
+          attributeStoredRefIfAny().catch(() => {});
+
           const u = session.user;
           const isOAuth = u.app_metadata?.provider !== "email";
           const createdAt = new Date(u.created_at).getTime();
