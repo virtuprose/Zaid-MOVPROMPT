@@ -1110,20 +1110,59 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
     !contract.supportsElementReferences &&
     images.filter(Boolean).length === 0;
 
+  // On the breakdown/generate screen, collapse the model picker into a single-line strip.
+  const isBreakdownLike = phase === "breakdown" || phase === "generate";
+  const inferredModelLabel =
+    MODEL_GROUPS.flatMap((g) => g.models).find((m) => m.value === selectedModel)?.label ??
+    selectedModel;
+
+  const modelBlock = isBreakdownLike ? (
+    <div
+      className="flex items-center justify-between gap-3 rounded-lg px-3 py-2 border border-white/[0.06] bg-white/[0.02]"
+    >
+      <div className="flex items-center gap-2 min-w-0">
+        <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-display">
+          Model
+        </span>
+        <span className="text-sm font-display font-medium text-foreground truncate">
+          {inferredModelLabel}
+        </span>
+        {selectedModel === "any" && (
+          <span className="text-xs text-muted-foreground hidden sm:inline truncate">
+            — Universal Prompt
+          </span>
+        )}
+      </div>
+      <button
+        type="button"
+        onClick={() => setPhase("upload")}
+        className="text-xs font-medium hover:underline shrink-0"
+        style={{ color: "#F5A524" }}
+      >
+        Change
+      </button>
+    </div>
+  ) : (
+    <ModelPicker model={selectedModel} onModelChange={(v) => onSwitchModel?.(v)} />
+  );
+
   const leftPanel = (
     <div className="space-y-5">
       {workflowHeaderBlock}
       {modeToggleBlock}
       {showOnboarding && <OnboardingExamples onPick={handlePickExample} />}
       {uploadBlock}
-      <ModelPicker model={selectedModel} onModelChange={(v) => onSwitchModel?.(v)} />
-      {ctaRowBlock}
-      {descriptionBlock}
-      {!contract.supportsElementReferences && sceneFrames.length > 0 && (phase === "breakdown" || phase === "generate") && (
+      {modelBlock}
+      {/* On breakdown/generate: textarea first, then back/Generate at the bottom. */}
+      {isBreakdownLike && descriptionBlock}
+      {!contract.supportsElementReferences && sceneFrames.length > 0 && isBreakdownLike && (
         <p className="text-xs text-muted-foreground px-1 -mt-2">
           {t("scene.autoAssignedHint" as any)}
         </p>
       )}
+      {ctaRowBlock}
+      {/* On upload phase, description block (if any) renders after the CTA. */}
+      {!isBreakdownLike && descriptionBlock}
       {audioToggleBlock}
     </div>
   );
