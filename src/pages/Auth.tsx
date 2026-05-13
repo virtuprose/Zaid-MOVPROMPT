@@ -125,6 +125,12 @@ const Auth = () => {
 
   return (
     <div className="min-h-screen bg-background relative overflow-hidden">
+      <Seo
+        title="Sign in or sign up — MovPrompt"
+        description="Sign in to MovPrompt to turn any still into a director-grade cinematic video prompt for Veo, Kling, Seedance, Runway, Sora and more."
+        path="/auth"
+      />
+      <h1 className="sr-only">Sign in to MovPrompt</h1>
       {/* Ambient glows */}
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute top-0 left-1/4 w-[600px] h-[400px] bg-primary/8 rounded-full blur-[140px]" />
