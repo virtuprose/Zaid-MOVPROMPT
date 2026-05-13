@@ -1338,14 +1338,48 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
     </div>
   );
 
+  const mobileStickyCta = hasRequiredImages && phase === "upload" ? (
+    <div className="lg:hidden fixed inset-x-0 bottom-0 z-40 px-4 pt-3 pb-[calc(env(safe-area-inset-bottom)+12px)] bg-background/95 backdrop-blur-md border-t border-white/[0.06]">
+      <Button
+        size="lg"
+        onClick={handleAnalyze}
+        disabled={isAnalyzing}
+        aria-label={isAnalyzing ? t("wp.analyzingScene") : t("wp.analyzeScene")}
+        className="w-full font-display font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/25"
+      >
+        {isAnalyzing ? (
+          <><Loader2 className="w-5 h-5 me-2 animate-spin" /> {t("wp.analyzingScene")}</>
+        ) : (
+          <><Sparkles className="w-5 h-5 me-2" /> {t("wp.analyzeScene")}</>
+        )}
+      </Button>
+    </div>
+  ) : (phase === "breakdown" || phase === "generate") && !isLoading && !isAnalyzing ? (
+    <div className="lg:hidden fixed inset-x-0 bottom-0 z-40 px-4 pt-3 pb-[calc(env(safe-area-inset-bottom)+12px)] bg-background/95 backdrop-blur-md border-t border-white/[0.06]">
+      <Button
+        size="lg"
+        onClick={() => handleGenerate()}
+        disabled={isLoading}
+        className="w-full font-display font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/25"
+      >
+        {results ? (
+          <><RefreshCw className="w-4 h-4 me-2" /> {t("wp.regeneratePrompt")}</>
+        ) : (
+          <><Sparkles className="w-4 h-4 me-2" /> {t("wp.generatePrompt")}</>
+        )}
+      </Button>
+    </div>
+  ) : null;
+
   return (
     <div className="w-full max-w-[1400px] mx-auto">
-      <div className="lg:grid lg:grid-cols-[40fr_60fr] lg:gap-8 space-y-6 lg:space-y-0">
+      <div className="lg:grid lg:grid-cols-[40fr_60fr] lg:gap-8 space-y-6 lg:space-y-0 pb-24 lg:pb-0">
         <div>{leftPanel}</div>
-        <div className="rounded-2xl border border-border bg-card/40 p-6">
+        <div className="rounded-2xl border border-border bg-card/40 p-4 sm:p-6">
           {rightPanel}
         </div>
       </div>
+      {mobileStickyCta}
     </div>
   );
 };
