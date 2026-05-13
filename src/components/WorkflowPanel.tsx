@@ -972,59 +972,36 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
   );
 
   const ctaRowBlock = hasRequiredImages && phase === "upload" ? (
-    <div className="pt-6 mt-6">
-      <p
-        className="text-center mx-auto"
-        style={{
-          fontSize: "13px",
-          color: "#8888AA",
-          maxWidth: "440px",
-          marginBottom: "20px",
-        }}
+    <div className="pt-6 mt-6 space-y-3">
+      <Button
+        data-tour="analyze-button"
+        size="lg"
+        onClick={handleAnalyze}
+        disabled={isAnalyzing}
+        aria-label={isAnalyzing ? t("wp.analyzingScene") : t("wp.analyzeScene")}
+        aria-busy={isAnalyzing}
+        className="w-full font-display font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/25"
       >
-        {t("wp.analyzeDesc")}
-      </p>
-      <div className="flex flex-col items-center" style={{ gap: "12px" }}>
-        <Button
-          data-tour="analyze-button"
-          size="lg"
-          onClick={handleAnalyze}
-          disabled={isAnalyzing}
-          aria-label={isAnalyzing ? t("wp.analyzingScene") : t("wp.analyzeScene")}
-          aria-busy={isAnalyzing}
-          className="w-full font-display font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/25"
-        >
-          {isAnalyzing ? (
-            <><Loader2 className="w-5 h-5 me-2 animate-spin" aria-hidden="true" /> {t("wp.analyzingScene")}</>
-          ) : (
-            <><Sparkles className="w-5 h-5 me-2" aria-hidden="true" /> {t("wp.analyzeScene")}</>
-          )}
-        </Button>
-        <Button
+        {isAnalyzing ? (
+          <><Loader2 className="w-5 h-5 me-2 animate-spin" aria-hidden="true" /> {t("wp.analyzingScene")}</>
+        ) : (
+          <><Sparkles className="w-5 h-5 me-2" aria-hidden="true" /> {t("wp.analyzeScene")}</>
+        )}
+      </Button>
+      <div className="flex justify-center">
+        <button
           type="button"
           onClick={() => { setSceneFrames([]); setPhase("breakdown"); }}
           disabled={isAnalyzing}
           aria-label={t("wp.skip")}
-          style={{
-            backgroundColor: "#E6A020",
-            color: "#0A0A0F",
-            fontFamily: "'Space Grotesk', sans-serif",
-            fontWeight: 600,
-            fontSize: "15px",
-            padding: "14px 24px",
-            borderRadius: "12px",
-            boxShadow: "0 2px 12px rgba(230, 160, 32, 0.3)",
-            height: "auto",
-          }}
-          className="w-full hover:brightness-110 hover:shadow-[0_4px_18px_rgba(230,160,32,0.4)] focus-visible:ring-2 focus-visible:ring-[#E6A020] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0A0A0F] transition-all disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:brightness-100"
+          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50 disabled:pointer-events-none focus:outline-none focus-visible:underline"
         >
-          {isAnalyzing ? (
-            <><Loader2 className="w-5 h-5 me-2 animate-spin" aria-hidden="true" /> {t("wp.analyzingScene")}</>
-          ) : (
-            <>{t("wp.skip")} <span aria-hidden="true">→</span></>
-          )}
-        </Button>
+          {t("wp.skip")} <ArrowRight className="w-3.5 h-3.5 rtl:rotate-180" aria-hidden="true" />
+        </button>
       </div>
+      <p className="text-center text-xs text-muted-foreground/80 max-w-[420px] mx-auto">
+        Analyze for full element control. Skip for a fast generation.
+      </p>
     </div>
   ) : (phase === "breakdown" || phase === "generate") ? (
     <div className="pt-6 mt-6 border-t border-white/[0.06] flex flex-col items-center gap-3">
