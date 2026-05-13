@@ -1,18 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 120" fill="none">
-  
-  <g transform="translate(0,10) scale(0.5)">
-    <circle cx="100" cy="100" r="88" stroke="#00D4FF" stroke-width="4"></circle>
-    <line x1="100.0" y1="12.0" x2="117.0" y2="70.6" stroke="#00D4FF" stroke-width="2.5" stroke-opacity="0.6"></line>
-    <line x1="176.2" y1="56.0" x2="134.0" y2="100.0" stroke="#00D4FF" stroke-width="2.5" stroke-opacity="0.6"></line>
-    <line x1="176.2" y1="144.0" x2="117.0" y2="129.4" stroke="#00D4FF" stroke-width="2.5" stroke-opacity="0.6"></line>
-    <line x1="100.0" y1="188.0" x2="83.0" y2="129.4" stroke="#00D4FF" stroke-width="2.5" stroke-opacity="0.6"></line>
-    <line x1="23.8" y1="144.0" x2="66.0" y2="100.0" stroke="#00D4FF" stroke-width="2.5" stroke-opacity="0.6"></line>
-    <line x1="23.8" y1="56.0" x2="83.0" y2="70.6" stroke="#00D4FF" stroke-width="2.5" stroke-opacity="0.6"></line>
-    <circle cx="100" cy="100" r="34" stroke="#00D4FF" stroke-width="3"></circle>
-    <path d="M82 116V84L100 104L118 84V116" stroke="#00D4FF" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round"></path>
-  </g>
-  
-  <text x="118" y="62" font-family="&#39;Space Grotesk&#39;, &#39;Trebuchet MS&#39;, sans-serif" font-weight="700" font-size="40" letter-spacing="-0.8" fill="#F0F0F5">Mov<tspan fill="#00D4FF">Prompt</tspan></text>
-  
-  <text x="119" y="82" font-family="&#39;Inter&#39;, &#39;Calibri&#39;, sans-serif" font-size="13" letter-spacing="2" fill="#8888AA" text-transform="uppercase">TURN STILLS INTO CINEMA</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 120" fill="none">
+  <path d="M76 14 L100 14 L52 106 L20 106 Z" fill="#E89B3C"/>
+  <text x="118" y="78" font-family="'Space Grotesk','Trebuchet MS',sans-serif" font-weight="700" font-size="56" letter-spacing="-1.5" fill="#F0F0F5">Mov<tspan fill="#E89B3C">Prompt</tspan></text>
+  <text x="120" y="102" font-family="'Inter','Calibri',sans-serif" font-size="10" letter-spacing="3" fill="#8888AA">AI CINEMATOGRAPHY PROMPT PLATFORM</text>
 </svg>
