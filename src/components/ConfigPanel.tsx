@@ -23,7 +23,7 @@ export const ConfigPanel = ({ description, onDescriptionChange }: ConfigPanelPro
           <CollapsibleTrigger className="group w-full flex items-start justify-between gap-3 text-start hover:bg-secondary/30 -m-2 p-2 rounded-md transition-colors">
             <div className="flex-1 space-y-1">
               <div className="flex items-center gap-2 flex-wrap">
-                <Sparkles size={16} className="text-primary" />
+                <Sparkles size={16} className="text-muted-foreground" />
                 <h3 className="text-sm font-semibold font-display text-foreground">
                   {t("config.describeVision")}
                 </h3>

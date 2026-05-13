@@ -49,7 +49,7 @@ export const PresetPickerPanel = ({ description, onDescriptionChange, defaultOpe
       <div className="rounded-lg border border-border/50 bg-card/40 p-3 sm:p-4 space-y-3">
         <CollapsibleTrigger className="group w-full flex items-center justify-between gap-3 text-start hover:bg-secondary/30 -m-2 p-2 rounded-md transition-colors">
           <div className="flex items-center gap-2 flex-wrap">
-            <Sparkles size={16} className="text-primary" />
+            <Sparkles size={16} className="text-muted-foreground" />
             <h3 className="text-sm font-semibold font-display text-foreground">
               {t("config.augmentWithPresets")}
             </h3>

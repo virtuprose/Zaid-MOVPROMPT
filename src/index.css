@@ -114,30 +114,30 @@
 }
 
 .upload-zone-empty {
-  border: 2px dashed rgba(0, 212, 255, 0.2);
+  border: 2px dashed hsl(var(--border));
   background: transparent;
 }
 .upload-zone-idle:hover {
   animation: upload-border-pulse 1.5s ease-in-out infinite;
 }
 .upload-zone-dragging {
-  border: 2px solid #00D4FF !important;
-  background: rgba(0, 212, 255, 0.06) !important;
+  border: 2px solid hsl(var(--muted-foreground) / 0.6) !important;
+  background: hsl(var(--muted) / 0.4) !important;
   animation: none !important;
 }
 @keyframes upload-border-pulse {
-  0%, 100% { border-color: rgba(0, 212, 255, 0.2); }
-  50% { border-color: rgba(0, 212, 255, 0.5); }
+  0%, 100% { border-color: hsl(var(--border)); }
+  50% { border-color: hsl(var(--muted-foreground) / 0.5); }
 }
 
 .model-picker-content::-webkit-scrollbar { width: 8px; }
 .model-picker-content::-webkit-scrollbar-track { background: transparent; }
 .model-picker-content::-webkit-scrollbar-thumb {
-  background-color: rgba(0, 212, 255, 0.3);
+  background-color: hsl(var(--muted-foreground) / 0.3);
   border-radius: 8px;
 }
 .model-picker-content::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(0, 212, 255, 0.5);
+  background-color: hsl(var(--muted-foreground) / 0.5);
 }
 
 @keyframes preset-zoom-in { 0%,100% { transform: scale(0.85); } 50% { transform: scale(1.15); } }
@@ -171,7 +171,7 @@
 @keyframes preset-dutch { 0%,100% { transform: rotate(-12deg); } 50% { transform: rotate(12deg); } }
 
 @keyframes empty-border-pulse {
-  0%, 100% { border-color: rgba(0, 212, 255, 0.12); box-shadow: 0 0 0 rgba(0, 212, 255, 0); }
-  50% { border-color: rgba(0, 212, 255, 0.45); box-shadow: 0 0 24px rgba(0, 212, 255, 0.12); }
+  0%, 100% { border-color: hsl(var(--border)); box-shadow: 0 0 0 transparent; }
+  50% { border-color: hsl(var(--muted-foreground) / 0.4); box-shadow: 0 0 24px hsl(var(--muted-foreground) / 0.08); }
 }
 .empty-state-pulse { animation: empty-border-pulse 2s ease-in-out infinite; }

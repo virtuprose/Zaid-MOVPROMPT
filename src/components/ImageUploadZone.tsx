@@ -63,21 +63,21 @@ export const ImageUploadZone = ({ label, onImageSelect, onImageRemove, preview }
           >
             <input type="file" accept="image/*" onChange={handleFileInput} className="hidden" />
             {isDragging ? (
-              <ImageIcon style={{ width: 48, height: 48, color: "#00D4FF" }} />
+              <ImageIcon className="w-12 h-12 text-foreground" />
             ) : (
-              <Upload style={{ width: 48, height: 48, color: "#00D4FF" }} />
+              <Upload className="w-12 h-12 text-muted-foreground" />
             )}
             <div className="text-center">
               {isDragging ? (
-                <p style={{ fontSize: 16, color: "#00D4FF", fontWeight: 600 }}>
+                <p className="text-base font-semibold text-foreground">
                   {t("upload.release" as any)}
                 </p>
               ) : (
                 <>
-                  <p style={{ fontSize: 16, color: "#F0F0F5", fontWeight: 600 }}>
+                  <p className="text-base font-semibold text-foreground">
                     {t("upload.title" as any)}
                   </p>
-                  <p style={{ fontSize: 12, color: "#8888AA", marginTop: 4 }}>
+                  <p className="text-xs text-muted-foreground mt-1">
                     {t("upload.subtitle" as any)}
                   </p>
                 </>

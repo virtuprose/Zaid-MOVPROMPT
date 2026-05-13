@@ -49,7 +49,7 @@ export const ModelPicker = ({ model, onModelChange }: ModelPickerProps) => {
   return (
     <div data-tour="model-picker" className="rounded-xl border border-border bg-card/60 backdrop-blur-sm p-4 sm:p-5 space-y-2.5 sm:space-y-3 shadow-md">
       <div className="flex items-center gap-2">
-        <Sparkles className={cn("w-4 h-4 text-primary", flash && "animate-pulse")} />
+        <Sparkles className={cn("w-4 h-4 text-muted-foreground", flash && "animate-pulse")} />
         <Label className="text-sm font-medium font-display">{t("modelPicker.title" as any)}</Label>
       </div>
       <Select value={model} onValueChange={onModelChange}>
@@ -70,11 +70,11 @@ export const ModelPicker = ({ model, onModelChange }: ModelPickerProps) => {
             zIndex: 1000,
             maxHeight: 360,
             overflowY: "auto",
-            backgroundColor: "#141420",
-            border: "1px solid rgba(0,212,255,0.2)",
+            backgroundColor: "hsl(var(--popover))",
+            border: "1px solid hsl(var(--border))",
             borderRadius: 12,
-            boxShadow: "0 8px 40px rgba(0,0,0,0.8)",
-            scrollbarColor: "rgba(0,212,255,0.3) transparent",
+            boxShadow: "0 8px 40px rgba(0,0,0,0.6)",
+            scrollbarColor: "hsl(var(--muted-foreground) / 0.3) transparent",
             scrollbarWidth: "thin",
           }}
         >
