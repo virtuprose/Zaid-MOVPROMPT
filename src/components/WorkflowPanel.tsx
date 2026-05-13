@@ -786,8 +786,8 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
       }`;
 
     return (
-      <div className={`flex flex-wrap justify-center gap-2 ${widthClass} mx-auto`}>
-        <button onClick={() => setMode("single")} className={btn(currentMode === "single")}>
+      <div className={`flex sm:flex-wrap flex-nowrap overflow-x-auto sm:overflow-visible justify-start sm:justify-center gap-2 ${widthClass} mx-auto -mx-1 px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden snap-x snap-mandatory`}>
+        <button onClick={() => setMode("single")} className={`${btn(currentMode === "single")} snap-start shrink-0`}>
           {contract.supportsMultiShotToggle && !contract.supportsTwoFrameToggle
             ? t("contract.toggle.singleShot" as any)
             : t("contract.toggle.single" as any)}
