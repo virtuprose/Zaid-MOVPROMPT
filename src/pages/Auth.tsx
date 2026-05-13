@@ -30,7 +30,7 @@ const Auth = () => {
 
   const FEATURES = [
     { icon: Camera, title: t("auth.feat.dop.title"), description: t("auth.feat.dop.desc"), color: "text-primary" },
-    { icon: Layers, title: t("auth.feat.workflows.title"), description: t("auth.feat.workflows.desc"), color: "text-[#F97316]" },
+    { icon: Layers, title: t("auth.feat.workflows.title"), description: t("auth.feat.workflows.desc"), color: "text-primary" },
     { icon: History, title: t("auth.feat.save.title"), description: t("auth.feat.save.desc"), color: "text-primary" },
   ];
 
