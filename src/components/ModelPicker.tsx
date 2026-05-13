@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { MODEL_GROUPS, type ModelGroup, type ModelOption } from "@/lib/models";
 import { getContract } from "@/lib/modelContracts";
 import { useLanguage } from "@/i18n/LanguageContext";
-import { Sparkles, Search, HelpCircle } from "lucide-react";
+import { Sparkles, Search, HelpCircle, Pencil } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
