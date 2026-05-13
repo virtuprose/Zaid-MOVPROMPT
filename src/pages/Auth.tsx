@@ -30,7 +30,7 @@ const Auth = () => {
 
   const FEATURES = [
     { icon: Camera, title: t("auth.feat.dop.title"), description: t("auth.feat.dop.desc"), color: "text-primary" },
-    { icon: Layers, title: t("auth.feat.workflows.title"), description: t("auth.feat.workflows.desc"), color: "text-[#F97316]" },
+    { icon: Layers, title: t("auth.feat.workflows.title"), description: t("auth.feat.workflows.desc"), color: "text-primary" },
     { icon: History, title: t("auth.feat.save.title"), description: t("auth.feat.save.desc"), color: "text-primary" },
   ];
 
@@ -137,6 +137,14 @@ const Auth = () => {
         <div className="absolute bottom-0 right-1/4 w-[500px] h-[300px] bg-accent/6 rounded-full blur-[120px]" />
       </div>
 
+      {/* Top-left wordmark */}
+      <div className="absolute top-4 start-4 z-20">
+        <span className="font-display font-bold text-sm tracking-tight">
+          <span className="text-primary">Mov</span>
+          <span className="text-foreground">Prompt</span>
+        </span>
+      </div>
+
       {/* Language toggle */}
       <div className="absolute top-4 end-4 z-20">
         <LanguageToggle />
@@ -195,7 +203,6 @@ const Auth = () => {
           <div className="w-full max-w-sm">
             {/* Mobile brand header */}
             <div className="text-center mb-6">
-              <img src="/logo-mark.svg" alt="" className="w-12 h-12 mx-auto mb-2" />
               <h2 className="text-2xl font-mono font-bold mb-1">
                 <span className="text-primary">Mov</span>Prompt
               </h2>
@@ -204,7 +211,7 @@ const Auth = () => {
               </p>
             </div>
 
-            <Card className="bg-card border-border/60 shadow-lg shadow-black/20">
+            <Card className="bg-card border border-[#27272A] shadow-[inset_0_0_40px_0_hsl(38_91%_55%/0.08)]">
               <CardContent className="p-5 sm:p-6 space-y-5">
                 {/* Google */}
                 <Button
@@ -243,9 +250,19 @@ const Auth = () => {
 
                 {/* Email tabs */}
                 <Tabs defaultValue="signin" className="w-full">
-                  <TabsList className="grid grid-cols-2 w-full">
-                    <TabsTrigger value="signin" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">{t("auth.signIn")}</TabsTrigger>
-                    <TabsTrigger value="signup">{t("auth.signUp")}</TabsTrigger>
+                  <TabsList className="grid grid-cols-2 w-full bg-transparent p-0 h-auto rounded-none border-b border-[#27272A]">
+                    <TabsTrigger
+                      value="signin"
+                      className="rounded-none bg-transparent text-muted-foreground data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none border-b-2 border-transparent data-[state=active]:border-primary -mb-px py-2"
+                    >
+                      {t("auth.signIn")}
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="signup"
+                      className="rounded-none bg-transparent text-muted-foreground data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none border-b-2 border-transparent data-[state=active]:border-primary -mb-px py-2"
+                    >
+                      {t("auth.signUp")}
+                    </TabsTrigger>
                   </TabsList>
 
                   <TabsContent value="signin">
@@ -254,7 +271,7 @@ const Auth = () => {
                         <p className="text-sm text-muted-foreground">{t("auth.resetDesc")}</p>
                         <div className="space-y-1.5">
                           <Label htmlFor="forgot-email">{t("auth.email")}</Label>
-                          <Input id="forgot-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                          <Input className="bg-[#161618] border border-[#27272A] text-foreground placeholder:text-[#71717A] rounded-lg px-4 py-[14px] h-auto focus-visible:border-primary/60 focus-visible:ring-0 focus-visible:ring-offset-0" id="forgot-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
                         </div>
                         <Button type="submit" className="w-full h-11 hover:scale-[1.02] active:scale-[0.98]" disabled={loading}>
                           {loading ? <Loader2 className="w-4 h-4 animate-spin me-2" /> : <Mail className="w-4 h-4 me-2" />}
@@ -268,11 +285,11 @@ const Auth = () => {
                       <form onSubmit={handleEmailSignIn} className="space-y-3 mt-3">
                         <div className="space-y-1.5">
                           <Label htmlFor="signin-email">{t("auth.email")}</Label>
-                          <Input id="signin-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                          <Input className="bg-[#161618] border border-[#27272A] text-foreground placeholder:text-[#71717A] rounded-lg px-4 py-[14px] h-auto focus-visible:border-primary/60 focus-visible:ring-0 focus-visible:ring-offset-0" id="signin-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
                         </div>
                         <div className="space-y-1.5">
                           <Label htmlFor="signin-password">{t("auth.password")}</Label>
-                          <Input id="signin-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                          <Input className="bg-[#161618] border border-[#27272A] text-foreground placeholder:text-[#71717A] rounded-lg px-4 py-[14px] h-auto focus-visible:border-primary/60 focus-visible:ring-0 focus-visible:ring-offset-0" id="signin-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
                         </div>
                         <Button type="submit" className="w-full h-11 hover:scale-[1.02] active:scale-[0.98]" disabled={loading}>
                           {loading ? <Loader2 className="w-4 h-4 animate-spin me-2" /> : <Mail className="w-4 h-4 me-2" />}
@@ -289,11 +306,11 @@ const Auth = () => {
                     <form onSubmit={handleEmailSignUp} className="space-y-3 mt-3">
                       <div className="space-y-1.5">
                         <Label htmlFor="signup-email">{t("auth.email")}</Label>
-                        <Input id="signup-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                        <Input className="bg-[#161618] border border-[#27272A] text-foreground placeholder:text-[#71717A] rounded-lg px-4 py-[14px] h-auto focus-visible:border-primary/60 focus-visible:ring-0 focus-visible:ring-offset-0" id="signup-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
                       </div>
                       <div className="space-y-1.5">
                         <Label htmlFor="signup-password">{t("auth.password")}</Label>
-                        <Input id="signup-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} />
+                        <Input className="bg-[#161618] border border-[#27272A] text-foreground placeholder:text-[#71717A] rounded-lg px-4 py-[14px] h-auto focus-visible:border-primary/60 focus-visible:ring-0 focus-visible:ring-offset-0" id="signup-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} />
                       </div>
                       <div className="space-y-1">
                         <div className="flex items-start gap-2">
