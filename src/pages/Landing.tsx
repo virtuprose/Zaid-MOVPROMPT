@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { ArrowDown, Film, Layers, Clapperboard, Lock, Wand2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LanguageToggle } from "@/components/LanguageToggle";
+import { Seo } from "@/components/Seo";
 import logoMark from "@/assets/logo-mark.svg";
 import exampleDesert from "@/assets/example-desert.jpg";
 import examplePortrait from "@/assets/example-portrait.jpg";
