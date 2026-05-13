@@ -844,7 +844,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
                 style={{ marginTop: 8, marginBottom: -8 }}
                 aria-hidden="true"
               >
-                <ArrowDown size={24} style={{ color: "#8888AA" }} />
+                <ArrowDown size={32} className="text-primary animate-pulse-glow" />
               </div>
             )}
           </div>
@@ -857,7 +857,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
                 className="hidden sm:flex items-center justify-center self-center"
                 aria-hidden="true"
               >
-                <ArrowRight size={24} style={{ color: "#8888AA" }} />
+                <ArrowRight size={32} className="text-primary animate-pulse-glow" />
               </div>
             );
           }
@@ -998,7 +998,9 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
         disabled={!hasRequiredImages || isAnalyzing}
         aria-label={hasRequiredImages ? (isAnalyzing ? t("wp.analyzingScene") : t("wp.analyzeScene")) : "Upload an image to continue"}
         aria-busy={isAnalyzing}
-        className="w-full font-display font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/25 disabled:opacity-60 disabled:shadow-none"
+        className={!hasRequiredImages
+          ? "w-full font-display font-medium bg-transparent border border-dashed border-[#3F3F46] text-[#71717A] hover:bg-transparent hover:text-[#71717A] disabled:opacity-100"
+          : "w-full font-display font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/25"}
       >
         {!hasRequiredImages ? (
           <>Upload an image to continue</>
@@ -1014,7 +1016,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
           onClick={() => { setSceneFrames([]); setPhase("breakdown"); }}
           disabled={isAnalyzing}
           aria-label="Skip & Generate Now"
-          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50 disabled:pointer-events-none focus:outline-none focus-visible:underline"
+          className="inline-flex items-center gap-1.5 text-sm text-[#A1A1AA] hover:text-foreground transition-colors disabled:opacity-50 disabled:pointer-events-none focus:outline-none focus-visible:underline"
         >
           Skip &amp; Generate Now <ArrowRight className="w-3.5 h-3.5 rtl:rotate-180" aria-hidden="true" />
         </button>
