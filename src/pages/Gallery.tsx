@@ -17,6 +17,9 @@ import NotificationBell from "@/components/NotificationBell";
 import exampleTokyo from "@/assets/example-tokyo.jpg";
 import exampleDesert from "@/assets/example-desert.jpg";
 import examplePortrait from "@/assets/example-portrait.jpg";
+import exampleKitchen from "@/assets/example-kitchen.jpg";
+import exampleCyberpunk from "@/assets/example-cyberpunk.jpg";
+import exampleUnderwater from "@/assets/example-underwater.jpg";
 
 interface GalleryPageProps {
   family?: typeof MODEL_FAMILIES[number];
@@ -42,15 +45,18 @@ type ProviderCard = {
 };
 
 const PROVIDER_CARDS: ProviderCard[] = [
-  { key: "veo", name: "Veo", vendor: "Google DeepMind", description: "Cinematic prompts for Veo 3 and Veo 3.1.", count: 142, slug: "google-veo", initial: "V" },
-  { key: "kling", name: "Kling", vendor: "Kuaishou", description: "Director-grade prompts for Kling 2.5 → 3.0 Omni.", count: 98, slug: "kling", initial: "K" },
-  { key: "seedance", name: "Seedance", vendor: "ByteDance", description: "Fast, punchy prompts for Seedance Pro and 2.0.", count: 76, slug: "seedance", initial: "S" },
-  { key: "sora", name: "Sora", vendor: "OpenAI", description: "Long-form, story-driven prompts for Sora.", count: 0, initial: "S" },
-  { key: "runway", name: "Runway", vendor: "Runway ML", description: "Motion-focused prompts for Gen-3 Alpha.", count: 0, initial: "R" },
-  { key: "wan", name: "Wan", vendor: "Alibaba", description: "Stylised prompts for Wan 2.1.", count: 0, initial: "W" },
-  { key: "hailuo", name: "Hailuo", vendor: "MiniMax", description: "Character animation prompts for Hailuo.", count: 0, initial: "H" },
-  { key: "pika", name: "Pika", vendor: "Pika Labs", description: "Quick experimental prompts for Pika 2.0.", count: 0, initial: "P" },
+  { key: "veo", name: "Veo", vendor: "Google DeepMind", description: "Cinematic prompts for Veo 3 and Veo 3.1.", count: 142, slug: "google-veo", initial: "Ve" },
+  { key: "kling", name: "Kling", vendor: "Kuaishou", description: "Director-grade prompts for Kling 2.5 → 3.0 Omni.", count: 98, slug: "kling", initial: "Kl" },
+  { key: "seedance", name: "Seedance", vendor: "ByteDance", description: "Fast, punchy prompts for Seedance Pro and 2.0.", count: 76, slug: "seedance", initial: "Se" },
+  { key: "sora", name: "Sora", vendor: "OpenAI", description: "Long-form, story-driven prompts for Sora.", count: 0, initial: "So" },
+  { key: "runway", name: "Runway", vendor: "Runway ML", description: "Motion-focused prompts for Gen-3 Alpha.", count: 0, initial: "Ru" },
+  { key: "wan", name: "Wan", vendor: "Alibaba", description: "Stylised prompts for Wan 2.1.", count: 0, initial: "Wa" },
+  { key: "hailuo", name: "Hailuo", vendor: "MiniMax", description: "Character animation prompts for Hailuo.", count: 0, initial: "Ha" },
+  { key: "pika", name: "Pika", vendor: "Pika Labs", description: "Quick experimental prompts for Pika 2.0.", count: 0, initial: "Pi" },
 ];
+
+// Flagship models get amber-FILLED pills; older variants get amber-OUTLINE pills.
+const FLAGSHIP_MODELS = new Set(["Veo 3.1", "Kling 3.0 Omni", "Seedance Pro"]);
 
 // ─────────────────────────────────────── Sample showcase data
 const SAMPLE_CARDS = [
@@ -76,24 +82,24 @@ const SAMPLE_CARDS = [
     likes: 167, copies: 72,
   },
   {
-    image: exampleTokyo,
+    image: exampleKitchen,
     model: "Veo 3",
-    title: "Rainy street reflections, vintage car pulls up",
-    snippet: "Static low-angle, puddle reflections of moving neon, classic sedan eases into frame headlights blooming, droplets streak windshield…",
+    title: "Steam-lit kitchen, sizzling pan close-up",
+    snippet: "Macro push-in on a sizzling pan, billowing steam catching warm tungsten light, shallow focus, anamorphic flare grazing the rim, amber/teal grade…",
     likes: 134, copies: 58,
   },
   {
-    image: exampleDesert,
+    image: exampleCyberpunk,
     model: "Kling 2.5 Turbo",
-    title: "Desert convoy, drone reveal",
-    snippet: "Aerial drone reveal pulling back from a single jeep cresting a dune, golden hour, long shadows raking across rippled sand…",
+    title: "Cyberpunk rooftop, neon skyline reveal",
+    snippet: "Slow crane-up behind a lone figure on a rain-slick rooftop, magenta and cyan holographic billboards bloom across the skyline, anamorphic widescreen…",
     likes: 121, copies: 49,
   },
   {
-    image: examplePortrait,
+    image: exampleUnderwater,
     model: "Seedance 2.0",
-    title: "Close-up — eyes open, slow blink",
-    snippet: "Extreme close-up on subject's eye, ambient practical light, soft slow blink revealing iris detail, faint bokeh of city lights behind…",
+    title: "Underwater diver, god-rays piercing the deep",
+    snippet: "Wide silhouette of a scuba diver suspended mid-water, volumetric god-rays slicing through deep blue, particles drifting, IMAX-style framing…",
     likes: 98, copies: 41,
   },
 ];
@@ -102,38 +108,51 @@ const SAMPLE_CARDS = [
 const GalleryGrid = ({ items, sampleMode }: { items: GalleryItem[]; sampleMode: boolean }) => {
   if (sampleMode) {
     return (
-      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {SAMPLE_CARDS.map((c, i) => (
-          <article
-            key={i}
-            className="group relative overflow-hidden rounded-xl border border-border/60 bg-card/40 hover:border-primary/40 hover:bg-card/70 transition-colors flex flex-col"
-          >
-            <div className="relative aspect-video w-full overflow-hidden">
-              <img src={c.image} alt={c.title} loading="lazy" className="w-full h-full object-cover" />
-              <span className="absolute top-2 right-2 inline-flex items-center px-2 py-0.5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold uppercase tracking-wider">
-                Featured
-              </span>
-            </div>
-            <div className="p-4 flex flex-col gap-2 flex-1">
-              <div className="flex items-center gap-2 text-[10px] uppercase tracking-wider font-display">
-                <span className="rounded-full border border-primary/30 bg-primary/10 text-primary px-2 py-0.5">
-                  {c.model}
+      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 auto-rows-fr">
+        {SAMPLE_CARDS.map((c, i) => {
+          const isFlagship = FLAGSHIP_MODELS.has(c.model);
+          return (
+            <article
+              key={i}
+              className="group relative overflow-hidden rounded-xl border border-border/60 bg-card/40 hover:border-primary/40 hover:bg-card/70 transition-colors flex flex-col min-h-[420px] h-full"
+            >
+              <div className="relative aspect-video w-full overflow-hidden">
+                <img src={c.image} alt={c.title} loading="lazy" className="w-full h-full object-cover" />
+                <span className="absolute top-2 right-2 inline-flex items-center px-2 py-0.5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold uppercase tracking-wider">
+                  Featured
                 </span>
-                <span className="text-muted-foreground normal-case tracking-normal">@movprompt</span>
               </div>
-              <h3 className="font-display text-sm font-semibold leading-snug line-clamp-2 group-hover:text-primary transition-colors">
-                {c.title}
-              </h3>
-              <p className="text-xs text-muted-foreground line-clamp-3 font-mono leading-relaxed flex-1">
-                {c.snippet}
-              </p>
-              <div className="flex items-center gap-3 text-[11px] text-muted-foreground pt-1.5 border-t border-border/40">
-                <span className="inline-flex items-center gap-1"><Heart className="w-3 h-3" /> {c.likes}</span>
-                <span className="inline-flex items-center gap-1"><Copy className="w-3 h-3" /> {c.copies}</span>
+              <div className="p-4 flex flex-col gap-2 flex-1">
+                <div className="flex items-center gap-2 text-[10px] uppercase tracking-wider font-display">
+                  <span
+                    className={`rounded-full px-2 py-0.5 ${
+                      isFlagship
+                        ? "bg-primary text-primary-foreground border border-primary"
+                        : "border border-primary/40 text-primary bg-transparent"
+                    }`}
+                  >
+                    {c.model}
+                  </span>
+                  <span className="text-muted-foreground normal-case tracking-normal">@movprompt</span>
+                </div>
+                <h3 className="font-display text-sm font-semibold leading-snug line-clamp-2 text-foreground">
+                  {c.title}
+                </h3>
+                <p
+                  className="font-mono leading-relaxed flex-1 break-words"
+                  style={{ fontSize: "12px", color: "#A1A1AA", display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden", wordBreak: "normal", overflowWrap: "break-word" }}
+                >
+                  {c.snippet}
+                </p>
+                <div className="flex items-center gap-2 text-[11px] text-muted-foreground pt-2 mt-auto border-t border-border/40">
+                  <span className="inline-flex items-center gap-1"><Heart className="w-3 h-3" /> {c.likes} likes</span>
+                  <span className="opacity-50">·</span>
+                  <span className="inline-flex items-center gap-1"><Copy className="w-3 h-3" /> {c.copies} copies</span>
+                </div>
               </div>
-            </div>
-          </article>
-        ))}
+            </article>
+          );
+        })}
       </div>
     );
   }
@@ -196,13 +215,15 @@ const SiteFooter = () => (
           <ul className="space-y-2 text-sm">
             <li><Link to="/" className="text-muted-foreground hover:text-foreground transition-colors">Studio</Link></li>
             <li><Link to="/gallery" className="text-muted-foreground hover:text-foreground transition-colors">Gallery</Link></li>
-            <li><Link to="/learn" className="text-muted-foreground hover:text-foreground transition-colors">Learn</Link></li>
+            <li><Link to="/learn" className="text-muted-foreground hover:text-foreground transition-colors">Tutorials</Link></li>
           </ul>
         </div>
         <div>
           <div className="text-[11px] uppercase tracking-wider text-muted-foreground mb-3 font-semibold">Company</div>
           <ul className="space-y-2 text-sm">
             <li><Link to="/learn" className="text-muted-foreground hover:text-foreground transition-colors">About</Link></li>
+            <li><Link to="/learn" className="text-muted-foreground hover:text-foreground transition-colors">Blog</Link></li>
+            <li><Link to="/learn" className="text-muted-foreground hover:text-foreground transition-colors">Careers</Link></li>
             <li><a href="mailto:hello@movprompt.com" className="text-muted-foreground hover:text-foreground transition-colors">Contact</a></li>
           </ul>
         </div>
@@ -319,7 +340,7 @@ export const GalleryView = ({ family }: GalleryPageProps) => {
           <Wordmark />
           {user ? (
             <div className="flex items-center gap-1 sm:gap-2">
-              <Button asChild size="sm" variant="ghost"><Link to="/">Tool</Link></Button>
+              <Button asChild size="sm" variant="ghost"><Link to="/">Studio</Link></Button>
               <Button asChild size="sm" variant="ghost"><Link to="/gallery">Gallery</Link></Button>
               <Button asChild size="sm" variant="ghost"><Link to="/library">Prompt Library</Link></Button>
               <NotificationBell />
@@ -384,8 +405,8 @@ export const GalleryView = ({ family }: GalleryPageProps) => {
                     onClick={() => setFormatFilter(f)}
                     className={`text-[11px] uppercase tracking-wider font-display px-2.5 py-1 rounded-full border transition-colors ${
                       active
-                        ? "border-primary/50 bg-primary/10 text-primary"
-                        : "border-border bg-muted/30 text-muted-foreground hover:text-foreground"
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-primary/40 bg-transparent text-primary hover:bg-primary/10"
                     }`}
                   >
                     {f}
@@ -422,37 +443,56 @@ export const GalleryView = ({ family }: GalleryPageProps) => {
           <GalleryGrid items={visibleItems} sampleMode={visibleItems.length === 0} />
         )}
 
-        {/* BROWSE BY MODEL */}
-        {!family && (
-          <section className="pt-6 border-t border-border/40">
-            <h2 className="font-display text-lg font-semibold mb-4">Browse by model</h2>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
-              {PROVIDER_CARDS.map((p) => {
-                const inner = (
-                  <div className="rounded-xl border border-border/60 hover:border-primary/40 bg-card/40 hover:bg-card/70 transition-colors p-4 flex items-center gap-3 h-full">
-                    <div className="shrink-0 w-10 h-10 rounded-lg bg-primary/10 border border-primary/30 text-primary flex items-center justify-center font-display font-bold">
-                      {p.initial}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-display truncate">{p.vendor}</div>
-                      <div className="font-display font-semibold text-sm truncate">{p.name}</div>
-                      <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-1">{p.description}</p>
-                      <div className="text-[10px] text-primary mt-1 font-medium">
-                        {p.count > 0 ? `${p.count} prompts` : "Coming soon"}
+        {/* BROWSE BY MODEL — split into Available / Coming soon */}
+        {!family && (() => {
+          const available = PROVIDER_CARDS.filter((p) => p.count > 0);
+          const upcoming = PROVIDER_CARDS.filter((p) => p.count === 0);
+          return (
+            <section className="pt-6 border-t border-border/40 space-y-6">
+              <div>
+                <h2 className="font-display text-lg font-semibold mb-4">Available now</h2>
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {available.map((p) => (
+                    <Link key={p.key} to={`/models/${p.slug}`}>
+                      <div className="rounded-xl border border-border/60 hover:border-primary/40 bg-card/40 hover:bg-card/70 transition-colors p-4 flex items-center gap-3 h-full">
+                        <div className="shrink-0 w-10 h-10 rounded-lg bg-primary/10 border border-primary/30 text-primary flex items-center justify-center font-display font-bold text-xs">
+                          {p.initial}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-display truncate">{p.vendor}</div>
+                          <div className="font-display font-semibold text-sm truncate">{p.name}</div>
+                          <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-1">{p.description}</p>
+                          <div className="text-[10px] text-primary mt-1 font-medium">{p.count} prompts</div>
+                        </div>
+                        <ArrowRight className="w-4 h-4 text-muted-foreground shrink-0" />
                       </div>
-                    </div>
-                    <ArrowRight className="w-4 h-4 text-muted-foreground shrink-0" />
+                    </Link>
+                  ))}
+                </div>
+              </div>
+
+              {upcoming.length > 0 && (
+                <div>
+                  <h3 className="font-display text-xs uppercase tracking-wider text-muted-foreground mb-3">Coming soon</h3>
+                  <div className="flex flex-wrap gap-2 opacity-60">
+                    {upcoming.map((p) => (
+                      <div
+                        key={p.key}
+                        className="rounded-full border border-border/60 bg-card/40 px-3 py-1.5 flex items-center gap-2 text-xs"
+                      >
+                        <span className="w-5 h-5 rounded-full bg-primary/10 border border-primary/20 text-primary flex items-center justify-center text-[9px] font-display font-bold">
+                          {p.initial}
+                        </span>
+                        <span className="font-display font-medium">{p.name}</span>
+                        <span className="text-muted-foreground text-[10px]">· {p.vendor}</span>
+                      </div>
+                    ))}
                   </div>
-                );
-                return p.slug ? (
-                  <Link key={p.key} to={`/models/${p.slug}`}>{inner}</Link>
-                ) : (
-                  <div key={p.key} className="opacity-70 cursor-not-allowed">{inner}</div>
-                );
-              })}
-            </div>
-          </section>
-        )}
+                </div>
+              )}
+            </section>
+          );
+        })()}
 
         {/* CTA */}
         <Card className="border-primary/30 bg-primary/5">
