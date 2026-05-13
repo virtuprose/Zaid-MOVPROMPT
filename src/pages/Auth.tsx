@@ -15,6 +15,7 @@ import { Loader2, Mail, Camera, Layers, History } from "lucide-react";
 import { motion } from "framer-motion";
 import { InstallPrompt } from "@/components/InstallPrompt";
 import { LanguageToggle } from "@/components/LanguageToggle";
+import { Seo } from "@/components/Seo";
 
 const Auth = () => {
   const navigate = useNavigate();
