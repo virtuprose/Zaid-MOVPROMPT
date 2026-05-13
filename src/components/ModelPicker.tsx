@@ -78,6 +78,21 @@ export const ModelPicker = ({ model, onModelChange }: ModelPickerProps) => {
             scrollbarWidth: "thin",
           }}
         >
+          <div className="flex items-center gap-1.5 px-3 py-2 border-b border-border/60">
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground me-1">Providers</span>
+            {MODEL_GROUPS.map((g) => {
+              const initial = g.label.replace(/\(.+?\)/g, "").trim().charAt(0).toUpperCase();
+              return (
+                <span
+                  key={g.label}
+                  title={g.label}
+                  className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-secondary border border-border text-[10px] font-semibold text-muted-foreground"
+                >
+                  {initial}
+                </span>
+              );
+            })}
+          </div>
           <ModelRow
             value="any"
             label={t("config.anyModel")}
