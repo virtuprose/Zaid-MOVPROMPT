@@ -1,9 +1,12 @@
-import { Copy, Check, RefreshCw, Sparkles, ChevronDown, ClipboardCheck, Wand2, AlertTriangle } from "lucide-react";
+import { Copy, Check, RefreshCw, Sparkles, ChevronDown, ClipboardCheck, Wand2, AlertTriangle, History as HistoryIcon, GitCompare, Repeat } from "lucide-react";
 import { getModelLabel } from "@/lib/models";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState, forwardRef } from "react";
 import { motion } from "framer-motion";
 import { useLanguage } from "@/i18n/LanguageContext";
@@ -26,6 +29,16 @@ interface ShotResult {
   recommendedModelReason?: string;
 }
 
+interface GenerationSnapshot {
+  id: string;
+  results: ShotResult[];
+  agentName: string | null;
+  modelValue: string;
+  modelLabel: string;
+  workflowType: string;
+  createdAt: number;
+}
+
 interface ResultsPanelProps {
   results: ShotResult[];
   onRegenerate: () => void;
@@ -37,6 +50,11 @@ interface ResultsPanelProps {
   stitchHint?: boolean;
   elementsLegend?: { index: number; kind: "image" | "video" | "audio"; preview?: string }[];
   onSwitchModel?: (value: string) => void;
+  history?: GenerationSnapshot[];
+  onRestoreSnapshot?: (id: string) => void;
+  isMultiShot?: boolean;
+  regeneratingShotIdx?: number | null;
+  onRegenerateShot?: (shotIdx: number) => void;
 }
 
 const CopyButton = ({ text }: { text: string }) => {
@@ -267,9 +285,31 @@ const SectionToggle = ({ label, count, open }: { label: string; count?: number; 
   </CollapsibleTrigger>
 );
 
-export const ResultsPanel = forwardRef<HTMLDivElement, ResultsPanelProps>(({ results, onRegenerate, onRegenerateCompact, isLoading, agentName, modelLabel, modelValue, stitchHint, elementsLegend, onSwitchModel }, ref) => {
+export const ResultsPanel = forwardRef<HTMLDivElement, ResultsPanelProps>(({ results, onRegenerate, onRegenerateCompact, isLoading, agentName, modelLabel, modelValue, stitchHint, elementsLegend, onSwitchModel, history, onRestoreSnapshot, isMultiShot, regeneratingShotIdx, onRegenerateShot }, ref) => {
   const { t } = useLanguage();
   const [allCopied, setAllCopied] = useState(false);
+  const [compareOpen, setCompareOpen] = useState(false);
+  const [compareLeftId, setCompareLeftId] = useState<string | null>(null);
+  const [compareRightId, setCompareRightId] = useState<string | null>(null);
+
+  const formatRelative = (ts: number) => {
+    const diff = Math.max(0, Date.now() - ts);
+    const s = Math.floor(diff / 1000);
+    if (s < 60) return `${s}s ${t("results.history.ago" as any)}`;
+    const m = Math.floor(s / 60);
+    if (m < 60) return `${m}m ${t("results.history.ago" as any)}`;
+    const h = Math.floor(m / 60);
+    return `${h}h ${t("results.history.ago" as any)}`;
+  };
+
+  const openCompare = () => {
+    if (!history || history.length < 2) return;
+    setCompareLeftId(history[1].id);
+    setCompareRightId(history[0].id);
+    setCompareOpen(true);
+  };
+  const leftSnap = history?.find((h) => h.id === compareLeftId) ?? null;
+  const rightSnap = history?.find((h) => h.id === compareRightId) ?? null;
 
   const handleCopyAll = async () => {
     const allText = results.map((r, i) => {
@@ -303,7 +343,7 @@ export const ResultsPanel = forwardRef<HTMLDivElement, ResultsPanelProps>(({ res
               </span>
             )}
           </div>
-          <div className="flex gap-1.5 sm:gap-2">
+          <div className="flex gap-1.5 sm:gap-2 flex-wrap">
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button variant="outline" size="sm" onClick={handleCopyAll} className={`px-2 sm:px-3 ${allCopied ? "border-green-500/50 text-green-400" : ""}`}>
@@ -313,6 +353,59 @@ export const ResultsPanel = forwardRef<HTMLDivElement, ResultsPanelProps>(({ res
               </TooltipTrigger>
               <TooltipContent><p className="max-w-xs">{t("results.copyFullPackageHint")}</p></TooltipContent>
             </Tooltip>
+
+            {history && history.length > 0 && onRestoreSnapshot && (
+              <DropdownMenu>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="sm" className="px-2 sm:px-3">
+                        <HistoryIcon className="w-3.5 h-3.5 sm:me-1.5" />
+                        <span className="hidden sm:inline">{t("results.history.label" as any)}</span>
+                        <span className="ms-1 text-[10px] font-mono px-1 rounded bg-muted text-muted-foreground">{history.length}</span>
+                      </Button>
+                    </DropdownMenuTrigger>
+                  </TooltipTrigger>
+                  <TooltipContent><p className="max-w-xs">{t("results.history.hint" as any)}</p></TooltipContent>
+                </Tooltip>
+                <DropdownMenuContent align="end" className="w-72">
+                  <DropdownMenuLabel className="text-xs uppercase tracking-wider text-muted-foreground">
+                    {t("results.history.title" as any)}
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {history.map((snap, i) => (
+                    <DropdownMenuItem
+                      key={snap.id}
+                      onClick={() => onRestoreSnapshot(snap.id)}
+                      className="flex flex-col items-start gap-0.5 py-2"
+                    >
+                      <div className="flex items-center justify-between w-full gap-2">
+                        <span className="text-sm font-medium">
+                          {i === 0 ? t("results.history.current" as any) : `${t("results.history.version" as any)} ${history.length - i}`}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground font-mono">{formatRelative(snap.createdAt)}</span>
+                      </div>
+                      <div className="text-[11px] text-muted-foreground truncate w-full">
+                        {snap.modelLabel} · {snap.results.length} {snap.results.length === 1 ? t("library.shot") : t("library.shots" as any)}
+                      </div>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+
+            {history && history.length >= 2 && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="outline" size="sm" onClick={openCompare} className="px-2 sm:px-3">
+                    <GitCompare className="w-3.5 h-3.5 sm:me-1.5" />
+                    <span className="hidden sm:inline">{t("results.compare.label" as any)}</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent><p className="max-w-xs">{t("results.compare.hint" as any)}</p></TooltipContent>
+              </Tooltip>
+            )}
+
             <Button variant="outline" size="sm" onClick={onRegenerate} disabled={isLoading} className="px-2 sm:px-3">
               <RefreshCw className={`w-3.5 h-3.5 sm:me-1.5 ${isLoading ? "animate-spin" : ""}`} /> <span className="hidden sm:inline">{t("results.regenerate")}</span>
             </Button>
@@ -351,9 +444,78 @@ export const ResultsPanel = forwardRef<HTMLDivElement, ResultsPanelProps>(({ res
           if (isMeaningful(result.cameraTags)) refinements.push({ label: t("results.cameraTags"), value: result.cameraTags! });
           if (isMeaningful(result.referenceGuidance)) refinements.push({ label: t("results.referenceGuidance"), value: result.referenceGuidance! });
 
-          return <ShotCard key={idx} result={result} idx={idx} total={results.length} refinements={refinements} modelLabel={modelLabel} modelValue={modelValue} onSwitchModel={idx === 0 ? onSwitchModel : undefined} onRegenerateCompact={onRegenerateCompact} isRegenerating={isLoading} />;
+          return <ShotCard
+            key={idx}
+            result={result}
+            idx={idx}
+            total={results.length}
+            refinements={refinements}
+            modelLabel={modelLabel}
+            modelValue={modelValue}
+            onSwitchModel={idx === 0 ? onSwitchModel : undefined}
+            onRegenerateCompact={onRegenerateCompact}
+            isRegenerating={isLoading}
+            onRegenerateShot={isMultiShot && results.length > 1 && onRegenerateShot ? () => onRegenerateShot(idx) : undefined}
+            isThisShotRegenerating={regeneratingShotIdx === idx}
+          />;
         })}
       </motion.div>
+
+      {/* Compare dialog */}
+      <Dialog open={compareOpen} onOpenChange={setCompareOpen}>
+        <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="font-display flex items-center gap-2">
+              <GitCompare className="w-4 h-4 text-primary" />
+              {t("results.compare.title" as any)}
+            </DialogTitle>
+          </DialogHeader>
+          {history && history.length >= 2 && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
+              {[
+                { side: "left" as const, snap: leftSnap, setId: setCompareLeftId, id: compareLeftId },
+                { side: "right" as const, snap: rightSnap, setId: setCompareRightId, id: compareRightId },
+              ].map(({ side, snap, setId, id }) => (
+                <div key={side} className="space-y-2 min-w-0">
+                  <Select value={id ?? undefined} onValueChange={setId}>
+                    <SelectTrigger className="h-8 text-xs">
+                      <SelectValue placeholder={t("results.compare.pick" as any)} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {history.map((h, i) => (
+                        <SelectItem key={h.id} value={h.id}>
+                          {i === 0 ? t("results.history.current" as any) : `${t("results.history.version" as any)} ${history.length - i}`}
+                          {" · "}{h.modelLabel}
+                          {" · "}{formatRelative(h.createdAt)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {snap ? (
+                    <div className="space-y-2">
+                      {snap.results.map((r, ri) => (
+                        <div key={ri} className="rounded-md border border-border bg-card p-2.5">
+                          <div className="flex items-center justify-between mb-1.5 gap-2">
+                            <span className="text-[10px] uppercase tracking-wider text-accent font-display">
+                              {r.shotName || `${t("library.shot")} ${ri + 1}`}
+                            </span>
+                            <CopyButton text={r.mainPrompt} />
+                          </div>
+                          <p className="text-[12px] leading-relaxed whitespace-pre-wrap text-foreground/90">
+                            {r.mainPrompt}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-xs text-muted-foreground italic p-3">—</div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </TooltipProvider>
   );
 });
@@ -368,6 +530,8 @@ const ShotCard = ({
   onSwitchModel,
   onRegenerateCompact,
   isRegenerating,
+  onRegenerateShot,
+  isThisShotRegenerating,
 }: {
   result: ShotResult;
   idx: number;
@@ -378,21 +542,48 @@ const ShotCard = ({
   onSwitchModel?: (value: string) => void;
   onRegenerateCompact?: () => void;
   isRegenerating?: boolean;
+  onRegenerateShot?: () => void;
+  isThisShotRegenerating?: boolean;
 }) => {
   const { t } = useLanguage();
   const [refinementsOpen, setRefinementsOpen] = useState(false);
   const [notesOpen, setNotesOpen] = useState(false);
 
   return (
-    <Card className="bg-card border-border">
+    <Card className={`bg-card border-border relative ${isThisShotRegenerating ? "opacity-70" : ""}`}>
+      {isThisShotRegenerating && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-background/40 backdrop-blur-[1px] pointer-events-none">
+          <div className="flex items-center gap-2 rounded-full border border-primary/40 bg-card/90 px-3 py-1.5 text-xs text-primary shadow">
+            <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+            {t("results.shotRegen.inProgress" as any)}
+          </div>
+        </div>
+      )}
       <CardHeader className="pb-3">
-        <CardTitle className="text-base font-display flex items-center gap-2">
+        <CardTitle className="text-base font-display flex items-center gap-2 flex-wrap">
           {total > 1 && (
             <span className="text-xs font-mono text-muted-foreground bg-secondary px-2 py-0.5 rounded">
               {idx + 1}/{total}
             </span>
           )}
-          <span className="text-accent">{result.shotName || `${t("library.shot")} ${idx + 1}`}</span>
+          <span className="text-accent flex-1">{result.shotName || `${t("library.shot")} ${idx + 1}`}</span>
+          {onRegenerateShot && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={onRegenerateShot}
+                  disabled={isRegenerating || isThisShotRegenerating}
+                  className="h-7 px-2 text-xs text-muted-foreground hover:text-primary"
+                >
+                  <Repeat className={`w-3.5 h-3.5 sm:me-1 ${isThisShotRegenerating ? "animate-spin" : ""}`} />
+                  <span className="hidden sm:inline">{t("results.shotRegen.label" as any)}</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent><p className="max-w-xs">{t("results.shotRegen.hint" as any)}</p></TooltipContent>
+            </Tooltip>
+          )}
         </CardTitle>
       </CardHeader>
       <CardContent>

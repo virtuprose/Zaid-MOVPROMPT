@@ -85,6 +85,16 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
   const [results, setResults] = useState<ShotResult[] | null>(null);
   const [agentName, setAgentName] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [regeneratingShotIdx, setRegeneratingShotIdx] = useState<number | null>(null);
+  const [history, setHistory] = useState<Array<{
+    id: string;
+    results: ShotResult[];
+    agentName: string | null;
+    modelValue: string;
+    modelLabel: string;
+    workflowType: string;
+    createdAt: number;
+  }>>([]);
 
   const [phase, setPhase] = useState<Phase>("upload");
   const [sceneFrames, setSceneFrames] = useState<SceneFrame[]>([]);
@@ -171,6 +181,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
       const preview = URL.createObjectURL(file);
       setImages([{ file, preview }]);
       setResults(null);
+      setHistory([]);
       setPhase("upload");
       setSceneFrames([]);
       setElementDirections({});
@@ -343,6 +354,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
     setPhase("upload");
     setSceneFrames([]);
     setElementDirections({});
+    setHistory([]);
   }, []);
 
   const handleImageRemove = useCallback((index: number) => {
@@ -425,15 +437,20 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
     }
   };
 
-  const handleGenerate = async (opts?: { compact?: boolean }) => {
+  const handleGenerate = async (opts?: { compact?: boolean; replaceShotIdx?: number }) => {
     if (!hasRequiredImages) return;
     if (!user) {
       toast({ title: t("wp.signInRequired"), description: t("wp.signInGenerate"), variant: "destructive" });
       navigate("/auth");
       return;
     }
-    setIsLoading(true);
-    setResults(null);
+    const isShotRegen = typeof opts?.replaceShotIdx === "number" && results && results[opts.replaceShotIdx];
+    if (isShotRegen) {
+      setRegeneratingShotIdx(opts!.replaceShotIdx!);
+    } else {
+      setIsLoading(true);
+      setResults(null);
+    }
 
     try {
       const imageBase64s = await Promise.all(images.filter(Boolean).map((img) => compressImage(img.file)));
@@ -543,10 +560,30 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
         return;
       }
 
-      setResults(data.results);
+      let finalResults: ShotResult[] = data.results;
+      if (isShotRegen && results) {
+        const idx = opts!.replaceShotIdx!;
+        const newShot = data.results[idx] ?? data.results[0];
+        finalResults = results.map((r, i) => (i === idx ? newShot : r));
+      }
+      setResults(finalResults);
       setAgentName(data.agentName ?? null);
       setPhase("generate");
       trackGeneration(workflowType, selectedModel);
+      // Push snapshot to in-session history (cap 5)
+      const modelLabelNow = MODEL_GROUPS.flatMap(g => g.models).find(m => m.value === selectedModel)?.label ?? selectedModel;
+      setHistory((prev) => {
+        const snap = {
+          id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+          results: finalResults,
+          agentName: data.agentName ?? null,
+          modelValue: selectedModel,
+          modelLabel: modelLabelNow,
+          workflowType,
+          createdAt: Date.now(),
+        };
+        return [snap, ...prev].slice(0, 5);
+      });
       try {
         localStorage.setItem(ONBOARDING_DONE_KEY, "1");
         setHasGeneratedBefore(true);
@@ -594,6 +631,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
       toast({ title: t("wp.generationFailed"), description: err.message || t("wp.somethingWrongRetry"), variant: "destructive" });
     } finally {
       setIsLoading(false);
+      setRegeneratingShotIdx(null);
     }
   };
 
@@ -665,6 +703,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
       setMultiShotMode(mode === "multishot");
       setImages([]);
       setResults(null);
+      setHistory([]);
       setPhase("upload");
     };
     const currentMode: "single" | "twoframe" | "multishot" =
@@ -1010,6 +1049,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
         setSceneFrames([]);
         setElementDirections({});
         setResults(null);
+        setHistory([]);
       }}
       aria-label={t("wp.startOver")}
       title={t("wp.startOver")}
@@ -1100,6 +1140,17 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
                 ? elementItems.map((el, idx) => ({ index: idx + 1, kind: el.kind, preview: el.preview }))
                 : undefined}
               onSwitchModel={selectedModel === "any" ? onSwitchModel : undefined}
+              history={history}
+              onRestoreSnapshot={(id) => {
+                const snap = history.find((h) => h.id === id);
+                if (!snap) return;
+                setResults(snap.results);
+                setAgentName(snap.agentName);
+                toast({ title: t("results.history.restored" as any) });
+              }}
+              isMultiShot={workflowType === "multishot"}
+              regeneratingShotIdx={regeneratingShotIdx}
+              onRegenerateShot={workflowType === "multishot" ? (idx) => handleGenerate({ replaceShotIdx: idx }) : undefined}
             />
           </motion.div>
         ) : (
