@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef } from "react";
-import { motion } from "framer-motion";
-import { Lock, Play, Plus, X, User, Mountain, Sun, Cloud, Package, Palette, Film } from "lucide-react";
+import { useState, useEffect, useRef, useMemo } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Lock, Waves, Film } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -35,30 +35,56 @@ interface SceneBreakdownProps {
   onManualToggle?: (id: string) => void;
 }
 
-const categoryIcons: Record<string, React.ElementType> = {
-  Subject: User, Background: Mountain, Lighting: Sun, Atmosphere: Cloud, Objects: Package, Colors: Palette,
-};
+// Categories that should default to LOCK (static), others default to MOVE (animate).
+const LOCK_DEFAULT_CATEGORIES = new Set(["Background", "Objects", "Atmosphere"]);
 
 const categoryEmoji: Record<string, string> = {
-  Subject: "🎯", Background: "🏙", Lighting: "💡", Atmosphere: "🌤", Objects: "📦", Colors: "🎨",
+  Subject: "🎯",
+  Background: "🏙",
+  Lighting: "💡",
+  Atmosphere: "🌤",
+  Objects: "📦",
+  Colors: "🎨",
 };
 
-export const SceneBreakdown = ({ frames, frameLabels, framePreviews, directions, onDirectionsChange, onInsertMention, onManualToggle }: SceneBreakdownProps) => {
-  // Build a stable global 1-based index across all frames (left-to-right, frame-by-frame).
-  const globalIndexById = new Map<string, number>();
-  let counter = 0;
-  for (const frame of frames) {
-    for (const el of frame.elements) {
-      counter += 1;
-      globalIndexById.set(el.id, counter);
+const CATEGORY_ORDER = ["Subject", "Objects", "Background", "Lighting", "Atmosphere", "Colors"];
+
+const truncate = (text: string, max = 80) => {
+  if (!text) return "";
+  if (text.length <= max) return text;
+  const slice = text.slice(0, max);
+  const lastSpace = slice.lastIndexOf(" ");
+  return (lastSpace > 40 ? slice.slice(0, lastSpace) : slice).trimEnd() + "…";
+};
+
+export const SceneBreakdown = ({
+  frames,
+  frameLabels,
+  framePreviews,
+  directions,
+  onDirectionsChange,
+  onInsertMention,
+  onManualToggle,
+}: SceneBreakdownProps) => {
+  // Stable global 1-based index across all frames.
+  const globalIndexById = useMemo(() => {
+    const m = new Map<string, number>();
+    let counter = 0;
+    for (const frame of frames) {
+      for (const el of frame.elements) {
+        counter += 1;
+        m.set(el.id, counter);
+      }
     }
-  }
+    return m;
+  }, [frames]);
+
+  const [expandedDescriptions, setExpandedDescriptions] = useState<Set<string>>(new Set());
   const [expandedNotes, setExpandedNotes] = useState<Set<string>>(new Set());
   const [pulsing, setPulsing] = useState<Record<string, number>>({});
   const prevActionsRef = useRef<Record<string, string | undefined>>({});
   const { t } = useLanguage();
 
-  // Pulse the active button whenever an element's action changes (auto or manual).
   useEffect(() => {
     const prev = prevActionsRef.current;
     const changed: string[] = [];
@@ -86,12 +112,13 @@ export const SceneBreakdown = ({ frames, frameLabels, framePreviews, directions,
     return () => clearTimeout(timer);
   }, [directions]);
 
-  const toggleAction = (id: string) => {
+  const setAction = (id: string, action: "lock" | "move") => {
     onManualToggle?.(id);
     const current = directions[id];
+    if (current?.action === action) return;
     onDirectionsChange({
       ...directions,
-      [id]: { ...current, action: current.action === "lock" ? "move" : "lock" },
+      [id]: { ...current, action },
     });
   };
 
@@ -102,8 +129,8 @@ export const SceneBreakdown = ({ frames, frameLabels, framePreviews, directions,
     });
   };
 
-  const toggleNoteExpanded = (id: string) => {
-    setExpandedNotes((prev) => {
+  const toggleDescExpanded = (id: string) => {
+    setExpandedDescriptions((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
@@ -111,21 +138,111 @@ export const SceneBreakdown = ({ frames, frameLabels, framePreviews, directions,
     });
   };
 
+  // Batch actions
+  const applyAll = (action: "lock" | "move") => {
+    const next: ElementDirections = { ...directions };
+    for (const frame of frames) {
+      for (const el of frame.elements) {
+        onManualToggle?.(el.id);
+        next[el.id] = { ...next[el.id], action };
+      }
+    }
+    onDirectionsChange(next);
+  };
+
+  const applySmartDefaults = () => {
+    const next: ElementDirections = { ...directions };
+    for (const frame of frames) {
+      for (const el of frame.elements) {
+        onManualToggle?.(el.id);
+        next[el.id] = {
+          ...next[el.id],
+          action: LOCK_DEFAULT_CATEGORIES.has(el.category) ? "lock" : "move",
+        };
+      }
+    }
+    onDirectionsChange(next);
+  };
+
   const showFrameHeaders = frames.length > 1;
 
+  // Group elements by category within each frame, ordered consistently.
+  const groupByCategory = (elements: SceneElement[]) => {
+    const grouped = new Map<string, SceneElement[]>();
+    for (const el of elements) {
+      const list = grouped.get(el.category) ?? [];
+      list.push(el);
+      grouped.set(el.category, list);
+    }
+    return CATEGORY_ORDER.filter((c) => grouped.has(c)).map((c) => ({
+      category: c,
+      items: grouped.get(c)!,
+    }));
+  };
+
   return (
-    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
-      <div className="flex items-center gap-2 mb-2">
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="space-y-4"
+    >
+      <div className="flex items-center gap-2 mb-1">
         <h3 className="text-sm font-display font-semibold text-foreground">{t("scene.title")}</h3>
         <span className="text-xs text-muted-foreground">{t("scene.subtitle")}</span>
       </div>
 
+      {/* Batch action chips */}
+      <div className="flex items-center gap-1.5 flex-wrap">
+        <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-display me-1">
+          Quick set:
+        </span>
+        <button
+          type="button"
+          onClick={applySmartDefaults}
+          className="inline-flex items-center gap-1 text-[11px] uppercase tracking-wider font-display px-2.5 py-1 rounded-full transition-colors"
+          style={{
+            backgroundColor: "#F5A524",
+            color: "#000",
+            border: "1px solid #F5A524",
+          }}
+          title="Auto-assign Lock/Move based on element category"
+        >
+          ✨ Smart suggest
+        </button>
+        <button
+          type="button"
+          onClick={() => applyAll("lock")}
+          className="inline-flex items-center gap-1 text-[11px] uppercase tracking-wider font-display px-2.5 py-1 rounded-full border border-white/15 bg-transparent text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors"
+        >
+          <Lock className="w-3 h-3" /> Lock all
+        </button>
+        <button
+          type="button"
+          onClick={() => applyAll("move")}
+          className="inline-flex items-center gap-1 text-[11px] uppercase tracking-wider font-display px-2.5 py-1 rounded-full transition-colors"
+          style={{
+            border: "1px solid #F5A524",
+            color: "#F5A524",
+            backgroundColor: "transparent",
+          }}
+        >
+          <Waves className="w-3 h-3" /> Move all
+        </button>
+      </div>
+
+      {/* Helper strip — replaces "Mention element" pill */}
+      <p className="text-[13px]" style={{ color: "#A1A1AA" }}>
+        💡 Type <span className="font-mono text-primary">@</span> followed by an element number to reference it
+        (e.g. <span className="font-mono text-primary">@2</span> should turn toward camera).
+      </p>
+
       {frames.map((frame, frameIdx) => {
         const label = frameLabels[frameIdx] || `Frame ${frameIdx + 1}`;
         const preview = framePreviews[frameIdx];
+        const groups = groupByCategory(frame.elements);
 
         return (
-          <div key={frame.frameIndex} className="space-y-2">
+          <div key={frame.frameIndex} className="space-y-3">
             {showFrameHeaders && (
               <motion.div
                 initial={{ opacity: 0, x: -10 }}
@@ -134,138 +251,216 @@ export const SceneBreakdown = ({ frames, frameLabels, framePreviews, directions,
                 className="flex items-center gap-3 pt-2 pb-1 border-b border-border/50"
               >
                 {preview ? (
-                  <img src={preview} alt={label} loading="lazy" decoding="async" className="w-10 h-10 rounded-md object-cover border border-border/50 flex-shrink-0" />
+                  <img
+                    src={preview}
+                    alt={label}
+                    loading="lazy"
+                    decoding="async"
+                    className="w-10 h-10 rounded-md object-cover border border-border/50 flex-shrink-0"
+                  />
                 ) : (
                   <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center flex-shrink-0">
                     <Film className="w-4 h-4 text-muted-foreground" />
                   </div>
                 )}
-                <h4 className="text-xs font-display font-semibold text-muted-foreground uppercase tracking-wider">{label}</h4>
-                <span className="text-xs text-muted-foreground">{frame.elements.length} {t("scene.elements")}</span>
+                <h4 className="text-xs font-display font-semibold text-muted-foreground uppercase tracking-wider">
+                  {label}
+                </h4>
+                <span className="text-xs text-muted-foreground">
+                  {frame.elements.length} {t("scene.elements")}
+                </span>
               </motion.div>
             )}
 
-            <div className="space-y-2">
-              {frame.elements.map((el, i) => {
-                const dir = directions[el.id];
-                const isLocked = dir?.action === "lock";
-                const noteExpanded = expandedNotes.has(el.id);
-                const Icon = categoryIcons[el.category] || Package;
-
-                return (
-                  <motion.div
-                    key={el.id}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: frameIdx * 0.15 + i * 0.08 }}
-                    className={`rounded-lg p-2.5 sm:p-3 transition-colors border ${
-                      isLocked
-                        ? "border-primary/40 bg-primary/5"
-                        : "border-border/50 bg-transparent"
-                    }`}
+            {groups.map((group, gIdx) => (
+              <motion.div
+                key={`${frame.frameIndex}-${group.category}`}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: frameIdx * 0.12 + gIdx * 0.06 }}
+                className="space-y-1.5"
+              >
+                {/* Category header — single per group */}
+                <div className="flex items-center gap-2 ps-1">
+                  <span
+                    className="text-[10px] uppercase tracking-[0.14em] font-display font-semibold"
+                    style={{ color: "#F5A524" }}
                   >
-                    <div className="flex items-start gap-2 sm:gap-3">
-                      <div
-                        className={`mt-0.5 flex-shrink-0 rounded-md p-1.5 ${
+                    {categoryEmoji[group.category]} {group.category}
+                  </span>
+                  <span className="text-[10px] text-muted-foreground">
+                    ({group.items.length} {group.items.length === 1 ? "element" : "elements"})
+                  </span>
+                </div>
+
+                {/* Indented element list */}
+                <div className="ms-3 ps-3 border-l border-border/40 space-y-1.5">
+                  {group.items.map((el, i) => {
+                    const dir = directions[el.id];
+                    const isLocked = dir?.action === "lock";
+                    const descExpanded = expandedDescriptions.has(el.id);
+                    const fullText = el.details || el.description || "";
+                    const needsTruncate = fullText.length > 80;
+                    const visibleText = descExpanded ? fullText : truncate(fullText, 80);
+                    const idx = globalIndexById.get(el.id) ?? 0;
+
+                    return (
+                      <motion.div
+                        key={el.id}
+                        initial={{ opacity: 0, x: -12 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: frameIdx * 0.12 + gIdx * 0.06 + i * 0.04 }}
+                        className={`rounded-lg p-2.5 sm:p-3 transition-colors border ${
                           isLocked
-                            ? "bg-primary/15 text-primary"
-                            : "bg-muted/40 text-muted-foreground"
+                            ? "border-white/10 bg-white/[0.02]"
+                            : "border-primary/30 bg-primary/[0.04]"
                         }`}
                       >
-                        <Icon className="w-4 h-4" />
-                      </div>
+                        <div className="flex items-start gap-2.5">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1 flex-wrap">
+                              {/* Prominent amber @ number — clickable to insert */}
+                              <button
+                                type="button"
+                                onClick={() => onInsertMention?.(idx)}
+                                disabled={!onInsertMention}
+                                title="Insert reference into prompt"
+                                className="font-mono font-bold rounded px-1.5 py-0.5 transition-all disabled:cursor-default"
+                                style={{
+                                  fontSize: 14,
+                                  color: "#F5A524",
+                                  backgroundColor: "rgba(245,165,36,0.12)",
+                                  border: "1px solid rgba(245,165,36,0.3)",
+                                }}
+                                onMouseEnter={(e) => {
+                                  if (onInsertMention)
+                                    e.currentTarget.style.backgroundColor = "rgba(245,165,36,0.22)";
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.backgroundColor = "rgba(245,165,36,0.12)";
+                                }}
+                              >
+                                @{idx}
+                              </button>
+                              <span className="text-sm font-medium text-foreground break-words">
+                                {el.description}
+                              </span>
+                            </div>
 
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-                          <button
-                            type="button"
-                            onClick={() => onInsertMention?.(globalIndexById.get(el.id) ?? 0)}
-                            disabled={!onInsertMention}
-                            title={t("scene.insertMention" as any)}
-                            className="font-mono text-[11px] font-semibold text-primary bg-primary/15 hover:bg-primary/25 disabled:hover:bg-primary/15 disabled:cursor-default rounded px-1.5 py-0.5 transition-colors"
-                          >
-                            @{globalIndexById.get(el.id)}
-                          </button>
-                          <span className="text-[10px] sm:text-xs text-muted-foreground font-medium uppercase tracking-wider">
-                            {categoryEmoji[el.category]} {el.category}
-                          </span>
+                            <p className="text-xs text-muted-foreground leading-relaxed break-words">
+                              {visibleText}
+                              {needsTruncate && (
+                                <>
+                                  {" "}
+                                  <button
+                                    type="button"
+                                    onClick={() => toggleDescExpanded(el.id)}
+                                    className="font-medium hover:underline"
+                                    style={{ color: "#F5A524" }}
+                                  >
+                                    {descExpanded ? "Show less" : "Show more"}
+                                  </button>
+                                </>
+                              )}
+                            </p>
+                          </div>
+
+                          {/* Lock/Move segmented toggle */}
+                          <TooltipProvider delayDuration={200}>
+                            <div
+                              className="flex items-center rounded-md p-0.5 flex-shrink-0 relative"
+                              style={{
+                                backgroundColor: "rgba(255,255,255,0.04)",
+                                border: "1px solid rgba(255,255,255,0.08)",
+                              }}
+                            >
+                              {/* Sliding active background */}
+                              <motion.div
+                                className="absolute top-0.5 bottom-0.5 rounded"
+                                animate={{
+                                  left: isLocked ? 2 : "calc(50% + 0px)",
+                                  right: isLocked ? "calc(50% + 0px)" : 2,
+                                }}
+                                transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                                style={{
+                                  backgroundColor: isLocked ? "#27272A" : "#F5A524",
+                                  boxShadow: isLocked
+                                    ? "none"
+                                    : "0 0 12px rgba(245,165,36,0.45)",
+                                }}
+                              />
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <button
+                                    type="button"
+                                    onClick={() => setAction(el.id, "lock")}
+                                    aria-label="Lock"
+                                    aria-pressed={isLocked}
+                                    className={`relative z-10 inline-flex items-center gap-1 h-7 px-2 text-xs font-display font-medium transition-colors ${
+                                      isLocked && pulsing[el.id] ? "animate-pulse-glow" : ""
+                                    }`}
+                                    style={{
+                                      color: isLocked ? "#FFFFFF" : "#71717A",
+                                    }}
+                                  >
+                                    <Lock className="w-3 h-3" />
+                                    <span className="hidden sm:inline">Lock</span>
+                                  </button>
+                                </TooltipTrigger>
+                                <TooltipContent side="top" className="max-w-[220px] text-xs">
+                                  {t("scene.lockTooltip" as any)}
+                                </TooltipContent>
+                              </Tooltip>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <button
+                                    type="button"
+                                    onClick={() => setAction(el.id, "move")}
+                                    aria-label="Move"
+                                    aria-pressed={!isLocked}
+                                    className={`relative z-10 inline-flex items-center gap-1 h-7 px-2 text-xs font-display font-medium transition-colors ${
+                                      !isLocked && pulsing[el.id] ? "animate-pulse-glow" : ""
+                                    }`}
+                                    style={{
+                                      color: !isLocked ? "#000000" : "#71717A",
+                                    }}
+                                  >
+                                    <Waves className="w-3 h-3" />
+                                    <span className="hidden sm:inline">Move</span>
+                                  </button>
+                                </TooltipTrigger>
+                                <TooltipContent side="top" className="max-w-[220px] text-xs">
+                                  {t("scene.moveTooltip" as any)}
+                                </TooltipContent>
+                              </Tooltip>
+                            </div>
+                          </TooltipProvider>
                         </div>
-                        <p className="text-sm font-medium text-foreground break-words">{el.description}</p>
-                        <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed break-words line-clamp-3 sm:line-clamp-none">{el.details}</p>
-                      </div>
 
-                      <div className="flex items-center gap-1 sm:gap-1.5 flex-shrink-0 flex-wrap justify-end">
-                        <TooltipProvider delayDuration={200}>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => { if (!isLocked) toggleAction(el.id); }}
-                                aria-label={t("scene.lock")}
-                                className={`h-7 px-1.5 sm:px-2 text-xs gap-1 ${
-                                  isLocked
-                                    ? "bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground"
-                                    : ""
-                                } ${isLocked && pulsing[el.id] ? "animate-pulse-glow" : ""}`}
-                              >
-                                <Lock className="w-3 h-3" />
-                                <span className="hidden sm:inline">{t("scene.lock")}</span>
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent side="top" className="max-w-[220px] text-xs">
-                              {t("scene.lockTooltip" as any)}
-                            </TooltipContent>
-                          </Tooltip>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => { if (isLocked) toggleAction(el.id); }}
-                                aria-label={t("scene.move")}
-                                style={
-                                  !isLocked
-                                    ? {
-                                        border: "1px solid rgba(255,255,255,0.15)",
-                                        color: "#8888AA",
-                                        backgroundColor: "transparent",
-                                      }
-                                    : undefined
-                                }
-                                className={`h-7 px-1.5 sm:px-2 text-xs gap-1 ${!isLocked && pulsing[el.id] ? "animate-pulse-glow" : ""}`}
-                              >
-                                <Play className="w-3 h-3" /> <span className="hidden sm:inline">{t("scene.move")}</span>
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent side="top" className="max-w-[220px] text-xs">
-                              {t("scene.moveTooltip" as any)}
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      </div>
-                    </div>
-
-                    {noteExpanded && (
-                      <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: "auto" }}
-                        exit={{ opacity: 0, height: 0 }}
-                        className="mt-2 ms-7 sm:ms-9"
-                      >
-                        <Textarea
-                          placeholder={t("scene.notePlaceholder")}
-                          value={dir?.note || ""}
-                          onChange={(e) => updateNote(el.id, e.target.value)}
-                          className="min-h-[56px] sm:min-h-[60px] text-xs bg-background/50 border-border/50 resize-none"
-                          maxLength={300}
-                        />
+                        <AnimatePresence>
+                          {expandedNotes.has(el.id) && (
+                            <motion.div
+                              initial={{ opacity: 0, height: 0 }}
+                              animate={{ opacity: 1, height: "auto" }}
+                              exit={{ opacity: 0, height: 0 }}
+                              className="mt-2"
+                            >
+                              <Textarea
+                                placeholder={t("scene.notePlaceholder")}
+                                value={dir?.note || ""}
+                                onChange={(e) => updateNote(el.id, e.target.value)}
+                                className="min-h-[56px] sm:min-h-[60px] text-xs bg-background/50 border-border/50 resize-none"
+                                maxLength={300}
+                              />
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
                       </motion.div>
-                    )}
-                  </motion.div>
-                );
-              })}
-            </div>
+                    );
+                  })}
+                </div>
+              </motion.div>
+            ))}
           </div>
         );
       })}
