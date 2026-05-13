@@ -21,6 +21,8 @@ import Terms from "./pages/Terms.tsx";
 import PrivacyPolicy from "./pages/PrivacyPolicy.tsx";
 import QaMobile from "./pages/QaMobile.tsx";
 import SharedPrompt from "./pages/SharedPrompt.tsx";
+import Gallery from "./pages/Gallery.tsx";
+import ModelLanding from "./pages/ModelLanding.tsx";
 
 const queryClient = new QueryClient();
 
@@ -45,6 +47,8 @@ const AppRoutes = () => {
           <Route path="/privacy" element={<PrivacyPolicy />} />
           <Route path="/qa/mobile" element={<QaMobile />} />
           <Route path="/p/:slug" element={<SharedPrompt />} />
+          <Route path="/gallery" element={<Gallery />} />
+          <Route path="/models/:slug" element={<ModelLanding />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

@@ -20,10 +20,10 @@ export interface CreateSharePayload {
   agentName: string | null;
   results: unknown;
   title?: string;
+  featured?: boolean;
 }
 
 export async function createSharedPrompt(payload: CreateSharePayload): Promise<{ slug: string; url: string }> {
-  // Retry on the very rare slug collision (UNIQUE constraint).
   for (let attempt = 0; attempt < 4; attempt++) {
     const slug = generateSlug();
     const { error } = await supabase.from("shared_prompts").insert({
@@ -34,11 +34,10 @@ export async function createSharedPrompt(payload: CreateSharePayload): Promise<{
       agent_name: payload.agentName,
       results: payload.results as any,
       title: payload.title?.trim() || null,
+      featured: !!payload.featured,
+      featured_at: payload.featured ? new Date().toISOString() : null,
     });
-    if (!error) {
-      return { slug, url: buildShareUrl(slug) };
-    }
-    // 23505 = unique_violation
+    if (!error) return { slug, url: buildShareUrl(slug) };
     if ((error as any).code !== "23505") throw error;
   }
   throw new Error("Could not allocate a unique share link, please try again.");
@@ -51,7 +50,7 @@ export function buildShareUrl(slug: string): string {
 export async function fetchSharedPrompt(slug: string) {
   const { data, error } = await supabase
     .from("shared_prompts")
-    .select("slug,title,workflow_type,target_model,agent_name,results,view_count,created_at,expires_at")
+    .select("slug,title,workflow_type,target_model,agent_name,results,view_count,created_at,expires_at,featured")
     .eq("slug", slug)
     .maybeSingle();
   if (error) throw error;
@@ -59,10 +58,33 @@ export async function fetchSharedPrompt(slug: string) {
 }
 
 export async function incrementShareViews(slug: string): Promise<void> {
-  // Best-effort — don't break the page if it fails.
   try {
     await supabase.rpc("increment_shared_prompt_views", { _slug: slug });
   } catch (e) {
     console.warn("incrementShareViews failed", e);
   }
+}
+
+export interface GalleryItem {
+  slug: string;
+  title: string | null;
+  workflow_type: string;
+  target_model: string;
+  agent_name: string | null;
+  view_count: number;
+  created_at: string;
+  results: any;
+}
+
+export async function fetchGallery(opts?: { model?: string; limit?: number }): Promise<GalleryItem[]> {
+  let q = supabase
+    .from("shared_prompts")
+    .select("slug,title,workflow_type,target_model,agent_name,view_count,created_at,results")
+    .eq("featured", true)
+    .order("featured_at", { ascending: false })
+    .limit(opts?.limit ?? 60);
+  if (opts?.model) q = q.eq("target_model", opts.model);
+  const { data, error } = await q;
+  if (error) throw error;
+  return (data ?? []) as GalleryItem[];
 }
