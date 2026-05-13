@@ -109,6 +109,14 @@ interface ModelRowProps {
 const ModelRow = ({ value, label, description, isAny, providerLabel }: ModelRowProps) => {
   const { base, variant } = isAny ? { base: label, variant: null } : splitLabel(label);
   const tier = isAny ? "default" : classifyTier(value, variant);
+  // Show "FLAGSHIP" pill on top-tier models that have no variant suffix (e.g. Veo 3.1, Kling 3.0).
+  const showFlagshipPill = !isAny && !variant && tier === "flagship";
+  // OMNI EDIT is a function variant — render as outline + pencil icon.
+  const isOmniEdit = variant === "OMNI EDIT";
+  const variantPillClass = isOmniEdit
+    ? "border border-primary/60 text-primary bg-transparent"
+    : TIER_PILL[tier];
+
   return (
     <SelectItem
       value={value}
@@ -126,13 +134,19 @@ const ModelRow = ({ value, label, description, isAny, providerLabel }: ModelRowP
           <span className="text-[15px] leading-tight text-foreground font-semibold">
             {base}
           </span>
+          {showFlagshipPill && (
+            <span className="inline-flex items-center px-1.5 py-[1px] rounded bg-primary text-primary-foreground border border-primary text-[10px] font-semibold uppercase tracking-wider leading-none">
+              Flagship
+            </span>
+          )}
           {variant && (
             <span
               className={cn(
-                "inline-flex items-center px-1.5 py-[1px] rounded text-[10px] font-semibold uppercase tracking-wider leading-none",
-                TIER_PILL[tier]
+                "inline-flex items-center gap-1 px-1.5 py-[1px] rounded text-[10px] font-semibold uppercase tracking-wider leading-none",
+                variantPillClass
               )}
             >
+              {isOmniEdit && <Pencil size={9} />}
               {variant}
             </span>
           )}
