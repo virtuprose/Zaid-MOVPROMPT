@@ -353,6 +353,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
     setPhase("upload");
     setSceneFrames([]);
     setElementDirections({});
+    setHistory([]);
   }, []);
 
   const handleImageRemove = useCallback((index: number) => {
