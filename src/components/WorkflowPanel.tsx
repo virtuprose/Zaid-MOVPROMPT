@@ -467,10 +467,12 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
     })();
 
     try {
-      const imageBase64s = await Promise.all(images.filter(Boolean).map((img) => compressImage(img.file)));
+      // Run all upload-prep stages truly in parallel — main images, references,
+      // and @Element items used to chain sequentially (3 awaits). With per-File
+      // memoization (lib/imageCache) re-runs become near-instant.
+      const imagesP = Promise.all(images.filter(Boolean).map((img) => compressImage(img.file)));
 
-      // Process references: images → resized base64; videos → keyframes; audio → metadata only
-      const referencesPayload = await Promise.all(
+      const referencesP = Promise.all(
         referenceItems.map(async (ref) => {
           if (ref.kind === "image") {
             const b64 = await compressImageFile(ref.file);
@@ -486,12 +488,11 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
             }
           }
           return { kind: "audio", role: ref.role, note: ref.note || undefined, filename: ref.file.name };
-        })
+        }),
       );
 
-      // Process @Element references (Seedance 2.0 / 2.0 Fast). Treated like references on the wire.
-      const elementsPayload = contract.supportsElementReferences
-        ? await Promise.all(
+      const elementsP = contract.supportsElementReferences
+        ? Promise.all(
             elementItems.map(async (el, idx) => {
               const base = { role: "style" as const, note: el.note || undefined, filename: el.file.name, index: idx + 1 };
               if (el.kind === "image") {
@@ -510,7 +511,13 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
               return { ...base, kind: "audio" };
             }),
           )
-        : [];
+        : Promise.resolve([] as any[]);
+
+      const [imageBase64s, referencesPayload, elementsPayload] = await Promise.all([
+        imagesP,
+        referencesP,
+        elementsP,
+      ]);
 
       const sceneBreakdown = sceneFrames.length > 0
         ? sceneFrames.map((frame) => ({
