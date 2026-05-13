@@ -86,6 +86,12 @@ const ResetPassword = () => {
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-4">
+      <Seo
+        title="Reset password — MovPrompt"
+        description="Set a new password for your MovPrompt account."
+        path="/reset-password"
+        noindex
+      />
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-primary/5 rounded-full blur-[120px]" />
       </div>
@@ -99,7 +105,7 @@ const ResetPassword = () => {
         </button>
 
         <h1 className="text-2xl font-mono font-bold mb-1">
-          Mov<span className="text-primary">Prompt</span>
+          Reset password — Mov<span className="text-primary">Prompt</span>
         </h1>
         <p className="text-sm text-muted-foreground mb-6">{t("reset.setNew")}</p>
 
