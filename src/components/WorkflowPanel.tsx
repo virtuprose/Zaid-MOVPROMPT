@@ -723,10 +723,27 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
 
   // ============ Reusable JSX blocks ============
 
-  const extrasHintBlock = extrasHint && (
-    <div className="flex items-start gap-2 rounded-lg border border-[#27272A] bg-[#161618] px-3 py-2 text-xs text-foreground/90">
-      <Info className="w-3.5 h-3.5 text-primary mt-0.5 shrink-0" />
-      <span>{extrasHint}</span>
+  const workflowHeaderBlock = (
+    <div className="flex items-center gap-1.5">
+      <h2 className="text-sm font-medium text-foreground">Choose your workflow</h2>
+      {extrasHint && (
+        <TooltipProvider delayDuration={150}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                aria-label="Workflow help"
+                className="inline-flex text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <HelpCircle className="w-3.5 h-3.5" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="right" className="max-w-xs text-xs">
+              {extrasHint}
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      )}
     </div>
   );
 
