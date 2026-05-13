@@ -133,31 +133,7 @@ const Index = () => {
           )}
         </div>
 
-        {/* Hero */}
-        <motion.header
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="text-center mb-6 sm:mb-12"
-        >
-          <button
-            type="button"
-            onClick={() => { window.location.href = "/"; }}
-            aria-label={t("nav.goHome")}
-            className="flex items-center justify-center gap-2.5 sm:gap-3 mb-3 sm:mb-4 mx-auto cursor-pointer hover:opacity-80 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-md"
-          >
-            <img src={logoMark} alt="MovPrompt" className="w-6 h-6 sm:w-10 sm:h-10" />
-            <h1 className="text-[18px] tracking-tight font-display sm:text-[34px] font-bold">
-              <span className="text-primary">Mov</span>Prompt
-            </h1>
-          </button>
-          <p
-            className="text-muted-foreground text-sm sm:text-lg max-w-[20rem] sm:max-w-xl mx-auto px-2 font-display"
-            style={{ fontWeight: 500, letterSpacing: "-0.01em" }}
-          >
-            {t("hero.subtitle")}
-          </p>
-        </motion.header>
+        {/* Hero removed — slim nav above keeps focus on the tool */}
 
         {/* Model-First flow: pick model, then upload (ModelPicker now lives inside LeftPanel) */}
         <motion.div
