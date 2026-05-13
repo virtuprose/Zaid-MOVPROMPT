@@ -181,6 +181,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
       const preview = URL.createObjectURL(file);
       setImages([{ file, preview }]);
       setResults(null);
+      setHistory([]);
       setPhase("upload");
       setSceneFrames([]);
       setElementDirections({});
@@ -702,6 +703,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
       setMultiShotMode(mode === "multishot");
       setImages([]);
       setResults(null);
+      setHistory([]);
       setPhase("upload");
     };
     const currentMode: "single" | "twoframe" | "multishot" =
@@ -1047,6 +1049,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
         setSceneFrames([]);
         setElementDirections({});
         setResults(null);
+        setHistory([]);
       }}
       aria-label={t("wp.startOver")}
       title={t("wp.startOver")}
