@@ -755,37 +755,29 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
     </div>
   );
 
-  const audioToggleBlock = contract.supportsAudio && (
+  // Inline compact audio toggle (rendered inside the collapsed model strip).
+  const audioInlineToggle = contract.supportsAudio ? (
     <button
-      onClick={() => setAudioEnabled((v) => !v)}
-      className={`flex items-center justify-between gap-3 w-full rounded-lg border px-3 py-2 transition-colors ${
-        audioEnabled
-          ? "border-border bg-secondary/60 hover:bg-secondary"
-          : "border-border bg-secondary/40 hover:bg-secondary/60"
-      }`}
+      type="button"
+      onClick={(e) => { e.stopPropagation(); setAudioEnabled((v) => !v); }}
+      className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors shrink-0"
       aria-pressed={audioEnabled}
+      title={audioEnabled ? "Audio on" : "Audio off"}
     >
-      <span className="flex items-center gap-2 text-sm font-medium">
-        {audioEnabled ? (
-          <Volume2 className="w-4 h-4 text-foreground" />
-        ) : (
-          <VolumeX className="w-4 h-4 text-muted-foreground" />
-        )}
-        {t("contract.audio.label" as any)}
-      </span>
+      {audioEnabled ? <Volume2 className="w-3.5 h-3.5 text-foreground" /> : <VolumeX className="w-3.5 h-3.5" />}
       <span
-        className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+        className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${
           audioEnabled ? "bg-primary" : "bg-muted"
         }`}
       >
         <span
-          className={`inline-block h-4 w-4 transform rounded-full bg-background transition-transform ${
-            audioEnabled ? "translate-x-4" : "translate-x-0.5"
+          className={`inline-block h-3 w-3 transform rounded-full bg-background transition-transform ${
+            audioEnabled ? "translate-x-[14px]" : "translate-x-0.5"
           }`}
         />
       </span>
     </button>
-  );
+  ) : null;
 
   const modeToggleBlock = (contract.supportsTwoFrameToggle || contract.supportsMultiShotToggle) && (() => {
     const both = contract.supportsTwoFrameToggle && contract.supportsMultiShotToggle;
@@ -1075,17 +1067,6 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
   ) : phase === "upload" && contract.supportsElementReferences ? null
     : (phase === "breakdown" || phase === "generate") ? (
     <div className="pt-6 mt-6 border-t border-white/[0.06] flex flex-col items-center gap-3">
-      {!isAnalyzing && !isLoading && !(phase === "generate" && results) && (
-        <Button
-          size="sm"
-          variant="ghost"
-          onClick={() => setPhase("upload")}
-          aria-label={t("wp.back" as any)}
-          className="gap-1.5 text-muted-foreground hover:text-foreground"
-        >
-          <ArrowLeft className="w-3.5 h-3.5 rtl:rotate-180" /> {t("wp.back" as any)}
-        </Button>
-      )}
       <Button
         data-tour="generate-button"
         size="lg"
@@ -1117,53 +1098,66 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
     selectedModel;
 
   const modelBlock = isBreakdownLike ? (
-    <div
-      className="flex items-center justify-between gap-3 rounded-lg px-3 py-2 border border-white/[0.06] bg-white/[0.02]"
-    >
-      <div className="flex items-center gap-2 min-w-0">
-        <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-display">
-          Model
-        </span>
-        <span className="text-sm font-display font-medium text-foreground truncate">
-          {inferredModelLabel}
-        </span>
-        {selectedModel === "any" && (
-          <span className="text-xs text-muted-foreground hidden sm:inline truncate">
-            — Universal Prompt
+    <div className="space-y-1">
+      <div className="flex items-center justify-between gap-3 rounded-lg px-3 py-2 border border-white/[0.06] bg-white/[0.02]">
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-display">
+            Model
           </span>
-        )}
+          <span className="text-sm font-display font-medium text-foreground truncate">
+            {inferredModelLabel}
+          </span>
+          {selectedModel === "any" && (
+            <span className="text-xs text-muted-foreground hidden sm:inline truncate">
+              — Universal Prompt
+            </span>
+          )}
+        </div>
+        {audioInlineToggle}
+        {audioInlineToggle && <span className="text-muted-foreground/40 text-xs shrink-0">|</span>}
+        <button
+          type="button"
+          onClick={() => setPhase("upload")}
+          className="text-xs font-medium hover:underline shrink-0"
+          style={{ color: "#F5A524" }}
+        >
+          Change
+        </button>
       </div>
-      <button
-        type="button"
-        onClick={() => setPhase("upload")}
-        className="text-xs font-medium hover:underline shrink-0"
-        style={{ color: "#F5A524" }}
-      >
-        Change
-      </button>
+      {contract.supportsAudio && (
+        <p className="text-[12px] text-muted-foreground px-3">
+          Native synced audio for Veo 3.1 (ambient sound + dialogue)
+        </p>
+      )}
     </div>
   ) : (
     <ModelPicker model={selectedModel} onModelChange={(v) => onSwitchModel?.(v)} />
   );
 
+  const backLinkTop = isBreakdownLike && !isAnalyzing && !isLoading && !(phase === "generate" && results) ? (
+    <button
+      type="button"
+      onClick={() => setPhase("upload")}
+      className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors self-start"
+      aria-label={t("wp.back" as any)}
+    >
+      <ArrowLeft className="w-3 h-3 rtl:rotate-180" /> {t("wp.back" as any)}
+    </button>
+  ) : null;
+
   const leftPanel = (
     <div className="space-y-5">
+      {backLinkTop}
       {workflowHeaderBlock}
       {modeToggleBlock}
       {showOnboarding && <OnboardingExamples onPick={handlePickExample} />}
       {uploadBlock}
       {modelBlock}
-      {/* On breakdown/generate: textarea first, then back/Generate at the bottom. */}
+      {/* On breakdown/generate: textarea first, then Generate at the bottom. */}
       {isBreakdownLike && descriptionBlock}
-      {!contract.supportsElementReferences && sceneFrames.length > 0 && isBreakdownLike && (
-        <p className="text-xs text-muted-foreground px-1 -mt-2">
-          {t("scene.autoAssignedHint" as any)}
-        </p>
-      )}
       {ctaRowBlock}
       {/* On upload phase, description block (if any) renders after the CTA. */}
       {!isBreakdownLike && descriptionBlock}
-      {audioToggleBlock}
     </div>
   );
 
