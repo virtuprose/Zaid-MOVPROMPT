@@ -49,12 +49,12 @@ const categoryEmoji: Record<string, string> = {
 
 const CATEGORY_ORDER = ["Subject", "Objects", "Background", "Lighting", "Atmosphere", "Colors"];
 
-const truncate = (text: string, max = 80) => {
+const truncate = (text: string, max = 60) => {
   if (!text) return "";
   if (text.length <= max) return text;
   const slice = text.slice(0, max);
   const lastSpace = slice.lastIndexOf(" ");
-  return (lastSpace > 40 ? slice.slice(0, lastSpace) : slice).trimEnd() + "…";
+  return (lastSpace > 30 ? slice.slice(0, lastSpace) : slice).trimEnd() + "…";
 };
 
 export const SceneBreakdown = ({
