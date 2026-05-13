@@ -88,6 +88,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
   const [agentName, setAgentName] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [regeneratingShotIdx, setRegeneratingShotIdx] = useState<number | null>(null);
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [history, setHistory] = useState<Array<{
     id: string;
     results: ShotResult[];
