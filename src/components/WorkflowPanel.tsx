@@ -16,7 +16,8 @@ import { MentionTextarea } from "./MentionTextarea";
 import { SceneMentionTextarea, type SceneMentionTextareaHandle } from "./SceneMentionTextarea";
 import { extractVideoKeyframes, compressImageFile } from "@/lib/videoFrames";
 import { hashBase64, getCachedAnalysis, setCachedAnalysis } from "@/lib/imageCache";
-import { Sparkles, Loader2, ScanSearch, RotateCcw, RefreshCw, Info, Volume2, VolumeX, Zap, Clapperboard, ArrowRight, ArrowDown, ArrowLeft } from "lucide-react";
+import { Sparkles, Loader2, ScanSearch, RotateCcw, RefreshCw, Info, Volume2, VolumeX, Zap, Clapperboard, ArrowRight, ArrowDown, ArrowLeft, HelpCircle } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { PresetPickerPanel } from "./PresetPickerPanel";
 import {
   AlertDialog,
@@ -722,10 +723,27 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
 
   // ============ Reusable JSX blocks ============
 
-  const extrasHintBlock = extrasHint && (
-    <div className="flex items-start gap-2 rounded-lg border border-[#27272A] bg-[#161618] px-3 py-2 text-xs text-foreground/90">
-      <Info className="w-3.5 h-3.5 text-primary mt-0.5 shrink-0" />
-      <span>{extrasHint}</span>
+  const workflowHeaderBlock = (
+    <div className="flex items-center gap-1.5">
+      <h2 className="text-sm font-medium text-foreground">Choose your workflow</h2>
+      {extrasHint && (
+        <TooltipProvider delayDuration={150}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                aria-label="Workflow help"
+                className="inline-flex text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <HelpCircle className="w-3.5 h-3.5" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="right" className="max-w-xs text-xs">
+              {extrasHint}
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      )}
     </div>
   );
 
@@ -779,10 +797,10 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
 
     const widthClass = both ? "sm:max-w-md" : "sm:max-w-xs";
     const btn = (active: boolean) =>
-      `flex-1 min-w-0 basis-[140px] sm:basis-0 px-3 py-2 sm:px-4 sm:py-2 text-xs whitespace-normal break-words leading-tight bg-transparent border-0 border-b-2 rounded-none transition-colors ${
+      `flex-1 min-w-0 basis-[140px] sm:basis-0 px-5 py-3 text-xs whitespace-normal break-words leading-tight rounded-full border-2 transition-colors ${
         active
-          ? "border-primary text-foreground font-semibold"
-          : "border-transparent text-muted-foreground hover:text-foreground hover:border-primary/40"
+          ? "bg-primary/10 border-transparent border-b-primary text-foreground font-semibold ring-1 ring-primary/40"
+          : "bg-transparent border-transparent border-[#27272A] text-muted-foreground hover:text-foreground hover:border-primary/40"
       }`;
 
     return (
@@ -971,18 +989,20 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
     </div>
   );
 
-  const ctaRowBlock = hasRequiredImages && phase === "upload" ? (
-    <div className="pt-6 mt-6 space-y-3">
+  const ctaRowBlock = phase === "upload" && !contract.supportsElementReferences ? (
+    <div className="pt-2 space-y-3">
       <Button
         data-tour="analyze-button"
         size="lg"
         onClick={handleAnalyze}
-        disabled={isAnalyzing}
-        aria-label={isAnalyzing ? t("wp.analyzingScene") : t("wp.analyzeScene")}
+        disabled={!hasRequiredImages || isAnalyzing}
+        aria-label={hasRequiredImages ? (isAnalyzing ? t("wp.analyzingScene") : t("wp.analyzeScene")) : "Upload an image to continue"}
         aria-busy={isAnalyzing}
-        className="w-full font-display font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/25"
+        className="w-full font-display font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/25 disabled:opacity-60 disabled:shadow-none"
       >
-        {isAnalyzing ? (
+        {!hasRequiredImages ? (
+          <>Upload an image to continue</>
+        ) : isAnalyzing ? (
           <><Loader2 className="w-5 h-5 me-2 animate-spin" aria-hidden="true" /> {t("wp.analyzingScene")}</>
         ) : (
           <><Sparkles className="w-5 h-5 me-2" aria-hidden="true" /> {t("wp.analyzeScene")}</>
@@ -993,17 +1013,15 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
           type="button"
           onClick={() => { setSceneFrames([]); setPhase("breakdown"); }}
           disabled={isAnalyzing}
-          aria-label={t("wp.skip")}
+          aria-label="Skip & Generate Now"
           className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50 disabled:pointer-events-none focus:outline-none focus-visible:underline"
         >
-          {t("wp.skip")} <ArrowRight className="w-3.5 h-3.5 rtl:rotate-180" aria-hidden="true" />
+          Skip &amp; Generate Now <ArrowRight className="w-3.5 h-3.5 rtl:rotate-180" aria-hidden="true" />
         </button>
       </div>
-      <p className="text-center text-xs text-muted-foreground/80 max-w-[420px] mx-auto">
-        Analyze for full element control. Skip for a fast generation.
-      </p>
     </div>
-  ) : (phase === "breakdown" || phase === "generate") ? (
+  ) : phase === "upload" && contract.supportsElementReferences ? null
+    : (phase === "breakdown" || phase === "generate") ? (
     <div className="pt-6 mt-6 border-t border-white/[0.06] flex flex-col items-center gap-3">
       {!isAnalyzing && !isLoading && !(phase === "generate" && results) && (
         <Button
@@ -1041,12 +1059,13 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
     images.filter(Boolean).length === 0;
 
   const leftPanel = (
-    <div className="space-y-6">
-      {extrasHintBlock}
+    <div className="space-y-5">
+      {workflowHeaderBlock}
+      {modeToggleBlock}
       {showOnboarding && <OnboardingExamples onPick={handlePickExample} />}
       {uploadBlock}
-      {modeToggleBlock}
       <ModelPicker model={selectedModel} onModelChange={(v) => onSwitchModel?.(v)} />
+      {ctaRowBlock}
       {descriptionBlock}
       {!contract.supportsElementReferences && sceneFrames.length > 0 && (phase === "breakdown" || phase === "generate") && (
         <p className="text-xs text-muted-foreground px-1 -mt-2">
@@ -1054,14 +1073,6 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
         </p>
       )}
       {audioToggleBlock}
-      {ctaRowBlock}
-      {/* Hidden for now — will be re-enabled in a future iteration
-      <PresetPickerPanel
-        description={description}
-        onDescriptionChange={setDescription}
-        defaultOpen={false}
-      />
-      */}
     </div>
   );
 

@@ -62,9 +62,8 @@ const Index = () => {
             type="button"
             onClick={() => { window.location.href = "/"; }}
             aria-label={t("nav.goHome")}
-            className="flex items-center gap-2 me-auto cursor-pointer hover:opacity-80 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-md py-1"
+            className="flex items-center me-auto cursor-pointer hover:opacity-80 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-md py-1"
           >
-            <img src={logoMark} alt="MovPrompt" className="w-5 h-5 sm:w-6 sm:h-6" />
             <h1 className="text-[14px] sm:text-[17px] tracking-tight font-display font-bold leading-none">
               <span className="text-primary">Mov</span>Prompt
             </h1>

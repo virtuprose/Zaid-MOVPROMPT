@@ -1,71 +1,58 @@
-## Goal
+# Tool screen polish — implementation plan
 
-Replace the generic `ResultsSkeleton` with a dedicated **storyboard loader** when the user generates in **multi-shot** mode, so the longest wait in the app feels like watching a director assemble each shot in turn.
+Touches `src/pages/Index.tsx`, `src/components/WorkflowPanel.tsx`, `src/components/OnboardingExamples.tsx` (or `EmptyStateExamples.tsx`), `src/components/ImageUploadZone.tsx`, and a small Tooltip addition. No backend or business-logic changes.
 
-## Current behavior
+## 1. Nav (Index.tsx)
+- Remove the `<img src={logoMark}>` mark to the left of "MovPrompt".
+- Keep the wordmark only (`Mov` in amber + `Prompt` in foreground), matching the auth page.
 
-In `src/components/WorkflowPanel.tsx` the `resultsBlock` always renders `<ResultsSkeleton />` while `isLoading` is true — even when `workflowType === "multishot"` and the request returns 3–10 shots. There is no per-shot affordance, so the user can't tell how many shots are coming or that progress is being made.
+## 2-5. Examples panel (right column)
+Locate the right-side examples list inside `WorkflowPanel.tsx` (rendered via `OnboardingExamples` / `EmptyStateExamples`).
+- Replace the heading text with `Examples · Try one or upload your own` — 13px, `text-muted-foreground`, sentence case, middle-dot separator (no all-caps, no em-dash).
+- Each card:
+  - Fixed height ~120px, horizontal layout: 100×100 thumbnail on the left (`aspect-video` 16:9 wrapper inside the 100px column — actually 100px square that crops the image with `object-cover`; the *thumbnail itself* renders 16:9 by using `aspect-video` and `w-[140px]` instead, then title/tags stacked to the right). Final spec: card = flex-row, h-[120px]; left = 16:9 thumb at `w-[140px] aspect-video rounded-md overflow-hidden`; right = title + tag chips stacked, `min-w-0`.
+  - Default border: `border-border/60`.
+  - Hover: `border-primary/40`, `bg-[#161618]`, `cursor-pointer`, and reveal a small `Use this →` label in `text-primary` text-xs at the right end (opacity 0 → 100 on hover).
+- Panel top alignment: ensure the examples panel container starts at the same vertical position as the new "Choose your workflow" header on the left (remove any extra top padding/margin so both columns align at row 1 of the grid).
 
-The generation API is a **single call** that returns all shots together (line 507 `supabase.functions.invoke("generate-prompt", …)`). We can't surface real per-shot progress, but we can simulate it in a way that matches what the model is doing under the hood (drafting one shot at a time).
+## 6. Replace info box with header + tooltip
+- Remove the existing info/explanation box at the top of the workflow area.
+- Add `<h2>Choose your workflow</h2>` — `text-sm font-medium text-foreground` (14px white).
+- Next to it, render a `<HelpCircle className="w-3.5 h-3.5 text-muted-foreground" />` wrapped in a shadcn `<Tooltip>` whose content shows the previous explanation copy.
 
-## Plan
+## 7. Workflow toggle pills
+- Update the three workflow toggles (Single frame / Start + End / Multi-shot) to:
+  - Base: `px-5 py-3 rounded-full border text-sm transition-colors`
+  - Inactive: `bg-transparent border-[#27272A] text-muted-foreground hover:text-foreground`
+  - Active: `bg-primary/10 border-primary/40 text-foreground` plus a 2px amber bottom underline (`border-b-2 border-b-primary` or a pseudo-element). Active state is mutually exclusive.
 
-### 1. New component: `src/components/StoryboardSkeleton.tsx`
+## 8. Reorder the left column
+Inside the left side of `WorkflowPanel`, render in this order:
+1. "Choose your workflow" header + tooltip
+2. Workflow toggle pills
+3. `ImageUploadZone`
+4. `ModelPicker` ("Pick your target AI model" card)
+5. New primary CTA + secondary skip link (see #9)
 
-Props:
-```ts
-{ shotCount: number; modelLabel?: string }
-```
+This may require moving the model picker out of its current position (search for `<ModelPicker` inside WorkflowPanel and relocate; preserve existing props and `selectedModel`/`onSwitchModel` wiring).
 
-Layout (top to bottom, same dark cinematic palette as `ResultsSkeleton`):
+## 9. Primary CTA + skip link
+- New `<Button>` directly below the model picker, `w-full size-lg`, amber primary.
+- Disabled when no image is uploaded; label = `Upload an image to continue`.
+- Enabled when image present; label = `Analyze Scene`. Wire `onClick` to the existing analyze handler already present in WorkflowPanel (reuse — do not duplicate).
+- Beneath it: a `<button>` text link `Skip & Generate Now →` in `text-muted-foreground text-sm hover:text-foreground`, centered, that triggers the same analyze flow without an image (or whatever the existing "skip" path is — if none exists, wire it to the same handler with a flag; default behavior: triggers analyze immediately).
 
-- **Director header card** — reuses the gradient + scanline overlay, animated `Clapperboard` icon, title `storyboard.title` (e.g. "Storyboarding {count} shots…"), subtitle `storyboard.subtitle`, eased shimmer progress bar (~14s to 92%), live `n / total` counter on the right.
-- **Storyboard strip** — a responsive grid (`grid-cols-2 sm:grid-cols-3 lg:grid-cols-4`) of `shotCount` shot tiles. Each tile:
-  - `aspect-video` panel with film-grain background and a `Shot N` label.
-  - One of three states driven by an interval (~1800ms per shot, looping the last one as "polishing"):
-    - **Pending**: dim, 8% opacity icon, dotted border.
-    - **Active**: glowing cyan border, animated `Camera` icon panning left↔right, mini progress sub-bar with `shimmer-sweep`, status line cycling through `storyboard.status.compose → light → frame → lock` every ~450ms.
-    - **Done**: solid border, checkmark badge, status `storyboard.status.locked` in cyan, frozen mini-bar at 100%.
-- **Trivia card** — same component shape as `ResultsSkeleton`/`AnalyzingSkeleton`, but with 4 storyboard-specific cinematography facts (shot list, coverage, axis of action, montage).
+## 10. Column alignment
+- Wrap left and right panels in a CSS grid where both children start at `row-start-1`. Remove any conditional top padding/margin on the examples panel that pushes it down relative to the header.
 
-Animation primitives reuse the existing `shimmer-sweep` keyframe pattern; `framer-motion` for tile state transitions and trivia crossfade.
-
-### 2. Wire into `src/components/WorkflowPanel.tsx`
-
-- Import `StoryboardSkeleton`.
-- In the `resultsBlock` `AnimatePresence` (around line 1104, the `key="results-skeleton"` branch), branch on `workflowType`:
-  ```tsx
-  {workflowType === "multishot" ? (
-    <StoryboardSkeleton
-      shotCount={Math.min(10, Math.max(contract.multiShotCount ?? 3, elementItems.length, 2))}
-      modelLabel={…}
-    />
-  ) : (
-    <ResultsSkeleton modelLabel={…} />
-  )}
-  ```
-- No other render gates change — the existing auto-scroll on `isLoading` already targets the same container.
-
-### 3. i18n keys
-
-Add to `src/i18n/translations/en.ts` and `src/i18n/translations/ar.ts` under `storyboard.*`:
-
-- `storyboard.title` — "Storyboarding {count} shots…"
-- `storyboard.subtitle` — "Drafting coverage, blocking, and continuity for {model}."
-- `storyboard.shotLabel` — "Shot {n}"
-- `storyboard.status.compose`, `.light`, `.frame`, `.lock`, `.locked`
-- `storyboard.triviaLabel`
-- `storyboard.trivia.shotlist`, `.coverage`, `.axis`, `.montage`
-
-## Files to touch
-
-- **New:** `src/components/StoryboardSkeleton.tsx`
-- **Edit:** `src/components/WorkflowPanel.tsx` (import + branch in skeleton renderer)
-- **Edit:** `src/i18n/translations/en.ts` (+ `storyboard.*`)
-- **Edit:** `src/i18n/translations/ar.ts` (+ Arabic versions)
+## 11. Upload zone height
+- In `ImageUploadZone.tsx`, reduce the dropzone min-height by ~20% (e.g. `min-h-[200px]` → `min-h-[160px]`, or whatever the current value is — read first, then trim ~20%).
 
 ## Out of scope
+- No changes to analyze pipeline, model contracts, prompt generation, or any backend code.
+- No translation key changes beyond the examples header label and CTA strings (added inline in English; Arabic falls back).
+- Preserve all existing `data-tour` attributes on relocated elements.
 
-- Single-frame and two-frame loaders (already handled by `ResultsSkeleton`).
-- Real per-shot streaming from the edge function — the API returns all shots at once.
-- Layout shift on results arrival — `ResultsPanel` already renders into the same container, so the existing exit transition handles it.
+## Verification
+- Read updated WorkflowPanel section after edit to confirm structure.
+- Visual check via preview at /.

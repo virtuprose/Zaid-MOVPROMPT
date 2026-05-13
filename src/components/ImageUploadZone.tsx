@@ -54,7 +54,7 @@ export const ImageUploadZone = ({ label, onImageSelect, onImageRemove, preview }
             onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
             onDragLeave={() => setIsDragging(false)}
             onDrop={handleDrop}
-            className={`upload-zone-empty group flex flex-col items-center justify-center gap-3 p-5 sm:p-8 rounded-xl cursor-pointer transition-all duration-200 min-h-[180px] sm:aspect-video ${
+            className={`upload-zone-empty group flex flex-col items-center justify-center gap-3 p-4 sm:p-6 rounded-xl cursor-pointer transition-all duration-200 min-h-[144px] sm:min-h-[180px] ${
               isDragging ? "upload-zone-dragging" : "upload-zone-idle"
             }`}
           >
