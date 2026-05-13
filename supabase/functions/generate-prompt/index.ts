@@ -358,6 +358,27 @@ serve(async (req) => {
         : `Audio: DISABLED — produce a SILENT video. Do not include any audio direction. Set audioBlock to "Silent — no audio".\n\n`;
     }
 
+    // Refinement guidance: from auto-fix chips, AI critique suggestions, or thumbs-down feedback.
+    // These are USER-DIRECTED corrections to the previous attempt. Honor them precisely without rewriting other parts.
+    if (refinementAddendum || feedbackLiked === false || feedbackReasons.length > 0 || feedbackNote) {
+      userText += `═══ REFINEMENT GUIDANCE (highest priority) ═══\nThis is a refinement of a previous attempt. Apply these corrections precisely without weakening already-good elements.\n`;
+      if (refinementAddendum) {
+        userText += `- Required adjustment: ${refinementAddendum}\n`;
+      }
+      if (feedbackLiked === false) {
+        userText += `- The previous output was marked DISLIKED by the user. Materially change the approach, do not produce a near-duplicate.\n`;
+      } else if (feedbackLiked === true) {
+        userText += `- The previous output was marked LIKED. Preserve its strengths; refine only what the guidance below targets.\n`;
+      }
+      if (feedbackReasons.length > 0) {
+        userText += `- Specific complaints to fix: ${feedbackReasons.join("; ")}\n`;
+      }
+      if (feedbackNote) {
+        userText += `- User's free-text note: "${feedbackNote}"\n`;
+      }
+      userText += `\n`;
+    }
+
     // Build a Reference Brief if user attached references
     const ROLE_LABELS: Record<string, string> = {
       style: "Style — mirror artistic treatment only",
