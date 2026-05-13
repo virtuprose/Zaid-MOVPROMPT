@@ -40,6 +40,7 @@ import { parseEdgeFnError, pickErrorKey } from "@/lib/edgeFnError";
 import { detectAllIntents } from "@/lib/sceneIntent";
 import { ModelPicker } from "./ModelPicker";
 import { OnboardingExamples, type OnboardingExample } from "./OnboardingExamples";
+import { EmptyStateExamples } from "./EmptyStateExamples";
 
 const ONBOARDING_DONE_KEY = "movprompt.firstGenerationDone";
 
@@ -722,8 +723,8 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
   // ============ Reusable JSX blocks ============
 
   const extrasHintBlock = extrasHint && (
-    <div className="flex items-start gap-2 rounded-lg border border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
-      <Info className="w-3.5 h-3.5 text-muted-foreground mt-0.5 shrink-0" />
+    <div className="flex items-start gap-2 rounded-lg border border-[#27272A] bg-[#161618] px-3 py-2 text-xs text-foreground/90">
+      <Info className="w-3.5 h-3.5 text-primary mt-0.5 shrink-0" />
       <span>{extrasHint}</span>
     </div>
   );
@@ -778,10 +779,10 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
 
     const widthClass = both ? "sm:max-w-md" : "sm:max-w-xs";
     const btn = (active: boolean) =>
-      `flex-1 min-w-0 basis-[140px] sm:basis-0 px-3 py-2 sm:px-5 sm:py-2.5 text-xs whitespace-normal break-words leading-tight rounded-md transition-all ${
+      `flex-1 min-w-0 basis-[140px] sm:basis-0 px-3 py-2 sm:px-4 sm:py-2 text-xs whitespace-normal break-words leading-tight bg-transparent border-0 border-b-2 rounded-none transition-colors ${
         active
-          ? "bg-secondary border border-border text-foreground font-semibold shadow-sm"
-          : "bg-transparent border border-border/50 text-muted-foreground font-normal hover:border-border hover:text-foreground"
+          ? "border-primary text-foreground font-semibold"
+          : "border-transparent text-muted-foreground hover:text-foreground hover:border-primary/40"
       }`;
 
     return (
@@ -810,8 +811,8 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
       <div className="flex flex-col sm:flex-row sm:items-stretch gap-4 sm:gap-4">
         {[0, 1].map((i) => (
           <div key={i} className="flex-1 flex flex-col">
-            <span className="block text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground mb-2">
-              {i === 0 ? t("upload.startFrame" as any) : t("upload.endFrame" as any)}
+            <span className="block text-[11px] font-bold uppercase tracking-[0.14em] text-primary mb-2">
+              {i === 0 ? t("upload.startFrame" as any) : `${t("upload.endFrame" as any)} (Optional)`}
             </span>
             <ImageUploadZone
               label={slotLabels[i] || `Frame ${i + 1}`}
@@ -971,59 +972,36 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
   );
 
   const ctaRowBlock = hasRequiredImages && phase === "upload" ? (
-    <div className="pt-6 mt-6">
-      <p
-        className="text-center mx-auto"
-        style={{
-          fontSize: "13px",
-          color: "#8888AA",
-          maxWidth: "440px",
-          marginBottom: "20px",
-        }}
+    <div className="pt-6 mt-6 space-y-3">
+      <Button
+        data-tour="analyze-button"
+        size="lg"
+        onClick={handleAnalyze}
+        disabled={isAnalyzing}
+        aria-label={isAnalyzing ? t("wp.analyzingScene") : t("wp.analyzeScene")}
+        aria-busy={isAnalyzing}
+        className="w-full font-display font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/25"
       >
-        {t("wp.analyzeDesc")}
-      </p>
-      <div className="flex flex-col items-center" style={{ gap: "12px" }}>
-        <Button
-          data-tour="analyze-button"
-          size="lg"
-          onClick={handleAnalyze}
-          disabled={isAnalyzing}
-          aria-label={isAnalyzing ? t("wp.analyzingScene") : t("wp.analyzeScene")}
-          aria-busy={isAnalyzing}
-          className="w-full font-display font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/25"
-        >
-          {isAnalyzing ? (
-            <><Loader2 className="w-5 h-5 me-2 animate-spin" aria-hidden="true" /> {t("wp.analyzingScene")}</>
-          ) : (
-            <><Sparkles className="w-5 h-5 me-2" aria-hidden="true" /> {t("wp.analyzeScene")}</>
-          )}
-        </Button>
-        <Button
+        {isAnalyzing ? (
+          <><Loader2 className="w-5 h-5 me-2 animate-spin" aria-hidden="true" /> {t("wp.analyzingScene")}</>
+        ) : (
+          <><Sparkles className="w-5 h-5 me-2" aria-hidden="true" /> {t("wp.analyzeScene")}</>
+        )}
+      </Button>
+      <div className="flex justify-center">
+        <button
           type="button"
           onClick={() => { setSceneFrames([]); setPhase("breakdown"); }}
           disabled={isAnalyzing}
           aria-label={t("wp.skip")}
-          style={{
-            backgroundColor: "#E6A020",
-            color: "#0A0A0F",
-            fontFamily: "'Space Grotesk', sans-serif",
-            fontWeight: 600,
-            fontSize: "15px",
-            padding: "14px 24px",
-            borderRadius: "12px",
-            boxShadow: "0 2px 12px rgba(230, 160, 32, 0.3)",
-            height: "auto",
-          }}
-          className="w-full hover:brightness-110 hover:shadow-[0_4px_18px_rgba(230,160,32,0.4)] focus-visible:ring-2 focus-visible:ring-[#E6A020] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0A0A0F] transition-all disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:brightness-100"
+          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50 disabled:pointer-events-none focus:outline-none focus-visible:underline"
         >
-          {isAnalyzing ? (
-            <><Loader2 className="w-5 h-5 me-2 animate-spin" aria-hidden="true" /> {t("wp.analyzingScene")}</>
-          ) : (
-            <>{t("wp.skip")} <span aria-hidden="true">→</span></>
-          )}
-        </Button>
+          {t("wp.skip")} <ArrowRight className="w-3.5 h-3.5 rtl:rotate-180" aria-hidden="true" />
+        </button>
       </div>
+      <p className="text-center text-xs text-muted-foreground/80 max-w-[420px] mx-auto">
+        Analyze for full element control. Skip for a fast generation.
+      </p>
     </div>
   ) : (phase === "breakdown" || phase === "generate") ? (
     <div className="pt-6 mt-6 border-t border-white/[0.06] flex flex-col items-center gap-3">
@@ -1267,8 +1245,8 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
 
             {resultsBlock}
 
-            <div className="flex items-start gap-2 rounded-lg border border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
-              <Info className="w-3.5 h-3.5 text-muted-foreground mt-0.5 shrink-0" />
+            <div className="flex items-start gap-2 rounded-lg border border-[#27272A] bg-[#161618] px-3 py-2 text-xs text-foreground/90">
+              <Info className="w-3.5 h-3.5 text-primary mt-0.5 shrink-0" />
               <span>{t("scene.reviewHint" as any)}</span>
             </div>
 
@@ -1339,8 +1317,8 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
               </div>
             )}
             {phase === "generate" && !isLoading && !results && (
-              <div className="flex items-start gap-2 rounded-lg border border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
-                <Info className="w-3.5 h-3.5 text-muted-foreground mt-0.5 shrink-0" />
+              <div className="flex items-start gap-2 rounded-lg border border-[#27272A] bg-[#161618] px-3 py-2 text-xs text-foreground/90">
+                <Info className="w-3.5 h-3.5 text-primary mt-0.5 shrink-0" />
                 <span>{t("wp.skipNoFramesHint" as any)}</span>
               </div>
             )}
@@ -1355,17 +1333,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
         </div>
       )}
 
-      {showRightEmptyState && (
-        <div className="empty-state-pulse flex flex-col items-center justify-center text-center min-h-[280px] rounded-2xl px-6 py-10 border border-border bg-muted/20">
-          <Clapperboard size={64} strokeWidth={1.5} className="text-muted-foreground" />
-          <h3 className="font-display mt-5 text-xl font-semibold text-foreground tracking-tight">
-            {t("rp.empty.title" as any)}
-          </h3>
-          <p className="mt-2 max-w-sm text-sm text-muted-foreground leading-relaxed">
-            {t("rp.empty.subtitle" as any)}
-          </p>
-        </div>
-      )}
+      {showRightEmptyState && <EmptyStateExamples />}
 
     </div>
   );

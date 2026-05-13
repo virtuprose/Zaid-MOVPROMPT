@@ -49,7 +49,7 @@ export const ModelPicker = ({ model, onModelChange }: ModelPickerProps) => {
   return (
     <div data-tour="model-picker" className="rounded-xl border border-border bg-card/60 backdrop-blur-sm p-4 sm:p-5 space-y-2.5 sm:space-y-3 shadow-md">
       <div className="flex items-center gap-2">
-        <Sparkles className={cn("w-4 h-4 text-muted-foreground", flash && "animate-pulse")} />
+        <Sparkles className={cn("w-4 h-4 text-primary", flash && "animate-pulse")} />
         <Label className="text-sm font-medium font-display">{t("modelPicker.title" as any)}</Label>
       </div>
       <Select value={model} onValueChange={onModelChange}>
@@ -78,6 +78,21 @@ export const ModelPicker = ({ model, onModelChange }: ModelPickerProps) => {
             scrollbarWidth: "thin",
           }}
         >
+          <div className="flex items-center gap-1.5 px-3 py-2 border-b border-border/60">
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground me-1">Providers</span>
+            {MODEL_GROUPS.map((g) => {
+              const initial = g.label.replace(/\(.+?\)/g, "").trim().charAt(0).toUpperCase();
+              return (
+                <span
+                  key={g.label}
+                  title={g.label}
+                  className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-secondary border border-border text-[10px] font-semibold text-muted-foreground"
+                >
+                  {initial}
+                </span>
+              );
+            })}
+          </div>
           <ModelRow
             value="any"
             label={t("config.anyModel")}

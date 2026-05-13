@@ -53,10 +53,21 @@ const Index = () => {
         <div className="absolute bottom-0 right-0 w-[400px] h-[220px] sm:w-[600px] sm:h-[300px] bg-accent/5 rounded-full blur-[100px] animate-pulse-glow" style={{ animationDelay: "1.5s" }} />
       </div>
 
-      <div className="relative z-10 container max-w-[1400px] mx-auto px-4 py-4 sm:py-12">
+      <div className="relative z-10 container max-w-[1400px] mx-auto px-4 py-3 sm:py-4">
         <AnnouncementBanner />
         {/* Top bar */}
-        <div className="flex flex-nowrap justify-end items-center gap-1 sm:gap-1.5 mb-4">
+        <div className="flex flex-nowrap items-center gap-1 sm:gap-1.5 mb-4 sm:mb-6">
+          <button
+            type="button"
+            onClick={() => { window.location.href = "/"; }}
+            aria-label={t("nav.goHome")}
+            className="flex items-center gap-2 me-auto cursor-pointer hover:opacity-80 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-md py-1"
+          >
+            <img src={logoMark} alt="MovPrompt" className="w-5 h-5 sm:w-6 sm:h-6" />
+            <h1 className="text-[14px] sm:text-[17px] tracking-tight font-display font-bold leading-none">
+              <span className="text-primary">Mov</span>Prompt
+            </h1>
+          </button>
           {!loading && user && !tourDone && (
             <Button
               variant="ghost"
@@ -122,31 +133,7 @@ const Index = () => {
           )}
         </div>
 
-        {/* Hero */}
-        <motion.header
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="text-center mb-6 sm:mb-12"
-        >
-          <button
-            type="button"
-            onClick={() => { window.location.href = "/"; }}
-            aria-label={t("nav.goHome")}
-            className="flex items-center justify-center gap-2.5 sm:gap-3 mb-3 sm:mb-4 mx-auto cursor-pointer hover:opacity-80 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-md"
-          >
-            <img src={logoMark} alt="MovPrompt" className="w-6 h-6 sm:w-10 sm:h-10" />
-            <h1 className="text-[18px] tracking-tight font-display sm:text-[34px] font-bold">
-              <span className="text-primary">Mov</span>Prompt
-            </h1>
-          </button>
-          <p
-            className="text-muted-foreground text-sm sm:text-lg max-w-[20rem] sm:max-w-xl mx-auto px-2 font-display"
-            style={{ fontWeight: 500, letterSpacing: "-0.01em" }}
-          >
-            {t("hero.subtitle")}
-          </p>
-        </motion.header>
+        {/* Hero removed — slim nav above keeps focus on the tool */}
 
         {/* Model-First flow: pick model, then upload (ModelPicker now lives inside LeftPanel) */}
         <motion.div
