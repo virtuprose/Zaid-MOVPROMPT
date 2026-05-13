@@ -77,7 +77,7 @@ export const ReferenceMediaPanel = ({ items, onChange }: ReferenceMediaPanelProp
     <Collapsible defaultOpen={items.length > 0}>
       <CollapsibleTrigger className="flex items-center justify-between w-full rounded-lg border border-border bg-secondary/30 px-3 py-2 hover:bg-secondary/50 transition-colors group">
         <div className="flex items-center gap-2 text-sm font-medium">
-          <Layers className="w-4 h-4 text-primary" />
+          <Layers className="w-4 h-4 text-muted-foreground" />
           <span>{t("references.title" as any)}</span>
           {items.length > 0 && (
             <span className="text-xs text-muted-foreground">({items.length}/{MAX_REFERENCES})</span>

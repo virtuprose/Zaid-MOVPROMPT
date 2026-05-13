@@ -140,7 +140,7 @@ export const SceneBreakdown = ({ frames, frameLabels, framePreviews, directions,
                     <Film className="w-4 h-4 text-muted-foreground" />
                   </div>
                 )}
-                <h4 className="text-xs font-display font-semibold text-primary uppercase tracking-wider">{label}</h4>
+                <h4 className="text-xs font-display font-semibold text-muted-foreground uppercase tracking-wider">{label}</h4>
                 <span className="text-xs text-muted-foreground">{frame.elements.length} {t("scene.elements")}</span>
               </motion.div>
             )}
