@@ -237,7 +237,7 @@ const Auth = () => {
                 {/* Email tabs */}
                 <Tabs defaultValue="signin" className="w-full">
                   <TabsList className="grid grid-cols-2 w-full">
-                    <TabsTrigger value="signin" className="data-[state=active]:bg-brand data-[state=active]:text-brand-foreground">{t("auth.signIn")}</TabsTrigger>
+                    <TabsTrigger value="signin" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">{t("auth.signIn")}</TabsTrigger>
                     <TabsTrigger value="signup">{t("auth.signUp")}</TabsTrigger>
                   </TabsList>
 
