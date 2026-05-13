@@ -190,7 +190,7 @@ const Auth = () => {
             <div className="text-center mb-6">
               <img src="/logo-mark.svg" alt="" className="w-12 h-12 mx-auto mb-2" />
               <h2 className="text-2xl font-mono font-bold mb-1">
-                Mov<span className="text-brand">Prompt</span>
+                <span className="text-primary">Mov</span>Prompt
               </h2>
               <p className="text-sm text-muted-foreground">
                 {t("auth.mobileBrand")}

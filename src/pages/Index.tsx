@@ -135,9 +135,9 @@ const Index = () => {
             aria-label={t("nav.goHome")}
             className="flex items-center justify-center gap-2.5 sm:gap-3 mb-3 sm:mb-4 mx-auto cursor-pointer hover:opacity-80 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-md"
           >
-            <img src={logoMark} alt="MovPrompt" className="w-9 h-9 sm:w-14 sm:h-14" />
-            <h1 className="text-[26px] tracking-tight font-display sm:text-5xl font-bold">
-              Mov<span className="text-brand">Prompt</span>
+            <img src={logoMark} alt="MovPrompt" className="w-6 h-6 sm:w-10 sm:h-10" />
+            <h1 className="text-[18px] tracking-tight font-display sm:text-[34px] font-bold">
+              <span className="text-primary">Mov</span>Prompt
             </h1>
           </button>
           <p
