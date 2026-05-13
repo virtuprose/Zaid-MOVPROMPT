@@ -797,10 +797,10 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
 
     const widthClass = both ? "sm:max-w-md" : "sm:max-w-xs";
     const btn = (active: boolean) =>
-      `flex-1 min-w-0 basis-[140px] sm:basis-0 px-3 py-2 sm:px-4 sm:py-2 text-xs whitespace-normal break-words leading-tight bg-transparent border-0 border-b-2 rounded-none transition-colors ${
+      `flex-1 min-w-0 basis-[140px] sm:basis-0 px-5 py-3 text-xs whitespace-normal break-words leading-tight rounded-full border-2 transition-colors ${
         active
-          ? "border-primary text-foreground font-semibold"
-          : "border-transparent text-muted-foreground hover:text-foreground hover:border-primary/40"
+          ? "bg-primary/10 border-transparent border-b-primary text-foreground font-semibold ring-1 ring-primary/40"
+          : "bg-transparent border-transparent border-[#27272A] text-muted-foreground hover:text-foreground hover:border-primary/40"
       }`;
 
     return (
