@@ -32,10 +32,10 @@ export const ReferenceItem = ({ item, onChange, onRemove }: ReferenceItemProps) 
       {/* Thumbnail */}
       <div className="relative shrink-0 w-20 h-20 rounded-md overflow-hidden bg-background border border-border flex items-center justify-center">
         {item.kind === "image" && item.preview && (
-          <img src={item.preview} alt="" className="w-full h-full object-cover" />
+          <img src={item.preview} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />
         )}
         {item.kind === "video" && item.preview && (
-          <video src={item.preview} className="w-full h-full object-cover" muted playsInline />
+          <video src={item.preview} preload="metadata" className="w-full h-full object-cover" muted playsInline />
         )}
         {item.kind === "audio" && (
           <Music className="w-8 h-8 text-muted-foreground" />
