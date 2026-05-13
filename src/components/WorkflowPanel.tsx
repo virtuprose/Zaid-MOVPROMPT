@@ -444,7 +444,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
     }
   };
 
-  const handleGenerate = async (opts?: { compact?: boolean; replaceShotIdx?: number }) => {
+  const handleGenerate = async (opts?: { compact?: boolean; replaceShotIdx?: number; addendum?: string }) => {
     if (!hasRequiredImages) return;
     if (!user) {
       toast({ title: t("wp.signInRequired"), description: t("wp.signInGenerate"), variant: "destructive" });
@@ -452,12 +452,26 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
       return;
     }
     const isShotRegen = typeof opts?.replaceShotIdx === "number" && results && results[opts.replaceShotIdx];
+    const addendum = opts?.addendum?.trim() || undefined;
     if (isShotRegen) {
       setRegeneratingShotIdx(opts!.replaceShotIdx!);
+      if (addendum) {
+        setApplyingAddendumByShot((prev) => ({ ...prev, [opts!.replaceShotIdx!]: addendum }));
+      }
     } else {
       setIsLoading(true);
       setResults(null);
+      // Full regenerate clears per-shot critiques; feedback is preserved (it's intentional bias).
+      setCritiqueByShot({});
     }
+
+    // Resolve feedback to send: per-shot if regenerating one shot, else first-shot feedback as a hint.
+    const feedbackPayload = (() => {
+      const target = isShotRegen ? opts!.replaceShotIdx! : 0;
+      const fb = feedbackByShot[target];
+      if (!fb || (fb.liked === null && fb.reasons.length === 0 && !fb.note)) return undefined;
+      return { liked: fb.liked, reasons: fb.reasons, note: fb.note || undefined };
+    })();
 
     try {
       const imageBase64s = await Promise.all(images.filter(Boolean).map((img) => compressImage(img.file)));
