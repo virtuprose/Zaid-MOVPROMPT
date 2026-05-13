@@ -45,12 +45,6 @@ export const EmptyStateExamples = () => {
         <p className="text-[13px] text-muted-foreground">
           Examples · Try one or upload your own
         </p>
-        <Link
-          to="/gallery"
-          className="text-[13px] text-primary hover:text-primary/80 inline-flex items-center gap-1"
-        >
-          View all <ArrowRight className="w-3 h-3" />
-        </Link>
       </div>
       <div className="space-y-2">
         {EXAMPLES.map((ex, i) => (
