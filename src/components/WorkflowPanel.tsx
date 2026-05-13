@@ -559,6 +559,8 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
             ? Math.min(10, Math.max(contract.multiShotCount ?? 0, elementsPayload.length))
             : undefined,
           compactMode: opts?.compact === true ? true : undefined,
+          addendum,
+          feedback: feedbackPayload,
         },
       });
 
