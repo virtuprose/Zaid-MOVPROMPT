@@ -985,6 +985,26 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
     </div>
   );
 
+  // Context-aware placeholder based on dominant scene category.
+  const contextPlaceholder = useMemo(() => {
+    if (flatSceneElements.length === 0) return t("config.placeholder");
+    const counts: Record<string, number> = {};
+    for (const el of flatSceneElements) counts[el.category] = (counts[el.category] || 0) + 1;
+    const subj = counts["Subject"] || 0;
+    const objs = counts["Objects"] || 0;
+    const bg = counts["Background"] || 0;
+    if (objs >= 2 && subj <= 1) {
+      return 'e.g. "Slow rotation showing condensation forming on the product, soft commercial lighting, premium advertising mood."';
+    }
+    if (subj >= 1 && bg <= 1 && objs <= 1) {
+      return 'e.g. "Slow push-in on the subject, rack focus on the eyes, golden hour key light from the left."';
+    }
+    if (bg >= 1 && subj === 0) {
+      return 'e.g. "Wide tracking shot across the dunes, sun-flared silhouette walking the ridge, 70mm grain, cinematic letterbox."';
+    }
+    return t("config.placeholder");
+  }, [flatSceneElements, t]);
+
   const descriptionBlock = (phase === "breakdown" || phase === "generate") && (
     <div className="space-y-2" data-tour="describe-textarea">
       {contract.supportsElementReferences ? (
@@ -992,7 +1012,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
           value={description}
           onChange={setDescription}
           elements={elementItems}
-          placeholder={t("config.placeholder")}
+          placeholder={contextPlaceholder}
         />
       ) : sceneFrames.length > 0 ? (
         <SceneMentionTextarea
@@ -1000,7 +1020,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
           value={description}
           onChange={setDescription}
           elements={flatSceneElements.map(({ index, category, description }) => ({ index, category, description }))}
-          placeholder={t("config.placeholder")}
+          placeholder={contextPlaceholder}
         />
       ) : (
         <ConfigPanel description={description} onDescriptionChange={setDescription} />

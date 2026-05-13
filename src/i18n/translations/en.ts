@@ -92,7 +92,7 @@ export const en = {
   "wp.somethingWrongRetry": "Something went wrong. Please try again.",
 
   // Enhance my vision (AI rewrite of Describe)
-  "enhance.button": "Enhance my vision",
+  "enhance.button": "Auto-write from scene",
   "enhance.tooltip.short": "Write a few words first",
   "enhance.loading": "Enhancing…",
   "enhance.dialog.title": "Compare your description",
