@@ -115,8 +115,23 @@ export const GalleryView = ({ family }: GalleryPageProps) => {
         <meta property="og:title" content={`${heading} · MovPrompt`} />
         <meta property="og:description" content={desc} />
         <meta property="og:type" content="website" />
+        <meta property="og:url" content={canonical} />
+        <meta property="og:image" content="https://movprompt.com/og-image.jpg" />
         <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={`${heading} · MovPrompt`} />
+        <meta name="twitter:description" content={desc} />
+        <meta name="twitter:image" content="https://movprompt.com/og-image.jpg" />
         <link rel="canonical" href={canonical} />
+        <script type="application/ld+json">
+          {JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "CollectionPage",
+            name: heading,
+            description: desc,
+            url: canonical,
+            isPartOf: { "@type": "WebSite", name: "MovPrompt", url: "https://movprompt.com" },
+          })}
+        </script>
       </Helmet>
 
       <header className="border-b border-border/40 sticky top-0 z-10 backdrop-blur" style={{ backgroundColor: "hsl(220 25% 4% / 0.85)" }}>
