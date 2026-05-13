@@ -1020,7 +1020,12 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
           <><Sparkles className="w-5 h-5 me-2" aria-hidden="true" /> {t("wp.analyzeScene")}</>
         )}
       </Button>
-      <div className="flex justify-center">
+      {!hasGeneratedBefore && hasRequiredImages && (
+        <p className="text-[12px] leading-snug text-muted-foreground text-center px-2 -mt-1">
+          {t("wp.firstUse.analyzeHint" as any)}
+        </p>
+      )}
+      <div className="flex flex-col items-center gap-1">
         <button
           type="button"
           onClick={() => { setSceneFrames([]); setPhase("breakdown"); }}
@@ -1030,6 +1035,11 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
         >
           Skip &amp; Generate Now <ArrowRight className="w-3.5 h-3.5 rtl:rotate-180" aria-hidden="true" />
         </button>
+        {!hasGeneratedBefore && hasRequiredImages && (
+          <p className="text-[12px] leading-snug text-muted-foreground text-center px-2">
+            {t("wp.firstUse.skipHint" as any)}
+          </p>
+        )}
       </div>
     </div>
   ) : phase === "upload" && contract.supportsElementReferences ? null
