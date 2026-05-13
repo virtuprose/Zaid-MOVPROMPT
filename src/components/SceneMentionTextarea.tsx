@@ -236,22 +236,7 @@ export const SceneMentionTextarea = forwardRef<SceneMentionTextareaHandle, Scene
             )}
           </PopoverContent>
 
-          <div className="flex items-center gap-2 flex-wrap">
-            <PopoverTrigger asChild>
-              <button
-                type="button"
-                onClick={() => {
-                  triggerPosRef.current = null;
-                }}
-                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-primary/30 bg-primary/5 text-xs font-medium text-primary hover:bg-primary/10 transition-colors"
-              >
-                <AtSign className="w-3 h-3" /> {t("scene.insertMention" as any)}
-              </button>
-            </PopoverTrigger>
-            <span className="hidden sm:inline text-[11px] text-muted-foreground">
-              {t("scene.mentionHint" as any)}
-            </span>
-          </div>
+          {/* Bottom pill + helper text removed — autocomplete opens automatically when the user types '@'. */}
         </Popover>
       </div>
     );

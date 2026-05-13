@@ -49,12 +49,12 @@ const categoryEmoji: Record<string, string> = {
 
 const CATEGORY_ORDER = ["Subject", "Objects", "Background", "Lighting", "Atmosphere", "Colors"];
 
-const truncate = (text: string, max = 80) => {
+const truncate = (text: string, max = 60) => {
   if (!text) return "";
   if (text.length <= max) return text;
   const slice = text.slice(0, max);
   const lastSpace = slice.lastIndexOf(" ");
-  return (lastSpace > 40 ? slice.slice(0, lastSpace) : slice).trimEnd() + "…";
+  return (lastSpace > 30 ? slice.slice(0, lastSpace) : slice).trimEnd() + "…";
 };
 
 export const SceneBreakdown = ({
@@ -300,8 +300,8 @@ export const SceneBreakdown = ({
                     const isLocked = dir?.action === "lock";
                     const descExpanded = expandedDescriptions.has(el.id);
                     const fullText = el.details || el.description || "";
-                    const needsTruncate = fullText.length > 80;
-                    const visibleText = descExpanded ? fullText : truncate(fullText, 80);
+                    const needsTruncate = fullText.length > 60;
+                    const visibleText = descExpanded ? fullText : truncate(fullText, 60);
                     const idx = globalIndexById.get(el.id) ?? 0;
 
                     return (
@@ -368,7 +368,7 @@ export const SceneBreakdown = ({
                           {/* Lock/Move segmented toggle */}
                           <TooltipProvider delayDuration={200}>
                             <div
-                              className="flex items-center rounded-md p-0.5 flex-shrink-0 relative"
+                              className="group/toggle flex items-center rounded-md p-0.5 flex-shrink-0 relative transition-all"
                               style={{
                                 backgroundColor: "rgba(255,255,255,0.04)",
                                 border: "1px solid rgba(255,255,255,0.08)",
@@ -396,15 +396,17 @@ export const SceneBreakdown = ({
                                     onClick={() => setAction(el.id, "lock")}
                                     aria-label="Lock"
                                     aria-pressed={isLocked}
-                                    className={`relative z-10 inline-flex items-center gap-1 h-7 px-2 text-xs font-display font-medium transition-colors ${
+                                    className={`relative z-10 inline-flex items-center h-7 px-1.5 text-xs font-display font-medium transition-colors ${
                                       isLocked && pulsing[el.id] ? "animate-pulse-glow" : ""
                                     }`}
                                     style={{
                                       color: isLocked ? "#FFFFFF" : "#71717A",
                                     }}
                                   >
-                                    <Lock className="w-3 h-3" />
-                                    <span className="hidden sm:inline">Lock</span>
+                                    <Lock className="w-3.5 h-3.5" />
+                                    <span className="max-w-0 opacity-0 overflow-hidden whitespace-nowrap group-hover/toggle:max-w-[40px] group-hover/toggle:opacity-100 group-hover/toggle:ms-1 transition-all duration-200">
+                                      Lock
+                                    </span>
                                   </button>
                                 </TooltipTrigger>
                                 <TooltipContent side="top" className="max-w-[220px] text-xs">
@@ -418,15 +420,17 @@ export const SceneBreakdown = ({
                                     onClick={() => setAction(el.id, "move")}
                                     aria-label="Move"
                                     aria-pressed={!isLocked}
-                                    className={`relative z-10 inline-flex items-center gap-1 h-7 px-2 text-xs font-display font-medium transition-colors ${
+                                    className={`relative z-10 inline-flex items-center h-7 px-1.5 text-xs font-display font-medium transition-colors ${
                                       !isLocked && pulsing[el.id] ? "animate-pulse-glow" : ""
                                     }`}
                                     style={{
                                       color: !isLocked ? "#000000" : "#71717A",
                                     }}
                                   >
-                                    <Waves className="w-3 h-3" />
-                                    <span className="hidden sm:inline">Move</span>
+                                    <Waves className="w-3.5 h-3.5" />
+                                    <span className="max-w-0 opacity-0 overflow-hidden whitespace-nowrap group-hover/toggle:max-w-[40px] group-hover/toggle:opacity-100 group-hover/toggle:ms-1 transition-all duration-200">
+                                      Move
+                                    </span>
                                   </button>
                                 </TooltipTrigger>
                                 <TooltipContent side="top" className="max-w-[220px] text-xs">
