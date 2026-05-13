@@ -300,8 +300,8 @@ export const SceneBreakdown = ({
                     const isLocked = dir?.action === "lock";
                     const descExpanded = expandedDescriptions.has(el.id);
                     const fullText = el.details || el.description || "";
-                    const needsTruncate = fullText.length > 80;
-                    const visibleText = descExpanded ? fullText : truncate(fullText, 80);
+                    const needsTruncate = fullText.length > 60;
+                    const visibleText = descExpanded ? fullText : truncate(fullText, 60);
                     const idx = globalIndexById.get(el.id) ?? 0;
 
                     return (
