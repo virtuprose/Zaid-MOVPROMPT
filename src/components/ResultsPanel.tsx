@@ -444,9 +444,78 @@ export const ResultsPanel = forwardRef<HTMLDivElement, ResultsPanelProps>(({ res
           if (isMeaningful(result.cameraTags)) refinements.push({ label: t("results.cameraTags"), value: result.cameraTags! });
           if (isMeaningful(result.referenceGuidance)) refinements.push({ label: t("results.referenceGuidance"), value: result.referenceGuidance! });
 
-          return <ShotCard key={idx} result={result} idx={idx} total={results.length} refinements={refinements} modelLabel={modelLabel} modelValue={modelValue} onSwitchModel={idx === 0 ? onSwitchModel : undefined} onRegenerateCompact={onRegenerateCompact} isRegenerating={isLoading} />;
+          return <ShotCard
+            key={idx}
+            result={result}
+            idx={idx}
+            total={results.length}
+            refinements={refinements}
+            modelLabel={modelLabel}
+            modelValue={modelValue}
+            onSwitchModel={idx === 0 ? onSwitchModel : undefined}
+            onRegenerateCompact={onRegenerateCompact}
+            isRegenerating={isLoading}
+            onRegenerateShot={isMultiShot && results.length > 1 && onRegenerateShot ? () => onRegenerateShot(idx) : undefined}
+            isThisShotRegenerating={regeneratingShotIdx === idx}
+          />;
         })}
       </motion.div>
+
+      {/* Compare dialog */}
+      <Dialog open={compareOpen} onOpenChange={setCompareOpen}>
+        <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="font-display flex items-center gap-2">
+              <GitCompare className="w-4 h-4 text-primary" />
+              {t("results.compare.title" as any)}
+            </DialogTitle>
+          </DialogHeader>
+          {history && history.length >= 2 && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
+              {[
+                { side: "left" as const, snap: leftSnap, setId: setCompareLeftId, id: compareLeftId },
+                { side: "right" as const, snap: rightSnap, setId: setCompareRightId, id: compareRightId },
+              ].map(({ side, snap, setId, id }) => (
+                <div key={side} className="space-y-2 min-w-0">
+                  <Select value={id ?? undefined} onValueChange={setId}>
+                    <SelectTrigger className="h-8 text-xs">
+                      <SelectValue placeholder={t("results.compare.pick" as any)} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {history.map((h, i) => (
+                        <SelectItem key={h.id} value={h.id}>
+                          {i === 0 ? t("results.history.current" as any) : `${t("results.history.version" as any)} ${history.length - i}`}
+                          {" · "}{h.modelLabel}
+                          {" · "}{formatRelative(h.createdAt)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {snap ? (
+                    <div className="space-y-2">
+                      {snap.results.map((r, ri) => (
+                        <div key={ri} className="rounded-md border border-border bg-card p-2.5">
+                          <div className="flex items-center justify-between mb-1.5 gap-2">
+                            <span className="text-[10px] uppercase tracking-wider text-accent font-display">
+                              {r.shotName || `${t("library.shot")} ${ri + 1}`}
+                            </span>
+                            <CopyButton text={r.mainPrompt} />
+                          </div>
+                          <p className="text-[12px] leading-relaxed whitespace-pre-wrap text-foreground/90">
+                            {r.mainPrompt}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-xs text-muted-foreground italic p-3">—</div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </TooltipProvider>
   );
 });
