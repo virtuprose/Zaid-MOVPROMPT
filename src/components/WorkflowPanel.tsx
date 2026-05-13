@@ -96,6 +96,13 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
     createdAt: number;
   }>>([]);
 
+  // Quality & evaluation loop — per-shot state, reset whenever results object identity changes.
+  type ShotFeedback = { liked: boolean | null; reasons: string[]; note: string };
+  type ShotCritique = { result: any | null; loading: boolean; error: string | null };
+  const [feedbackByShot, setFeedbackByShot] = useState<Record<number, ShotFeedback>>({});
+  const [critiqueByShot, setCritiqueByShot] = useState<Record<number, ShotCritique>>({});
+  const [applyingAddendumByShot, setApplyingAddendumByShot] = useState<Record<number, string | null>>({});
+
   const [phase, setPhase] = useState<Phase>("upload");
   const [sceneFrames, setSceneFrames] = useState<SceneFrame[]>([]);
   const [elementDirections, setElementDirections] = useState<ElementDirections>({});
