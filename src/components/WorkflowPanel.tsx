@@ -406,6 +406,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
       navigate("/auth");
       return;
     }
+    analysisCancelledRef.current = false;
     setIsAnalyzing(true);
     try {
       const imageBase64s = await Promise.all(images.filter(Boolean).map((img) => compressImage(img.file)));
