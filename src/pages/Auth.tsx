@@ -137,6 +137,14 @@ const Auth = () => {
         <div className="absolute bottom-0 right-1/4 w-[500px] h-[300px] bg-accent/6 rounded-full blur-[120px]" />
       </div>
 
+      {/* Top-left wordmark */}
+      <div className="absolute top-4 start-4 z-20">
+        <span className="font-display font-bold text-sm tracking-tight">
+          <span className="text-primary">Mov</span>
+          <span className="text-foreground">Prompt</span>
+        </span>
+      </div>
+
       {/* Language toggle */}
       <div className="absolute top-4 end-4 z-20">
         <LanguageToggle />
