@@ -755,37 +755,29 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
     </div>
   );
 
-  const audioToggleBlock = contract.supportsAudio && (
+  // Inline compact audio toggle (rendered inside the collapsed model strip).
+  const audioInlineToggle = contract.supportsAudio ? (
     <button
-      onClick={() => setAudioEnabled((v) => !v)}
-      className={`flex items-center justify-between gap-3 w-full rounded-lg border px-3 py-2 transition-colors ${
-        audioEnabled
-          ? "border-border bg-secondary/60 hover:bg-secondary"
-          : "border-border bg-secondary/40 hover:bg-secondary/60"
-      }`}
+      type="button"
+      onClick={(e) => { e.stopPropagation(); setAudioEnabled((v) => !v); }}
+      className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors shrink-0"
       aria-pressed={audioEnabled}
+      title={audioEnabled ? "Audio on" : "Audio off"}
     >
-      <span className="flex items-center gap-2 text-sm font-medium">
-        {audioEnabled ? (
-          <Volume2 className="w-4 h-4 text-foreground" />
-        ) : (
-          <VolumeX className="w-4 h-4 text-muted-foreground" />
-        )}
-        {t("contract.audio.label" as any)}
-      </span>
+      {audioEnabled ? <Volume2 className="w-3.5 h-3.5 text-foreground" /> : <VolumeX className="w-3.5 h-3.5" />}
       <span
-        className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+        className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${
           audioEnabled ? "bg-primary" : "bg-muted"
         }`}
       >
         <span
-          className={`inline-block h-4 w-4 transform rounded-full bg-background transition-transform ${
-            audioEnabled ? "translate-x-4" : "translate-x-0.5"
+          className={`inline-block h-3 w-3 transform rounded-full bg-background transition-transform ${
+            audioEnabled ? "translate-x-[14px]" : "translate-x-0.5"
           }`}
         />
       </span>
     </button>
-  );
+  ) : null;
 
   const modeToggleBlock = (contract.supportsTwoFrameToggle || contract.supportsMultiShotToggle) && (() => {
     const both = contract.supportsTwoFrameToggle && contract.supportsMultiShotToggle;
