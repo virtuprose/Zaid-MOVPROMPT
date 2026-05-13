@@ -77,15 +77,6 @@ export const ImageUploadZone = ({ label, onImageSelect, onImageRemove, preview }
                 <X size={16} />
               </button>
             </div>
-            {meta && (
-              <p
-                className="text-[13px] text-center truncate whitespace-nowrap overflow-hidden max-w-full px-2"
-                style={{ color: "#71717A" }}
-                title={`${meta.name} · ${formatBytes(meta.size)}`}
-              >
-                {meta.name} · {formatBytes(meta.size)}
-              </p>
-            )}
             <div className="flex justify-center">
               <input
                 ref={replaceInputRef}
