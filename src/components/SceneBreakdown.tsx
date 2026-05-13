@@ -368,7 +368,7 @@ export const SceneBreakdown = ({
                           {/* Lock/Move segmented toggle */}
                           <TooltipProvider delayDuration={200}>
                             <div
-                              className="flex items-center rounded-md p-0.5 flex-shrink-0 relative"
+                              className="group/toggle flex items-center rounded-md p-0.5 flex-shrink-0 relative transition-all"
                               style={{
                                 backgroundColor: "rgba(255,255,255,0.04)",
                                 border: "1px solid rgba(255,255,255,0.08)",
