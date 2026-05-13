@@ -9,6 +9,21 @@ import { OfflineFallback } from "@/components/OfflineFallback";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { TourProvider } from "@/components/tour/TourProvider";
 import Index from "./pages/Index.tsx";
+import Landing from "./pages/Landing.tsx";
+import { useAuth } from "@/hooks/useAuth";
+import { Loader2 } from "lucide-react";
+
+const RootRoute = () => {
+  const { user, loading } = useAuth();
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-6 h-6 animate-spin text-primary" />
+      </div>
+    );
+  }
+  return user ? <Index /> : <Landing />;
+};
 import NotFound from "./pages/NotFound.tsx";
 import Analytics from "./pages/Analytics.tsx";
 import Auth from "./pages/Auth.tsx";
@@ -36,7 +51,7 @@ const AppRoutes = () => {
     <BrowserRouter>
       <TourProvider>
         <Routes>
-          <Route path="/" element={<AuthGuard><Index /></AuthGuard>} />
+          <Route path="/" element={<RootRoute />} />
           <Route path="/auth" element={<Auth />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/admin/login" element={<AdminLogin />} />
