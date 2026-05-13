@@ -112,6 +112,11 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
   const [sceneFrames, setSceneFrames] = useState<SceneFrame[]>([]);
   const [elementDirections, setElementDirections] = useState<ElementDirections>({});
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const analysisCancelledRef = useRef(false);
+  const handleCancelAnalysis = () => {
+    analysisCancelledRef.current = true;
+    setIsAnalyzing(false);
+  };
   const [referenceItems, setReferenceItems] = useState<ReferenceMediaItem[]>([]);
   const [elementItems, setElementItems] = useState<ElementItem[]>([]);
   const sceneMentionRef = useRef<SceneMentionTextareaHandle>(null);
@@ -401,6 +406,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
       navigate("/auth");
       return;
     }
+    analysisCancelledRef.current = false;
     setIsAnalyzing(true);
     try {
       const imageBase64s = await Promise.all(images.filter(Boolean).map((img) => compressImage(img.file)));
@@ -421,6 +427,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
             return data;
           })();
 
+      if (analysisCancelledRef.current) return;
       const frames: SceneFrame[] = data.frames || [];
       setSceneFrames(frames);
 
@@ -434,10 +441,11 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
       setManualOverrides({});
       setPhase("breakdown");
     } catch (err: any) {
+      if (analysisCancelledRef.current) return;
       console.error("Analysis error:", err);
       toast({ title: t("wp.analysisFailed"), description: err.message || t("wp.somethingWrong"), variant: "destructive" });
     } finally {
-      setIsAnalyzing(false);
+      if (!analysisCancelledRef.current) setIsAnalyzing(false);
     }
   };
 
@@ -837,6 +845,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
               preview={images[i]?.preview || null}
               onImageSelect={(file) => handleImageSelect(i, file)}
               onImageRemove={() => handleImageRemove(i)}
+              disabled={isAnalyzing}
             />
             {i === 0 && (
               <div
@@ -883,6 +892,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
             preview={images[i]?.preview || null}
             onImageSelect={(file) => handleImageSelect(i, file)}
             onImageRemove={() => handleImageRemove(i)}
+            disabled={isAnalyzing}
           />
         ))}
       </div>
@@ -1362,7 +1372,10 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
 
       {isAnalyzing && sceneFrames.length === 0 && (
         <div ref={analyzingRef}>
-          <AnalyzingSkeleton framePreviews={images.map((img) => img?.preview || null)} />
+          <AnalyzingSkeleton
+            framePreviews={images.map((img) => img?.preview || null)}
+            onCancel={handleCancelAnalysis}
+          />
         </div>
       )}
 
@@ -1407,7 +1420,14 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
   return (
     <div className="w-full max-w-[1400px] mx-auto">
       <div className="lg:grid lg:grid-cols-[40fr_60fr] lg:gap-8 space-y-6 lg:space-y-0 pb-24 lg:pb-0">
-        <div>{leftPanel}</div>
+        <div
+          style={{
+            opacity: isAnalyzing ? 0.7 : 1,
+            transition: "opacity 300ms ease",
+          }}
+        >
+          {leftPanel}
+        </div>
         <div className="rounded-2xl border border-border bg-card/40 p-4 sm:p-6 lg:self-start">
           {rightPanel}
         </div>

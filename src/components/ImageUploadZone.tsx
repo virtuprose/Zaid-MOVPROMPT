@@ -8,6 +8,7 @@ interface ImageUploadZoneProps {
   onImageSelect: (file: File) => void;
   onImageRemove: () => void;
   preview: string | null;
+  disabled?: boolean;
 }
 
 function formatBytes(bytes: number): string {
@@ -16,7 +17,7 @@ function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-export const ImageUploadZone = ({ label, onImageSelect, onImageRemove, preview }: ImageUploadZoneProps) => {
+export const ImageUploadZone = ({ label, onImageSelect, onImageRemove, preview, disabled = false }: ImageUploadZoneProps) => {
   const [isDragging, setIsDragging] = useState(false);
   const [meta, setMeta] = useState<{ name: string; size: number } | null>(null);
   const replaceInputRef = useRef<HTMLInputElement>(null);
@@ -67,12 +68,18 @@ export const ImageUploadZone = ({ label, onImageSelect, onImageRemove, preview }
                 className="max-w-full max-h-[380px] w-auto h-auto object-contain rounded-md"
               />
               <button
-                onClick={() => { setMeta(null); onImageRemove(); }}
+                onClick={() => { if (disabled) return; setMeta(null); onImageRemove(); }}
                 aria-label="Remove image"
-                className="absolute top-3 right-3 inline-flex items-center justify-center w-8 h-8 rounded-full text-white transition-colors"
-                style={{ background: "rgba(0,0,0,0.6)" }}
-                onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(245,165,36,0.2)")}
-                onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(0,0,0,0.6)")}
+                disabled={disabled}
+                className="absolute top-3 right-3 inline-flex items-center justify-center w-8 h-8 rounded-full text-white transition-all"
+                style={{
+                  background: "rgba(0,0,0,0.6)",
+                  opacity: disabled ? 0.4 : 1,
+                  cursor: disabled ? "not-allowed" : "pointer",
+                  pointerEvents: disabled ? "none" : "auto",
+                }}
+                onMouseEnter={(e) => { if (!disabled) e.currentTarget.style.background = "rgba(245,165,36,0.2)"; }}
+                onMouseLeave={(e) => { if (!disabled) e.currentTarget.style.background = "rgba(0,0,0,0.6)"; }}
               >
                 <X size={16} />
               </button>
@@ -84,12 +91,21 @@ export const ImageUploadZone = ({ label, onImageSelect, onImageRemove, preview }
                 accept="image/*"
                 onChange={handleFileInput}
                 className="hidden"
+                disabled={disabled}
               />
               <button
                 type="button"
-                onClick={() => replaceInputRef.current?.click()}
-                className="inline-flex items-center gap-1.5 text-[13px] font-medium hover:opacity-80 transition-opacity"
-                style={{ color: "#F5A524" }}
+                onClick={() => { if (!disabled) replaceInputRef.current?.click(); }}
+                disabled={disabled}
+                className="inline-flex items-center gap-1.5 text-[13px] font-medium transition-opacity"
+                style={{
+                  color: "#F5A524",
+                  opacity: disabled ? 0.4 : 1,
+                  cursor: disabled ? "not-allowed" : "pointer",
+                  pointerEvents: disabled ? "none" : "auto",
+                }}
+                onMouseEnter={(e) => { if (!disabled) e.currentTarget.style.opacity = "0.8"; }}
+                onMouseLeave={(e) => { if (!disabled) e.currentTarget.style.opacity = "1"; }}
               >
                 <RefreshCw size={13} /> Replace image
               </button>
