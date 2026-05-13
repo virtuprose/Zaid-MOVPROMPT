@@ -1,33 +1,61 @@
 ## Goal
 
-When the user is about to do their **first generation ever**, show a short helper description under each of the two CTAs so they understand the difference between them. After the first successful generation these descriptions disappear permanently.
+Polish the model picker dropdown: remove the leftover Radix chevrons, classify variant pills by tier, add a Sort-by row, and confirm the open/closed state coordination.
 
-## What the user will see
+## Changes
 
-Only on the very first visit (until first generation completes), under the upload zone:
+### 1. Remove chevron scroll buttons (item 1)
+The 40px gradient fade already exists. The chevrons the user still sees come from shadcn's `SelectContent`, which renders `<SelectScrollUpButton />` and `<SelectScrollDownButton />`. Hide them inside the model picker only via a scoped CSS rule on the existing `.model-picker-content` class:
 
-- **Analyze Scene** button → small caption below it:
-  "Recommended — we'll read your image first to write a richer, scene-aware prompt."
+```css
+.model-picker-content [data-radix-select-scroll-up-button],
+.model-picker-content [data-radix-select-scroll-down-button] {
+  display: none;
+}
+```
 
-- **Skip & Generate Now →** link → small caption below it:
-  "Faster path — generates a prompt from your settings only, without analyzing the image."
+Add this rule to `src/index.css`. The fade stays as the only scroll affordance.
 
-After the user generates once, both captions vanish on every following visit.
+### 2. Sticky selected-model card (item 2)
+The only persistent "selected model" surface is the `variantDesc` paragraph below the trigger. It is already conditional on `!open`. Verify and keep that gate so it's hidden while the dropdown is open. No code change unless I also find another sticky element during implementation.
 
-## How it works (technical)
+### 3. Variant pill tiers (item 3)
+Replace the single amber-outline pill with a tier-aware pill. Build a per-model classification map in `ModelPicker.tsx`:
 
-- A flag already exists: `localStorage` key `movprompt.firstGenerationDone`, exposed in `WorkflowPanel.tsx` as `hasGeneratedBefore`. It flips to true after the first generation completes.
-- Reuse it. No new state, no new storage key.
-- Add the two captions inside the existing `phase === "upload"` CTA block in `WorkflowPanel.tsx` (around the Analyze button + Skip link, lines ~995–1023), conditionally rendered when `!hasGeneratedBefore`.
-- Style: 12px, muted foreground, centered, tight line-height. Animated fade-in via the existing framer-motion patterns already used in the file.
-- Add the two new strings to `src/i18n/translations/en.ts` (and other locale files if present) with keys like `wp.firstUse.analyzeHint` and `wp.firstUse.skipHint` so the copy is translatable.
+| Tier | Style | Models |
+|---|---|---|
+| LITE | gray outline (`#71717A` border, gray text) | Veo 3.1 Lite |
+| FAST | amber outline (current) | Veo 3.1 Fast, Veo 3 Fast, Seedance 2.0 Fast, Seedance Pro Fast, Kling 3 Fast (if any) |
+| FLAGSHIP / PRO | amber filled (amber bg, black text) | Kling 3.0 Omni / Omni Edit, Seedance Pro, Seedance 1.5 Pro, Veo 3.1 (base flagship) |
+| TURBO | red outline (`#EF4444`) | Kling 2.5 Turbo |
+
+Other variants (Motion Control, Video Edit, Omni without "Pro" branding) keep the current amber-outline default. Pill label = uppercase variant token (already computed by `splitLabel`). Tier is decided by `(value, variantToken)` lookup so it's deterministic and easy to extend.
+
+### 4. Hover state (item 4)
+Already implemented (`hover:bg-[#161618]` + `hover:border-l-primary`). Add `transition-[background-color,border-color] duration-150 ease-out` to the row so the change is explicitly smooth. Cursor is already `cursor-pointer`.
+
+### 5. Sort-by pills (item 5)
+Add a row directly below the "Available providers" line inside the sticky header:
+
+- Label "Sort by:" — 12px, `text-muted-foreground`
+- Four pills: `Recommended` (default) · `Quality` · `Speed` · `Price`
+- Active: `bg-primary/15 text-primary border border-primary/40`
+- Inactive: `bg-transparent text-muted-foreground hover:text-foreground border border-transparent`
+- Stored in a local `sort` state inside `ModelPicker`.
+
+Sort logic:
+- **Recommended** — current behavior (group order Veo → Kling → Seedance, original order inside each group; "Any Model" pinned on top).
+- **Quality / Speed / Price** — flatten all models into a single list (drop the per-provider section headers in these modes for clarity), sort by a numeric rank, keep "Any Model" pinned on top. Provider name shown as a small subtitle on each row so context isn't lost.
+
+Add a small metadata table next to the existing `MODEL_GROUPS` (in `src/lib/models.ts` or co-located in `ModelPicker.tsx` to avoid bloating shared lib): `{ value: string, qualityRank: number, speedRank: number, priceRank: number }`. Lower rank = better in that dimension. Defaults applied if a model is missing from the table.
 
 ## Files to change
 
-- `src/components/WorkflowPanel.tsx` — render the two hint captions when `!hasGeneratedBefore` in the upload-phase CTA block.
-- `src/i18n/translations/en.ts` (+ any sibling locale files) — add the two new translation keys.
+- `src/components/ModelPicker.tsx` — tier-aware pill component, Sort-by pill row, sort logic, smooth hover transition.
+- `src/index.css` — hide Radix chevrons inside `.model-picker-content`.
+- `src/lib/models.ts` (or local const in ModelPicker) — per-model `qualityRank` / `speedRank` / `priceRank`.
 
 ## Out of scope
 
-- No new tooltip, popover, or dismiss button — captions auto-disappear after the first generation, which matches the request "only will show on his first generation".
-- No changes to the model picker, workflow toggle, or example cards.
+- No new translation keys for now (Sort-by labels stay in English here; I'll wire i18n in a later pass if you want).
+- Mobile/tablet behavior is unchanged beyond the hover / pill restyle.

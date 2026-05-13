@@ -232,3 +232,9 @@
   50% { border-color: hsl(var(--muted-foreground) / 0.4); box-shadow: 0 0 24px hsl(var(--muted-foreground) / 0.08); }
 }
 .empty-state-pulse { animation: empty-border-pulse 2s ease-in-out infinite; }
+
+/* Hide Radix select chevron scroll buttons inside the model picker (gradient fade is the affordance) */
+.model-picker-content [data-radix-select-scroll-up-button],
+.model-picker-content [data-radix-select-scroll-down-button] {
+  display: none !important;
+}
