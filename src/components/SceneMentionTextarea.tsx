@@ -236,9 +236,7 @@ export const SceneMentionTextarea = forwardRef<SceneMentionTextareaHandle, Scene
             )}
           </PopoverContent>
 
-          {/* Anchor only — no visible pill. The autocomplete popover opens automatically when the user types '@'. */}
-          <PopoverAnchor />
-          {/* Helper text + insert pill removed — covered by the helper strip in SceneBreakdown. */}
+          {/* Bottom pill + helper text removed — autocomplete opens automatically when the user types '@'. */}
         </Popover>
       </div>
     );
