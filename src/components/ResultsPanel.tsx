@@ -343,7 +343,7 @@ export const ResultsPanel = forwardRef<HTMLDivElement, ResultsPanelProps>(({ res
               </span>
             )}
           </div>
-          <div className="flex gap-1.5 sm:gap-2">
+          <div className="flex gap-1.5 sm:gap-2 flex-wrap">
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button variant="outline" size="sm" onClick={handleCopyAll} className={`px-2 sm:px-3 ${allCopied ? "border-green-500/50 text-green-400" : ""}`}>
@@ -353,6 +353,59 @@ export const ResultsPanel = forwardRef<HTMLDivElement, ResultsPanelProps>(({ res
               </TooltipTrigger>
               <TooltipContent><p className="max-w-xs">{t("results.copyFullPackageHint")}</p></TooltipContent>
             </Tooltip>
+
+            {history && history.length > 0 && onRestoreSnapshot && (
+              <DropdownMenu>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="sm" className="px-2 sm:px-3">
+                        <HistoryIcon className="w-3.5 h-3.5 sm:me-1.5" />
+                        <span className="hidden sm:inline">{t("results.history.label" as any)}</span>
+                        <span className="ms-1 text-[10px] font-mono px-1 rounded bg-muted text-muted-foreground">{history.length}</span>
+                      </Button>
+                    </DropdownMenuTrigger>
+                  </TooltipTrigger>
+                  <TooltipContent><p className="max-w-xs">{t("results.history.hint" as any)}</p></TooltipContent>
+                </Tooltip>
+                <DropdownMenuContent align="end" className="w-72">
+                  <DropdownMenuLabel className="text-xs uppercase tracking-wider text-muted-foreground">
+                    {t("results.history.title" as any)}
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {history.map((snap, i) => (
+                    <DropdownMenuItem
+                      key={snap.id}
+                      onClick={() => onRestoreSnapshot(snap.id)}
+                      className="flex flex-col items-start gap-0.5 py-2"
+                    >
+                      <div className="flex items-center justify-between w-full gap-2">
+                        <span className="text-sm font-medium">
+                          {i === 0 ? t("results.history.current" as any) : `${t("results.history.version" as any)} ${history.length - i}`}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground font-mono">{formatRelative(snap.createdAt)}</span>
+                      </div>
+                      <div className="text-[11px] text-muted-foreground truncate w-full">
+                        {snap.modelLabel} · {snap.results.length} {snap.results.length === 1 ? t("library.shot") : t("library.shots" as any)}
+                      </div>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+
+            {history && history.length >= 2 && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="outline" size="sm" onClick={openCompare} className="px-2 sm:px-3">
+                    <GitCompare className="w-3.5 h-3.5 sm:me-1.5" />
+                    <span className="hidden sm:inline">{t("results.compare.label" as any)}</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent><p className="max-w-xs">{t("results.compare.hint" as any)}</p></TooltipContent>
+              </Tooltip>
+            )}
+
             <Button variant="outline" size="sm" onClick={onRegenerate} disabled={isLoading} className="px-2 sm:px-3">
               <RefreshCw className={`w-3.5 h-3.5 sm:me-1.5 ${isLoading ? "animate-spin" : ""}`} /> <span className="hidden sm:inline">{t("results.regenerate")}</span>
             </Button>
