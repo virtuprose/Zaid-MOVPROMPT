@@ -420,15 +420,17 @@ export const SceneBreakdown = ({
                                     onClick={() => setAction(el.id, "move")}
                                     aria-label="Move"
                                     aria-pressed={!isLocked}
-                                    className={`relative z-10 inline-flex items-center gap-1 h-7 px-2 text-xs font-display font-medium transition-colors ${
+                                    className={`relative z-10 inline-flex items-center h-7 px-1.5 text-xs font-display font-medium transition-colors ${
                                       !isLocked && pulsing[el.id] ? "animate-pulse-glow" : ""
                                     }`}
                                     style={{
                                       color: !isLocked ? "#000000" : "#71717A",
                                     }}
                                   >
-                                    <Waves className="w-3 h-3" />
-                                    <span className="hidden sm:inline">Move</span>
+                                    <Waves className="w-3.5 h-3.5" />
+                                    <span className="max-w-0 opacity-0 overflow-hidden whitespace-nowrap group-hover/toggle:max-w-[40px] group-hover/toggle:opacity-100 group-hover/toggle:ms-1 transition-all duration-200">
+                                      Move
+                                    </span>
                                   </button>
                                 </TooltipTrigger>
                                 <TooltipContent side="top" className="max-w-[220px] text-xs">
