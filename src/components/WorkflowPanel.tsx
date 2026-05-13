@@ -558,10 +558,30 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
         return;
       }
 
-      setResults(data.results);
+      let finalResults: ShotResult[] = data.results;
+      if (isShotRegen && results) {
+        const idx = opts!.replaceShotIdx!;
+        const newShot = data.results[idx] ?? data.results[0];
+        finalResults = results.map((r, i) => (i === idx ? newShot : r));
+      }
+      setResults(finalResults);
       setAgentName(data.agentName ?? null);
       setPhase("generate");
       trackGeneration(workflowType, selectedModel);
+      // Push snapshot to in-session history (cap 5)
+      const modelLabelNow = MODEL_GROUPS.flatMap(g => g.models).find(m => m.value === selectedModel)?.label ?? selectedModel;
+      setHistory((prev) => {
+        const snap = {
+          id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+          results: finalResults,
+          agentName: data.agentName ?? null,
+          modelValue: selectedModel,
+          modelLabel: modelLabelNow,
+          workflowType,
+          createdAt: Date.now(),
+        };
+        return [snap, ...prev].slice(0, 5);
+      });
       try {
         localStorage.setItem(ONBOARDING_DONE_KEY, "1");
         setHasGeneratedBefore(true);
