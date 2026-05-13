@@ -10,7 +10,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { motion } from "framer-motion";
-import { User, LogOut, Library, BookOpen, PlayCircle, Sparkles, Gift } from "lucide-react";
+import { User, LogOut, Library, BookOpen, PlayCircle, Sparkles, Gift, Menu, Bell } from "lucide-react";
+import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import AnnouncementBanner from "@/components/AnnouncementBanner";
 import NotificationBell from "@/components/NotificationBell";
 import { InstallPrompt } from "@/components/InstallPrompt";
@@ -79,14 +80,14 @@ const Index = () => {
               <span className="text-sm">{t("tour.takeTourShort" as any)}</span>
             </Button>
           )}
-          <div className="shrink-0"><LanguageToggle /></div>
-          {!loading && user && <div className="shrink-0"><NotificationBell /></div>}
+          <div className="shrink-0 hidden sm:block"><LanguageToggle /></div>
+          {!loading && user && <div className="shrink-0 hidden sm:block"><NotificationBell /></div>}
           {!loading && user && (
             <Button
               variant="ghost"
               size="sm"
               onClick={() => navigate("/library")}
-              className="gap-1.5 shrink-0 px-2 sm:px-3"
+              className="gap-1.5 shrink-0 px-2 sm:px-3 hidden sm:inline-flex"
               data-tour="library-link"
             >
               <Library className="w-4 h-4" />
@@ -95,40 +96,91 @@ const Index = () => {
           )}
           {!loading && (
             user ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="gap-2 shrink-0 px-2 sm:px-3">
-                    <Avatar className="w-6 h-6">
-                      <AvatarImage src={user.user_metadata?.avatar_url} />
-                      <AvatarFallback className="text-[10px] bg-primary/20 text-primary">{initials}</AvatarFallback>
-                    </Avatar>
-                    <span className="hidden sm:inline text-sm">{user.user_metadata?.full_name || user.email}</span>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={startTour}>
-                    <PlayCircle className="w-4 h-4 me-2" /> {t("tour.takeTour" as any)}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate("/learn")}>
-                    <BookOpen className="w-4 h-4 me-2" /> {t("learn.menuLabel" as any)}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate("/gallery")}>
-                    <Sparkles className="w-4 h-4 me-2" /> Public gallery
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate("/referrals")}>
-                    <Gift className="w-4 h-4 me-2" /> Refer friends
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={signOut}>
-                    <LogOut className="w-4 h-4 me-2" /> {t("auth.signOut")}
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <>
+                {/* Desktop: avatar dropdown */}
+                <div className="hidden sm:block">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="sm" className="gap-2 shrink-0 px-2 sm:px-3">
+                        <Avatar className="w-6 h-6">
+                          <AvatarImage src={user.user_metadata?.avatar_url} />
+                          <AvatarFallback className="text-[10px] bg-primary/20 text-primary">{initials}</AvatarFallback>
+                        </Avatar>
+                        <span className="hidden sm:inline text-sm">{user.user_metadata?.full_name || user.email}</span>
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={startTour}>
+                        <PlayCircle className="w-4 h-4 me-2" /> {t("tour.takeTour" as any)}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => navigate("/learn")}>
+                        <BookOpen className="w-4 h-4 me-2" /> {t("learn.menuLabel" as any)}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => navigate("/gallery")}>
+                        <Sparkles className="w-4 h-4 me-2" /> Public gallery
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => navigate("/referrals")}>
+                        <Gift className="w-4 h-4 me-2" /> Refer friends
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={signOut}>
+                        <LogOut className="w-4 h-4 me-2" /> {t("auth.signOut")}
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+                {/* Mobile: hamburger sheet */}
+                <Sheet>
+                  <SheetTrigger asChild>
+                    <Button variant="ghost" size="sm" className="sm:hidden shrink-0 px-2" aria-label="Menu">
+                      <Menu className="w-5 h-5" />
+                    </Button>
+                  </SheetTrigger>
+                  <SheetContent side="right" className="w-[280px] flex flex-col gap-1">
+                    <SheetHeader>
+                      <SheetTitle className="flex items-center gap-2">
+                        <Avatar className="w-7 h-7">
+                          <AvatarImage src={user.user_metadata?.avatar_url} />
+                          <AvatarFallback className="text-[10px] bg-primary/20 text-primary">{initials}</AvatarFallback>
+                        </Avatar>
+                        <span className="truncate text-sm font-normal">{user.user_metadata?.full_name || user.email}</span>
+                      </SheetTitle>
+                    </SheetHeader>
+                    <div className="mt-4 flex items-center justify-between px-1">
+                      <span className="text-xs text-muted-foreground">Language</span>
+                      <LanguageToggle />
+                    </div>
+                    <div className="mt-2 flex flex-col">
+                      <Button variant="ghost" className="justify-start" onClick={() => navigate("/library")}>
+                        <Library className="w-4 h-4 me-2" /> {t("library.title")}
+                      </Button>
+                      <Button variant="ghost" className="justify-start" onClick={startTour}>
+                        <PlayCircle className="w-4 h-4 me-2" /> {t("tour.takeTour" as any)}
+                      </Button>
+                      <Button variant="ghost" className="justify-start" onClick={() => navigate("/learn")}>
+                        <BookOpen className="w-4 h-4 me-2" /> {t("learn.menuLabel" as any)}
+                      </Button>
+                      <Button variant="ghost" className="justify-start" onClick={() => navigate("/gallery")}>
+                        <Sparkles className="w-4 h-4 me-2" /> Public gallery
+                      </Button>
+                      <Button variant="ghost" className="justify-start" onClick={() => navigate("/referrals")}>
+                        <Gift className="w-4 h-4 me-2" /> Refer friends
+                      </Button>
+                      <Button variant="ghost" className="justify-start" onClick={signOut}>
+                        <LogOut className="w-4 h-4 me-2" /> {t("auth.signOut")}
+                      </Button>
+                    </div>
+                  </SheetContent>
+                </Sheet>
+              </>
             ) : (
-              <Button variant="outline" size="sm" onClick={() => navigate("/auth")} className="shrink-0 px-2 sm:px-3">
-                <User className="w-4 h-4 sm:me-1.5" />
-                <span className="hidden sm:inline">{t("auth.signIn")}</span>
-              </Button>
+              <>
+                <div className="shrink-0 sm:hidden"><LanguageToggle /></div>
+                <Button variant="outline" size="sm" onClick={() => navigate("/auth")} className="shrink-0 px-2 sm:px-3">
+                  <User className="w-4 h-4 sm:me-1.5" />
+                  <span className="hidden sm:inline">{t("auth.signIn")}</span>
+                </Button>
+              </>
             )
           )}
         </div>
