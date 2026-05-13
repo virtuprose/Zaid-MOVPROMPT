@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { LanguageToggle } from "@/components/LanguageToggle";
+import { Seo } from "@/components/Seo";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { trackPageVisit } from "@/lib/analytics";
 import { LearnSection } from "@/components/learn/LearnSection";
