@@ -93,21 +93,7 @@ const Learn = () => {
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-primary/5 rounded-full blur-[120px]" />
       </div>
 
-      <div className="relative z-10 container max-w-6xl mx-auto px-4 py-6 sm:py-10">
-        {/* Header bar */}
-        <div className="flex items-center justify-between gap-2 mb-8">
-          <Button variant="ghost" size="sm" onClick={() => navigate("/")} className="gap-1.5">
-            <ArrowLeft className="w-4 h-4 rtl:rotate-180" />
-            <span className="text-sm">{t("wp.back" as any)}</span>
-          </Button>
-          <div className="flex items-center gap-2">
-            <BookOpen className="w-4 h-4 text-primary" />
-            <span className="font-display font-semibold text-sm">
-              MovPrompt · <span className="text-primary">{t("learn.title" as any)}</span>
-            </span>
-          </div>
-          <LanguageToggle />
-        </div>
+      <div className="relative z-10 container max-w-6xl mx-auto px-4 py-4 sm:py-6">
 
         {/* Hero */}
         <div className="text-center mb-12 sm:mb-16">
