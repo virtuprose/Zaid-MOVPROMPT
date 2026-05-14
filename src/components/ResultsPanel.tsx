@@ -74,6 +74,7 @@ interface ResultsPanelProps {
 }
 
 const CopyButton = ({ text }: { text: string }) => {
+  const { t } = useLanguage();
   const [copied, setCopied] = useState(false);
   const handleCopy = () => {
     navigator.clipboard.writeText(text);
@@ -81,9 +82,14 @@ const CopyButton = ({ text }: { text: string }) => {
     setTimeout(() => setCopied(false), 2000);
   };
   return (
-    <button onClick={handleCopy} className="p-1.5 rounded-md hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground">
-      {copied ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
-    </button>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button onClick={handleCopy} className="p-1.5 rounded-md hover:bg-accent/10 transition-colors text-muted-foreground hover:text-accent">
+          {copied ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
+        </button>
+      </TooltipTrigger>
+      <TooltipContent><p className="text-xs">{t("results.copySection.tooltip" as any)}</p></TooltipContent>
+    </Tooltip>
   );
 };
 
@@ -125,30 +131,66 @@ const parseScriptedPrompt = (text: string): { header: string; body: string }[] |
   return sections;
 };
 
+const COMMON_FIX_CHIPS: FixChip[] = [
+  { dimension: "mood", label: "mood", addendum: "Anchor the emotional tone with one specific mood word and tie one visual element (lighting, framing, or sound) to that emotion." },
+  { dimension: "lighting", label: "lighting", addendum: "Add explicit lighting design: key light direction and quality (hard / soft), fill ratio, practicals, and color temperature." },
+  { dimension: "lens", label: "lens", addendum: "Specify a concrete lens choice (focal length, prime/zoom) and a depth-of-field intent (shallow / deep)." },
+  { dimension: "movement", label: "movement", addendum: "Add a specific named camera movement (slow dolly-in, lateral tracking, locked-off static) with pace and starting/ending framing." },
+  { dimension: "action", label: "action", addendum: "Replace any vague action with one concrete, observable verb beat for the subject. Avoid 'cinematic moment' or 'unfolds'." },
+];
+const mergeWithCommonChips = (detected: FixChip[]): FixChip[] => {
+  const map = new Map<string, FixChip>();
+  detected.forEach((c) => map.set(c.dimension, c));
+  for (const c of COMMON_FIX_CHIPS) {
+    if (map.size >= 5) break;
+    if (!map.has(c.dimension)) map.set(c.dimension, c);
+  }
+  return Array.from(map.values()).slice(0, 5);
+};
+
+const TECHNICAL_HEADERS = new Set(["NEGATIVE PROMPT", "AUDIO DIRECTION", "SHOT STRUCTURE", "CAMERA SUGGESTIONS", "INTRO"]);
+const isTechnicalHeader = (h: string) => {
+  const up = h.trim().toUpperCase();
+  if (TECHNICAL_HEADERS.has(up)) return true;
+  // Treat anything matching a known tech header as technical even with extra text
+  return Array.from(TECHNICAL_HEADERS).some((k) => up.startsWith(k));
+};
+const formatNarrativeHeader = (h: string) =>
+  h.trim().toUpperCase().replace(/\s*[—–-]\s*/g, " · ");
+
 const ScriptedPrompt = ({ sections }: { sections: { header: string; body: string }[] }) => {
-  // Default: open the first 2 sections, collapse the rest
+  // Default: narrative scenes expanded, technical sections collapsed
   const [openMap, setOpenMap] = useState<Record<number, boolean>>(() =>
-    Object.fromEntries(sections.map((_, i) => [i, i < 2]))
+    Object.fromEntries(sections.map((s, i) => [i, !isTechnicalHeader(s.header)]))
   );
   const toggle = (i: number) => setOpenMap((p) => ({ ...p, [i]: !p[i] }));
   return (
     <div className="space-y-2">
-      {sections.map((s, i) => (
-        <Collapsible key={i} open={!!openMap[i]} onOpenChange={() => toggle(i)}>
-          <CollapsibleTrigger className="flex w-full items-center justify-between gap-2 rounded-md px-3 py-2 bg-background/60 hover:bg-background border border-primary/20 transition-colors group">
-            <span className="text-[11px] font-bold uppercase tracking-[0.1em] text-primary font-mono text-start">
-              [{s.header}]
-            </span>
-            <div className="flex items-center gap-1.5 shrink-0">
-              <CopyButton text={s.body} />
-              <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground transition-transform ${openMap[i] ? "rotate-180" : ""}`} />
-            </div>
-          </CollapsibleTrigger>
-          <CollapsibleContent>
-            <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap px-3 pt-2 pb-1">{s.body}</p>
-          </CollapsibleContent>
-        </Collapsible>
-      ))}
+      {sections.map((s, i) => {
+        const tech = isTechnicalHeader(s.header);
+        return (
+          <Collapsible key={i} open={!!openMap[i]} onOpenChange={() => toggle(i)}>
+            <CollapsibleTrigger className="flex w-full items-center justify-between gap-2 rounded-md px-3 py-2 bg-background/60 hover:bg-[#161618] border border-accent/20 hover:border-accent/40 transition-colors group cursor-pointer">
+              {tech ? (
+                <span className="text-[11px] font-bold uppercase tracking-[0.1em] text-accent font-mono text-start">
+                  [{s.header}]
+                </span>
+              ) : (
+                <span className="text-[11px] font-bold uppercase tracking-[0.12em] text-accent text-start">
+                  {formatNarrativeHeader(s.header)}
+                </span>
+              )}
+              <div className="flex items-center gap-1.5 shrink-0">
+                <CopyButton text={s.body} />
+                <ChevronDown className={`w-4 h-4 text-accent transition-transform ${openMap[i] ? "rotate-180" : ""}`} />
+              </div>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap px-3 pt-2 pb-1">{s.body}</p>
+            </CollapsibleContent>
+          </Collapsible>
+        );
+      })}
     </div>
   );
 };
@@ -182,7 +224,7 @@ const MainPromptHero = ({ value, result, modelLabel, modelValue, onSwitchModel, 
   if (isMeaningful(result.cameraSuggestions)) appended.push({ header: "CAMERA SUGGESTIONS", body: result.cameraSuggestions });
   const totalSections = (parsed?.length ?? 0) + appended.length;
   return (
-    <div className="relative rounded-xl p-4 sm:p-5 bg-card border border-primary/40">
+    <div className="relative rounded-xl p-4 sm:p-5 bg-[#1a1410] border border-accent/30">
       {result.recommendedModel && (
         <div className="mb-3 rounded-lg border-s-4 border-primary bg-primary/5 border border-primary/30 px-3 py-2.5">
           <div className="flex items-start justify-between gap-3 flex-wrap">
@@ -246,7 +288,7 @@ const MainPromptHero = ({ value, result, modelLabel, modelValue, onSwitchModel, 
         const counterColor = ratio > 0.95
           ? "text-destructive font-semibold"
           : ratio >= 0.8
-            ? "text-primary font-medium"
+            ? "text-accent font-medium"
             : "text-muted-foreground";
         return (
           <div className="mb-3 space-y-2">
@@ -296,14 +338,14 @@ const MainPromptHero = ({ value, result, modelLabel, modelValue, onSwitchModel, 
 };
 
 const SectionToggle = ({ label, count, open }: { label: string; count?: number; open: boolean }) => (
-  <CollapsibleTrigger className="flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2.5 bg-secondary/30 hover:bg-secondary/60 border border-border transition-colors group">
+  <CollapsibleTrigger className="flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2.5 bg-secondary/30 hover:bg-[#161618] border border-border transition-colors group cursor-pointer">
     <span className="text-sm font-medium text-foreground flex items-center gap-2">
       {label}
       {typeof count === "number" && count > 0 && (
         <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-muted text-muted-foreground">{count}</span>
       )}
     </span>
-    <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`} />
+    <ChevronDown className={`w-4 h-4 text-accent transition-transform ${open ? "rotate-180" : ""}`} />
   </CollapsibleTrigger>
 );
 
@@ -686,13 +728,13 @@ const ShotCard = ({
           {(result.suggestedAspectRatio || result.suggestedDuration) && (
             <div className="flex items-center gap-3 flex-wrap">
               {result.suggestedAspectRatio && (
-                <span className="text-xs font-mono bg-muted/50 text-muted-foreground border border-border px-2.5 py-1 rounded-md">
-                  📐 {result.suggestedAspectRatio}
+                <span className="text-xs font-mono bg-muted/50 text-muted-foreground border border-border px-2.5 py-1 rounded-md inline-flex items-center gap-1 leading-none">
+                  <span className="text-[11px]">📐</span>{result.suggestedAspectRatio}
                 </span>
               )}
               {result.suggestedDuration && (
-                <span className="text-xs font-mono bg-accent/10 text-accent border border-accent/20 px-2.5 py-1 rounded-md">
-                  ⏱ {result.suggestedDuration}
+                <span className="text-xs font-mono bg-accent/10 text-accent border border-accent/20 px-2.5 py-1 rounded-md inline-flex items-center gap-1 leading-none">
+                  <span className="text-[11px]">⏱</span>{result.suggestedDuration}
                 </span>
               )}
             </div>
@@ -719,16 +761,31 @@ const ShotCard = ({
           </Collapsible>
 
           {onApplyAddendum && (
-            <AutoFixChips
-              chips={fixChips}
-              onApply={(c) => handleApplyFix(c.addendum)}
-              applyingDim={applyingAddendum && fixChips.find((c) => c.addendum === applyingAddendum)?.dimension || null}
-              disabled={isRegenerating || isThisShotRegenerating}
-            />
+            fixChips.length < 2 ? (
+              <div className="rounded-lg border border-border bg-secondary/30 px-3 py-2.5">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <Sparkles className="w-3.5 h-3.5 text-accent" />
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-accent">
+                    {t("results.quickFixes.title" as any)}
+                  </span>
+                </div>
+                <p className="text-[11px] text-muted-foreground">{t("results.quickFixes.complete" as any)}</p>
+              </div>
+            ) : (
+              <AutoFixChips
+                chips={mergeWithCommonChips(fixChips)}
+                onApply={(c) => handleApplyFix(c.addendum)}
+                applyingDim={applyingAddendum && mergeWithCommonChips(fixChips).find((c) => c.addendum === applyingAddendum)?.dimension || null}
+                disabled={isRegenerating || isThisShotRegenerating}
+              />
+            )
           )}
 
           {onFeedbackChange && (
-            <FeedbackBar feedback={feedback} onChange={onFeedbackChange} />
+            <div className="space-y-1.5">
+              <p className="text-[13px] text-muted-foreground">{t("results.feedbackPrompt" as any)}</p>
+              <FeedbackBar feedback={feedback} onChange={onFeedbackChange} />
+            </div>
           )}
         </div>
       </CardContent>
