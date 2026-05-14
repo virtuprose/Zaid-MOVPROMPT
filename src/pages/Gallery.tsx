@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
-import { Eye, Loader2, Sparkles, Search, ArrowRight, Heart, Copy, ChevronDown } from "lucide-react";
+import { Eye, Loader2, Sparkles, Search, ArrowRight, Heart, Copy, ChevronDown, X, Volume2, VolumeX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Dialog, DialogContent, DialogClose } from "@/components/ui/dialog";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -20,6 +21,13 @@ import examplePortrait from "@/assets/example-portrait.jpg";
 import exampleKitchen from "@/assets/example-kitchen.jpg";
 import exampleCyberpunk from "@/assets/example-cyberpunk.jpg";
 import exampleUnderwater from "@/assets/example-underwater.jpg";
+import loopTokyo from "@/assets/loop-tokyo.mp4.asset.json";
+import loopDesert from "@/assets/loop-desert.mp4.asset.json";
+import loopPortrait from "@/assets/loop-portrait.mp4.asset.json";
+import loopKitchen from "@/assets/loop-kitchen.mp4.asset.json";
+import loopCyberpunk from "@/assets/loop-cyberpunk.mp4.asset.json";
+import loopUnderwater from "@/assets/loop-underwater.mp4.asset.json";
+import { toast } from "@/hooks/use-toast";
 
 interface GalleryPageProps {
   family?: typeof MODEL_FAMILIES[number];
