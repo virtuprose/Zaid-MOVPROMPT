@@ -557,6 +557,7 @@ export const GalleryView = ({ family }: GalleryPageProps) => {
   const [search, setSearch] = useState("");
   const [formatFilter, setFormatFilter] = useState("All");
   const [sortBy, setSortBy] = useState(SORT_OPTIONS[0]);
+  const [openSample, setOpenSample] = useState<SampleCard | null>(null);
 
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
@@ -731,8 +732,13 @@ export const GalleryView = ({ family }: GalleryPageProps) => {
           <Card className="border-destructive/30"><CardContent className="py-10 text-center text-sm">{error}</CardContent></Card>
         )}
         {!loading && !error && (
-          <GalleryGrid items={visibleItems} sampleMode={visibleItems.length === 0} />
+          <GalleryGrid
+            items={visibleItems}
+            sampleMode={visibleItems.length === 0}
+            onOpenSample={setOpenSample}
+          />
         )}
+        <SampleModal card={openSample} onClose={() => setOpenSample(null)} />
 
         {/* BROWSE BY MODEL — split into Available / Coming soon */}
         {!family && (() => {
