@@ -744,16 +744,31 @@ const ShotCard = ({
           </Collapsible>
 
           {onApplyAddendum && (
-            <AutoFixChips
-              chips={fixChips}
-              onApply={(c) => handleApplyFix(c.addendum)}
-              applyingDim={applyingAddendum && fixChips.find((c) => c.addendum === applyingAddendum)?.dimension || null}
-              disabled={isRegenerating || isThisShotRegenerating}
-            />
+            fixChips.length < 2 ? (
+              <div className="rounded-lg border border-border bg-secondary/30 px-3 py-2.5">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <Sparkles className="w-3.5 h-3.5 text-accent" />
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-accent">
+                    {t("results.quickFixes.title" as any)}
+                  </span>
+                </div>
+                <p className="text-[11px] text-muted-foreground">{t("results.quickFixes.complete" as any)}</p>
+              </div>
+            ) : (
+              <AutoFixChips
+                chips={mergeWithCommonChips(fixChips)}
+                onApply={(c) => handleApplyFix(c.addendum)}
+                applyingDim={applyingAddendum && mergeWithCommonChips(fixChips).find((c) => c.addendum === applyingAddendum)?.dimension || null}
+                disabled={isRegenerating || isThisShotRegenerating}
+              />
+            )
           )}
 
           {onFeedbackChange && (
-            <FeedbackBar feedback={feedback} onChange={onFeedbackChange} />
+            <div className="space-y-1.5">
+              <p className="text-[13px] text-muted-foreground">{t("results.feedbackPrompt" as any)}</p>
+              <FeedbackBar feedback={feedback} onChange={onFeedbackChange} />
+            </div>
           )}
         </div>
       </CardContent>
