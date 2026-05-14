@@ -292,23 +292,28 @@ export const ResultsSkeleton = ({ modelLabel }: ResultsSkeletonProps) => {
         `}</style>
       </Card>
 
-      {/* Trivia card */}
+      {/* "While you wait" — callout-styled cinematography tip */}
       <Card
-        className="border-border/50"
-        style={{ backgroundColor: "hsl(220 25% 7% / 0.6)" }}
+        className="border-0"
+        style={{
+          backgroundColor: "#161618",
+          borderLeft: "2px solid hsl(35 90% 55%)",
+          backgroundImage:
+            "linear-gradient(90deg, hsl(35 90% 55% / 0.06), transparent 60%)",
+        }}
       >
-        <CardContent className="py-3 px-4">
+        <CardContent className="py-4 px-4">
           <div className="flex items-start gap-2.5">
             <Lightbulb
               className="shrink-0 mt-0.5"
-              style={{ width: 14, height: 14, color: "hsl(35 90% 60%)" }}
+              style={{ width: 16, height: 16, color: "hsl(35 90% 60%)" }}
             />
             <div className="flex-1 min-w-0">
               <div
-                className="text-[10px] uppercase tracking-wider font-display mb-1"
-                style={{ color: "hsl(35 90% 60%)", letterSpacing: "0.1em" }}
+                className="text-[10px] uppercase tracking-wider font-display mb-1.5"
+                style={{ color: "hsl(35 90% 60%)", letterSpacing: "0.14em" }}
               >
-                {t("loading.triviaLabel" as any)}
+                {t("loading.triviaLabel" as any) || "While you wait"}
               </div>
               <AnimatePresence mode="wait">
                 <motion.p
@@ -317,31 +322,50 @@ export const ResultsSkeleton = ({ modelLabel }: ResultsSkeletonProps) => {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -6 }}
                   transition={{ duration: 0.4 }}
-                  className="text-xs sm:text-sm italic"
-                  style={{ color: "hsl(0 0% 80%)", lineHeight: 1.5 }}
+                  className="text-base"
+                  style={{ color: "hsl(0 0% 98%)", lineHeight: 1.55 }}
                 >
-                  {t(TRIVIA_KEYS[triviaIdx] as any)}
+                  &ldquo;{t(TRIVIA_KEYS[triviaIdx] as any)}&rdquo;
                 </motion.p>
               </AnimatePresence>
+              <div
+                className="mt-2 text-[11px] font-display"
+                style={{ color: "hsl(0 0% 55%)", letterSpacing: "0.02em" }}
+              >
+                — MovPrompt cinematography library
+              </div>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Card-shaped placeholders (so layout doesn't shift when results arrive) */}
+      {/* Animated shimmer placeholders (so layout doesn't shift when results arrive) */}
       <Card className="bg-card border-border">
         <CardHeader className="pb-3">
           <Skeleton className="h-5 w-32" />
         </CardHeader>
         <CardContent>
           <div className="grid gap-3">
-            <div className="rounded-lg p-4 bg-primary/5 border border-primary/20 space-y-2">
+            <div
+              className="rounded-lg p-4 border space-y-2 animate-pulse"
+              style={{
+                backgroundColor: "hsl(35 90% 55% / 0.04)",
+                borderColor: "hsl(35 90% 55% / 0.18)",
+              }}
+            >
               <Skeleton className="h-3 w-20" />
               <Skeleton className="h-4 w-full" />
               <Skeleton className="h-4 w-full" />
               <Skeleton className="h-4 w-3/4" />
             </div>
-            <div className="rounded-lg p-4 bg-secondary/50 border border-border space-y-2">
+            <div
+              className="rounded-lg p-4 border space-y-2 animate-pulse"
+              style={{
+                backgroundColor: "hsl(220 25% 9%)",
+                borderColor: "hsl(0 0% 100% / 0.06)",
+                animationDelay: "0.4s",
+              }}
+            >
               <Skeleton className="h-3 w-28" />
               <Skeleton className="h-4 w-full" />
               <Skeleton className="h-4 w-2/3" />
