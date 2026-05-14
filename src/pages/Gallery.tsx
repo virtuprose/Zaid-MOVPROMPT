@@ -725,15 +725,15 @@ export const GalleryView = ({ family }: GalleryPageProps) => {
               className="w-full bg-card/60 border border-border rounded-lg text-sm pl-10 pr-3 py-2.5 outline-none focus:border-primary/50 placeholder:text-muted-foreground"
             />
           </div>
-          <div className="flex items-start justify-between gap-3 flex-wrap">
-            <div className="flex items-center gap-1.5 flex-wrap">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+            <div className="flex items-center gap-1.5 flex-nowrap sm:flex-wrap overflow-x-auto sm:overflow-x-visible -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-none [&>*]:shrink-0 sm:[&>*]:shrink">
               {FORMAT_FILTERS.map((f) => {
                 const active = formatFilter === f;
                 return (
                   <button
                     key={f}
                     onClick={() => setFormatFilter(f)}
-                    className={`text-[11px] uppercase tracking-wider font-display px-2.5 py-1 rounded-full border transition-colors ${
+                    className={`text-[11px] uppercase tracking-wider font-display px-3 py-2 min-h-[44px] sm:min-h-0 sm:py-1 rounded-full border transition-colors ${
                       active
                         ? "border-primary bg-primary text-primary-foreground"
                         : "border-primary/40 bg-transparent text-primary hover:bg-primary/10"
@@ -746,7 +746,7 @@ export const GalleryView = ({ family }: GalleryPageProps) => {
             </div>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="text-xs gap-1.5">
+                <Button variant="outline" size="sm" className="text-xs gap-1.5 self-start min-h-[44px] sm:min-h-0">
                   {sortBy} <ChevronDown className="w-3.5 h-3.5" />
                 </Button>
               </DropdownMenuTrigger>
