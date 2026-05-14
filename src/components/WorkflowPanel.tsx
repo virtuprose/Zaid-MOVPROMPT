@@ -1000,14 +1000,21 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
     const subj = counts["Subject"] || 0;
     const objs = counts["Objects"] || 0;
     const bg = counts["Background"] || 0;
-    if (objs >= 2 && subj <= 1) {
-      return 'e.g. "Slow rotation showing condensation forming on the product, soft commercial lighting, premium advertising mood."';
+    // Product packaging WITH characters (mascot/figure on packaging)
+    if (objs >= 2 && subj >= 1) {
+      return 'e.g. "The mascot animates, product details come into focus, bright commercial lighting, premium retail mood."';
     }
+    // Product packaging WITHOUT characters
+    if (objs >= 2 && subj <= 0) {
+      return 'e.g. "Slow rotation, condensation forms on the surface, soft commercial lighting, premium advertising mood."';
+    }
+    // Portrait
     if (subj >= 1 && bg <= 1 && objs <= 1) {
       return 'e.g. "Slow push-in on the subject, rack focus on the eyes, golden hour key light from the left."';
     }
+    // Landscape
     if (bg >= 1 && subj === 0) {
-      return 'e.g. "Wide tracking shot across the dunes, sun-flared silhouette walking the ridge, 70mm grain, cinematic letterbox."';
+      return 'e.g. "Wide tracking shot, sun-flared silhouette walking the ridge, 70mm grain, cinematic letterbox."';
     }
     return t("config.placeholder");
   }, [flatSceneElements, t]);
