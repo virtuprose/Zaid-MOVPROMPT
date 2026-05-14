@@ -120,25 +120,25 @@ export const ResultsSkeleton = ({ modelLabel }: ResultsSkeletonProps) => {
               style={{
                 width: 18,
                 height: 18,
-                backgroundColor: "hsl(190 90% 50% / 0.18)",
-                border: "1px solid hsl(190 90% 50% / 0.5)",
+                backgroundColor: "hsl(35 90% 50% / 0.18)",
+                border: "1px solid hsl(35 90% 50% / 0.5)",
               }}
             >
-              <Check style={{ width: 11, height: 11, color: "hsl(190 90% 60%)" }} strokeWidth={3} />
+              <Check style={{ width: 11, height: 11, color: "hsl(35 90% 60%)" }} strokeWidth={3} />
             </motion.span>
           ) : active ? (
             <span className="relative">
               <span
                 className="absolute inset-0 rounded-full animate-ping"
-                style={{ backgroundColor: "hsl(190 90% 50% / 0.4)" }}
+                style={{ backgroundColor: "hsl(35 90% 50% / 0.4)" }}
               />
               <span
                 className="relative block rounded-full"
                 style={{
                   width: 10,
                   height: 10,
-                  backgroundColor: "hsl(190 90% 55%)",
-                  boxShadow: "0 0 8px hsl(190 90% 55% / 0.8)",
+                  backgroundColor: "hsl(35 90% 55%)",
+                  boxShadow: "0 0 8px hsl(35 90% 55% / 0.8)",
                 }}
               />
             </span>
@@ -155,7 +155,7 @@ export const ResultsSkeleton = ({ modelLabel }: ResultsSkeletonProps) => {
             color: done
               ? "hsl(0 0% 95%)"
               : active
-                ? "hsl(190 90% 70%)"
+                ? "hsl(35 90% 70%)"
                 : "hsl(0 0% 60%)",
             fontWeight: active ? 500 : 400,
             letterSpacing: "-0.01em",
@@ -179,7 +179,7 @@ export const ResultsSkeleton = ({ modelLabel }: ResultsSkeletonProps) => {
         className="relative overflow-hidden border-border/60"
         style={{
           background:
-            "linear-gradient(135deg, hsl(190 90% 50% / 0.06) 0%, hsl(220 25% 8%) 50%, hsl(35 90% 55% / 0.05) 100%)",
+            "linear-gradient(135deg, hsl(35 90% 50% / 0.06) 0%, hsl(220 25% 8%) 50%, hsl(35 90% 55% / 0.05) 100%)",
         }}
       >
         {/* subtle scanline overlay */}
@@ -187,7 +187,7 @@ export const ResultsSkeleton = ({ modelLabel }: ResultsSkeletonProps) => {
           className="pointer-events-none absolute inset-0 opacity-[0.04]"
           style={{
             backgroundImage:
-              "repeating-linear-gradient(0deg, hsl(190 90% 80%) 0px, hsl(190 90% 80%) 1px, transparent 1px, transparent 3px)",
+              "repeating-linear-gradient(0deg, hsl(35 90% 80%) 0px, hsl(35 90% 80%) 1px, transparent 1px, transparent 3px)",
           }}
         />
         <CardContent className="relative pt-5 pb-5 space-y-4">
@@ -198,8 +198,8 @@ export const ResultsSkeleton = ({ modelLabel }: ResultsSkeletonProps) => {
               style={{
                 width: 40,
                 height: 40,
-                backgroundColor: "hsl(190 90% 50% / 0.12)",
-                border: "1px solid hsl(190 90% 50% / 0.3)",
+                backgroundColor: "hsl(35 90% 50% / 0.12)",
+                border: "1px solid hsl(35 90% 50% / 0.3)",
               }}
             >
               <motion.div
@@ -207,7 +207,7 @@ export const ResultsSkeleton = ({ modelLabel }: ResultsSkeletonProps) => {
                 transition={{ duration: 0.18, ease: "easeOut" }}
                 style={{ originX: 0.1, originY: 0.9 }}
               >
-                <Film style={{ width: 22, height: 22, color: "hsl(190 90% 60%)" }} />
+                <Film style={{ width: 22, height: 22, color: "hsl(35 90% 60%)" }} />
               </motion.div>
               <motion.span
                 aria-hidden
@@ -233,7 +233,7 @@ export const ResultsSkeleton = ({ modelLabel }: ResultsSkeletonProps) => {
                   style={{
                     width: 2,
                     height: "1em",
-                    backgroundColor: "hsl(190 90% 60%)",
+                    backgroundColor: "hsl(35 90% 60%)",
                     transform: "translateY(2px)",
                   }}
                 />
@@ -247,7 +247,7 @@ export const ResultsSkeleton = ({ modelLabel }: ResultsSkeletonProps) => {
             </div>
             <div
               className="shrink-0 font-mono tabular-nums text-xs"
-              style={{ color: "hsl(190 90% 65%)" }}
+              style={{ color: "hsl(35 90% 65%)" }}
             >
               {Math.round(progress)}%
             </div>
@@ -263,8 +263,8 @@ export const ResultsSkeleton = ({ modelLabel }: ResultsSkeletonProps) => {
               style={{
                 width: `${progress}%`,
                 background:
-                  "linear-gradient(90deg, hsl(190 90% 50%) 0%, hsl(190 90% 65%) 50%, hsl(35 90% 55%) 100%)",
-                boxShadow: "0 0 10px hsl(190 90% 50% / 0.6)",
+                  "linear-gradient(90deg, hsl(35 90% 50%) 0%, hsl(35 90% 65%) 50%, hsl(35 90% 55%) 100%)",
+                boxShadow: "0 0 10px hsl(35 90% 50% / 0.6)",
               }}
             />
             {/* sweeping shimmer */}

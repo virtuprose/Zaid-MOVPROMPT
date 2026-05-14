@@ -106,11 +106,11 @@ export const StoryboardSkeleton = ({ shotCount, modelLabel }: StoryboardSkeleton
           background:
             "linear-gradient(135deg, hsl(220 25% 9%) 0%, hsl(220 25% 6%) 100%)",
           border: active
-            ? "1px solid hsl(190 90% 55% / 0.7)"
+            ? "1px solid hsl(35 90% 55% / 0.7)"
             : done
-              ? "1px solid hsl(190 90% 50% / 0.45)"
+              ? "1px solid hsl(35 90% 50% / 0.45)"
               : "1px dashed hsl(0 0% 100% / 0.12)",
-          boxShadow: active ? "0 0 14px hsl(190 90% 50% / 0.35)" : "none",
+          boxShadow: active ? "0 0 14px hsl(35 90% 50% / 0.35)" : "none",
           transition: "border-color 0.3s, box-shadow 0.3s",
         }}
       >
@@ -119,7 +119,7 @@ export const StoryboardSkeleton = ({ shotCount, modelLabel }: StoryboardSkeleton
           className="pointer-events-none absolute inset-0 opacity-[0.05]"
           style={{
             backgroundImage:
-              "repeating-linear-gradient(0deg, hsl(190 90% 80%) 0px, hsl(190 90% 80%) 1px, transparent 1px, transparent 3px)",
+              "repeating-linear-gradient(0deg, hsl(35 90% 80%) 0px, hsl(35 90% 80%) 1px, transparent 1px, transparent 3px)",
           }}
         />
 
@@ -127,7 +127,7 @@ export const StoryboardSkeleton = ({ shotCount, modelLabel }: StoryboardSkeleton
         <div
           className="absolute top-1.5 left-2 font-display text-[10px] uppercase tracking-wider"
           style={{
-            color: done || active ? "hsl(190 90% 70%)" : "hsl(0 0% 50%)",
+            color: done || active ? "hsl(35 90% 70%)" : "hsl(0 0% 50%)",
             letterSpacing: "0.1em",
           }}
         >
@@ -144,11 +144,11 @@ export const StoryboardSkeleton = ({ shotCount, modelLabel }: StoryboardSkeleton
             style={{
               width: 18,
               height: 18,
-              backgroundColor: "hsl(190 90% 50% / 0.22)",
-              border: "1px solid hsl(190 90% 50% / 0.6)",
+              backgroundColor: "hsl(35 90% 50% / 0.22)",
+              border: "1px solid hsl(35 90% 50% / 0.6)",
             }}
           >
-            <Check style={{ width: 11, height: 11, color: "hsl(190 90% 65%)" }} strokeWidth={3} />
+            <Check style={{ width: 11, height: 11, color: "hsl(35 90% 65%)" }} strokeWidth={3} />
           </motion.div>
         )}
 
@@ -163,8 +163,8 @@ export const StoryboardSkeleton = ({ shotCount, modelLabel }: StoryboardSkeleton
                 style={{
                   width: 26,
                   height: 26,
-                  color: "hsl(190 90% 60%)",
-                  filter: "drop-shadow(0 0 6px hsl(190 90% 50% / 0.6))",
+                  color: "hsl(35 90% 60%)",
+                  filter: "drop-shadow(0 0 6px hsl(35 90% 50% / 0.6))",
                 }}
               />
             </motion.div>
@@ -173,7 +173,7 @@ export const StoryboardSkeleton = ({ shotCount, modelLabel }: StoryboardSkeleton
               style={{
                 width: 22,
                 height: 22,
-                color: done ? "hsl(190 90% 55%)" : "hsl(0 0% 100% / 0.18)",
+                color: done ? "hsl(35 90% 55%)" : "hsl(0 0% 100% / 0.18)",
               }}
             />
           )}
@@ -184,7 +184,7 @@ export const StoryboardSkeleton = ({ shotCount, modelLabel }: StoryboardSkeleton
           className="absolute bottom-4 left-2 right-2 text-[10px] font-display truncate"
           style={{
             color: done
-              ? "hsl(190 90% 70%)"
+              ? "hsl(35 90% 70%)"
               : active
                 ? "hsl(0 0% 92%)"
                 : "hsl(0 0% 40%)",
@@ -207,9 +207,9 @@ export const StoryboardSkeleton = ({ shotCount, modelLabel }: StoryboardSkeleton
             style={{
               width: done ? "100%" : active ? `${tileFill}%` : "0%",
               background: done
-                ? "hsl(190 90% 55%)"
-                : "linear-gradient(90deg, hsl(190 90% 50%), hsl(35 90% 55%))",
-              boxShadow: active ? "0 0 6px hsl(190 90% 50% / 0.6)" : "none",
+                ? "hsl(35 90% 55%)"
+                : "linear-gradient(90deg, hsl(35 90% 50%), hsl(35 90% 55%))",
+              boxShadow: active ? "0 0 6px hsl(35 90% 50% / 0.6)" : "none",
             }}
           />
           {active && (
@@ -239,14 +239,14 @@ export const StoryboardSkeleton = ({ shotCount, modelLabel }: StoryboardSkeleton
         className="relative overflow-hidden border-border/60"
         style={{
           background:
-            "linear-gradient(135deg, hsl(190 90% 50% / 0.06) 0%, hsl(220 25% 8%) 50%, hsl(35 90% 55% / 0.05) 100%)",
+            "linear-gradient(135deg, hsl(35 90% 50% / 0.06) 0%, hsl(220 25% 8%) 50%, hsl(35 90% 55% / 0.05) 100%)",
         }}
       >
         <div
           className="pointer-events-none absolute inset-0 opacity-[0.04]"
           style={{
             backgroundImage:
-              "repeating-linear-gradient(0deg, hsl(190 90% 80%) 0px, hsl(190 90% 80%) 1px, transparent 1px, transparent 3px)",
+              "repeating-linear-gradient(0deg, hsl(35 90% 80%) 0px, hsl(35 90% 80%) 1px, transparent 1px, transparent 3px)",
           }}
         />
         <CardContent className="relative pt-5 pb-5 space-y-4">
@@ -256,8 +256,8 @@ export const StoryboardSkeleton = ({ shotCount, modelLabel }: StoryboardSkeleton
               style={{
                 width: 40,
                 height: 40,
-                backgroundColor: "hsl(190 90% 50% / 0.12)",
-                border: "1px solid hsl(190 90% 50% / 0.3)",
+                backgroundColor: "hsl(35 90% 50% / 0.12)",
+                border: "1px solid hsl(35 90% 50% / 0.3)",
               }}
             >
               <motion.div
@@ -265,7 +265,7 @@ export const StoryboardSkeleton = ({ shotCount, modelLabel }: StoryboardSkeleton
                 transition={{ duration: 0.18, ease: "easeOut" }}
                 style={{ originX: 0.1, originY: 0.9 }}
               >
-                <Clapperboard style={{ width: 22, height: 22, color: "hsl(190 90% 60%)" }} />
+                <Clapperboard style={{ width: 22, height: 22, color: "hsl(35 90% 60%)" }} />
               </motion.div>
               <motion.span
                 aria-hidden
@@ -291,7 +291,7 @@ export const StoryboardSkeleton = ({ shotCount, modelLabel }: StoryboardSkeleton
                   style={{
                     width: 2,
                     height: "1em",
-                    backgroundColor: "hsl(190 90% 60%)",
+                    backgroundColor: "hsl(35 90% 60%)",
                     transform: "translateY(2px)",
                   }}
                 />
@@ -302,7 +302,7 @@ export const StoryboardSkeleton = ({ shotCount, modelLabel }: StoryboardSkeleton
             </div>
             <div
               className="shrink-0 font-mono tabular-nums text-xs"
-              style={{ color: "hsl(190 90% 65%)" }}
+              style={{ color: "hsl(35 90% 65%)" }}
             >
               {Math.min(activeIdx + 1, safeCount)} / {safeCount}
             </div>
@@ -318,8 +318,8 @@ export const StoryboardSkeleton = ({ shotCount, modelLabel }: StoryboardSkeleton
               style={{
                 width: `${progress}%`,
                 background:
-                  "linear-gradient(90deg, hsl(190 90% 50%) 0%, hsl(190 90% 65%) 50%, hsl(35 90% 55%) 100%)",
-                boxShadow: "0 0 10px hsl(190 90% 50% / 0.6)",
+                  "linear-gradient(90deg, hsl(35 90% 50%) 0%, hsl(35 90% 65%) 50%, hsl(35 90% 55%) 100%)",
+                boxShadow: "0 0 10px hsl(35 90% 50% / 0.6)",
               }}
             />
             <div
