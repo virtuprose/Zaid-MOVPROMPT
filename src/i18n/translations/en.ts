@@ -354,7 +354,7 @@ export const en = {
   "library.daysAgo": "d ago",
   "library.shot": "Shot",
   "library.copy": "Copy",
-  "library.copyAll": "Copy All",
+  "library.copyAll": "Copy full package",
   "library.copied": "Copied",
   "library.negative": "Negative",
   "library.camera": "Camera",
