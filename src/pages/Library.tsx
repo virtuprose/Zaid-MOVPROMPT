@@ -547,19 +547,7 @@ const Library = () => {
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-primary/5 rounded-full blur-[120px] animate-pulse-glow" />
       </div>
 
-      <div className="relative z-10 container max-w-7xl mx-auto px-4 py-6 sm:py-12">
-        {/* Top bar */}
-        <div className="flex items-center justify-between mb-8">
-          <Button variant="ghost" size="sm" onClick={() => navigate("/")} className="gap-1.5">
-            <ArrowLeft className="w-4 h-4" />
-            <img src="/logo-mark.svg" alt="" className="w-5 h-5" />
-            <span className="hidden sm:inline font-display font-bold tracking-tight text-base">
-              <span className="text-accent">Mov</span>
-              <span className="text-foreground">Prompt</span>
-            </span>
-          </Button>
-          <LanguageToggle />
-        </div>
+      <div className="relative z-10 container max-w-7xl mx-auto px-4 py-4 sm:py-6">
 
         {/* Title */}
         <motion.div
