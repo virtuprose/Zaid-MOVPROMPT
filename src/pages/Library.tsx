@@ -523,8 +523,8 @@ const Library = () => {
                     })}
                     className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors ${
                       active
-                        ? `${wf.color} border-current`
-                        : "border-border text-muted-foreground hover:text-foreground hover:border-foreground/30"
+                        ? "bg-accent text-accent-foreground border-accent"
+                        : "border-accent/40 text-accent bg-transparent hover:bg-accent/10"
                     }`}
                   >
                     {active && <Check className="w-3 h-3" />}
@@ -546,12 +546,12 @@ const Library = () => {
                     })}
                     className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors ${
                       active
-                        ? "bg-foreground/10 text-foreground border-foreground/30"
-                        : "border-border text-muted-foreground hover:text-foreground hover:border-foreground/30"
+                        ? "bg-accent text-accent-foreground border-accent"
+                        : "border-accent/40 text-accent bg-transparent hover:bg-accent/10"
                     }`}
                   >
                     {active && <Check className="w-3 h-3" />}
-                    {model}
+                    {normalizeModelLabel(model)}
                   </button>
                 );
               })}
