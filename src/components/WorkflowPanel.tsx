@@ -824,18 +824,18 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
 
     return (
       <div className="flex flex-nowrap sm:flex-wrap sm:justify-center items-center gap-2 overflow-x-auto sm:overflow-visible -mx-1 px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden snap-x snap-mandatory" style={{ paddingTop: 2, paddingBottom: 2 }}>
-        <button onClick={() => setMode("single")} className={`${btn(currentMode === "single")} snap-start shrink-0`}>
+        <button onClick={() => setMode("single")} style={{ padding: "14px 24px" }} className={`${btn(currentMode === "single")} snap-start`}>
           {contract.supportsMultiShotToggle && !contract.supportsTwoFrameToggle
             ? t("contract.toggle.singleShot" as any)
             : t("contract.toggle.single" as any)}
         </button>
         {contract.supportsTwoFrameToggle && (
-          <button onClick={() => setMode("twoframe")} className={`${btn(currentMode === "twoframe")} snap-start shrink-0`}>
+          <button onClick={() => setMode("twoframe")} style={{ padding: "14px 24px" }} className={`${btn(currentMode === "twoframe")} snap-start`}>
             {t("contract.toggle.startEnd" as any)}
           </button>
         )}
         {contract.supportsMultiShotToggle && (
-          <button onClick={() => setMode("multishot")} className={`${btn(currentMode === "multishot")} snap-start shrink-0`}>
+          <button onClick={() => setMode("multishot")} style={{ padding: "14px 24px" }} className={`${btn(currentMode === "multishot")} snap-start`}>
             {multiLabel}
           </button>
         )}
