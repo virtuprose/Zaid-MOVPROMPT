@@ -10,7 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { motion } from "framer-motion";
-import { User, LogOut, Library, BookOpen, PlayCircle, Sparkles, Gift, Menu, Bell } from "lucide-react";
+import { User, LogOut, Library, BookOpen, PlayCircle, Sparkles, Gift, Menu, Bell, Clapperboard } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import AnnouncementBanner from "@/components/AnnouncementBanner";
 import NotificationBell from "@/components/NotificationBell";
@@ -112,6 +112,10 @@ const Index = () => {
                       <DropdownMenuItem onClick={startTour}>
                         <PlayCircle className="w-4 h-4 me-2" /> {t("tour.takeTour" as any)}
                       </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => navigate("/director")}>
+                        <Clapperboard className="w-4 h-4 me-2" /> AI Director
+                        <span className="ml-auto text-[9px] uppercase tracking-wider text-accent">New</span>
+                      </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => navigate("/learn")}>
                         <BookOpen className="w-4 h-4 me-2" /> {t("learn.menuLabel" as any)}
                       </DropdownMenuItem>
@@ -155,6 +159,10 @@ const Index = () => {
                       </Button>
                       <Button variant="ghost" className="justify-start" onClick={startTour}>
                         <PlayCircle className="w-4 h-4 me-2" /> {t("tour.takeTour" as any)}
+                      </Button>
+                      <Button variant="ghost" className="justify-start" onClick={() => navigate("/director")}>
+                        <Clapperboard className="w-4 h-4 me-2" /> AI Director
+                        <span className="ml-auto text-[9px] uppercase tracking-wider text-accent">New</span>
                       </Button>
                       <Button variant="ghost" className="justify-start" onClick={() => navigate("/learn")}>
                         <BookOpen className="w-4 h-4 me-2" /> {t("learn.menuLabel" as any)}

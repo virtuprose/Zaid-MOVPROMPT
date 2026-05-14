@@ -52,6 +52,7 @@ import Gallery from "./pages/Gallery.tsx";
 import ModelLanding from "./pages/ModelLanding.tsx";
 import Referrals from "./pages/Referrals.tsx";
 import Onboarding from "./pages/Onboarding.tsx";
+import Director from "./pages/Director.tsx";
 
 const queryClient = new QueryClient();
 
@@ -80,6 +81,7 @@ const AppRoutes = () => {
           <Route path="/models/:slug" element={<ModelLanding />} />
           <Route path="/referrals" element={<AuthGuard><Referrals /></AuthGuard>} />
           <Route path="/onboarding" element={<AuthGuard><Onboarding /></AuthGuard>} />
+          <Route path="/director" element={<AuthGuard><Director /></AuthGuard>} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
