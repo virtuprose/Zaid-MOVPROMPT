@@ -4,12 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { Seo } from "@/components/Seo";
+import { TopNav } from "@/components/TopNav";
 
 const AccountPreferences = () => {
   const navigate = useNavigate();
   return (
     <div className="min-h-screen bg-background">
       <Seo title="Preferences · MovPrompt" description="Language and notification preferences." />
+      <TopNav />
       <div className="container max-w-3xl mx-auto px-4 py-6">
         <Button variant="ghost" size="sm" onClick={() => navigate("/")} className="mb-4 gap-2">
           <ArrowLeft className="w-4 h-4" /> Back
