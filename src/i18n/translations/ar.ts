@@ -356,7 +356,7 @@ export const ar: Record<TranslationKey, string> = {
   "library.daysAgo": "ي",
   "library.shot": "لقطة",
   "library.copy": "نسخ",
-  "library.copyAll": "نسخ-الكل",
+  "library.copyAll": "نسخ الحزمة كاملة",
   "library.copied": "تم النسخ",
   "library.negative": "سلبي",
   "library.camera": "كاميرا",
