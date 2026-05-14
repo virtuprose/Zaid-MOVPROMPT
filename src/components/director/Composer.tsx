@@ -20,9 +20,10 @@ type Props = {
   onAttachmentsChange: (a: Attachment[]) => void;
   onSend: () => void;
   busy: boolean;
+  showHelper?: boolean;
 };
 
-export function Composer({ value, onChange, attachments, onAttachmentsChange, onSend, busy }: Props) {
+export function Composer({ value, onChange, attachments, onAttachmentsChange, onSend, busy, showHelper }: Props) {
   const { user } = useAuth();
   const inputRef = useRef<HTMLInputElement>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
