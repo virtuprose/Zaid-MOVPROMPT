@@ -41,7 +41,7 @@ import { parseEdgeFnError, pickErrorKey } from "@/lib/edgeFnError";
 import { detectAllIntents } from "@/lib/sceneIntent";
 import { ModelPicker } from "./ModelPicker";
 import { OnboardingExamples, type OnboardingExample } from "./OnboardingExamples";
-import { EmptyStateExamples } from "./EmptyStateExamples";
+
 
 const ONBOARDING_DONE_KEY = "movprompt.firstGenerationDone";
 
@@ -1255,7 +1255,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
     </Button>
   );
 
-  const showRightEmptyState = !results && !isLoading && !isAnalyzing && !((phase === "breakdown" || phase === "generate") && sceneFrames.length > 0);
+  
 
   const analyzingRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -1489,8 +1489,6 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
         </div>
       )}
 
-      {showRightEmptyState && <EmptyStateExamples />}
-
     </div>
   );
 
@@ -1527,9 +1525,18 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
     </div>
   ) : null;
 
+  // Show the right-side workspace card only when there's actually content
+  // (results, loading, analyzing, scene breakdown). When idle, the screen is
+  // a clean single column — no empty Examples panel, no empty bordered box.
+  const hasRightContent =
+    !!results ||
+    isLoading ||
+    isAnalyzing ||
+    ((phase === "breakdown" || phase === "generate") && sceneFrames.length > 0);
+
   return (
-    <div className="w-full max-w-[1400px] mx-auto">
-      <div className="lg:grid lg:grid-cols-[40fr_60fr] lg:gap-8 space-y-6 lg:space-y-0 pb-24 lg:pb-0">
+    <div className="w-full max-w-[720px] mx-auto">
+      <div className="space-y-6 pb-24 lg:pb-0">
         <div
           style={{
             opacity: isAnalyzing ? 0.7 : 1,
@@ -1538,9 +1545,11 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
         >
           {leftPanel}
         </div>
-        <div className="rounded-2xl border border-border bg-card/40 p-4 sm:p-6 lg:self-start">
-          {rightPanel}
-        </div>
+        {hasRightContent && (
+          <div className="rounded-2xl border border-border bg-card/40 p-4 sm:p-6">
+            {rightPanel}
+          </div>
+        )}
       </div>
       {mobileStickyCta}
     </div>
