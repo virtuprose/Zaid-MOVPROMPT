@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/i18n/LanguageContext";
-import { Bell } from "lucide-react";
+import { Bell, BellOff, Settings } from "lucide-react";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -11,6 +12,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { cn } from "@/lib/utils";
 
 interface Notification {
   id: string;
@@ -109,22 +111,51 @@ const NotificationBell = () => {
 
   if (!user) return null;
 
+  const hasNotifications = notifications.length > 0;
+  const hasUnread = unreadCount > 0;
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative">
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label="Notifications"
+          className={cn(
+            "relative transition-colors",
+            hasUnread
+              ? "bg-primary text-primary-foreground hover:bg-primary/90"
+              : hasNotifications
+                ? "bg-white/[0.04] text-foreground hover:bg-white/[0.08]"
+                : "bg-transparent text-muted-foreground hover:text-foreground hover:bg-white/[0.04]"
+          )}
+        >
           <Bell className="h-5 w-5" />
-          {unreadCount > 0 && (
+          {hasUnread && (
             <Badge
               variant="destructive"
-              className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center text-[10px] rounded-full"
+              className="absolute -top-1 -right-1 h-[18px] min-w-[18px] px-1 flex items-center justify-center text-[10px] leading-none rounded-full ring-2 ring-background"
             >
               {unreadCount > 9 ? "9+" : unreadCount}
             </Badge>
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-80 p-0" align="end">
+      <PopoverContent
+        align="end"
+        sideOffset={8}
+        collisionPadding={12}
+        className={cn(
+          "p-0 border border-border/80 shadow-2xl rounded-xl overflow-hidden",
+          hasNotifications ? "w-[380px]" : "w-[320px]"
+        )}
+        style={{
+          zIndex: 100,
+          backgroundColor: "#0F0F11",
+          backdropFilter: "blur(8px)",
+          WebkitBackdropFilter: "blur(8px)",
+        }}
+      >
         <div dir={locale === "ar" ? "rtl" : "ltr"} className="flex items-center justify-between px-4 py-3 border-b border-border">
           <h4 className="text-sm font-semibold">{t("notifications.title")}</h4>
           {unreadCount > 0 && (
@@ -133,10 +164,8 @@ const NotificationBell = () => {
             </Button>
           )}
         </div>
-        <ScrollArea className="max-h-[320px]">
-          {notifications.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-8">{t("notifications.empty")}</p>
-          ) : (
+        {hasNotifications ? (
+          <ScrollArea className="max-h-[420px]">
             <div className="divide-y divide-border">
               {notifications.map((n) => {
                 const isRead = readIds.has(n.id);
@@ -165,8 +194,44 @@ const NotificationBell = () => {
                 );
               })}
             </div>
+          </ScrollArea>
+        ) : (
+          <div
+            dir={locale === "ar" ? "rtl" : "ltr"}
+            className="flex flex-col items-center justify-center text-center px-6 py-7 gap-2"
+            style={{ minHeight: 140 }}
+          >
+            <div className="h-9 w-9 rounded-full bg-white/[0.04] flex items-center justify-center">
+              <BellOff className="h-4 w-4 text-muted-foreground" />
+            </div>
+            <p className="text-sm font-medium text-foreground">No notifications yet</p>
+            <p className="text-xs text-muted-foreground leading-snug">
+              We'll let you know when your prompts get likes, comments, or when new models are added.
+            </p>
+          </div>
+        )}
+        <div
+          dir={locale === "ar" ? "rtl" : "ltr"}
+          className="flex items-center justify-between px-3 py-2 border-t border-border"
+        >
+          <Link
+            to="/account/notifications"
+            className="inline-flex items-center justify-center h-8 w-8 rounded-md text-muted-foreground hover:text-foreground hover:bg-white/[0.04] transition-colors"
+            aria-label="Notification settings"
+            onClick={() => setOpen(false)}
+          >
+            <Settings className="h-4 w-4" />
+          </Link>
+          {hasNotifications && (
+            <Link
+              to="/notifications"
+              className="text-xs font-medium text-primary hover:text-primary/80 transition-colors"
+              onClick={() => setOpen(false)}
+            >
+              View all
+            </Link>
           )}
-        </ScrollArea>
+        </div>
       </PopoverContent>
     </Popover>
   );
