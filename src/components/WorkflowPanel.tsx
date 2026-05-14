@@ -1086,7 +1086,37 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
         )}
       </div>
     </div>
-  ) : phase === "upload" && contract.supportsElementReferences ? null
+  ) : phase === "upload" && contract.supportsElementReferences ? (
+    <div className="pt-2 space-y-3">
+      <Button
+        data-tour="analyze-button"
+        size="lg"
+        onClick={handleAnalyze}
+        disabled={!hasRequiredImages || isAnalyzing}
+        aria-label={hasRequiredImages ? t("wp.analyzeScene") : "Add at least one element reference to continue"}
+        className={!hasRequiredImages
+          ? "w-full font-display font-medium bg-transparent border border-dashed border-[#3F3F46] text-[#71717A] hover:bg-transparent hover:text-[#71717A] disabled:opacity-100"
+          : "w-full font-display font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-md shadow-primary/[0.15]"}
+      >
+        {!hasRequiredImages ? (
+          <>Add an element reference to continue</>
+        ) : (
+          <><Sparkles className="w-5 h-5 me-2" aria-hidden="true" /> {t("wp.analyzeScene")}</>
+        )}
+      </Button>
+      <div className="flex flex-col items-center gap-1">
+        <button
+          type="button"
+          onClick={() => { setSceneFrames([]); setPhase("breakdown"); }}
+          disabled={isAnalyzing || !hasRequiredImages}
+          aria-label="Skip & Generate Now"
+          className="inline-flex items-center gap-1.5 text-sm text-[#A1A1AA] hover:text-foreground transition-colors disabled:opacity-50 disabled:pointer-events-none focus:outline-none focus-visible:underline"
+        >
+          Skip &amp; Generate Now <ArrowRight className="w-3.5 h-3.5 rtl:rotate-180" aria-hidden="true" />
+        </button>
+      </div>
+    </div>
+  )
     : (phase === "breakdown" || phase === "generate") ? (
     <div className="pt-6 mt-6 border-t border-white/[0.06] flex flex-col items-center gap-3">
       <Button
