@@ -461,7 +461,10 @@ const Library = () => {
           <Button variant="ghost" size="sm" onClick={() => navigate("/")} className="gap-1.5">
             <ArrowLeft className="w-4 h-4" />
             <img src="/logo-mark.svg" alt="" className="w-5 h-5" />
-            <span className="hidden sm:inline font-mono font-semibold">MOVPROMPT</span>
+            <span className="hidden sm:inline font-display font-bold tracking-tight text-base">
+              <span className="text-accent">Mov</span>
+              <span className="text-foreground">Prompt</span>
+            </span>
           </Button>
           <LanguageToggle />
         </div>
