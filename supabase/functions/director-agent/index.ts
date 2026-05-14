@@ -34,6 +34,9 @@ CORE BEHAVIOR — SMART ONE-SHOT:
 WHEN YOU GENERATE A PROMPT:
 - The \`prompt\` field is the final cinematic prompt the user will paste into a video model. Write it as a single dense paragraph (60–140 words), packed with concrete visual detail: subject + action, camera (lens, angle, movement), lighting (key/fill/practicals, time of day, color temp), environment, mood, color palette, film/look reference if relevant.
 - The \`breakdown\` is a structured snapshot of your decisions for the user to scan and tweak.
+- ALWAYS fill \`breakdown.negative_prompt\` with concrete things to avoid (face artifacts, motion blur, text/watermark, modern items if vintage, etc).
+- ALWAYS fill \`breakdown.model_recommendation\` with one of: Seedance Pro, Veo 3, Kling 2, plus a 4–8 word reason. Pick what genuinely fits the shot.
+- ALWAYS fill \`breakdown.film_emulation\` if a film/look reference is implied (stock + grade), otherwise leave blank.
 - Always be opinionated. If the brief is vague, MAKE strong creative choices and explain them in \`directors_note\`.
 
 NEVER:
@@ -89,8 +92,20 @@ const TOOLS = [
               color_palette: { type: "string" },
               environment: { type: "string" },
               duration_hint: { type: "string", description: "e.g. '5s' or '10s'." },
+              film_emulation: {
+                type: "string",
+                description: "Film stock / color grading / aesthetic notes (e.g. '35mm Kodak Portra, teal-orange grade').",
+              },
+              negative_prompt: {
+                type: "string",
+                description: "Comma-separated negatives the model should avoid (e.g. 'blurry face, motion blur, watermark, text overlay').",
+              },
+              model_recommendation: {
+                type: "string",
+                description: "Single short line: which model fits best and why (e.g. 'Seedance Pro — best for portrait + film grain').",
+              },
             },
-            required: ["subject", "camera", "lighting", "mood"],
+            required: ["subject", "camera", "lighting", "mood", "negative_prompt", "model_recommendation"],
             additionalProperties: false,
           },
           directors_note: {

@@ -37,8 +37,14 @@ export default function Director() {
 
       <div className="relative z-10 container max-w-3xl mx-auto px-4 py-4">
         <div className="flex items-center justify-between mb-4">
-          <Button variant="ghost" size="sm" onClick={() => navigate("/")} className="gap-1.5">
-            <ArrowLeft className="w-4 h-4" /> Back
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate("/")}
+            className="gap-1.5"
+            title="Back to Studio"
+          >
+            <ArrowLeft className="w-4 h-4" /> Back to Studio
           </Button>
           <div className="flex items-center gap-2">
             <Clapperboard className="w-5 h-5 text-primary" />

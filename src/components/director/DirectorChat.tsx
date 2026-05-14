@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Loader2, RotateCcw } from "lucide-react";
+import { Loader2, RotateCcw, FileText, Music } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import {
@@ -22,7 +22,7 @@ import { useAuth } from "@/hooks/useAuth";
 import logoMark from "@/assets/logo-mark.svg";
 
 type Bubble =
-  | { role: "user"; content: string }
+  | { role: "user"; content: string; attachments?: Attachment[] }
   | { role: "assistant"; content: string }
   | { role: "result"; data: Extract<AgentResponse, { kind: "generate_prompt" }> }
   | { role: "questions"; questions: string[]; reason: string };
@@ -86,9 +86,13 @@ export function DirectorChat() {
       toast.error("Add a brief or some references");
       return;
     }
+    const fallback = attachments.length
+      ? `References attached: ${attachments.length} file${attachments.length === 1 ? "" : "s"}`
+      : "(See attached references.)";
     const userBubble: Bubble = {
       role: "user",
-      content: text || "(See attached references.)",
+      content: text || fallback,
+      attachments: attachments.length ? attachments : undefined,
     };
     const next = [...bubbles, userBubble];
     setBubbles(next);
@@ -164,12 +168,22 @@ export function DirectorChat() {
     "🎬 Documentary narrative shot",
   ];
 
+  const lastBubble = bubbles[bubbles.length - 1];
+  const subhead =
+    lastBubble?.role === "questions"
+      ? "Gathering details to craft your prompt…"
+      : lastBubble?.role === "result"
+        ? "Prompt ready. Refine or open in your video model."
+        : "Smart one-shot — I'll only ask if something would change the shot.";
+
+  const handleRefine = (currentPrompt: string) => {
+    setInput(`Refine this prompt: ${currentPrompt}\n\nMy changes: `);
+  };
+
   return (
     <div className="flex flex-col gap-3 h-[calc(100vh-180px)] max-h-[820px]">
       <div className="flex items-center justify-between">
-        <div className="text-xs text-muted-foreground">
-          Smart one-shot — I'll only ask if something would change the shot.
-        </div>
+        <div className="text-xs text-muted-foreground transition-colors">{subhead}</div>
         <Button size="sm" variant="ghost" onClick={onResetClick} className="gap-1.5 h-7 text-xs">
           <RotateCcw className="w-3.5 h-3.5" /> New brief
         </Button>
@@ -192,8 +206,9 @@ export function DirectorChat() {
                   key={i}
                   title={b.data.title}
                   prompt={b.data.prompt}
-                  breakdown={b.data.breakdown as Record<string, string>}
+                  breakdown={b.data.breakdown}
                   directorsNote={b.data.directors_note}
+                  onRefine={() => handleRefine(b.data.prompt)}
                 />
               );
             }
@@ -217,7 +232,7 @@ export function DirectorChat() {
             }
             const isUser = b.role === "user";
             return (
-              <div key={i} className={`relative flex ${isUser ? "justify-end" : "justify-start"}`}>
+              <div key={i} className={`relative flex flex-col gap-1.5 ${isUser ? "items-end" : "items-start"}`}>
                 <div
                   className={`max-w-[85%] rounded-2xl px-3.5 py-2 text-sm whitespace-pre-wrap leading-relaxed ${
                     isUser
@@ -227,6 +242,38 @@ export function DirectorChat() {
                 >
                   {b.content}
                 </div>
+                {isUser && b.role === "user" && b.attachments && b.attachments.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 max-w-[85%] justify-end">
+                    {b.attachments.map((a, j) => {
+                      const isImage = a.kind === "image" || a.kind === "video_keyframes";
+                      return (
+                        <div
+                          key={j}
+                          className="flex items-center gap-1.5 rounded-lg border border-[hsl(240_5%_15%)] bg-[hsl(240_5%_8%)] p-1 pr-2"
+                        >
+                          {isImage ? (
+                            <img
+                              src={(a as any).url}
+                              alt={a.name}
+                              className="w-[60px] h-[60px] object-cover rounded-md"
+                            />
+                          ) : (
+                            <div className="w-[60px] h-[60px] rounded-md bg-muted flex items-center justify-center text-muted-foreground">
+                              {a.kind === "audio_transcript" ? (
+                                <Music className="w-5 h-5" />
+                              ) : (
+                                <FileText className="w-5 h-5" />
+                              )}
+                            </div>
+                          )}
+                          <span className="text-[11px] text-muted-foreground max-w-[140px] truncate">
+                            {a.name}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             );
           })}
