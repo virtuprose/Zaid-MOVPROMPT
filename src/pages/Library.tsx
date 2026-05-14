@@ -501,20 +501,38 @@ const Library = () => {
             animate={{ opacity: 1 }}
             className="space-y-3 mb-6"
           >
-            {/* Search input */}
-            <div className="relative">
-              <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
-              <Input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder={t("library.searchPlaceholder")}
-                className="ps-9 pe-9 bg-secondary/30 border-border"
-              />
-              {search && (
-                <button onClick={() => setSearch("")} className="absolute end-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-                  <X className="w-4 h-4" />
-                </button>
-              )}
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                <Input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder={t("library.searchPlaceholder")}
+                  className="ps-9 pe-9 bg-secondary/30 border-border"
+                />
+                {search && (
+                  <button onClick={() => setSearch("")} className="absolute end-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="text-xs gap-1.5 shrink-0 h-10">
+                    {sortBy === "newest" && "Newest first"}
+                    {sortBy === "oldest" && "Oldest first"}
+                    {sortBy === "copied" && "Most copied"}
+                    {sortBy === "liked" && "Most liked"}
+                    <ChevronDown className="w-3.5 h-3.5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => setSortBy("newest")}>Newest first</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setSortBy("oldest")}>Oldest first</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setSortBy("copied")}>Most copied</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setSortBy("liked")}>Most liked</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
 
             {/* Filter chips */}
