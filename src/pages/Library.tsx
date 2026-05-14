@@ -616,8 +616,8 @@ const Library = () => {
               </DropdownMenu>
             </div>
 
-            {/* Filter chips */}
-            <div className="flex flex-wrap gap-2">
+            {/* Filter chips — horizontal scroll on mobile, wrap on larger screens */}
+            <div className="flex sm:flex-wrap flex-nowrap gap-2 overflow-x-auto sm:overflow-x-visible -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-none [&>*]:shrink-0 sm:[&>*]:shrink">
               {/* Workflow chips */}
               {Object.entries(getWorkflowLabels(t)).map(([key, wf]) => {
                 const active = workflowFilter.has(key);
