@@ -711,13 +711,13 @@ const ShotCard = ({
           {(result.suggestedAspectRatio || result.suggestedDuration) && (
             <div className="flex items-center gap-3 flex-wrap">
               {result.suggestedAspectRatio && (
-                <span className="text-xs font-mono bg-muted/50 text-muted-foreground border border-border px-2.5 py-1 rounded-md">
-                  📐 {result.suggestedAspectRatio}
+                <span className="text-xs font-mono bg-muted/50 text-muted-foreground border border-border px-2.5 py-1 rounded-md inline-flex items-center gap-1 leading-none">
+                  <span className="text-[11px]">📐</span>{result.suggestedAspectRatio}
                 </span>
               )}
               {result.suggestedDuration && (
-                <span className="text-xs font-mono bg-accent/10 text-accent border border-accent/20 px-2.5 py-1 rounded-md">
-                  ⏱ {result.suggestedDuration}
+                <span className="text-xs font-mono bg-accent/10 text-accent border border-accent/20 px-2.5 py-1 rounded-md inline-flex items-center gap-1 leading-none">
+                  <span className="text-[11px]">⏱</span>{result.suggestedDuration}
                 </span>
               )}
             </div>
