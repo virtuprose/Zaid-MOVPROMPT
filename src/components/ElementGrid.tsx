@@ -156,8 +156,12 @@ export const ElementGrid = ({ items, onChange, max = 10 }: ElementGridProps) => 
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <span className="text-sm font-medium text-foreground">{t("elements.title" as any)}</span>
-        <span className="text-xs text-muted-foreground">{items.length}/{max}</span>
+        <span className="text-sm font-medium text-foreground">
+          Characters / References <span className="text-muted-foreground font-normal">({items.length}/{max})</span>
+        </span>
+        <span className="text-[11px] text-muted-foreground italic">
+          Add up to {max} character references for your single shot
+        </span>
       </div>
 
       {items.length === 0 ? (
