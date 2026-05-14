@@ -91,23 +91,26 @@ function HistoryCard({
   isExpanded: boolean;
   onToggle: () => void;
 }) {
-  const [thumbUrl, setThumbUrl] = useState<string | null>(null);
+  const [thumbUrls, setThumbUrls] = useState<string[]>([]);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const workflowLabels = getWorkflowLabels(t);
   const wf = workflowLabels[entry.workflow_type] || workflowLabels.single;
   const results: any[] = Array.isArray(entry.results) ? entry.results : [entry.results];
   const preview = results[0]?.mainPrompt?.slice(0, 200) || "";
+  const modelLabel = normalizeModelLabel(entry.target_model);
 
-  // Eagerly resolve a thumbnail for the first reference image (if any).
+  // Resolve up to 4 thumbnails for a 2x2 composite when multiple references exist.
   useEffect(() => {
-    const firstPath = entry.image_paths?.[0];
-    if (!firstPath) return;
+    const paths = entry.image_paths?.slice(0, 4) || [];
+    if (paths.length === 0) return;
     let cancelled = false;
-    supabase.storage
-      .from("generation-images")
-      .createSignedUrl(firstPath, 3600)
-      .then(({ data }) => {
-        if (!cancelled && data?.signedUrl) setThumbUrl(data.signedUrl);
-      });
+    Promise.all(
+      paths.map((p) =>
+        supabase.storage.from("generation-images").createSignedUrl(p, 3600).then(({ data }) => data?.signedUrl || null),
+      ),
+    ).then((urls) => {
+      if (!cancelled) setThumbUrls(urls.filter((u): u is string => !!u));
+    });
     return () => { cancelled = true; };
   }, [entry.image_paths]);
 
@@ -121,6 +124,9 @@ function HistoryCard({
     })
     .join("\n\n");
 
+  const totalRefs = entry.image_paths?.length ?? 0;
+  const showComposite = thumbUrls.length > 1;
+
   return (
     <Card
       className={`bg-card border-border overflow-hidden flex flex-col group transition-shadow ${
@@ -129,9 +135,19 @@ function HistoryCard({
     >
       {/* Media banner */}
       <div className="relative aspect-video w-full overflow-hidden bg-gradient-to-br from-primary/10 via-secondary/40 to-accent/10">
-        {thumbUrl ? (
+        {showComposite ? (
+          <div className="grid grid-cols-2 grid-rows-2 gap-px w-full h-full bg-border/50">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="bg-background/40 overflow-hidden">
+                {thumbUrls[i] ? (
+                  <img src={thumbUrls[i]} alt="" className="w-full h-full object-cover" loading="lazy" />
+                ) : null}
+              </div>
+            ))}
+          </div>
+        ) : thumbUrls[0] ? (
           <img
-            src={thumbUrl}
+            src={thumbUrls[0]}
             alt={t("library.referenceThumb" as any) || "Reference"}
             className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
             loading="lazy"
@@ -143,22 +159,46 @@ function HistoryCard({
           </div>
         )}
 
+        {/* Workflow pill — dark backdrop for legibility */}
         <div className="absolute top-2 start-2">
-          <Badge variant="outline" className={`text-[10px] backdrop-blur-md bg-background/60 ${wf.color}`}>
+          <span
+            className={`inline-flex items-center text-[10px] font-medium uppercase tracking-wider px-2 py-1 rounded-md bg-black/60 backdrop-blur-sm border border-white/10 ${wf.color}`}
+          >
             {wf.label}
-          </Badge>
-        </div>
-
-        <div className="absolute top-2 end-2">
-          <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-background/60 backdrop-blur-md text-foreground/90 border border-border/40">
-            {timeAgo(entry.created_at, t)}
           </span>
         </div>
 
-        {entry.image_paths && entry.image_paths.length > 1 && (
+        {/* Time pill + kebab top-right */}
+        <div className="absolute top-2 end-2 flex items-center gap-1">
+          <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-sm text-foreground/90 border border-white/10">
+            {timeAgo(entry.created_at, t)}
+          </span>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                className="h-6 w-6 inline-flex items-center justify-center rounded-md bg-black/60 backdrop-blur-sm border border-white/10 text-foreground/90 hover:text-foreground hover:bg-black/80 transition-colors"
+                aria-label="More options"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <MoreVertical className="w-3.5 h-3.5" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                onClick={(e) => { e.stopPropagation(); setConfirmOpen(true); }}
+                className="text-destructive focus:text-destructive"
+              >
+                <Trash2 className="w-3.5 h-3.5 me-2" />
+                {t("library.delete")}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+
+        {totalRefs > 4 && (
           <div className="absolute bottom-2 end-2">
-            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-background/70 backdrop-blur-md text-foreground border border-border/40">
-              +{entry.image_paths.length - 1}
+            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-black/70 backdrop-blur-sm text-foreground border border-white/10">
+              +{totalRefs - 4}
             </span>
           </div>
         )}
@@ -166,7 +206,7 @@ function HistoryCard({
 
       <div className="p-4 flex flex-col gap-2 flex-1">
         <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-primary">
-          {entry.target_model}
+          {modelLabel}
         </span>
         <p className="text-sm text-foreground/85 leading-relaxed line-clamp-2 min-h-[2.6rem]">
           {preview}{preview.length >= 200 ? "…" : ""}
@@ -178,19 +218,28 @@ function HistoryCard({
           <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isExpanded ? "rotate-180" : ""}`} />
           {isExpanded ? t("library.hidePrompts" as any) : t("library.viewPrompts" as any)}
         </Button>
-        <div className="flex items-center gap-1">
-          <CopyButton text={allText} label={t("library.copyAll")} copiedLabel={t("library.copied")} />
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 w-7 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
-            onClick={(e) => { e.stopPropagation(); onDelete(entry.id); }}
-            aria-label={t("library.delete")}
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-          </Button>
-        </div>
+        <CopyButton text={allText} label={t("library.copyAll")} copiedLabel={t("library.copied")} />
       </div>
+
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("library.delete")}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This prompt will be permanently removed from your library. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => { onDelete(entry.id); setConfirmOpen(false); }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {t("library.delete")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }
