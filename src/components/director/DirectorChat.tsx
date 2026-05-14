@@ -22,7 +22,7 @@ import { useAuth } from "@/hooks/useAuth";
 import logoMark from "@/assets/logo-mark.svg";
 
 type Bubble =
-  | { role: "user"; content: string }
+  | { role: "user"; content: string; attachments?: Attachment[] }
   | { role: "assistant"; content: string }
   | { role: "result"; data: Extract<AgentResponse, { kind: "generate_prompt" }> }
   | { role: "questions"; questions: string[]; reason: string };
