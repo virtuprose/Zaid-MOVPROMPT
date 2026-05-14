@@ -10,7 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { motion } from "framer-motion";
-import { User, LogOut, Library, BookOpen, PlayCircle, Sparkles, Gift, Menu, Bell, Clapperboard } from "lucide-react";
+import { User, LogOut, Library, BookOpen, PlayCircle, Sparkles, Gift, Menu, Bell, Clapperboard, Settings, CreditCard, Globe, ChevronRight, GraduationCap } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import AnnouncementBanner from "@/components/AnnouncementBanner";
 import NotificationBell from "@/components/NotificationBell";
@@ -120,22 +120,63 @@ const Index = () => {
                         <span className="hidden sm:inline text-sm">{user.user_metadata?.full_name || user.email}</span>
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={startTour}>
-                        <PlayCircle className="w-4 h-4 me-2" /> {t("tour.takeTour" as any)}
+                    <DropdownMenuContent align="end" className="w-64 p-1.5 rounded-xl border-accent/10 bg-popover">
+                      {/* Profile row */}
+                      <button
+                        type="button"
+                        onClick={() => navigate("/account/settings")}
+                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-[hsl(240_5%_11%)] transition-colors group"
+                      >
+                        <Avatar className="w-8 h-8">
+                          <AvatarImage src={user.user_metadata?.avatar_url} />
+                          <AvatarFallback className="text-[10px] bg-primary/20 text-primary">{initials}</AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0 text-left">
+                          <p className="text-sm font-medium truncate">{user.user_metadata?.full_name || "Account"}</p>
+                          <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-accent transition-colors" />
+                      </button>
+                      <DropdownMenuSeparator className="my-1.5 bg-[hsl(240_5%_12%)]" />
+                      <DropdownMenuItem onClick={() => navigate("/account/settings")} className="gap-3 px-4 py-3 rounded-lg cursor-pointer focus:bg-[hsl(240_5%_11%)] focus:text-foreground group">
+                        <Settings className="w-4 h-4 text-muted-foreground group-hover:text-accent group-focus:text-accent transition-colors" />
+                        <span className="text-sm">Account settings</span>
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => navigate("/learn")}>
-                        <BookOpen className="w-4 h-4 me-2" /> {t("learn.menuLabel" as any)}
+                      <DropdownMenuItem onClick={() => navigate("/account/billing")} className="gap-3 px-4 py-3 rounded-lg cursor-pointer focus:bg-[hsl(240_5%_11%)] focus:text-foreground group">
+                        <CreditCard className="w-4 h-4 text-muted-foreground group-hover:text-accent group-focus:text-accent transition-colors" />
+                        <span className="text-sm">Billing & subscription</span>
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => navigate("/gallery")}>
-                        <Sparkles className="w-4 h-4 me-2" /> Public gallery
+                      <DropdownMenuItem onClick={() => navigate("/account/preferences")} className="gap-3 px-4 py-3 rounded-lg cursor-pointer focus:bg-[hsl(240_5%_11%)] focus:text-foreground group">
+                        <Globe className="w-4 h-4 text-muted-foreground group-hover:text-accent group-focus:text-accent transition-colors" />
+                        <span className="text-sm">Language & preferences</span>
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => navigate("/referrals")}>
-                        <Gift className="w-4 h-4 me-2" /> Refer friends
+                      <DropdownMenuSeparator className="my-1.5 bg-[hsl(240_5%_12%)]" />
+                      <DropdownMenuItem
+                        onClick={startTour}
+                        className={`gap-3 px-4 py-3 rounded-lg cursor-pointer group ${
+                          !tourDone
+                            ? "bg-accent/10 text-accent focus:bg-accent/20 focus:text-accent"
+                            : "focus:bg-[hsl(240_5%_11%)] focus:text-foreground"
+                        }`}
+                      >
+                        <PlayCircle className={`w-4 h-4 ${!tourDone ? "text-accent" : "text-muted-foreground group-hover:text-accent group-focus:text-accent"} transition-colors`} />
+                        <span className="text-sm">Take the tour</span>
                       </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={signOut}>
-                        <LogOut className="w-4 h-4 me-2" /> {t("auth.signOut")}
+                      <DropdownMenuItem onClick={() => navigate("/learn")} className="gap-3 px-4 py-3 rounded-lg cursor-pointer focus:bg-[hsl(240_5%_11%)] focus:text-foreground group">
+                        <GraduationCap className="w-4 h-4 text-muted-foreground group-hover:text-accent group-focus:text-accent transition-colors" />
+                        <span className="text-sm">Tutorials</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => navigate("/referrals")} className="gap-3 px-4 py-3 rounded-lg cursor-pointer focus:bg-[hsl(240_5%_11%)] focus:text-foreground group">
+                        <Gift className="w-4 h-4 text-muted-foreground group-hover:text-accent group-focus:text-accent transition-colors" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm leading-tight">Refer friends</p>
+                          <p className="text-[11px] text-muted-foreground leading-tight">Earn rewards</p>
+                        </div>
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator className="my-1.5 bg-[hsl(240_5%_12%)]" />
+                      <DropdownMenuItem onClick={signOut} className="gap-3 px-4 py-3 rounded-lg cursor-pointer text-muted-foreground focus:bg-destructive/10 focus:text-destructive group">
+                        <LogOut className="w-4 h-4 group-focus:text-destructive transition-colors" />
+                        <span className="text-sm">Sign out</span>
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>

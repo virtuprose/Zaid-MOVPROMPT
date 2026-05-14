@@ -53,6 +53,9 @@ import ModelLanding from "./pages/ModelLanding.tsx";
 import Referrals from "./pages/Referrals.tsx";
 import Onboarding from "./pages/Onboarding.tsx";
 import Director from "./pages/Director.tsx";
+import AccountSettings from "./pages/account/AccountSettings.tsx";
+import AccountBilling from "./pages/account/AccountBilling.tsx";
+import AccountPreferences from "./pages/account/AccountPreferences.tsx";
 
 const queryClient = new QueryClient();
 
@@ -82,6 +85,9 @@ const AppRoutes = () => {
           <Route path="/referrals" element={<AuthGuard><Referrals /></AuthGuard>} />
           <Route path="/onboarding" element={<AuthGuard><Onboarding /></AuthGuard>} />
           <Route path="/director" element={<AuthGuard><Director /></AuthGuard>} />
+          <Route path="/account/settings" element={<AuthGuard><AccountSettings /></AuthGuard>} />
+          <Route path="/account/billing" element={<AuthGuard><AccountBilling /></AuthGuard>} />
+          <Route path="/account/preferences" element={<AuthGuard><AccountPreferences /></AuthGuard>} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
