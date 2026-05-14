@@ -45,6 +45,9 @@ export default function Director() {
             <h1 className="font-display text-lg sm:text-xl font-bold">
               AI <span className="text-primary">Director</span>
             </h1>
+            <span className="text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-accent/15 text-accent border border-accent/30">
+              New
+            </span>
           </div>
           <div className="w-[64px]" />
         </div>
