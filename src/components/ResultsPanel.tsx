@@ -74,6 +74,7 @@ interface ResultsPanelProps {
 }
 
 const CopyButton = ({ text }: { text: string }) => {
+  const { t } = useLanguage();
   const [copied, setCopied] = useState(false);
   const handleCopy = () => {
     navigator.clipboard.writeText(text);
@@ -81,9 +82,14 @@ const CopyButton = ({ text }: { text: string }) => {
     setTimeout(() => setCopied(false), 2000);
   };
   return (
-    <button onClick={handleCopy} className="p-1.5 rounded-md hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground">
-      {copied ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
-    </button>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button onClick={handleCopy} className="p-1.5 rounded-md hover:bg-accent/10 transition-colors text-muted-foreground hover:text-accent">
+          {copied ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
+        </button>
+      </TooltipTrigger>
+      <TooltipContent><p className="text-xs">{t("results.copySection.tooltip" as any)}</p></TooltipContent>
+    </Tooltip>
   );
 };
 
