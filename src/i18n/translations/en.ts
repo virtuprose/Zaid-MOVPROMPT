@@ -359,7 +359,7 @@ export const en = {
   "library.negative": "Negative",
   "library.camera": "Camera",
   "library.notes": "Notes",
-  "library.viewPrompts": "View prompts",
+  "library.viewPrompts": "View details",
   "library.hidePrompts": "Hide prompts",
   "library.morePhotos": "+{n}",
   "library.subtitle": "{count} saved generations",
