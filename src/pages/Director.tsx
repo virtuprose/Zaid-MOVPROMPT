@@ -35,6 +35,8 @@ export default function Director() {
         <div className="absolute bottom-0 right-0 w-[500px] h-[250px] bg-accent/5 rounded-full blur-[100px] animate-pulse-glow" style={{ animationDelay: "1.5s" }} />
       </div>
 
+      <TopNav />
+
       <div className="relative z-10 container max-w-3xl mx-auto px-4 py-4">
         <div className="flex items-center justify-between mb-4">
           <Button
