@@ -131,6 +131,23 @@ const parseScriptedPrompt = (text: string): { header: string; body: string }[] |
   return sections;
 };
 
+const COMMON_FIX_CHIPS: FixChip[] = [
+  { dimension: "mood", label: "mood", addendum: "Anchor the emotional tone with one specific mood word and tie one visual element (lighting, framing, or sound) to that emotion." },
+  { dimension: "lighting", label: "lighting", addendum: "Add explicit lighting design: key light direction and quality (hard / soft), fill ratio, practicals, and color temperature." },
+  { dimension: "lens", label: "lens", addendum: "Specify a concrete lens choice (focal length, prime/zoom) and a depth-of-field intent (shallow / deep)." },
+  { dimension: "movement", label: "movement", addendum: "Add a specific named camera movement (slow dolly-in, lateral tracking, locked-off static) with pace and starting/ending framing." },
+  { dimension: "action", label: "action", addendum: "Replace any vague action with one concrete, observable verb beat for the subject. Avoid 'cinematic moment' or 'unfolds'." },
+];
+const mergeWithCommonChips = (detected: FixChip[]): FixChip[] => {
+  const map = new Map<string, FixChip>();
+  detected.forEach((c) => map.set(c.dimension, c));
+  for (const c of COMMON_FIX_CHIPS) {
+    if (map.size >= 5) break;
+    if (!map.has(c.dimension)) map.set(c.dimension, c);
+  }
+  return Array.from(map.values()).slice(0, 5);
+};
+
 const TECHNICAL_HEADERS = new Set(["NEGATIVE PROMPT", "AUDIO DIRECTION", "SHOT STRUCTURE", "CAMERA SUGGESTIONS", "INTRO"]);
 const isTechnicalHeader = (h: string) => {
   const up = h.trim().toUpperCase();
