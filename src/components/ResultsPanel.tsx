@@ -321,14 +321,14 @@ const MainPromptHero = ({ value, result, modelLabel, modelValue, onSwitchModel, 
 };
 
 const SectionToggle = ({ label, count, open }: { label: string; count?: number; open: boolean }) => (
-  <CollapsibleTrigger className="flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2.5 bg-secondary/30 hover:bg-secondary/60 border border-border transition-colors group">
+  <CollapsibleTrigger className="flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2.5 bg-secondary/30 hover:bg-[#161618] border border-border transition-colors group cursor-pointer">
     <span className="text-sm font-medium text-foreground flex items-center gap-2">
       {label}
       {typeof count === "number" && count > 0 && (
         <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-muted text-muted-foreground">{count}</span>
       )}
     </span>
-    <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`} />
+    <ChevronDown className={`w-4 h-4 text-accent transition-transform ${open ? "rotate-180" : ""}`} />
   </CollapsibleTrigger>
 );
 
