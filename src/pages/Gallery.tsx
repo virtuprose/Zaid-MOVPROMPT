@@ -67,82 +67,202 @@ const PROVIDER_CARDS: ProviderCard[] = [
 const FLAGSHIP_MODELS = new Set(["Veo 3.1", "Kling 3.0 Omni", "Seedance Pro"]);
 
 // ─────────────────────────────────────── Sample showcase data
-const SAMPLE_CARDS = [
+type SampleCard = {
+  id: string;
+  video: string;
+  poster: string;
+  source: string; // 40x40 source image thumbnail
+  model: string;
+  duration: string;
+  title: string;
+  snippet: string;
+  fullPrompt: string;
+  negativePrompt?: string;
+  cameraNotes?: string;
+  audioNotes?: string;
+  likes: number;
+  copies: number;
+};
+
+const SAMPLE_CARDS: SampleCard[] = [
   {
-    image: exampleTokyo,
+    id: "tokyo",
+    video: loopTokyo.url,
+    poster: exampleTokyo,
+    source: exampleTokyo,
     model: "Veo 3.1",
+    duration: "8s",
     title: "Neon-soaked Tokyo alley at dawn",
     snippet: "Slow dolly-in through rain-slick neon alley, anamorphic lens flares, steam rising from manhole, lone figure in trench coat backlit by sodium streetlamps…",
+    fullPrompt: "Slow dolly-in through a rain-slick neon Tokyo alley at first light. Anamorphic lens flares streak across sodium streetlamps. Steam billows from a manhole in the foreground. A lone figure in a trench coat walks away from camera, silhouetted against the wet glow. Cinematic 35mm film grain, teal and magenta grade.",
+    negativePrompt: "blurry, low quality, distorted faces, oversaturated, daylight",
+    cameraNotes: "35mm anamorphic, slow dolly-in, eye-level, shallow DoF (f/2)",
+    audioNotes: "Distant city ambience, light rain, low synth drone",
     likes: 248, copies: 132,
   },
   {
-    image: exampleDesert,
+    id: "desert",
+    video: loopDesert.url,
+    poster: exampleDesert,
+    source: exampleDesert,
     model: "Kling 3.0 Omni",
+    duration: "10s",
     title: "Lone traveller crossing dunes at golden hour",
     snippet: "Wide tracking shot, sun-flared silhouette walking the ridge of an amber dune, wind-driven sand particles, 70mm grain, cinematic letterbox…",
+    fullPrompt: "Wide tracking shot of a lone traveller crossing the ridge of an amber sand dune at golden hour. Sun-flared silhouette, wind-driven sand particles catching the light. 70mm film grain, cinematic letterbox 2.39:1, warm orange and deep shadow grade.",
+    negativePrompt: "people in foreground, modern objects, harsh shadows",
+    cameraNotes: "70mm wide, slow lateral tracking, sun directly behind subject",
+    audioNotes: "Wind across dunes, low cinematic strings rising",
     likes: 189, copies: 94,
   },
   {
-    image: examplePortrait,
+    id: "portrait",
+    video: loopPortrait.url,
+    poster: examplePortrait,
+    source: examplePortrait,
     model: "Seedance Pro",
-    title: "Studio portrait turn — Rembrandt to profile",
+    duration: "6s",
+    title: "Studio portrait — Rembrandt push-in",
     snippet: "Subject begins facing camera in soft Rembrandt key, slow rotational head turn to a sharp side profile, shallow depth, 85mm look…",
+    fullPrompt: "Studio portrait. Subject begins facing camera in soft Rembrandt key lighting. Slow push-in with subtle rotational head turn to a sharp side profile. Shallow depth of field, creamy bokeh, 85mm portrait look. Skin texture preserved, deep blacks, warm key.",
+    negativePrompt: "harsh frontal flash, plastic skin, wide-angle distortion",
+    cameraNotes: "85mm prime, f/1.8, slow push-in 0.5x speed",
     likes: 167, copies: 72,
   },
   {
-    image: exampleKitchen,
+    id: "kitchen",
+    video: loopKitchen.url,
+    poster: exampleKitchen,
+    source: exampleKitchen,
     model: "Veo 3",
+    duration: "8s",
     title: "Steam-lit kitchen, sizzling pan close-up",
-    snippet: "Macro push-in on a sizzling pan, billowing steam catching warm tungsten light, shallow focus, anamorphic flare grazing the rim, amber/teal grade…",
+    snippet: "Macro push-in on a sizzling pan, billowing steam catching warm tungsten light, shallow focus, anamorphic flare grazing the rim…",
+    fullPrompt: "Macro push-in on a sizzling pan in a low-lit professional kitchen. Billowing steam catches warm tungsten light from above. Shallow focus on the pan rim, anamorphic horizontal flare grazing the edge. Amber and teal commercial grade.",
+    negativePrompt: "flat lighting, overcooked colors, cluttered background",
+    cameraNotes: "Macro 100mm, slow push-in, side-key tungsten, anamorphic adapter",
+    audioNotes: "Loud sizzle, gentle ambient kitchen hum",
     likes: 134, copies: 58,
   },
   {
-    image: exampleCyberpunk,
+    id: "cyberpunk",
+    video: loopCyberpunk.url,
+    poster: exampleCyberpunk,
+    source: exampleCyberpunk,
     model: "Kling 2.5 Turbo",
-    title: "Cyberpunk rooftop, neon skyline reveal",
-    snippet: "Slow crane-up behind a lone figure on a rain-slick rooftop, magenta and cyan holographic billboards bloom across the skyline, anamorphic widescreen…",
+    duration: "10s",
+    title: "Cyberpunk rooftop neon skyline reveal",
+    snippet: "Slow crane-up behind a lone figure on a rain-slick rooftop, magenta and cyan holographic billboards bloom across the skyline…",
+    fullPrompt: "Slow crane-up behind a lone figure standing on a rain-slick rooftop. As the camera rises, magenta and cyan holographic billboards bloom across the skyline below. Anamorphic widescreen, heavy atmospheric haze, neon reflections on wet surfaces.",
+    negativePrompt: "daytime, low contrast, dull colors, empty skyline",
+    cameraNotes: "Anamorphic 2.39:1, slow vertical crane, tilt-up reveal",
+    audioNotes: "Synthwave bass pulse, distant traffic, light rain",
     likes: 121, copies: 49,
   },
   {
-    image: exampleUnderwater,
+    id: "underwater",
+    video: loopUnderwater.url,
+    poster: exampleUnderwater,
+    source: exampleUnderwater,
     model: "Seedance 2.0",
+    duration: "8s",
     title: "Underwater diver, god-rays piercing the deep",
     snippet: "Wide silhouette of a scuba diver suspended mid-water, volumetric god-rays slicing through deep blue, particles drifting, IMAX-style framing…",
+    fullPrompt: "Wide silhouette of a scuba diver suspended mid-water. Volumetric god-rays slice through the deep blue from the surface. Tiny particles drift through the beams. IMAX-style framing, ultra-clean clarity, deep cyan and indigo grade.",
+    negativePrompt: "muddy water, bright daylight surface, busy reef background",
+    cameraNotes: "Wide 24mm, static frame with subtle drift, slow motion 0.7x",
+    audioNotes: "Low underwater pressure ambience, distant sonar ping",
     likes: 98, copies: 41,
   },
 ];
 
+// Lazy autoplay video — plays only when in viewport, falls back to poster on error.
+const LoopVideo = ({ src, poster, alt }: { src: string; poster: string; alt: string }) => {
+  const ref = useRef<HTMLVideoElement | null>(null);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || failed) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((e) => {
+          if (e.isIntersecting) {
+            el.play().catch(() => { /* autoplay blocked */ });
+          } else {
+            el.pause();
+          }
+        });
+      },
+      { rootMargin: "100px", threshold: 0.25 }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [failed]);
+
+  if (failed) {
+    return <img src={poster} alt={alt} loading="lazy" className="w-full h-full object-cover" />;
+  }
+  return (
+    <video
+      ref={ref}
+      src={src}
+      poster={poster}
+      muted
+      loop
+      playsInline
+      preload="metadata"
+      onError={() => setFailed(true)}
+      className="w-full h-full object-cover"
+      aria-label={alt}
+    />
+  );
+};
+
 // ─────────────────────────────────────── Card grid
-const GalleryGrid = ({ items, sampleMode }: { items: GalleryItem[]; sampleMode: boolean }) => {
+const GalleryGrid = ({
+  items,
+  sampleMode,
+  onOpenSample,
+}: {
+  items: GalleryItem[];
+  sampleMode: boolean;
+  onOpenSample: (c: SampleCard) => void;
+}) => {
   if (sampleMode) {
     return (
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 auto-rows-fr">
-        {SAMPLE_CARDS.map((c, i) => {
+        {SAMPLE_CARDS.map((c) => {
           const isFlagship = FLAGSHIP_MODELS.has(c.model);
           return (
-            <article
-              key={i}
-              className="group relative overflow-hidden rounded-xl border border-border/60 bg-card/40 hover:border-primary/40 hover:bg-card/70 transition-colors flex flex-col min-h-[420px] h-full"
+            <button
+              key={c.id}
+              onClick={() => onOpenSample(c)}
+              className="group relative overflow-hidden rounded-xl border border-border/60 bg-card/40 hover:border-primary/40 hover:bg-card/70 transition-colors flex flex-col min-h-[420px] h-full text-left"
             >
-              <div className="relative aspect-video w-full overflow-hidden">
-                <img src={c.image} alt={c.title} loading="lazy" className="w-full h-full object-cover" />
-                <span className="absolute top-2 right-2 inline-flex items-center px-2 py-0.5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold uppercase tracking-wider">
-                  Featured
-                </span>
-              </div>
-              <div className="p-4 flex flex-col gap-2 flex-1">
-                <div className="flex items-center gap-2 text-[10px] uppercase tracking-wider font-display">
+              <div className="relative aspect-video w-full overflow-hidden bg-black">
+                <LoopVideo src={c.video} poster={c.poster} alt={c.title} />
+                {/* Source image thumbnail (top-left) */}
+                <div className="absolute top-2 left-2 w-10 h-10 rounded-md overflow-hidden ring-1 ring-white/40 shadow-lg">
+                  <img src={c.source} alt="source" className="w-full h-full object-cover" />
+                </div>
+                {/* Model + duration pills (top-right, stacked) */}
+                <div className="absolute top-2 right-2 flex flex-col items-end gap-1">
                   <span
-                    className={`rounded-full px-2 py-0.5 ${
+                    className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider backdrop-blur-sm ${
                       isFlagship
-                        ? "bg-primary text-primary-foreground border border-primary"
-                        : "border border-primary/40 text-primary bg-transparent"
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-black/60 text-primary border border-primary/40"
                     }`}
                   >
                     {c.model}
                   </span>
-                  <span className="text-muted-foreground normal-case tracking-normal">@movprompt</span>
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-black/60 text-white backdrop-blur-sm">
+                    {c.duration}
+                  </span>
                 </div>
+              </div>
+              <div className="p-4 flex flex-col gap-2 flex-1">
                 <h3 className="font-display text-sm font-semibold leading-snug line-clamp-2 text-foreground">
                   {c.title}
                 </h3>
@@ -153,12 +273,12 @@ const GalleryGrid = ({ items, sampleMode }: { items: GalleryItem[]; sampleMode: 
                   {c.snippet}
                 </p>
                 <div className="flex items-center gap-2 text-[11px] text-muted-foreground pt-2 mt-auto border-t border-border/40">
-                  <span className="inline-flex items-center gap-1"><Heart className="w-3 h-3" /> {c.likes} likes</span>
+                  <span className="inline-flex items-center gap-1"><Heart className="w-3 h-3" /> {c.likes}</span>
                   <span className="opacity-50">·</span>
-                  <span className="inline-flex items-center gap-1"><Copy className="w-3 h-3" /> {c.copies} copies</span>
+                  <span className="inline-flex items-center gap-1"><Copy className="w-3 h-3" /> {c.copies}</span>
                 </div>
               </div>
-            </article>
+            </button>
           );
         })}
       </div>
@@ -204,6 +324,169 @@ const GalleryGrid = ({ items, sampleMode }: { items: GalleryItem[]; sampleMode: 
         );
       })}
     </div>
+  );
+};
+
+// ─────────────────────────────────────── Sample detail modal
+const PromptSection = ({ label, body, mono }: { label: string; body: string; mono?: boolean }) => {
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(body);
+      toast({ title: `Copied ${label.toLowerCase()}` });
+    } catch { /* ignore */ }
+  };
+  return (
+    <div className="rounded-lg border border-border/40 bg-[#161618] p-3">
+      <div className="flex items-center justify-between mb-1.5">
+        <div className="text-[10px] uppercase tracking-wider font-display text-accent">{label}</div>
+        <button
+          onClick={copy}
+          className="text-muted-foreground hover:text-accent transition-colors"
+          aria-label={`Copy ${label}`}
+        >
+          <Copy className="w-3.5 h-3.5" />
+        </button>
+      </div>
+      <p className={`text-[12px] leading-relaxed text-foreground/90 whitespace-pre-wrap ${mono ? "font-mono" : ""}`}>
+        {body}
+      </p>
+    </div>
+  );
+};
+
+const SampleModal = ({ card, onClose }: { card: SampleCard | null; onClose: () => void }) => {
+  const [muted, setMuted] = useState(true);
+  const navigate = useNavigate();
+
+  useEffect(() => { setMuted(true); }, [card?.id]);
+
+  if (!card) return null;
+
+  const fullPackage = [
+    `[MAIN PROMPT]\n${card.fullPrompt}`,
+    card.negativePrompt ? `\n[NEGATIVE PROMPT]\n${card.negativePrompt}` : "",
+    card.cameraNotes ? `\n[CAMERA]\n${card.cameraNotes}` : "",
+    card.audioNotes ? `\n[AUDIO]\n${card.audioNotes}` : "",
+  ].join("\n").trim();
+
+  const copyAll = async () => {
+    try {
+      await navigator.clipboard.writeText(fullPackage);
+      toast({ title: "Copied full package", description: "Prompt + negative + camera + audio." });
+    } catch {
+      toast({ title: "Copy failed", variant: "destructive" });
+    }
+  };
+
+  return (
+    <Dialog open={!!card} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent
+        className="max-w-[960px] w-[95vw] p-0 overflow-hidden bg-[#0F0F11] border-accent/20"
+        style={{ maxHeight: "92vh" }}
+      >
+        <div className="grid md:grid-cols-[1.4fr_1fr] max-h-[92vh]">
+          {/* LEFT — video + source */}
+          <div className="bg-black flex flex-col">
+            <div
+              className="relative aspect-video w-full bg-black"
+              onMouseEnter={() => setMuted(false)}
+              onMouseLeave={() => setMuted(true)}
+            >
+              <video
+                src={card.video}
+                poster={card.poster}
+                autoPlay
+                loop
+                playsInline
+                muted={muted}
+                className="w-full h-full object-cover"
+              />
+              <button
+                type="button"
+                onClick={() => setMuted((m) => !m)}
+                className="absolute bottom-3 right-3 inline-flex items-center justify-center w-9 h-9 rounded-full bg-black/70 hover:bg-black/90 text-white border border-white/20"
+                aria-label={muted ? "Unmute" : "Mute"}
+              >
+                {muted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+              </button>
+              <div className="absolute top-3 left-3 flex flex-col gap-1">
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold uppercase tracking-wider">
+                  {card.model}
+                </span>
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-black/70 text-white text-[10px] font-semibold">
+                  {card.duration}
+                </span>
+              </div>
+            </div>
+            <div className="p-4 border-t border-white/5">
+              <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-display mb-2">Source image</div>
+              <img
+                src={card.source}
+                alt="source"
+                className="w-full max-h-48 object-cover rounded-md border border-white/10"
+              />
+            </div>
+          </div>
+
+          {/* RIGHT — prompt sections */}
+          <div className="overflow-y-auto p-5 space-y-5">
+            <div>
+              <h2 className="font-display text-lg font-semibold leading-snug pe-8">{card.title}</h2>
+              <div className="flex items-center gap-3 text-[11px] text-muted-foreground mt-2">
+                <span className="inline-flex items-center gap-1"><Heart className="w-3 h-3" /> {card.likes}</span>
+                <span className="opacity-50">·</span>
+                <span className="inline-flex items-center gap-1"><Copy className="w-3 h-3" /> {card.copies}</span>
+              </div>
+            </div>
+
+            <PromptSection label="Main prompt" body={card.fullPrompt} />
+            {card.negativePrompt && <PromptSection label="Negative prompt" body={card.negativePrompt} mono />}
+            {card.cameraNotes && <PromptSection label="Camera suggestions" body={card.cameraNotes} />}
+            {card.audioNotes && <PromptSection label="Audio direction" body={card.audioNotes} />}
+
+            <div className="flex flex-col gap-2 pt-2">
+              <Button
+                onClick={copyAll}
+                className="w-full bg-accent text-accent-foreground hover:bg-accent/90 font-semibold"
+              >
+                <Copy className="w-4 h-4 me-2" /> Copy full package
+              </Button>
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    try {
+                      sessionStorage.setItem("movprompt.useSourceImage", card.source);
+                      sessionStorage.setItem("movprompt.useSourcePrompt", card.fullPrompt);
+                    } catch { /* ignore */ }
+                    navigate("/");
+                  }}
+                >
+                  Use source image
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    try { sessionStorage.setItem("movprompt.useSourcePrompt", card.fullPrompt); } catch { /* ignore */ }
+                    navigate("/");
+                  }}
+                >
+                  Open in Studio
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <DialogClose asChild>
+          <button
+            aria-label="Close"
+            className="absolute top-3 right-3 z-10 inline-flex items-center justify-center w-8 h-8 rounded-full bg-black/70 hover:bg-black/90 text-white border border-white/20"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </DialogClose>
+      </DialogContent>
+    </Dialog>
   );
 };
 
