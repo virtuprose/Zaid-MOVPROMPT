@@ -724,49 +724,27 @@ const Library = () => {
             className="space-y-3"
           >
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {sorted.map((entry, idx) => {
+              {sorted.map((entry) => {
                 const isExpanded = expandedId === entry.id;
-                const colInRow = idx % cols;
-                const rowEndIdx = Math.min(idx + (cols - colInRow) - 1, sorted.length - 1);
-                const isRowEndForExpanded =
-                  isExpanded || (expandedId
-                    ? sorted.findIndex((e) => e.id === expandedId) >= idx - colInRow &&
-                      sorted.findIndex((e) => e.id === expandedId) <= rowEndIdx &&
-                      idx === rowEndIdx
-                    : false);
-                const expandedEntry =
-                  isRowEndForExpanded && expandedId
-                    ? sorted.find((e) => e.id === expandedId)
-                    : null;
-                const expandedColInRow = expandedEntry
-                  ? sorted.findIndex((e) => e.id === expandedId) % cols
-                  : 0;
-                const arrowOffsetPct = ((expandedColInRow + 0.5) / cols) * 100;
-
                 return (
-                  <Fragment key={entry.id}>
-                    <HistoryCard
-                      entry={entry}
-                      t={t}
-                      onDelete={handleDelete}
-                      isExpanded={isExpanded}
-                      onToggle={() => setExpandedId(isExpanded ? null : entry.id)}
-                    />
-                    <AnimatePresence initial={false}>
-                      {expandedEntry && (
-                        <ExpandedPromptPanel
-                          key={expandedEntry.id}
-                          entry={expandedEntry}
-                          t={t}
-                          onClose={() => setExpandedId(null)}
-                          arrowOffsetPct={arrowOffsetPct}
-                        />
-                      )}
-                    </AnimatePresence>
-                  </Fragment>
+                  <HistoryCard
+                    key={entry.id}
+                    entry={entry}
+                    t={t}
+                    onDelete={handleDelete}
+                    isExpanded={isExpanded}
+                    onToggle={() => setExpandedId(isExpanded ? null : entry.id)}
+                  />
                 );
               })}
             </div>
+
+            <ExpandedPromptModal
+              entry={sorted.find((e) => e.id === expandedId) || null}
+              t={t}
+              open={!!expandedId}
+              onClose={() => setExpandedId(null)}
+            />
           </motion.div>
         )}
       </div>
