@@ -1123,23 +1123,37 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
     </div>
   )
     : (phase === "breakdown" || phase === "generate") ? (
-    <div className="pt-6 mt-6 border-t border-white/[0.06] flex flex-col items-center gap-3">
-      <Button
-        data-tour="generate-button"
-        size="lg"
-        onClick={() => handleGenerate()}
-        disabled={isLoading}
-        className="w-full sm:w-auto px-6 sm:px-8 font-display font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/25"
-      >
-        {isLoading ? (
-          <><Loader2 className="w-5 h-5 me-2 animate-spin" /> {t("wp.generatingPrompt")}</>
-        ) : results ? (
-          <><RefreshCw className="w-4 h-4 me-2" /> {t("wp.regeneratePrompt")}</>
-        ) : (
-          <><Sparkles className="w-4 h-4 me-2" /> {t("wp.generatePrompt")}</>
-        )}
-      </Button>
-    </div>
+    results ? (
+      <div className="pt-6 mt-6 border-t border-white/[0.06] flex flex-col items-center gap-3">
+        <button
+          type="button"
+          onClick={() => {
+            const el = document.querySelector('[data-tour="scene-elements"]') as HTMLElement | null;
+            el?.scrollIntoView({ behavior: "smooth", block: "start" });
+          }}
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-accent hover:underline focus:outline-none focus-visible:underline"
+        >
+          <Pencil className="w-3.5 h-3.5" aria-hidden="true" />
+          {t("wp.editElements" as any)}
+        </button>
+      </div>
+    ) : (
+      <div className="pt-6 mt-6 border-t border-white/[0.06] flex flex-col items-center gap-3">
+        <Button
+          data-tour="generate-button"
+          size="lg"
+          onClick={() => handleGenerate()}
+          disabled={isLoading}
+          className="w-full sm:w-auto px-6 sm:px-8 font-display font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/25"
+        >
+          {isLoading ? (
+            <><Loader2 className="w-5 h-5 me-2 animate-spin" /> {t("wp.generatingPrompt")}</>
+          ) : (
+            <><Sparkles className="w-4 h-4 me-2" /> {t("wp.generatePrompt")}</>
+          )}
+        </Button>
+      </div>
+    )
   ) : null;
 
   const showOnboarding =
