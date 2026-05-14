@@ -642,26 +642,23 @@ const Library = () => {
             animate={{ opacity: 1 }}
             className="space-y-3"
           >
-            <p className="text-xs text-muted-foreground/60">
-              {filtered.length} {t("library.resultsCount")}
-            </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filtered.map((entry, idx) => {
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {sorted.map((entry, idx) => {
                 const isExpanded = expandedId === entry.id;
                 const colInRow = idx % cols;
-                const rowEndIdx = Math.min(idx + (cols - colInRow) - 1, filtered.length - 1);
+                const rowEndIdx = Math.min(idx + (cols - colInRow) - 1, sorted.length - 1);
                 const isRowEndForExpanded =
                   isExpanded || (expandedId
-                    ? filtered.findIndex((e) => e.id === expandedId) >= idx - colInRow &&
-                      filtered.findIndex((e) => e.id === expandedId) <= rowEndIdx &&
+                    ? sorted.findIndex((e) => e.id === expandedId) >= idx - colInRow &&
+                      sorted.findIndex((e) => e.id === expandedId) <= rowEndIdx &&
                       idx === rowEndIdx
                     : false);
                 const expandedEntry =
                   isRowEndForExpanded && expandedId
-                    ? filtered.find((e) => e.id === expandedId)
+                    ? sorted.find((e) => e.id === expandedId)
                     : null;
                 const expandedColInRow = expandedEntry
-                  ? filtered.findIndex((e) => e.id === expandedId) % cols
+                  ? sorted.findIndex((e) => e.id === expandedId) % cols
                   : 0;
                 const arrowOffsetPct = ((expandedColInRow + 0.5) / cols) * 100;
 
