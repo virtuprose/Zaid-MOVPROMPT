@@ -27,7 +27,35 @@ export function Composer({ value, onChange, attachments, onAttachmentsChange, on
   const inputRef = useRef<HTMLInputElement>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
   const [drag, setDrag] = useState(false);
+  const [pageDrag, setPageDrag] = useState(false);
   const [ingesting, setIngesting] = useState(false);
+
+  // Global drag detection so the composer signals "drop here" from anywhere on the page
+  useEffect(() => {
+    let counter = 0;
+    const hasFiles = (e: DragEvent) => Array.from(e.dataTransfer?.types || []).includes("Files");
+    const onEnter = (e: DragEvent) => {
+      if (!hasFiles(e)) return;
+      counter++;
+      setPageDrag(true);
+    };
+    const onLeave = () => {
+      counter = Math.max(0, counter - 1);
+      if (counter === 0) setPageDrag(false);
+    };
+    const onDrop = () => {
+      counter = 0;
+      setPageDrag(false);
+    };
+    window.addEventListener("dragenter", onEnter);
+    window.addEventListener("dragleave", onLeave);
+    window.addEventListener("drop", onDrop);
+    return () => {
+      window.removeEventListener("dragenter", onEnter);
+      window.removeEventListener("dragleave", onLeave);
+      window.removeEventListener("drop", onDrop);
+    };
+  }, []);
 
   const handleFiles = useCallback(
     async (files: FileList | File[]) => {
