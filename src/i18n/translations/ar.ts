@@ -361,7 +361,7 @@ export const ar: Record<TranslationKey, string> = {
   "library.negative": "سلبي",
   "library.camera": "كاميرا",
   "library.notes": "ملاحظات",
-  "library.viewPrompts": "عرض الأوامر",
+  "library.viewPrompts": "عرض التفاصيل",
   "library.hidePrompts": "إخفاء الأوامر",
   "library.morePhotos": "+{n}",
   "library.subtitle": "{count} امر محفوظ",
