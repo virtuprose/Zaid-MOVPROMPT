@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, Fragment } from "react";
+import { useState, useEffect } from "react";
 
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,8 +11,9 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { LanguageToggle } from "@/components/LanguageToggle";
-import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Copy, ChevronDown, Sparkles, Check, Trash2, Search, X, Film, MoreVertical } from "lucide-react";
+import { motion } from "framer-motion";
+import { ArrowLeft, Copy, ChevronDown, Sparkles, Check, Trash2, Search, X, Film, MoreVertical, AlertTriangle } from "lucide-react";
+import { Dialog, DialogContent, DialogClose } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
 import { Seo } from "@/components/Seo";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
@@ -63,7 +64,7 @@ function timeAgo(dateStr: string, t: (k: string) => string): string {
   return new Date(dateStr).toLocaleDateString();
 }
 
-function CopyButton({ text, label, copiedLabel }: { text: string; label: string; copiedLabel: string }) {
+function CopyButton({ text, label, copiedLabel, variant = "ghost" }: { text: string; label: string; copiedLabel: string; variant?: "ghost" | "outline" }) {
   const [copied, setCopied] = useState(false);
   const handleCopy = async () => {
     await navigator.clipboard.writeText(text);
@@ -71,11 +72,35 @@ function CopyButton({ text, label, copiedLabel }: { text: string; label: string;
     setTimeout(() => setCopied(false), 1500);
   };
   return (
-    <Button variant="ghost" size="sm" onClick={handleCopy} className="h-7 px-2 text-xs gap-1">
+    <Button
+      variant={variant}
+      size="sm"
+      onClick={handleCopy}
+      className="h-7 px-2 text-xs gap-1 hover:bg-[#161618] hover:border-accent/40 hover:text-accent"
+    >
       {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
       {copied ? copiedLabel : label}
     </Button>
   );
+}
+
+// Detect sequence-style headers in the prompt body so we can amber-style them in the modal.
+const SEQUENCE_RE = /^\s*\[?\s*(SEQUENCE|SCENE|SHOT)\b[^\]\n]*\]?\s*$/i;
+function renderPromptWithSequenceHeaders(text: string) {
+  const lines = text.split("\n");
+  return lines.map((line, i) => {
+    if (SEQUENCE_RE.test(line)) {
+      return (
+        <div
+          key={i}
+          className="text-accent font-semibold uppercase tracking-wider text-xs mt-2 first:mt-0"
+        >
+          {line.trim()}
+        </div>
+      );
+    }
+    return <div key={i}>{line || "\u00A0"}</div>;
+  });
 }
 
 function HistoryCard({
@@ -216,7 +241,7 @@ function HistoryCard({
       <div className="flex items-center justify-between gap-2 px-3 py-2 border-t border-border bg-secondary/20">
         <Button variant="ghost" size="sm" onClick={onToggle} className="h-7 px-2 text-xs gap-1">
           <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isExpanded ? "rotate-180" : ""}`} />
-          {isExpanded ? t("library.hidePrompts" as any) : t("library.viewPrompts" as any)}
+          {isExpanded ? "Close" : t("library.viewPrompts" as any)}
         </Button>
         <CopyButton text={allText} label={t("library.copyAll")} copiedLabel={t("library.copied")} />
       </div>
@@ -244,125 +269,181 @@ function HistoryCard({
   );
 }
 
-function ExpandedPromptPanel({
+function PromptSection({
+  title,
+  body,
+  variant = "default",
+  copyLabel,
+  copiedLabel,
+  renderHeaders = false,
+}: {
+  title: string;
+  body: string;
+  variant?: "default" | "notes";
+  copyLabel: string;
+  copiedLabel: string;
+  renderHeaders?: boolean;
+}) {
+  const isNotes = variant === "notes";
+  return (
+    <section
+      className={`rounded-lg border p-6 ${
+        isNotes
+          ? "bg-[#0F0E0C] border-t border-[#27272A] border-accent/15"
+          : "bg-secondary/30 border-border"
+      }`}
+    >
+      <div className="flex items-center justify-between mb-3">
+        <h3
+          className={`text-[11px] font-semibold uppercase tracking-wider ${
+            isNotes ? "text-muted-foreground" : "text-foreground/80"
+          }`}
+        >
+          {title}
+        </h3>
+        <CopyButton text={body} label={copyLabel} copiedLabel={copiedLabel} />
+      </div>
+      <div
+        className={`text-sm leading-relaxed whitespace-pre-wrap ${
+          isNotes ? "text-muted-foreground italic" : "text-foreground/90"
+        }`}
+      >
+        {renderHeaders ? renderPromptWithSequenceHeaders(body) : body}
+      </div>
+    </section>
+  );
+}
+
+function ExpandedPromptModal({
   entry,
   t,
+  open,
   onClose,
-  arrowOffsetPct,
 }: {
-  entry: HistoryEntry;
+  entry: HistoryEntry | null;
   t: (k: string) => string;
+  open: boolean;
   onClose: () => void;
-  arrowOffsetPct: number;
 }) {
   const [imageUrls, setImageUrls] = useState<string[]>([]);
-  const results: any[] = Array.isArray(entry.results) ? entry.results : [entry.results];
-  const ref = useRef<HTMLDivElement>(null);
+  const results: any[] = entry ? (Array.isArray(entry.results) ? entry.results : [entry.results]) : [];
 
   useEffect(() => {
-    if (!entry.image_paths?.length) return;
+    if (!entry?.image_paths?.length) {
+      setImageUrls([]);
+      return;
+    }
     let cancelled = false;
-    const loadUrls = async () => {
-      const urls: string[] = [];
-      for (const path of entry.image_paths!) {
-        const { data } = await supabase.storage.from("generation-images").createSignedUrl(path, 3600);
-        if (data?.signedUrl) urls.push(data.signedUrl);
-      }
-      if (!cancelled) setImageUrls(urls);
-    };
-    loadUrls();
+    Promise.all(
+      entry.image_paths.map((p) =>
+        supabase.storage.from("generation-images").createSignedUrl(p, 3600).then(({ data }) => data?.signedUrl || null),
+      ),
+    ).then((urls) => {
+      if (!cancelled) setImageUrls(urls.filter((u): u is string => !!u));
+    });
     return () => { cancelled = true; };
-  }, [entry.image_paths]);
+  }, [entry?.id]);
 
-  useEffect(() => {
-    ref.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
-  }, []);
+  if (!entry) return null;
 
   return (
-    <motion.div
-      ref={ref}
-      layout
-      initial={{ height: 0, opacity: 0 }}
-      animate={{ height: "auto", opacity: 1 }}
-      exit={{ height: 0, opacity: 0 }}
-      transition={{ duration: 0.25 }}
-      className="col-span-full overflow-hidden"
-    >
-      <div className="relative pt-3">
-        {/* Arrow tick pointing to source card */}
-        <div
-          className="absolute -top-0 w-3 h-3 rotate-45 bg-card border-t border-s border-border"
-          style={{ insetInlineStart: `calc(${arrowOffsetPct}% - 6px)` }}
-          aria-hidden
-        />
-        <Card className="bg-card border-border p-5 sm:p-6 relative">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onClose}
-            className="absolute top-2 end-2 h-7 w-7 p-0"
-            aria-label={t("library.hidePrompts" as any)}
-          >
-            <X className="w-4 h-4" />
-          </Button>
+    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent
+        className="max-w-[800px] max-h-[90vh] overflow-y-auto p-0 gap-0 bg-[#0F0F11] border border-accent/20"
+      >
+        <DialogClose className="absolute right-4 top-4 z-10 rounded-md p-1.5 text-muted-foreground hover:text-foreground hover:bg-[#161618] transition-colors">
+          <X className="w-4 h-4" />
+          <span className="sr-only">Close</span>
+        </DialogClose>
 
-          <div className="max-w-5xl mx-auto space-y-5">
-            {imageUrls.length > 0 && (
-              <div className="flex gap-2 overflow-x-auto pb-1">
-                {imageUrls.map((url, i) => (
-                  <img
-                    key={i}
-                    src={url}
-                    alt={`Reference frame ${i + 1}`}
-                    className="w-24 h-24 rounded-md object-cover border border-border shrink-0"
-                  />
-                ))}
-              </div>
-            )}
+        <div className="p-6 sm:p-8 space-y-4">
+          <div className="space-y-1 pe-10">
+            <p className="text-[10px] font-mono font-semibold uppercase tracking-wider text-primary">
+              {normalizeModelLabel(entry.target_model)}
+            </p>
+            <h2 className="text-lg font-semibold font-display">{t("library.viewPrompts" as any)}</h2>
+          </div>
 
-            <div className={`grid gap-4 ${results.length > 1 ? "lg:grid-cols-2" : "grid-cols-1"}`}>
-              {results.map((shot: any, i: number) => (
-                <div key={i} className="space-y-2">
-                  {results.length > 1 && (
-                    <p className="text-xs font-semibold text-primary">{t("library.shot")} {i + 1}</p>
-                  )}
-                  {shot.mainPrompt && (
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[11px] font-medium text-muted-foreground">{t("results.mainPrompt")}</span>
-                        <CopyButton text={shot.mainPrompt} label={t("library.copy")} copiedLabel={t("library.copied")} />
-                      </div>
-                      <p className="text-sm bg-secondary/40 rounded-md p-3 leading-relaxed whitespace-pre-wrap">{shot.mainPrompt}</p>
-                    </div>
-                  )}
-                  {shot.negativePrompt && (
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[11px] font-medium text-muted-foreground">{t("results.negativePrompt")}</span>
-                        <CopyButton text={shot.negativePrompt} label={t("library.copy")} copiedLabel={t("library.copied")} />
-                      </div>
-                      <p className="text-xs bg-secondary/40 rounded-md p-3 text-muted-foreground whitespace-pre-wrap">{shot.negativePrompt}</p>
-                    </div>
-                  )}
-                  {shot.cameraSuggestions && (
-                    <div className="space-y-1">
-                      <span className="text-[11px] font-medium text-muted-foreground">{t("results.cameraSuggestions")}</span>
-                      <p className="text-xs bg-secondary/40 rounded-md p-3 text-muted-foreground whitespace-pre-wrap">{shot.cameraSuggestions}</p>
-                    </div>
-                  )}
-                  {shot.modelNotes && (
-                    <div className="space-y-1">
-                      <span className="text-[11px] font-medium text-muted-foreground">{t("results.modelNotes")}</span>
-                      <p className="text-xs bg-secondary/40 rounded-md p-3 text-muted-foreground whitespace-pre-wrap">{shot.modelNotes}</p>
-                    </div>
-                  )}
-                </div>
+          {imageUrls.length > 0 && (
+            <div className="flex gap-2 overflow-x-auto pb-1">
+              {imageUrls.map((url, i) => (
+                <img
+                  key={i}
+                  src={url}
+                  alt={`Reference frame ${i + 1}`}
+                  className="w-20 h-20 rounded-md object-cover border border-border shrink-0"
+                />
               ))}
             </div>
-          </div>
-        </Card>
-      </div>
-    </motion.div>
+          )}
+
+          {results.map((shot: any, i: number) => {
+            const charLimit = shot.charLimit as number | undefined;
+            const originalLength = shot.originalLength as number | undefined;
+            const trimmedLength = (shot.mainPrompt || "").length;
+            const wasTrimmed =
+              typeof charLimit === "number" &&
+              typeof originalLength === "number" &&
+              originalLength > trimmedLength;
+
+            return (
+              <div key={i} className="space-y-4">
+                {results.length > 1 && (
+                  <p className="text-accent font-semibold uppercase tracking-wider text-xs">
+                    {t("library.shot")} {i + 1}
+                  </p>
+                )}
+
+                {wasTrimmed && (
+                  <div className="rounded-md border border-accent/30 bg-accent/10 p-3 flex gap-2 items-start">
+                    <AlertTriangle className="w-4 h-4 text-accent shrink-0 mt-0.5" />
+                    <p className="text-xs text-accent-foreground/90 leading-relaxed">
+                      Auto-trimmed from {originalLength} to {charLimit} chars to fit{" "}
+                      {normalizeModelLabel(entry.target_model)} input limit.
+                    </p>
+                  </div>
+                )}
+
+                {shot.mainPrompt && (
+                  <PromptSection
+                    title={t("results.mainPrompt")}
+                    body={shot.mainPrompt}
+                    copyLabel={t("library.copy")}
+                    copiedLabel={t("library.copied")}
+                    renderHeaders
+                  />
+                )}
+                {shot.negativePrompt && (
+                  <PromptSection
+                    title={t("results.negativePrompt")}
+                    body={shot.negativePrompt}
+                    copyLabel={t("library.copy")}
+                    copiedLabel={t("library.copied")}
+                  />
+                )}
+                {shot.cameraSuggestions && (
+                  <PromptSection
+                    title={t("results.cameraSuggestions")}
+                    body={shot.cameraSuggestions}
+                    copyLabel={t("library.copy")}
+                    copiedLabel={t("library.copied")}
+                  />
+                )}
+                {shot.modelNotes && (
+                  <PromptSection
+                    title={t("results.modelNotes")}
+                    body={shot.modelNotes}
+                    variant="notes"
+                    copyLabel={t("library.copy")}
+                    copiedLabel={t("library.copied")}
+                  />
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -643,49 +724,27 @@ const Library = () => {
             className="space-y-3"
           >
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {sorted.map((entry, idx) => {
+              {sorted.map((entry) => {
                 const isExpanded = expandedId === entry.id;
-                const colInRow = idx % cols;
-                const rowEndIdx = Math.min(idx + (cols - colInRow) - 1, sorted.length - 1);
-                const isRowEndForExpanded =
-                  isExpanded || (expandedId
-                    ? sorted.findIndex((e) => e.id === expandedId) >= idx - colInRow &&
-                      sorted.findIndex((e) => e.id === expandedId) <= rowEndIdx &&
-                      idx === rowEndIdx
-                    : false);
-                const expandedEntry =
-                  isRowEndForExpanded && expandedId
-                    ? sorted.find((e) => e.id === expandedId)
-                    : null;
-                const expandedColInRow = expandedEntry
-                  ? sorted.findIndex((e) => e.id === expandedId) % cols
-                  : 0;
-                const arrowOffsetPct = ((expandedColInRow + 0.5) / cols) * 100;
-
                 return (
-                  <Fragment key={entry.id}>
-                    <HistoryCard
-                      entry={entry}
-                      t={t}
-                      onDelete={handleDelete}
-                      isExpanded={isExpanded}
-                      onToggle={() => setExpandedId(isExpanded ? null : entry.id)}
-                    />
-                    <AnimatePresence initial={false}>
-                      {expandedEntry && (
-                        <ExpandedPromptPanel
-                          key={expandedEntry.id}
-                          entry={expandedEntry}
-                          t={t}
-                          onClose={() => setExpandedId(null)}
-                          arrowOffsetPct={arrowOffsetPct}
-                        />
-                      )}
-                    </AnimatePresence>
-                  </Fragment>
+                  <HistoryCard
+                    key={entry.id}
+                    entry={entry}
+                    t={t}
+                    onDelete={handleDelete}
+                    isExpanded={isExpanded}
+                    onToggle={() => setExpandedId(isExpanded ? null : entry.id)}
+                  />
                 );
               })}
             </div>
+
+            <ExpandedPromptModal
+              entry={sorted.find((e) => e.id === expandedId) || null}
+              t={t}
+              open={!!expandedId}
+              onClose={() => setExpandedId(null)}
+            />
           </motion.div>
         )}
       </div>
