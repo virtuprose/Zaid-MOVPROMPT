@@ -261,6 +261,7 @@ export function DirectorChat() {
         onAttachmentsChange={setAttachments}
         onSend={send}
         busy={busy}
+        showHelper={isEmpty && attachments.length === 0}
       />
 
       <div className="text-center">
