@@ -36,7 +36,7 @@ import { trackGeneration } from "@/lib/analytics";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { getContract, deriveWorkflowType } from "@/lib/modelContracts";
-import { MODEL_GROUPS } from "@/lib/models";
+import { MODEL_GROUPS, getModelLabel } from "@/lib/models";
 import { parseEdgeFnError, pickErrorKey } from "@/lib/edgeFnError";
 import { detectAllIntents } from "@/lib/sceneIntent";
 import { ModelPicker } from "./ModelPicker";
@@ -756,27 +756,42 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
   );
 
   // Inline compact audio toggle (rendered inside the collapsed model strip).
-  const audioInlineToggle = contract.supportsAudio ? (
-    <button
-      type="button"
-      onClick={(e) => { e.stopPropagation(); setAudioEnabled((v) => !v); }}
-      className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors shrink-0"
-      aria-pressed={audioEnabled}
-      title={audioEnabled ? "Audio on" : "Audio off"}
-    >
-      {audioEnabled ? <Volume2 className="w-3.5 h-3.5 text-foreground" /> : <VolumeX className="w-3.5 h-3.5" />}
-      <span
-        className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${
-          audioEnabled ? "bg-primary" : "bg-muted"
-        }`}
-      >
-        <span
-          className={`inline-block h-3 w-3 transform rounded-full bg-background transition-transform ${
-            audioEnabled ? "translate-x-[14px]" : "translate-x-0.5"
-          }`}
-        />
-      </span>
-    </button>
+  // Show for audio-capable models. For "any" (Universal Prompt), show a neutral
+  // state with explanatory tooltip since the actual audio capability depends on
+  // which model the AI ultimately chooses.
+  const isAnyModel = selectedModel === "any";
+  const showAudioToggle = contract.supportsAudio || isAnyModel;
+  const audioInlineToggle = showAudioToggle ? (
+    <TooltipProvider delayDuration={200}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); setAudioEnabled((v) => !v); }}
+            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors shrink-0"
+            aria-pressed={audioEnabled}
+          >
+            {audioEnabled ? <Volume2 className="w-3.5 h-3.5 text-foreground" /> : <VolumeX className="w-3.5 h-3.5" />}
+            <span
+              className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${
+                audioEnabled ? (isAnyModel ? "bg-muted-foreground/40" : "bg-primary") : "bg-muted"
+              }`}
+            >
+              <span
+                className={`inline-block h-3 w-3 transform rounded-full bg-background transition-transform ${
+                  audioEnabled ? "translate-x-[14px]" : "translate-x-0.5"
+                }`}
+              />
+            </span>
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="top" className="max-w-[240px] text-xs">
+          {isAnyModel
+            ? "Audio output depends on which model the AI picks for your scene"
+            : audioEnabled ? "Audio on" : "Audio off"}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   ) : null;
 
   const modeToggleBlock = (contract.supportsTwoFrameToggle || contract.supportsMultiShotToggle) && (() => {
@@ -985,14 +1000,21 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
     const subj = counts["Subject"] || 0;
     const objs = counts["Objects"] || 0;
     const bg = counts["Background"] || 0;
-    if (objs >= 2 && subj <= 1) {
-      return 'e.g. "Slow rotation showing condensation forming on the product, soft commercial lighting, premium advertising mood."';
+    // Product packaging WITH characters (mascot/figure on packaging)
+    if (objs >= 2 && subj >= 1) {
+      return 'e.g. "The mascot animates, product details come into focus, bright commercial lighting, premium retail mood."';
     }
+    // Product packaging WITHOUT characters
+    if (objs >= 2 && subj <= 0) {
+      return 'e.g. "Slow rotation, condensation forms on the surface, soft commercial lighting, premium advertising mood."';
+    }
+    // Portrait
     if (subj >= 1 && bg <= 1 && objs <= 1) {
       return 'e.g. "Slow push-in on the subject, rack focus on the eyes, golden hour key light from the left."';
     }
+    // Landscape
     if (bg >= 1 && subj === 0) {
-      return 'e.g. "Wide tracking shot across the dunes, sun-flared silhouette walking the ridge, 70mm grain, cinematic letterbox."';
+      return 'e.g. "Wide tracking shot, sun-flared silhouette walking the ridge, 70mm grain, cinematic letterbox."';
     }
     return t("config.placeholder");
   }, [flatSceneElements, t]);
@@ -1093,9 +1115,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
 
   // On the breakdown/generate screen, collapse the model picker into a single-line strip.
   const isBreakdownLike = phase === "breakdown" || phase === "generate";
-  const inferredModelLabel =
-    MODEL_GROUPS.flatMap((g) => g.models).find((m) => m.value === selectedModel)?.label ??
-    selectedModel;
+  const inferredModelLabel = getModelLabel(selectedModel);
 
   const modelBlock = isBreakdownLike ? (
     <div className="space-y-1">
@@ -1107,7 +1127,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
           <span className="text-sm font-display font-medium text-foreground truncate">
             {inferredModelLabel}
           </span>
-          {selectedModel === "any" && (
+          {isAnyModel && (
             <span className="text-xs text-muted-foreground hidden sm:inline truncate">
               — Universal Prompt
             </span>
@@ -1124,9 +1144,9 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
           Change
         </button>
       </div>
-      {contract.supportsAudio && (
+      {contract.supportsAudio && !isAnyModel && (
         <p className="text-[12px] text-muted-foreground px-3">
-          Native synced audio for Veo 3.1 (ambient sound + dialogue)
+          Native synced audio for {inferredModelLabel} (ambient sound + dialogue)
         </p>
       )}
     </div>
@@ -1134,20 +1154,8 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
     <ModelPicker model={selectedModel} onModelChange={(v) => onSwitchModel?.(v)} />
   );
 
-  const backLinkTop = isBreakdownLike && !isAnalyzing && !isLoading && !(phase === "generate" && results) ? (
-    <button
-      type="button"
-      onClick={() => setPhase("upload")}
-      className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors self-start"
-      aria-label={t("wp.back" as any)}
-    >
-      <ArrowLeft className="w-3 h-3 rtl:rotate-180" /> {t("wp.back" as any)}
-    </button>
-  ) : null;
-
   const leftPanel = (
     <div className="space-y-5">
-      {backLinkTop}
       {workflowHeaderBlock}
       {modeToggleBlock}
       {showOnboarding && <OnboardingExamples onPick={handlePickExample} />}

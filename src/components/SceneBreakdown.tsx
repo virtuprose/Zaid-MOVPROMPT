@@ -199,7 +199,7 @@ export const SceneBreakdown = ({
         <button
           type="button"
           onClick={applySmartDefaults}
-          className="inline-flex items-center gap-1 text-[11px] uppercase tracking-wider font-display px-2.5 py-1 rounded-full transition-colors"
+          className="inline-flex items-center gap-1.5 text-[11px] uppercase tracking-wider font-display px-2.5 py-1 rounded-full transition-colors"
           style={{
             backgroundColor: "#F5A524",
             color: "#000",
@@ -207,26 +207,32 @@ export const SceneBreakdown = ({
           }}
           title="Auto-assign Lock/Move based on element category"
         >
-          ✨ Smart suggest
+          <span style={{ color: "rgba(255,255,255,0.9)" }}>✨</span>
+          <span>Smart suggest</span>
         </button>
         <button
           type="button"
           onClick={() => applyAll("lock")}
-          className="inline-flex items-center gap-1 text-[11px] uppercase tracking-wider font-display px-2.5 py-1 rounded-full border border-white/15 bg-transparent text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors"
-        >
-          <Lock className="w-3 h-3" /> Lock all
-        </button>
-        <button
-          type="button"
-          onClick={() => applyAll("move")}
-          className="inline-flex items-center gap-1 text-[11px] uppercase tracking-wider font-display px-2.5 py-1 rounded-full transition-colors"
+          className="inline-flex items-center gap-1.5 text-[11px] uppercase tracking-wider font-display px-2.5 py-1 rounded-full transition-colors hover:bg-primary/5"
           style={{
             border: "1px solid #F5A524",
             color: "#F5A524",
             backgroundColor: "transparent",
           }}
         >
-          <Waves className="w-3 h-3" /> Move all
+          <Lock className="w-3 h-3" style={{ color: "rgba(255,255,255,0.9)" }} /> Lock all
+        </button>
+        <button
+          type="button"
+          onClick={() => applyAll("move")}
+          className="inline-flex items-center gap-1.5 text-[11px] uppercase tracking-wider font-display px-2.5 py-1 rounded-full transition-colors hover:bg-primary/5"
+          style={{
+            border: "1px solid #F5A524",
+            color: "#F5A524",
+            backgroundColor: "transparent",
+          }}
+        >
+          <Waves className="w-3 h-3" style={{ color: "rgba(255,255,255,0.9)" }} /> Move all
         </button>
       </div>
 
