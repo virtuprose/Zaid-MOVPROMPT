@@ -131,30 +131,49 @@ const parseScriptedPrompt = (text: string): { header: string; body: string }[] |
   return sections;
 };
 
+const TECHNICAL_HEADERS = new Set(["NEGATIVE PROMPT", "AUDIO DIRECTION", "SHOT STRUCTURE", "CAMERA SUGGESTIONS", "INTRO"]);
+const isTechnicalHeader = (h: string) => {
+  const up = h.trim().toUpperCase();
+  if (TECHNICAL_HEADERS.has(up)) return true;
+  // Treat anything matching a known tech header as technical even with extra text
+  return Array.from(TECHNICAL_HEADERS).some((k) => up.startsWith(k));
+};
+const formatNarrativeHeader = (h: string) =>
+  h.trim().toUpperCase().replace(/\s*[—–-]\s*/g, " · ");
+
 const ScriptedPrompt = ({ sections }: { sections: { header: string; body: string }[] }) => {
-  // Default: open the first 2 sections, collapse the rest
+  // Default: narrative scenes expanded, technical sections collapsed
   const [openMap, setOpenMap] = useState<Record<number, boolean>>(() =>
-    Object.fromEntries(sections.map((_, i) => [i, i < 2]))
+    Object.fromEntries(sections.map((s, i) => [i, !isTechnicalHeader(s.header)]))
   );
   const toggle = (i: number) => setOpenMap((p) => ({ ...p, [i]: !p[i] }));
   return (
     <div className="space-y-2">
-      {sections.map((s, i) => (
-        <Collapsible key={i} open={!!openMap[i]} onOpenChange={() => toggle(i)}>
-          <CollapsibleTrigger className="flex w-full items-center justify-between gap-2 rounded-md px-3 py-2 bg-background/60 hover:bg-background border border-primary/20 transition-colors group">
-            <span className="text-[11px] font-bold uppercase tracking-[0.1em] text-primary font-mono text-start">
-              [{s.header}]
-            </span>
-            <div className="flex items-center gap-1.5 shrink-0">
-              <CopyButton text={s.body} />
-              <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground transition-transform ${openMap[i] ? "rotate-180" : ""}`} />
-            </div>
-          </CollapsibleTrigger>
-          <CollapsibleContent>
-            <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap px-3 pt-2 pb-1">{s.body}</p>
-          </CollapsibleContent>
-        </Collapsible>
-      ))}
+      {sections.map((s, i) => {
+        const tech = isTechnicalHeader(s.header);
+        return (
+          <Collapsible key={i} open={!!openMap[i]} onOpenChange={() => toggle(i)}>
+            <CollapsibleTrigger className="flex w-full items-center justify-between gap-2 rounded-md px-3 py-2 bg-background/60 hover:bg-[#161618] border border-accent/20 hover:border-accent/40 transition-colors group cursor-pointer">
+              {tech ? (
+                <span className="text-[11px] font-bold uppercase tracking-[0.1em] text-accent font-mono text-start">
+                  [{s.header}]
+                </span>
+              ) : (
+                <span className="text-[11px] font-bold uppercase tracking-[0.12em] text-accent text-start">
+                  {formatNarrativeHeader(s.header)}
+                </span>
+              )}
+              <div className="flex items-center gap-1.5 shrink-0">
+                <CopyButton text={s.body} />
+                <ChevronDown className={`w-4 h-4 text-accent transition-transform ${openMap[i] ? "rotate-180" : ""}`} />
+              </div>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap px-3 pt-2 pb-1">{s.body}</p>
+            </CollapsibleContent>
+          </Collapsible>
+        );
+      })}
     </div>
   );
 };
