@@ -1132,7 +1132,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
         className="w-full sm:w-auto px-6 sm:px-8 font-display font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/25"
       >
         {isLoading ? (
-          <><Loader2 className="w-4 h-4 me-2 animate-spin" /> {t("wp.generatingPrompt")}</>
+          <><Loader2 className="w-5 h-5 me-2 animate-spin" /> {t("wp.generatingPrompt")}</>
         ) : results ? (
           <><RefreshCw className="w-4 h-4 me-2" /> {t("wp.regeneratePrompt")}</>
         ) : (
