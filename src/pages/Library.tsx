@@ -379,10 +379,11 @@ const Library = () => {
   
   // Tailwind: grid-cols-1 (mobile), sm:grid-cols-2 (>=640), lg:grid-cols-3 (>=1024)
   const [cols, setCols] = useState(3);
+  const [sortBy, setSortBy] = useState<"newest" | "oldest" | "copied" | "liked">("newest");
   useEffect(() => {
     const compute = () => {
       const w = window.innerWidth;
-      setCols(w >= 1024 ? 3 : w >= 640 ? 2 : 1);
+      setCols(w >= 1280 ? 4 : w >= 1024 ? 3 : w >= 640 ? 2 : 1);
     };
     compute();
     window.addEventListener("resize", compute);
