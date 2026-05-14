@@ -79,6 +79,7 @@ const AppRoutes = () => {
           <Route path="/gallery" element={<Gallery />} />
           <Route path="/models/:slug" element={<ModelLanding />} />
           <Route path="/referrals" element={<AuthGuard><Referrals /></AuthGuard>} />
+          <Route path="/onboarding" element={<AuthGuard><Onboarding /></AuthGuard>} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
