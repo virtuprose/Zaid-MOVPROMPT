@@ -12,9 +12,21 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Copy, ChevronDown, Sparkles, Check, Trash2, Search, X, Film } from "lucide-react";
+import { ArrowLeft, Copy, ChevronDown, Sparkles, Check, Trash2, Search, X, Film, MoreVertical } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Seo } from "@/components/Seo";
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { getModelLabel } from "@/lib/models";
 
 interface HistoryEntry {
   id: string;
@@ -27,10 +39,16 @@ interface HistoryEntry {
 
 function getWorkflowLabels(t: (k: string) => string): Record<string, { label: string; color: string }> {
   return {
-    single: { label: t("library.singleFrame"), color: "bg-primary/20 text-primary border-primary/30" },
-    twoframe: { label: t("library.twoFrames"), color: "bg-accent/20 text-accent border-accent/30" },
-    multishot: { label: t("library.multiShot"), color: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" },
+    single: { label: t("library.singleFrame"), color: "text-primary" },
+    twoframe: { label: t("library.twoFrames"), color: "text-accent" },
+    multishot: { label: t("library.multiShot"), color: "text-emerald-400" },
   };
+}
+
+function normalizeModelLabel(model: string): string {
+  if (!model) return "Any";
+  if (model === "any" || model.toLowerCase() === "any model") return "Any";
+  return getModelLabel(model);
 }
 
 function timeAgo(dateStr: string, t: (k: string) => string): string {
@@ -73,23 +91,26 @@ function HistoryCard({
   isExpanded: boolean;
   onToggle: () => void;
 }) {
-  const [thumbUrl, setThumbUrl] = useState<string | null>(null);
+  const [thumbUrls, setThumbUrls] = useState<string[]>([]);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const workflowLabels = getWorkflowLabels(t);
   const wf = workflowLabels[entry.workflow_type] || workflowLabels.single;
   const results: any[] = Array.isArray(entry.results) ? entry.results : [entry.results];
   const preview = results[0]?.mainPrompt?.slice(0, 200) || "";
+  const modelLabel = normalizeModelLabel(entry.target_model);
 
-  // Eagerly resolve a thumbnail for the first reference image (if any).
+  // Resolve up to 4 thumbnails for a 2x2 composite when multiple references exist.
   useEffect(() => {
-    const firstPath = entry.image_paths?.[0];
-    if (!firstPath) return;
+    const paths = entry.image_paths?.slice(0, 4) || [];
+    if (paths.length === 0) return;
     let cancelled = false;
-    supabase.storage
-      .from("generation-images")
-      .createSignedUrl(firstPath, 3600)
-      .then(({ data }) => {
-        if (!cancelled && data?.signedUrl) setThumbUrl(data.signedUrl);
-      });
+    Promise.all(
+      paths.map((p) =>
+        supabase.storage.from("generation-images").createSignedUrl(p, 3600).then(({ data }) => data?.signedUrl || null),
+      ),
+    ).then((urls) => {
+      if (!cancelled) setThumbUrls(urls.filter((u): u is string => !!u));
+    });
     return () => { cancelled = true; };
   }, [entry.image_paths]);
 
@@ -103,6 +124,9 @@ function HistoryCard({
     })
     .join("\n\n");
 
+  const totalRefs = entry.image_paths?.length ?? 0;
+  const showComposite = thumbUrls.length > 1;
+
   return (
     <Card
       className={`bg-card border-border overflow-hidden flex flex-col group transition-shadow ${
@@ -111,9 +135,19 @@ function HistoryCard({
     >
       {/* Media banner */}
       <div className="relative aspect-video w-full overflow-hidden bg-gradient-to-br from-primary/10 via-secondary/40 to-accent/10">
-        {thumbUrl ? (
+        {showComposite ? (
+          <div className="grid grid-cols-2 grid-rows-2 gap-px w-full h-full bg-border/50">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="bg-background/40 overflow-hidden">
+                {thumbUrls[i] ? (
+                  <img src={thumbUrls[i]} alt="" className="w-full h-full object-cover" loading="lazy" />
+                ) : null}
+              </div>
+            ))}
+          </div>
+        ) : thumbUrls[0] ? (
           <img
-            src={thumbUrl}
+            src={thumbUrls[0]}
             alt={t("library.referenceThumb" as any) || "Reference"}
             className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
             loading="lazy"
@@ -125,22 +159,46 @@ function HistoryCard({
           </div>
         )}
 
+        {/* Workflow pill — dark backdrop for legibility */}
         <div className="absolute top-2 start-2">
-          <Badge variant="outline" className={`text-[10px] backdrop-blur-md bg-background/60 ${wf.color}`}>
+          <span
+            className={`inline-flex items-center text-[10px] font-medium uppercase tracking-wider px-2 py-1 rounded-md bg-black/60 backdrop-blur-sm border border-white/10 ${wf.color}`}
+          >
             {wf.label}
-          </Badge>
-        </div>
-
-        <div className="absolute top-2 end-2">
-          <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-background/60 backdrop-blur-md text-foreground/90 border border-border/40">
-            {timeAgo(entry.created_at, t)}
           </span>
         </div>
 
-        {entry.image_paths && entry.image_paths.length > 1 && (
+        {/* Time pill + kebab top-right */}
+        <div className="absolute top-2 end-2 flex items-center gap-1">
+          <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-sm text-foreground/90 border border-white/10">
+            {timeAgo(entry.created_at, t)}
+          </span>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                className="h-6 w-6 inline-flex items-center justify-center rounded-md bg-black/60 backdrop-blur-sm border border-white/10 text-foreground/90 hover:text-foreground hover:bg-black/80 transition-colors"
+                aria-label="More options"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <MoreVertical className="w-3.5 h-3.5" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                onClick={(e) => { e.stopPropagation(); setConfirmOpen(true); }}
+                className="text-destructive focus:text-destructive"
+              >
+                <Trash2 className="w-3.5 h-3.5 me-2" />
+                {t("library.delete")}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+
+        {totalRefs > 4 && (
           <div className="absolute bottom-2 end-2">
-            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-background/70 backdrop-blur-md text-foreground border border-border/40">
-              +{entry.image_paths.length - 1}
+            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-black/70 backdrop-blur-sm text-foreground border border-white/10">
+              +{totalRefs - 4}
             </span>
           </div>
         )}
@@ -148,7 +206,7 @@ function HistoryCard({
 
       <div className="p-4 flex flex-col gap-2 flex-1">
         <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-primary">
-          {entry.target_model}
+          {modelLabel}
         </span>
         <p className="text-sm text-foreground/85 leading-relaxed line-clamp-2 min-h-[2.6rem]">
           {preview}{preview.length >= 200 ? "…" : ""}
@@ -160,19 +218,28 @@ function HistoryCard({
           <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isExpanded ? "rotate-180" : ""}`} />
           {isExpanded ? t("library.hidePrompts" as any) : t("library.viewPrompts" as any)}
         </Button>
-        <div className="flex items-center gap-1">
-          <CopyButton text={allText} label={t("library.copyAll")} copiedLabel={t("library.copied")} />
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 w-7 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
-            onClick={(e) => { e.stopPropagation(); onDelete(entry.id); }}
-            aria-label={t("library.delete")}
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-          </Button>
-        </div>
+        <CopyButton text={allText} label={t("library.copyAll")} copiedLabel={t("library.copied")} />
       </div>
+
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("library.delete")}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This prompt will be permanently removed from your library. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => { onDelete(entry.id); setConfirmOpen(false); }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {t("library.delete")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }
@@ -312,10 +379,11 @@ const Library = () => {
   
   // Tailwind: grid-cols-1 (mobile), sm:grid-cols-2 (>=640), lg:grid-cols-3 (>=1024)
   const [cols, setCols] = useState(3);
+  const [sortBy, setSortBy] = useState<"newest" | "oldest" | "copied" | "liked">("newest");
   useEffect(() => {
     const compute = () => {
       const w = window.innerWidth;
-      setCols(w >= 1024 ? 3 : w >= 640 ? 2 : 1);
+      setCols(w >= 1280 ? 4 : w >= 1024 ? 3 : w >= 640 ? 2 : 1);
     };
     compute();
     window.addEventListener("resize", compute);
@@ -373,6 +441,14 @@ const Library = () => {
     return true;
   });
 
+  const sorted = [...filtered].sort((a, b) => {
+    if (sortBy === "oldest") {
+      return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+    }
+    // newest, copied, liked: fallback to newest (copy/like counts not yet tracked)
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+  });
+
   const activeFilterCount = workflowFilter.size + modelFilter.size;
   const hasActiveFilters = activeFilterCount > 0 || !!search.trim();
 
@@ -394,7 +470,10 @@ const Library = () => {
           <Button variant="ghost" size="sm" onClick={() => navigate("/")} className="gap-1.5">
             <ArrowLeft className="w-4 h-4" />
             <img src="/logo-mark.svg" alt="" className="w-5 h-5" />
-            <span className="hidden sm:inline font-mono font-semibold">MOVPROMPT</span>
+            <span className="hidden sm:inline font-display font-bold tracking-tight text-base">
+              <span className="text-accent">Mov</span>
+              <span className="text-foreground">Prompt</span>
+            </span>
           </Button>
           <LanguageToggle />
         </div>
@@ -422,20 +501,38 @@ const Library = () => {
             animate={{ opacity: 1 }}
             className="space-y-3 mb-6"
           >
-            {/* Search input */}
-            <div className="relative">
-              <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
-              <Input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder={t("library.searchPlaceholder")}
-                className="ps-9 pe-9 bg-secondary/30 border-border"
-              />
-              {search && (
-                <button onClick={() => setSearch("")} className="absolute end-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-                  <X className="w-4 h-4" />
-                </button>
-              )}
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                <Input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder={t("library.searchPlaceholder")}
+                  className="ps-9 pe-9 bg-secondary/30 border-border"
+                />
+                {search && (
+                  <button onClick={() => setSearch("")} className="absolute end-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="text-xs gap-1.5 shrink-0 h-10">
+                    {sortBy === "newest" && "Newest first"}
+                    {sortBy === "oldest" && "Oldest first"}
+                    {sortBy === "copied" && "Most copied"}
+                    {sortBy === "liked" && "Most liked"}
+                    <ChevronDown className="w-3.5 h-3.5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => setSortBy("newest")}>Newest first</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setSortBy("oldest")}>Oldest first</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setSortBy("copied")}>Most copied</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setSortBy("liked")}>Most liked</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
 
             {/* Filter chips */}
@@ -453,8 +550,8 @@ const Library = () => {
                     })}
                     className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors ${
                       active
-                        ? `${wf.color} border-current`
-                        : "border-border text-muted-foreground hover:text-foreground hover:border-foreground/30"
+                        ? "bg-accent text-accent-foreground border-accent"
+                        : "border-accent/40 text-accent bg-transparent hover:bg-accent/10"
                     }`}
                   >
                     {active && <Check className="w-3 h-3" />}
@@ -476,12 +573,12 @@ const Library = () => {
                     })}
                     className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors ${
                       active
-                        ? "bg-foreground/10 text-foreground border-foreground/30"
-                        : "border-border text-muted-foreground hover:text-foreground hover:border-foreground/30"
+                        ? "bg-accent text-accent-foreground border-accent"
+                        : "border-accent/40 text-accent bg-transparent hover:bg-accent/10"
                     }`}
                   >
                     {active && <Check className="w-3 h-3" />}
-                    {model}
+                    {normalizeModelLabel(model)}
                   </button>
                 );
               })}
@@ -505,7 +602,7 @@ const Library = () => {
 
         {/* Content */}
         {loading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {[1, 2, 3, 4, 5, 6].map((i) => (
               <Skeleton key={i} className="aspect-[4/3] rounded-lg" />
             ))}
@@ -545,26 +642,23 @@ const Library = () => {
             animate={{ opacity: 1 }}
             className="space-y-3"
           >
-            <p className="text-xs text-muted-foreground/60">
-              {filtered.length} {t("library.resultsCount")}
-            </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filtered.map((entry, idx) => {
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {sorted.map((entry, idx) => {
                 const isExpanded = expandedId === entry.id;
                 const colInRow = idx % cols;
-                const rowEndIdx = Math.min(idx + (cols - colInRow) - 1, filtered.length - 1);
+                const rowEndIdx = Math.min(idx + (cols - colInRow) - 1, sorted.length - 1);
                 const isRowEndForExpanded =
                   isExpanded || (expandedId
-                    ? filtered.findIndex((e) => e.id === expandedId) >= idx - colInRow &&
-                      filtered.findIndex((e) => e.id === expandedId) <= rowEndIdx &&
+                    ? sorted.findIndex((e) => e.id === expandedId) >= idx - colInRow &&
+                      sorted.findIndex((e) => e.id === expandedId) <= rowEndIdx &&
                       idx === rowEndIdx
                     : false);
                 const expandedEntry =
                   isRowEndForExpanded && expandedId
-                    ? filtered.find((e) => e.id === expandedId)
+                    ? sorted.find((e) => e.id === expandedId)
                     : null;
                 const expandedColInRow = expandedEntry
-                  ? filtered.findIndex((e) => e.id === expandedId) % cols
+                  ? sorted.findIndex((e) => e.id === expandedId) % cols
                   : 0;
                 const arrowOffsetPct = ((expandedColInRow + 0.5) / cols) * 100;
 
