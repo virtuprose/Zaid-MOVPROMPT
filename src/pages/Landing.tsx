@@ -201,7 +201,7 @@ export default function Landing() {
           >
             <h1
               className="font-display font-bold tracking-tight text-foreground leading-[1.05]"
-              style={{ fontSize: "clamp(48px, 8vw, 84px)" }}
+              style={{ fontSize: "clamp(40px, 8vw, 84px)" }}
             >
               Turn Stills Into Cinema
             </h1>
