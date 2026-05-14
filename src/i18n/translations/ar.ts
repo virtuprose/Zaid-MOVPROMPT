@@ -158,8 +158,15 @@ export const ar: Record<TranslationKey, string> = {
   "results.shotRegen.inProgress": "إعادة توليد اللقطة…",
 
   // Quality & evaluation loop
-  "results.critique.button": "تقييم المخرج",
-  "results.critique.hint": "قيّم هذا الامر على أساسيات التصوير السينمائي واحصل على إصلاحات فورية.",
+  "results.critique.button": "عرض التقييم",
+  "results.critique.hint": "افتح تقييم الذكاء الاصطناعي مع إصلاحات فورية للعدسة والإضاءة والمزاج والحركة.",
+  "results.share.label": "مشاركة",
+  "results.share.hint": "أنشئ رابطًا عامًا لحزمة التوجيه هذه.",
+  "results.copySection.tooltip": "انسخ هذا القسم",
+  "results.feedbackPrompt": "هل كان هذا التوجيه مفيدًا؟",
+  "results.quickFixes.title": "إصلاحات سريعة",
+  "results.quickFixes.complete": "يبدو مكتملاً — لا توجد إصلاحات سريعة مقترحة.",
+  "wp.editElements": "تعديل عناصر المشهد",
   "results.critique.title": "تقييم سينمائي",
   "results.critique.subtitle": "تقييم وفق قواعد اللقطة، العدسة، الإضاءة، الحركة، المزاج والاستمرارية.",
   "results.critique.run": "تشغيل التقييم",
