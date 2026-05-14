@@ -157,80 +157,101 @@ export function DirectorChat() {
 
   const isEmpty = bubbles.length === 1 && bubbles[0].role === "assistant";
 
+  const STARTERS = [
+    "📸 Cinematic product reveal",
+    "🎭 Character introduction scene",
+    "🌅 Atmospheric landscape transition",
+    "🎬 Documentary narrative shot",
+  ];
+
   return (
     <div className="flex flex-col gap-3 h-[calc(100vh-180px)] max-h-[820px]">
       <div className="flex items-center justify-between">
         <div className="text-xs text-muted-foreground">
           Smart one-shot — I'll only ask if something would change the shot.
         </div>
-        <div className="flex items-center gap-2">
-          <Button size="sm" variant="ghost" onClick={onResetClick} className="gap-1.5 h-7 text-xs">
-            <RotateCcw className="w-3.5 h-3.5" /> New brief
-          </Button>
-          <span className="text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-accent/15 text-accent border border-accent/30">
-            New
-          </span>
-        </div>
+        <Button size="sm" variant="ghost" onClick={onResetClick} className="gap-1.5 h-7 text-xs">
+          <RotateCcw className="w-3.5 h-3.5" /> New brief
+        </Button>
       </div>
 
       <div
         ref={scrollRef}
-        className={`relative overflow-y-auto rounded-xl border bg-card/50 p-3 sm:p-4 space-y-3 ${
-          isEmpty ? "h-[40vh] max-h-[320px]" : "flex-1"
-        }`}
+        className="relative flex-1 overflow-y-auto rounded-xl border border-[hsl(240_5%_13%)] bg-[hsl(240_8%_5.5%)] p-3 sm:p-4"
       >
         {isEmpty && (
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
             <img src={logoMark} alt="" className="w-32 h-32 opacity-[0.05]" />
           </div>
         )}
-        {bubbles.map((b, i) => {
-          if (b.role === "result") {
+        <div className="flex flex-col gap-3 min-h-full">
+          {bubbles.map((b, i) => {
+            if (b.role === "result") {
+              return (
+                <PromptResultCard
+                  key={i}
+                  title={b.data.title}
+                  prompt={b.data.prompt}
+                  breakdown={b.data.breakdown as Record<string, string>}
+                  directorsNote={b.data.directors_note}
+                />
+              );
+            }
+            if (b.role === "questions") {
+              return (
+                <div
+                  key={i}
+                  className="rounded-lg border border-accent/30 bg-[hsl(20_30%_8%)] p-3 space-y-2 relative"
+                >
+                  <div className="text-xs text-accent/80 italic">{b.reason}</div>
+                  <ul className="text-sm space-y-1.5">
+                    {b.questions.map((q, j) => (
+                      <li key={j} className="flex gap-2">
+                        <span className="text-accent font-semibold">{j + 1}.</span>
+                        <span>{q}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              );
+            }
+            const isUser = b.role === "user";
             return (
-              <PromptResultCard
-                key={i}
-                title={b.data.title}
-                prompt={b.data.prompt}
-                breakdown={b.data.breakdown as Record<string, string>}
-                directorsNote={b.data.directors_note}
-              />
-            );
-          }
-          if (b.role === "questions") {
-            return (
-              <div key={i} className="rounded-lg border border-accent/30 bg-accent/5 p-3 space-y-2 relative">
-                <div className="text-xs text-muted-foreground italic">{b.reason}</div>
-                <ul className="text-sm space-y-1.5">
-                  {b.questions.map((q, j) => (
-                    <li key={j} className="flex gap-2">
-                      <span className="text-accent">{j + 1}.</span>
-                      <span>{q}</span>
-                    </li>
-                  ))}
-                </ul>
+              <div key={i} className={`relative flex ${isUser ? "justify-end" : "justify-start"}`}>
+                <div
+                  className={`max-w-[85%] rounded-2xl px-3.5 py-2 text-sm whitespace-pre-wrap leading-relaxed ${
+                    isUser
+                      ? "border border-accent/50 bg-accent/15 text-foreground rounded-br-sm"
+                      : "bg-[hsl(240_5%_9%)] border border-[hsl(240_5%_13%)] rounded-bl-sm"
+                  }`}
+                >
+                  {b.content}
+                </div>
               </div>
             );
-          }
-          const isUser = b.role === "user";
-          return (
-            <div key={i} className={`relative flex ${isUser ? "justify-end" : "justify-start"}`}>
-              <div
-                className={`max-w-[85%] rounded-2xl px-3.5 py-2 text-sm whitespace-pre-wrap leading-relaxed ${
-                  isUser
-                    ? "bg-primary text-primary-foreground rounded-br-sm"
-                    : "bg-muted rounded-bl-sm"
-                }`}
-              >
-                {b.content}
-              </div>
+          })}
+          {isEmpty && (
+            <div className="flex flex-wrap gap-2 pt-1">
+              {STARTERS.map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => setInput(s)}
+                  className="text-xs px-3 py-1.5 rounded-full border border-[hsl(240_5%_15%)] bg-[hsl(240_5%_9%)] hover:border-accent/40 hover:text-accent transition-colors"
+                >
+                  {s}
+                </button>
+              ))}
             </div>
-          );
-        })}
-        {busy && (
-          <div className="flex items-center gap-2 text-xs text-muted-foreground relative">
-            <Loader2 className="w-3.5 h-3.5 animate-spin" /> Director is reading the brief…
-          </div>
-        )}
+          )}
+          {busy && (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground relative">
+              <Loader2 className="w-3.5 h-3.5 animate-spin" /> Director is reading the brief…
+            </div>
+          )}
+          {/* Spacer pushes content up so empty space sits below */}
+          <div className="flex-1" />
+        </div>
       </div>
 
       <Composer
