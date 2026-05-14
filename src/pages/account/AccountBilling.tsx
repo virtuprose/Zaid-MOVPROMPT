@@ -3,12 +3,14 @@ import { ArrowLeft, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Seo } from "@/components/Seo";
+import { TopNav } from "@/components/TopNav";
 
 const AccountBilling = () => {
   const navigate = useNavigate();
   return (
     <div className="min-h-screen bg-background">
       <Seo title="Billing · MovPrompt" description="Manage your subscription and payment method." />
+      <TopNav />
       <div className="container max-w-3xl mx-auto px-4 py-6">
         <Button variant="ghost" size="sm" onClick={() => navigate("/")} className="mb-4 gap-2">
           <ArrowLeft className="w-4 h-4" /> Back
