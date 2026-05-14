@@ -1255,7 +1255,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
     </Button>
   );
 
-  const showRightEmptyState = !results && !isLoading && !isAnalyzing && !((phase === "breakdown" || phase === "generate") && sceneFrames.length > 0);
+  
 
   const analyzingRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
