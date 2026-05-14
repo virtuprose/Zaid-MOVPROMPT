@@ -156,8 +156,15 @@ export const en = {
   "results.shotRegen.inProgress": "Re-rolling shot…",
 
   // Quality & evaluation loop
-  "results.critique.button": "AI Critique",
-  "results.critique.hint": "Score this prompt on cinematography fundamentals and get one-click fixes.",
+  "results.critique.button": "Show critique",
+  "results.critique.hint": "Open an AI critique with one-click fixes for lens, lighting, mood and movement.",
+  "results.share.label": "Share",
+  "results.share.hint": "Create a public link to this prompt package.",
+  "results.copySection.tooltip": "Copy this section",
+  "results.feedbackPrompt": "Was this prompt useful?",
+  "results.quickFixes.title": "Quick fixes",
+  "results.quickFixes.complete": "Looks complete — no quick fixes suggested.",
+  "wp.editElements": "Edit scene elements",
   "results.critique.title": "Cinematography Critique",
   "results.critique.subtitle": "Scored against shot grammar, lensing, lighting, movement, mood and continuity.",
   "results.critique.run": "Run critique",
