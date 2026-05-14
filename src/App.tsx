@@ -12,6 +12,8 @@ import Index from "./pages/Index.tsx";
 import Landing from "./pages/Landing.tsx";
 import { useAuth } from "@/hooks/useAuth";
 import { Loader2 } from "lucide-react";
+import { Navigate } from "react-router-dom";
+import { onboardingDoneKey, ONBOARDING_PENDING_KEY } from "@/components/onboarding/OnboardingContext";
 
 const RootRoute = () => {
   const { user, loading } = useAuth();
@@ -22,7 +24,17 @@ const RootRoute = () => {
       </div>
     );
   }
-  return user ? <Index /> : <Landing />;
+  if (user) {
+    try {
+      const pending = localStorage.getItem(ONBOARDING_PENDING_KEY) === "1";
+      const done = localStorage.getItem(onboardingDoneKey(user.id)) === "1";
+      if (pending && !done) return <Navigate to="/onboarding" replace />;
+    } catch {
+      /* ignore */
+    }
+    return <Index />;
+  }
+  return <Landing />;
 };
 import NotFound from "./pages/NotFound.tsx";
 import Analytics from "./pages/Analytics.tsx";
@@ -39,6 +51,7 @@ import SharedPrompt from "./pages/SharedPrompt.tsx";
 import Gallery from "./pages/Gallery.tsx";
 import ModelLanding from "./pages/ModelLanding.tsx";
 import Referrals from "./pages/Referrals.tsx";
+import Onboarding from "./pages/Onboarding.tsx";
 
 const queryClient = new QueryClient();
 
@@ -66,6 +79,7 @@ const AppRoutes = () => {
           <Route path="/gallery" element={<Gallery />} />
           <Route path="/models/:slug" element={<ModelLanding />} />
           <Route path="/referrals" element={<AuthGuard><Referrals /></AuthGuard>} />
+          <Route path="/onboarding" element={<AuthGuard><Onboarding /></AuthGuard>} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

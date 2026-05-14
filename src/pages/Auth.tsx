@@ -72,6 +72,8 @@ const Auth = () => {
     } else {
       // Mark this user for the first-time welcome popup (shown once on first signed-in load).
       try { localStorage.setItem("first_signup_pending", "1"); } catch {}
+      // Mark onboarding pending — RootRoute will redirect to /onboarding on next load.
+      try { localStorage.setItem("movprompt.onboarding.pending", "1"); } catch {}
       // Auto-confirm is enabled — user is signed in immediately, no email verification.
       toast({ title: t("toast.accountCreated"), description: t("toast.welcomeAboard") });
       if (data?.user?.email) {
