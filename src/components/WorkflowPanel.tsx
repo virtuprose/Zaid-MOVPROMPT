@@ -1204,10 +1204,14 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
 
   const leftPanel = (
     <div className="space-y-5">
-      {workflowHeaderBlock}
-      {modeToggleBlock}
+      <div className="space-y-6">
+        {workflowHeaderBlock}
+        {modeToggleBlock}
+      </div>
       {showOnboarding && <OnboardingExamples onPick={handlePickExample} />}
-      {uploadBlock}
+      <div className="pt-2">
+        {uploadBlock}
+      </div>
       {modelBlock}
       {/* On breakdown/generate: textarea first, then Generate at the bottom. */}
       {isBreakdownLike && descriptionBlock}
