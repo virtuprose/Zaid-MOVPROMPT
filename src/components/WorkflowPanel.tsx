@@ -1489,10 +1489,11 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
         </div>
       )}
 
-      {showRightEmptyState && <EmptyStateExamples />}
-
     </div>
   );
+
+  const showSingleColumn = phase === "upload" && !isAnalyzing;
+
 
   const mobileStickyCta = hasRequiredImages && phase === "upload" ? (
     <div className="lg:hidden fixed inset-x-0 bottom-0 z-40 px-4 pt-3 pb-[calc(env(safe-area-inset-bottom)+12px)] bg-background/95 backdrop-blur-md border-t border-white/[0.06]">
