@@ -815,16 +815,15 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
     const currentMode: "single" | "twoframe" | "multishot" =
       multiShotMode ? "multishot" : twoFrameMode ? "twoframe" : "single";
 
-    const widthClass = both ? "sm:max-w-md" : "sm:max-w-xs";
     const btn = (active: boolean) =>
-      `flex-1 min-w-0 basis-[140px] sm:basis-0 px-5 py-3 text-xs whitespace-normal break-words leading-tight rounded-full border-2 transition-colors ${
+      `shrink-0 whitespace-nowrap rounded-full text-sm leading-none transition-colors ${
         active
-          ? "bg-primary/10 border-transparent border-b-primary text-foreground font-semibold ring-1 ring-primary/40"
-          : "bg-transparent border-transparent border-[#27272A] text-muted-foreground hover:text-foreground hover:border-primary/40"
+          ? "bg-[#F5A524] text-[#0A0A0B] font-semibold"
+          : "bg-transparent text-muted-foreground hover:bg-[#F5A524]/10 hover:text-foreground"
       }`;
 
     return (
-      <div className={`flex sm:flex-wrap flex-nowrap overflow-x-auto sm:overflow-visible justify-start sm:justify-center gap-2 ${widthClass} mx-auto -mx-1 px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden snap-x snap-mandatory`}>
+      <div className="flex flex-nowrap sm:flex-wrap sm:justify-center items-center gap-2 overflow-x-auto sm:overflow-visible -mx-1 px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden snap-x snap-mandatory" style={{ paddingTop: 2, paddingBottom: 2 }}>
         <button onClick={() => setMode("single")} className={`${btn(currentMode === "single")} snap-start shrink-0`}>
           {contract.supportsMultiShotToggle && !contract.supportsTwoFrameToggle
             ? t("contract.toggle.singleShot" as any)
