@@ -895,16 +895,17 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
         }, [])}
       </div>
     ) : (
-      <div className="grid gap-4 grid-cols-1">
+      <div className="flex flex-col items-center gap-4 w-full">
         {Array.from({ length: activeSlots }).map((_, i) => (
-          <ImageUploadZone
-            key={i}
-            label={slotLabels[i] || `Frame ${i + 1}`}
-            preview={images[i]?.preview || null}
-            onImageSelect={(file) => handleImageSelect(i, file)}
-            onImageRemove={() => handleImageRemove(i)}
-            disabled={isAnalyzing}
-          />
+          <div key={i} className="w-full max-w-[480px]">
+            <ImageUploadZone
+              label={slotLabels[i] || `Frame ${i + 1}`}
+              preview={images[i]?.preview || null}
+              onImageSelect={(file) => handleImageSelect(i, file)}
+              onImageRemove={() => handleImageRemove(i)}
+              disabled={isAnalyzing}
+            />
+          </div>
         ))}
       </div>
     )
