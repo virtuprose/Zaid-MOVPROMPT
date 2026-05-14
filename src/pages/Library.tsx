@@ -241,7 +241,7 @@ function HistoryCard({
       <div className="flex items-center justify-between gap-2 px-3 py-2 border-t border-border bg-secondary/20">
         <Button variant="ghost" size="sm" onClick={onToggle} className="h-7 px-2 text-xs gap-1">
           <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isExpanded ? "rotate-180" : ""}`} />
-          {isExpanded ? t("library.hidePrompts" as any) : t("library.viewPrompts" as any)}
+          {isExpanded ? "Close" : t("library.viewPrompts" as any)}
         </Button>
         <CopyButton text={allText} label={t("library.copyAll")} copiedLabel={t("library.copied")} />
       </div>
