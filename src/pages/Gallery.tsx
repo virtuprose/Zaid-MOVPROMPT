@@ -29,6 +29,7 @@ import loopKitchen from "@/assets/loop-kitchen.mp4.asset.json";
 import loopCyberpunk from "@/assets/loop-cyberpunk.mp4.asset.json";
 import loopUnderwater from "@/assets/loop-underwater.mp4.asset.json";
 import { toast } from "@/hooks/use-toast";
+import { TopNav } from "@/components/TopNav";
 
 interface GalleryPageProps {
   family?: typeof MODEL_FAMILIES[number];
@@ -602,6 +603,7 @@ export const GalleryView = ({ family }: GalleryPageProps) => {
 
   return (
     <div className="min-h-screen flex flex-col" style={{ background: "hsl(220 25% 4%)" }}>
+      <TopNav />
       <Helmet>
         <title>{heading} · MovPrompt</title>
         <meta name="description" content={desc} />

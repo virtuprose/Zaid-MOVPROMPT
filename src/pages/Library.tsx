@@ -28,6 +28,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { getModelLabel } from "@/lib/models";
+import { TopNav } from "@/components/TopNav";
 
 interface HistoryEntry {
   id: string;
@@ -535,6 +536,7 @@ const Library = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <TopNav />
       <Seo
         title="Your prompt library — MovPrompt"
         description="Browse, search, and reuse every cinematic AI video prompt you've generated with MovPrompt."
