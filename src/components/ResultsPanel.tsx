@@ -207,7 +207,7 @@ const MainPromptHero = ({ value, result, modelLabel, modelValue, onSwitchModel, 
   if (isMeaningful(result.cameraSuggestions)) appended.push({ header: "CAMERA SUGGESTIONS", body: result.cameraSuggestions });
   const totalSections = (parsed?.length ?? 0) + appended.length;
   return (
-    <div className="relative rounded-xl p-4 sm:p-5 bg-card border border-primary/40">
+    <div className="relative rounded-xl p-4 sm:p-5 bg-[#1a1410] border border-accent/30">
       {result.recommendedModel && (
         <div className="mb-3 rounded-lg border-s-4 border-primary bg-primary/5 border border-primary/30 px-3 py-2.5">
           <div className="flex items-start justify-between gap-3 flex-wrap">
