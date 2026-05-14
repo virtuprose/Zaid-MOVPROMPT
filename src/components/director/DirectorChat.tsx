@@ -86,9 +86,13 @@ export function DirectorChat() {
       toast.error("Add a brief or some references");
       return;
     }
+    const fallback = attachments.length
+      ? `References attached: ${attachments.length} file${attachments.length === 1 ? "" : "s"}`
+      : "(See attached references.)";
     const userBubble: Bubble = {
       role: "user",
-      content: text || "(See attached references.)",
+      content: text || fallback,
+      attachments: attachments.length ? attachments : undefined,
     };
     const next = [...bubbles, userBubble];
     setBubbles(next);
