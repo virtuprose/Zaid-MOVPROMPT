@@ -156,8 +156,12 @@ export const ElementGrid = ({ items, onChange, max = 10 }: ElementGridProps) => 
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <span className="text-sm font-medium text-foreground">{t("elements.title" as any)}</span>
-        <span className="text-xs text-muted-foreground">{items.length}/{max}</span>
+        <span className="text-sm font-medium text-foreground">
+          Characters / References <span className="text-muted-foreground font-normal">({items.length}/{max})</span>
+        </span>
+        <span className="text-[11px] text-muted-foreground italic">
+          Add up to {max} character references for your single shot
+        </span>
       </div>
 
       {items.length === 0 ? (
@@ -253,14 +257,16 @@ export const ElementGrid = ({ items, onChange, max = 10 }: ElementGridProps) => 
                 </div>
               )}
 
-              <span className="absolute top-1 left-1 text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-primary text-primary-foreground shadow">
+              <span
+                className="absolute top-1 left-1 font-mono font-bold rounded px-1.5 py-0.5 shadow"
+                style={{
+                  fontSize: 11,
+                  color: "#000",
+                  backgroundColor: "#F5A524",
+                  border: "1px solid #F5A524",
+                }}
+              >
                 @{idx + 1}
-              </span>
-
-              <span className="absolute bottom-1 left-1 p-1 rounded bg-background/70 backdrop-blur-sm text-foreground">
-                {item.kind === "image" && <ImageIcon className="w-3 h-3" />}
-                {item.kind === "video" && <Film className="w-3 h-3" />}
-                {item.kind === "audio" && <Music className="w-3 h-3" />}
               </span>
 
               <button
