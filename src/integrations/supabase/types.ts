@@ -175,6 +175,42 @@ export type Database = {
         }
         Relationships: []
       }
+      director_sessions: {
+        Row: {
+          brief_context: Json
+          created_at: string
+          final_prompt: string | null
+          id: string
+          messages: Json
+          title: string | null
+          updated_at: string
+          user_id: string
+          video_job_id: string | null
+        }
+        Insert: {
+          brief_context?: Json
+          created_at?: string
+          final_prompt?: string | null
+          id?: string
+          messages?: Json
+          title?: string | null
+          updated_at?: string
+          user_id: string
+          video_job_id?: string | null
+        }
+        Update: {
+          brief_context?: Json
+          created_at?: string
+          final_prompt?: string | null
+          id?: string
+          messages?: Json
+          title?: string | null
+          updated_at?: string
+          user_id?: string
+          video_job_id?: string | null
+        }
+        Relationships: []
+      }
       email_send_log: {
         Row: {
           created_at: string
