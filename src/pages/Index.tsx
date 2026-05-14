@@ -85,6 +85,18 @@ const Index = () => {
             <Button
               variant="ghost"
               size="sm"
+              onClick={() => navigate("/director")}
+              className="gap-1.5 shrink-0 px-2 sm:px-3 hidden sm:inline-flex relative"
+            >
+              <Clapperboard className="w-4 h-4" />
+              <span className="hidden sm:inline text-sm">AI Director</span>
+              <span className="text-[9px] uppercase tracking-wider text-accent font-semibold">New</span>
+            </Button>
+          )}
+          {!loading && user && (
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => navigate("/library")}
               className="gap-1.5 shrink-0 px-2 sm:px-3 hidden sm:inline-flex"
               data-tour="library-link"
@@ -111,10 +123,6 @@ const Index = () => {
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem onClick={startTour}>
                         <PlayCircle className="w-4 h-4 me-2" /> {t("tour.takeTour" as any)}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => navigate("/director")}>
-                        <Clapperboard className="w-4 h-4 me-2" /> AI Director
-                        <span className="ml-auto text-[9px] uppercase tracking-wider text-accent">New</span>
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => navigate("/learn")}>
                         <BookOpen className="w-4 h-4 me-2" /> {t("learn.menuLabel" as any)}
