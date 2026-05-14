@@ -257,14 +257,16 @@ export const ElementGrid = ({ items, onChange, max = 10 }: ElementGridProps) => 
                 </div>
               )}
 
-              <span className="absolute top-1 left-1 text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-primary text-primary-foreground shadow">
+              <span
+                className="absolute top-1 left-1 font-mono font-bold rounded px-1.5 py-0.5 shadow"
+                style={{
+                  fontSize: 11,
+                  color: "#000",
+                  backgroundColor: "#F5A524",
+                  border: "1px solid #F5A524",
+                }}
+              >
                 @{idx + 1}
-              </span>
-
-              <span className="absolute bottom-1 left-1 p-1 rounded bg-background/70 backdrop-blur-sm text-foreground">
-                {item.kind === "image" && <ImageIcon className="w-3 h-3" />}
-                {item.kind === "video" && <Film className="w-3 h-3" />}
-                {item.kind === "audio" && <Music className="w-3 h-3" />}
               </span>
 
               <button
