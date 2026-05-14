@@ -6,6 +6,7 @@ import { ArrowLeft, Clapperboard } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { trackPageVisit } from "@/lib/analytics";
 import { DirectorChat } from "@/components/director/DirectorChat";
+import { TopNav } from "@/components/TopNav";
 
 export default function Director() {
   const { user, loading } = useAuth();
