@@ -1,57 +1,61 @@
 ## Goal
-Add a 7-step first-run onboarding flow at `/onboarding` that runs once per user after signup, then never again.
+Audit and fix mobile responsiveness at 375px (iPhone 14) across every major screen.
 
-## Persistence
-- Track completion in `localStorage` per user (`movprompt.onboarding.done.<userId>`), mirroring the existing `TourProvider` pattern. No DB schema change required for v1 (keeps scope tight; can promote to a `profiles.onboarding_complete` column later if needed).
-- After signup in `src/pages/Auth.tsx`, redirect new users to `/onboarding` instead of `/`. Existing users continue to `/`.
+## Approach
+1. Switch preview to mobile, then navigate screen-by-screen capturing screenshots and noting issues.
+2. Group fixes by file and apply them in batches.
+3. Re-verify each fixed screen at 375px.
 
-## Routing
-- New route in `src/App.tsx`: `<Route path="/onboarding" element={<AuthGuard><Onboarding /></AuthGuard>} />`
-- New page: `src/pages/Onboarding.tsx` — a single full-screen container that renders the active step. Header shows step pills (1–7) + "Skip" link top-right (skip jumps to STEP 7 quick-tips on top of `/`).
+## Screens to audit
+| # | Screen | Route | Files likely touched |
+|---|---|---|---|
+| 1 | Tool / Studio | `/` (signed in) | `WorkflowPanel.tsx`, `ImageUploadZone.tsx`, `Index.tsx` |
+| 2 | Landing | `/` (signed out) | `Landing.tsx` |
+| 3 | Gallery | `/gallery` | `Gallery.tsx` |
+| 4 | Library | `/library` | `Library.tsx` |
+| 5 | Generated output | `/` after generate | `WorkflowPanel.tsx`, `ResultsPanel.tsx`, `SceneBreakdown.tsx` |
+| 6 | Navigation | global | `Index.tsx`, `Landing.tsx` |
+| 7 | Scene Elements panel | breakdown phase | `SceneBreakdown.tsx`, `ElementGrid.tsx` |
 
-## Step components (in `src/components/onboarding/`)
-1. `StepWelcome.tsx` — Heading "Welcome to MovPrompt, {first name}", sub copy, amber primary CTA "Let's go →". Subtle Framer fade/slide.
-2. `StepStarterImage.tsx` — 6 curated cinematic stills in a responsive grid (3×2 desktop, 2×3 mobile) sourced from `src/assets/onboarding/starter-*.jpg` (generated via imagegen). Each tile selectable; "Upload your own" tile triggers file picker. Selection stored in onboarding context.
-3. `StepWorkflow.tsx` — 3 large cards (single, twoframe, multishot) each playing a 5s muted autoplay loop on hover/in-view (reuse existing `loop-*.mp4` assets where applicable; add a small "Most people start with Single shot" badge on card 1).
-4. `StepModel.tsx` — Reuse existing `ModelPicker` component pre-set to `any`. Helper text "Don't worry, you can change this anytime."
-5. `StepGenerating.tsx` — Calls existing `analyze-scene` + `generate-prompt` edge functions with the chosen image/model/workflow. Shows existing skeleton + a rotating cinematography facts strip (10 short facts hardcoded in the file).
-6. `StepReveal.tsx` — Shows the generated prompt in a styled card, runs a 1s sparkle/confetti micro-animation (Framer Motion stagger of small SVG sparkles — no extra package). Primary CTA "Copy & open in Seedance", secondary "Save to library" (auto-saves on mount via existing prompt_history insert path).
-7. `StepQuickTips.tsx` — Spotlight overlay with 4 tips (text + icon, no actual element targeting needed for v1; just a centered modal carousel). "Got it" finalizes, sets the localStorage flag, navigates to `/`.
+## Specific fixes mapped to spec
+1. **Tool screen** — confirm upload zone uses `w-full` with parent `px-3` (24px total padding). Adjust container if not.
+2. **Workflow toggle pills** — already `flex flex-nowrap snap-x` per earlier work; verify no wrap, add `overflow-x-auto scrollbar-none -mx-4 px-4` for momentum on iOS.
+3. **Model picker card** — wrap in `w-full` and reduce internal padding to `p-3 sm:p-4` on mobile.
+4. **CTAs sticky on scroll** — wrap primary CTA row in a `sm:static fixed bottom-0 inset-x-0 z-30 bg-background/95 backdrop-blur border-t border-border p-3` block on mobile only, with safe-area padding.
+5. **Landing page**
+   - Hero `text-[40px] sm:text-6xl` (or current `text-7xl` shrunk to `text-[40px]` at base).
+   - Workflow card grid `grid-cols-1 md:grid-cols-3`.
+   - Before/after section flex column on mobile.
+   - Testimonials `grid-cols-1 md:grid-cols-3`.
+   - Footer `text-center` single column on mobile.
+6. **Gallery**
+   - Cards `grid-cols-1 sm:grid-cols-2 lg:grid-cols-3`.
+   - Search + filter stack vertically (`flex-col sm:flex-row`).
+   - Sort dropdown moved below filter row on mobile.
+   - All buttons enforce `min-h-[44px]`.
+7. **Library**
+   - Card grid `grid-cols-1 sm:grid-cols-2`.
+   - Filter pills row gets `overflow-x-auto whitespace-nowrap -mx-4 px-4`.
+   - Action buttons remain visible inside card footer (already inline).
+8. **Generated output (mobile)**
+   - Hide left image preview column at `<sm` (`hidden sm:block`).
+   - Output card `w-full`.
+   - Sticky bottom action bar with Copy / Regenerate / Edit (3 equal-width buttons inside `fixed bottom-0` container, mobile only).
+9. **Navigation**
+   - Already has hamburger Sheet; verify Studio link is included and menu shows: Studio, Gallery, Pricing (if route exists), Library, Profile, Sign out. Add missing items.
+10. **Scene Elements panel**
+    - On mobile, stack image preview above elements list (currently side-by-side?). Set `flex-col sm:flex-row`.
+    - Element rows: Lock/Move buttons inline with name (`flex items-center gap-2` on the title row, not pushed right).
+    - Quick set chips: `overflow-x-auto whitespace-nowrap` row.
 
-## Onboarding context
-- `src/components/onboarding/OnboardingContext.tsx` — local React context holding `{ step, image, workflow, model, result }` and `next/prev/skip/complete` helpers. Lives only inside the `/onboarding` page tree.
+## Verification matrix
+After implementation, screenshot each route at 375×812 and confirm:
+- No horizontal scroll on `<body>`.
+- Tap targets ≥44px on all primary buttons.
+- Sticky CTA only appears on mobile, never overlaps content.
 
-## Reused infrastructure
-- `useAuth` for the user (display name, id).
-- `WorkflowPanel`'s underlying generation calls — extract the minimum logic into `src/lib/onboardingGenerate.ts` (a thin wrapper that posts the file + chosen model to `analyze-scene` then `generate-prompt`, returning the first prompt). No changes to existing components.
-- `ModelPicker` for STEP 4.
-- Existing `loop-*.mp4` cards for STEP 3 previews.
-
-## Auto-redirect logic
-- `RootRoute` in `src/App.tsx`: when user is signed in AND onboarding flag is missing AND not currently on `/onboarding` or `/auth`, redirect to `/onboarding`. Keep this behind a one-shot check so returning users with the flag never see it.
-
-## Assets to generate
-- 6 cinematic still JPEGs in `src/assets/onboarding/` (Tokyo neon street, desert dune, Rembrandt portrait, kitchen scene, underwater diver, cyberpunk rooftop) — fast tier, 1024×640.
-
-## Out of scope (v1)
-- No DB column for `onboarding_complete` — localStorage is enough and avoids a migration. Easy upgrade later.
-- No translation strings yet (English copy hardcoded; can be moved to `i18n/translations/en.ts` in a follow-up).
-- Quick-tips spotlight does not target real DOM nodes — it's a centered carousel. True element-targeted spotlight can reuse the existing `TourOverlay` later.
-
-## Files to add
-- `src/pages/Onboarding.tsx`
-- `src/components/onboarding/OnboardingContext.tsx`
-- `src/components/onboarding/StepWelcome.tsx`
-- `src/components/onboarding/StepStarterImage.tsx`
-- `src/components/onboarding/StepWorkflow.tsx`
-- `src/components/onboarding/StepModel.tsx`
-- `src/components/onboarding/StepGenerating.tsx`
-- `src/components/onboarding/StepReveal.tsx`
-- `src/components/onboarding/StepQuickTips.tsx`
-- `src/components/onboarding/Sparkles.tsx`
-- `src/lib/onboardingGenerate.ts`
-- `src/assets/onboarding/starter-{1..6}.jpg`
-
-## Files to edit
-- `src/App.tsx` — add route + redirect logic in `RootRoute`.
-- `src/pages/Auth.tsx` — after successful signup, set a session flag so `RootRoute` sends them to `/onboarding`.
+## Scope notes
+- Strictly UI/Tailwind class adjustments — no business logic changes.
+- No new components except possibly a small `MobileStickyCta` wrapper if reused.
+- Existing translation keys preserved.
+- Not adding a Pricing route if it doesn't exist; the spec lists it but only include nav links for routes that exist.
