@@ -441,6 +441,14 @@ const Library = () => {
     return true;
   });
 
+  const sorted = [...filtered].sort((a, b) => {
+    if (sortBy === "oldest") {
+      return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+    }
+    // newest, copied, liked: fallback to newest (copy/like counts not yet tracked)
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+  });
+
   const activeFilterCount = workflowFilter.size + modelFilter.size;
   const hasActiveFilters = activeFilterCount > 0 || !!search.trim();
 
