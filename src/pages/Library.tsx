@@ -64,7 +64,7 @@ function timeAgo(dateStr: string, t: (k: string) => string): string {
   return new Date(dateStr).toLocaleDateString();
 }
 
-function CopyButton({ text, label, copiedLabel }: { text: string; label: string; copiedLabel: string }) {
+function CopyButton({ text, label, copiedLabel, variant = "ghost" }: { text: string; label: string; copiedLabel: string; variant?: "ghost" | "outline" }) {
   const [copied, setCopied] = useState(false);
   const handleCopy = async () => {
     await navigator.clipboard.writeText(text);
@@ -72,11 +72,35 @@ function CopyButton({ text, label, copiedLabel }: { text: string; label: string;
     setTimeout(() => setCopied(false), 1500);
   };
   return (
-    <Button variant="ghost" size="sm" onClick={handleCopy} className="h-7 px-2 text-xs gap-1">
+    <Button
+      variant={variant}
+      size="sm"
+      onClick={handleCopy}
+      className="h-7 px-2 text-xs gap-1 hover:bg-[#161618] hover:border-accent/40 hover:text-accent"
+    >
       {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
       {copied ? copiedLabel : label}
     </Button>
   );
+}
+
+// Detect sequence-style headers in the prompt body so we can amber-style them in the modal.
+const SEQUENCE_RE = /^\s*\[?\s*(SEQUENCE|SCENE|SHOT)\b[^\]\n]*\]?\s*$/i;
+function renderPromptWithSequenceHeaders(text: string) {
+  const lines = text.split("\n");
+  return lines.map((line, i) => {
+    if (SEQUENCE_RE.test(line)) {
+      return (
+        <div
+          key={i}
+          className="text-accent font-semibold uppercase tracking-wider text-xs mt-2 first:mt-0"
+        >
+          {line.trim()}
+        </div>
+      );
+    }
+    return <div key={i}>{line || "\u00A0"}</div>;
+  });
 }
 
 function HistoryCard({
