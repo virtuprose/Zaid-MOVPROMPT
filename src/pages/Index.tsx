@@ -1,24 +1,15 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import { trackPageVisit } from "@/lib/analytics";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { WorkflowPanel } from "@/components/WorkflowPanel";
-
-import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { LanguageToggle } from "@/components/LanguageToggle";
 import { motion } from "framer-motion";
-import { User, LogOut, Library, BookOpen, PlayCircle, Sparkles, Gift, Menu, Bell, Clapperboard, Settings, CreditCard, Globe, ChevronRight, GraduationCap } from "lucide-react";
-import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import AnnouncementBanner from "@/components/AnnouncementBanner";
-import NotificationBell from "@/components/NotificationBell";
 import { InstallPrompt } from "@/components/InstallPrompt";
 import WelcomePopup from "@/components/WelcomePopup";
 import { TourOverlay } from "@/components/tour/TourOverlay";
 import { useTour } from "@/components/tour/TourProvider";
-import logoMark from "@/assets/logo-mark.svg";
+import { TopNav } from "@/components/TopNav";
 
 const Index = () => {
   const [model, setModel] = useState("any");
