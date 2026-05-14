@@ -1108,9 +1108,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
 
   // On the breakdown/generate screen, collapse the model picker into a single-line strip.
   const isBreakdownLike = phase === "breakdown" || phase === "generate";
-  const inferredModelLabel =
-    MODEL_GROUPS.flatMap((g) => g.models).find((m) => m.value === selectedModel)?.label ??
-    selectedModel;
+  const inferredModelLabel = getModelLabel(selectedModel);
 
   const modelBlock = isBreakdownLike ? (
     <div className="space-y-1">
@@ -1122,7 +1120,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
           <span className="text-sm font-display font-medium text-foreground truncate">
             {inferredModelLabel}
           </span>
-          {selectedModel === "any" && (
+          {isAnyModel && (
             <span className="text-xs text-muted-foreground hidden sm:inline truncate">
               — Universal Prompt
             </span>
@@ -1139,9 +1137,9 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
           Change
         </button>
       </div>
-      {contract.supportsAudio && (
+      {contract.supportsAudio && !isAnyModel && (
         <p className="text-[12px] text-muted-foreground px-3">
-          Native synced audio for Veo 3.1 (ambient sound + dialogue)
+          Native synced audio for {inferredModelLabel} (ambient sound + dialogue)
         </p>
       )}
     </div>
@@ -1149,20 +1147,8 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
     <ModelPicker model={selectedModel} onModelChange={(v) => onSwitchModel?.(v)} />
   );
 
-  const backLinkTop = isBreakdownLike && !isAnalyzing && !isLoading && !(phase === "generate" && results) ? (
-    <button
-      type="button"
-      onClick={() => setPhase("upload")}
-      className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors self-start"
-      aria-label={t("wp.back" as any)}
-    >
-      <ArrowLeft className="w-3 h-3 rtl:rotate-180" /> {t("wp.back" as any)}
-    </button>
-  ) : null;
-
   const leftPanel = (
     <div className="space-y-5">
-      {backLinkTop}
       {workflowHeaderBlock}
       {modeToggleBlock}
       {showOnboarding && <OnboardingExamples onPick={handlePickExample} />}
