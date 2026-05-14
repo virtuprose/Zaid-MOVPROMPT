@@ -1,22 +1,56 @@
-## Move AI Director out of the profile dropdown
+## Goal
 
-Right now "AI Director" lives inside the avatar dropdown (desktop) and the hamburger sheet (mobile) on `src/pages/Index.tsx`. We'll promote it to a first-class entry in the top navigation so users see it without opening a menu.
+Replace the current top bar everywhere with a Higgsfield-style horizontal nav: logo on the left, route links in the middle, and a right cluster with Search (⌘K), Buy Credits, Assets, Notifications, and a ringed avatar.
 
-### Changes (single file: `src/pages/Index.tsx`)
+## Visual reference
 
-1. **Desktop top nav** — add a new "AI Director" button next to the existing Library button (lines 84–95 area):
-   - Same `variant="ghost"`, `size="sm"` styling as Library so it sits inline.
-   - `Clapperboard` icon + label "AI Director".
-   - Small `New` accent badge (reuse the same `text-accent` "NEW" chip styling currently in the dropdown).
-   - Visible on `sm:` and up; hidden on mobile (mobile keeps it in the sheet).
-   - Navigates to `/director`, gated to signed-in users (only render when `user` exists, like Library).
+Dark bar, no card chrome. Logo mark + small divider, then nav links (active link uses cyan with a small leading sparkle). Pill search with ⌘K shortcut. Outlined "Buy Credits" pill with a record-dot. Green-tinted "Assets" pill with a folder glyph. Avatar with an amber gradient ring and a small badge dot.
 
-2. **Desktop dropdown** — remove the AI Director `DropdownMenuItem` (lines 115–118) since it's now in the nav.
+## Implementation
 
-3. **Mobile hamburger sheet** — keep the AI Director entry where it is (lines 163–166). Mobile has limited horizontal space; the sheet is the right place for it. Optionally bump it to the top of the list so it gets visual priority.
+### 1. New shared component: `src/components/TopNav.tsx`
 
-### Out of scope
+- Sticky top bar (`sticky top-0 z-40 backdrop-blur bg-background/80 border-b border-border/40`).
+- Left: `logo-mark.svg` + "MovPrompt" wordmark, vertical divider.
+- Center nav links (mapped to existing routes):
+  - Studio → `/`
+  - AI Director → `/director` (amber `New` pill badge)
+  - Library → `/library`
+  - Learn → `/learn`
+  - Gallery → `/gallery`
+  - Active link: `text-primary` with a leading 2-dot sparkle glyph.
+- Right cluster (in order):
+  - Search pill: read-only input styled like the reference, opens nothing yet but shows a `⌘K` kbd chip on the right. (Hook can be wired later.)
+  - Buy Credits: outlined pill, red record-dot, navigates to `/account/billing`.
+  - Assets: green-tinted pill with folder icon, navigates to `/library`.
+  - `NotificationBell` (existing).
+  - `LanguageToggle` (existing, condensed).
+  - Avatar wrapped in a 2px amber→primary gradient ring with a tiny amber dot badge; opens the existing profile `DropdownMenu` (reuse the menu already built in `Index.tsx`, extracted into the component).
+- Mobile (`< sm`): collapses to logo + hamburger `Sheet` with the same links and right-cluster items stacked.
 
-- No changes to `/director` page itself, routes, or auth guard.
-- No changes to Landing page CTAs.
-- No copy/i18n key changes (label stays plain "AI Director" as it is today).
+### 2. Extract profile dropdown
+
+Move the existing dropdown JSX from `src/pages/Index.tsx` into `TopNav.tsx` so every page gets the same menu. Keep current items, tour state, and sign-out behavior unchanged.
+
+### 3. Wire it up across pages
+
+Add `<TopNav />` at the top of each page that currently renders its own header:
+- `src/pages/Index.tsx` (remove old top-bar JSX, keep `AnnouncementBanner`).
+- `src/pages/Director.tsx`, `src/pages/Library.tsx`, `src/pages/Learn.tsx`, `src/pages/Gallery.tsx`, `src/pages/Referrals.tsx`, `src/pages/account/*`.
+- Skip `Auth`, `Landing`, `SharedPrompt`, `NotFound`, admin and onboarding routes.
+
+### 4. Tokens
+
+Use semantic tokens only — `bg-background`, `text-foreground`, `text-muted-foreground`, `border-border`, `text-primary` (cyan), `text-accent` (amber), `bg-accent/10`, etc. The green Assets pill uses an inline HSL accent (`hsl(150 60% 45%)`) wrapped in a tiny utility class added to `index.css` so it stays themable.
+
+## Out of scope
+
+- Wiring the search to a real command palette.
+- Real billing flow behind Buy Credits (links to existing billing page).
+- Visual restyling of pages below the nav.
+
+## Files
+
+- new: `src/components/TopNav.tsx`
+- edit: `src/pages/Index.tsx`, `src/pages/Director.tsx`, `src/pages/Library.tsx`, `src/pages/Learn.tsx`, `src/pages/Gallery.tsx`, `src/pages/Referrals.tsx`, `src/pages/account/AccountSettings.tsx`, `src/pages/account/AccountBilling.tsx`, `src/pages/account/AccountPreferences.tsx`
+- edit: `src/index.css` (one helper class for the green Assets pill)
