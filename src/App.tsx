@@ -51,6 +51,7 @@ import SharedPrompt from "./pages/SharedPrompt.tsx";
 import Gallery from "./pages/Gallery.tsx";
 import ModelLanding from "./pages/ModelLanding.tsx";
 import Referrals from "./pages/Referrals.tsx";
+import Onboarding from "./pages/Onboarding.tsx";
 
 const queryClient = new QueryClient();
 
