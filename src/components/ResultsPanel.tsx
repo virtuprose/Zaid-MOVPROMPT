@@ -271,7 +271,7 @@ const MainPromptHero = ({ value, result, modelLabel, modelValue, onSwitchModel, 
         const counterColor = ratio > 0.95
           ? "text-destructive font-semibold"
           : ratio >= 0.8
-            ? "text-primary font-medium"
+            ? "text-accent font-medium"
             : "text-muted-foreground";
         return (
           <div className="mb-3 space-y-2">
