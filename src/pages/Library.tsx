@@ -39,10 +39,16 @@ interface HistoryEntry {
 
 function getWorkflowLabels(t: (k: string) => string): Record<string, { label: string; color: string }> {
   return {
-    single: { label: t("library.singleFrame"), color: "bg-primary/20 text-primary border-primary/30" },
-    twoframe: { label: t("library.twoFrames"), color: "bg-accent/20 text-accent border-accent/30" },
-    multishot: { label: t("library.multiShot"), color: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" },
+    single: { label: t("library.singleFrame"), color: "text-primary" },
+    twoframe: { label: t("library.twoFrames"), color: "text-accent" },
+    multishot: { label: t("library.multiShot"), color: "text-emerald-400" },
   };
+}
+
+function normalizeModelLabel(model: string): string {
+  if (!model) return "Any";
+  if (model === "any" || model.toLowerCase() === "any model") return "Any";
+  return getModelLabel(model);
 }
 
 function timeAgo(dateStr: string, t: (k: string) => string): string {
