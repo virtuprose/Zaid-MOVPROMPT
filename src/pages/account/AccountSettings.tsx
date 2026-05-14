@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/useAuth";
 import { Seo } from "@/components/Seo";
+import { TopNav } from "@/components/TopNav";
 
 const AccountSettings = () => {
   const navigate = useNavigate();
