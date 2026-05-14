@@ -756,27 +756,42 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
   );
 
   // Inline compact audio toggle (rendered inside the collapsed model strip).
-  const audioInlineToggle = contract.supportsAudio ? (
-    <button
-      type="button"
-      onClick={(e) => { e.stopPropagation(); setAudioEnabled((v) => !v); }}
-      className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors shrink-0"
-      aria-pressed={audioEnabled}
-      title={audioEnabled ? "Audio on" : "Audio off"}
-    >
-      {audioEnabled ? <Volume2 className="w-3.5 h-3.5 text-foreground" /> : <VolumeX className="w-3.5 h-3.5" />}
-      <span
-        className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${
-          audioEnabled ? "bg-primary" : "bg-muted"
-        }`}
-      >
-        <span
-          className={`inline-block h-3 w-3 transform rounded-full bg-background transition-transform ${
-            audioEnabled ? "translate-x-[14px]" : "translate-x-0.5"
-          }`}
-        />
-      </span>
-    </button>
+  // Show for audio-capable models. For "any" (Universal Prompt), show a neutral
+  // state with explanatory tooltip since the actual audio capability depends on
+  // which model the AI ultimately chooses.
+  const isAnyModel = selectedModel === "any";
+  const showAudioToggle = contract.supportsAudio || isAnyModel;
+  const audioInlineToggle = showAudioToggle ? (
+    <TooltipProvider delayDuration={200}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); setAudioEnabled((v) => !v); }}
+            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors shrink-0"
+            aria-pressed={audioEnabled}
+          >
+            {audioEnabled ? <Volume2 className="w-3.5 h-3.5 text-foreground" /> : <VolumeX className="w-3.5 h-3.5" />}
+            <span
+              className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${
+                audioEnabled ? (isAnyModel ? "bg-muted-foreground/40" : "bg-primary") : "bg-muted"
+              }`}
+            >
+              <span
+                className={`inline-block h-3 w-3 transform rounded-full bg-background transition-transform ${
+                  audioEnabled ? "translate-x-[14px]" : "translate-x-0.5"
+                }`}
+              />
+            </span>
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="top" className="max-w-[240px] text-xs">
+          {isAnyModel
+            ? "Audio output depends on which model the AI picks for your scene"
+            : audioEnabled ? "Audio on" : "Audio off"}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   ) : null;
 
   const modeToggleBlock = (contract.supportsTwoFrameToggle || contract.supportsMultiShotToggle) && (() => {
