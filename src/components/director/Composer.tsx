@@ -61,6 +61,49 @@ export function Composer({ value, onChange, attachments, onAttachmentsChange, on
 
   const [pendingCount, setPendingCount] = useState(0);
 
+  // Use a ref to the latest attachments so async moderation patches don't
+  // race with concurrent uploads/removals.
+  const attachmentsRef = useRef<Attachment[]>(attachments);
+  useEffect(() => {
+    attachmentsRef.current = attachments;
+  }, [attachments]);
+
+  const isImageLike = (a: Attachment) => a.kind === "image" || a.kind === "video_keyframes";
+
+  const moderateAttachment = useCallback(
+    async (att: Attachment) => {
+      if (!isImageLike(att) || !("url" in att) || !att.url) return;
+      try {
+        const verdict = await moderateImage(att.url);
+        const next = attachmentsRef.current.map((a) => {
+          if (a === att) {
+            const moderation = verdict.eligible
+              ? { state: "ok" as const }
+              : {
+                  state: "blocked" as const,
+                  reason: verdict.reason || "Image flagged by content moderation.",
+                  categories: verdict.categories,
+                };
+            return { ...(a as any), moderation };
+          }
+          return a;
+        });
+        if (!verdict.eligible) {
+          toast.error(`Image blocked: ${verdict.reason || "content policy"}`);
+        }
+        attachmentsRef.current = next;
+        onAttachmentsChange(next);
+      } catch {
+        const next = attachmentsRef.current.map((a) =>
+          a === att ? { ...(a as any), moderation: { state: "unknown" as const } } : a,
+        );
+        attachmentsRef.current = next;
+        onAttachmentsChange(next);
+      }
+    },
+    [onAttachmentsChange],
+  );
+
   const handleFiles = useCallback(
     async (files: FileList | File[]) => {
       const arr = Array.from(files || []);
@@ -87,11 +130,23 @@ export function Composer({ value, onChange, attachments, onAttachmentsChange, on
         else toast.error(r.reason?.message || `Could not read ${arr[i].name}`);
       });
 
-      onAttachmentsChange([...attachments, ...fresh].slice(0, 12));
+      // Mark image-like attachments as scanning before we hand them to the parent.
+      const stamped = fresh.map((a) =>
+        isImageLike(a) ? ({ ...(a as any), moderation: { state: "scanning" as const } }) : a,
+      );
+
+      const next = [...attachmentsRef.current, ...stamped].slice(0, 12);
+      attachmentsRef.current = next;
+      onAttachmentsChange(next);
       setPendingCount((c) => Math.max(0, c - arr.length));
       setIngesting(false);
+
+      // Kick off moderation in parallel; results patch the attachment in place.
+      stamped.forEach((a) => {
+        if (isImageLike(a)) void moderateAttachment(a);
+      });
     },
-    [attachments, onAttachmentsChange, user],
+    [onAttachmentsChange, user, moderateAttachment],
   );
 
   const remove = (i: number) => onAttachmentsChange(attachments.filter((_, idx) => idx !== i));
