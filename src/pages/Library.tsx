@@ -813,7 +813,9 @@ const Library = () => {
         <div className="mb-5 text-center sm:text-start">
           <h1 className="font-display text-2xl sm:text-3xl font-semibold tracking-tight">Library</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Every prompt you've generated, ready to use again.
+            {tab === "videos"
+              ? "Every video you've rendered. Download, share, or remix."
+              : "Every prompt you've generated, ready to use again."}
           </p>
         </div>
 
