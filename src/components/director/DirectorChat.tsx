@@ -333,7 +333,20 @@ export function DirectorChat() {
                       : "bg-[hsl(240_5%_9%)] border border-[hsl(240_5%_13%)] rounded-bl-sm"
                   }`}
                 >
-                  {b.content}
+                  {isUser
+                    ? b.content.split(/(@\d+)/g).map((part, k) =>
+                        /^@\d+$/.test(part) ? (
+                          <span
+                            key={k}
+                            className="inline-flex items-center rounded bg-accent/25 px-1 text-[12px] font-semibold text-accent"
+                          >
+                            {part}
+                          </span>
+                        ) : (
+                          <span key={k}>{part}</span>
+                        ),
+                      )
+                    : b.content}
                 </div>
                 {isUser && b.role === "user" && b.attachments && b.attachments.length > 0 && (
                   <div className="flex flex-wrap gap-1.5 max-w-[85%] justify-end">
