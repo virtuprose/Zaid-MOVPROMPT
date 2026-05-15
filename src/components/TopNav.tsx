@@ -184,7 +184,7 @@ export function TopNav() {
                             {initials}
                           </AvatarFallback>
                         </Avatar>
-                        <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-accent border-2 border-background" />
+                        
                       </button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-64 p-1.5 rounded-xl border-accent/10 bg-popover">
