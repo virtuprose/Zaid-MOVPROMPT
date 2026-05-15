@@ -354,11 +354,20 @@ export default function MarketingStudio() {
               <PresetChip
                 icon={<Globe2 className="w-3.5 h-3.5" />}
                 label="Setting"
-                value={
-                  setting?.label
-                    ? `${setting.label}${location.place ? ` · ${location.place}` : location.imagePath ? " · Custom" : ""}`
-                    : location.place || (location.imagePath ? "Custom location" : undefined)
-                }
+                value={(() => {
+                  const sceneLabel =
+                    setting?.label ||
+                    (customSetting.trim()
+                      ? `Custom: ${customSetting.trim().slice(0, 28)}${customSetting.trim().length > 28 ? "…" : ""}`
+                      : undefined);
+                  const locSuffix = location.place
+                    ? ` · ${location.place}`
+                    : location.imagePath
+                      ? " · Custom"
+                      : "";
+                  if (sceneLabel) return `${sceneLabel}${locSuffix}`;
+                  return location.place || (location.imagePath ? "Custom location" : undefined);
+                })()}
                 tooltip="Scene type and location"
                 onClick={() => setOpenPicker("setting")}
                 flash={flashChips}
