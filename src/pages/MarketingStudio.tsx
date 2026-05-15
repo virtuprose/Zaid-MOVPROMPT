@@ -237,8 +237,9 @@ export default function MarketingStudio() {
   );
 
   const adCount = userAds.length;
+  const totalCount = adCount + pendingJobs.length;
   const mode: "empty" | "mixed" | "full" =
-    adCount === 0 ? "empty" : adCount < 10 ? "mixed" : "full";
+    totalCount === 0 ? "empty" : totalCount < 10 ? "mixed" : "full";
 
   const applyTemplate = (tpl: { formatId: string; hookId: string; settingId: string }) => {
     setFormatId(tpl.formatId);
