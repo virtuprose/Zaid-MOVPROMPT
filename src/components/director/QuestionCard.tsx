@@ -66,8 +66,8 @@ export function QuestionCard({ reason, questions, disabled, onContinue, onSkip }
           const value = answers[i] ?? "";
           return (
             <div key={i} className="space-y-2">
-              <div className="text-sm text-foreground">
-                <span className="text-muted-foreground mr-1">{i + 1}.</span>
+              <div className="text-sm text-foreground/90 font-normal">
+                <span className="text-muted-foreground/70 mr-1.5">{i + 1}.</span>
                 {q}
               </div>
 
