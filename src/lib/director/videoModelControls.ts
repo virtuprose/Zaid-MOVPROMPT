@@ -195,15 +195,3 @@ export function getModelControls(modelId: string): ModelControls {
   return CONTROLS[modelId] ?? FALLBACK;
 }
 
-/**
- * Models that expose a pre-flight content moderation / eligibility check
- * (currently only Seedance 2.0 + 2.0 Fast on fal.ai).
- */
-const ELIGIBILITY_CHECK_MODELS = new Set<string>([
-  "seedance-2.0",
-  "seedance-2.0-fast",
-]);
-
-export function requiresEligibilityCheck(modelId: string): boolean {
-  return ELIGIBILITY_CHECK_MODELS.has(modelId);
-}
