@@ -373,7 +373,8 @@ export function TopNav() {
             ))}
         </div>
       </div>
-    </header>
+      <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
+   </header>
   );
 }
 
