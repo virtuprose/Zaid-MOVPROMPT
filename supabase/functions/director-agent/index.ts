@@ -239,17 +239,21 @@ serve(async (req) => {
     let attachmentBlock = "";
     const imageUrls: string[] = [];
     if (Array.isArray(attachments) && attachments.length > 0) {
-      attachmentBlock = "\n\n═══ ATTACHED REFERENCES ═══\n";
-      for (const a of attachments.slice(0, 12)) {
+      attachmentBlock =
+        "\n\n═══ ATTACHED REFERENCES ═══\n" +
+        "(The user may refer to these by @N, where N is the number below. " +
+        "Resolve any @N token in the brief to the matching reference.)\n";
+      attachments.slice(0, 12).forEach((a, idx) => {
+        const tag = `[@${idx + 1}]`;
         if ((a.kind === "image" || a.kind === "video_keyframes") && a.url) {
           imageUrls.push(a.url);
-          attachmentBlock += `- ${a.kind === "image" ? "Image" : "Video keyframe"}: ${a.name}\n`;
+          attachmentBlock += `${tag} ${a.kind === "image" ? "Image" : "Video keyframe"}: ${a.name}\n`;
         } else if (a.kind === "audio_transcript" && a.text) {
-          attachmentBlock += `- Voice brief transcript (${a.name}): "${a.text.slice(0, 1500)}"\n`;
+          attachmentBlock += `${tag} Voice brief transcript (${a.name}): "${a.text.slice(0, 1500)}"\n`;
         } else if (a.kind === "document" && a.text) {
-          attachmentBlock += `- Document (${a.name}): """${a.text.slice(0, 4000)}"""\n`;
+          attachmentBlock += `${tag} Document (${a.name}): """${a.text.slice(0, 4000)}"""\n`;
         }
-      }
+      });
     }
 
     const last = messages[messages.length - 1];
