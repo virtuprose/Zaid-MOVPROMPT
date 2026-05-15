@@ -192,6 +192,9 @@ export function LocationPanel({
               <span className="text-[10px] text-muted-foreground/70">PNG/JPG · ≤5MB</span>
             </button>
           )}
+          <p className="text-[10px] text-muted-foreground mt-1.5 leading-snug">
+            Drop a photo of your location. We'll match the architecture, lighting and mood in your generated ad.
+          </p>
         </div>
       </div>
     </div>
