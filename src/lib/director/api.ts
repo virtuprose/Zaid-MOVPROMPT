@@ -195,15 +195,9 @@ export async function submitVideoJob(
 }
 
 export async function pollVideoJob(jobId: string): Promise<VideoJob> {
-  const { data: sessionData } = await supabase.auth.getSession();
-  const token = sessionData.session?.access_token;
-  const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-video?action=status&job_id=${jobId}`;
-  const resp = await fetch(url, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-      apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-    },
+  const { data, error } = await supabase.functions.invoke("generate-video", {
+    body: { action: "status", job_id: jobId },
   });
-  if (!resp.ok) throw new Error("Could not poll job");
-  return (await resp.json()) as VideoJob;
+  if (error) throw new Error(error.message || "Could not poll job");
+  return data as VideoJob;
 }
