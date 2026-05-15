@@ -64,14 +64,17 @@ export default function MarketingStudio() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
 
-  const [subject, setSubject] = useState<Subject>("product");
+  const { kit: brandKit } = useBrandKit();
+  const subject: Subject = brandKit?.subject ?? "product";
   const [master, setMaster] = useState("");
   const [formatId, setFormatId] = useState<string | undefined>();
   const [hookId, setHookId] = useState<string | undefined>();
   const [settingId, setSettingId] = useState<string | undefined>();
+  const [location, setLocation] = useState<LocationInput>(EMPTY_LOCATION);
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>("All");
 
   const [openPicker, setOpenPicker] = useState<"format" | "hook" | "setting" | null>(null);
+  const [brandOpen, setBrandOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
