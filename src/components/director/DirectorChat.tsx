@@ -452,9 +452,17 @@ function DirectorChatInner() {
               <span>Awaiting your input</span>
             </div>
           )}
+          {pendingApproval && (
+            <>
+              <InlineApprovalCard request={pendingApproval} />
+              <AwaitingApprovalPill />
+            </>
+          )}
           <div className="flex-1" />
         </div>
       </div>
+
+      {pendingApproval && <BottomApprovalBar request={pendingApproval} />}
 
       <Composer
         value={input}
