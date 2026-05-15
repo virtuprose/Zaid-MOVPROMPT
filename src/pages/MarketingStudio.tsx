@@ -360,15 +360,11 @@ export default function MarketingStudio() {
                     (customSetting.trim()
                       ? `Custom: ${customSetting.trim().slice(0, 28)}${customSetting.trim().length > 28 ? "…" : ""}`
                       : undefined);
-                  const locSuffix = location.place
-                    ? ` · ${location.place}`
-                    : location.imagePath
-                      ? " · Custom"
-                      : "";
+                  const locSuffix = location.imagePath ? " · Ref image" : "";
                   if (sceneLabel) return `${sceneLabel}${locSuffix}`;
-                  return location.place || (location.imagePath ? "Custom location" : undefined);
+                  return location.imagePath ? "Reference image" : undefined;
                 })()}
-                tooltip="Scene type and location"
+                tooltip="Scene type and optional reference image"
                 onClick={() => setOpenPicker("setting")}
                 flash={flashChips}
               />
