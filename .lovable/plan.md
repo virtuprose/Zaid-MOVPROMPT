@@ -1,82 +1,76 @@
-# Duration audit + slider UI
+# Image-time moderation via Lovable AI
 
-## Problems
+## Why
 
-1. **Wrong durations.** Confirmed against fal.ai schema: Seedance 2.0 / 2.0 Fast accept `4–15s` (+ `auto`), not `[5, 10]`. Other model families need the same audit.
-2. **UX.** Duration is rendered as segmented buttons. User wants a slider.
+The current eligibility flow runs at "Generate Video" click and checks the prompt against a fal.ai endpoint that does not exist (returns 404, fail-open). You want the check to happen **the moment an image is uploaded**, on the image itself, so flagged content is caught before the user invests time writing prompts or picking models.
 
-## Step 1 — Audit each model's duration against fal.ai
+## How
 
-Fetch the official schema for every model in `videoModelControls.ts` and update both `durations` and `maxDurationSec` (in `videoModelCatalog.ts`) to match. Confirmed so far:
+**New edge function: `moderate-image`** (`supabase/functions/moderate-image/index.ts`)
 
-| Model | Current | Fal schema |
-|---|---|---|
-| seedance-2.0 | [5, 10] | 4–15 + auto |
-| seedance-2.0-fast | [5, 10] | 4–15 + auto (to verify) |
-| seedance-v1-pro / lite | [5, 10] | to verify (likely 5/10) |
-| veo-3.1 / 3.1-fast | [4, 6, 8] | to verify |
-| veo-3.1-lite / veo-3 / veo-3-fast | [8] | to verify |
-| veo-2 | [5, 6, 7, 8] | to verify |
-| kling family | [5, 10] | to verify |
-| hailuo-02-pro | [6, 10] | to verify |
-| hailuo-02-standard / 01 | [6] | to verify |
-| runway-gen3-turbo | [5, 10] | to verify |
-| ltx variants | [5] | to verify |
-| wan-pro / wan-v2.2-a14b | [5, 10] | to verify |
+- Input: `{ image_url: string }` (signed URL from `director-uploads`, or video keyframe).
+- Calls Lovable AI Gateway, model `google/gemini-2.5-flash` (cheap, fast, multimodal).
+- Uses `Output.object()` with this Zod schema:
+  ```ts
+  {
+    eligible: boolean,
+    severity: "safe" | "borderline" | "blocked",
+    categories: string[],   // e.g. ["nudity","violence","minors","weapons","hate","copyright"]
+    reason: string          // ≤200 chars, explains why if not eligible
+  }
+  ```
+- System prompt: strict commercial-video safety classifier modeled on Seedance / Veo policies (no nudity, no minors in suggestive contexts, no graphic violence, no real-person likeness, no hate symbols, no extremist content, no copyrighted characters/logos).
+- Returns 200 with the structured result. CORS via `npm:@supabase/supabase-js@2/cors`. JWT-validated.
 
-For each model the duration spec is one of two shapes:
+**Attachment type extension** (`src/lib/director/ingest.ts`)
 
-- **Discrete set** (e.g. Kling: `5 \| 10`) → keep `durations: number[]`, render as slider snapping to those marks.
-- **Continuous range** (e.g. Seedance 2.0: `4..15`) → new fields `durationMin`, `durationMax`, `durationStep` (default `1`), optional `durationAuto: true` for an "Auto" toggle.
-
-Also re-check `maxResolution`, audio support, and aspect lists while the schemas are open — only update if mismatched (no scope creep).
-
-## Step 2 — Slider UI in `VideoOptionsDialog.tsx`
-
-Replace the `Segmented` duration block with a `Slider`:
-
-```text
-Duration                              7s
-[●━━━━━━━━━○━━━━━━━━━━━━━━━━━━━]
-4s                                    15s
-```
-
-- For continuous models: `min/max/step` from controls, current value shown inline, end-labels under the track.
-- For discrete models: still a slider, but `step` derived so it snaps only to allowed values (use `value` index into `durations[]`, or use `Slider` with custom `step` and clamp `onValueChange` to the nearest allowed value).
-- If `durationAuto` is true, show a small "Auto" toggle next to the value; when on, slider is disabled and we send `duration: "auto"`.
-- Single-option durations (e.g. Hailuo 01 = `[6]`) → render as a static read-only chip, not a slider.
-
-## Step 3 — Type changes
-
-`videoModelControls.ts`:
-
+Add an optional `moderation` field to image and video_keyframes attachments:
 ```ts
-type ModelControls = {
-  // ...
-  durations?: number[];          // discrete set
-  durationMin?: number;          // continuous range
-  durationMax?: number;
-  durationStep?: number;         // default 1
-  durationAuto?: boolean;        // model accepts "auto"
-};
-
-type VideoOptions = {
-  // ...
-  duration?: number | "auto";
-};
+moderation?: { state: "scanning" | "ok" | "blocked"; reason?: string; categories?: string[] }
 ```
 
-`generate-video/index.ts`: forward `"auto"` straight through for Seedance 2.0 (already a valid enum value); no other backend changes.
+**Wire-in: `AttachmentDropzone.tsx`**
+
+After `ingestImage` / `ingestVideo` returns, push the attachment with `moderation.state = "scanning"`, then `await` `moderate-image` for each image/keyframe URL in parallel. On result, patch the attachment in state.
+
+- **Blocked** → red shield icon on the chip, hover/tap shows the reason and categories. Toast: *"Image blocked: {reason}"*.
+- **OK** → small green check, no fuss.
+- **Failure / 5xx** → silent fail-open with a small "Couldn't verify" tooltip; user can still proceed.
+
+**Send-time guard: `Composer.tsx` (or whichever component triggers director-agent)**
+
+Disable the Send button while any attachment is `scanning` (with tooltip *"Scanning attachments…"*), and block sending with a toast if any attachment is `blocked` (*"Remove the flagged images to continue"*).
+
+**Prompt-time check removal**
+
+- `VideoOptionsDialog`: remove the `requiresEligibilityCheck` branch, the `checkVideoEligibility` call, the rewriting state machine, and the blocked banner. The dialog goes back to `idle → submit`.
+- `videoModelControls.ts`: remove `requiresEligibilityCheck` and the `ELIGIBILITY_CHECK_MODELS` set.
+- `generate-video/index.ts`: remove the `check_eligibility` action, the `ELIGIBILITY_ENDPOINTS` map, the server-side enforcement block in `submit`, and the related helpers.
+- `director-agent/index.ts`: keep `rewrite_safe` for now (still useful as an explicit user action; not auto-invoked).
+- `api.ts`: remove `checkVideoEligibility`; keep `rewritePromptSafe` (no caller, but lightweight) or remove — out of scope unless you say otherwise.
 
 ## Out of scope
 
-- No changes to the eligibility/rewrite flow.
-- No changes to the recommendation ranking (the catalog's `maxDurationSec` is updated for accuracy, but scoring weights stay the same).
-- No new analytics or DB columns.
+- Document and audio moderation (text references rarely violate image-safety policies; can be added later).
+- Re-running moderation when a signed URL expires.
+- Persisting moderation results to a DB table.
+- Auto-rewrite of the prompt — image moderation can't be solved by rephrasing.
+
+## Open question
+
+When an image is flagged, should the app:
+- **(default in this plan)** Keep the chip visible with a red marker and block Send until the user removes it, or
+- Auto-remove the attachment and just toast the reason?
+
+I'll go with the first (visible + blocking) unless you say otherwise.
 
 ## Files
 
-- `src/lib/director/videoModelControls.ts` — schema fields + corrected per-model values
-- `src/lib/director/videoModelCatalog.ts` — `maxDurationSec` corrections only where mismatched
-- `src/components/director/VideoOptionsDialog.tsx` — duration slider + auto toggle
-- `supabase/functions/generate-video/index.ts` — accept `"auto"` for Seedance 2.0 duration (no-op if already pass-through)
+- `supabase/functions/moderate-image/index.ts` — new
+- `src/lib/director/ingest.ts` — add `moderation` field
+- `src/lib/director/api.ts` — add `moderateImage()` helper, remove `checkVideoEligibility`
+- `src/components/director/AttachmentDropzone.tsx` — kick off moderation, render badges
+- `src/components/director/Composer.tsx` — gate Send on moderation state
+- `src/components/director/VideoOptionsDialog.tsx` — remove eligibility flow
+- `src/lib/director/videoModelControls.ts` — drop `requiresEligibilityCheck`
+- `supabase/functions/generate-video/index.ts` — drop eligibility action + enforcement

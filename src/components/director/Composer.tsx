@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Paperclip, Send, Loader2, X, FileText, Image as ImageIcon, Music } from "lucide-react";
+import { Paperclip, Send, Loader2, X, FileText, Image as ImageIcon, Music, ShieldCheck, ShieldAlert, ShieldQuestion } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { toast } from "sonner";
@@ -12,6 +12,7 @@ import {
   ingestVideo,
   type Attachment,
 } from "@/lib/director/ingest";
+import { moderateImage } from "@/lib/director/api";
 
 type Props = {
   value: string;
@@ -60,6 +61,49 @@ export function Composer({ value, onChange, attachments, onAttachmentsChange, on
 
   const [pendingCount, setPendingCount] = useState(0);
 
+  // Use a ref to the latest attachments so async moderation patches don't
+  // race with concurrent uploads/removals.
+  const attachmentsRef = useRef<Attachment[]>(attachments);
+  useEffect(() => {
+    attachmentsRef.current = attachments;
+  }, [attachments]);
+
+  const isImageLike = (a: Attachment) => a.kind === "image" || a.kind === "video_keyframes";
+
+  const moderateAttachment = useCallback(
+    async (att: Attachment) => {
+      if (!isImageLike(att) || !("url" in att) || !att.url) return;
+      try {
+        const verdict = await moderateImage(att.url);
+        const next = attachmentsRef.current.map((a) => {
+          if (a === att) {
+            const moderation = verdict.eligible
+              ? { state: "ok" as const }
+              : {
+                  state: "blocked" as const,
+                  reason: verdict.reason || "Image flagged by content moderation.",
+                  categories: verdict.categories,
+                };
+            return { ...(a as any), moderation };
+          }
+          return a;
+        });
+        if (!verdict.eligible) {
+          toast.error(`Image blocked: ${verdict.reason || "content policy"}`);
+        }
+        attachmentsRef.current = next;
+        onAttachmentsChange(next);
+      } catch {
+        const next = attachmentsRef.current.map((a) =>
+          a === att ? { ...(a as any), moderation: { state: "unknown" as const } } : a,
+        );
+        attachmentsRef.current = next;
+        onAttachmentsChange(next);
+      }
+    },
+    [onAttachmentsChange],
+  );
+
   const handleFiles = useCallback(
     async (files: FileList | File[]) => {
       const arr = Array.from(files || []);
@@ -86,16 +130,27 @@ export function Composer({ value, onChange, attachments, onAttachmentsChange, on
         else toast.error(r.reason?.message || `Could not read ${arr[i].name}`);
       });
 
-      onAttachmentsChange([...attachments, ...fresh].slice(0, 12));
+      // Mark image-like attachments as scanning before we hand them to the parent.
+      const stamped = fresh.map((a) =>
+        isImageLike(a) ? ({ ...(a as any), moderation: { state: "scanning" as const } }) : a,
+      );
+
+      const next = [...attachmentsRef.current, ...stamped].slice(0, 12);
+      attachmentsRef.current = next;
+      onAttachmentsChange(next);
       setPendingCount((c) => Math.max(0, c - arr.length));
       setIngesting(false);
+
+      // Kick off moderation in parallel; results patch the attachment in place.
+      stamped.forEach((a) => {
+        if (isImageLike(a)) void moderateAttachment(a);
+      });
     },
-    [attachments, onAttachmentsChange, user],
+    [onAttachmentsChange, user, moderateAttachment],
   );
 
   const remove = (i: number) => onAttachmentsChange(attachments.filter((_, idx) => idx !== i));
 
-  const isImageLike = (a: Attachment) => a.kind === "image" || a.kind === "video_keyframes";
   const iconFor = (a: Attachment) => {
     if (a.kind === "audio_transcript") return <Music className="w-5 h-5" />;
     return <FileText className="w-5 h-5" />;
@@ -253,10 +308,26 @@ export function Composer({ value, onChange, attachments, onAttachmentsChange, on
 
           {(attachments.length > 0 || pendingCount > 0) && (
             <div className="flex flex-wrap gap-2 px-3 pb-2">
-              {attachments.map((a, i) => (
+              {attachments.map((a, i) => {
+                const mod = (a as any).moderation as
+                  | { state: "scanning" | "ok" | "blocked" | "unknown"; reason?: string; categories?: string[] }
+                  | undefined;
+                const blocked = mod?.state === "blocked";
+                const tooltip = blocked
+                  ? `Blocked: ${mod?.reason || "content policy"}${mod?.categories?.length ? ` (${mod.categories.join(", ")})` : ""}`
+                  : mod?.state === "scanning"
+                    ? `Scanning ${a.name}…`
+                    : mod?.state === "unknown"
+                      ? `Couldn't verify ${a.name}`
+                      : a.name;
+                return (
                 <Tooltip key={i}>
                   <TooltipTrigger asChild>
-                    <div className="group relative h-16 w-16 overflow-hidden rounded-lg bg-muted ring-1 ring-border">
+                    <div
+                      className={`group relative h-16 w-16 overflow-hidden rounded-lg bg-muted ring-1 transition-colors ${
+                        blocked ? "ring-2 ring-destructive" : "ring-border"
+                      }`}
+                    >
                       <span className="absolute left-0.5 top-0.5 z-10 inline-flex h-4 min-w-[16px] items-center justify-center rounded bg-accent px-1 text-[10px] font-semibold text-accent-foreground shadow">
                         {i + 1}
                       </span>
@@ -265,13 +336,37 @@ export function Composer({ value, onChange, attachments, onAttachmentsChange, on
                           src={(a as any).url}
                           alt={a.name}
                           loading="lazy"
-                          className="h-full w-full object-cover"
+                          className={`h-full w-full object-cover ${blocked ? "opacity-50" : ""}`}
                         />
                       ) : (
                         <div className="flex h-full w-full flex-col items-center justify-center gap-0.5 px-1 text-muted-foreground">
                           {iconFor(a)}
                           <span className="w-full truncate text-center text-[9px] leading-tight">{a.name}</span>
                         </div>
+                      )}
+                      {mod?.state === "scanning" && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-background/40 backdrop-blur-[1px]">
+                          <Loader2 className="h-4 w-4 animate-spin text-foreground/80" />
+                        </div>
+                      )}
+                      {mod && mod.state !== "scanning" && (
+                        <span
+                          className={`absolute bottom-0.5 left-0.5 z-10 inline-flex h-4 w-4 items-center justify-center rounded-full shadow ${
+                            blocked
+                              ? "bg-destructive text-destructive-foreground"
+                              : mod.state === "ok"
+                                ? "bg-emerald-500/90 text-white"
+                                : "bg-muted text-muted-foreground"
+                          }`}
+                        >
+                          {blocked ? (
+                            <ShieldAlert className="h-2.5 w-2.5" />
+                          ) : mod.state === "ok" ? (
+                            <ShieldCheck className="h-2.5 w-2.5" />
+                          ) : (
+                            <ShieldQuestion className="h-2.5 w-2.5" />
+                          )}
+                        </span>
                       )}
                       <button
                         type="button"
@@ -283,9 +378,10 @@ export function Composer({ value, onChange, attachments, onAttachmentsChange, on
                       </button>
                     </div>
                   </TooltipTrigger>
-                  <TooltipContent side="top">{a.name}</TooltipContent>
+                  <TooltipContent side="top">{tooltip}</TooltipContent>
                 </Tooltip>
-              ))}
+                );
+              })}
               {Array.from({ length: pendingCount }).map((_, i) => (
                 <div
                   key={`skeleton-${i}`}
@@ -308,14 +404,50 @@ export function Composer({ value, onChange, attachments, onAttachmentsChange, on
               {ingesting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Paperclip className="w-4 h-4" />}
             </Button>
 
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button onClick={onSend} disabled={busy} size="sm" className="h-9 px-4">
-                  {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="top">⌘/Ctrl + Enter to send · Max 12 attachments</TooltipContent>
-            </Tooltip>
+            {(() => {
+              const scanning = attachments.some(
+                (a) => (a as any).moderation?.state === "scanning",
+              );
+              const blocked = attachments.some(
+                (a) => (a as any).moderation?.state === "blocked",
+              );
+              const sendDisabled = busy || scanning || blocked;
+              const handleSend = () => {
+                if (blocked) {
+                  toast.error("Remove the flagged images to continue.");
+                  return;
+                }
+                if (scanning) {
+                  toast.message("Scanning attachments — one moment…");
+                  return;
+                }
+                onSend();
+              };
+              const tip = blocked
+                ? "Remove flagged images to continue"
+                : scanning
+                  ? "Scanning attachments…"
+                  : "⌘/Ctrl + Enter to send · Max 12 attachments";
+              return (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      onClick={handleSend}
+                      disabled={sendDisabled}
+                      size="sm"
+                      className="h-9 px-4"
+                    >
+                      {busy || scanning ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Send className="w-4 h-4" />
+                      )}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top">{tip}</TooltipContent>
+                </Tooltip>
+              );
+            })()}
 
             <input
               ref={inputRef}

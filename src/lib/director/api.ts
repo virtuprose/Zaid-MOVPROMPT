@@ -215,26 +215,31 @@ export async function pollVideoJob(jobId: string): Promise<VideoJob> {
   return data as VideoJob;
 }
 
-export type EligibilityResult = {
+export type ModerateImageResult = {
   eligible: boolean;
-  reason?: string;
-  categories?: string[];
+  severity: "safe" | "borderline" | "blocked";
+  categories: string[];
+  reason: string;
   degraded?: boolean;
-  skipped?: boolean;
 };
 
-export async function checkVideoEligibility(
-  provider: string,
-  prompt: string,
-): Promise<EligibilityResult> {
-  const { data, error } = await supabase.functions.invoke("generate-video", {
-    body: { action: "check_eligibility", provider, prompt },
-  });
-  if (error) {
-    // Fail-open on transport errors — server still re-checks before submit.
-    return { eligible: true, degraded: true, reason: "check_unavailable" };
+export async function moderateImage(imageUrl: string): Promise<ModerateImageResult> {
+  try {
+    const { data, error } = await supabase.functions.invoke("moderate-image", {
+      body: { image_url: imageUrl },
+    });
+    if (error) throw error;
+    return data as ModerateImageResult;
+  } catch {
+    // Fail-open on transport errors so users aren't blocked by infra issues.
+    return {
+      eligible: true,
+      severity: "safe",
+      categories: [],
+      reason: "",
+      degraded: true,
+    };
   }
-  return data as EligibilityResult;
 }
 
 export async function rewritePromptSafe(
