@@ -296,7 +296,16 @@ export function PromptResultCard({ title, prompt, breakdown, directorsNote, onRe
           onConfirm={(opts, finalPrompt, meta) => {
             const m = pendingModel;
             setPendingModel(null);
-            if (m) void generateVideo(m, opts, finalPrompt, meta);
+            if (!m) return;
+            requestApproval({
+              action: "video",
+              label: `Render with ${m.label}`,
+              question: "Approve render?",
+              items: [finalPrompt.slice(0, 140) + (finalPrompt.length > 140 ? "…" : "")],
+              cost: 2.125,
+              alwaysAllowKey: `approval:video:${m.id}`,
+              onConfirm: () => generateVideo(m, opts, finalPrompt, meta),
+            });
           }}
         />
 
