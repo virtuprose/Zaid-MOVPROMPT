@@ -1,74 +1,74 @@
-## Goal
+# Ads Studio — Brand kit & Location inputs
 
-Add a **Marketing Studio** entry point in the Director that opens a guided ad-brief flow on the right side of the workspace when the user starts a New Task. Output is a fully composed prompt sent to **Seedance 2.0** (already wired in `generate-video`).
+Add two new structured inputs to the composer, sitting next to Format / Hook / Setting as dropdown chips. They feed into the prompt builder so the AI knows **what** is being advertised and **where in the world** the ad lives.
 
-It mirrors the Higgsfield reference: pick a Subject (Product / App), then layer a Format, Hook, and Setting from curated libraries, optionally seed with a viral Ad Reference or a product URL, then generate.
+## 1. New chips in the composer
 
-## Is it worth shipping now?
+Order, left → right:
 
-Yes — recommended. Reasons:
-- All plumbing exists: Seedance 2.0 model id, `generate-video`, prompt expert agents, video options dialog, approval/credits flow.
-- It turns the open "Describe your shot" into a packaged, repeatable use case (ads) — much higher conversion for marketing users than a blank prompt.
-- It's purely additive: a new entry mode + curated content tables, no rewrite of the Director chat.
+```
+[Brand ▾]  [Location ▾]  |  [Format ▾]  [Hook ▾]  [Setting ▾]
+```
 
-Scope this v1 to **curated presets only** (no scraping product URLs, no viral-ad video analysis yet). Those become v2 once the core flow proves out.
+A subtle vertical divider separates "what/where" (brand + location) from the existing creative chips. Same `PresetChip` styling — red-tinted border when filled, chevron, label flips to the chosen value.
 
-## v1 Scope
+## 2. Brand chip — full brand kit
 
-1. **Entry point** — on the Director sidebar, alongside `+ New Task`, add `+ Marketing Studio`. Also surface as a card on the empty Director state.
-2. **Right-side Studio panel** (sheet/drawer on mobile, right column on desktop ≥1024px) with the composer:
-   - **Subject toggle:** Product · App (left rail, like the screenshot)
-   - **Master prompt input:** "Describe what happens in the ad…"
-   - **Three preset pickers** opening modal galleries:
-     - **Format** ("Pick the format that hits") — UGC / Tutorial / Unboxing / Hyper Motion / Commercial …
-     - **Hook** ("Hooks that stop the scroll") — Product Hit / Spicy / Interview / Random Object Mic …
-     - **Setting** ("Settings that set the scene") — Bedroom / Nature / Rooftop / Airplane Wing …
-   - **Reference slots:** Product image, Avatar image (reuse existing `AttachmentDropzone`)
-   - **Generate** button → cost chip → existing `ConfirmRightsDialog` → `generate-video` with `provider: "seedance-2.0"`
-3. **Prompt assembly** — combine Subject + Format.template + Hook.template + Setting.template + user master text into one Seedance-tuned prompt via the existing `seedance` expert agent in `generate-prompt`. Studio sends a structured payload; expert returns the final prompt.
-4. **Persistence** — store the brief on the existing `director_sessions` row (new jsonb column `studio_brief`) so reopening a task restores selections.
+Opens a side sheet (reuse Sheet component) titled **"Your brand"** with:
 
-## v2 (later, not now)
+- **Logo / product image / app icon** — drag-and-drop upload (1 image, ≤5MB). Stored in the existing `director-uploads` private bucket under `marketing/{user_id}/brand/`. Preview thumb shown after upload. Used as visual reference by the AI.
+- **Name** — text, required (e.g. "Acme Sneakers", "Lumen App")
+- **One-line description** — text, 120 char max ("AI-powered sleep tracker for athletes")
+- **Website / App Store URL** — optional
+- **Tagline** — optional, 60 char max
+- **Target audience** — optional, free text ("Gen-Z runners in major US cities")
+- Subject toggle (Product / App) lives at the top of this sheet — the standalone segmented control above the composer is removed, since it's now part of the brand kit.
 
-- **Url to Ad** — call a scraper edge function to pull product image/title and prefill the brief.
-- **Ad Reference** — upload a viral ad video, run a vision pass to extract hook/format/setting, prefill pickers.
-- Saved brand kit (logo, palette, voice) reused across briefs.
+Saving collapses the sheet and the chip label becomes the brand name with a 16px logo thumb prefix. A small "Edit brand" affordance reopens the sheet. Brand kit is persisted per user (new `brand_kits` table, one row per user, RLS = own row only) so it auto-loads next visit.
 
-## Files
+## 3. Location chip — geography (separate from Setting)
 
-**New**
-- `src/lib/director/marketingStudio.ts` — typed catalogs: `FORMATS`, `HOOKS`, `SETTINGS`, each `{ id, label, description, thumbnail, promptFragment }`. Start with ~6 entries each, mirroring the screenshots.
-- `src/components/director/studio/MarketingStudioPanel.tsx` — right-side composer.
-- `src/components/director/studio/PresetPickerDialog.tsx` — reusable gallery modal (tabs: All / category filters, search, thumb grid, description).
-- `src/components/director/studio/SubjectRail.tsx` — Product / App vertical toggle.
-- `supabase/functions/generate-prompt/experts/seedance-ad.ts` — narrow addendum to the existing `seedance` expert that knows how to weave Format/Hook/Setting fragments into a 5–10s ad prompt with native audio cues.
+Clarified semantics:
+- **Setting** = scene type (kitchen, rooftop, studio) — unchanged
+- **Location** = real-world place for cultural & visual styling
 
-**Edited**
-- `src/pages/Director.tsx` — add "Marketing Studio" sidebar action; route `/director/:sessionId?mode=studio` opens the panel; passes `studio_brief` to chat.
-- `src/components/director/DirectorChat.tsx` — when `mode=studio`, render `MarketingStudioPanel` on the right (≥lg) or as a sheet (<lg) instead of the free composer.
-- `src/components/director/PromptResultCard.tsx` — when result came from Studio, default `VideoOptionsDialog` model to `seedance-2.0`, aspect `9:16`, duration `5s`, audio on.
-- `supabase/functions/generate-prompt/experts/registry.ts` — register the new ad-tuned seedance variant, matched when `intent === "marketing_ad"`.
-- `supabase/functions/generate-prompt/index.ts` — accept optional `studio_brief` in the body and forward to expert.
+Opens a small popover with two tabs:
 
-**DB migration**
-- Add `studio_brief jsonb null` to `director_sessions`. No RLS changes (already user-scoped).
+- **Place** — free-text input + preset grid: Tokyo, NYC, Paris, Dubai, LA, London, Lagos, São Paulo, Seoul, Mexico City, Mumbai, Berlin. Selecting a preset fills the text field; user can also type anything ("Kyoto backstreet", "Marrakech medina").
+- **Reference image** — upload a photo of the actual location (storefront, neighborhood, room). Stored in `director-uploads` under `marketing/{user_id}/location/`. AI uses it as visual ground truth.
+
+Either or both tabs can be used. Chip label shows the place name (or "Custom location" if only an image is set), with a 16px image thumb prefix when an image is attached.
+
+## 4. Prompt assembly
+
+Extend the prompt builder so the final prompt to Lovable AI includes:
+
+- Brand: name, description, tagline, audience, URL (text context) + logo/product image (vision input)
+- Location: place name (text) + location image (vision input, when present)
+
+Existing Format / Hook / Setting logic is unchanged.
+
+## 5. Generate-button readiness
+
+"Add inputs to generate" stays the disabled label. Becomes enabled when **either**:
+- the existing free-text brief is filled, **or**
+- a brand kit is set + at least one of Format/Hook/Setting is chosen
+
+This way the new chips are a real path to generating, not just decoration.
+
+---
 
 ## Technical notes
 
-- Curated assets: store thumbnails in `public/studio/{format|hook|setting}/<id>.jpg`. v1 uses 6–8 per category — small enough to ship without storage.
-- Prompt template shape:
-  ```
-  {hook.opening} — {format.style} of {subject} in {setting.location}.
-  {user master prompt}.
-  Audio: {format.audio_cue}. Duration ~{duration}s, 9:16.
-  ```
-  Final composition lives in the seedance-ad expert, not on the client, so we can iterate without redeploying the app.
-- The Studio panel is presentation-only on the client; no business logic moves out of the existing `generate-prompt` / `generate-video` functions.
-- Keep the existing free-form Director chat untouched; Studio is a parallel mode toggled per session.
-- All new colors/typography reuse existing design tokens — no new palette.
+**Files**
+- `src/pages/MarketingStudio.tsx` — add two chips, remove standalone subject segment, wire to prompt builder
+- `src/components/marketing/BrandKitSheet.tsx` — new
+- `src/components/marketing/LocationPopover.tsx` — new
+- `src/lib/marketing/brandKit.ts` — load/save brand kit hook
+- Prompt builder (wherever `doGenerate` composes the request) — accept `brand` and `location` payloads
 
-## Open questions
+**Backend (migration)**
+- New table `public.brand_kits` (user_id PK fk → auth.users, subject enum, name, description, url, tagline, audience, logo_path, updated_at) with RLS: select/insert/update/delete where `user_id = auth.uid()`.
+- Reuse `director-uploads` bucket; add a path-scoped policy so users can only read/write `marketing/{auth.uid()}/...`.
 
-1. **Subjects:** ship just **Product + App** like Higgsfield, or also add **Service / Personal Brand** in v1?
-2. **Library size v1:** is 6 presets per category enough, or should I aim for ~12 each (more curation work, more thumbnails)?
-3. **Url to Ad / Ad Reference:** confirm we defer both to v2, or do you want at least the URL scraper in v1?
+**No business-logic changes** beyond the prompt builder accepting two new optional context blocks. Format/Hook/Setting presets, generation flow, and existing UI elsewhere are untouched.
