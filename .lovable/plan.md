@@ -1,46 +1,71 @@
-## Auto-fill brand kit from uploaded logo/product image
+## Save multiple brand kits per user (Products & Apps library)
 
-When a user uploads an image in the **Your brand** sheet, run it through Lovable AI vision and auto-populate **Name**, **One-line description**, and **Tagline**. User can still edit any field before saving.
+Today each user has exactly one brand kit. Switch to a **library**: many named brands per user, each marked as Product or App, reusable across every Ads Studio session and any future preset that needs brand context.
 
-### UX
+### Data model
 
-1. User picks "Upload image" mode and selects a file in `BrandKitSheet`.
-2. Image uploads to storage as today.
-3. Immediately after upload succeeds, an inline status appears under the image: `✨ Reading your brand…` (small spinner, amber).
-4. When the AI returns:
-   - Empty fields are filled in.
-   - Already-filled fields are left untouched (no overwrite).
-   - A subtle "Filled by AI — edit anything" hint shows for ~4s.
-5. On error: silent toast `Couldn't auto-read the image — fill it in manually`. Upload still succeeds.
-6. URL mode (paste image link) gets the same treatment when the URL is a valid image.
+Migrate `brand_kits` from one-row-per-user to many-rows-per-user.
 
-### Backend — new edge function `analyze-brand-image`
+- Add `id uuid PRIMARY KEY DEFAULT gen_random_uuid()`
+- Drop the implicit single-row constraint on `user_id`; keep it as `NOT NULL` with an index
+- Keep existing columns: `subject`, `name`, `description`, `tagline`, `url`, `audience`, `logo_path`, timestamps
+- RLS policies stay the same (own-row CRUD)
 
-- Input: `{ imagePath?: string, imageUrl?: string, subject: "product" | "app" }`
-- Resolves a signed URL from `director-uploads` if `imagePath` given.
-- Calls Lovable AI Gateway with `google/gemini-3-flash-preview` (vision) using AI SDK structured output (`Output.object` + zod):
-  ```
-  { name: string, description: string (≤120), tagline: string (≤60) }
-  ```
-- System prompt tuned per `subject` ("This is a product photo / app screenshot. Infer the brand…"). Returns `null` for any field it can't confidently guess.
-- Auth required; uses `LOVABLE_API_KEY` server-side.
+Add a `brand_kit_selection` table to remember which brand the user last used in Ads Studio:
+- `user_id uuid PK` → `brand_kit_id uuid` (nullable, FK with `ON DELETE SET NULL`)
+- Own-row RLS
 
-### Frontend wiring
+### `useBrandKit` hook (rewritten)
 
-- `src/lib/marketing/brandKit.ts`: add `analyzeBrandImage({ imagePath?, imageUrl?, subject })` helper that invokes the edge function.
-- `src/components/marketing/BrandKitSheet.tsx`:
-  - Add `analyzing` state + inline status row under the image area.
-  - After `handleFile` succeeds, call `analyzeBrandImage({ imagePath: path, subject: draft.subject })` and merge results into empty fields only.
-  - In URL mode, debounce 600ms after URL change; if it looks like an image URL, call `analyzeBrandImage({ imageUrl, subject })`.
+Returns:
+- `kits: BrandKit[]` — all of the user's saved brands
+- `activeKit: BrandKit | null` — the currently selected one (from selection table, falls back to most recently updated)
+- `setActive(id)` — persists selection
+- `saveKit(draft)` — insert if no `id`, update if `id` exists; auto-selects the saved kit
+- `deleteKit(id)`
+- `uploadLogo(file)` — unchanged
+
+### Ads Studio composer — Brand chip becomes a picker
+
+Replace the single "Brand" button with a popover:
+
+```
+┌─ Your brands ──────────────────┐
+│ ✓ Acme Sneakers      [Product] │
+│   Sleepy App          [App]    │
+│   Foo Coffee          [Product]│
+├────────────────────────────────┤
+│ + New brand                    │
+│ ✎ Edit selected                │
+└────────────────────────────────┘
+```
+
+- Each row shows logo thumb, name, subject pill (red-tint border for active).
+- Selecting a row sets it active for the next generation.
+- "+ New brand" opens `BrandKitSheet` blank.
+- "✎ Edit selected" opens `BrandKitSheet` pre-filled.
+- Auto-fill from logo upload still works (already implemented).
+
+### `BrandKitSheet` updates
+
+- Accept optional `kitId` prop. When set, edit that row; when null, create new.
+- Add a small "Delete" button (ghost, danger color) when editing existing.
+- After save, the picker reflects the new/updated kit and selects it.
+
+### Generation wiring
+
+`composeStudioPrompt` still receives a single `BrandContext` — no changes to prompt code. The Studio just feeds it from `activeKit` instead of the previous singleton.
 
 ### Files
 
-- new: `supabase/functions/analyze-brand-image/index.ts`
-- edit: `src/lib/marketing/brandKit.ts` (add helper)
-- edit: `src/components/marketing/BrandKitSheet.tsx` (status UI + auto-fill)
+- migration: schema change + new `brand_kit_selection` table
+- edit: `src/lib/marketing/brandKit.ts` — list + active + CRUD
+- new: `src/components/marketing/BrandPickerPopover.tsx`
+- edit: `src/components/marketing/BrandKitSheet.tsx` — accept `kitId`, add delete
+- edit: `src/pages/MarketingStudio.tsx` — swap Brand button for the picker
 
 ### Out of scope
 
-- No DB changes.
-- Doesn't touch Format/Hook/Setting/Location.
-- Doesn't overwrite anything the user already typed.
+- No changes to Location, Format, Hook, Setting.
+- No sharing/teams — kits stay private per user.
+- No brand-asset library (extra logos, color tokens) — single logo per kit, same as today.
