@@ -101,6 +101,55 @@ export function Composer({ value, onChange, attachments, onAttachmentsChange, on
     return <FileText className="w-5 h-5" />;
   };
 
+  // @-mention picker state
+  const [mention, setMention] = useState<{ query: string; start: number; index: number } | null>(null);
+  const filteredMentions = mention
+    ? attachments
+        .map((a, i) => ({ a, i }))
+        .filter(({ a, i }) => {
+          const q = mention.query.toLowerCase();
+          if (!q) return true;
+          return String(i + 1).startsWith(q) || a.name.toLowerCase().includes(q);
+        })
+    : [];
+
+  const detectMention = (text: string, caret: number) => {
+    const upto = text.slice(0, caret);
+    const m = upto.match(/(?:^|\s)@([\w.-]*)$/);
+    if (!m) return null;
+    const start = caret - m[1].length - 1; // position of '@'
+    return { query: m[1], start, index: 0 };
+  };
+
+  const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const text = e.target.value;
+    onChange(text);
+    const caret = e.target.selectionStart ?? text.length;
+    if (attachments.length === 0) {
+      setMention(null);
+      return;
+    }
+    setMention(detectMention(text, caret));
+  };
+
+  const insertMention = (attachmentIndex: number) => {
+    if (!mention) return;
+    const caretEnd = taRef.current?.selectionStart ?? value.length;
+    const before = value.slice(0, mention.start);
+    const after = value.slice(caretEnd);
+    const token = `@${attachmentIndex + 1} `;
+    const next = before + token + after;
+    onChange(next);
+    setMention(null);
+    requestAnimationFrame(() => {
+      const ta = taRef.current;
+      if (!ta) return;
+      const pos = (before + token).length;
+      ta.focus();
+      ta.setSelectionRange(pos, pos);
+    });
+  };
+
   const highlight = drag || pageDrag;
 
   return (
