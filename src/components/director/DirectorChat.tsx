@@ -337,6 +337,7 @@ function DirectorChatInner() {
           </div>
         )}
         <div className="flex flex-col gap-6 min-h-full">
+          <div className="flex-1" />
           {bubbles.map((b, i) => {
             if (b.role === "result") {
               return (
