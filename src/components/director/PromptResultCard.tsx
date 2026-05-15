@@ -21,7 +21,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import type { Breakdown } from "@/lib/director/api";
 import { submitVideoJob, pollVideoJob, type VideoJob } from "@/lib/director/api";
-import { VIDEO_MODEL_GROUPS, pickRecommendedModel, findVideoModel, type VideoModel } from "@/lib/director/videoModels";
+import { VIDEO_MODEL_GROUPS, findVideoModel, type VideoModel } from "@/lib/director/videoModels";
+import { resolveRecommendation } from "@/lib/director/modelRanking";
 import { VideoOptionsDialog } from "./VideoOptionsDialog";
 import type { VideoOptions } from "@/lib/director/videoModelControls";
 
@@ -101,8 +102,14 @@ export function PromptResultCard({ title, prompt, breakdown, directorsNote, onRe
   const cameraLighting = [breakdown.camera, breakdown.lighting].filter(Boolean).join(" · ");
   const film = breakdown.film_emulation;
   const negative = breakdown.negative_prompt;
-  const recommendation = breakdown.model_recommendation;
-  const recommendedModel = pickRecommendedModel(recommendation);
+  const recommendation =
+    breakdown.recommendation_reason || breakdown.model_recommendation;
+  const resolved = resolveRecommendation(breakdown);
+  const recommendedModel =
+    findVideoModel(resolved.primary.id) ?? findVideoModel("seedance-v1-pro")!;
+  const topPicks = [resolved.primary, ...resolved.alternatives]
+    .map((c) => findVideoModel(c.id))
+    .filter((m): m is VideoModel => !!m);
   const externalLink = EXTERNAL_LINKS[recommendedModel.family];
 
   const fullText = [
