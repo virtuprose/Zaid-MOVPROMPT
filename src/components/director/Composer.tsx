@@ -404,14 +404,50 @@ export function Composer({ value, onChange, attachments, onAttachmentsChange, on
               {ingesting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Paperclip className="w-4 h-4" />}
             </Button>
 
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button onClick={onSend} disabled={busy} size="sm" className="h-9 px-4">
-                  {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="top">⌘/Ctrl + Enter to send · Max 12 attachments</TooltipContent>
-            </Tooltip>
+            {(() => {
+              const scanning = attachments.some(
+                (a) => (a as any).moderation?.state === "scanning",
+              );
+              const blocked = attachments.some(
+                (a) => (a as any).moderation?.state === "blocked",
+              );
+              const sendDisabled = busy || scanning || blocked;
+              const handleSend = () => {
+                if (blocked) {
+                  toast.error("Remove the flagged images to continue.");
+                  return;
+                }
+                if (scanning) {
+                  toast.message("Scanning attachments — one moment…");
+                  return;
+                }
+                onSend();
+              };
+              const tip = blocked
+                ? "Remove flagged images to continue"
+                : scanning
+                  ? "Scanning attachments…"
+                  : "⌘/Ctrl + Enter to send · Max 12 attachments";
+              return (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      onClick={handleSend}
+                      disabled={sendDisabled}
+                      size="sm"
+                      className="h-9 px-4"
+                    >
+                      {busy || scanning ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Send className="w-4 h-4" />
+                      )}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top">{tip}</TooltipContent>
+                </Tooltip>
+              );
+            })()}
 
             <input
               ref={inputRef}
