@@ -180,13 +180,25 @@ serve(async (req) => {
     }
 
     // Submit new job
-    const { prompt, provider = "seedance-v1-pro", session_id } = body as {
+    let { prompt, provider = "seedance-v1-pro", session_id } = body as {
       prompt?: string;
       provider?: string;
       session_id?: string;
     };
 
-    if (!prompt || typeof prompt !== "string" || prompt.length > 2000) {
+    if ((!prompt || !prompt.trim()) && session_id) {
+      const { data: session } = await admin
+        .from("director_sessions")
+        .select("final_prompt")
+        .eq("id", session_id)
+        .eq("user_id", uid)
+        .maybeSingle();
+      prompt = typeof session?.final_prompt === "string" ? session.final_prompt : prompt;
+    }
+
+    const normalizedPrompt = typeof prompt === "string" ? prompt.trim() : "";
+
+    if (!normalizedPrompt || normalizedPrompt.length > 2000) {
       return new Response(JSON.stringify({ error: "Valid prompt required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -207,7 +219,7 @@ serve(async (req) => {
         user_id: uid,
         session_id: session_id || null,
         provider,
-        prompt,
+        prompt: normalizedPrompt,
         status: "queued",
       })
       .select("*")
@@ -227,7 +239,7 @@ serve(async (req) => {
         Authorization: `Key ${FAL_KEY}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ prompt }),
+      body: JSON.stringify({ prompt: normalizedPrompt }),
     });
     if (!submitResp.ok) {
       const t = await submitResp.text();

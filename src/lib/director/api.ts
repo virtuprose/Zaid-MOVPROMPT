@@ -187,8 +187,13 @@ export async function submitVideoJob(
   provider: string,
   sessionId?: string | null,
 ): Promise<VideoJob> {
+  const normalizedPrompt = prompt.trim();
+  if (!normalizedPrompt) {
+    throw new Error("Prompt is empty — generate or select a prompt first.");
+  }
+
   const { data, error } = await supabase.functions.invoke("generate-video", {
-    body: { prompt, provider, session_id: sessionId },
+    body: { prompt: normalizedPrompt, provider, session_id: sessionId },
   });
   if (error) throw error;
   return data as VideoJob;

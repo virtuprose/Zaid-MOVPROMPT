@@ -50,6 +50,17 @@ export function DirectorChat() {
   const sessionIdRef = useRef<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  const getLatestGeneratedPrompt = () => {
+    for (let i = bubbles.length - 1; i >= 0; i -= 1) {
+      const bubble = bubbles[i];
+      if (bubble.role === "result") {
+        const value = bubble.data.prompt?.trim();
+        if (value) return value;
+      }
+    }
+    return "";
+  };
+
   // Load session from route param
   useEffect(() => {
     if (!user || !routeSessionId) {
@@ -189,11 +200,12 @@ export function DirectorChat() {
           content: `Sending this to the ${resp.provider_preference || "seedance"} renderer…`,
         };
         try {
+          const resolvedPrompt = resp.prompt?.trim() || getLatestGeneratedPrompt();
           const provider =
             resp.provider_preference && resp.provider_preference !== "any"
               ? resp.provider_preference
               : "seedance";
-          await submitVideoJob(resp.prompt, provider, sessionIdRef.current);
+          await submitVideoJob(resolvedPrompt, provider, sessionIdRef.current);
           toast.success("Render started — check your Library when it finishes.");
         } catch (e: any) {
           toast.error(e?.message || "Could not start render");
