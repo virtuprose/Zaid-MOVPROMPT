@@ -47,7 +47,7 @@ export function QuestionCard({ reason, questions, disabled, onContinue, onSkip }
   return (
     <div
       className={cn(
-        "rounded-2xl border border-border/60 bg-muted/20 p-4 sm:p-5 space-y-4",
+        "rounded-2xl bg-muted/15 p-5 sm:p-6 space-y-5",
         disabled && "opacity-60 pointer-events-none",
       )}
       onKeyDown={(e) => {
@@ -57,7 +57,7 @@ export function QuestionCard({ reason, questions, disabled, onContinue, onSkip }
         }
       }}
     >
-      {reason && <div className="text-xs text-accent/80 italic">{reason}</div>}
+      {reason && <div className="text-xs text-muted-foreground/80 italic">{reason}</div>}
 
       <div className="space-y-4">
         {questions.map((q, i) => {
@@ -66,8 +66,8 @@ export function QuestionCard({ reason, questions, disabled, onContinue, onSkip }
           const value = answers[i] ?? "";
           return (
             <div key={i} className="space-y-2">
-              <div className="text-sm text-foreground">
-                <span className="text-muted-foreground mr-1">{i + 1}.</span>
+              <div className="text-sm text-foreground/90 font-normal">
+                <span className="text-muted-foreground/70 mr-1.5">{i + 1}.</span>
                 {q}
               </div>
 
@@ -91,8 +91,8 @@ export function QuestionCard({ reason, questions, disabled, onContinue, onSkip }
                         className={cn(
                           "rounded-full px-3 py-1 text-xs border transition-colors",
                           active
-                            ? "bg-foreground/10 border-border text-foreground"
-                            : "border-border/40 text-muted-foreground hover:text-foreground hover:border-border",
+                            ? "bg-foreground/10 border-border/50 text-foreground"
+                            : "bg-transparent border-border/30 text-muted-foreground hover:text-foreground hover:border-border/60",
                         )}
                       >
                         {p}
@@ -109,7 +109,7 @@ export function QuestionCard({ reason, questions, disabled, onContinue, onSkip }
                   value={value}
                   onChange={(e) => setAnswer(i, e.target.value)}
                   placeholder="Enter your answer"
-                  className="w-full rounded-full bg-background/40 border border-border/40 px-4 py-2 text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:border-border focus:bg-background/60 transition-colors"
+                  className="w-full rounded-full bg-background/30 border border-transparent px-4 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:bg-background/50 focus:border-border/40 transition-colors"
                 />
               )}
             </div>
@@ -131,7 +131,7 @@ export function QuestionCard({ reason, questions, disabled, onContinue, onSkip }
           type="button"
           size="sm"
           onClick={submit}
-          className="rounded-full gap-2"
+          className="rounded-full gap-2 bg-foreground/10 text-foreground hover:bg-foreground/15 border border-border/30"
         >
           Continue
           <span className="hidden sm:inline-flex items-center gap-0.5 text-[10px] opacity-70">
