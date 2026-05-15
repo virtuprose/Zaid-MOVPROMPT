@@ -308,7 +308,7 @@ export default function Director() {
           </DialogHeader>
           <DialogFooter className="gap-2 sm:gap-2">
             <Button variant="ghost" onClick={() => setDeleteTarget(null)} className="rounded-full">
-              Keep brief
+              Keep
             </Button>
             <Button
               onClick={confirmDelete}
