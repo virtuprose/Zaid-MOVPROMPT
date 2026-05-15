@@ -129,32 +129,78 @@ export default function Director() {
             >
               <Plus className="w-4 h-4" /> New brief
             </Button>
-            <div className="text-[10px] uppercase tracking-wider text-muted-foreground px-2 pt-2">
-              Recent
-            </div>
-            <div className="flex-1 overflow-y-auto space-y-0.5">
-              {sessions.length === 0 && (
-                <div className="text-xs text-muted-foreground px-2">No sessions yet.</div>
-              )}
-              {sessions.map((s) => {
-                const active = s.id === sessionId;
-                return (
-                  <button
-                    key={s.id}
-                    onClick={() => navigate(`/director/${s.id}`)}
-                    className={cn(
-                      "w-full text-left flex items-start gap-2 px-2 py-1.5 rounded-md text-xs transition-colors",
-                      active
-                        ? "bg-primary/15 text-primary border border-primary/30"
-                        : "hover:bg-[hsl(240_5%_10%)] text-muted-foreground hover:text-foreground border border-transparent",
-                    )}
-                  >
-                    <MessageSquare className="w-3 h-3 mt-0.5 shrink-0" />
-                    <span className="truncate">{s.title || "Untitled brief"}</span>
-                  </button>
-                );
-              })}
-            </div>
+            <button
+              type="button"
+              onClick={() => setTasksOpen((v) => !v)}
+              className="flex items-center justify-between w-full px-2 pt-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <span>Tasks</span>
+              <ChevronDown
+                className={cn(
+                  "w-4 h-4 transition-transform",
+                  tasksOpen ? "" : "-rotate-90",
+                )}
+              />
+            </button>
+            {tasksOpen && (
+              <div className="flex-1 overflow-y-auto space-y-1">
+                {sessions.length === 0 && (
+                  <div className="text-xs text-muted-foreground px-2">No sessions yet.</div>
+                )}
+                {sessions.map((s) => {
+                  const active = s.id === sessionId;
+                  return (
+                    <div
+                      key={s.id}
+                      className={cn(
+                        "group relative flex items-center gap-1.5 pl-3 pr-1 py-1.5 rounded-full border text-xs transition-colors cursor-pointer",
+                        active
+                          ? "bg-muted/60 border-border text-foreground"
+                          : "border-border/40 text-foreground/80 hover:bg-muted/40 hover:text-foreground",
+                      )}
+                      onClick={() => navigate(`/director/${s.id}`)}
+                    >
+                      <span className="truncate flex-1">{s.title || "Untitled brief"}</span>
+                      {s.needsReply && (
+                        <span className="shrink-0 text-[10px] px-2 py-0.5 rounded-full bg-accent/15 text-accent border border-accent/30 whitespace-nowrap">
+                          Needs reply
+                        </span>
+                      )}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button
+                            type="button"
+                            onClick={(e) => e.stopPropagation()}
+                            className="shrink-0 size-6 inline-flex items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/60 opacity-0 group-hover:opacity-100 data-[state=open]:opacity-100 transition-opacity"
+                            aria-label="Task actions"
+                          >
+                            <MoreVertical className="w-3.5 h-3.5" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent
+                          align="end"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <DropdownMenuItem onSelect={() => toast("Rename coming soon")}>
+                            <Pencil className="w-4 h-4 mr-2" /> Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onSelect={() => toast("Pin coming soon")}>
+                            <Pin className="w-4 h-4 mr-2" /> Pin
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onSelect={() => toast("Delete coming soon")}
+                            className="text-destructive focus:text-destructive"
+                          >
+                            <Trash2 className="w-4 h-4 mr-2" /> Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </aside>
 
           <div className="max-w-3xl w-full mx-auto lg:mx-0">
