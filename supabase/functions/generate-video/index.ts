@@ -87,9 +87,12 @@ async function runEligibilityCheck(
       data = null;
     }
     if (!resp.ok) {
-      // 4xx from moderation often means "rejected"; 5xx is service degradation.
-      if (resp.status >= 500) {
-        console.warn("eligibility check degraded", resp.status, text);
+      // 5xx → service degradation. 404/405 → endpoint not available on this
+      // model (fal hasn't shipped a pre-flight check for it). In both cases
+      // fail open: the actual submit call will surface any real moderation
+      // rejection from the model itself.
+      if (resp.status >= 500 || resp.status === 404 || resp.status === 405) {
+        console.warn("eligibility check unavailable", resp.status, text);
         return { eligible: true, degraded: true, reason: "check_unavailable" };
       }
       const reason = data?.detail || data?.error || data?.message || "Prompt was rejected by content moderation.";
