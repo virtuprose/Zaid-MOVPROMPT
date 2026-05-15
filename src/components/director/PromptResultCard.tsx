@@ -304,7 +304,7 @@ export function PromptResultCard({ title, prompt, breakdown, directorsNote, onRe
               <DropdownMenuLabel className="text-[11px] uppercase tracking-wider text-muted-foreground">
                 Recommended
               </DropdownMenuLabel>
-              <DropdownMenuItem onClick={() => generateVideo(recommendedModel.id)}>
+              <DropdownMenuItem onClick={() => openOptionsFor(recommendedModel.id)}>
                 {recommendedModel.label}
                 {recommendedModel.note && (
                   <span className="ml-auto text-[10px] text-muted-foreground">{recommendedModel.note}</span>
@@ -317,7 +317,7 @@ export function PromptResultCard({ title, prompt, breakdown, directorsNote, onRe
                     {group.label}
                   </DropdownMenuLabel>
                   {group.models.map((m) => (
-                    <DropdownMenuItem key={m.id} onClick={() => generateVideo(m.id)}>
+                    <DropdownMenuItem key={m.id} onClick={() => openOptionsFor(m.id)}>
                       <span className="truncate">{m.label}</span>
                       {m.note && (
                         <span className="ml-auto text-[10px] text-muted-foreground shrink-0">{m.note}</span>
@@ -356,6 +356,17 @@ export function PromptResultCard({ title, prompt, breakdown, directorsNote, onRe
           </div>
         </DialogContent>
       </Dialog>
+
+      <VideoOptionsDialog
+        open={!!pendingModel}
+        model={pendingModel}
+        onCancel={() => setPendingModel(null)}
+        onConfirm={(opts) => {
+          const m = pendingModel;
+          setPendingModel(null);
+          if (m) void generateVideo(m, opts);
+        }}
+      />
     </>
   );
 }
