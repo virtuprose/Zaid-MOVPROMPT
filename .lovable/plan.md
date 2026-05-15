@@ -1,34 +1,88 @@
-# @-mention reference files by number
+# Per-model video options before generation
 
-Give every attachment a stable index (`@1`, `@2`, …) so the user can refer to a specific file in their brief and the agent knows which one they mean.
+## Goal
 
-## UX
+When the user clicks **Generate video** and picks a model, instead of submitting immediately, open a small **"Render settings"** dialog showing only the controls that the chosen model actually supports. After they confirm, submit the job with those options.
 
-- Each thumbnail in the composer gets a small numbered badge in the top-left corner: `1`, `2`, … matching the order they were added. Same numbering shown on the attachment chips inside sent user messages so the conversation stays consistent.
-- Typing `@` in the textarea opens a small floating picker above the caret listing the current attachments (`@1 cluster.jpg`, `@2 wellness.jpg`, …). Arrow keys + Enter to insert, Esc/click-away to dismiss. Filtering by typing after `@` (number or filename substring).
-- After insertion the text contains plain `@1`, `@2` tokens. Inside rendered chat bubbles those tokens are styled as accent-colored pills so they read as references, not literal text.
+Each model family on fal.ai exposes a different set of inputs. We tailor the form to that model.
 
-## Implementation
+## Per-model control matrix
 
-### `src/components/director/Composer.tsx`
-- Add a 1-based number badge to every thumbnail (absolute top-left, small rounded pill, accent background).
-- Add an `@` mention picker:
-  - Track caret position and detect when the active token starts with `@`.
-  - Render a `<Popover>`-style absolute panel above the action row listing `attachments` filtered by the query after `@`.
-  - On select, replace the active `@query` with `@<index> ` and close the picker.
-  - Keyboard: ArrowUp/Down to move highlight, Enter/Tab to insert, Esc to close. Disable the textarea's own Enter-to-send only while the picker is open.
-- Skeleton placeholders are not numbered (only resolved attachments).
+| Model family | Aspect ratio | Duration | Resolution / Quality | Audio | Other |
+|---|---|---|---|---|---|
+| Veo 3.1 / 3.1 Fast | 16:9, 9:16, 1:1 | 4s, 6s, 8s | 720p, 1080p | on / off (native audio) | — |
+| Veo 3.1 Lite / Veo 3 / Veo 3 Fast | 16:9, 9:16 | 8s | 720p, 1080p | on / off | — |
+| Veo 2 | 16:9, 9:16 | 5s, 6s, 7s, 8s | 720p | — (no audio) | — |
+| Kling 2.5 Turbo Pro / 2.1 Master / 2 Master | 16:9, 9:16, 1:1 | 5s, 10s | — | — | cfg_scale slider (0.1–1) |
+| Kling 1.6 Pro / 1.5 Pro / 1.6 Std / 1.0 Pro / 1.0 Std | 16:9, 9:16, 1:1 | 5s, 10s | — | — | cfg_scale |
+| Seedance 2.0 / 2.0 Fast | 16:9, 9:16, 1:1, 4:3, 3:4, 21:9 | 5s, 10s | 480p, 720p, 1080p | on / off (native audio) | — |
+| Seedance 1 Pro / 1 Lite | same aspects | 5s, 10s | 480p, 720p, 1080p | — | — |
+| Hailuo 02 Pro | 16:9 | 6s, 10s | 768p, 1080p | — | prompt_optimizer toggle |
+| Hailuo 02 Standard / 01 | 16:9 | 6s | 768p | — | — |
+| Runway Gen-3 Turbo | 16:9, 9:16 | 5s, 10s | — | — | — |
+| LTX Video / 13B | 16:9, 9:16, 1:1 | 5s | — | — | — |
+| Wan Pro / 2.2 A14B | 16:9, 9:16, 1:1 | 5s, 10s | 480p, 720p | — | — |
 
-### `src/components/director/DirectorChat.tsx`
-- When rendering a sent user message's attachment chips, prefix each with its index (`1 · filename`) so numbering matches what the user typed.
-- In the user message body, post-process the text to wrap `@\d+` tokens in a small accent pill span.
+(Defaults: 16:9, lowest duration option, highest resolution available, audio on when supported.)
 
-### `supabase/functions/director-agent/index.ts`
-- Number attachments in the `ATTACHED REFERENCES` block (`[@1] Image: cluster.jpg`, `[@2] Voice brief transcript …`).
-- Append a one-line instruction to the system prompt or to the attachment block: *"The user may refer to specific references by `@N`. Resolve those tokens to the matching reference above when reasoning."*
-- Order of `imageUrls` already matches attachment order, so multimodal indexing stays consistent.
+## What to build
+
+### 1. New file: `src/lib/director/videoModelControls.ts`
+
+Declares a `getModelControls(modelId)` returning the schema for that model:
+
+```ts
+type ModelControls = {
+  aspectRatios?: string[];        // e.g. ["16:9","9:16","1:1"]
+  durations?: number[];            // seconds
+  resolutions?: string[];          // ["720p","1080p"]
+  audio?: boolean;                 // show audio toggle
+  cfgScale?: boolean;              // show cfg slider (Kling)
+  promptOptimizer?: boolean;       // Hailuo
+  defaults: { aspect_ratio?: string; duration?: number; resolution?: string; audio?: boolean; cfg_scale?: number; prompt_optimizer?: boolean };
+};
+```
+
+Encodes the matrix above keyed by model id, plus a small fallback for unknown models (16:9 only).
+
+### 2. New file: `src/components/director/VideoOptionsDialog.tsx`
+
+Small shadcn `Dialog` rendered from `PromptResultCard`. Props: `open`, `model`, `onCancel`, `onConfirm(options)`. Renders only the controls returned by `getModelControls(model.id)`:
+
+- Aspect ratio → button group / `ToggleGroup`
+- Duration → segmented buttons
+- Resolution → segmented buttons
+- Audio → `Switch`
+- cfg_scale → `Slider` 0.1–1, default 0.5
+- prompt_optimizer → `Switch`
+
+Confirm button label: "Render with {model.label}".
+
+### 3. Update `PromptResultCard.tsx`
+
+- Replace direct `generateVideo(modelId)` from the dropdown with a two-step flow: clicking a model in the dropdown sets `pendingModel` and opens `VideoOptionsDialog`. Confirming the dialog calls `generateVideo(modelId, options)`.
+- `generateVideo` now passes `options` through to `submitVideoJob`.
+
+### 4. Update `src/lib/director/api.ts`
+
+- Add `VideoOptions` type matching the union of fields above.
+- `submitVideoJob(prompt, provider, sessionId, options?)` includes `options` in the request body.
+
+### 5. Update `supabase/functions/generate-video/index.ts`
+
+- Accept `options` from the request body. Build the fal payload starting from `{ prompt }` and merge model-appropriate fields:
+  - Veo: `aspect_ratio`, `duration`, `resolution`, `generate_audio`
+  - Kling: `aspect_ratio`, `duration`, `cfg_scale`
+  - Seedance: `aspect_ratio`, `duration`, `resolution`, `generate_audio`
+  - Hailuo: `duration`, `resolution`, `prompt_optimizer`
+  - Runway: `aspect_ratio`, `duration`
+  - LTX: `aspect_ratio`
+  - Wan: `aspect_ratio`, `duration`, `resolution`
+- A small `buildFalPayload(provider, prompt, options)` helper keeps this isolated. Unknown fields are dropped — never forwarded to fal.
+
+No DB migration needed (the options are just forwarded to fal; we already store `prompt` and `provider`).
 
 ## Out of scope
-- No persistence/migration changes — numbering is per-message, derived from `attachments` array order.
-- No drag-to-reorder of attachments (numbering would shift; revisit later if needed).
-- No autocomplete for past-message references — `@N` only resolves against the current pending attachments.
+
+- No changes to the AI Director's chat conversation itself — the questions are asked via a focused settings dialog rather than free-form chat (faster, less error-prone, and won't burn AI credits).
+- No new auth, analytics or tour additions.
