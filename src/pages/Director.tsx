@@ -201,6 +201,9 @@ export default function Director() {
                       )}
                       onClick={() => navigate(`/director/${s.id}`)}
                     >
+                      {s.pinned && (
+                        <Pin className="w-3 h-3 shrink-0 text-accent fill-current -rotate-45" />
+                      )}
                       <span className="truncate flex-1">{s.title || "Untitled brief"}</span>
                       {s.needsReply && (
                         <span className="shrink-0 text-[10px] px-2 py-0.5 rounded-full bg-accent/15 text-accent border border-accent/30 whitespace-nowrap">
