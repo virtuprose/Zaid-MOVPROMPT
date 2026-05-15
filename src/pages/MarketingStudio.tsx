@@ -91,9 +91,32 @@ export default function MarketingStudio() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
+  const [userAds, setUserAds] = useState<UserAd[]>([]);
+  const [showCommunity, setShowCommunity] = useState(false);
+  const [flashChips, setFlashChips] = useState(false);
+  const composerRef = useRef<HTMLDivElement | null>(null);
+
   useEffect(() => {
     if (!loading && !user) navigate("/auth");
   }, [loading, user, navigate]);
+
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    void (async () => {
+      const { data } = await supabase
+        .from("video_jobs")
+        .select("id,video_url,created_at")
+        .eq("user_id", user.id)
+        .not("video_url", "is", null)
+        .order("created_at", { ascending: false })
+        .limit(24);
+      if (!cancelled && data) {
+        setUserAds(data.filter((d) => d.video_url) as UserAd[]);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [user]);
 
   if (!loading && !user) return null;
 
