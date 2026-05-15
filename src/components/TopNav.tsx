@@ -39,7 +39,6 @@ type NavItem = { to: string; label: string; badge?: string };
 const NAV_ITEMS: NavItem[] = [
   { to: "/", label: "Studio" },
   { to: "/director", label: "AI Director", badge: "New" },
-  { to: "/learn", label: "Learn" },
   { to: "/gallery", label: "Gallery" },
 ];
 
@@ -239,7 +238,7 @@ export function TopNav() {
                         className="gap-3 px-4 py-3 rounded-lg cursor-pointer focus:bg-[hsl(240_5%_11%)] focus:text-foreground group"
                       >
                         <GraduationCap className="w-4 h-4 text-muted-foreground group-hover:text-accent group-focus:text-accent transition-colors" />
-                        <span className="text-sm">Tutorials</span>
+                        <span className="text-sm">Learn</span>
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         onClick={() => navigate("/referrals")}
