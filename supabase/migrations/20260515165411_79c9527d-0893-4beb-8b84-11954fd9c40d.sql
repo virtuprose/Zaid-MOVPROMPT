@@ -1,0 +1,2 @@
+ALTER TABLE public.director_sessions ADD COLUMN IF NOT EXISTS pinned boolean NOT NULL DEFAULT false;
+CREATE INDEX IF NOT EXISTS idx_director_sessions_user_pinned ON public.director_sessions (user_id, pinned, updated_at DESC);

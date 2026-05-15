@@ -182,6 +182,7 @@ export type Database = {
           final_prompt: string | null
           id: string
           messages: Json
+          pinned: boolean
           title: string | null
           updated_at: string
           user_id: string
@@ -193,6 +194,7 @@ export type Database = {
           final_prompt?: string | null
           id?: string
           messages?: Json
+          pinned?: boolean
           title?: string | null
           updated_at?: string
           user_id: string
@@ -204,6 +206,7 @@ export type Database = {
           final_prompt?: string | null
           id?: string
           messages?: Json
+          pinned?: boolean
           title?: string | null
           updated_at?: string
           user_id?: string
