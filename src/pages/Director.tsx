@@ -128,15 +128,17 @@ export default function Director() {
     else toast.success(next ? "Pinned" : "Unpinned");
   };
 
-  const handleDelete = async (s: SessionRow) => {
-    if (!window.confirm(`Delete "${s.title || "Untitled brief"}"? This can't be undone.`)) return;
+  const confirmDelete = async () => {
+    const s = deleteTarget;
+    if (!s) return;
+    setDeleteTarget(null);
     setSessions((prev) => prev.filter((x) => x.id !== s.id));
     const { error } = await supabase.from("director_sessions").delete().eq("id", s.id);
     if (error) {
       toast.error("Couldn't delete brief");
       return;
     }
-    toast.success("Deleted");
+    toast.success("Brief deleted");
     if (sessionId === s.id) navigate("/director");
   };
 
