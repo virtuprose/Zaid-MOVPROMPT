@@ -20,12 +20,15 @@ export function BrandKitSheet({
   open,
   onOpenChange,
   onSaved,
+  kitId,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSaved?: (kit: BrandKit) => void;
+  /** When set, edit this kit. When null/undefined, create a new one. */
+  kitId?: string | null;
 }) {
-  const { kit, save, uploadLogo } = useBrandKit();
+  const { kits, saveKit, deleteKit, uploadLogo } = useBrandKit();
   const [draft, setDraft] = useState<BrandKit>(EMPTY_BRAND_KIT);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -36,8 +39,14 @@ export function BrandKitSheet({
   const urlDebounce = useRef<number | null>(null);
 
   useEffect(() => {
-    if (open) setDraft(kit ?? EMPTY_BRAND_KIT);
-  }, [open, kit]);
+    if (!open) return;
+    if (kitId) {
+      const found = kits.find((k) => k.id === kitId);
+      setDraft(found ?? EMPTY_BRAND_KIT);
+    } else {
+      setDraft(EMPTY_BRAND_KIT);
+    }
+  }, [open, kitId, kits]);
 
   const update = <K extends keyof BrandKit>(k: K, v: BrandKit[K]) =>
     setDraft((d) => ({ ...d, [k]: v }));
@@ -97,14 +106,26 @@ export function BrandKitSheet({
     }
     setSaving(true);
     try {
-      await save(draft);
+      const saved = await saveKit(draft);
       toast.success("Brand kit saved");
-      onSaved?.(draft);
+      onSaved?.(saved);
       onOpenChange(false);
     } catch (e: any) {
       toast.error(e?.message || "Could not save");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!draft.id) return;
+    if (!window.confirm("Delete this brand?")) return;
+    try {
+      await deleteKit(draft.id);
+      toast.success("Brand deleted");
+      onOpenChange(false);
+    } catch (e: any) {
+      toast.error(e?.message || "Could not delete");
     }
   };
 
