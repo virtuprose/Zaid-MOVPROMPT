@@ -302,9 +302,6 @@ function DirectorChatInner() {
     <div className="flex flex-col gap-3 h-[calc(100vh-120px)]">
       <div className="flex items-center justify-between">
         <div className="text-xs text-muted-foreground transition-colors">{subhead}</div>
-        <Button size="sm" variant="ghost" onClick={onResetClick} className="gap-1.5 h-7 text-xs">
-          <RotateCcw className="w-3.5 h-3.5" /> New brief
-        </Button>
       </div>
 
       <div
