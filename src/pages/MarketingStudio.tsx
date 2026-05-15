@@ -83,6 +83,7 @@ export default function MarketingStudio() {
   const [formatId, setFormatId] = useState<string | undefined>();
   const [hookId, setHookId] = useState<string | undefined>();
   const [settingId, setSettingId] = useState<string | undefined>();
+  const [customSetting, setCustomSetting] = useState<string>("");
   const [location, setLocation] = useState<LocationInput>(EMPTY_LOCATION);
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>("All");
 
