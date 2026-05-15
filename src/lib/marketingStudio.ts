@@ -394,7 +394,7 @@ export function composeStudioPrompt(brief: StudioBrief): string {
     brandLine(brief.brand),
     hook?.fragment,
     format?.fragment,
-    setting?.fragment,
+    setting?.fragment ?? (brief.customSetting?.trim() ? `Setting: ${brief.customSetting.trim()}` : null),
     locationLine(brief.location),
     brief.master.trim() ? `Story: ${brief.master.trim()}` : null,
     "End on a confident product hero frame. Keep text-on-screen minimal and legible.",
