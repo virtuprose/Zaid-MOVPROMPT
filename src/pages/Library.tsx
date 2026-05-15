@@ -453,6 +453,23 @@ const Library = () => {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { t } = useLanguage();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tab = (searchParams.get("tab") === "videos" ? "videos" : "prompts") as "prompts" | "videos";
+  const setTab = (next: "prompts" | "videos") => {
+    const sp = new URLSearchParams(searchParams);
+    if (next === "prompts") sp.delete("tab");
+    else sp.set("tab", next);
+    setSearchParams(sp, { replace: true });
+  };
+  const [videoCount, setVideoCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!user) return;
+    void supabase
+      .from("video_jobs")
+      .select("id", { count: "exact", head: true })
+      .then(({ count }) => setVideoCount(count ?? 0));
+  }, [user]);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
