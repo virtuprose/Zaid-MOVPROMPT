@@ -47,7 +47,7 @@ export function QuestionCard({ reason, questions, disabled, onContinue, onSkip }
   return (
     <div
       className={cn(
-        "rounded-2xl border border-border/60 bg-muted/20 p-4 sm:p-5 space-y-4",
+        "rounded-2xl bg-muted/15 p-5 sm:p-6 space-y-5",
         disabled && "opacity-60 pointer-events-none",
       )}
       onKeyDown={(e) => {

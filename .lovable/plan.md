@@ -1,22 +1,39 @@
-## Polish Buy Credits pill spacing & match Assets visual rhythm
+## Restyle QuestionCard to a soft borderless panel
 
-The new "Buy Credits" pill currently uses a filled accent fill (`bg-accent/10`) which reads heavier than the outlined "Assets" pill next to it, and the icon/label spacing is slightly off the Assets pill rhythm. Tighten both and match the outline treatment.
+Match the screenshot: subtle muted background, no visible border, lighter type weights, pill chip options, inline rounded input. Replace the look everywhere the questions bubble renders in DirectorChat.
 
-### Changes — `src/components/TopNav.tsx`
+### Changes — `src/components/director/QuestionCard.tsx`
 
-1. **Match the Assets visual language (outline, not filled)** so the two pills sit as a pair rather than fighting:
-   - Replace the Buy Credits classes with: `hidden sm:inline-flex h-9 rounded-full px-3.5 gap-2 text-[13px] font-medium bg-transparent text-accent border border-accent/40 hover:bg-accent/10 hover:border-accent/60 transition-colors`
-   - Same paddings/gap as Assets so icon-to-label and pill-to-pill spacing line up.
+1. **Container** — drop border, soften background:
+   - From: `rounded-2xl border border-border/60 bg-muted/20 p-4 sm:p-5 space-y-4`
+   - To:   `rounded-2xl bg-muted/15 p-5 sm:p-6 space-y-5` (no border, slightly more padding for breathing room)
 
-2. **Tighten spacing in the right cluster** so Search → Buy Credits → Assets reads as one row:
-   - Bump the right cluster gap from `gap-1.5 sm:gap-2` to `gap-2 sm:gap-2.5` for a touch more breathing room around the two outlined pills (still tight on mobile).
+2. **Reason line** — keep accent italic but ensure no bold:
+   - `text-xs text-muted-foreground/80 italic` (drop accent tint so the panel reads softer; keeps it secondary)
 
-3. **Icon polish**
-   - Use `Coins className="w-4 h-4"` (Assets uses 3.5 but Coins reads thin at 3.5; 4 matches optical weight of the folder icon).
+3. **Question label** — lighter weight, muted number:
+   - Wrapper: `text-sm text-foreground/90 font-normal`
+   - Number: `text-muted-foreground/70 mr-1.5`
 
-4. **Stop the layout from jumping when only Buy Credits is hidden on mobile**
-   - Keep the existing `hidden sm:inline-flex`; no wrapper changes needed.
+4. **Duration chips** — softer inactive, keep active subtle:
+   - Inactive: `border border-border/30 text-muted-foreground hover:text-foreground hover:border-border/60 bg-transparent`
+   - Active:   `bg-foreground/10 border border-border/50 text-foreground`
+   - Same `rounded-full px-3 py-1 text-xs transition-colors`
+
+5. **Text input** — borderless, sits on subtle inner surface:
+   - From bordered pill to: `w-full rounded-full bg-background/30 border border-transparent px-4 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:bg-background/50 focus:border-border/40 transition-colors`
+
+6. **Footer buttons** — keep current Skip/Continue layout, but ensure Continue is not heavy:
+   - Continue button: `rounded-full gap-2 bg-foreground/10 text-foreground hover:bg-foreground/15 border border-border/30` (replace default solid primary so the panel stays soft)
+   - Skip stays as ghost.
 
 ### Out of scope
-- No copy changes, no route changes, no new icons elsewhere.
-- No changes to the Assets button itself or other TopNav items.
+- No new component file; we're restyling in place since the user chose "replace visually everywhere."
+- No changes to DirectorChat wiring, props, or behavior (Enter shortcuts, focus, submit logic untouched).
+- No changes to VideoOptionsDialog or other panels.
+- No new chip presets or new question types.
+
+### Technical notes
+- All colors use existing semantic tokens (`muted`, `foreground`, `background`, `border`) — no raw hex.
+- `font-semibold`/`font-bold` are not introduced anywhere in the new styles.
+- File stays a single component; no API change so DirectorChat at line 349 keeps working without edits.
