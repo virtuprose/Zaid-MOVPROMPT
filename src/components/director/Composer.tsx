@@ -257,6 +257,9 @@ export function Composer({ value, onChange, attachments, onAttachmentsChange, on
                 <Tooltip key={i}>
                   <TooltipTrigger asChild>
                     <div className="group relative h-16 w-16 overflow-hidden rounded-lg bg-muted ring-1 ring-border">
+                      <span className="absolute left-0.5 top-0.5 z-10 inline-flex h-4 min-w-[16px] items-center justify-center rounded bg-accent px-1 text-[10px] font-semibold text-accent-foreground shadow">
+                        {i + 1}
+                      </span>
                       {isImageLike(a) && "url" in a ? (
                         <img
                           src={(a as any).url}
