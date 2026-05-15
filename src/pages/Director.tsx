@@ -39,6 +39,7 @@ export default function Director() {
   const navigate = useNavigate();
   const { sessionId } = useParams<{ sessionId?: string }>();
   const [sessions, setSessions] = useState<SessionRow[]>([]);
+  const [tasksOpen, setTasksOpen] = useState(true);
 
   useEffect(() => {
     trackPageVisit("/director");
@@ -54,11 +55,20 @@ export default function Director() {
     const load = async () => {
       const { data } = await supabase
         .from("director_sessions")
-        .select("id, title, updated_at")
+        .select("id, title, updated_at, messages")
         .eq("user_id", user.id)
         .order("updated_at", { ascending: false })
         .limit(30);
-      if (active && data) setSessions(data as SessionRow[]);
+      if (active && data) {
+        setSessions(
+          data.map((s: any) => {
+            const msgs = Array.isArray(s.messages) ? s.messages : [];
+            const last = msgs[msgs.length - 1];
+            const needsReply = !!last && last.role === "assistant";
+            return { id: s.id, title: s.title, updated_at: s.updated_at, needsReply };
+          }),
+        );
+      }
     };
     load();
     // refresh when leaving / arriving on a session
