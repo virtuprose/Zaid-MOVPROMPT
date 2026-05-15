@@ -249,7 +249,7 @@ export default function MarketingStudio() {
           </div>
 
           {/* Composer card */}
-          <div className="rounded-3xl border border-border/60 bg-[hsl(240_5%_8%)]/70 backdrop-blur p-4 sm:p-6">
+          <div ref={composerRef} className="rounded-3xl border border-border/60 bg-[hsl(240_5%_8%)]/70 backdrop-blur p-4 sm:p-6 scroll-mt-20">
             <Textarea
               value={master}
               onChange={(e) => setMaster(e.target.value)}
