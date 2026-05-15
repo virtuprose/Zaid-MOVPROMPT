@@ -46,6 +46,7 @@ export function PresetPickerDialog({
   const [draftCustom, setDraftCustom] = useState<string>(customValue ?? "");
   const [draftLocation, setDraftLocation] = useState<LocationInput | undefined>(locationValue);
   const [customOpen, setCustomOpen] = useState<boolean>(!!(customValue && !selectedId));
+  const cancelledRef = useRef(false);
 
   // Sync drafts when dialog opens
   useEffect(() => {
@@ -56,6 +57,7 @@ export function PresetPickerDialog({
       setCustomOpen(!!(customValue && !selectedId));
       setQ("");
       setTab("all");
+      cancelledRef.current = false;
     }
   }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -70,9 +72,8 @@ export function PresetPickerDialog({
   const noMatch = q.trim().length > 0 && filtered.length === 0;
   const supportsCustom = !!onCustomChange;
 
-  const apply = () => {
+  const commit = useCallback(() => {
     if (supportsCustom) {
-      // Custom takes over when populated and no preset is picked
       if (draftCustom.trim() && !draftId) {
         onCustomChange?.(draftCustom.trim());
         onSelect(undefined);
@@ -84,10 +85,26 @@ export function PresetPickerDialog({
       onSelect(draftId);
     }
     if (onLocationChange && draftLocation) onLocationChange(draftLocation);
+  }, [supportsCustom, draftCustom, draftId, draftLocation, onCustomChange, onSelect, onLocationChange]);
+
+  const apply = () => {
+    commit();
     onOpenChange(false);
   };
 
-  const cancel = () => onOpenChange(false);
+  const cancel = () => {
+    cancelledRef.current = true;
+    onOpenChange(false);
+  };
+
+  const handleOpenChange = (next: boolean) => {
+    if (next) {
+      onOpenChange(true);
+      return;
+    }
+    if (!cancelledRef.current) commit();
+    onOpenChange(false);
+  };
 
   const handleKey = (e: React.KeyboardEvent) => {
     if (e.key === "Escape" && q) {
