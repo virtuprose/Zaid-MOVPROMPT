@@ -812,7 +812,10 @@ export function VideosTab() {
   };
 
   const handleRemix = (job: VideoJob) => {
-    navigate("/", { state: { restorePrompt: job.prompt } });
+    const target = job.session_id ? "/director" : "/";
+    const where = job.session_id ? "AI Director" : "Studio";
+    navigate(target, { state: { restorePrompt: job.prompt } });
+    toast({ title: "Remixing…", description: `Prompt loaded into ${where}. Edit and regenerate.` });
   };
 
   const handleRetry = (job: VideoJob) => {
