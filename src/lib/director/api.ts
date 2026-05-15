@@ -214,3 +214,44 @@ export async function pollVideoJob(jobId: string): Promise<VideoJob> {
   if (error) throw new Error(error.message || "Could not poll job");
   return data as VideoJob;
 }
+
+export type EligibilityResult = {
+  eligible: boolean;
+  reason?: string;
+  categories?: string[];
+  degraded?: boolean;
+  skipped?: boolean;
+};
+
+export async function checkVideoEligibility(
+  provider: string,
+  prompt: string,
+): Promise<EligibilityResult> {
+  const { data, error } = await supabase.functions.invoke("generate-video", {
+    body: { action: "check_eligibility", provider, prompt },
+  });
+  if (error) {
+    // Fail-open on transport errors — server still re-checks before submit.
+    return { eligible: true, degraded: true, reason: "check_unavailable" };
+  }
+  return data as EligibilityResult;
+}
+
+export async function rewritePromptSafe(
+  originalPrompt: string,
+  rejectionReason: string,
+  modelId: string,
+  categories?: string[],
+): Promise<{ rewritten_prompt: string; changes_summary: string }> {
+  const { data, error } = await supabase.functions.invoke("director-agent", {
+    body: {
+      action: "rewrite_safe",
+      original_prompt: originalPrompt,
+      rejection_reason: rejectionReason,
+      categories,
+      model_id: modelId,
+    },
+  });
+  if (error) throw error;
+  return data as { rewritten_prompt: string; changes_summary: string };
+}
