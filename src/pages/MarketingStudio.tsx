@@ -39,7 +39,7 @@ import {
 import { useBrandKit, EMPTY_LOCATION, type LocationInput } from "@/lib/marketing/brandKit";
 import { BrandKitSheet } from "@/components/marketing/BrandKitSheet";
 import { BrandsRow } from "@/components/marketing/BrandsRow";
-import { LocationPopover } from "@/components/marketing/LocationPopover";
+
 import { submitVideoJob } from "@/lib/director/api";
 import loopKitchen from "@/assets/loop-kitchen.mp4.asset.json";
 import loopCyberpunk from "@/assets/loop-cyberpunk.mp4.asset.json";
@@ -332,38 +332,6 @@ export default function MarketingStudio() {
 
             <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-border/30">
 
-              <LocationPopover
-                value={location}
-                onChange={setLocation}
-                trigger={
-                  <button
-                    type="button"
-                    className={cn(
-                      "inline-flex items-center gap-1.5 rounded-full border px-3 h-9 text-xs transition-colors",
-                      location.place || location.imagePath
-                        ? "border-[hsl(0_72%_55%)]/50 bg-[hsl(0_72%_55%)]/10 text-foreground"
-                        : "border-border/40 bg-muted/20 text-muted-foreground hover:text-foreground hover:border-border",
-                    )}
-                  >
-                    {location.imageUrl ? (
-                      <img src={location.imageUrl} alt="" className="w-4 h-4 rounded-sm object-cover" />
-                    ) : (
-                      <MapPin className="w-3.5 h-3.5" />
-                    )}
-                    <span className="font-medium">
-                      {location.place
-                        ? `Location: ${location.place}`
-                        : location.imagePath
-                          ? "Location: Custom"
-                          : "Location"}
-                    </span>
-                    <ChevronDown className="w-3.5 h-3.5 opacity-60" />
-                  </button>
-                }
-              />
-
-              <span className="mx-1 h-5 w-px bg-border/50" />
-
               <PresetChip
                 icon={<Sparkles className="w-3.5 h-3.5" />}
                 label="Format"
@@ -383,8 +351,12 @@ export default function MarketingStudio() {
               <PresetChip
                 icon={<Globe2 className="w-3.5 h-3.5" />}
                 label="Setting"
-                value={setting?.label}
-                tooltip="Scene type — kitchen, studio, rooftop"
+                value={
+                  setting?.label
+                    ? `${setting.label}${location.place ? ` · ${location.place}` : location.imagePath ? " · Custom" : ""}`
+                    : location.place || (location.imagePath ? "Custom location" : undefined)
+                }
+                tooltip="Scene type and location"
                 onClick={() => setOpenPicker("setting")}
                 flash={flashChips}
               />
@@ -527,7 +499,7 @@ export default function MarketingStudio() {
           open={openPicker === "setting"}
           onOpenChange={(o) => !o && setOpenPicker(null)}
           title="Settings that set the scene"
-          subtitle="Choose where the story unfolds. Pick a setting that frames your ad with the right mood."
+          subtitle="Pick the scene type and where in the world it unfolds."
           presets={SETTINGS}
           selectedId={settingId}
           onSelect={setSettingId}
@@ -535,6 +507,8 @@ export default function MarketingStudio() {
             { id: "realistic", label: "Realistic" },
             { id: "unrealistic", label: "Unrealistic" },
           ]}
+          locationValue={location}
+          onLocationChange={setLocation}
         />
 
         <BrandKitSheet

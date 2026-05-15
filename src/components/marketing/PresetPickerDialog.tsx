@@ -4,6 +4,8 @@ import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/compone
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import type { StudioPreset } from "@/lib/marketingStudio";
+import { LocationPanel } from "@/components/marketing/LocationPanel";
+import type { LocationInput } from "@/lib/marketing/brandKit";
 
 type Props = {
   open: boolean;
@@ -14,6 +16,8 @@ type Props = {
   selectedId?: string;
   onSelect: (id: string) => void;
   categories?: { id: string; label: string }[];
+  locationValue?: LocationInput;
+  onLocationChange?: (v: LocationInput) => void;
 };
 
 export function PresetPickerDialog({
@@ -25,6 +29,8 @@ export function PresetPickerDialog({
   selectedId,
   onSelect,
   categories,
+  locationValue,
+  onLocationChange,
 }: Props) {
   const [tab, setTab] = useState<string>("all");
   const [q, setQ] = useState("");
@@ -84,7 +90,13 @@ export function PresetPickerDialog({
           </div>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 max-h-[60vh] overflow-y-auto pt-2">
+        {locationValue && onLocationChange && (
+          <div className="pt-3">
+            <LocationPanel value={locationValue} onChange={onLocationChange} />
+          </div>
+        )}
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 max-h-[50vh] overflow-y-auto pt-3">
           {filtered.map((p) => {
             const active = p.id === selectedId;
             return (
