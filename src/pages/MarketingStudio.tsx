@@ -64,7 +64,7 @@ export default function MarketingStudio() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
 
-  const { kit: brandKit } = useBrandKit();
+  const { kits, activeKit: brandKit, activeId: brandActiveId, setActive: setBrandActive, deleteKit: deleteBrand } = useBrandKit();
   const subject: Subject = brandKit?.subject ?? "product";
   const [master, setMaster] = useState("");
   const [formatId, setFormatId] = useState<string | undefined>();
