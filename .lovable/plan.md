@@ -1,37 +1,31 @@
 ## Goal
+Merge the standalone Location chip into the Setting picker. The toolbar will show a single combined chip; users edit both scene and location from the same modal.
 
-When a brand is selected, surface it as an "attachment chip" inside the composer (above the textarea), showing the product/logo thumbnail + name + an X to detach — matching the reference screenshot's chat-style attachment chips. Same treatment for an attached location image so the composer always shows what's being sent.
+## Changes
 
-## Changes — `src/pages/MarketingStudio.tsx` composer card only
+### 1. `PresetPickerDialog.tsx` — accept optional Location slot
+Add optional props: `locationValue?: LocationInput`, `onLocationChange?: (v) => void`. When provided, render a "Location" section above the preset grid:
+- Section title "Location" + subtitle ("Where in the world the scene takes place").
+- Inline city input + trending chips (Tokyo, Dubai, Paris, LA, Seoul) + "See all" reveal of regional groups (MENA / Asia / Americas / Europe / Africa).
+- Compact reference-image dropzone (reuses `useBrandKit().uploadLocationImage`).
+- "Clear location" link when set.
 
-### 1. New attachments row above the textarea
-Add a small wrapper inside the composer card, before `<Textarea>`. It only renders when `brandKit?.name` or `location.imagePath` exists.
+Existing scene-preset grid below, unchanged.
 
-```
-[ thumb ] Haribo Goldbears  [×]   [ thumb ] Studio backdrop  [×]
-```
+### 2. `LocationPopover.tsx`
+Extract its inner content into a reusable `LocationPanel` component (same file or new `LocationPanel.tsx`) so `PresetPickerDialog` can embed the same UI. Keep `LocationPopover` exported for any other callers, but it will no longer be used in MarketingStudio.
 
-Per chip:
-- Container: `inline-flex items-center gap-2 pr-2 pl-1 h-8 rounded-lg border border-border/60 bg-secondary/40 text-xs`
-- Thumbnail: 24×24 rounded-md, `object-contain` on `bg-white/5`. Falls back to a Building2 / MapPin icon when no image.
-- Label: brand name (truncate, max-w ~140px) or location place / "Location image".
-- X button: 5×5 ghost icon button → calls `setBrandActive(null)` for brand, or clears `imagePath`/`imageUrl` for location.
+### 3. `MarketingStudio.tsx`
+- Remove the standalone `<LocationPopover>` chip and its divider (lines ~335–365).
+- Pass `locationValue={location}` and `onLocationChange={setLocation}` to the Setting `PresetPickerDialog` (lines ~526–538).
+- Update the Setting `PresetChip` value to combine: `setting?.label` + (`· ${location.place}` or `· Custom`) when location is set. Tooltip: "Scene type and location".
+- Update Setting picker `subtitle` to mention both: "Pick the scene type and where in the world it unfolds."
+- Keep `EMPTY_LOCATION`, `LocationInput`, brand-kit imports — still used.
 
-### 2. Remove the duplicate brand chip from the bottom pill row
-The current passive "Brand: Bose" chip in the filters row (`MarketingStudio.tsx` ~lines 277-289) gets removed — its job moves to the attachments row.
-
-### 3. Subtle tweaks
-- If at least one attachment exists, add `pb-2 mb-2 border-b border-border/30` under the attachments row so the textarea visually sits below them.
-- Keep BrandsRow above the composer card as-is — the new chip is just a "what's currently attached" indicator.
+### 4. No data-model changes
+`location` state, prompt composition (`location: { place, hasImage }`), and brand-kit upload remain identical.
 
 ## Out of scope
-- BrandsRow card design (already polished in previous turn).
-- BrandKitSheet modal.
-- Sending the brand image to the model — selection logic is unchanged; only the visual representation moves.
-
-## Files
-- Edit only: `src/pages/MarketingStudio.tsx`
-
-## Tech notes
-- Reuse existing `brandKit`, `setBrandActive`, `location`, `setLocation` already in scope.
-- Use `lucide-react` `X`, `MapPin` icons (already imported elsewhere in this file).
+- No backend changes.
+- "YOUR LOCATIONS" saved customs (deferred earlier) still deferred.
+- Other pickers (Format, Hook) untouched.
