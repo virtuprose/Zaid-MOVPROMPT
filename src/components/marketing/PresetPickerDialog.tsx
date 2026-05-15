@@ -288,7 +288,7 @@ export function PresetPickerDialog({
               <div className="flex items-center gap-2 text-sm">
                 <Sparkles className="w-4 h-4 text-[#F5A524]" />
                 <span>
-                  No scene matches <span className="font-semibold">"{q}"</span>.
+                  No match for <span className="font-semibold">"{q}"</span>.
                 </span>
               </div>
               {supportsCustom && (
@@ -302,7 +302,7 @@ export function PresetPickerDialog({
                   }}
                   className="bg-[#F5A524] text-black hover:bg-[#F5A524]/90"
                 >
-                  Use "{q}" as custom scene
+                  Use "{q}" as custom
                 </Button>
               )}
             </div>
