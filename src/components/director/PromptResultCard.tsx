@@ -110,6 +110,7 @@ export function PromptResultCard({ title, prompt, breakdown, directorsNote, onRe
   const [job, setJob] = useState<VideoJob | null>(null);
   const [generating, setGenerating] = useState(false);
   const [pendingModel, setPendingModel] = useState<VideoModel | null>(null);
+  const [pendingRender, setPendingRender] = useState<PendingRender | null>(null);
 
   const cameraLighting = [breakdown.camera, breakdown.lighting].filter(Boolean).join(" · ");
   const film = breakdown.film_emulation;
