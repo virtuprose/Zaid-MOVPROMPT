@@ -843,37 +843,47 @@ const Library = () => {
                     )}
                   </div>
 
-                  <Button
-                    variant={selectMode ? "secondary" : "outline"}
-                    size="sm"
-                    onClick={() => { setSelectMode((v) => !v); setSelectedIds(new Set()); }}
-                    className="h-10 text-xs"
-                  >
-                    {selectMode ? "Cancel" : "Select"}
-                  </Button>
-
                   <div className="inline-flex items-center rounded-md border border-border bg-secondary/30 p-0.5 h-10">
                     <button
                       type="button"
                       onClick={() => setView("grid")}
                       aria-label="Grid view"
+                      title="Grid view"
                       className={`h-9 w-9 inline-flex items-center justify-center rounded-[5px] transition-colors ${
-                        view === "grid" ? "bg-background text-foreground" : "text-muted-foreground hover:text-foreground"
+                        view === "grid"
+                          ? "bg-accent text-accent-foreground"
+                          : "text-muted-foreground hover:text-foreground"
                       }`}
                     >
-                      <LayoutGrid className="w-4 h-4" />
+                      <LayoutGrid className="w-5 h-5" />
                     </button>
                     <button
                       type="button"
                       onClick={() => setView("list")}
                       aria-label="List view"
+                      title="List view"
                       className={`h-9 w-9 inline-flex items-center justify-center rounded-[5px] transition-colors ${
-                        view === "list" ? "bg-background text-foreground" : "text-muted-foreground hover:text-foreground"
+                        view === "list"
+                          ? "bg-accent text-accent-foreground"
+                          : "text-muted-foreground hover:text-foreground"
                       }`}
                     >
-                      <ListIcon className="w-4 h-4" />
+                      <ListIcon className="w-5 h-5" />
                     </button>
                   </div>
+
+                  <Button
+                    variant={selectMode ? "secondary" : "outline"}
+                    size="sm"
+                    onClick={() => { setSelectMode((v) => !v); setSelectedIds(new Set()); }}
+                    className="h-10 text-xs gap-1.5"
+                  >
+                    {selectMode ? (
+                      <>Cancel</>
+                    ) : (
+                      <><Checkbox checked={false} className="pointer-events-none" /> Select multiple</>
+                    )}
+                  </Button>
 
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
