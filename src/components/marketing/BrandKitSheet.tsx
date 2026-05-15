@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Loader2, Upload, X, Gift, Smartphone } from "lucide-react";
+import { Loader2, Upload, X, Gift, Smartphone, Link as LinkIcon } from "lucide-react";
 import { toast } from "sonner";
 import {
   Sheet,
@@ -29,6 +29,7 @@ export function BrandKitSheet({
   const [draft, setDraft] = useState<BrandKit>(EMPTY_BRAND_KIT);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [logoMode, setLogoMode] = useState<"upload" | "url">("upload");
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -106,60 +107,85 @@ export function BrandKitSheet({
             </div>
           </div>
 
-          {/* Logo */}
+          {/* Logo — upload OR url */}
           <div>
             <Label className="text-xs uppercase tracking-wide text-muted-foreground">
               {draft.subject === "app" ? "App icon / screenshot" : "Logo / product image"}
             </Label>
-            <div className="mt-2 flex items-center gap-3">
-              <div className="relative w-20 h-20 rounded-xl border border-border/60 bg-muted/20 overflow-hidden flex items-center justify-center">
-                {draft.logo_url ? (
-                  <>
-                    <img
-                      src={draft.logo_url}
-                      alt="Brand"
-                      className="w-full h-full object-cover"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        update("logo_path", null);
-                        update("logo_url", null);
-                      }}
-                      className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/70 text-white flex items-center justify-center"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </>
-                ) : (
-                  <Upload className="w-5 h-5 text-muted-foreground" />
-                )}
-              </div>
-              <div className="flex-1">
-                <input
-                  ref={fileRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) => handleFile(e.target.files?.[0])}
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={uploading}
-                  onClick={() => fileRef.current?.click()}
-                >
-                  {uploading ? (
-                    <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
-                  ) : (
-                    <Upload className="w-3.5 h-3.5 mr-1.5" />
-                  )}
-                  {draft.logo_path ? "Replace" : "Upload"}
-                </Button>
-                <p className="text-xs text-muted-foreground mt-1.5">PNG/JPG, ≤5MB</p>
-              </div>
+            <div className="mt-2 inline-flex w-full p-1 rounded-xl border border-border/50 bg-muted/20">
+              <SubjectBtn
+                icon={<Upload className="w-4 h-4" />}
+                label="Upload image"
+                active={logoMode === "upload"}
+                onClick={() => setLogoMode("upload")}
+              />
+              <SubjectBtn
+                icon={<LinkIcon className="w-4 h-4" />}
+                label="Image URL"
+                active={logoMode === "url"}
+                onClick={() => setLogoMode("url")}
+              />
             </div>
+
+            {logoMode === "upload" ? (
+              <div className="mt-3 flex items-center gap-3">
+                <div className="relative w-20 h-20 rounded-xl border border-border/60 bg-muted/20 overflow-hidden flex items-center justify-center">
+                  {draft.logo_url ? (
+                    <>
+                      <img src={draft.logo_url} alt="Brand" className="w-full h-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          update("logo_path", null);
+                          update("logo_url", null);
+                        }}
+                        className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/70 text-white flex items-center justify-center"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </>
+                  ) : (
+                    <Upload className="w-5 h-5 text-muted-foreground" />
+                  )}
+                </div>
+                <div className="flex-1">
+                  <input
+                    ref={fileRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => handleFile(e.target.files?.[0])}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={uploading}
+                    onClick={() => fileRef.current?.click()}
+                  >
+                    {uploading ? (
+                      <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                    ) : (
+                      <Upload className="w-3.5 h-3.5 mr-1.5" />
+                    )}
+                    {draft.logo_path ? "Replace" : "Upload"}
+                  </Button>
+                  <p className="text-xs text-muted-foreground mt-1.5">PNG/JPG, ≤5MB</p>
+                </div>
+              </div>
+            ) : (
+              <div className="mt-3">
+                <Input
+                  value={draft.logo_url ?? ""}
+                  onChange={(e) => {
+                    update("logo_path", null);
+                    update("logo_url", e.target.value || null);
+                  }}
+                  placeholder="https://example.com/logo.png"
+                />
+                <p className="text-xs text-muted-foreground mt-1.5">Paste a direct link to an image</p>
+              </div>
+            )}
           </div>
 
           {/* Fields */}
@@ -190,13 +216,7 @@ export function BrandKitSheet({
             placeholder="Sleep smarter. Run faster."
             max={60}
           />
-          <FieldArea
-            label="Target audience"
-            value={draft.audience ?? ""}
-            onChange={(v) => update("audience", v || null)}
-            placeholder="Gen-Z runners in major US cities"
-            max={160}
-          />
+
 
           <div className="pt-2 flex gap-2">
             <Button
