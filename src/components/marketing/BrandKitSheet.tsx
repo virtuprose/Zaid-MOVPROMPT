@@ -278,7 +278,16 @@ export function BrandKitSheet({
             max={60}
           />
 
-          <div className="pt-2 flex gap-2">
+          <div className="pt-2 flex gap-2 items-center">
+            {draft.id && (
+              <Button
+                variant="ghost"
+                onClick={handleDelete}
+                className="text-destructive hover:text-destructive hover:bg-destructive/10"
+              >
+                Delete
+              </Button>
+            )}
             <Button
               variant="ghost"
               onClick={() => onOpenChange(false)}
@@ -292,7 +301,7 @@ export function BrandKitSheet({
               className="flex-1 bg-[#F5A524] text-black hover:bg-[#F5A524]/90"
             >
               {saving && <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />}
-              Save brand
+              {draft.id ? "Save changes" : "Save brand"}
             </Button>
           </div>
         </div>
