@@ -105,7 +105,7 @@ export function TopNav() {
         <div className="flex-1" />
 
         {/* Right cluster */}
-        <div className="flex items-center gap-1.5 sm:gap-2">
+        <div className="flex items-center gap-2 sm:gap-2.5">
           {/* Search */}
           <button
             type="button"
