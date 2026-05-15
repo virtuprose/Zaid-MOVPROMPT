@@ -567,22 +567,6 @@ const Library = () => {
 
       <div className="relative z-10 container max-w-7xl mx-auto px-4 py-4 sm:py-6">
 
-        {/* Title */}
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-6 space-y-1"
-        >
-          <h1 className="text-2xl sm:text-3xl font-bold font-display">
-            {t("library.title")}
-          </h1>
-          {!loading && history.length > 0 && (
-            <p className="text-xs text-muted-foreground">
-              {t("library.subtitle" as any).replace("{count}", String(history.length))}
-            </p>
-          )}
-        </motion.div>
-
         {/* Tab toggle */}
         <div className="flex justify-center mb-6">
           <div className="inline-flex items-center gap-1 rounded-full bg-secondary/40 border border-border p-1">
