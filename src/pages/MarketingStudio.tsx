@@ -265,6 +265,62 @@ export default function MarketingStudio() {
 
           {/* Composer card */}
           <div ref={composerRef} className="rounded-3xl border border-border/60 bg-[hsl(240_5%_8%)]/70 backdrop-blur p-4 sm:p-6 scroll-mt-20">
+            {(brandKit?.name || location.imagePath || location.place) && (
+              <div className="flex flex-wrap items-center gap-2 mb-3 pb-3 border-b border-border/30">
+                {brandKit?.name && (
+                  <div className="inline-flex items-center gap-2 h-9 pl-1 pr-1.5 rounded-xl border border-border/60 bg-secondary/40 text-xs">
+                    <div className="w-7 h-7 rounded-md bg-white/5 overflow-hidden flex items-center justify-center shrink-0">
+                      {brandKit.logo_url ? (
+                        <img
+                          src={brandKit.logo_url}
+                          alt=""
+                          className="w-full h-full object-contain"
+                          onError={(e) => {
+                            (e.currentTarget as HTMLImageElement).style.display = "none";
+                          }}
+                        />
+                      ) : (
+                        <Building2 className="w-3.5 h-3.5 text-muted-foreground" />
+                      )}
+                    </div>
+                    <span className="font-medium text-foreground truncate max-w-[160px]">
+                      {brandKit.name}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => void setBrandActive(null)}
+                      className="w-6 h-6 rounded-md text-muted-foreground hover:text-foreground hover:bg-background/60 flex items-center justify-center shrink-0"
+                      aria-label="Detach brand"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
+                {(location.place || location.imagePath) && (
+                  <div className="inline-flex items-center gap-2 h-9 pl-1 pr-1.5 rounded-xl border border-border/60 bg-secondary/40 text-xs">
+                    <div className="w-7 h-7 rounded-md bg-white/5 overflow-hidden flex items-center justify-center shrink-0">
+                      {location.imageUrl ? (
+                        <img src={location.imageUrl} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <MapPin className="w-3.5 h-3.5 text-muted-foreground" />
+                      )}
+                    </div>
+                    <span className="font-medium text-foreground truncate max-w-[160px]">
+                      {location.place || "Location image"}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setLocation(EMPTY_LOCATION)}
+                      className="w-6 h-6 rounded-md text-muted-foreground hover:text-foreground hover:bg-background/60 flex items-center justify-center shrink-0"
+                      aria-label="Detach location"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
             <Textarea
               value={master}
               onChange={(e) => setMaster(e.target.value)}
@@ -274,19 +330,7 @@ export default function MarketingStudio() {
             />
 
             <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-border/30">
-              {brandKit?.name && (
-                <div
-                  className="inline-flex items-center gap-1.5 rounded-full border border-[hsl(0_72%_55%)]/50 bg-[hsl(0_72%_55%)]/10 px-3 h-9 text-xs text-foreground"
-                  title="Active brand"
-                >
-                  {brandKit.logo_url ? (
-                    <img src={brandKit.logo_url} alt="" className="w-4 h-4 rounded-sm object-cover" />
-                  ) : (
-                    <Building2 className="w-3.5 h-3.5" />
-                  )}
-                  <span className="font-medium">Brand: {brandKit.name}</span>
-                </div>
-              )}
+
               <LocationPopover
                 value={location}
                 onChange={setLocation}
