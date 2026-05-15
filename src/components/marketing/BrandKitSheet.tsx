@@ -1,10 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { Loader2, Upload, X, Gift, Smartphone, Link as LinkIcon, Sparkles } from "lucide-react";
+import { Loader2, Upload, X, Gift, Smartphone, Link as LinkIcon, Sparkles, ImagePlus } from "lucide-react";
 import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
@@ -35,6 +34,7 @@ export function BrandKitSheet({
   const [logoMode, setLogoMode] = useState<"upload" | "url">("upload");
   const [analyzing, setAnalyzing] = useState(false);
   const [justFilled, setJustFilled] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const urlDebounce = useRef<number | null>(null);
 
@@ -129,117 +129,152 @@ export function BrandKitSheet({
     }
   };
 
+  const hasLogo = !!draft.logo_url;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{draft.id ? "Edit brand" : "New brand"}</DialogTitle>
-          <DialogDescription>
+      <DialogContent className="max-w-[520px] p-0 gap-0 max-h-[88vh] flex flex-col overflow-hidden">
+        {/* Header */}
+        <div className="px-6 pt-6 pb-4 border-b border-border/60">
+          <DialogTitle className="text-lg font-semibold tracking-tight">
+            {draft.id ? "Edit brand" : "New brand"}
+          </DialogTitle>
+          <DialogDescription className="text-sm text-muted-foreground mt-1">
             Saved to your brand library — reuse it on any ad.
           </DialogDescription>
-        </DialogHeader>
+        </div>
 
-        <div className="mt-6 space-y-5">
-          {/* Subject toggle */}
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+          {/* Type */}
           <div>
-            <Label className="text-xs uppercase tracking-wide text-muted-foreground">
-              Type
-            </Label>
-            <div className="mt-2 inline-flex w-full p-1 rounded-xl border border-border/50 bg-muted/20">
-              <SubjectBtn
+            <SectionLabel>Type</SectionLabel>
+            <Segmented>
+              <SegBtn
                 icon={<Gift className="w-4 h-4" />}
                 label="Product"
                 active={draft.subject === "product"}
                 onClick={() => update("subject", "product" as Subject)}
               />
-              <SubjectBtn
+              <SegBtn
                 icon={<Smartphone className="w-4 h-4" />}
                 label="App"
                 active={draft.subject === "app"}
                 onClick={() => update("subject", "app" as Subject)}
               />
-            </div>
+            </Segmented>
           </div>
 
-          {/* Logo — upload OR url */}
+          {/* Logo source */}
           <div>
-            <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+            <SectionLabel>
               {draft.subject === "app" ? "App icon / screenshot" : "Logo / product image"}
-            </Label>
-            <div className="mt-2 inline-flex w-full p-1 rounded-xl border border-border/50 bg-muted/20">
-              <SubjectBtn
+            </SectionLabel>
+            <Segmented>
+              <SegBtn
                 icon={<Upload className="w-4 h-4" />}
-                label="Upload image"
+                label="Upload"
                 active={logoMode === "upload"}
                 onClick={() => setLogoMode("upload")}
               />
-              <SubjectBtn
+              <SegBtn
                 icon={<LinkIcon className="w-4 h-4" />}
                 label="Image URL"
                 active={logoMode === "url"}
                 onClick={() => setLogoMode("url")}
               />
-            </div>
+            </Segmented>
 
             {logoMode === "upload" ? (
-              <div className="mt-3 flex items-center gap-3">
-                <div className="relative w-20 h-20 rounded-xl border border-border/60 bg-muted/20 overflow-hidden flex items-center justify-center">
-                  {draft.logo_url ? (
-                    <>
-                      <img src={draft.logo_url} alt="Brand" className="w-full h-full object-cover" />
-                      <button
+              hasLogo ? (
+                <div className="mt-3 flex items-center gap-3 p-3 rounded-xl border border-border/60 bg-secondary/20">
+                  <div className="relative w-20 h-20 rounded-lg overflow-hidden bg-muted/30 shrink-0">
+                    <img src={draft.logo_url!} alt="Brand" className="w-full h-full object-cover" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">
+                      {draft.logo_path ? "Uploaded image" : "Image preview"}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-0.5">PNG, JPG, WEBP — up to 5 MB</p>
+                    <div className="flex gap-2 mt-2">
+                      <Button
                         type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={uploading}
+                        onClick={() => fileRef.current?.click()}
+                      >
+                        {uploading ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Upload className="w-3.5 h-3.5 mr-1.5" />}
+                        Replace
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
                         onClick={() => {
                           update("logo_path", null);
                           update("logo_url", null);
                         }}
-                        className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/70 text-white flex items-center justify-center"
                       >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </>
-                  ) : (
-                    <Upload className="w-5 h-5 text-muted-foreground" />
+                        <X className="w-3.5 h-3.5 mr-1.5" />
+                        Remove
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => fileRef.current?.click()}
+                  onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                  onDragLeave={() => setDragOver(false)}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setDragOver(false);
+                    handleFile(e.dataTransfer.files?.[0]);
+                  }}
+                  className={cn(
+                    "mt-3 w-full h-[140px] rounded-xl border border-dashed flex flex-col items-center justify-center gap-2 transition-all",
+                    "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent/60",
+                    dragOver
+                      ? "border-accent bg-accent/5"
+                      : "border-border hover:border-accent/60 hover:bg-secondary/20 bg-secondary/10",
                   )}
-                </div>
-                <div className="flex-1">
-                  <input
-                    ref={fileRef}
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(e) => handleFile(e.target.files?.[0])}
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    disabled={uploading}
-                    onClick={() => fileRef.current?.click()}
-                  >
-                    {uploading ? (
-                      <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
-                    ) : (
-                      <Upload className="w-3.5 h-3.5 mr-1.5" />
-                    )}
-                    {draft.logo_path ? "Replace" : "Upload"}
-                  </Button>
-                  <p className="text-xs text-muted-foreground mt-1.5">PNG/JPG, ≤5MB</p>
-                </div>
-              </div>
+                >
+                  {uploading ? (
+                    <Loader2 className="w-6 h-6 text-muted-foreground animate-spin" />
+                  ) : (
+                    <ImagePlus className="w-6 h-6 text-muted-foreground" />
+                  )}
+                  <p className="text-sm font-medium text-foreground/90">Drag & drop or click to upload</p>
+                  <p className="text-xs text-muted-foreground">PNG, JPG, WEBP — up to 5 MB</p>
+                </button>
+              )
             ) : (
-              <div className="mt-3">
-                <Input
-                  value={draft.logo_url ?? ""}
-                  onChange={(e) => handleUrlChange(e.target.value)}
-                  placeholder="https://example.com/logo.png"
-                />
-                <p className="text-xs text-muted-foreground mt-1.5">Paste a direct link to an image</p>
+              <div className="mt-3 space-y-1.5">
+                <div className="relative">
+                  <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    value={draft.logo_url ?? ""}
+                    onChange={(e) => handleUrlChange(e.target.value)}
+                    placeholder="https://example.com/logo.png"
+                    className="pl-9"
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">Paste a direct link to an image (PNG, JPG, WEBP)</p>
               </div>
             )}
 
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => handleFile(e.target.files?.[0])}
+            />
+
             {(analyzing || justFilled) && (
-              <div className="mt-2.5 inline-flex items-center gap-1.5 text-xs text-[#F5A524]">
+              <div className="mt-2.5 inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-accent/10 text-accent text-[11px] font-medium">
                 {analyzing ? (
                   <>
                     <Loader2 className="w-3 h-3 animate-spin" />
@@ -277,40 +312,55 @@ export function BrandKitSheet({
             placeholder="Sleep smarter. Run faster."
             max={60}
           />
+        </div>
 
-          <div className="pt-2 flex gap-2 items-center">
-            {draft.id && (
-              <Button
-                variant="ghost"
-                onClick={handleDelete}
-                className="text-destructive hover:text-destructive hover:bg-destructive/10"
-              >
-                Delete
-              </Button>
-            )}
+        {/* Footer */}
+        <div className="px-6 py-4 border-t border-border/60 flex items-center gap-2">
+          {draft.id && (
             <Button
               variant="ghost"
-              onClick={() => onOpenChange(false)}
-              className="flex-1"
+              size="sm"
+              onClick={handleDelete}
+              className="text-destructive hover:text-destructive hover:bg-destructive/10"
             >
-              Cancel
+              Delete
             </Button>
-            <Button
-              onClick={handleSave}
-              disabled={saving}
-              className="flex-1 bg-[#F5A524] text-black hover:bg-[#F5A524]/90"
-            >
-              {saving && <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />}
-              {draft.id ? "Save changes" : "Save brand"}
-            </Button>
-          </div>
+          )}
+          <div className="flex-1" />
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleSave}
+            disabled={saving}
+            className="min-w-[140px] bg-[#F5A524] text-black hover:bg-[#F5A524]/90"
+          >
+            {saving && <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />}
+            {draft.id ? "Save changes" : "Save brand"}
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
   );
 }
 
-function SubjectBtn({
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <Label className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">
+      {children}
+    </Label>
+  );
+}
+
+function Segmented({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="mt-2 inline-flex w-full p-1 rounded-lg border border-border/60 bg-secondary/30">
+      {children}
+    </div>
+  );
+}
+
+function SegBtn({
   icon,
   label,
   active,
@@ -326,9 +376,10 @@ function SubjectBtn({
       type="button"
       onClick={onClick}
       className={cn(
-        "flex-1 inline-flex items-center justify-center gap-2 h-9 rounded-lg text-sm font-medium transition-all",
+        "flex-1 inline-flex items-center justify-center gap-2 h-9 rounded-md text-sm font-medium transition-all",
+        "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent/60",
         active
-          ? "bg-[#F5A524] text-black"
+          ? "bg-[#F5A524] text-black shadow-sm"
           : "text-muted-foreground hover:text-foreground",
       )}
     >
@@ -355,7 +406,7 @@ function Field({
 }) {
   return (
     <div>
-      <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+      <Label className="text-[11px] font-medium text-muted-foreground">
         {label}
         {required && <span className="text-[hsl(0_72%_60%)]"> *</span>}
       </Label>
@@ -383,17 +434,23 @@ function FieldArea({
   placeholder?: string;
   max?: number;
 }) {
+  const count = value?.length ?? 0;
   return (
     <div>
-      <Label className="text-xs uppercase tracking-wide text-muted-foreground">
-        {label}
-      </Label>
+      <div className="flex items-center justify-between">
+        <Label className="text-[11px] font-medium text-muted-foreground">{label}</Label>
+        {max && (
+          <span className="text-[10px] text-muted-foreground/70 tabular-nums">
+            {count}/{max}
+          </span>
+        )}
+      </div>
       <Textarea
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         maxLength={max}
-        className="mt-1.5 min-h-[60px] resize-none"
+        className="mt-1.5 min-h-[96px] resize-none"
       />
     </div>
   );
