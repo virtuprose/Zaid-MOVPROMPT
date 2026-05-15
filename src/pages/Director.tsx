@@ -98,28 +98,6 @@ export default function Director() {
       <TopNav />
 
       <div className="relative z-10 container max-w-7xl mx-auto px-4 py-4">
-        <div className="flex items-center justify-between mb-4">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => navigate("/")}
-            className="gap-1.5"
-            title="Back to Studio"
-          >
-            <ArrowLeft className="w-4 h-4" /> Back to Studio
-          </Button>
-          <div className="flex items-center gap-2">
-            <Clapperboard className="w-5 h-5 text-primary" />
-            <h1 className="font-display text-lg sm:text-xl font-bold">
-              AI <span className="text-primary">Director</span>
-            </h1>
-            <span className="text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-accent/15 text-accent border border-accent/30">
-              New
-            </span>
-          </div>
-          <div className="w-[64px]" />
-        </div>
-
         <div className="grid grid-cols-1 lg:grid-cols-[240px_1fr] gap-4">
           <aside className="hidden lg:flex flex-col gap-2 max-h-[calc(100vh-160px)]">
             <Button
