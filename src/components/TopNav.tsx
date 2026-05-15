@@ -119,6 +119,17 @@ export function TopNav() {
             </kbd>
           </button>
 
+          {!loading && user && location.pathname.startsWith("/director") && (
+            <Button
+              size="sm"
+              onClick={() => navigate("/account/billing")}
+              className="hidden sm:inline-flex h-9 rounded-full px-3 gap-1.5 text-[13px] bg-accent/10 text-accent border border-accent/30 hover:bg-accent/15"
+            >
+              <Coins className="w-3.5 h-3.5" />
+              Buy Credits
+            </Button>
+          )}
+
           {!loading && user && (
             <>
               {/* Assets */}
