@@ -1,8 +1,25 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Clapperboard, Plus, MessageSquare } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  ArrowLeft,
+  Clapperboard,
+  Plus,
+  ChevronDown,
+  MoreVertical,
+  Pencil,
+  Pin,
+  Trash2,
+} from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { trackPageVisit } from "@/lib/analytics";
 import { DirectorChat } from "@/components/director/DirectorChat";
@@ -10,7 +27,12 @@ import { TopNav } from "@/components/TopNav";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
-type SessionRow = { id: string; title: string | null; updated_at: string };
+type SessionRow = {
+  id: string;
+  title: string | null;
+  updated_at: string;
+  needsReply: boolean;
+};
 
 export default function Director() {
   const { user, loading } = useAuth();
