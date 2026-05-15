@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   Search,
@@ -16,7 +16,9 @@ import {
   User,
   Sparkles,
   Coins,
+  Megaphone,
 } from "lucide-react";
+import { CommandPalette } from "@/components/CommandPalette";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -40,6 +42,7 @@ type NavItem = { to: string; label: string; badge?: string };
 const NAV_ITEMS: NavItem[] = [
   { to: "/", label: "Studio" },
   { to: "/director", label: "AI Director", badge: "New" },
+  { to: "/marketing", label: "Ads Studio" },
   { to: "/gallery", label: "Gallery" },
 ];
 
@@ -50,6 +53,18 @@ export function TopNav() {
   const { t } = useLanguage();
   const { start: startTour, isDone: tourDone } = useTour();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setPaletteOpen((v) => !v);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   const initials = user?.user_metadata?.full_name
     ? user.user_metadata.full_name
@@ -79,6 +94,7 @@ export function TopNav() {
         <nav className="hidden lg:flex items-center gap-0.5">
           {NAV_ITEMS.map((item) => {
             const active = isActive(item.to);
+            const isAds = item.to === "/marketing";
             return (
               <NavLink
                 key={item.to}
@@ -90,7 +106,8 @@ export function TopNav() {
                     : "text-muted-foreground hover:text-foreground",
                 )}
               >
-                {active && <Sparkles className="w-3.5 h-3.5" />}
+                {active && !isAds && <Sparkles className="w-3.5 h-3.5" />}
+                {isAds && <Megaphone className={cn("w-3.5 h-3.5", active ? "text-accent" : "")} />}
                 <span>{item.label}</span>
                 {item.badge && (
                   <span className="ml-1 px-1.5 py-0.5 rounded-md bg-accent/15 text-accent text-[10px] font-semibold uppercase tracking-wider border border-accent/25">
@@ -109,11 +126,12 @@ export function TopNav() {
           {/* Search */}
           <button
             type="button"
-            className="hidden md:inline-flex items-center gap-2 h-9 w-[200px] xl:w-[260px] px-3 rounded-full bg-[hsl(240_5%_9%)] border border-border/50 text-muted-foreground hover:border-border hover:text-foreground transition-colors"
+            onClick={() => setPaletteOpen(true)}
+            className="hidden md:inline-flex items-center gap-2 h-9 w-[220px] xl:w-[280px] px-3 rounded-full bg-[hsl(240_5%_9%)] border border-border/50 text-muted-foreground hover:border-border hover:text-foreground transition-colors"
             aria-label="Search"
           >
             <Search className="w-3.5 h-3.5" />
-            <span className="text-[13px] flex-1 text-left">Search</span>
+            <span className="text-[13px] flex-1 text-left truncate">Search tasks, prompts, references...</span>
             <kbd className="hidden xl:inline-flex items-center gap-0.5 text-[10px] text-muted-foreground/70 font-mono">
               <span className="text-sm leading-none">⌘</span>K
             </kbd>
@@ -132,13 +150,13 @@ export function TopNav() {
 
           {!loading && user && (
             <>
-              {/* Assets */}
+              {/* Assets — neutral */}
               <Button
                 size="sm"
                 onClick={() => navigate("/library")}
-                className="hidden sm:inline-flex h-9 rounded-full px-3 gap-1.5 text-[13px] bg-[hsl(150_45%_12%)] text-[hsl(150_70%_70%)] border border-[hsl(150_50%_25%)] hover:bg-[hsl(150_45%_15%)]"
+                className="hidden sm:inline-flex h-9 rounded-full px-3 gap-1.5 text-[13px] bg-transparent text-foreground border border-[#27272A] hover:bg-[hsl(240_5%_10%)] hover:border-border"
               >
-                <FolderOpen className="w-3.5 h-3.5" />
+                <FolderOpen className="w-3.5 h-3.5 text-muted-foreground" />
                 Assets
               </Button>
 
@@ -166,7 +184,7 @@ export function TopNav() {
                             {initials}
                           </AvatarFallback>
                         </Avatar>
-                        <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-accent border-2 border-background" />
+                        
                       </button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-64 p-1.5 rounded-xl border-accent/10 bg-popover">
@@ -355,7 +373,8 @@ export function TopNav() {
             ))}
         </div>
       </div>
-    </header>
+      <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
+   </header>
   );
 }
 

@@ -36,12 +36,16 @@ import { TopNav } from "@/components/TopNav";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
+type SessionStatus = "completed" | "in_progress" | "draft";
+
 type SessionRow = {
   id: string;
   title: string | null;
   updated_at: string;
   needsReply: boolean;
   pinned: boolean;
+  status: SessionStatus;
+  thumbnail: string | null;
 };
 
 export default function Director() {
@@ -68,7 +72,7 @@ export default function Director() {
     const load = async () => {
       const { data } = await supabase
         .from("director_sessions")
-        .select("id, title, updated_at, messages, pinned")
+        .select("id, title, updated_at, messages, pinned, final_prompt")
         .eq("user_id", user.id)
         .order("pinned", { ascending: false })
         .order("updated_at", { ascending: false })
@@ -79,7 +83,32 @@ export default function Director() {
             const msgs = Array.isArray(s.messages) ? s.messages : [];
             const last = msgs[msgs.length - 1];
             const needsReply = !!last && last.role === "assistant";
-            return { id: s.id, title: s.title, updated_at: s.updated_at, needsReply, pinned: !!s.pinned };
+            let thumbnail: string | null = null;
+            for (const m of msgs) {
+              if (m?.role === "user" && Array.isArray(m.attachments)) {
+                const img = m.attachments.find(
+                  (a: any) => a?.url && (a.kind === "image" || a.kind === "video_keyframes"),
+                );
+                if (img?.url) {
+                  thumbnail = img.url;
+                  break;
+                }
+              }
+            }
+            const status: SessionStatus = s.final_prompt
+              ? "completed"
+              : needsReply
+                ? "in_progress"
+                : "draft";
+            return {
+              id: s.id,
+              title: s.title,
+              updated_at: s.updated_at,
+              needsReply,
+              pinned: !!s.pinned,
+              status,
+              thumbnail,
+            };
           }),
         );
       }
@@ -174,9 +203,9 @@ export default function Director() {
             <Button
               size="sm"
               onClick={() => navigate("/marketing")}
-              className="gap-1.5 justify-start rounded-md bg-gradient-to-br from-[hsl(340_85%_60%)] to-[hsl(355_85%_50%)] text-white hover:opacity-90 border-0"
+              className="gap-1.5 justify-start rounded-md bg-gradient-to-br from-[hsl(35_90%_55%)] to-[hsl(28_92%_48%)] text-white hover:opacity-90 border-0 shadow-[0_2px_12px_-4px_hsl(35_90%_55%/0.5)]"
             >
-              <Megaphone className="w-4 h-4" /> Ads Studio
+              <Megaphone className="w-4 h-4 text-white" /> Ads brief
             </Button>
             <button
               type="button"
@@ -198,26 +227,51 @@ export default function Director() {
                 )}
                 {sessions.map((s) => {
                   const active = s.id === sessionId;
+                  const dotColor =
+                    s.status === "completed"
+                      ? "bg-emerald-500"
+                      : s.status === "in_progress"
+                        ? "bg-amber-500 animate-pulse"
+                        : "bg-muted-foreground/40";
+                  const ts = new Date(s.updated_at);
+                  const tsLabel = ts.toLocaleString(undefined, {
+                    month: "short",
+                    day: "numeric",
+                    hour: "numeric",
+                    minute: "2-digit",
+                  });
                   return (
                     <div
                       key={s.id}
+                      title={tsLabel}
                       className={cn(
-                        "group relative flex items-center gap-1.5 pl-3 pr-1 py-1.5 rounded-full border text-xs transition-colors cursor-pointer",
+                        "group relative flex items-center gap-2 pl-3 pr-1 py-1.5 rounded-lg border text-xs transition-colors cursor-pointer",
                         active
-                          ? "bg-muted/60 border-border text-foreground"
-                          : "border-border/40 text-foreground/80 hover:bg-muted/40 hover:text-foreground",
+                          ? "bg-[#1a1a1f] border-l-2 border-l-accent border-y-border/40 border-r-border/40 text-foreground"
+                          : "border-border/30 text-foreground/80 hover:bg-muted/30 hover:text-foreground",
                       )}
                       onClick={() => navigate(`/director/${s.id}`)}
                     >
+                      {/* Thumbnail */}
+                      <div className="shrink-0 w-6 h-6 rounded overflow-hidden bg-muted/40 border border-border/40 flex items-center justify-center">
+                        {s.thumbnail ? (
+                          <img src={s.thumbnail} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <MessageSquare className="w-3 h-3 text-muted-foreground/60" />
+                        )}
+                      </div>
+                      {/* Status dot */}
+                      <span
+                        className={cn("shrink-0 w-1.5 h-1.5 rounded-full", dotColor)}
+                        aria-label={s.status}
+                      />
                       {s.pinned && (
                         <Pin className="w-3 h-3 shrink-0 text-accent fill-current -rotate-45" />
                       )}
                       <span className="truncate flex-1">{s.title || "Untitled brief"}</span>
-                      {s.needsReply && (
-                        <span className="shrink-0 text-[10px] px-2 py-0.5 rounded-full bg-accent/15 text-accent border border-accent/30 whitespace-nowrap">
-                          Needs reply
-                        </span>
-                      )}
+                      <span className="hidden group-hover:inline shrink-0 text-[10px] text-muted-foreground/70 whitespace-nowrap">
+                        {tsLabel}
+                      </span>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <button
