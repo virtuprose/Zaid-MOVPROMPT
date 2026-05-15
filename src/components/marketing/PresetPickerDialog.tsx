@@ -328,18 +328,23 @@ export function PresetPickerDialog({
         </div>
 
         <div className="border-t border-border/40 p-4 flex items-center justify-between gap-3 bg-[hsl(240_5%_8%)] rounded-b-3xl">
-          <button
-            type="button"
-            onClick={cancel}
-            className="text-sm text-muted-foreground hover:text-foreground px-2"
-          >
-            Cancel
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={cancel}
+              className="text-sm text-muted-foreground hover:text-foreground px-2"
+            >
+              Cancel
+            </button>
+            <span className="hidden sm:inline text-[11px] text-muted-foreground/70">
+              Selection saves automatically — Cancel to discard.
+            </span>
+          </div>
           <Button
             onClick={apply}
             className="bg-[#F5A524] text-black hover:bg-[#F5A524]/90 font-semibold px-5"
           >
-            Apply settings
+            Done
           </Button>
         </div>
       </DialogContent>
