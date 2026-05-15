@@ -21,7 +21,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import type { Breakdown } from "@/lib/director/api";
 import { submitVideoJob, pollVideoJob, type VideoJob } from "@/lib/director/api";
-import { VIDEO_MODEL_GROUPS, pickRecommendedModel, findVideoModel } from "@/lib/director/videoModels";
+import { VIDEO_MODEL_GROUPS, pickRecommendedModel, findVideoModel, type VideoModel } from "@/lib/director/videoModels";
+import { VideoOptionsDialog } from "./VideoOptionsDialog";
+import type { VideoOptions } from "@/lib/director/videoModelControls";
 
 type Props = {
   title: string;
@@ -94,6 +96,7 @@ export function PromptResultCard({ title, prompt, breakdown, directorsNote, onRe
   const [open, setOpen] = useState(false);
   const [job, setJob] = useState<VideoJob | null>(null);
   const [generating, setGenerating] = useState(false);
+  const [pendingModel, setPendingModel] = useState<VideoModel | null>(null);
 
   const cameraLighting = [breakdown.camera, breakdown.lighting].filter(Boolean).join(" · ");
   const film = breakdown.film_emulation;
@@ -165,17 +168,22 @@ export function PromptResultCard({ title, prompt, breakdown, directorsNote, onRe
     };
   }, [job]);
 
-  const generateVideo = async (modelId: string) => {
+  const openOptionsFor = (modelId: string) => {
     if (!user) {
       toast.error("Sign in to generate videos");
       return;
     }
     const m = findVideoModel(modelId);
+    if (!m) return;
+    setPendingModel(m);
+  };
+
+  const generateVideo = async (model: VideoModel, options: VideoOptions) => {
     setGenerating(true);
     try {
-      const newJob = await submitVideoJob(prompt, modelId, sessionId);
+      const newJob = await submitVideoJob(prompt, model.id, sessionId, options);
       setJob(newJob);
-      toast.success(`Rendering with ${m?.label ?? modelId} — this can take a few minutes`);
+      toast.success(`Rendering with ${model.label} — this can take a few minutes`);
     } catch (e: any) {
       toast.error(e?.message || "Could not start video generation");
     } finally {
@@ -296,7 +304,7 @@ export function PromptResultCard({ title, prompt, breakdown, directorsNote, onRe
               <DropdownMenuLabel className="text-[11px] uppercase tracking-wider text-muted-foreground">
                 Recommended
               </DropdownMenuLabel>
-              <DropdownMenuItem onClick={() => generateVideo(recommendedModel.id)}>
+              <DropdownMenuItem onClick={() => openOptionsFor(recommendedModel.id)}>
                 {recommendedModel.label}
                 {recommendedModel.note && (
                   <span className="ml-auto text-[10px] text-muted-foreground">{recommendedModel.note}</span>
@@ -309,7 +317,7 @@ export function PromptResultCard({ title, prompt, breakdown, directorsNote, onRe
                     {group.label}
                   </DropdownMenuLabel>
                   {group.models.map((m) => (
-                    <DropdownMenuItem key={m.id} onClick={() => generateVideo(m.id)}>
+                    <DropdownMenuItem key={m.id} onClick={() => openOptionsFor(m.id)}>
                       <span className="truncate">{m.label}</span>
                       {m.note && (
                         <span className="ml-auto text-[10px] text-muted-foreground shrink-0">{m.note}</span>
@@ -348,6 +356,17 @@ export function PromptResultCard({ title, prompt, breakdown, directorsNote, onRe
           </div>
         </DialogContent>
       </Dialog>
+
+      <VideoOptionsDialog
+        open={!!pendingModel}
+        model={pendingModel}
+        onCancel={() => setPendingModel(null)}
+        onConfirm={(opts) => {
+          const m = pendingModel;
+          setPendingModel(null);
+          if (m) void generateVideo(m, opts);
+        }}
+      />
     </>
   );
 }

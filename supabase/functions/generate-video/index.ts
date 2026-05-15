@@ -73,6 +73,61 @@ function getLegacyFalUrls(provider: string, model: string, requestId: string) {
   };
 }
 
+type VideoOptions = {
+  aspect_ratio?: string;
+  duration?: number;
+  resolution?: string;
+  audio?: boolean;
+  cfg_scale?: number;
+  prompt_optimizer?: boolean;
+};
+
+function buildFalPayload(provider: string, prompt: string, opts: VideoOptions = {}) {
+  const payload: Record<string, unknown> = { prompt };
+  const family = provider.split("-")[0]; // kling | veo | seedance | hailuo | runway | ltx | wan
+  const set = (k: string, v: unknown) => {
+    if (v !== undefined && v !== null) payload[k] = v;
+  };
+
+  switch (family) {
+    case "veo":
+      set("aspect_ratio", opts.aspect_ratio);
+      if (opts.duration !== undefined) set("duration", `${opts.duration}s`);
+      set("resolution", opts.resolution);
+      if (opts.audio !== undefined) set("generate_audio", opts.audio);
+      break;
+    case "kling":
+      set("aspect_ratio", opts.aspect_ratio);
+      if (opts.duration !== undefined) set("duration", String(opts.duration));
+      set("cfg_scale", opts.cfg_scale);
+      break;
+    case "seedance":
+      set("aspect_ratio", opts.aspect_ratio);
+      set("duration", opts.duration);
+      set("resolution", opts.resolution);
+      if (opts.audio !== undefined) set("generate_audio", opts.audio);
+      break;
+    case "hailuo":
+      set("duration", opts.duration);
+      set("resolution", opts.resolution);
+      if (opts.prompt_optimizer !== undefined) set("prompt_optimizer", opts.prompt_optimizer);
+      break;
+    case "runway":
+      set("aspect_ratio", opts.aspect_ratio);
+      if (opts.duration !== undefined) set("duration", String(opts.duration));
+      break;
+    case "ltx":
+      set("aspect_ratio", opts.aspect_ratio);
+      break;
+    case "wan":
+      set("aspect_ratio", opts.aspect_ratio);
+      set("resolution", opts.resolution);
+      if (opts.duration !== undefined) set("num_frames", opts.duration === 10 ? 161 : 81);
+      break;
+  }
+  return payload;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -225,10 +280,11 @@ serve(async (req) => {
     }
 
     // Submit new job
-    let { prompt, provider = "seedance-v1-pro", session_id } = body as {
+    let { prompt, provider = "seedance-v1-pro", session_id, options } = body as {
       prompt?: string;
       provider?: string;
       session_id?: string;
+      options?: VideoOptions;
     };
 
     if ((!prompt || !prompt.trim()) && session_id) {
@@ -284,7 +340,7 @@ serve(async (req) => {
         Authorization: `Key ${FAL_KEY}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ prompt: normalizedPrompt }),
+      body: JSON.stringify(buildFalPayload(provider, normalizedPrompt, options)),
     });
     if (!submitResp.ok) {
       const t = await submitResp.text();
