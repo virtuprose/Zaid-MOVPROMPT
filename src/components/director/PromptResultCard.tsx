@@ -93,6 +93,7 @@ function Section({
 
 export function PromptResultCard({ title, prompt, breakdown, directorsNote, onRefine, sessionId }: Props) {
   const { user } = useAuth();
+  const { request: requestApproval } = useApproval();
   const [copied, setCopied] = useState(false);
   const [saved, setSaved] = useState(false);
   const [open, setOpen] = useState(false);
