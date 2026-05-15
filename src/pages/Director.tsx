@@ -92,10 +92,16 @@ export default function Director() {
     };
   }, [user, sessionId]);
 
-  const handleRename = async (s: SessionRow) => {
-    const next = window.prompt("Rename brief", s.title || "Untitled brief");
-    if (next === null) return;
-    const trimmed = next.trim().slice(0, 120);
+  const openRename = (s: SessionRow) => {
+    setRenameValue(s.title || "");
+    setRenameTarget(s);
+  };
+
+  const confirmRename = async () => {
+    const s = renameTarget;
+    if (!s) return;
+    const trimmed = renameValue.trim().slice(0, 120);
+    setRenameTarget(null);
     if (!trimmed || trimmed === s.title) return;
     setSessions((prev) => prev.map((x) => (x.id === s.id ? { ...x, title: trimmed } : x)));
     const { error } = await supabase
@@ -103,7 +109,7 @@ export default function Director() {
       .update({ title: trimmed })
       .eq("id", s.id);
     if (error) toast.error("Couldn't rename brief");
-    else toast.success("Renamed");
+    else toast.success("Brief renamed");
   };
 
   const handleTogglePin = async (s: SessionRow) => {
