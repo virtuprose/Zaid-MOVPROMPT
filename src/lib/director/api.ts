@@ -179,6 +179,8 @@ export type VideoJob = {
   video_url?: string | null;
   error?: string | null;
   fal_request_id?: string | null;
+  fal_status_url?: string | null;
+  fal_response_url?: string | null;
   session_id?: string | null;
 };
 

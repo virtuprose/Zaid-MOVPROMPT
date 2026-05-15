@@ -644,6 +644,8 @@ export type Database = {
           created_at: string
           error: string | null
           fal_request_id: string | null
+          fal_response_url: string | null
+          fal_status_url: string | null
           id: string
           prompt: string
           provider: string
@@ -657,6 +659,8 @@ export type Database = {
           created_at?: string
           error?: string | null
           fal_request_id?: string | null
+          fal_response_url?: string | null
+          fal_status_url?: string | null
           id?: string
           prompt: string
           provider: string
@@ -670,6 +674,8 @@ export type Database = {
           created_at?: string
           error?: string | null
           fal_request_id?: string | null
+          fal_response_url?: string | null
+          fal_status_url?: string | null
           id?: string
           prompt?: string
           provider?: string

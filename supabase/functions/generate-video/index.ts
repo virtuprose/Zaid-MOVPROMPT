@@ -62,6 +62,17 @@ async function readJsonResponse(resp: Response) {
   }
 }
 
+function getLegacyFalUrls(provider: string, model: string, requestId: string) {
+  const base = provider.startsWith("kling")
+    ? "fal-ai/kling-video"
+    : model;
+
+  return {
+    statusUrl: `https://queue.fal.run/${base}/requests/${requestId}/status`,
+    responseUrl: `https://queue.fal.run/${base}/requests/${requestId}/response`,
+  };
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -148,8 +159,15 @@ serve(async (req) => {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
+      const legacyUrls = getLegacyFalUrls(job.provider, model, job.fal_request_id);
+      const statusUrl =
+        (job as { fal_status_url?: string | null }).fal_status_url ||
+        legacyUrls.statusUrl;
+      const responseUrl =
+        (job as { fal_response_url?: string | null }).fal_response_url ||
+        legacyUrls.responseUrl;
       const statusResp = await fetch(
-        `https://queue.fal.run/${model}/requests/${job.fal_request_id}/status`,
+        statusUrl,
         { headers: { Authorization: `Key ${FAL_KEY}` } },
       );
       const statusPayload = await readJsonResponse(statusResp);
@@ -162,7 +180,7 @@ serve(async (req) => {
       }
       if (statusData.status === "COMPLETED") {
         const resultResp = await fetch(
-          `https://queue.fal.run/${model}/requests/${job.fal_request_id}`,
+          responseUrl,
           { headers: { Authorization: `Key ${FAL_KEY}` } },
         );
         const resultPayload = await readJsonResponse(resultResp);
@@ -295,11 +313,22 @@ serve(async (req) => {
     }
     await admin
       .from("video_jobs")
-      .update({ fal_request_id: submitData.request_id, status: "processing" })
+      .update({
+        fal_request_id: submitData.request_id,
+        fal_status_url: submitData.status_url ?? null,
+        fal_response_url: submitData.response_url ?? null,
+        status: "processing",
+      })
       .eq("id", job.id);
 
     return new Response(
-      JSON.stringify({ ...job, fal_request_id: submitData.request_id, status: "processing" }),
+      JSON.stringify({
+        ...job,
+        fal_request_id: submitData.request_id,
+        fal_status_url: submitData.status_url ?? null,
+        fal_response_url: submitData.response_url ?? null,
+        status: "processing",
+      }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (e) {
