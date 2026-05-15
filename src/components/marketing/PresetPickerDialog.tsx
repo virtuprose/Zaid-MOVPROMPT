@@ -274,9 +274,9 @@ export function PresetPickerDialog({
                 <div className="w-10 h-10 rounded-full bg-[#F5A524]/15 text-[#F5A524] inline-flex items-center justify-center">
                   <Plus className="w-5 h-5" />
                 </div>
-                <div className="text-sm font-semibold text-foreground">Custom scene</div>
+                <div className="text-sm font-semibold text-foreground">+ {customLabel}</div>
                 <div className="text-[11px] text-muted-foreground line-clamp-2">
-                  {draftCustom || "Describe the exact scene you want"}
+                  {draftCustom || `Describe your ${customLabel.toLowerCase()}`}
                 </div>
               </button>
             )}
