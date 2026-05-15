@@ -151,7 +151,6 @@ export function Composer({ value, onChange, attachments, onAttachmentsChange, on
 
   const remove = (i: number) => onAttachmentsChange(attachments.filter((_, idx) => idx !== i));
 
-  const isImageLike = (a: Attachment) => a.kind === "image" || a.kind === "video_keyframes";
   const iconFor = (a: Attachment) => {
     if (a.kind === "audio_transcript") return <Music className="w-5 h-5" />;
     return <FileText className="w-5 h-5" />;
