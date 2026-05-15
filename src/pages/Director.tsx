@@ -3,6 +3,15 @@ import { useNavigate, useParams } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -40,6 +49,9 @@ export default function Director() {
   const { sessionId } = useParams<{ sessionId?: string }>();
   const [sessions, setSessions] = useState<SessionRow[]>([]);
   const [tasksOpen, setTasksOpen] = useState(true);
+  const [renameTarget, setRenameTarget] = useState<SessionRow | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<SessionRow | null>(null);
 
   useEffect(() => {
     trackPageVisit("/director");
@@ -80,10 +92,16 @@ export default function Director() {
     };
   }, [user, sessionId]);
 
-  const handleRename = async (s: SessionRow) => {
-    const next = window.prompt("Rename brief", s.title || "Untitled brief");
-    if (next === null) return;
-    const trimmed = next.trim().slice(0, 120);
+  const openRename = (s: SessionRow) => {
+    setRenameValue(s.title || "");
+    setRenameTarget(s);
+  };
+
+  const confirmRename = async () => {
+    const s = renameTarget;
+    if (!s) return;
+    const trimmed = renameValue.trim().slice(0, 120);
+    setRenameTarget(null);
     if (!trimmed || trimmed === s.title) return;
     setSessions((prev) => prev.map((x) => (x.id === s.id ? { ...x, title: trimmed } : x)));
     const { error } = await supabase
@@ -91,7 +109,7 @@ export default function Director() {
       .update({ title: trimmed })
       .eq("id", s.id);
     if (error) toast.error("Couldn't rename brief");
-    else toast.success("Renamed");
+    else toast.success("Brief renamed");
   };
 
   const handleTogglePin = async (s: SessionRow) => {
@@ -110,15 +128,17 @@ export default function Director() {
     else toast.success(next ? "Pinned" : "Unpinned");
   };
 
-  const handleDelete = async (s: SessionRow) => {
-    if (!window.confirm(`Delete "${s.title || "Untitled brief"}"? This can't be undone.`)) return;
+  const confirmDelete = async () => {
+    const s = deleteTarget;
+    if (!s) return;
+    setDeleteTarget(null);
     setSessions((prev) => prev.filter((x) => x.id !== s.id));
     const { error } = await supabase.from("director_sessions").delete().eq("id", s.id);
     if (error) {
       toast.error("Couldn't delete brief");
       return;
     }
-    toast.success("Deleted");
+    toast.success("Brief deleted");
     if (sessionId === s.id) navigate("/director");
   };
 
@@ -202,7 +222,7 @@ export default function Director() {
                           align="end"
                           onClick={(e) => e.stopPropagation()}
                         >
-                          <DropdownMenuItem onSelect={() => handleRename(s)}>
+                          <DropdownMenuItem onSelect={() => openRename(s)}>
                             <Pencil className="w-4 h-4 mr-2" /> Edit
                           </DropdownMenuItem>
                           <DropdownMenuItem onSelect={() => handleTogglePin(s)}>
@@ -211,7 +231,7 @@ export default function Director() {
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
-                            onSelect={() => handleDelete(s)}
+                            onSelect={() => setDeleteTarget(s)}
                             className="text-destructive focus:text-destructive"
                           >
                             <Trash2 className="w-4 h-4 mr-2" /> Delete
@@ -230,6 +250,73 @@ export default function Director() {
           </div>
         </div>
       </div>
+
+      <Dialog open={!!renameTarget} onOpenChange={(o) => !o && setRenameTarget(null)}>
+        <DialogContent className="rounded-2xl border-border/60 bg-[hsl(240_5%_8%)] sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-display text-2xl tracking-tight">Rename brief</DialogTitle>
+            <DialogDescription className="text-muted-foreground">
+              Give this brief a clearer name to find it faster later.
+            </DialogDescription>
+          </DialogHeader>
+          <Input
+            value={renameValue}
+            onChange={(e) => setRenameValue(e.target.value)}
+            placeholder="Untitled brief"
+            maxLength={120}
+            autoFocus
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                void confirmRename();
+              }
+            }}
+          />
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button variant="ghost" onClick={() => setRenameTarget(null)} className="rounded-full">
+              Cancel
+            </Button>
+            <Button
+              onClick={confirmRename}
+              disabled={!renameValue.trim()}
+              className="rounded-full bg-primary/15 text-primary border border-primary/30 hover:bg-primary/25"
+            >
+              Save name
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
+        <DialogContent className="rounded-2xl border-border/60 bg-[hsl(240_5%_8%)] sm:max-w-md">
+          <DialogHeader>
+            <div className="inline-flex items-center justify-center w-9 h-9 rounded-md bg-destructive/15 text-destructive mb-2">
+              <Trash2 className="w-4 h-4" />
+            </div>
+            <DialogTitle className="font-display text-2xl tracking-tight">
+              Delete this brief?
+            </DialogTitle>
+            <DialogDescription className="text-muted-foreground leading-relaxed">
+              <span className="text-foreground/90 font-medium">
+                {deleteTarget?.title || "Untitled brief"}
+              </span>{" "}
+              and its full conversation will be removed permanently. This can't be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button variant="ghost" onClick={() => setDeleteTarget(null)} className="rounded-full">
+              Keep brief
+            </Button>
+            <Button
+              onClick={confirmDelete}
+              variant="destructive"
+              className="rounded-full"
+            >
+              Delete permanently
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
