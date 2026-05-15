@@ -3,9 +3,17 @@
 
 import { supabase } from "@/integrations/supabase/client";
 
+export type ModerationState = "scanning" | "ok" | "blocked" | "unknown";
+
+export type ModerationResult = {
+  state: ModerationState;
+  reason?: string;
+  categories?: string[];
+};
+
 export type Attachment =
-  | { kind: "image"; name: string; url: string; storage_path?: string }
-  | { kind: "video_keyframes"; name: string; url: string; storage_path?: string }
+  | { kind: "image"; name: string; url: string; storage_path?: string; moderation?: ModerationResult }
+  | { kind: "video_keyframes"; name: string; url: string; storage_path?: string; moderation?: ModerationResult }
   | { kind: "audio_transcript"; name: string; text: string; storage_path?: string }
   | { kind: "document"; name: string; text: string };
 
