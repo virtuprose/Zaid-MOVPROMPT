@@ -202,15 +202,16 @@ export default function Director() {
                           align="end"
                           onClick={(e) => e.stopPropagation()}
                         >
-                          <DropdownMenuItem onSelect={() => toast("Rename coming soon")}>
+                          <DropdownMenuItem onSelect={() => handleRename(s)}>
                             <Pencil className="w-4 h-4 mr-2" /> Edit
                           </DropdownMenuItem>
-                          <DropdownMenuItem onSelect={() => toast("Pin coming soon")}>
-                            <Pin className="w-4 h-4 mr-2" /> Pin
+                          <DropdownMenuItem onSelect={() => handleTogglePin(s)}>
+                            <Pin className={cn("w-4 h-4 mr-2", s.pinned && "fill-current text-accent")} />
+                            {s.pinned ? "Unpin" : "Pin"}
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
-                            onSelect={() => toast("Delete coming soon")}
+                            onSelect={() => handleDelete(s)}
                             className="text-destructive focus:text-destructive"
                           >
                             <Trash2 className="w-4 h-4 mr-2" /> Delete
