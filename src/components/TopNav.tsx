@@ -126,11 +126,12 @@ export function TopNav() {
           {/* Search */}
           <button
             type="button"
-            className="hidden md:inline-flex items-center gap-2 h-9 w-[200px] xl:w-[260px] px-3 rounded-full bg-[hsl(240_5%_9%)] border border-border/50 text-muted-foreground hover:border-border hover:text-foreground transition-colors"
+            onClick={() => setPaletteOpen(true)}
+            className="hidden md:inline-flex items-center gap-2 h-9 w-[220px] xl:w-[280px] px-3 rounded-full bg-[hsl(240_5%_9%)] border border-border/50 text-muted-foreground hover:border-border hover:text-foreground transition-colors"
             aria-label="Search"
           >
             <Search className="w-3.5 h-3.5" />
-            <span className="text-[13px] flex-1 text-left">Search</span>
+            <span className="text-[13px] flex-1 text-left truncate">Search tasks, prompts, references...</span>
             <kbd className="hidden xl:inline-flex items-center gap-0.5 text-[10px] text-muted-foreground/70 font-mono">
               <span className="text-sm leading-none">⌘</span>K
             </kbd>
