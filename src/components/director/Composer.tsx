@@ -399,7 +399,7 @@ export function Composer({ value, onChange, attachments, onAttachmentsChange, on
               onClick={() => inputRef.current?.click()}
               disabled={busy || ingesting}
               aria-label="Attach files"
-              className="h-9 w-9 text-muted-foreground hover:text-foreground"
+              className="h-9 w-9 rounded-full text-muted-foreground hover:text-foreground"
             >
               {ingesting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Paperclip className="w-4 h-4" />}
             </Button>
@@ -434,8 +434,9 @@ export function Composer({ value, onChange, attachments, onAttachmentsChange, on
                     <Button
                       onClick={handleSend}
                       disabled={sendDisabled}
-                      size="sm"
-                      className="h-9 px-4"
+                      size="icon"
+                      aria-label="Send"
+                      className="h-9 w-9 rounded-full bg-primary text-primary-foreground hover:bg-primary/90"
                     >
                       {busy || scanning ? (
                         <Loader2 className="w-4 h-4 animate-spin" />
