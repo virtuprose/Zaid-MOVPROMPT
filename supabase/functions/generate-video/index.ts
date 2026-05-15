@@ -169,9 +169,9 @@ serve(async (req) => {
 
     // Submit new job
     const body = await req.json();
-    const { prompt, provider = "seedance", session_id } = body as {
+    const { prompt, provider = "seedance-v1-pro", session_id } = body as {
       prompt?: string;
-      provider?: keyof typeof FAL_MODELS;
+      provider?: string;
       session_id?: string;
     };
 
@@ -183,7 +183,7 @@ serve(async (req) => {
     }
     const model = FAL_MODELS[provider];
     if (!model) {
-      return new Response(JSON.stringify({ error: "Unknown provider" }), {
+      return new Response(JSON.stringify({ error: `Unknown provider: ${provider}` }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
