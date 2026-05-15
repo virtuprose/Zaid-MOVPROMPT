@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-import { useBrandKit, EMPTY_BRAND_KIT, type BrandKit } from "@/lib/marketing/brandKit";
+import { useBrandKit, EMPTY_BRAND_KIT, analyzeBrandImage, type BrandKit } from "@/lib/marketing/brandKit";
 import type { Subject } from "@/lib/marketingStudio";
 
 export function BrandKitSheet({
