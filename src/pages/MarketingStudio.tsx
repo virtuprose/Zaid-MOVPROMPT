@@ -3,16 +3,15 @@ import { Helmet } from "react-helmet-async";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import {
-  Gift,
-  Smartphone,
   Sparkles,
   Target,
   Globe2,
   Loader2,
   Wand2,
   ChevronDown,
-  Info,
   Heart,
+  Building2,
+  MapPin,
 } from "lucide-react";
 import { TopNav } from "@/components/TopNav";
 import { Button } from "@/components/ui/button";
@@ -35,6 +34,9 @@ import {
   type Subject,
   type StudioPreset,
 } from "@/lib/marketingStudio";
+import { useBrandKit, EMPTY_LOCATION, type LocationInput } from "@/lib/marketing/brandKit";
+import { BrandKitSheet } from "@/components/marketing/BrandKitSheet";
+import { LocationPopover } from "@/components/marketing/LocationPopover";
 import { submitVideoJob } from "@/lib/director/api";
 import loopKitchen from "@/assets/loop-kitchen.mp4.asset.json";
 import loopCyberpunk from "@/assets/loop-cyberpunk.mp4.asset.json";
@@ -62,14 +64,17 @@ export default function MarketingStudio() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
 
-  const [subject, setSubject] = useState<Subject>("product");
+  const { kit: brandKit } = useBrandKit();
+  const subject: Subject = brandKit?.subject ?? "product";
   const [master, setMaster] = useState("");
   const [formatId, setFormatId] = useState<string | undefined>();
   const [hookId, setHookId] = useState<string | undefined>();
   const [settingId, setSettingId] = useState<string | undefined>();
+  const [location, setLocation] = useState<LocationInput>(EMPTY_LOCATION);
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>("All");
 
   const [openPicker, setOpenPicker] = useState<"format" | "hook" | "setting" | null>(null);
+  const [brandOpen, setBrandOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
@@ -82,7 +87,14 @@ export default function MarketingStudio() {
   const hook = find(HOOKS, hookId);
   const setting = find(SETTINGS, settingId);
 
-  const hasInputs = master.trim().length > 0 || formatId || hookId || settingId;
+  const hasInputs =
+    master.trim().length > 0 ||
+    !!formatId ||
+    !!hookId ||
+    !!settingId ||
+    !!brandKit?.name ||
+    !!location.place ||
+    !!location.imagePath;
   const ready = !!(formatId && hookId && settingId);
 
   const startGenerate = () => {
@@ -100,7 +112,26 @@ export default function MarketingStudio() {
   const doGenerate = async () => {
     setSubmitting(true);
     try {
-      const prompt = composeStudioPrompt({ subject, master, formatId, hookId, settingId });
+      const prompt = composeStudioPrompt({
+        subject,
+        master,
+        formatId,
+        hookId,
+        settingId,
+        brand: brandKit
+          ? {
+              name: brandKit.name,
+              description: brandKit.description,
+              url: brandKit.url,
+              tagline: brandKit.tagline,
+              audience: brandKit.audience,
+            }
+          : undefined,
+        location: {
+          place: location.place || undefined,
+          hasImage: !!location.imagePath,
+        },
+      });
       await submitVideoJob(prompt, "seedance-2.0", null, {
         aspect_ratio: "9:16",
         duration: 5,
@@ -166,27 +197,6 @@ export default function MarketingStudio() {
             </p>
           </div>
 
-          {/* Subject selector */}
-          <div className="max-w-md mx-auto mb-5">
-            <div className="inline-flex w-full p-1 rounded-2xl border border-border/50 bg-muted/20">
-              <SubjectSegment
-                icon={<Gift className="w-4 h-4" />}
-                label="Product"
-                active={subject === "product"}
-                onClick={() => setSubject("product")}
-              />
-              <SubjectSegment
-                icon={<Smartphone className="w-4 h-4" />}
-                label="App"
-                active={subject === "app"}
-                onClick={() => setSubject("app")}
-              />
-            </div>
-            <p className="text-center text-xs text-muted-foreground mt-2">
-              What are you advertising?
-            </p>
-          </div>
-
           {/* Composer card */}
           <div className="rounded-3xl border border-border/60 bg-[hsl(240_5%_8%)]/70 backdrop-blur p-4 sm:p-6">
             <Textarea
@@ -198,6 +208,52 @@ export default function MarketingStudio() {
             />
 
             <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-border/30">
+              <PresetChip
+                icon={
+                  brandKit?.logo_url ? (
+                    <img src={brandKit.logo_url} alt="" className="w-4 h-4 rounded-sm object-cover" />
+                  ) : (
+                    <Building2 className="w-3.5 h-3.5" />
+                  )
+                }
+                label="Brand"
+                value={brandKit?.name || undefined}
+                tooltip="Tell the AI what you're advertising"
+                onClick={() => setBrandOpen(true)}
+              />
+
+              <LocationPopover
+                value={location}
+                onChange={setLocation}
+                trigger={
+                  <button
+                    type="button"
+                    className={cn(
+                      "inline-flex items-center gap-1.5 rounded-full border px-3 h-9 text-xs transition-colors",
+                      location.place || location.imagePath
+                        ? "border-[hsl(0_72%_55%)]/50 bg-[hsl(0_72%_55%)]/10 text-foreground"
+                        : "border-border/40 bg-muted/20 text-muted-foreground hover:text-foreground hover:border-border",
+                    )}
+                  >
+                    {location.imageUrl ? (
+                      <img src={location.imageUrl} alt="" className="w-4 h-4 rounded-sm object-cover" />
+                    ) : (
+                      <MapPin className="w-3.5 h-3.5" />
+                    )}
+                    <span className="font-medium">
+                      {location.place
+                        ? `Location: ${location.place}`
+                        : location.imagePath
+                          ? "Location: Custom"
+                          : "Location"}
+                    </span>
+                    <ChevronDown className="w-3.5 h-3.5 opacity-60" />
+                  </button>
+                }
+              />
+
+              <span className="mx-1 h-5 w-px bg-border/50" />
+
               <PresetChip
                 icon={<Sparkles className="w-3.5 h-3.5" />}
                 label="Format"
@@ -216,7 +272,7 @@ export default function MarketingStudio() {
                 icon={<Globe2 className="w-3.5 h-3.5" />}
                 label="Setting"
                 value={setting?.label}
-                tooltip="Where the ad takes place"
+                tooltip="Scene type — kitchen, studio, rooftop"
                 onClick={() => setOpenPicker("setting")}
               />
 
@@ -352,6 +408,8 @@ export default function MarketingStudio() {
           ]}
         />
 
+        <BrandKitSheet open={brandOpen} onOpenChange={setBrandOpen} />
+
         <ConfirmRightsDialog
           open={confirmOpen}
           onCancel={() => setConfirmOpen(false)}
@@ -363,34 +421,6 @@ export default function MarketingStudio() {
         />
       </div>
     </TooltipProvider>
-  );
-}
-
-function SubjectSegment({
-  icon,
-  label,
-  active,
-  onClick,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  active: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        "flex-1 inline-flex items-center justify-center gap-2 h-10 rounded-xl text-sm font-medium transition-all",
-        active
-          ? "bg-[#F5A524] text-black shadow shadow-[#F5A524]/30"
-          : "text-muted-foreground hover:text-foreground",
-      )}
-    >
-      {icon}
-      {label}
-    </button>
   );
 }
 
