@@ -25,6 +25,7 @@ import { VIDEO_MODEL_GROUPS, findVideoModel, type VideoModel } from "@/lib/direc
 import { resolveRecommendation } from "@/lib/director/modelRanking";
 import { VideoOptionsDialog } from "./VideoOptionsDialog";
 import type { VideoOptions } from "@/lib/director/videoModelControls";
+import { useApproval } from "./ApprovalContext";
 
 type Props = {
   title: string;
