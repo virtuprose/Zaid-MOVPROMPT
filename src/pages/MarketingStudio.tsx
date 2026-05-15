@@ -34,6 +34,9 @@ import {
   type Subject,
   type StudioPreset,
 } from "@/lib/marketingStudio";
+import { useBrandKit, EMPTY_LOCATION, type LocationInput } from "@/lib/marketing/brandKit";
+import { BrandKitSheet } from "@/components/marketing/BrandKitSheet";
+import { LocationPopover } from "@/components/marketing/LocationPopover";
 import { submitVideoJob } from "@/lib/director/api";
 import loopKitchen from "@/assets/loop-kitchen.mp4.asset.json";
 import loopCyberpunk from "@/assets/loop-cyberpunk.mp4.asset.json";
