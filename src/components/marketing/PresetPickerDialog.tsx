@@ -90,7 +90,13 @@ export function PresetPickerDialog({
           </div>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 max-h-[60vh] overflow-y-auto pt-2">
+        {locationValue && onLocationChange && (
+          <div className="pt-3">
+            <LocationPanel value={locationValue} onChange={onLocationChange} />
+          </div>
+        )}
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 max-h-[50vh] overflow-y-auto pt-3">
           {filtered.map((p) => {
             const active = p.id === selectedId;
             return (
