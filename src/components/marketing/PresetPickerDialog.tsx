@@ -332,7 +332,7 @@ export function PresetPickerDialog({
                 autoFocus
               />
               <p className="text-[11px] text-muted-foreground">
-                The AI will use this description directly as the setting.
+                The AI will use this description directly.
               </p>
             </div>
           )}
