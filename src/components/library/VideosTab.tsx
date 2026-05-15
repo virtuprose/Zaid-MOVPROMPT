@@ -335,22 +335,40 @@ function VideoJobCard({
             </div>
           </>
         ) : (
-          <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-muted-foreground/70">
+          <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-muted-foreground/70 px-4 text-center">
             {group === "In progress" ? (
               <>
                 <div className="relative">
-                  <Loader2 className="w-10 h-10 animate-spin text-[hsl(35_90%_55%)]" />
-                  <span className="absolute inset-0 rounded-full animate-ping bg-[hsl(35_90%_55%)]/20" />
+                  <Loader2
+                    className={`w-12 h-12 animate-spin ${
+                      health === "stuck" ? "text-destructive" : "text-[hsl(35_90%_55%)]"
+                    }`}
+                  />
+                  <span
+                    className={`absolute inset-0 rounded-full animate-ping ${
+                      health === "stuck" ? "bg-destructive/20" : "bg-[hsl(35_90%_55%)]/20"
+                    }`}
+                  />
                 </div>
-                <span className="text-[11px] font-medium text-[hsl(35_90%_70%)]">Rendering…</span>
-                <span className="text-[10px] text-muted-foreground tabular-nums">
-                  Elapsed {elapsedShort(job.created_at)}
+                <span className="text-xs font-medium text-[hsl(35_90%_70%)]">
+                  {health === "stuck" ? "Render appears stuck" : "Rendering…"}
                 </span>
+                <span className="text-base font-semibold tabular-nums text-foreground">
+                  {elapsedShort(job.created_at)}
+                </span>
+                {health === "slow" && (
+                  <span className="text-[10px] text-[hsl(35_90%_70%)]">Taking longer than expected</span>
+                )}
+                {health === "stuck" && (
+                  <span className="text-[10px] text-destructive">Cancel and retry recommended</span>
+                )}
               </>
             ) : group === "Failed" ? (
               <>
-                <AlertTriangle className="w-10 h-10 text-destructive" />
-                <span className="text-[11px] font-medium text-destructive">{failureReason(job)}</span>
+                <div className="h-12 w-12 rounded-full bg-destructive/15 border border-destructive/40 flex items-center justify-center">
+                  <AlertTriangle className="w-6 h-6 text-destructive" />
+                </div>
+                <span className="text-xs font-semibold text-destructive">{failureReason(job)}</span>
               </>
             ) : (
               <Film className="w-8 h-8" />
