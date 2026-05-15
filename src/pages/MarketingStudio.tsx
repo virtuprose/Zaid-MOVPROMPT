@@ -36,6 +36,7 @@ import {
 } from "@/lib/marketingStudio";
 import { useBrandKit, EMPTY_LOCATION, type LocationInput } from "@/lib/marketing/brandKit";
 import { BrandKitSheet } from "@/components/marketing/BrandKitSheet";
+import { BrandPickerPopover } from "@/components/marketing/BrandPickerPopover";
 import { LocationPopover } from "@/components/marketing/LocationPopover";
 import { submitVideoJob } from "@/lib/director/api";
 import loopKitchen from "@/assets/loop-kitchen.mp4.asset.json";
