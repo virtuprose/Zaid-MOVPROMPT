@@ -210,18 +210,40 @@ export default function MarketingStudio() {
             />
 
             <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-border/30">
-              <PresetChip
-                icon={
-                  brandKit?.logo_url ? (
-                    <img src={brandKit.logo_url} alt="" className="w-4 h-4 rounded-sm object-cover" />
-                  ) : (
-                    <Building2 className="w-3.5 h-3.5" />
-                  )
+              <BrandPickerPopover
+                kits={kits}
+                activeId={brandActiveId}
+                onSelect={(id) => void setBrandActive(id)}
+                onNew={() => {
+                  setBrandEditId(null);
+                  setBrandOpen(true);
+                }}
+                onEdit={(id) => {
+                  setBrandEditId(id);
+                  setBrandOpen(true);
+                }}
+                onDelete={(id) => void deleteBrand(id)}
+                trigger={
+                  <button
+                    type="button"
+                    className={cn(
+                      "inline-flex items-center gap-1.5 rounded-full border px-3 h-9 text-xs transition-colors",
+                      brandKit?.name
+                        ? "border-[hsl(0_72%_55%)]/50 bg-[hsl(0_72%_55%)]/10 text-foreground"
+                        : "border-border/40 bg-muted/20 text-muted-foreground hover:text-foreground hover:border-border",
+                    )}
+                  >
+                    {brandKit?.logo_url ? (
+                      <img src={brandKit.logo_url} alt="" className="w-4 h-4 rounded-sm object-cover" />
+                    ) : (
+                      <Building2 className="w-3.5 h-3.5" />
+                    )}
+                    <span className="font-medium">
+                      {brandKit?.name ? `Brand: ${brandKit.name}` : "Brand"}
+                    </span>
+                    <ChevronDown className="w-3.5 h-3.5 opacity-60" />
+                  </button>
                 }
-                label="Brand"
-                value={brandKit?.name || undefined}
-                tooltip="Tell the AI what you're advertising"
-                onClick={() => setBrandOpen(true)}
               />
 
               <LocationPopover
