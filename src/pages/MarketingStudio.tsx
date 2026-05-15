@@ -37,7 +37,7 @@ import {
 } from "@/lib/marketingStudio";
 import { useBrandKit, EMPTY_LOCATION, type LocationInput } from "@/lib/marketing/brandKit";
 import { BrandKitSheet } from "@/components/marketing/BrandKitSheet";
-import { BrandPickerPopover } from "@/components/marketing/BrandPickerPopover";
+import { BrandsRow } from "@/components/marketing/BrandsRow";
 import { LocationPopover } from "@/components/marketing/LocationPopover";
 import { submitVideoJob } from "@/lib/director/api";
 import loopKitchen from "@/assets/loop-kitchen.mp4.asset.json";
@@ -248,6 +248,21 @@ export default function MarketingStudio() {
             </p>
           </div>
 
+          <BrandsRow
+            kits={kits}
+            activeId={brandActiveId}
+            onSelect={(id) => void setBrandActive(id)}
+            onNew={() => {
+              setBrandEditId(null);
+              setBrandOpen(true);
+            }}
+            onEdit={(id) => {
+              setBrandEditId(id);
+              setBrandOpen(true);
+            }}
+            onDelete={(id) => void deleteBrand(id)}
+          />
+
           {/* Composer card */}
           <div ref={composerRef} className="rounded-3xl border border-border/60 bg-[hsl(240_5%_8%)]/70 backdrop-blur p-4 sm:p-6 scroll-mt-20">
             <Textarea
@@ -259,42 +274,19 @@ export default function MarketingStudio() {
             />
 
             <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-border/30">
-              <BrandPickerPopover
-                kits={kits}
-                activeId={brandActiveId}
-                onSelect={(id) => void setBrandActive(id)}
-                onNew={() => {
-                  setBrandEditId(null);
-                  setBrandOpen(true);
-                }}
-                onEdit={(id) => {
-                  setBrandEditId(id);
-                  setBrandOpen(true);
-                }}
-                onDelete={(id) => void deleteBrand(id)}
-                trigger={
-                  <button
-                    type="button"
-                    className={cn(
-                      "inline-flex items-center gap-1.5 rounded-full border px-3 h-9 text-xs transition-colors",
-                      brandKit?.name
-                        ? "border-[hsl(0_72%_55%)]/50 bg-[hsl(0_72%_55%)]/10 text-foreground"
-                        : "border-border/40 bg-muted/20 text-muted-foreground hover:text-foreground hover:border-border",
-                    )}
-                  >
-                    {brandKit?.logo_url ? (
-                      <img src={brandKit.logo_url} alt="" className="w-4 h-4 rounded-sm object-cover" />
-                    ) : (
-                      <Building2 className="w-3.5 h-3.5" />
-                    )}
-                    <span className="font-medium">
-                      {brandKit?.name ? `Brand: ${brandKit.name}` : "Brand"}
-                    </span>
-                    <ChevronDown className="w-3.5 h-3.5 opacity-60" />
-                  </button>
-                }
-              />
-
+              {brandKit?.name && (
+                <div
+                  className="inline-flex items-center gap-1.5 rounded-full border border-[hsl(0_72%_55%)]/50 bg-[hsl(0_72%_55%)]/10 px-3 h-9 text-xs text-foreground"
+                  title="Active brand"
+                >
+                  {brandKit.logo_url ? (
+                    <img src={brandKit.logo_url} alt="" className="w-4 h-4 rounded-sm object-cover" />
+                  ) : (
+                    <Building2 className="w-3.5 h-3.5" />
+                  )}
+                  <span className="font-medium">Brand: {brandKit.name}</span>
+                </div>
+              )}
               <LocationPopover
                 value={location}
                 onChange={setLocation}

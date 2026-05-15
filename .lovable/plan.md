@@ -1,50 +1,43 @@
 ## Goal
 
-Polish the New / Edit brand modal so it looks intentional and matches the rest of the cinematic UI (right now it reads as raw form fields stacked in a tall scroller).
+Make saved brands immediately visible and selectable on `/marketing` via a "Your brands" row above the composer. Remove the hidden Brand picker popover.
 
-## Issues in the current screenshot
+## New "Your brands" row
 
-1. Modal body scrolls together with header & footer — footer drifts away on long forms.
-2. Blue browser focus ring on the active "Upload image" toggle clashes with amber accent.
-3. Logo upload area: tiny placeholder square + bare "Upload" button + cramped helper text. No drop zone, no visual weight.
-4. Toggle pills (Type, Image source) have inconsistent height/padding versus the rest of the form, and the active state uses a harsh solid-amber pill that fights the field labels above it.
-5. Field labels are too prominent (uppercase amber-leaning) and inputs are under-styled, so the rhythm feels broken.
-6. Footer: ghost "Cancel" sized equal to "Save brand" makes secondary action too heavy; no separator.
+Placed between the page heading and the composer card (`MarketingStudio.tsx`, just before `composerRef`):
 
-## Changes
+- Section header: small uppercase label "YOUR BRANDS" with a count chip on the right (e.g. "3 saved").
+- Horizontal scroll row of brand cards (`flex gap-3 overflow-x-auto pb-1`).
+- Each brand card (~140px wide, ~96px tall):
+  - Logo thumbnail (48×48 rounded) + brand name + subject tag (Product / App).
+  - Hover: subtle amber border. Active: amber border + amber check badge top-right.
+  - Click anywhere on the card → `setBrandActive(id)`.
+  - Small ⋯ menu (or hover-only Pencil + Trash icons in the corner) for Edit / Delete.
+- Trailing "+ New brand" tile (dashed border, same dimensions, amber on hover) → opens BrandKitSheet in create mode.
+- Empty state (no kits saved): single full-width tile "Add your first brand — we'll reuse the logo, tagline & description on every ad" with a primary "+ New brand" button.
 
-### Layout
-- Convert `DialogContent` into a 3-row flex column: sticky header, scrollable body (`flex-1 overflow-y-auto`), sticky footer with top border.
-- Tighten width to `max-w-[520px]`, body padding `px-6 py-5`, footer `px-6 py-4 border-t border-border/60`.
+New small component: `src/components/marketing/BrandsRow.tsx` that wraps the card list and the new/edit/delete callbacks. It reuses the existing `useBrandKit` data passed in as props (kits, activeId, handlers).
 
-### Header
-- Keep title + description, drop the extra top margin, add a thin divider under the header.
+## Composer cleanup
 
-### Segmented toggles (Type, Image source)
-- Use a single shared `Segmented` component: rounded-lg track `bg-secondary/40 border border-border/60 p-1`, equal-width buttons `h-9`, active state = `bg-accent text-accent-foreground shadow-sm`, inactive = `text-muted-foreground hover:text-foreground`.
-- Remove default focus ring; use `focus-visible:ring-1 focus-visible:ring-accent/60`.
+In the composer card's filter row (`MarketingStudio.tsx` lines ~262-296):
+- Remove the `BrandPickerPopover` and its trigger button entirely.
+- Keep the active brand visible in the composer as a tiny non-interactive chip (logo + "Brand: Name") so users know what's selected while typing — clicking it scrolls to the BrandsRow. If no brand is active, hide the chip.
 
-### Logo / image picker
-- Replace the current 80px square + button row with a single drop-zone card: full-width, dashed border `border-dashed border-border hover:border-accent/60`, height ~140px, centered icon + "Drag & drop or click to upload" + subline "PNG, JPG, WEBP — up to 5 MB".
-- When an image exists: show it as a 96px rounded thumbnail on the left, file name + Replace / Remove buttons on the right, no dashed border.
-- URL mode: same card height, single Input with leading link icon and a small "Use URL" button on the right; helper text below.
+The `BrandPickerPopover.tsx` file stays in the codebase (not deleted) in case it's referenced elsewhere, but is no longer rendered in the marketing page.
 
-### Field labels & inputs
-- Lowercase-styled labels: `text-[11px] font-medium text-muted-foreground` (drop uppercase tracking for body fields, keep uppercase only for the two segmented section labels).
-- Inputs/Textarea: `bg-secondary/30 border-border/60 focus-visible:border-accent/60 focus-visible:ring-1 focus-visible:ring-accent/30`.
-- Textarea: min-h-[96px], show character counter inline-right under the field when `max` is set.
+## State / data
 
-### AI status chip
-- Pill style `inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-accent/10 text-accent text-[11px]` instead of plain text.
-
-### Footer
-- Sticky inside `DialogContent`, with a faint top border.
-- Layout: `Delete` (only when editing) on the left as a subtle ghost-destructive link, then `flex-1 spacer`, then `Cancel` (ghost, auto width) and `Save brand` (amber, `min-w-[140px]`) on the right — Save no longer stretches half the footer.
+- No backend or schema changes. Reuses `useBrandKit()` (kits, activeId, setActive, deleteKit) and the existing `BrandKitSheet` for create/edit.
+- `setActive` already persists to `brand_kit_selection`, so selection survives reloads.
 
 ## Out of scope
-- No changes to brand state, validation, AI auto-fill behavior, upload logic, or the parent picker.
-- No new fields.
+
+- BrandKitSheet form layout (already polished).
+- Brand kit data model.
+- Other marketing-page sections (location picker, format picker, etc.).
 
 ## Files
 
-- `src/components/marketing/BrandKitSheet.tsx` — only file touched.
+- New: `src/components/marketing/BrandsRow.tsx`
+- Edit: `src/pages/MarketingStudio.tsx` (insert BrandsRow, remove BrandPickerPopover usage, replace with passive selected-brand chip)
