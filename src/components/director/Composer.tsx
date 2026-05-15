@@ -101,6 +101,55 @@ export function Composer({ value, onChange, attachments, onAttachmentsChange, on
     return <FileText className="w-5 h-5" />;
   };
 
+  // @-mention picker state
+  const [mention, setMention] = useState<{ query: string; start: number; index: number } | null>(null);
+  const filteredMentions = mention
+    ? attachments
+        .map((a, i) => ({ a, i }))
+        .filter(({ a, i }) => {
+          const q = mention.query.toLowerCase();
+          if (!q) return true;
+          return String(i + 1).startsWith(q) || a.name.toLowerCase().includes(q);
+        })
+    : [];
+
+  const detectMention = (text: string, caret: number) => {
+    const upto = text.slice(0, caret);
+    const m = upto.match(/(?:^|\s)@([\w.-]*)$/);
+    if (!m) return null;
+    const start = caret - m[1].length - 1; // position of '@'
+    return { query: m[1], start, index: 0 };
+  };
+
+  const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const text = e.target.value;
+    onChange(text);
+    const caret = e.target.selectionStart ?? text.length;
+    if (attachments.length === 0) {
+      setMention(null);
+      return;
+    }
+    setMention(detectMention(text, caret));
+  };
+
+  const insertMention = (attachmentIndex: number) => {
+    if (!mention) return;
+    const caretEnd = taRef.current?.selectionStart ?? value.length;
+    const before = value.slice(0, mention.start);
+    const after = value.slice(caretEnd);
+    const token = `@${attachmentIndex + 1} `;
+    const next = before + token + after;
+    onChange(next);
+    setMention(null);
+    requestAnimationFrame(() => {
+      const ta = taRef.current;
+      if (!ta) return;
+      const pos = (before + token).length;
+      ta.focus();
+      ta.setSelectionRange(pos, pos);
+    });
+  };
+
   const highlight = drag || pageDrag;
 
   return (
@@ -129,18 +178,78 @@ export function Composer({ value, onChange, attachments, onAttachmentsChange, on
           <textarea
             ref={taRef}
             value={value}
-            onChange={(e) => onChange(e.target.value)}
+            onChange={handleTextChange}
+            onKeyUp={(e) => {
+              const ta = e.currentTarget;
+              if (attachments.length === 0) return;
+              setMention(detectMention(ta.value, ta.selectionStart ?? ta.value.length));
+            }}
+            onBlur={() => setTimeout(() => setMention(null), 150)}
             onKeyDown={(e) => {
+              if (mention && filteredMentions.length > 0) {
+                if (e.key === "ArrowDown") {
+                  e.preventDefault();
+                  setMention({ ...mention, index: (mention.index + 1) % filteredMentions.length });
+                  return;
+                }
+                if (e.key === "ArrowUp") {
+                  e.preventDefault();
+                  setMention({
+                    ...mention,
+                    index: (mention.index - 1 + filteredMentions.length) % filteredMentions.length,
+                  });
+                  return;
+                }
+                if (e.key === "Enter" || e.key === "Tab") {
+                  e.preventDefault();
+                  insertMention(filteredMentions[mention.index].i);
+                  return;
+                }
+                if (e.key === "Escape") {
+                  e.preventDefault();
+                  setMention(null);
+                  return;
+                }
+              }
               if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
                 e.preventDefault();
                 if (!busy) onSend();
               }
             }}
-            placeholder="What are you making? Describe the mood, action, and setting — or drop your references."
+            placeholder="What are you making? Describe the mood, action, and setting — or drop your references. Type @ to reference a file."
             rows={2}
             disabled={busy}
             className="w-full resize-none bg-transparent px-4 pt-3 pb-2 text-sm leading-relaxed placeholder:text-muted-foreground focus:outline-none min-h-[64px]"
           />
+
+          {mention && filteredMentions.length > 0 && (
+            <div className="absolute left-3 right-3 z-20 -translate-y-full mt-[-6px] top-0 max-h-56 overflow-auto rounded-lg border border-border bg-popover shadow-lg">
+              <div className="px-2 py-1 text-[10px] uppercase tracking-wider text-muted-foreground">
+                Reference files
+              </div>
+              {filteredMentions.map(({ a, i }, fi) => (
+                <button
+                  key={i}
+                  type="button"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    insertMention(i);
+                  }}
+                  className={`flex w-full items-center gap-2 px-2 py-1.5 text-left text-sm ${
+                    fi === mention.index ? "bg-accent/15 text-accent" : "hover:bg-muted"
+                  }`}
+                >
+                  <span className="inline-flex h-5 min-w-[20px] items-center justify-center rounded bg-accent/20 px-1 text-[11px] font-semibold text-accent">
+                    @{i + 1}
+                  </span>
+                  {isImageLike(a) && "url" in a && (
+                    <img src={(a as any).url} alt="" className="h-6 w-6 rounded object-cover" />
+                  )}
+                  <span className="truncate">{a.name}</span>
+                </button>
+              ))}
+            </div>
+          )}
 
           {(attachments.length > 0 || pendingCount > 0) && (
             <div className="flex flex-wrap gap-2 px-3 pb-2">
@@ -148,6 +257,9 @@ export function Composer({ value, onChange, attachments, onAttachmentsChange, on
                 <Tooltip key={i}>
                   <TooltipTrigger asChild>
                     <div className="group relative h-16 w-16 overflow-hidden rounded-lg bg-muted ring-1 ring-border">
+                      <span className="absolute left-0.5 top-0.5 z-10 inline-flex h-4 min-w-[16px] items-center justify-center rounded bg-accent px-1 text-[10px] font-semibold text-accent-foreground shadow">
+                        {i + 1}
+                      </span>
                       {isImageLike(a) && "url" in a ? (
                         <img
                           src={(a as any).url}

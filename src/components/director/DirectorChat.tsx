@@ -333,7 +333,20 @@ export function DirectorChat() {
                       : "bg-[hsl(240_5%_9%)] border border-[hsl(240_5%_13%)] rounded-bl-sm"
                   }`}
                 >
-                  {b.content}
+                  {isUser
+                    ? b.content.split(/(@\d+)/g).map((part, k) =>
+                        /^@\d+$/.test(part) ? (
+                          <span
+                            key={k}
+                            className="inline-flex items-center rounded bg-accent/25 px-1 text-[12px] font-semibold text-accent"
+                          >
+                            {part}
+                          </span>
+                        ) : (
+                          <span key={k}>{part}</span>
+                        ),
+                      )
+                    : b.content}
                 </div>
                 {isUser && b.role === "user" && b.attachments && b.attachments.length > 0 && (
                   <div className="flex flex-wrap gap-1.5 max-w-[85%] justify-end">
@@ -359,8 +372,11 @@ export function DirectorChat() {
                               )}
                             </div>
                           )}
-                          <span className="text-[11px] text-muted-foreground max-w-[140px] truncate">
-                            {a.name}
+                          <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground max-w-[160px] truncate">
+                            <span className="inline-flex h-4 min-w-[16px] items-center justify-center rounded bg-accent/20 px-1 text-[10px] font-semibold text-accent">
+                              @{j + 1}
+                            </span>
+                            <span className="truncate">{a.name}</span>
                           </span>
                         </div>
                       );
