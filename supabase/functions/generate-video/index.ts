@@ -20,10 +20,15 @@ const FAL_MODELS: Record<string, string> = {
   "kling-v1-pro": "fal-ai/kling-video/v1/pro/text-to-video",
   "kling-v1-standard": "fal-ai/kling-video/v1/standard/text-to-video",
   // Veo
+  "veo-3.1": "fal-ai/veo3.1",
+  "veo-3.1-fast": "fal-ai/veo3.1/fast",
+  "veo-3.1-lite": "fal-ai/veo3.1/lite",
   "veo-3": "fal-ai/veo3",
   "veo-3-fast": "fal-ai/veo3/fast",
   "veo-2": "fal-ai/veo2",
   // Seedance
+  "seedance-2.0": "fal-ai/bytedance/seedance-2.0/text-to-video",
+  "seedance-2.0-fast": "fal-ai/bytedance/seedance-2.0/fast/text-to-video",
   "seedance-v1-pro": "fal-ai/bytedance/seedance/v1/pro/text-to-video",
   "seedance-v1-lite": "fal-ai/bytedance/seedance/v1/lite/text-to-video",
   // Hailuo / MiniMax

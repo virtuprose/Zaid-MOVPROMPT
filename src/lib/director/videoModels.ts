@@ -33,7 +33,10 @@ export const VIDEO_MODEL_GROUPS: VideoModelGroup[] = [
   {
     label: "Google — Veo",
     models: [
-      { id: "veo-3", label: "Veo 3", family: "veo", note: "Native synced audio" },
+      { id: "veo-3.1", label: "Veo 3.1", family: "veo", note: "Latest, native audio" },
+      { id: "veo-3.1-fast", label: "Veo 3.1 Fast", family: "veo" },
+      { id: "veo-3.1-lite", label: "Veo 3.1 Lite", family: "veo", note: "Faster, lower cost" },
+      { id: "veo-3", label: "Veo 3", family: "veo" },
       { id: "veo-3-fast", label: "Veo 3 Fast", family: "veo" },
       { id: "veo-2", label: "Veo 2", family: "veo" },
     ],
@@ -41,6 +44,8 @@ export const VIDEO_MODEL_GROUPS: VideoModelGroup[] = [
   {
     label: "ByteDance — Seedance",
     models: [
+      { id: "seedance-2.0", label: "Seedance 2.0", family: "seedance", note: "Cinematic, native audio" },
+      { id: "seedance-2.0-fast", label: "Seedance 2.0 Fast", family: "seedance" },
       { id: "seedance-v1-pro", label: "Seedance 1 Pro", family: "seedance" },
       { id: "seedance-v1-lite", label: "Seedance 1 Lite", family: "seedance", note: "Faster, lower cost" },
     ],

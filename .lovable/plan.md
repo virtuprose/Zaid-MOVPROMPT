@@ -1,85 +1,69 @@
-# AI Director — Production Hardening
+## Goal
 
-Six upgrades to take the Director from MVP to production-solid. Each is independently shippable; recommended order below.
+Add Seedance 2.0 (full + Fast) and Veo 3.1 (full + Fast + Lite) to the Director's "Generate video" picker so users can render with the latest models from both families.
 
-## 1. Session persistence
+## What's available on fal.ai
 
-Today: chat lives only in component state. Refresh = lost.
+Confirmed via fal.ai docs:
 
-**DB:** new tables
-- `director_sessions` — `id, user_id, title, created_at, updated_at`
-- `director_messages` — `id, session_id, role, content, attachments jsonb, result jsonb, created_at`
+- `bytedance/seedance-2.0/text-to-video` — full quality, native audio, multi-shot
+- `bytedance/seedance-2.0/fast/text-to-video` — faster / cheaper variant
+- `fal-ai/veo3.1` — Google Veo 3.1 with sound
+- `fal-ai/veo3.1/fast` — faster variant of Veo 3.1
+- `fal-ai/veo3.1/lite` — lightweight, cost-effective variant
 
-RLS: owner-only via `auth.uid() = user_id` on sessions; messages joined through session.
+Note on the existing `fal-ai/veo3` IDs: the live fal endpoints are `fal-ai/veo3` and `fal-ai/veo3/fast`. We will keep them but reorder so Veo 3.1 sits above Veo 3 in the dropdown.
 
-**UI:**
-- Left rail on `/director` listing recent sessions (title from `generate_prompt.title`, fallback "Untitled brief").
-- New "+" button starts a fresh session.
-- `DirectorChat` loads/saves messages by `sessionId` (URL: `/director/:sessionId`).
-- Auto-create a session on first user message; auto-title from the first prompt result.
+## Files to touch
 
-## 2. Signed-URL image uploads (replace data URLs)
+### 1. `src/lib/director/videoModels.ts` (frontend registry)
 
-Today: 4 MB images are inlined as base64 → 33% bloat, single request can hit 40 MB.
+Update the Veo and Seedance groups so the picker shows the new entries first:
 
-**Change:**
-- `ingestImage` and `ingestVideo` upload originals/keyframes to the existing `director-uploads` bucket under `{userId}/{sessionId}/{ts}-{name}`.
-- Return `{ kind, name, url }` where `url` is a **signed URL** (1 hr TTL) created via `supabase.storage.from('director-uploads').createSignedUrl(path, 3600)`.
-- Edge function already accepts `url` — no server change needed beyond confirming the AI Gateway can fetch signed URLs (it can; they are plain HTTPS).
-- Add a cleanup edge function `director-cleanup` invoked nightly (or on session delete) to purge orphan files older than 7 days.
+```text
+Google — Veo
+  veo-3.1            Veo 3.1                (note: "Latest, native audio")
+  veo-3.1-fast       Veo 3.1 Fast
+  veo-3.1-lite       Veo 3.1 Lite           (note: "Faster, lower cost")
+  veo-3              Veo 3
+  veo-3-fast         Veo 3 Fast
+  veo-2              Veo 2
 
-## 3. Real audio transcription
+ByteDance — Seedance
+  seedance-2.0       Seedance 2.0           (note: "Cinematic, native audio")
+  seedance-2.0-fast  Seedance 2.0 Fast
+  seedance-v1-pro    Seedance 1 Pro
+  seedance-v1-lite   Seedance 1 Lite
+```
 
-Today: audio uploads but the model only sees a placeholder string.
+Also update `pickRecommendedModel` so a recommendation string like "Veo 3.1" or "Seedance 2.0" maps to the new top entry instead of falling through to the older Veo 3 / Seedance 1.
 
-**Change:**
-- New edge function `transcribe-audio` that downloads the uploaded file from `director-uploads` and calls **Lovable AI Gateway** with `google/gemini-2.5-flash` as a multimodal request (audio input → text). No external Whisper key needed.
-- `ingestAudio` uploads the file, calls `transcribe-audio`, and returns `{ kind: "audio_transcript", name, text: <real transcript> }`.
-- Show a "Transcribing…" chip in the composer while it runs; fail-soft to placeholder if transcription errors.
+### 2. `supabase/functions/generate-video/index.ts` (FAL_MODELS map)
 
-## 4. Streaming responses
+Add the matching entries (keep the existing ones intact so saved jobs still resolve):
 
-Today: single blocking request; user stares at a spinner for ~5–15 s on `gemini-3.1-pro-preview`.
+```ts
+// Veo
+"veo-3.1":         "fal-ai/veo3.1",
+"veo-3.1-fast":    "fal-ai/veo3.1/fast",
+"veo-3.1-lite":    "fal-ai/veo3.1/lite",
+// Seedance
+"seedance-2.0":      "bytedance/seedance-2.0/text-to-video",
+"seedance-2.0-fast": "bytedance/seedance-2.0/fast/text-to-video",
+```
 
-**Change:**
-- Switch `director-agent` to `stream: true`, return the gateway's SSE body directly with `Content-Type: text/event-stream`.
-- Frontend uses the line-by-line SSE parser pattern (per the AI Gateway streaming guide).
-- Streaming + tool calls: accumulate `tool_calls[0].function.arguments` deltas as they arrive; once `[DONE]`, parse the assembled JSON and dispatch to `PromptResultCard` / clarification UI.
-- Show a skeleton card that progressively fills as fields arrive (title → prompt → breakdown → director's note).
+The existing submit/poll flow already POSTs `{ prompt }` to `https://queue.fal.run/${model}` and polls `…/requests/${id}/status`, which works for all five new endpoints — no other backend changes required.
 
-## 5. Ship real video generation (or remove the seam)
+### 3. Optional: prompt-expert hint
 
-Today: `request_video_generation` returns "coming soon". `FAL_KEY` secret is already configured.
+The Veo expert in `supabase/functions/generate-prompt/experts/veo.ts` already mentions 3.1 — no edit required. The Seedance expert (`experts/seedance.ts`) currently targets v1; we can update its `matches` predicate to also cover `seedance-2`, but this is a follow-up and not blocking the picker change.
 
-**Change:** wire it up.
-- New edge function `generate-video` — accepts `{ prompt, provider, aspect_ratio, duration }`, calls fal.ai (`fal-ai/seedance/v1/pro`, `fal-ai/veo3`, or `fal-ai/kling-video/v2`) with the user's prompt.
-- Returns a job id; poll for completion (fal exposes a queue API).
-- New table `video_jobs` — `id, user_id, session_id, message_id, provider, prompt, status, video_url, error, created_at, completed_at`. RLS owner-only.
-- `PromptResultCard` gets a "Generate this video" button → calls the function → shows progress + final `<video>` player when done.
-- `request_video_generation` tool in the agent now triggers this flow instead of returning the placeholder.
+## Out of scope
 
-## 6. Retry, backoff, and dynamic model list
+- Image-to-video and reference-to-video endpoints (Seedance 2.0 has both, Veo 3.1 has image-to-video and first-last-frame). The current Director only does text-to-video; adding I2V is a separate flow.
+- Per-model parameter UIs (`duration`, `resolution`, `generate_audio`, `aspect_ratio`). Today we send `{ prompt }` only; exposing controls is a separate UX task.
+- Changing the legacy `seedance` / `veo` / `kling` aliases.
 
-- Wrap the AI Gateway call in a 2-attempt retry with 500 ms / 1.5 s backoff for 5xx and transient network errors. Never retry on 402/429 — surface those directly.
-- Move the hard-coded `Seedance Pro / Veo 3 / Kling 2` list out of the system prompt into a constant injected at request time, so adding a new provider only requires updating one array.
+## Verification
 
-## Out of scope (intentionally)
-
-- **Distributed rate limiting** — backend doesn't have proper primitives yet; keep the existing in-memory limiter as best-effort.
-- Multi-user collaboration on a session.
-- Versioning/branching of prompt results inside a session (can be added later via `parent_message_id`).
-
-## Technical details
-
-**Migrations:** 2 new tables (`director_sessions`, `director_messages`, `video_jobs`) with RLS policies using `auth.uid() = user_id`. No triggers needed; `updated_at` maintained by client on write.
-
-**Edge functions to add:** `transcribe-audio`, `generate-video`, `director-cleanup`. Modify: `director-agent` (streaming + retry + dynamic providers).
-
-**Files touched (frontend):**
-- `src/lib/director/ingest.ts` — uploads + signed URLs + transcription call
-- `src/lib/director/api.ts` — SSE streaming client
-- `src/pages/Director.tsx` — session routing + sidebar
-- `src/components/director/DirectorChat.tsx` — load/save by session, progressive rendering
-- `src/components/director/PromptResultCard.tsx` — "Generate video" CTA + job polling
-
-**Recommended ship order:** 1 (persistence) → 2 (signed URLs) → 4 (streaming) → 3 (transcription) → 5 (video gen) → 6 (retries). Each PR independently testable.
+After the edit, the dropdown on every result card shows Veo 3.1 / 3.1 Fast / 3.1 Lite at the top of Google and Seedance 2.0 / 2.0 Fast at the top of ByteDance. Picking any of them creates a `video_jobs` row, fal accepts the request, and polling completes with an MP4 URL.
