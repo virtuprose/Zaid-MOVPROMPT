@@ -227,26 +227,51 @@ export default function Director() {
                 )}
                 {sessions.map((s) => {
                   const active = s.id === sessionId;
+                  const dotColor =
+                    s.status === "completed"
+                      ? "bg-emerald-500"
+                      : s.status === "in_progress"
+                        ? "bg-amber-500 animate-pulse"
+                        : "bg-muted-foreground/40";
+                  const ts = new Date(s.updated_at);
+                  const tsLabel = ts.toLocaleString(undefined, {
+                    month: "short",
+                    day: "numeric",
+                    hour: "numeric",
+                    minute: "2-digit",
+                  });
                   return (
                     <div
                       key={s.id}
+                      title={tsLabel}
                       className={cn(
-                        "group relative flex items-center gap-1.5 pl-3 pr-1 py-1.5 rounded-full border text-xs transition-colors cursor-pointer",
+                        "group relative flex items-center gap-2 pl-3 pr-1 py-1.5 rounded-lg border text-xs transition-colors cursor-pointer",
                         active
-                          ? "bg-muted/60 border-border text-foreground"
-                          : "border-border/40 text-foreground/80 hover:bg-muted/40 hover:text-foreground",
+                          ? "bg-[#1a1a1f] border-l-2 border-l-accent border-y-border/40 border-r-border/40 text-foreground"
+                          : "border-border/30 text-foreground/80 hover:bg-muted/30 hover:text-foreground",
                       )}
                       onClick={() => navigate(`/director/${s.id}`)}
                     >
+                      {/* Thumbnail */}
+                      <div className="shrink-0 w-6 h-6 rounded overflow-hidden bg-muted/40 border border-border/40 flex items-center justify-center">
+                        {s.thumbnail ? (
+                          <img src={s.thumbnail} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <MessageSquare className="w-3 h-3 text-muted-foreground/60" />
+                        )}
+                      </div>
+                      {/* Status dot */}
+                      <span
+                        className={cn("shrink-0 w-1.5 h-1.5 rounded-full", dotColor)}
+                        aria-label={s.status}
+                      />
                       {s.pinned && (
                         <Pin className="w-3 h-3 shrink-0 text-accent fill-current -rotate-45" />
                       )}
                       <span className="truncate flex-1">{s.title || "Untitled brief"}</span>
-                      {s.needsReply && (
-                        <span className="shrink-0 text-[10px] px-2 py-0.5 rounded-full bg-accent/15 text-accent border border-accent/30 whitespace-nowrap">
-                          Needs reply
-                        </span>
-                      )}
+                      <span className="hidden group-hover:inline shrink-0 text-[10px] text-muted-foreground/70 whitespace-nowrap">
+                        {tsLabel}
+                      </span>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <button
