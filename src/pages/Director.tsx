@@ -284,7 +284,7 @@ export default function Director() {
               disabled={!renameValue.trim()}
               className="rounded-full bg-primary/15 text-primary border border-primary/30 hover:bg-primary/25"
             >
-              Save name
+              Save
             </Button>
           </DialogFooter>
         </DialogContent>
