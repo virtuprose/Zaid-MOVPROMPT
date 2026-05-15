@@ -20,8 +20,37 @@ function rateLimited(ip: string) {
   return false;
 }
 
-// Editable in one place
-const VIDEO_MODELS = ["Seedance Pro", "Veo 3", "Kling 2"];
+// Compact catalog the LLM uses to pick a concrete model id. Keep in sync with
+// src/lib/director/videoModelCatalog.ts on the frontend.
+const MODEL_CATALOG_LINES = [
+  "kling-v2.5-turbo-pro — kling, 10s, 1080p, no-audio, photoreal+complex_motion+long_take+action",
+  "kling-v2.1-master — kling, 10s, 1080p, no-audio, cinematic+photoreal+complex_motion+long_take",
+  "kling-v2-master — kling, 10s, 1080p, no-audio, cinematic+photoreal+complex_motion",
+  "kling-v1.6-pro — kling, 10s, 1080p, no-audio, photoreal+stable_subject",
+  "kling-v1.6-standard — kling, 10s, 720p, no-audio, photoreal+stable_subject",
+  "kling-v1.5-pro — kling, 10s, 1080p, no-audio, photoreal",
+  "kling-v1-pro — kling, 10s, 720p, no-audio, photoreal",
+  "kling-v1-standard — kling, 10s, 720p, no-audio, photoreal",
+  "veo-3.1 — veo, 8s, 1080p, AUDIO, photoreal+cinematic+dialogue+complex_motion+text_in_frame",
+  "veo-3.1-fast — veo, 8s, 1080p, AUDIO, photoreal+dialogue+complex_motion",
+  "veo-3.1-lite — veo, 8s, 1080p, AUDIO, photoreal+dialogue (16:9/9:16 only)",
+  "veo-3 — veo, 8s, 1080p, AUDIO, photoreal+cinematic+dialogue (16:9/9:16 only)",
+  "veo-3-fast — veo, 8s, 1080p, AUDIO, photoreal+dialogue (16:9/9:16 only)",
+  "veo-2 — veo, 8s, 720p, no-audio, photoreal+cinematic",
+  "seedance-2.0 — seedance, 10s, 1080p, AUDIO, cinematic+photoreal+film_grain+portrait+dialogue",
+  "seedance-2.0-fast — seedance, 10s, 1080p, AUDIO, cinematic+photoreal+film_grain",
+  "seedance-v1-pro — seedance, 10s, 1080p, no-audio, cinematic+film_grain+portrait",
+  "seedance-v1-lite — seedance, 10s, 720p, no-audio, cinematic+stylized",
+  "hailuo-02-pro — hailuo, 10s, 1080p, no-audio, stylized+portrait+anime+complex_motion (16:9 only)",
+  "hailuo-02-standard — hailuo, 6s, 768p, no-audio, stylized+portrait+anime (16:9 only)",
+  "hailuo-01 — hailuo, 6s, 768p, no-audio, stylized+anime (16:9 only)",
+  "runway-gen3-turbo — runway, 10s, 720p, no-audio, cinematic+photoreal+stylized",
+  "ltx-video-13b — ltx, 5s, 720p, no-audio, stylized+stable_subject",
+  "ltx-video — ltx, 5s, 720p, no-audio, stylized",
+  "wan-pro — wan, 10s, 720p, no-audio, photoreal+stylized",
+  "wan-v2.2-a14b — wan, 10s, 720p, no-audio, stylized",
+];
+const MODEL_IDS = MODEL_CATALOG_LINES.map((l) => l.split(" — ")[0]);
 
 const SYSTEM_PROMPT = `You are an AI Director — a professional cinematographer and creative director who turns a user's brief into a polished, production-ready cinematic prompt for AI video generation.
 
@@ -38,14 +67,21 @@ WHEN YOU GENERATE A PROMPT:
 - The \`prompt\` field is the final cinematic prompt the user will paste into a video model. Write it as a single dense paragraph (60–140 words), packed with concrete visual detail: subject + action, camera (lens, angle, movement), lighting (key/fill/practicals, time of day, color temp), environment, mood, color palette, film/look reference if relevant.
 - The \`breakdown\` is a structured snapshot of your decisions for the user to scan and tweak.
 - ALWAYS fill \`breakdown.negative_prompt\` with concrete things to avoid (face artifacts, motion blur, text/watermark, modern items if vintage, etc).
-- ALWAYS fill \`breakdown.model_recommendation\` with one of: ${VIDEO_MODELS.join(", ")}, plus a 4–8 word reason. Pick what genuinely fits the shot.
+- ALWAYS fill \`breakdown.recommended_model_id\` with EXACTLY ONE id from the AVAILABLE MODELS list below. Do NOT invent ids. Pick based on capability fit (audio needs, max duration, aesthetic strengths).
+- ALWAYS fill \`breakdown.recommended_alternatives\` with 2 backup ids from the same list, ranked by suitability.
+- ALWAYS fill \`breakdown.recommendation_reason\` with one sentence explaining the pick (e.g. "Native audio + 8s dialogue support").
+- ALWAYS fill \`breakdown.model_recommendation\` with a friendly one-line label + reason for display (the structured ids above are the source of truth, this is for humans).
 - ALWAYS fill \`breakdown.film_emulation\` if a film/look reference is implied (stock + grade), otherwise leave blank.
 - Always be opinionated. If the brief is vague, MAKE strong creative choices and explain them in \`directors_note\`.
+
+═══ AVAILABLE MODELS (id — family, max duration, max resolution, audio?, strengths) ═══
+${MODEL_CATALOG_LINES.join("\n")}
 
 NEVER:
 - Output the prompt as plain assistant text. Always use a tool.
 - Invent details that contradict the user's references.
-- Ask for information you can already infer from the references.`;
+- Ask for information you can already infer from the references.
+- Use any model id outside the list above.`;
 
 const TOOLS = [
   {
@@ -108,10 +144,26 @@ const TOOLS = [
               model_recommendation: {
                 type: "string",
                 description:
-                  "Single short line: which model fits best and why (e.g. 'Seedance Pro — best for portrait + film grain').",
+                  "Friendly one-line label + reason for display (e.g. 'Seedance 2.0 — cinematic + native audio').",
+              },
+              recommended_model_id: {
+                type: "string",
+                enum: MODEL_IDS,
+                description: "EXACT model id from the AVAILABLE MODELS list. Source of truth for the picker.",
+              },
+              recommended_alternatives: {
+                type: "array",
+                minItems: 0,
+                maxItems: 3,
+                items: { type: "string", enum: MODEL_IDS },
+                description: "Up to 3 backup model ids, ranked.",
+              },
+              recommendation_reason: {
+                type: "string",
+                description: "One short sentence explaining the model choice.",
               },
             },
-            required: ["subject", "camera", "lighting", "mood", "negative_prompt", "model_recommendation"],
+            required: ["subject", "camera", "lighting", "mood", "negative_prompt", "model_recommendation", "recommended_model_id"],
             additionalProperties: false,
           },
           directors_note: {
