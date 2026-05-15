@@ -1,74 +1,46 @@
-# Ads Studio — Brand kit & Location inputs
+## Auto-fill brand kit from uploaded logo/product image
 
-Add two new structured inputs to the composer, sitting next to Format / Hook / Setting as dropdown chips. They feed into the prompt builder so the AI knows **what** is being advertised and **where in the world** the ad lives.
+When a user uploads an image in the **Your brand** sheet, run it through Lovable AI vision and auto-populate **Name**, **One-line description**, and **Tagline**. User can still edit any field before saving.
 
-## 1. New chips in the composer
+### UX
 
-Order, left → right:
+1. User picks "Upload image" mode and selects a file in `BrandKitSheet`.
+2. Image uploads to storage as today.
+3. Immediately after upload succeeds, an inline status appears under the image: `✨ Reading your brand…` (small spinner, amber).
+4. When the AI returns:
+   - Empty fields are filled in.
+   - Already-filled fields are left untouched (no overwrite).
+   - A subtle "Filled by AI — edit anything" hint shows for ~4s.
+5. On error: silent toast `Couldn't auto-read the image — fill it in manually`. Upload still succeeds.
+6. URL mode (paste image link) gets the same treatment when the URL is a valid image.
 
-```
-[Brand ▾]  [Location ▾]  |  [Format ▾]  [Hook ▾]  [Setting ▾]
-```
+### Backend — new edge function `analyze-brand-image`
 
-A subtle vertical divider separates "what/where" (brand + location) from the existing creative chips. Same `PresetChip` styling — red-tinted border when filled, chevron, label flips to the chosen value.
+- Input: `{ imagePath?: string, imageUrl?: string, subject: "product" | "app" }`
+- Resolves a signed URL from `director-uploads` if `imagePath` given.
+- Calls Lovable AI Gateway with `google/gemini-3-flash-preview` (vision) using AI SDK structured output (`Output.object` + zod):
+  ```
+  { name: string, description: string (≤120), tagline: string (≤60) }
+  ```
+- System prompt tuned per `subject` ("This is a product photo / app screenshot. Infer the brand…"). Returns `null` for any field it can't confidently guess.
+- Auth required; uses `LOVABLE_API_KEY` server-side.
 
-## 2. Brand chip — full brand kit
+### Frontend wiring
 
-Opens a side sheet (reuse Sheet component) titled **"Your brand"** with:
+- `src/lib/marketing/brandKit.ts`: add `analyzeBrandImage({ imagePath?, imageUrl?, subject })` helper that invokes the edge function.
+- `src/components/marketing/BrandKitSheet.tsx`:
+  - Add `analyzing` state + inline status row under the image area.
+  - After `handleFile` succeeds, call `analyzeBrandImage({ imagePath: path, subject: draft.subject })` and merge results into empty fields only.
+  - In URL mode, debounce 600ms after URL change; if it looks like an image URL, call `analyzeBrandImage({ imageUrl, subject })`.
 
-- **Logo / product image / app icon** — drag-and-drop upload (1 image, ≤5MB). Stored in the existing `director-uploads` private bucket under `marketing/{user_id}/brand/`. Preview thumb shown after upload. Used as visual reference by the AI.
-- **Name** — text, required (e.g. "Acme Sneakers", "Lumen App")
-- **One-line description** — text, 120 char max ("AI-powered sleep tracker for athletes")
-- **Website / App Store URL** — optional
-- **Tagline** — optional, 60 char max
-- **Target audience** — optional, free text ("Gen-Z runners in major US cities")
-- Subject toggle (Product / App) lives at the top of this sheet — the standalone segmented control above the composer is removed, since it's now part of the brand kit.
+### Files
 
-Saving collapses the sheet and the chip label becomes the brand name with a 16px logo thumb prefix. A small "Edit brand" affordance reopens the sheet. Brand kit is persisted per user (new `brand_kits` table, one row per user, RLS = own row only) so it auto-loads next visit.
+- new: `supabase/functions/analyze-brand-image/index.ts`
+- edit: `src/lib/marketing/brandKit.ts` (add helper)
+- edit: `src/components/marketing/BrandKitSheet.tsx` (status UI + auto-fill)
 
-## 3. Location chip — geography (separate from Setting)
+### Out of scope
 
-Clarified semantics:
-- **Setting** = scene type (kitchen, rooftop, studio) — unchanged
-- **Location** = real-world place for cultural & visual styling
-
-Opens a small popover with two tabs:
-
-- **Place** — free-text input + preset grid: Tokyo, NYC, Paris, Dubai, LA, London, Lagos, São Paulo, Seoul, Mexico City, Mumbai, Berlin. Selecting a preset fills the text field; user can also type anything ("Kyoto backstreet", "Marrakech medina").
-- **Reference image** — upload a photo of the actual location (storefront, neighborhood, room). Stored in `director-uploads` under `marketing/{user_id}/location/`. AI uses it as visual ground truth.
-
-Either or both tabs can be used. Chip label shows the place name (or "Custom location" if only an image is set), with a 16px image thumb prefix when an image is attached.
-
-## 4. Prompt assembly
-
-Extend the prompt builder so the final prompt to Lovable AI includes:
-
-- Brand: name, description, tagline, audience, URL (text context) + logo/product image (vision input)
-- Location: place name (text) + location image (vision input, when present)
-
-Existing Format / Hook / Setting logic is unchanged.
-
-## 5. Generate-button readiness
-
-"Add inputs to generate" stays the disabled label. Becomes enabled when **either**:
-- the existing free-text brief is filled, **or**
-- a brand kit is set + at least one of Format/Hook/Setting is chosen
-
-This way the new chips are a real path to generating, not just decoration.
-
----
-
-## Technical notes
-
-**Files**
-- `src/pages/MarketingStudio.tsx` — add two chips, remove standalone subject segment, wire to prompt builder
-- `src/components/marketing/BrandKitSheet.tsx` — new
-- `src/components/marketing/LocationPopover.tsx` — new
-- `src/lib/marketing/brandKit.ts` — load/save brand kit hook
-- Prompt builder (wherever `doGenerate` composes the request) — accept `brand` and `location` payloads
-
-**Backend (migration)**
-- New table `public.brand_kits` (user_id PK fk → auth.users, subject enum, name, description, url, tagline, audience, logo_path, updated_at) with RLS: select/insert/update/delete where `user_id = auth.uid()`.
-- Reuse `director-uploads` bucket; add a path-scoped policy so users can only read/write `marketing/{auth.uid()}/...`.
-
-**No business-logic changes** beyond the prompt builder accepting two new optional context blocks. Format/Hook/Setting presets, generation flow, and existing UI elsewhere are untouched.
+- No DB changes.
+- Doesn't touch Format/Hook/Setting/Location.
+- Doesn't overwrite anything the user already typed.
