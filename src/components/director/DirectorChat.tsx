@@ -1,5 +1,9 @@
 import { useState, useRef, useEffect } from "react";
-import { Loader2, RotateCcw, FileText, Music, Sparkles } from "lucide-react";
+import { RotateCcw, FileText, Music, Sparkles, MessageCircleMore } from "lucide-react";
+import { Shimmer } from "@/components/ai-elements/shimmer";
+import { Message, MessageContent } from "@/components/ai-elements/message";
+import { QuestionCard } from "./QuestionCard";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useNavigate, useParams } from "react-router-dom";
 import {
@@ -123,8 +127,8 @@ export function DirectorChat() {
     }
   };
 
-  const send = async () => {
-    const text = input.trim();
+  const send = async (textOverride?: string) => {
+    const text = (textOverride ?? input).trim();
     if (!text && attachments.length === 0) {
       toast.error("Add a brief or some references");
       return;
@@ -296,7 +300,7 @@ export function DirectorChat() {
             <img src={logoMark} alt="" className="w-32 h-32 opacity-[0.05]" />
           </div>
         )}
-        <div className="flex flex-col gap-3 min-h-full">
+        <div className="flex flex-col gap-6 min-h-full">
           {bubbles.map((b, i) => {
             if (b.role === "result") {
               return (
@@ -318,56 +322,65 @@ export function DirectorChat() {
               );
             }
             if (b.role === "questions") {
+              // Only the most recent questions block is interactive.
+              const isLatestQuestions = (() => {
+                for (let k = bubbles.length - 1; k >= 0; k -= 1) {
+                  if (bubbles[k].role === "questions") return k === i;
+                }
+                return false;
+              })();
               return (
-                <div
+                <QuestionCard
                   key={i}
-                  className="rounded-lg border border-accent/30 bg-[hsl(20_30%_8%)] p-3 space-y-2 relative"
-                >
-                  <div className="text-xs text-accent/80 italic">{b.reason}</div>
-                  <ul className="text-sm space-y-1.5">
-                    {b.questions.map((q, j) => (
-                      <li key={j} className="flex gap-2">
-                        <span className="text-accent font-semibold">{j + 1}.</span>
-                        <span>{q}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+                  reason={b.reason}
+                  questions={b.questions}
+                  disabled={!isLatestQuestions || busy}
+                  onContinue={(formatted) => void send(formatted)}
+                  onSkip={() => void send("Skip")}
+                />
               );
             }
             const isUser = b.role === "user";
+            if (!isUser) {
+              return (
+                <Message key={i} from="assistant">
+                  <MessageContent className="whitespace-pre-wrap leading-relaxed text-foreground/90">
+                    {b.content}
+                  </MessageContent>
+                </Message>
+              );
+            }
             return (
-              <div key={i} className={`relative flex flex-col gap-1.5 ${isUser ? "items-end" : "items-start"}`}>
-                <div
-                  className={`max-w-[85%] rounded-2xl px-3.5 py-2 text-sm whitespace-pre-wrap leading-relaxed ${
-                    isUser
-                      ? "border border-accent/50 bg-accent/15 text-foreground rounded-br-sm"
-                      : "bg-[hsl(240_5%_9%)] border border-[hsl(240_5%_13%)] rounded-bl-sm"
-                  }`}
+              <Message key={i} from="user" className="items-end">
+                <MessageContent
+                  className={cn(
+                    "rounded-full bg-muted/40 border border-border/40 px-4 py-2 text-sm",
+                    "group-[.is-user]:bg-muted/40 group-[.is-user]:rounded-full group-[.is-user]:px-4 group-[.is-user]:py-2",
+                  )}
                 >
-                  {isUser
-                    ? b.content.split(/(@\d+)/g).map((part, k) =>
-                        /^@\d+$/.test(part) ? (
-                          <span
-                            key={k}
-                            className="inline-flex items-center rounded bg-accent/25 px-1 text-[12px] font-semibold text-accent"
-                          >
-                            {part}
-                          </span>
-                        ) : (
-                          <span key={k}>{part}</span>
-                        ),
-                      )
-                    : b.content}
-                </div>
-                {isUser && b.role === "user" && b.attachments && b.attachments.length > 0 && (
+                  <div className="whitespace-pre-wrap leading-relaxed">
+                    {b.content.split(/(@\d+)/g).map((part, k) =>
+                      /^@\d+$/.test(part) ? (
+                        <span
+                          key={k}
+                          className="inline-flex items-center rounded bg-accent/25 px-1 text-[12px] font-semibold text-accent"
+                        >
+                          {part}
+                        </span>
+                      ) : (
+                        <span key={k}>{part}</span>
+                      ),
+                    )}
+                  </div>
+                </MessageContent>
+                {b.attachments && b.attachments.length > 0 && (
                   <div className="flex flex-wrap gap-1.5 max-w-[85%] justify-end">
                     {b.attachments.map((a, j) => {
                       const isImage = a.kind === "image" || a.kind === "video_keyframes";
                       return (
                         <div
                           key={j}
-                          className="flex items-center gap-1.5 rounded-lg border border-[hsl(240_5%_15%)] bg-[hsl(240_5%_8%)] p-1 pr-2"
+                          className="flex items-center gap-1.5 rounded-lg border border-border/40 bg-muted/20 p-1 pr-2"
                         >
                           {isImage ? (
                             <img
@@ -395,7 +408,7 @@ export function DirectorChat() {
                     })}
                   </div>
                 )}
-              </div>
+              </Message>
             );
           })}
           {isEmpty && (
@@ -405,7 +418,7 @@ export function DirectorChat() {
                   key={s}
                   type="button"
                   onClick={() => setInput(s)}
-                  className="text-xs px-3 py-1.5 rounded-full border border-[hsl(240_5%_15%)] bg-[hsl(240_5%_9%)] hover:border-accent/40 hover:text-accent transition-colors"
+                  className="text-xs px-3 py-1.5 rounded-full border border-border/40 bg-muted/20 hover:border-border hover:text-accent transition-colors"
                 >
                   {s}
                 </button>
@@ -413,8 +426,14 @@ export function DirectorChat() {
             </div>
           )}
           {busy && (
-            <div className="flex items-center gap-2 text-xs text-muted-foreground relative">
-              <Loader2 className="w-3.5 h-3.5 animate-spin" /> Director is reading the brief…
+            <Shimmer className="text-sm" duration={2}>
+              Director is reading the brief…
+            </Shimmer>
+          )}
+          {!busy && lastBubble?.role === "questions" && (
+            <div className="flex items-center gap-2 text-sm text-primary">
+              <MessageCircleMore className="w-4 h-4" />
+              <span>Awaiting your input</span>
             </div>
           )}
           <div className="flex-1" />
