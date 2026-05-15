@@ -222,7 +222,7 @@ export default function Director() {
                           align="end"
                           onClick={(e) => e.stopPropagation()}
                         >
-                          <DropdownMenuItem onSelect={() => handleRename(s)}>
+                          <DropdownMenuItem onSelect={() => openRename(s)}>
                             <Pencil className="w-4 h-4 mr-2" /> Edit
                           </DropdownMenuItem>
                           <DropdownMenuItem onSelect={() => handleTogglePin(s)}>
@@ -231,7 +231,7 @@ export default function Director() {
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
-                            onSelect={() => handleDelete(s)}
+                            onSelect={() => setDeleteTarget(s)}
                             className="text-destructive focus:text-destructive"
                           >
                             <Trash2 className="w-4 h-4 mr-2" /> Delete
