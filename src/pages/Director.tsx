@@ -176,7 +176,7 @@ export default function Director() {
               onClick={() => navigate("/marketing")}
               className="gap-1.5 justify-start rounded-md bg-gradient-to-br from-[hsl(340_85%_60%)] to-[hsl(355_85%_50%)] text-white hover:opacity-90 border-0"
             >
-              <Megaphone className="w-4 h-4" /> Marketing Studio
+              <Megaphone className="w-4 h-4" /> Ads Studio
             </Button>
             <button
               type="button"

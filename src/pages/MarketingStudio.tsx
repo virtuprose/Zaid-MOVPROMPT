@@ -83,7 +83,7 @@ export default function MarketingStudio() {
   return (
     <div className="min-h-screen bg-background">
       <Helmet>
-        <title>Marketing Studio — MovPrompt</title>
+        <title>Ads Studio — MovPrompt</title>
         <meta
           name="description"
           content="Turn any product or app into a video ad. Pick a format, a scroll-stopping hook and a setting — render in one click with Seedance 2.0."
@@ -107,7 +107,7 @@ export default function MarketingStudio() {
       <div className="relative z-10 container max-w-6xl mx-auto px-4 py-10 sm:py-16">
         <div className="text-center mb-10 sm:mb-14">
           <div className="text-xs tracking-[0.3em] text-muted-foreground uppercase mb-3">
-            Marketing Studio
+            Ads Studio
           </div>
           <h1 className="font-display text-4xl sm:text-6xl tracking-tight uppercase leading-[0.95]">
             Turn any product
