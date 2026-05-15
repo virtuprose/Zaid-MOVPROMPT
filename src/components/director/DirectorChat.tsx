@@ -3,6 +3,7 @@ import { RotateCcw, FileText, Music, Sparkles, MessageCircleMore } from "lucide-
 import { Shimmer } from "@/components/ai-elements/shimmer";
 import { Message, MessageContent } from "@/components/ai-elements/message";
 import { QuestionCard } from "./QuestionCard";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useNavigate, useParams } from "react-router-dom";
 import {
