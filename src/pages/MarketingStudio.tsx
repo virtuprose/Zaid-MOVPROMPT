@@ -542,12 +542,14 @@ function PresetChip({
   value,
   tooltip,
   onClick,
+  flash,
 }: {
   icon: React.ReactNode;
   label: string;
   value?: string;
   tooltip: string;
   onClick: () => void;
+  flash?: boolean;
 }) {
   return (
     <Tooltip>
@@ -556,10 +558,12 @@ function PresetChip({
           type="button"
           onClick={onClick}
           className={cn(
-            "inline-flex items-center gap-1.5 rounded-full border px-3 h-9 text-xs transition-colors",
+            "inline-flex items-center gap-1.5 rounded-full border px-3 h-9 text-xs transition-all duration-300",
             value
               ? "border-[hsl(0_72%_55%)]/50 bg-[hsl(0_72%_55%)]/10 text-foreground"
               : "border-border/40 bg-muted/20 text-muted-foreground hover:text-foreground hover:border-border",
+            flash && value &&
+              "border-[hsl(35_90%_55%)] bg-[hsl(35_90%_55%)]/20 text-foreground shadow-[0_0_18px_hsl(35_90%_55%/0.5)] scale-[1.04]",
           )}
         >
           {icon}
@@ -571,5 +575,157 @@ function PresetChip({
       </TooltipTrigger>
       <TooltipContent>{tooltip}</TooltipContent>
     </Tooltip>
+  );
+}
+
+function SectionHeader({
+  title,
+  subtitle,
+  right,
+}: {
+  title: string;
+  subtitle?: string;
+  right?: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-end justify-between gap-4 flex-wrap mb-5">
+      <div>
+        <h2 className="font-display text-2xl sm:text-3xl tracking-tight uppercase">{title}</h2>
+        {subtitle && <p className="text-sm text-muted-foreground mt-1">{subtitle}</p>}
+      </div>
+      {right}
+    </div>
+  );
+}
+
+function FilterTabs({
+  value,
+  onChange,
+}: {
+  value: (typeof FILTERS)[number];
+  onChange: (v: (typeof FILTERS)[number]) => void;
+}) {
+  return (
+    <div className="flex items-center gap-1 rounded-full bg-muted/30 p-1">
+      {FILTERS.map((f) => (
+        <button
+          key={f}
+          type="button"
+          onClick={() => onChange(f)}
+          className={cn(
+            "px-3 py-1 text-xs rounded-full transition-colors",
+            value === f
+              ? "bg-background text-foreground border border-border/60"
+              : "text-muted-foreground hover:text-foreground",
+          )}
+        >
+          {f}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function ToggleTab({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "px-3 py-1 text-xs rounded-full transition-colors",
+        active
+          ? "bg-background text-foreground border border-border/60"
+          : "text-muted-foreground hover:text-foreground",
+      )}
+    >
+      {children}
+    </button>
+  );
+}
+
+function CommunityCard({ ad, onClick }: { ad: FeaturedAd; onClick: () => void }) {
+  return (
+    <article
+      onClick={onClick}
+      className="group relative overflow-hidden rounded-2xl border border-border/40 bg-muted/10 cursor-pointer transition-all hover:border-[hsl(35_90%_55%)]/60 hover:shadow-[0_0_24px_hsl(35_90%_55%/0.25)]"
+    >
+      <div className="aspect-[9/12] overflow-hidden">
+        <video
+          src={ad.url}
+          autoPlay
+          muted
+          loop
+          playsInline
+          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+        />
+      </div>
+      <div className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-black/60 backdrop-blur text-[10px] uppercase tracking-wide text-white/90">
+        {ad.tag}
+      </div>
+      <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
+        <span className="px-3 py-1.5 rounded-full bg-[hsl(35_90%_55%)] text-black text-xs font-semibold">
+          Click to use as template
+        </span>
+      </div>
+      <div className="absolute bottom-0 inset-x-0 p-3 bg-gradient-to-t from-black/80 to-transparent flex items-center justify-between text-white">
+        <span className="text-sm font-medium">{ad.handle}</span>
+        <span className="inline-flex items-center gap-1 text-xs">
+          <Heart className="w-3.5 h-3.5 fill-current" />
+          {ad.likes.toLocaleString()}
+        </span>
+      </div>
+    </article>
+  );
+}
+
+function CommunityGrid({
+  ads,
+  onPick,
+}: {
+  ads: FeaturedAd[];
+  onPick: (ad: FeaturedAd) => void;
+}) {
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      {ads.map((ad) => (
+        <CommunityCard key={ad.url} ad={ad} onClick={() => onPick(ad)} />
+      ))}
+    </div>
+  );
+}
+
+function UserAdCard({ ad, onClick }: { ad: UserAd; onClick: () => void }) {
+  return (
+    <article
+      onClick={onClick}
+      className="group relative overflow-hidden rounded-2xl border border-border/40 bg-muted/10 cursor-pointer transition-all hover:border-[hsl(35_90%_55%)]/60 hover:shadow-[0_0_24px_hsl(35_90%_55%/0.25)]"
+    >
+      <div className="aspect-[9/12] overflow-hidden">
+        <video
+          src={ad.video_url}
+          autoPlay
+          muted
+          loop
+          playsInline
+          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+        />
+      </div>
+      <div className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-[hsl(35_90%_55%)]/90 backdrop-blur text-[10px] uppercase tracking-wide text-black font-semibold">
+        Yours
+      </div>
+      <div className="absolute bottom-0 inset-x-0 p-3 bg-gradient-to-t from-black/80 to-transparent text-white">
+        <span className="text-xs opacity-80">
+          {new Date(ad.created_at).toLocaleDateString()}
+        </span>
+      </div>
+    </article>
   );
 }
