@@ -49,6 +49,71 @@ const FAL_MODELS: Record<string, string> = {
   kling: "fal-ai/kling-video/v2/master/text-to-video",
 };
 
+// Models that expose a fal.ai pre-flight content moderation endpoint.
+const ELIGIBILITY_ENDPOINTS: Record<string, string> = {
+  "seedance-2.0": "fal-ai/bytedance/seedance-2.0/check-eligibility",
+  "seedance-2.0-fast": "fal-ai/bytedance/seedance-2.0/fast/check-eligibility",
+};
+
+type EligibilityResult = {
+  eligible: boolean;
+  reason?: string;
+  categories?: string[];
+  degraded?: boolean;
+  skipped?: boolean;
+};
+
+async function runEligibilityCheck(
+  provider: string,
+  prompt: string,
+  falKey: string,
+): Promise<EligibilityResult> {
+  const endpoint = ELIGIBILITY_ENDPOINTS[provider];
+  if (!endpoint) return { eligible: true, skipped: true };
+  try {
+    const resp = await fetch(`https://fal.run/${endpoint}`, {
+      method: "POST",
+      headers: {
+        Authorization: `Key ${falKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ prompt }),
+    });
+    const text = await resp.text();
+    let data: any = null;
+    try {
+      data = text ? JSON.parse(text) : null;
+    } catch {
+      data = null;
+    }
+    if (!resp.ok) {
+      // 4xx from moderation often means "rejected"; 5xx is service degradation.
+      if (resp.status >= 500) {
+        console.warn("eligibility check degraded", resp.status, text);
+        return { eligible: true, degraded: true, reason: "check_unavailable" };
+      }
+      const reason = data?.detail || data?.error || data?.message || "Prompt was rejected by content moderation.";
+      const categories = Array.isArray(data?.categories) ? data.categories : undefined;
+      return { eligible: false, reason: String(reason).slice(0, 500), categories };
+    }
+    // Try common shape variants.
+    const eligible =
+      typeof data?.eligible === "boolean" ? data.eligible :
+      typeof data?.is_eligible === "boolean" ? data.is_eligible :
+      typeof data?.passed === "boolean" ? data.passed :
+      typeof data?.allowed === "boolean" ? data.allowed :
+      // If endpoint returns 200 with no explicit flag, treat as eligible.
+      true;
+    if (eligible) return { eligible: true };
+    const reason = data?.reason || data?.detail || data?.message || "Prompt was rejected by content moderation.";
+    const categories = Array.isArray(data?.categories) ? data.categories : undefined;
+    return { eligible: false, reason: String(reason).slice(0, 500), categories };
+  } catch (e) {
+    console.warn("eligibility check error", e);
+    return { eligible: true, degraded: true, reason: "check_unavailable" };
+  }
+}
+
 async function readJsonResponse(resp: Response) {
   const text = await resp.text();
   if (!text.trim()) {
