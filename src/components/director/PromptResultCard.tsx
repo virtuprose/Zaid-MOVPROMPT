@@ -286,6 +286,18 @@ export function PromptResultCard({ title, prompt, breakdown, directorsNote, onRe
 
         {renderVideoPanel()}
 
+        <VideoOptionsDialog
+          open={!!pendingModel}
+          model={pendingModel}
+          prompt={prompt}
+          onCancel={() => setPendingModel(null)}
+          onConfirm={(opts, finalPrompt, meta) => {
+            const m = pendingModel;
+            setPendingModel(null);
+            if (m) void generateVideo(m, opts, finalPrompt, meta);
+          }}
+        />
+
         <div className="flex flex-wrap gap-2 pt-3 border-t border-border/60">
           <Button size="sm" onClick={copyAll} className="gap-1.5">
             {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
@@ -382,17 +394,6 @@ export function PromptResultCard({ title, prompt, breakdown, directorsNote, onRe
         </DialogContent>
       </Dialog>
 
-      <VideoOptionsDialog
-        open={!!pendingModel}
-        model={pendingModel}
-        prompt={prompt}
-        onCancel={() => setPendingModel(null)}
-        onConfirm={(opts, finalPrompt, meta) => {
-          const m = pendingModel;
-          setPendingModel(null);
-          if (m) void generateVideo(m, opts, finalPrompt, meta);
-        }}
-      />
     </>
   );
 }
