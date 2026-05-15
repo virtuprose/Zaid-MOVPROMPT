@@ -1,124 +1,79 @@
-# Smarter model recommendation with structured catalog + ranked fallback
+# Seedance 2.0 prompt eligibility check + auto-rewrite
 
 ## Goal
+Before submitting a render to **Seedance 2.0** or **Seedance 2.0 Fast**, call fal.ai's eligibility/moderation endpoint. If the prompt is rejected, ask the AI Director to rewrite it safely, re-check, then submit. Show the user what happened.
 
-Replace the current "LLM picks one of 3 hardcoded names → regex maps to id" flow with a system where:
+Other model families (Veo, Kling, etc.) keep today's flow — no eligibility step.
 
-1. The Director LLM sees the **full catalog** (all ~25 models) with structured capability tags and picks a concrete `model_id` directly.
-2. The frontend computes its **own ranked shortlist** from the scene breakdown, so when the LLM's pick is missing/ambiguous/unavailable we always have a deterministic fallback — and we can surface a "Top picks" group in the dropdown.
+## User flow
 
-## Part 1 — Structured model catalog
+1. User clicks **Render with Seedance 2.0** in `VideoOptionsDialog`.
+2. Dialog stays open and shows an inline status: *"Checking prompt eligibility…"*
+3. Frontend calls `generate-video` with `action: "check_eligibility"`.
+   - **Eligible** → proceed to submit job (current flow).
+   - **Not eligible** → frontend calls `director-agent` with `action: "rewrite_safe"` passing the original prompt + the rejection reason. Status updates to *"Prompt flagged — rewriting safely (attempt 1/2)…"*
+4. Re-check the rewritten prompt.
+   - **Eligible** → submit. Show a small toast: *"Prompt was lightly rewritten to pass content checks."* with a "View changes" link (diff dialog).
+   - **Still not eligible after 2 rewrites** → stop. Surface the moderation reason in the dialog with a **Try again** / **Edit prompt manually** button. No job row is created.
 
-### New file: `src/lib/director/videoModelCatalog.ts`
+## Backend changes
 
-Extend each entry from `videoModels.ts` with capability metadata used for both the LLM prompt and the ranking heuristic:
+### `supabase/functions/generate-video/index.ts`
+- Add a `SEEDANCE_ELIGIBILITY` map for the two providers:
+  - `seedance-2.0` → `fal-ai/bytedance/seedance-2.0/check-eligibility`
+  - `seedance-2.0-fast` → `fal-ai/bytedance/seedance-2.0/fast/check-eligibility`
+- New action `check_eligibility` (POST):
+  - Body: `{ provider, prompt }`. Validate same as submit (auth, length, known provider).
+  - If provider is not in the map → return `{ eligible: true, skipped: true }` (so the frontend can call this uniformly without branching).
+  - Otherwise POST to `https://queue.fal.run/<endpoint>` synchronously (these checks return fast). Normalize the fal response into:
+    ```ts
+    { eligible: boolean, reason?: string, categories?: string[], raw?: unknown }
+    ```
+  - On fal 5xx / network error → return `{ eligible: true, degraded: true, reason: "check_unavailable" }` so we fail-open and don't block the user when the moderation service is down. Log it.
+- In the existing `submit` action, for Seedance 2.0 / 2.0 Fast, **re-run the eligibility check server-side** before hitting fal. This is a cheap defense so a client that skips the pre-check still can't bypass it. If not eligible, return `409 { error: "not_eligible", reason, categories }` and do **not** create a `video_jobs` row.
 
-```ts
-type ModelCapabilities = {
-  id: VideoModelId;
-  family: VideoModel["family"];
-  label: string;
-  // Capabilities
-  audio: boolean;                      // native audio generation
-  maxDurationSec: number;              // 5 | 8 | 10 | …
-  maxResolution: "480p"|"720p"|"768p"|"1080p";
-  aspects: string[];                   // ["16:9","9:16",…]
-  speed: "fast"|"balanced"|"slow";     // generation latency tier
-  cost: "low"|"mid"|"high";            // relative price tier
-  // Qualitative tags used for matching
-  strengths: Array<
-    | "cinematic" | "photoreal" | "stylized" | "anime"
-    | "portrait" | "product" | "landscape" | "action"
-    | "complex_motion" | "stable_subject" | "long_take"
-    | "film_grain" | "text_in_frame" | "dialogue"
-  >;
-};
-```
+### `supabase/functions/director-agent/index.ts`
+- Add a tool / action `rewrite_safe`:
+  - Input: `{ original_prompt, rejection_reason, categories?, model_id }`.
+  - System prompt addendum: *"The prompt was rejected by Seedance 2.0 content moderation for: {reason}. Rewrite the prompt to preserve cinematography, camera, lens, lighting, and composition, but remove or soften the flagged element. Do not add new subjects. Keep the Seedance shooting-script structure intact. Output the rewritten `mainPrompt` only."*
+  - Returns `{ rewritten_prompt: string, changes_summary: string }`.
 
-Filled out for all 25 models. Examples:
-- `veo-3.1`: audio ✓, 8s, 1080p, photoreal+dialogue+complex_motion, slow, high
-- `seedance-2.0`: audio ✓, 10s, 1080p, cinematic+photoreal+film_grain, balanced, mid
-- `kling-v2.5-turbo-pro`: no audio, 10s, photoreal+complex_motion+long_take, balanced, mid
-- `hailuo-02-pro`: no audio, 10s, 1080p, stylized+portrait, balanced, mid
-- `ltx-video-13b`: no audio, 5s, 720p, stylized, fast, low
-- `runway-gen3-turbo`: no audio, 10s, photoreal+cinematic, fast, mid
+## Frontend changes
 
-This file becomes the single source of truth; `videoModels.ts` keeps its existing `VIDEO_MODEL_GROUPS` shape but is built from the catalog.
+### `src/lib/director/api.ts`
+- Add helpers:
+  - `checkVideoEligibility(provider, prompt) → { eligible, reason?, categories?, degraded? }`
+  - `rewritePromptSafe(sessionId, prompt, reason, categories?) → { rewritten_prompt, changes_summary }`
 
-## Part 2 — LLM picks a concrete model_id
+### `src/lib/director/videoModelControls.ts` (or catalog)
+- Export `requiresEligibilityCheck(modelId): boolean` → true only for `seedance-2.0` and `seedance-2.0-fast`. Single source of truth used by both UI and any future analytics.
 
-### Edit: `supabase/functions/director-agent/index.ts`
+### `src/components/director/VideoOptionsDialog.tsx`
+- Add a `phase` state: `"idle" | "checking" | "rewriting" | "blocked" | "submitting"`.
+- When `requiresEligibilityCheck(model.id)` is true, on confirm:
+  1. `phase = "checking"` → call `checkVideoEligibility`.
+  2. If not eligible → `phase = "rewriting"`, call `rewritePromptSafe`, then re-check (max 2 rewrite attempts tracked in a `rewriteCount` ref).
+  3. On success → call `onConfirm(options, finalPrompt, rewriteSummary?)`.
+  4. On final failure → `phase = "blocked"`, show reason + categories with **Try again** / **Cancel**.
+- Update the `Render` button to show a spinner + dynamic label per phase.
+- Pass the (possibly rewritten) prompt up via the `onConfirm` signature change: `(options, finalPrompt, meta?: { rewritten: boolean; summary?: string })`.
 
-- Stop hardcoding `VIDEO_MODELS = ["Seedance Pro","Veo 3","Kling 2"]`.
-- At request time, build a compact catalog string (one line per model: `id — family, max Ns, [audio], strengths…`) and inject it into the system prompt.
-- Tighten the `generate_prompt` tool schema so the breakdown returns **two new structured fields** alongside the existing free text:
+### `src/components/director/PromptResultCard.tsx`
+- Update the `onConfirm` handler to:
+  - Use `finalPrompt` (rewritten or original) when calling `submitVideoJob`.
+  - If `meta.rewritten`, show a toast + a small "Prompt was rewritten to pass content checks. View changes" inline link that opens a diff dialog (reuse existing `Dialog` primitives, simple before/after side-by-side).
 
-```ts
-breakdown.recommended_model_id: string  // must be one of the catalog ids
-breakdown.recommended_alternatives: string[]  // 2–3 backup ids, ranked
-breakdown.recommendation_reason: string  // one sentence "why"
-```
+## Non-goals
+- No changes to other model families' submit flow.
+- No new DB columns; rewrite metadata lives in the toast/dialog only. (We can persist later if useful.)
+- No batching multiple prompts.
 
-The existing `model_recommendation` free-text field stays (for display), but the source of truth becomes the structured ids.
+## Technical notes
+- Fail-open on moderation service errors (so an outage doesn't break renders), but never fail-open on a clear `eligible: false`.
+- Server-side re-check in `submit` is the security boundary; the client check is a UX optimization.
+- Keep retries hard-capped at 2 to avoid a rewrite loop costing tokens.
+- All eligibility responses logged via `console.log` in the edge function (no PII beyond the prompt the user already wrote).
 
-## Part 3 — Deterministic fallback ranking on the client
-
-### New file: `src/lib/director/modelRanking.ts`
-
-A pure function:
-
-```ts
-function rankModels(breakdown: Breakdown): Array<{ model: ModelCapabilities; score: number; reasons: string[] }>
-```
-
-Scoring rules (additive, all bounded so no single signal dominates):
-
-```text
-+3  audio required (mood/film_emulation mentions music, dialogue, sound, voice, ambient) AND model has audio
--4  audio required AND model lacks audio
-+2  duration_hint ≥ 8s AND model.maxDurationSec ≥ that hint
--3  duration_hint exceeds model.maxDurationSec
-+2  scene tag match (e.g. "portrait" subject → portrait strength; "action" verbs → action/complex_motion)
-+1  film_emulation present AND model has film_grain or cinematic
-+1  resolution hint "4k"/"1080" AND model.maxResolution = "1080p"
-+1  speed preference: short brief / "quick" / "draft" → fast tier
--1  cost: prefer mid over high when no signal demands top quality
-+0.5 family hint in model_recommendation free text matches
-```
-
-Tag detection is plain regex/keyword on `breakdown.{subject, action, mood, environment, color_palette, film_emulation, model_recommendation}`. Scores are deterministic and explainable (`reasons[]` lists which rules fired — useful for tooltips and debugging).
-
-### Resolution flow used by `PromptResultCard`
-
-Replace `pickRecommendedModel(rec)` with `resolveRecommendation(breakdown)`:
-
-1. If `breakdown.recommended_model_id` exists in the catalog → that's the **primary**.
-2. Compute `rankModels(breakdown)` to get the ranked list.
-3. Primary's **alternatives** = first 3 ranked entries (excluding primary, deduped against `recommended_alternatives` if present).
-4. If the LLM's primary is missing/invalid → top-ranked entry becomes primary, and the ranking provides alternatives. Fallback path also fires when the free-text recommendation is ambiguous (e.g. just "Kling" with no version → ranking decides which Kling).
-5. Returns `{ primary, alternatives, reasons }`.
-
-## Part 4 — UI surfacing
-
-### Edit: `src/components/director/PromptResultCard.tsx`
-
-- Dropdown gains a new "Top picks" section above "Recommended": shows primary + 2 alternatives with a small `?` tooltip listing the matched reasons (e.g. "Has audio · Supports 10s · Cinematic strength").
-- Existing "Recommended" item keeps the LLM's pick (which is now usually the same as primary).
-- Full grouped list of all models stays underneath, unchanged.
-- "Model recommendation" section in the card body shows `recommendation_reason` from the breakdown when present, falling back to the old free-text line.
-
-## Part 5 — Tests
-
-### New file: `src/lib/director/__tests__/modelRanking.test.ts`
-
-Cover the deterministic-ranking guarantees:
-- Brief mentioning "dialogue" forces audio-capable models above Kling/Runway/LTX/Wan.
-- `duration_hint: "10s"` filters out Veo 3 (8s max).
-- Free-text `"Kling"` with no version resolves to the highest-ranked Kling, not the first in list order.
-- When primary id is invalid, the top-ranked model is promoted and surfaces in the UI shortlist.
-
-## Out of scope
-
-- No DB schema changes (everything fits in the existing `breakdown` JSON).
-- No changes to the per-model render-settings dialog from the previous plan — it already keys off model id.
-- No automated benchmarking of model output quality; this plan is about *matching* user intent to model capabilities, not measuring real-world fidelity.
+## Open follow-ups (not in this plan)
+- Apply the same pattern to Veo's safety filter once we confirm fal exposes a separate pre-check endpoint for it.
+- Persist `rewrite_history` on the `video_jobs` row for analytics.
