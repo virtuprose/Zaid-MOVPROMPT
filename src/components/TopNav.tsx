@@ -145,9 +145,6 @@ export function TopNav() {
               <div className="hidden sm:block">
                 <NotificationBell />
               </div>
-              <div className="hidden md:block">
-                <LanguageToggle />
-              </div>
             </>
           )}
 
