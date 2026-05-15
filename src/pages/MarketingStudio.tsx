@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { Helmet } from "react-helmet-async";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
