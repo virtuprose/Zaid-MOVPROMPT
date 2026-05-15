@@ -401,6 +401,8 @@ export default function MarketingStudio() {
           ]}
         />
 
+        <BrandKitSheet open={brandOpen} onOpenChange={setBrandOpen} />
+
         <ConfirmRightsDialog
           open={confirmOpen}
           onCancel={() => setConfirmOpen(false)}
@@ -412,34 +414,6 @@ export default function MarketingStudio() {
         />
       </div>
     </TooltipProvider>
-  );
-}
-
-function SubjectSegment({
-  icon,
-  label,
-  active,
-  onClick,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  active: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        "flex-1 inline-flex items-center justify-center gap-2 h-10 rounded-xl text-sm font-medium transition-all",
-        active
-          ? "bg-[#F5A524] text-black shadow shadow-[#F5A524]/30"
-          : "text-muted-foreground hover:text-foreground",
-      )}
-    >
-      {icon}
-      {label}
-    </button>
   );
 }
 
