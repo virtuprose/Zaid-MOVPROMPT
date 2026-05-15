@@ -32,17 +32,15 @@ type Props = {
   sessionId?: string | null;
 };
 
-const MODEL_LINKS: { id: "seedance" | "veo" | "kling" | "runway"; label: string; url: string }[] = [
-  { id: "seedance", label: "Seedance", url: "https://seedance.ai" },
-  { id: "veo", label: "Veo (Google)", url: "https://deepmind.google/technologies/veo/" },
-  { id: "kling", label: "Kling", url: "https://klingai.com" },
-  { id: "runway", label: "Runway", url: "https://runwayml.com" },
-];
-
-function detectRecommendedModel(rec?: string): typeof MODEL_LINKS[number] {
-  const r = (rec || "").toLowerCase();
-  return MODEL_LINKS.find((m) => r.includes(m.id)) || MODEL_LINKS[0];
-}
+const EXTERNAL_LINKS: Record<string, { label: string; url: string }> = {
+  kling: { label: "Kling", url: "https://klingai.com" },
+  veo: { label: "Veo (Google)", url: "https://deepmind.google/technologies/veo/" },
+  seedance: { label: "Seedance", url: "https://seedance.ai" },
+  hailuo: { label: "Hailuo (MiniMax)", url: "https://hailuoai.video/" },
+  runway: { label: "Runway", url: "https://runwayml.com" },
+  ltx: { label: "LTX Studio", url: "https://ltx.studio/" },
+  wan: { label: "Wan", url: "https://wan.video/" },
+};
 
 function CopyBtn({ text, label = "Copy", className = "" }: { text: string; label?: string; className?: string }) {
   const [done, setDone] = useState(false);
