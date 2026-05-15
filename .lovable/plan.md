@@ -1,43 +1,37 @@
 ## Goal
 
-Make saved brands immediately visible and selectable on `/marketing` via a "Your brands" row above the composer. Remove the hidden Brand picker popover.
+When a brand is selected, surface it as an "attachment chip" inside the composer (above the textarea), showing the product/logo thumbnail + name + an X to detach — matching the reference screenshot's chat-style attachment chips. Same treatment for an attached location image so the composer always shows what's being sent.
 
-## New "Your brands" row
+## Changes — `src/pages/MarketingStudio.tsx` composer card only
 
-Placed between the page heading and the composer card (`MarketingStudio.tsx`, just before `composerRef`):
+### 1. New attachments row above the textarea
+Add a small wrapper inside the composer card, before `<Textarea>`. It only renders when `brandKit?.name` or `location.imagePath` exists.
 
-- Section header: small uppercase label "YOUR BRANDS" with a count chip on the right (e.g. "3 saved").
-- Horizontal scroll row of brand cards (`flex gap-3 overflow-x-auto pb-1`).
-- Each brand card (~140px wide, ~96px tall):
-  - Logo thumbnail (48×48 rounded) + brand name + subject tag (Product / App).
-  - Hover: subtle amber border. Active: amber border + amber check badge top-right.
-  - Click anywhere on the card → `setBrandActive(id)`.
-  - Small ⋯ menu (or hover-only Pencil + Trash icons in the corner) for Edit / Delete.
-- Trailing "+ New brand" tile (dashed border, same dimensions, amber on hover) → opens BrandKitSheet in create mode.
-- Empty state (no kits saved): single full-width tile "Add your first brand — we'll reuse the logo, tagline & description on every ad" with a primary "+ New brand" button.
+```
+[ thumb ] Haribo Goldbears  [×]   [ thumb ] Studio backdrop  [×]
+```
 
-New small component: `src/components/marketing/BrandsRow.tsx` that wraps the card list and the new/edit/delete callbacks. It reuses the existing `useBrandKit` data passed in as props (kits, activeId, handlers).
+Per chip:
+- Container: `inline-flex items-center gap-2 pr-2 pl-1 h-8 rounded-lg border border-border/60 bg-secondary/40 text-xs`
+- Thumbnail: 24×24 rounded-md, `object-contain` on `bg-white/5`. Falls back to a Building2 / MapPin icon when no image.
+- Label: brand name (truncate, max-w ~140px) or location place / "Location image".
+- X button: 5×5 ghost icon button → calls `setBrandActive(null)` for brand, or clears `imagePath`/`imageUrl` for location.
 
-## Composer cleanup
+### 2. Remove the duplicate brand chip from the bottom pill row
+The current passive "Brand: Bose" chip in the filters row (`MarketingStudio.tsx` ~lines 277-289) gets removed — its job moves to the attachments row.
 
-In the composer card's filter row (`MarketingStudio.tsx` lines ~262-296):
-- Remove the `BrandPickerPopover` and its trigger button entirely.
-- Keep the active brand visible in the composer as a tiny non-interactive chip (logo + "Brand: Name") so users know what's selected while typing — clicking it scrolls to the BrandsRow. If no brand is active, hide the chip.
-
-The `BrandPickerPopover.tsx` file stays in the codebase (not deleted) in case it's referenced elsewhere, but is no longer rendered in the marketing page.
-
-## State / data
-
-- No backend or schema changes. Reuses `useBrandKit()` (kits, activeId, setActive, deleteKit) and the existing `BrandKitSheet` for create/edit.
-- `setActive` already persists to `brand_kit_selection`, so selection survives reloads.
+### 3. Subtle tweaks
+- If at least one attachment exists, add `pb-2 mb-2 border-b border-border/30` under the attachments row so the textarea visually sits below them.
+- Keep BrandsRow above the composer card as-is — the new chip is just a "what's currently attached" indicator.
 
 ## Out of scope
-
-- BrandKitSheet form layout (already polished).
-- Brand kit data model.
-- Other marketing-page sections (location picker, format picker, etc.).
+- BrandsRow card design (already polished in previous turn).
+- BrandKitSheet modal.
+- Sending the brand image to the model — selection logic is unchanged; only the visual representation moves.
 
 ## Files
+- Edit only: `src/pages/MarketingStudio.tsx`
 
-- New: `src/components/marketing/BrandsRow.tsx`
-- Edit: `src/pages/MarketingStudio.tsx` (insert BrandsRow, remove BrandPickerPopover usage, replace with passive selected-brand chip)
+## Tech notes
+- Reuse existing `brandKit`, `setBrandActive`, `location`, `setLocation` already in scope.
+- Use `lucide-react` `X`, `MapPin` icons (already imported elsewhere in this file).
