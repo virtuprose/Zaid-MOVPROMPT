@@ -87,7 +87,14 @@ export default function MarketingStudio() {
   const hook = find(HOOKS, hookId);
   const setting = find(SETTINGS, settingId);
 
-  const hasInputs = master.trim().length > 0 || formatId || hookId || settingId;
+  const hasInputs =
+    master.trim().length > 0 ||
+    !!formatId ||
+    !!hookId ||
+    !!settingId ||
+    !!brandKit?.name ||
+    !!location.place ||
+    !!location.imagePath;
   const ready = !!(formatId && hookId && settingId);
 
   const startGenerate = () => {
