@@ -40,7 +40,7 @@ import { useBrandKit, EMPTY_LOCATION, type LocationInput } from "@/lib/marketing
 import { BrandKitSheet } from "@/components/marketing/BrandKitSheet";
 import { BrandsRow } from "@/components/marketing/BrandsRow";
 
-import { submitVideoJob } from "@/lib/director/api";
+import { submitVideoJob, pollVideoJob, type VideoJob } from "@/lib/director/api";
 import loopKitchen from "@/assets/loop-kitchen.mp4.asset.json";
 import loopCyberpunk from "@/assets/loop-cyberpunk.mp4.asset.json";
 import loopDesert from "@/assets/loop-desert.mp4.asset.json";
