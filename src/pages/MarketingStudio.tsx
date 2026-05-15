@@ -105,7 +105,26 @@ export default function MarketingStudio() {
   const doGenerate = async () => {
     setSubmitting(true);
     try {
-      const prompt = composeStudioPrompt({ subject, master, formatId, hookId, settingId });
+      const prompt = composeStudioPrompt({
+        subject,
+        master,
+        formatId,
+        hookId,
+        settingId,
+        brand: brandKit
+          ? {
+              name: brandKit.name,
+              description: brandKit.description,
+              url: brandKit.url,
+              tagline: brandKit.tagline,
+              audience: brandKit.audience,
+            }
+          : undefined,
+        location: {
+          place: location.place || undefined,
+          hasImage: !!location.imagePath,
+        },
+      });
       await submitVideoJob(prompt, "seedance-2.0", null, {
         aspect_ratio: "9:16",
         duration: 5,
