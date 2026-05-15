@@ -194,6 +194,7 @@ function HistoryCard({
   onDelete,
   isExpanded,
   onToggle,
+  onOpen,
   selectMode,
   selected,
   onToggleSelect,
@@ -205,6 +206,7 @@ function HistoryCard({
   onDelete: (id: string) => void;
   isExpanded: boolean;
   onToggle: () => void;
+  onOpen: () => void;
   selectMode: boolean;
   selected: boolean;
   onToggleSelect: () => void;
