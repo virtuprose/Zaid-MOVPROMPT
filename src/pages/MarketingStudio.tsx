@@ -432,7 +432,14 @@ export default function MarketingStudio() {
           ]}
         />
 
-        <BrandKitSheet open={brandOpen} onOpenChange={setBrandOpen} />
+        <BrandKitSheet
+          open={brandOpen}
+          onOpenChange={(o) => {
+            setBrandOpen(o);
+            if (!o) setBrandEditId(null);
+          }}
+          kitId={brandEditId}
+        />
 
         <ConfirmRightsDialog
           open={confirmOpen}
