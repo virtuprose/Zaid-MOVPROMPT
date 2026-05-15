@@ -179,7 +179,7 @@ export function PresetPickerDialog({
               <Input
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
-                placeholder="Search scenes… (try 'rooftop' or 'cafe')"
+                placeholder={searchPlaceholder}
                 className="pl-9 pr-8 rounded-full bg-muted/30 border-border/40"
               />
               {q && (
