@@ -53,6 +53,7 @@ import ModelLanding from "./pages/ModelLanding.tsx";
 import Referrals from "./pages/Referrals.tsx";
 import Onboarding from "./pages/Onboarding.tsx";
 import Director from "./pages/Director.tsx";
+import MarketingStudio from "./pages/MarketingStudio.tsx";
 import AccountSettings from "./pages/account/AccountSettings.tsx";
 import AccountBilling from "./pages/account/AccountBilling.tsx";
 import AccountPreferences from "./pages/account/AccountPreferences.tsx";
