@@ -370,8 +370,8 @@ function DirectorChatInner() {
               <Message key={i} from="user" className="items-end">
                 <MessageContent
                   className={cn(
-                    "rounded-full bg-muted/40 border border-border/40 px-4 py-2 text-sm",
-                    "group-[.is-user]:bg-muted/40 group-[.is-user]:rounded-full group-[.is-user]:px-4 group-[.is-user]:py-2",
+                    "rounded-2xl bg-muted/40 border border-border/40 px-4 py-2 text-sm",
+                    "group-[.is-user]:bg-muted/40 group-[.is-user]:rounded-2xl group-[.is-user]:px-4 group-[.is-user]:py-2",
                   )}
                 >
                   <div className="whitespace-pre-wrap leading-relaxed">
