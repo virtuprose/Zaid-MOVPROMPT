@@ -511,16 +511,18 @@ export default function MarketingStudio() {
           open={openPicker === "setting"}
           onOpenChange={(o) => !o && setOpenPicker(null)}
           title="Settings that set the scene"
-          subtitle="Pick the scene type and where in the world it unfolds."
+          subtitle="Choose a scene type. Add a location for geographic context."
           presets={SETTINGS}
           selectedId={settingId}
           onSelect={setSettingId}
           categories={[
-            { id: "realistic", label: "Realistic" },
-            { id: "unrealistic", label: "Unrealistic" },
+            { id: "realistic", label: "Real", tooltip: "Real-world settings — bedrooms, kitchens, streets" },
+            { id: "unrealistic", label: "Stylized", tooltip: "Stylized scenes — surreal, dramatic, cinematic" },
           ]}
           locationValue={location}
           onLocationChange={setLocation}
+          customValue={customSetting}
+          onCustomChange={setCustomSetting}
         />
 
         <BrandKitSheet
