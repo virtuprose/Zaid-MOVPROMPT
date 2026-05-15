@@ -162,22 +162,7 @@ export default function MarketingStudio() {
               <br /> into a video ad
             </h1>
             <p className="text-muted-foreground mt-3 max-w-xl mx-auto text-sm">
-              Pick a format, a scroll-stopping hook and a setting. We compose the prompt and
-              render it on
-              <span className="inline-flex items-center gap-1 ml-1 text-foreground/80">
-                Seedance 2.0
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button type="button" className="inline-flex">
-                      <Info className="w-3.5 h-3.5 text-muted-foreground hover:text-foreground" />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent className="max-w-xs">
-                    Seedance 2.0 produces the highest-quality product motion for ad creative.
-                  </TooltipContent>
-                </Tooltip>
-              </span>
-              .
+              Pick a format, a scroll-stopping hook and a setting. We compose the prompt and render your ad.
             </p>
           </div>
 
