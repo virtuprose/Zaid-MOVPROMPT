@@ -333,6 +333,7 @@ export default function MarketingStudio() {
                 value={format?.label}
                 tooltip="The visual style of your ad"
                 onClick={() => setOpenPicker("format")}
+                flash={flashChips}
               />
               <PresetChip
                 icon={<Target className="w-3.5 h-3.5" />}
@@ -340,6 +341,7 @@ export default function MarketingStudio() {
                 value={hook?.label}
                 tooltip="The attention-grabber in the first 3 seconds"
                 onClick={() => setOpenPicker("hook")}
+                flash={flashChips}
               />
               <PresetChip
                 icon={<Globe2 className="w-3.5 h-3.5" />}
@@ -347,6 +349,7 @@ export default function MarketingStudio() {
                 value={setting?.label}
                 tooltip="Scene type — kitchen, studio, rooftop"
                 onClick={() => setOpenPicker("setting")}
+                flash={flashChips}
               />
 
               <div className="ml-auto flex items-center gap-2">
