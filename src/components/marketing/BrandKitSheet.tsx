@@ -30,7 +30,10 @@ export function BrandKitSheet({
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [logoMode, setLogoMode] = useState<"upload" | "url">("upload");
+  const [analyzing, setAnalyzing] = useState(false);
+  const [justFilled, setJustFilled] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const urlDebounce = useRef<number | null>(null);
 
   useEffect(() => {
     if (open) setDraft(kit ?? EMPTY_BRAND_KIT);
@@ -38,6 +41,25 @@ export function BrandKitSheet({
 
   const update = <K extends keyof BrandKit>(k: K, v: BrandKit[K]) =>
     setDraft((d) => ({ ...d, [k]: v }));
+
+  const runAnalyze = async (input: { imagePath?: string | null; imageUrl?: string | null }) => {
+    setAnalyzing(true);
+    try {
+      const res = await analyzeBrandImage({ ...input, subject: draft.subject });
+      setDraft((d) => ({
+        ...d,
+        name: d.name?.trim() ? d.name : res.name ?? d.name,
+        description: d.description?.trim() ? d.description : res.description ?? d.description,
+        tagline: d.tagline?.trim() ? d.tagline : res.tagline ?? d.tagline,
+      }));
+      setJustFilled(true);
+      window.setTimeout(() => setJustFilled(false), 4000);
+    } catch (e: any) {
+      toast.error("Couldn't auto-read the image — fill it in manually");
+    } finally {
+      setAnalyzing(false);
+    }
+  };
 
   const handleFile = async (file?: File | null) => {
     if (!file) return;
@@ -50,11 +72,22 @@ export function BrandKitSheet({
       const path = await uploadLogo(file);
       update("logo_path", path);
       update("logo_url", URL.createObjectURL(file));
+      runAnalyze({ imagePath: path });
     } catch (e: any) {
       toast.error(e?.message || "Upload failed");
     } finally {
       setUploading(false);
     }
+  };
+
+  const handleUrlChange = (url: string) => {
+    update("logo_path", null);
+    update("logo_url", url || null);
+    if (urlDebounce.current) window.clearTimeout(urlDebounce.current);
+    if (!url || !/^https?:\/\/.+\.(png|jpe?g|webp|gif|svg)(\?|$)/i.test(url)) return;
+    urlDebounce.current = window.setTimeout(() => {
+      runAnalyze({ imageUrl: url });
+    }, 600);
   };
 
   const handleSave = async () => {
