@@ -401,37 +401,24 @@ export default function MarketingStudio() {
             )}
 
             {mode === "mixed" && (
-              <div className="space-y-12">
-                <div>
-                  <SectionHeader
-                    title="Your recent ads"
-                    subtitle="Pick up where you left off — or remix one of yours."
-                    right={
-                      <button
-                        type="button"
-                        onClick={() => navigate("/library")}
-                        className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-                      >
-                        Browse all {adCount} →
-                      </button>
-                    }
-                  />
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {userAds.slice(0, 3).map((ad) => (
-                      <UserAdCard key={ad.id} ad={ad} onClick={() => navigate("/library")} />
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <SectionHeader
-                    title="More from community"
-                    subtitle="Click any template to load its format, hook and setting."
-                  />
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {filteredAds.slice(0, 3).map((ad) => (
-                      <CommunityCard key={ad.url} ad={ad} onClick={() => applyTemplate(ad.template)} />
-                    ))}
-                  </div>
+              <div>
+                <SectionHeader
+                  title="Your recent ads"
+                  subtitle="Pick up where you left off — or remix one of yours."
+                  right={
+                    <button
+                      type="button"
+                      onClick={() => navigate("/library")}
+                      className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      Browse all {adCount} →
+                    </button>
+                  }
+                />
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {userAds.slice(0, 3).map((ad) => (
+                    <UserAdCard key={ad.id} ad={ad} onClick={() => navigate("/library")} />
+                  ))}
                 </div>
               </div>
             )}
