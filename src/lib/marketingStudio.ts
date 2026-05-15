@@ -22,12 +22,13 @@ const u = (id: string) =>
   `https://images.unsplash.com/${id}?w=600&auto=format&fit=crop&q=80`;
 
 export const FORMATS: StudioPreset[] = [
+  // ── UGC / social ────────────────────────────
   {
     id: "ugc",
     label: "UGC",
-    description: "Realistic social media videos",
+    description: "Phone-shot, talking-to-camera selfie",
     category: "ugc",
-    emoji: "📱",
+    image: u("photo-1611162616305-c69b3fa7fbe0"),
     fragment:
       "Handheld vertical UGC selfie style, natural daylight, casual presenter speaking directly to camera, authentic phone-shot look",
   },
@@ -36,102 +37,266 @@ export const FORMATS: StudioPreset[] = [
     label: "Tutorial",
     description: "Step-by-step product walkthrough",
     category: "ugc",
-    emoji: "🧑‍🏫",
+    image: u("photo-1556909114-f6e7ad7d3136"),
     fragment:
       "Top-down or shoulder POV tutorial, presenter demonstrating the steps clearly, clean kitchen/desk surface, bright even lighting",
   },
   {
     id: "unboxing",
     label: "Unboxing",
-    description: "High-quality unboxing reveal",
-    category: "commercial",
-    emoji: "📦",
+    description: "Top-down hands-on reveal",
+    category: "ugc",
+    image: u("photo-1607083206869-4c7672e72a8a"),
     fragment:
       "Macro unboxing on neutral surface, slow reveal of product, soft directional light, ASMR-grade tactile sound design",
   },
   {
+    id: "testimonial",
+    label: "Testimonial",
+    description: "Customer talking head, candid",
+    category: "ugc",
+    image: u("photo-1573496359142-b8d87734a5a2"),
+    fragment:
+      "Customer testimonial talking head, soft natural light, candid eye contact, sincere delivery of one key benefit",
+  },
+  {
+    id: "reaction",
+    label: "Reaction",
+    description: "Real-time reaction to a reveal",
+    category: "ugc",
+    image: u("photo-1543610892-0b1f7e6d8ac1"),
+    fragment:
+      "Reaction format: subject reacts in real time to seeing or using the product, exaggerated honest expression, quick cuts",
+  },
+  {
+    id: "pov",
+    label: "POV",
+    description: "First-person point-of-view",
+    category: "ugc",
+    image: u("photo-1502920917128-1aa500764cbd"),
+    fragment:
+      "First-person POV throughout, hands enter frame to interact with the product, immersive everyday environment",
+  },
+
+  // ── Commercial / brand ──────────────────────
+  {
     id: "hyper-motion",
-    label: "Hyper Motion",
-    description: "Cinematic high-energy product hero",
+    label: "Speed Reveal",
+    description: "High-speed cinematic product hero",
     category: "commercial",
-    emoji: "💥",
+    image: u("photo-1551582045-6ec9c11d8697"),
     fragment:
       "Hyper-motion commercial, fast push-in to product hero, splash/particle FX, polished studio lighting, premium ad finish",
   },
   {
-    id: "talking-avatar",
-    label: "Talking Avatar",
-    description: "Avatar speaks to camera",
-    category: "ugc",
-    emoji: "🗣️",
+    id: "hero-shot",
+    label: "Hero Shot",
+    description: "Single dramatic product reveal",
+    category: "commercial",
+    image: u("photo-1542291026-7eec264c27ff"),
     fragment:
-      "Single avatar talking head, eye-line locked to camera, subtle natural gestures, lips synced to a confident sales line",
+      "Single hero shot of the product on a pedestal, dramatic key light, slow rotating camera, premium reveal beat",
+  },
+  {
+    id: "demo",
+    label: "Demo",
+    description: "Product in action, results-focused",
+    category: "commercial",
+    image: u("photo-1556761175-5973dc0f32e7"),
+    fragment:
+      "Demo format: clean cinematic shots of the product performing its core action, crisp sound design on each step",
+  },
+  {
+    id: "lifestyle",
+    label: "Lifestyle",
+    description: "Product woven into daily life",
+    category: "commercial",
+    image: u("photo-1490481651871-ab68de25d43d"),
+    fragment:
+      "Lifestyle commercial, product naturally integrated into a beautifully styled daily routine, warm cinematic color",
   },
   {
     id: "before-after",
     label: "Before / After",
     description: "Side-by-side transformation",
     category: "commercial",
-    emoji: "🔁",
+    image: u("photo-1517694712202-14dd9538aa97"),
     fragment:
       "Split-screen before/after transformation, smooth wipe between states, clear visual contrast, satisfying payoff frame",
+  },
+  {
+    id: "documentary",
+    label: "Documentary",
+    description: "Narrative-driven brand story",
+    category: "commercial",
+    image: u("photo-1522202176988-66273c2fd55f"),
+    fragment:
+      "Documentary style, observational handheld camera, voiceover narration, real moments around the product or its makers",
+  },
+  {
+    id: "founder-talk",
+    label: "Founder Talk",
+    description: "Founder direct-to-camera",
+    category: "commercial",
+    image: u("photo-1560250097-0b93528c311a"),
+    fragment:
+      "Founder direct-to-camera, soft studio light, sincere mid-shot, the founder explains the why behind the product",
+  },
+  {
+    id: "problem-solution",
+    label: "Problem → Solution",
+    description: "Pain point, then relief",
+    category: "commercial",
+    image: u("photo-1454165804606-c3d57bc86b40"),
+    fragment:
+      "Problem-solution arc: open on a relatable frustration, beat of tension, then product solves it cleanly with a happy payoff",
+  },
+  {
+    id: "day-in-life",
+    label: "Day in the Life",
+    description: "Vlog-style routine featuring the product",
+    category: "ugc",
+    image: u("photo-1499951360447-b19be8fe80f5"),
+    fragment:
+      "Day-in-the-life vlog cut, natural light through the day, the product appears at key moments of the routine",
+  },
+
+  // ── Avatar / animated ───────────────────────
+  {
+    id: "talking-avatar",
+    label: "Talking Avatar",
+    description: "Avatar speaks to camera",
+    category: "avatar",
+    image: u("photo-1494790108377-be9c29b29330"),
+    fragment:
+      "Single avatar talking head, eye-line locked to camera, subtle natural gestures, lips synced to a confident sales line",
+  },
+  {
+    id: "animated-explainer",
+    label: "Animated Explainer",
+    description: "Motion-graphic explainer",
+    category: "animated",
+    image: u("photo-1620712943543-bcc4688e7485"),
+    fragment:
+      "Animated explainer style, clean motion graphics, bold typography, illustrated icons walk through the value prop",
   },
 ];
 
 export const HOOKS: StudioPreset[] = [
+  // ── Surprise ────────────────────────────────
   {
     id: "product-hit",
     label: "Product Hit",
-    description: "Object flies into frame, brief reaction → pivot to product",
-    category: "stunt",
-    emoji: "🎯",
+    description: "Object flies into frame, beat reaction",
+    category: "surprise",
+    image: u("photo-1542291026-7eec264c27ff"),
     fragment:
       "Hook: product flies into frame and lands in subject's hand, micro-shocked reaction, then confident smile",
   },
   {
-    id: "spicy",
-    label: "Spicy",
-    description: "Extreme close-up that slowly pulls out",
-    category: "subtle",
-    emoji: "🌶️",
-    fragment:
-      "Hook: extreme close-up on a striking detail, slow pull-out reveals the full subject and product",
-  },
-  {
-    id: "interview",
-    label: "Interview",
-    description: "Stranger interview based on a punchy question",
-    category: "subtle",
-    emoji: "🎙️",
-    fragment:
-      "Hook: street-interview opener, off-camera voice asks a punchy question, subject answers candidly",
-  },
-  {
     id: "random-object-mic",
     label: "Random Object Mic",
-    description: "Absurd object falls in as the 'mic'",
-    category: "stunt",
-    emoji: "🎤",
+    description: "Absurd object drops in as the 'mic'",
+    category: "surprise",
+    image: u("photo-1485579149621-3123dd979885"),
     fragment:
       "Hook: an absurd object drops into frame and is used as a mic, comedic beat, then pivot to product talking point",
   },
   {
-    id: "first-line",
-    label: "Bold First Line",
-    description: "Loud opening statement straight to camera",
-    category: "subtle",
-    emoji: "💬",
+    id: "pattern-interrupt",
+    label: "Pattern Interrupt",
+    description: "Unexpected visual jolt in frame 1",
+    category: "surprise",
+    image: u("photo-1496111367193-b1c4cdfa6b39"),
     fragment:
-      "Hook: subject opens with a bold spoken first line directly to camera, no preamble",
+      "Hook: pattern-interrupt opener — an unexpected visual or sound jolt in the very first frame to stop the scroll",
+  },
+
+  // ── Curiosity ───────────────────────────────
+  {
+    id: "spicy",
+    label: "Mystery Macro",
+    description: "Extreme close-up that pulls out",
+    category: "curiosity",
+    image: u("photo-1556228720-195a672e8a03"),
+    fragment:
+      "Hook: extreme close-up on a striking detail, slow pull-out reveals the full subject and product",
   },
   {
     id: "pov-reveal",
     label: "POV Reveal",
-    description: "Open on POV shot, snap to product",
-    category: "stunt",
-    emoji: "👀",
+    description: "Open on POV, snap to product",
+    category: "curiosity",
+    image: u("photo-1502920917128-1aa500764cbd"),
     fragment:
       "Hook: opens on first-person POV, fast snap-cut reveals the product on a surface in front of the viewer",
+  },
+  {
+    id: "question",
+    label: "Open Question",
+    description: "Punchy question straight to camera",
+    category: "curiosity",
+    image: u("photo-1573497019940-1c28c88b4f3e"),
+    fragment:
+      "Hook: subject asks a punchy, specific question directly to camera that the rest of the ad answers",
+  },
+  {
+    id: "interview",
+    label: "Street Interview",
+    description: "Stranger answers a sharp question",
+    category: "curiosity",
+    image: u("photo-1521737604893-d14cc237f11d"),
+    fragment:
+      "Hook: street-interview opener, off-camera voice asks a punchy question, subject answers candidly",
+  },
+
+  // ── Bold claim ──────────────────────────────
+  {
+    id: "first-line",
+    label: "Bold First Line",
+    description: "Loud opening statement",
+    category: "bold-claim",
+    image: u("photo-1535713875002-d1d0cf377fde"),
+    fragment:
+      "Hook: subject opens with a bold spoken first line directly to camera, no preamble",
+  },
+  {
+    id: "statistic-shock",
+    label: "Statistic Shock",
+    description: "Surprising number on screen",
+    category: "bold-claim",
+    image: u("photo-1551288049-bebda4e38f71"),
+    fragment:
+      "Hook: a surprising statistic slams onto screen with bold typography and a hard sound cue, voiceover reads it",
+  },
+  {
+    id: "comparison",
+    label: "Comparison",
+    description: "Us vs. them, instant contrast",
+    category: "bold-claim",
+    image: u("photo-1517694712202-14dd9538aa97"),
+    fragment:
+      "Hook: instant comparison frame — ours vs theirs side by side, the difference is obvious within one second",
+  },
+
+  // ── Emotional ───────────────────────────────
+  {
+    id: "before-after-teaser",
+    label: "Before/After Teaser",
+    description: "Tease the transformation up front",
+    category: "emotional",
+    image: u("photo-1521572267360-ee0c2909d518"),
+    fragment:
+      "Hook: tease the after-state in the very first beat, then cut to the before — emotional payoff promised early",
+  },
+  {
+    id: "vulnerable-moment",
+    label: "Vulnerable Moment",
+    description: "Quiet, honest confession",
+    category: "emotional",
+    image: u("photo-1488161628813-04466f872be2"),
+    fragment:
+      "Hook: quiet vulnerable moment, soft handheld, subject shares a real frustration that the product addresses",
   },
 ];
 
@@ -352,6 +517,8 @@ export type StudioBrief = {
   formatId?: string;
   hookId?: string;
   settingId?: string;
+  /** Free-text format description used when no preset is picked. */
+  customFormat?: string;
   /** Free-text scene description used when no preset is picked. */
   customSetting?: string;
   brand?: BrandContext;
@@ -393,7 +560,7 @@ export function composeStudioPrompt(brief: StudioBrief): string {
     subjectLine,
     brandLine(brief.brand),
     hook?.fragment,
-    format?.fragment,
+    format?.fragment ?? (brief.customFormat?.trim() ? `Format: ${brief.customFormat.trim()}` : null),
     setting?.fragment ?? (brief.customSetting?.trim() ? `Setting: ${brief.customSetting.trim()}` : null),
     locationLine(brief.location),
     brief.master.trim() ? `Story: ${brief.master.trim()}` : null,

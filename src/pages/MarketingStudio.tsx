@@ -81,6 +81,7 @@ export default function MarketingStudio() {
   const subject: Subject = brandKit?.subject ?? "product";
   const [master, setMaster] = useState("");
   const [formatId, setFormatId] = useState<string | undefined>();
+  const [customFormat, setCustomFormat] = useState<string>("");
   const [hookId, setHookId] = useState<string | undefined>();
   const [settingId, setSettingId] = useState<string | undefined>();
   const [customSetting, setCustomSetting] = useState<string>("");
@@ -129,13 +130,14 @@ export default function MarketingStudio() {
   const hasInputs =
     master.trim().length > 0 ||
     !!formatId ||
+    !!customFormat.trim() ||
     !!hookId ||
     !!settingId ||
     !!customSetting.trim() ||
     !!brandKit?.name ||
     !!location.place ||
     !!location.imagePath;
-  const ready = !!(formatId && hookId && (settingId || customSetting.trim()));
+  const ready = !!((formatId || customFormat.trim()) && hookId && (settingId || customSetting.trim()));
 
   const startGenerate = () => {
     if (!ready) {
@@ -158,6 +160,7 @@ export default function MarketingStudio() {
         formatId,
         hookId,
         settingId,
+        customFormat: customFormat || undefined,
         customSetting: customSetting || undefined,
         brand: brandKit
           ? {
@@ -338,7 +341,12 @@ export default function MarketingStudio() {
               <PresetChip
                 icon={<Sparkles className="w-3.5 h-3.5" />}
                 label="Format"
-                value={format?.label}
+                value={
+                  format?.label ||
+                  (customFormat.trim()
+                    ? `Custom: ${customFormat.trim().slice(0, 24)}${customFormat.trim().length > 24 ? "…" : ""}`
+                    : undefined)
+                }
                 tooltip="The visual style of your ad"
                 onClick={() => setOpenPicker("format")}
                 flash={flashChips}
@@ -394,7 +402,7 @@ export default function MarketingStudio() {
             {ready && (
               <div className="mt-4 rounded-xl border border-border/30 bg-muted/10 p-3 text-xs text-muted-foreground">
                 <span className="text-foreground/80 font-medium">Renders as:</span>{" "}
-                {hook?.label} · {format?.label} · {setting?.label} · 9:16 · 5s · audio on
+                {hook?.label} · {format?.label || "Custom format"} · {setting?.label || "Custom scene"} · 9:16 · 5s · audio on
               </div>
             )}
           </div>
@@ -485,22 +493,31 @@ export default function MarketingStudio() {
           presets={FORMATS}
           selectedId={formatId}
           onSelect={setFormatId}
+          searchPlaceholder="Search formats… (try 'UGC' or 'unboxing')"
+          customLabel="Custom format"
+          customValue={customFormat}
+          onCustomChange={setCustomFormat}
           categories={[
-            { id: "ugc", label: "UGC" },
-            { id: "commercial", label: "Commercial" },
+            { id: "ugc", label: "UGC", tooltip: "Casual social-media formats" },
+            { id: "commercial", label: "Commercial", tooltip: "Polished brand formats" },
+            { id: "avatar", label: "Avatar", tooltip: "Avatar-led formats" },
+            { id: "animated", label: "Animated", tooltip: "Motion-graphic formats" },
           ]}
         />
         <PresetPickerDialog
           open={openPicker === "hook"}
           onOpenChange={(o) => !o && setOpenPicker(null)}
-          title="Hooks that stop the scroll"
+          title="Pick the hook that grabs"
           subtitle="The first 3 seconds decide if your ad gets watched or skipped. Pick a proven opener."
           presets={HOOKS}
           selectedId={hookId}
           onSelect={setHookId}
+          searchPlaceholder="Search hooks… (try 'POV' or 'question')"
           categories={[
-            { id: "stunt", label: "Stunt" },
-            { id: "subtle", label: "Subtle" },
+            { id: "surprise", label: "Surprise", tooltip: "Pattern interrupts and stunts" },
+            { id: "curiosity", label: "Curiosity", tooltip: "Open loops and reveals" },
+            { id: "bold-claim", label: "Bold claim", tooltip: "Statements and stats" },
+            { id: "emotional", label: "Emotional", tooltip: "Feeling-led openers" },
           ]}
         />
         <PresetPickerDialog
@@ -511,6 +528,8 @@ export default function MarketingStudio() {
           presets={SETTINGS}
           selectedId={settingId}
           onSelect={setSettingId}
+          searchPlaceholder="Search scenes… (try 'rooftop' or 'cafe')"
+          customLabel="Custom scene"
           categories={[
             { id: "realistic", label: "Real", tooltip: "Real-world settings — bedrooms, kitchens, streets" },
             { id: "unrealistic", label: "Stylized", tooltip: "Stylized scenes — surreal, dramatic, cinematic" },

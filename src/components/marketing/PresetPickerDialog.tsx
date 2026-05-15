@@ -19,11 +19,13 @@ type Props = {
   selectedId?: string;
   onSelect: (id: string | undefined) => void;
   categories?: { id: string; label: string; tooltip?: string }[];
+  searchPlaceholder?: string;
   locationValue?: LocationInput;
   onLocationChange?: (v: LocationInput) => void;
-  /** Optional: enables the "Custom scene" card. */
+  /** Optional: enables the "Custom" card. */
   customValue?: string;
   onCustomChange?: (v: string) => void;
+  customLabel?: string;
 };
 
 export function PresetPickerDialog({
@@ -35,10 +37,12 @@ export function PresetPickerDialog({
   selectedId,
   onSelect,
   categories,
+  searchPlaceholder = "Search presets…",
   locationValue,
   onLocationChange,
   customValue,
   onCustomChange,
+  customLabel = "Custom",
 }: Props) {
   const [tab, setTab] = useState<string>("all");
   const [q, setQ] = useState("");
@@ -175,7 +179,7 @@ export function PresetPickerDialog({
               <Input
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
-                placeholder="Search scenes… (try 'rooftop' or 'cafe')"
+                placeholder={searchPlaceholder}
                 className="pl-9 pr-8 rounded-full bg-muted/30 border-border/40"
               />
               {q && (
@@ -235,6 +239,13 @@ export function PresetPickerDialog({
                     <div className="text-sm font-semibold text-white">{p.label}</div>
                     <div className="text-[11px] text-white/70 line-clamp-2">{p.description}</div>
                   </div>
+                  {!active && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                      <span className="px-3 py-1 rounded-full bg-[#F5A524] text-black text-[11px] font-semibold">
+                        Click to use
+                      </span>
+                    </div>
+                  )}
                   {active && (
                     <div className="absolute top-2 right-2 w-6 h-6 rounded-full bg-[#F5A524] text-black inline-flex items-center justify-center shadow-md">
                       <Check className="w-3.5 h-3.5" />
@@ -263,9 +274,9 @@ export function PresetPickerDialog({
                 <div className="w-10 h-10 rounded-full bg-[#F5A524]/15 text-[#F5A524] inline-flex items-center justify-center">
                   <Plus className="w-5 h-5" />
                 </div>
-                <div className="text-sm font-semibold text-foreground">Custom scene</div>
+                <div className="text-sm font-semibold text-foreground">+ {customLabel}</div>
                 <div className="text-[11px] text-muted-foreground line-clamp-2">
-                  {draftCustom || "Describe the exact scene you want"}
+                  {draftCustom || `Describe your ${customLabel.toLowerCase()}`}
                 </div>
               </button>
             )}
@@ -277,7 +288,7 @@ export function PresetPickerDialog({
               <div className="flex items-center gap-2 text-sm">
                 <Sparkles className="w-4 h-4 text-[#F5A524]" />
                 <span>
-                  No scene matches <span className="font-semibold">"{q}"</span>.
+                  No match for <span className="font-semibold">"{q}"</span>.
                 </span>
               </div>
               {supportsCustom && (
@@ -291,7 +302,7 @@ export function PresetPickerDialog({
                   }}
                   className="bg-[#F5A524] text-black hover:bg-[#F5A524]/90"
                 >
-                  Use "{q}" as custom scene
+                  Use "{q}" as custom
                 </Button>
               )}
             </div>
@@ -301,7 +312,7 @@ export function PresetPickerDialog({
           {supportsCustom && customOpen && (
             <div className="mt-4 rounded-2xl border border-[#F5A524]/40 bg-muted/10 p-4 space-y-2">
               <div className="flex items-center justify-between">
-                <div className="text-sm font-semibold text-foreground">Custom scene</div>
+                <div className="text-sm font-semibold text-foreground">{customLabel}</div>
                 <button
                   type="button"
                   onClick={() => {
@@ -316,12 +327,12 @@ export function PresetPickerDialog({
               <Textarea
                 value={draftCustom}
                 onChange={(e) => setDraftCustom(e.target.value)}
-                placeholder="Describe your scene… e.g. 'Sunlit Marrakech rooftop at golden hour with lanterns'"
+                placeholder={`Describe your ${customLabel.toLowerCase()}…`}
                 className="min-h-[80px] bg-background/60"
                 autoFocus
               />
               <p className="text-[11px] text-muted-foreground">
-                The AI will use this description directly as the setting.
+                The AI will use this description directly.
               </p>
             </div>
           )}
