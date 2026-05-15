@@ -964,15 +964,58 @@ export function VideosTab() {
         </div>
       </div>
 
-      {/* Bulk action bar */}
+      {/* Bulk action bar — fixed to bottom of viewport when in select mode */}
       {selectMode && selectedIds.size > 0 && (
-        <div className="sticky top-16 z-20 rounded-lg border border-accent/40 bg-accent/10 backdrop-blur px-3 py-2 flex items-center gap-3">
-          <span className="text-xs font-medium text-accent">{selectedIds.size} selected</span>
-          <div className="flex-1" />
-          <Button size="sm" variant="destructive" onClick={() => setBulkConfirmOpen(true)} className="h-8 text-xs">
-            <Trash2 className="w-3.5 h-3.5 me-1.5" /> Delete
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 rounded-full border border-accent/50 bg-card/95 backdrop-blur-md shadow-[0_8px_32px_-8px_hsl(var(--accent)/0.4)] px-4 py-2 flex items-center gap-2">
+          <span className="text-xs font-semibold text-accent pe-1">
+            {selectedIds.size} selected
+          </span>
+          <div className="h-5 w-px bg-border" />
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => {
+              const completed = sorted.filter((j) => selectedIds.has(j.id) && j.video_url);
+              completed.forEach((j) => {
+                const a = document.createElement("a");
+                a.href = j.video_url!;
+                a.download = "";
+                a.target = "_blank";
+                a.rel = "noreferrer";
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+              });
+              toast({ title: "Downloads started", description: `${completed.length} video${completed.length === 1 ? "" : "s"}.` });
+            }}
+            className="h-8 text-xs gap-1.5"
+          >
+            <Download className="w-3.5 h-3.5" /> Download
           </Button>
-          <Button size="sm" variant="ghost" onClick={() => { setSelectMode(false); setSelectedIds(new Set()); }} className="h-8 text-xs">
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={async () => {
+              const urls = sorted.filter((j) => selectedIds.has(j.id) && j.video_url).map((j) => j.video_url).join("\n");
+              if (urls) {
+                await navigator.clipboard.writeText(urls);
+                toast({ title: "Links copied", description: "Video URLs copied to clipboard." });
+              }
+            }}
+            className="h-8 text-xs gap-1.5"
+          >
+            <Share2 className="w-3.5 h-3.5" /> Share
+          </Button>
+          <Button size="sm" variant="destructive" onClick={() => setBulkConfirmOpen(true)} className="h-8 text-xs gap-1.5">
+            <Trash2 className="w-3.5 h-3.5" /> Delete
+          </Button>
+          <div className="h-5 w-px bg-border" />
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => { setSelectMode(false); setSelectedIds(new Set()); }}
+            className="h-8 text-xs"
+          >
             Cancel
           </Button>
         </div>
