@@ -517,6 +517,8 @@ export type StudioBrief = {
   formatId?: string;
   hookId?: string;
   settingId?: string;
+  /** Free-text format description used when no preset is picked. */
+  customFormat?: string;
   /** Free-text scene description used when no preset is picked. */
   customSetting?: string;
   brand?: BrandContext;
