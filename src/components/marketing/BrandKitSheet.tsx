@@ -243,11 +243,11 @@ export function BrandKitSheet({
             placeholder="Acme Sneakers"
           />
           <FieldArea
-            label="One-line description"
+            label="Detailed description"
             value={draft.description}
             onChange={(v) => update("description", v)}
-            placeholder="AI-powered sleep tracker for athletes"
-            max={120}
+            placeholder="What it does, who it's for, what makes it different…"
+            max={500}
           />
           <Field
             label="Tagline"
