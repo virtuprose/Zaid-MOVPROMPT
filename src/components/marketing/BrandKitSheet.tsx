@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Loader2, Upload, X, Gift, Smartphone } from "lucide-react";
+import { Loader2, Upload, X, Gift, Smartphone, Link as LinkIcon } from "lucide-react";
 import { toast } from "sonner";
 import {
   Sheet,
