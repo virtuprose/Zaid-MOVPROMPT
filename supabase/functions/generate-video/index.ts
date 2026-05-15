@@ -344,6 +344,28 @@ serve(async (req) => {
       });
     }
 
+    if (action === "check_eligibility") {
+      const { provider: cProv, prompt: cPrompt } = body as { provider?: string; prompt?: string };
+      const provider = typeof cProv === "string" ? cProv : "";
+      const text = typeof cPrompt === "string" ? cPrompt.trim() : "";
+      if (!provider || !FAL_MODELS[provider]) {
+        return new Response(JSON.stringify({ error: "Unknown provider" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (!text || text.length > 6000) {
+        return new Response(JSON.stringify({ error: "Valid prompt required" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const result = await runEligibilityCheck(provider, text, FAL_KEY);
+      return new Response(JSON.stringify(result), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // Submit new job
     let { prompt, provider = "seedance-v1-pro", session_id, options } = body as {
       prompt?: string;
@@ -376,6 +398,21 @@ serve(async (req) => {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    // Server-side enforcement for models with eligibility checks.
+    if (ELIGIBILITY_ENDPOINTS[provider]) {
+      const elig = await runEligibilityCheck(provider, normalizedPrompt, FAL_KEY);
+      if (!elig.eligible) {
+        return new Response(
+          JSON.stringify({
+            error: "not_eligible",
+            reason: elig.reason,
+            categories: elig.categories,
+          }),
+          { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
     }
 
     // Create job row
