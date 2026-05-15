@@ -51,7 +51,7 @@ const CONTROLS: Record<string, ModelControls> = {
   },
   "veo-3.1-lite": {
     aspectRatios: ["16:9", "9:16"],
-    durations: [8],
+    durations: [4, 6, 8],
     resolutions: ["720p", "1080p"],
     audio: true,
     defaults: { aspect_ratio: "16:9", duration: 8, resolution: "1080p", audio: true },
