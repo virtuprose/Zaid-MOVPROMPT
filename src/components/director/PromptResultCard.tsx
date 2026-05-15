@@ -185,12 +185,23 @@ export function PromptResultCard({ title, prompt, breakdown, directorsNote, onRe
     setPendingModel(m);
   };
 
-  const generateVideo = async (model: VideoModel, options: VideoOptions) => {
+  const generateVideo = async (
+    model: VideoModel,
+    options: VideoOptions,
+    finalPrompt: string,
+    meta: { rewritten: boolean; summary?: string; original?: string },
+  ) => {
     setGenerating(true);
     try {
-      const newJob = await submitVideoJob(prompt, model.id, sessionId, options);
+      const newJob = await submitVideoJob(finalPrompt, model.id, sessionId, options);
       setJob(newJob);
-      toast.success(`Rendering with ${model.label} — this can take a few minutes`);
+      if (meta.rewritten) {
+        toast.success(
+          `Prompt rewritten to pass ${model.label} content checks. Rendering now — ${meta.summary || "minor edits applied."}`,
+        );
+      } else {
+        toast.success(`Rendering with ${model.label} — this can take a few minutes`);
+      }
     } catch (e: any) {
       toast.error(e?.message || "Could not start video generation");
     } finally {
