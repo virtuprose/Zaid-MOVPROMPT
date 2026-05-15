@@ -332,38 +332,6 @@ export default function MarketingStudio() {
 
             <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-border/30">
 
-              <LocationPopover
-                value={location}
-                onChange={setLocation}
-                trigger={
-                  <button
-                    type="button"
-                    className={cn(
-                      "inline-flex items-center gap-1.5 rounded-full border px-3 h-9 text-xs transition-colors",
-                      location.place || location.imagePath
-                        ? "border-[hsl(0_72%_55%)]/50 bg-[hsl(0_72%_55%)]/10 text-foreground"
-                        : "border-border/40 bg-muted/20 text-muted-foreground hover:text-foreground hover:border-border",
-                    )}
-                  >
-                    {location.imageUrl ? (
-                      <img src={location.imageUrl} alt="" className="w-4 h-4 rounded-sm object-cover" />
-                    ) : (
-                      <MapPin className="w-3.5 h-3.5" />
-                    )}
-                    <span className="font-medium">
-                      {location.place
-                        ? `Location: ${location.place}`
-                        : location.imagePath
-                          ? "Location: Custom"
-                          : "Location"}
-                    </span>
-                    <ChevronDown className="w-3.5 h-3.5 opacity-60" />
-                  </button>
-                }
-              />
-
-              <span className="mx-1 h-5 w-px bg-border/50" />
-
               <PresetChip
                 icon={<Sparkles className="w-3.5 h-3.5" />}
                 label="Format"
