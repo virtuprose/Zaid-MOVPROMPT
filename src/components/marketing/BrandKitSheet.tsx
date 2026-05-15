@@ -29,6 +29,7 @@ export function BrandKitSheet({
   const [draft, setDraft] = useState<BrandKit>(EMPTY_BRAND_KIT);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [logoMode, setLogoMode] = useState<"upload" | "url">("upload");
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
