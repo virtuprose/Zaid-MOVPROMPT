@@ -216,13 +216,7 @@ export function BrandKitSheet({
             placeholder="Sleep smarter. Run faster."
             max={60}
           />
-          <FieldArea
-            label="Target audience"
-            value={draft.audience ?? ""}
-            onChange={(v) => update("audience", v || null)}
-            placeholder="Gen-Z runners in major US cities"
-            max={160}
-          />
+
 
           <div className="pt-2 flex gap-2">
             <Button
