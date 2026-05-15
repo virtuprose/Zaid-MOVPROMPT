@@ -2,9 +2,11 @@
 // Mirrors fal.ai input schemas — only fields the model actually accepts are
 // surfaced in the UI and forwarded to the edge function.
 
+export type DurationValue = number | "auto";
+
 export type VideoOptions = {
   aspect_ratio?: string;
-  duration?: number;
+  duration?: DurationValue;
   resolution?: string;
   audio?: boolean;
   cfg_scale?: number;
@@ -13,7 +15,14 @@ export type VideoOptions = {
 
 export type ModelControls = {
   aspectRatios?: string[];
+  /** Discrete set of allowed durations (slider snaps to these). */
   durations?: number[];
+  /** Continuous range — used when a model accepts any integer duration in [min,max]. */
+  durationMin?: number;
+  durationMax?: number;
+  durationStep?: number;
+  /** Model also accepts `"auto"` as a duration value. */
+  durationAuto?: boolean;
   resolutions?: string[];
   audio?: boolean;
   cfgScale?: boolean;
@@ -42,7 +51,7 @@ const CONTROLS: Record<string, ModelControls> = {
   },
   "veo-3.1-lite": {
     aspectRatios: ["16:9", "9:16"],
-    durations: [8],
+    durations: [4, 6, 8],
     resolutions: ["720p", "1080p"],
     audio: true,
     defaults: { aspect_ratio: "16:9", duration: 8, resolution: "1080p", audio: true },
@@ -93,17 +102,23 @@ const CONTROLS: Record<string, ModelControls> = {
   // Seedance
   "seedance-2.0": {
     aspectRatios: SEEDANCE_ASPECTS,
-    durations: [5, 10],
+    durationMin: 4,
+    durationMax: 15,
+    durationStep: 1,
+    durationAuto: true,
     resolutions: ["480p", "720p", "1080p"],
     audio: true,
-    defaults: { aspect_ratio: "16:9", duration: 5, resolution: "1080p", audio: true },
+    defaults: { aspect_ratio: "16:9", duration: "auto", resolution: "1080p", audio: true },
   },
   "seedance-2.0-fast": {
     aspectRatios: SEEDANCE_ASPECTS,
-    durations: [5, 10],
+    durationMin: 4,
+    durationMax: 15,
+    durationStep: 1,
+    durationAuto: true,
     resolutions: ["480p", "720p", "1080p"],
     audio: true,
-    defaults: { aspect_ratio: "16:9", duration: 5, resolution: "1080p", audio: true },
+    defaults: { aspect_ratio: "16:9", duration: "auto", resolution: "1080p", audio: true },
   },
   "seedance-v1-pro": {
     aspectRatios: SEEDANCE_ASPECTS,
@@ -119,23 +134,22 @@ const CONTROLS: Record<string, ModelControls> = {
   },
 
   // Hailuo
+  // hailuo-02-pro and hailuo-01 do not expose a duration parameter — fixed length.
   "hailuo-02-pro": {
     aspectRatios: ["16:9"],
-    durations: [6, 10],
     resolutions: ["768p", "1080p"],
     promptOptimizer: true,
-    defaults: { aspect_ratio: "16:9", duration: 6, resolution: "1080p", prompt_optimizer: true },
+    defaults: { aspect_ratio: "16:9", resolution: "1080p", prompt_optimizer: true },
   },
   "hailuo-02-standard": {
     aspectRatios: ["16:9"],
-    durations: [6],
+    durations: [6, 10],
     resolutions: ["768p"],
     defaults: { aspect_ratio: "16:9", duration: 6, resolution: "768p" },
   },
   "hailuo-01": {
     aspectRatios: ["16:9"],
-    durations: [6],
-    defaults: { aspect_ratio: "16:9", duration: 6 },
+    defaults: { aspect_ratio: "16:9" },
   },
 
   // Runway

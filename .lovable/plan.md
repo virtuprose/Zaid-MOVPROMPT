@@ -1,79 +1,82 @@
-# Seedance 2.0 prompt eligibility check + auto-rewrite
+# Duration audit + slider UI
 
-## Goal
-Before submitting a render to **Seedance 2.0** or **Seedance 2.0 Fast**, call fal.ai's eligibility/moderation endpoint. If the prompt is rejected, ask the AI Director to rewrite it safely, re-check, then submit. Show the user what happened.
+## Problems
 
-Other model families (Veo, Kling, etc.) keep today's flow — no eligibility step.
+1. **Wrong durations.** Confirmed against fal.ai schema: Seedance 2.0 / 2.0 Fast accept `4–15s` (+ `auto`), not `[5, 10]`. Other model families need the same audit.
+2. **UX.** Duration is rendered as segmented buttons. User wants a slider.
 
-## User flow
+## Step 1 — Audit each model's duration against fal.ai
 
-1. User clicks **Render with Seedance 2.0** in `VideoOptionsDialog`.
-2. Dialog stays open and shows an inline status: *"Checking prompt eligibility…"*
-3. Frontend calls `generate-video` with `action: "check_eligibility"`.
-   - **Eligible** → proceed to submit job (current flow).
-   - **Not eligible** → frontend calls `director-agent` with `action: "rewrite_safe"` passing the original prompt + the rejection reason. Status updates to *"Prompt flagged — rewriting safely (attempt 1/2)…"*
-4. Re-check the rewritten prompt.
-   - **Eligible** → submit. Show a small toast: *"Prompt was lightly rewritten to pass content checks."* with a "View changes" link (diff dialog).
-   - **Still not eligible after 2 rewrites** → stop. Surface the moderation reason in the dialog with a **Try again** / **Edit prompt manually** button. No job row is created.
+Fetch the official schema for every model in `videoModelControls.ts` and update both `durations` and `maxDurationSec` (in `videoModelCatalog.ts`) to match. Confirmed so far:
 
-## Backend changes
+| Model | Current | Fal schema |
+|---|---|---|
+| seedance-2.0 | [5, 10] | 4–15 + auto |
+| seedance-2.0-fast | [5, 10] | 4–15 + auto (to verify) |
+| seedance-v1-pro / lite | [5, 10] | to verify (likely 5/10) |
+| veo-3.1 / 3.1-fast | [4, 6, 8] | to verify |
+| veo-3.1-lite / veo-3 / veo-3-fast | [8] | to verify |
+| veo-2 | [5, 6, 7, 8] | to verify |
+| kling family | [5, 10] | to verify |
+| hailuo-02-pro | [6, 10] | to verify |
+| hailuo-02-standard / 01 | [6] | to verify |
+| runway-gen3-turbo | [5, 10] | to verify |
+| ltx variants | [5] | to verify |
+| wan-pro / wan-v2.2-a14b | [5, 10] | to verify |
 
-### `supabase/functions/generate-video/index.ts`
-- Add a `SEEDANCE_ELIGIBILITY` map for the two providers:
-  - `seedance-2.0` → `fal-ai/bytedance/seedance-2.0/check-eligibility`
-  - `seedance-2.0-fast` → `fal-ai/bytedance/seedance-2.0/fast/check-eligibility`
-- New action `check_eligibility` (POST):
-  - Body: `{ provider, prompt }`. Validate same as submit (auth, length, known provider).
-  - If provider is not in the map → return `{ eligible: true, skipped: true }` (so the frontend can call this uniformly without branching).
-  - Otherwise POST to `https://queue.fal.run/<endpoint>` synchronously (these checks return fast). Normalize the fal response into:
-    ```ts
-    { eligible: boolean, reason?: string, categories?: string[], raw?: unknown }
-    ```
-  - On fal 5xx / network error → return `{ eligible: true, degraded: true, reason: "check_unavailable" }` so we fail-open and don't block the user when the moderation service is down. Log it.
-- In the existing `submit` action, for Seedance 2.0 / 2.0 Fast, **re-run the eligibility check server-side** before hitting fal. This is a cheap defense so a client that skips the pre-check still can't bypass it. If not eligible, return `409 { error: "not_eligible", reason, categories }` and do **not** create a `video_jobs` row.
+For each model the duration spec is one of two shapes:
 
-### `supabase/functions/director-agent/index.ts`
-- Add a tool / action `rewrite_safe`:
-  - Input: `{ original_prompt, rejection_reason, categories?, model_id }`.
-  - System prompt addendum: *"The prompt was rejected by Seedance 2.0 content moderation for: {reason}. Rewrite the prompt to preserve cinematography, camera, lens, lighting, and composition, but remove or soften the flagged element. Do not add new subjects. Keep the Seedance shooting-script structure intact. Output the rewritten `mainPrompt` only."*
-  - Returns `{ rewritten_prompt: string, changes_summary: string }`.
+- **Discrete set** (e.g. Kling: `5 \| 10`) → keep `durations: number[]`, render as slider snapping to those marks.
+- **Continuous range** (e.g. Seedance 2.0: `4..15`) → new fields `durationMin`, `durationMax`, `durationStep` (default `1`), optional `durationAuto: true` for an "Auto" toggle.
 
-## Frontend changes
+Also re-check `maxResolution`, audio support, and aspect lists while the schemas are open — only update if mismatched (no scope creep).
 
-### `src/lib/director/api.ts`
-- Add helpers:
-  - `checkVideoEligibility(provider, prompt) → { eligible, reason?, categories?, degraded? }`
-  - `rewritePromptSafe(sessionId, prompt, reason, categories?) → { rewritten_prompt, changes_summary }`
+## Step 2 — Slider UI in `VideoOptionsDialog.tsx`
 
-### `src/lib/director/videoModelControls.ts` (or catalog)
-- Export `requiresEligibilityCheck(modelId): boolean` → true only for `seedance-2.0` and `seedance-2.0-fast`. Single source of truth used by both UI and any future analytics.
+Replace the `Segmented` duration block with a `Slider`:
 
-### `src/components/director/VideoOptionsDialog.tsx`
-- Add a `phase` state: `"idle" | "checking" | "rewriting" | "blocked" | "submitting"`.
-- When `requiresEligibilityCheck(model.id)` is true, on confirm:
-  1. `phase = "checking"` → call `checkVideoEligibility`.
-  2. If not eligible → `phase = "rewriting"`, call `rewritePromptSafe`, then re-check (max 2 rewrite attempts tracked in a `rewriteCount` ref).
-  3. On success → call `onConfirm(options, finalPrompt, rewriteSummary?)`.
-  4. On final failure → `phase = "blocked"`, show reason + categories with **Try again** / **Cancel**.
-- Update the `Render` button to show a spinner + dynamic label per phase.
-- Pass the (possibly rewritten) prompt up via the `onConfirm` signature change: `(options, finalPrompt, meta?: { rewritten: boolean; summary?: string })`.
+```text
+Duration                              7s
+[●━━━━━━━━━○━━━━━━━━━━━━━━━━━━━]
+4s                                    15s
+```
 
-### `src/components/director/PromptResultCard.tsx`
-- Update the `onConfirm` handler to:
-  - Use `finalPrompt` (rewritten or original) when calling `submitVideoJob`.
-  - If `meta.rewritten`, show a toast + a small "Prompt was rewritten to pass content checks. View changes" inline link that opens a diff dialog (reuse existing `Dialog` primitives, simple before/after side-by-side).
+- For continuous models: `min/max/step` from controls, current value shown inline, end-labels under the track.
+- For discrete models: still a slider, but `step` derived so it snaps only to allowed values (use `value` index into `durations[]`, or use `Slider` with custom `step` and clamp `onValueChange` to the nearest allowed value).
+- If `durationAuto` is true, show a small "Auto" toggle next to the value; when on, slider is disabled and we send `duration: "auto"`.
+- Single-option durations (e.g. Hailuo 01 = `[6]`) → render as a static read-only chip, not a slider.
 
-## Non-goals
-- No changes to other model families' submit flow.
-- No new DB columns; rewrite metadata lives in the toast/dialog only. (We can persist later if useful.)
-- No batching multiple prompts.
+## Step 3 — Type changes
 
-## Technical notes
-- Fail-open on moderation service errors (so an outage doesn't break renders), but never fail-open on a clear `eligible: false`.
-- Server-side re-check in `submit` is the security boundary; the client check is a UX optimization.
-- Keep retries hard-capped at 2 to avoid a rewrite loop costing tokens.
-- All eligibility responses logged via `console.log` in the edge function (no PII beyond the prompt the user already wrote).
+`videoModelControls.ts`:
 
-## Open follow-ups (not in this plan)
-- Apply the same pattern to Veo's safety filter once we confirm fal exposes a separate pre-check endpoint for it.
-- Persist `rewrite_history` on the `video_jobs` row for analytics.
+```ts
+type ModelControls = {
+  // ...
+  durations?: number[];          // discrete set
+  durationMin?: number;          // continuous range
+  durationMax?: number;
+  durationStep?: number;         // default 1
+  durationAuto?: boolean;        // model accepts "auto"
+};
+
+type VideoOptions = {
+  // ...
+  duration?: number | "auto";
+};
+```
+
+`generate-video/index.ts`: forward `"auto"` straight through for Seedance 2.0 (already a valid enum value); no other backend changes.
+
+## Out of scope
+
+- No changes to the eligibility/rewrite flow.
+- No changes to the recommendation ranking (the catalog's `maxDurationSec` is updated for accuracy, but scoring weights stay the same).
+- No new analytics or DB columns.
+
+## Files
+
+- `src/lib/director/videoModelControls.ts` — schema fields + corrected per-model values
+- `src/lib/director/videoModelCatalog.ts` — `maxDurationSec` corrections only where mismatched
+- `src/components/director/VideoOptionsDialog.tsx` — duration slider + auto toggle
+- `supabase/functions/generate-video/index.ts` — accept `"auto"` for Seedance 2.0 duration (no-op if already pass-through)

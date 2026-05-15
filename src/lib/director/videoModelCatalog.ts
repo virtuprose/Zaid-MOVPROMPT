@@ -85,10 +85,10 @@ export const MODEL_CATALOG: ModelCapabilities[] = [
 
   // Seedance
   { id: "seedance-2.0", family: "seedance", label: "Seedance 2.0", note: "Cinematic, native audio",
-    audio: true, maxDurationSec: 10, maxResolution: "1080p", aspects: SEEDANCE, speed: "balanced", cost: "mid",
+    audio: true, maxDurationSec: 15, maxResolution: "1080p", aspects: SEEDANCE, speed: "balanced", cost: "mid",
     strengths: ["cinematic", "photoreal", "film_grain", "portrait", "dialogue"] },
   { id: "seedance-2.0-fast", family: "seedance", label: "Seedance 2.0 Fast",
-    audio: true, maxDurationSec: 10, maxResolution: "1080p", aspects: SEEDANCE, speed: "fast", cost: "low",
+    audio: true, maxDurationSec: 15, maxResolution: "1080p", aspects: SEEDANCE, speed: "fast", cost: "low",
     strengths: ["cinematic", "photoreal", "film_grain"] },
   { id: "seedance-v1-pro", family: "seedance", label: "Seedance 1 Pro",
     audio: false, maxDurationSec: 10, maxResolution: "1080p", aspects: SEEDANCE, speed: "balanced", cost: "mid",

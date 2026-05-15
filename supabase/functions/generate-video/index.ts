@@ -140,7 +140,7 @@ function getLegacyFalUrls(provider: string, model: string, requestId: string) {
 
 type VideoOptions = {
   aspect_ratio?: string;
-  duration?: number;
+  duration?: number | "auto";
   resolution?: string;
   audio?: boolean;
   cfg_scale?: number;
@@ -168,12 +168,13 @@ function buildFalPayload(provider: string, prompt: string, opts: VideoOptions = 
       break;
     case "seedance":
       set("aspect_ratio", opts.aspect_ratio);
-      set("duration", opts.duration);
+      // Seedance accepts the string enum "auto" or a numeric second value (sent as string).
+      if (opts.duration !== undefined) set("duration", String(opts.duration));
       set("resolution", opts.resolution);
       if (opts.audio !== undefined) set("generate_audio", opts.audio);
       break;
     case "hailuo":
-      set("duration", opts.duration);
+      if (opts.duration !== undefined) set("duration", String(opts.duration));
       set("resolution", opts.resolution);
       if (opts.prompt_optimizer !== undefined) set("prompt_optimizer", opts.prompt_optimizer);
       break;
@@ -187,7 +188,7 @@ function buildFalPayload(provider: string, prompt: string, opts: VideoOptions = 
     case "wan":
       set("aspect_ratio", opts.aspect_ratio);
       set("resolution", opts.resolution);
-      if (opts.duration !== undefined) set("num_frames", opts.duration === 10 ? 161 : 81);
+      if (typeof opts.duration === "number") set("num_frames", opts.duration === 10 ? 161 : 81);
       break;
   }
   return payload;
