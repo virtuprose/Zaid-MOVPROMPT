@@ -184,10 +184,13 @@ export type VideoJob = {
   session_id?: string | null;
 };
 
+import type { VideoOptions } from "./videoModelControls";
+
 export async function submitVideoJob(
   prompt: string,
   provider: string,
   sessionId?: string | null,
+  options?: VideoOptions,
 ): Promise<VideoJob> {
   const normalizedPrompt = prompt.trim();
   if (!normalizedPrompt) {
@@ -195,7 +198,7 @@ export async function submitVideoJob(
   }
 
   const { data, error } = await supabase.functions.invoke("generate-video", {
-    body: { prompt: normalizedPrompt, provider, session_id: sessionId },
+    body: { prompt: normalizedPrompt, provider, session_id: sessionId, options },
   });
   if (error) throw error;
   return data as VideoJob;

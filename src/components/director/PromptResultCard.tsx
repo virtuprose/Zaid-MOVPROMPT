@@ -21,7 +21,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import type { Breakdown } from "@/lib/director/api";
 import { submitVideoJob, pollVideoJob, type VideoJob } from "@/lib/director/api";
-import { VIDEO_MODEL_GROUPS, pickRecommendedModel, findVideoModel } from "@/lib/director/videoModels";
+import { VIDEO_MODEL_GROUPS, pickRecommendedModel, findVideoModel, type VideoModel } from "@/lib/director/videoModels";
+import { VideoOptionsDialog } from "./VideoOptionsDialog";
+import type { VideoOptions } from "@/lib/director/videoModelControls";
 
 type Props = {
   title: string;
@@ -94,6 +96,7 @@ export function PromptResultCard({ title, prompt, breakdown, directorsNote, onRe
   const [open, setOpen] = useState(false);
   const [job, setJob] = useState<VideoJob | null>(null);
   const [generating, setGenerating] = useState(false);
+  const [pendingModel, setPendingModel] = useState<VideoModel | null>(null);
 
   const cameraLighting = [breakdown.camera, breakdown.lighting].filter(Boolean).join(" · ");
   const film = breakdown.film_emulation;
@@ -165,17 +168,22 @@ export function PromptResultCard({ title, prompt, breakdown, directorsNote, onRe
     };
   }, [job]);
 
-  const generateVideo = async (modelId: string) => {
+  const openOptionsFor = (modelId: string) => {
     if (!user) {
       toast.error("Sign in to generate videos");
       return;
     }
     const m = findVideoModel(modelId);
+    if (!m) return;
+    setPendingModel(m);
+  };
+
+  const generateVideo = async (model: VideoModel, options: VideoOptions) => {
     setGenerating(true);
     try {
-      const newJob = await submitVideoJob(prompt, modelId, sessionId);
+      const newJob = await submitVideoJob(prompt, model.id, sessionId, options);
       setJob(newJob);
-      toast.success(`Rendering with ${m?.label ?? modelId} — this can take a few minutes`);
+      toast.success(`Rendering with ${model.label} — this can take a few minutes`);
     } catch (e: any) {
       toast.error(e?.message || "Could not start video generation");
     } finally {
