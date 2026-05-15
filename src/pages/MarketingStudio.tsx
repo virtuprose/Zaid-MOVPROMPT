@@ -178,20 +178,59 @@ export default function MarketingStudio() {
           hasImage: !!location.imagePath,
         },
       });
-      await submitVideoJob(prompt, "seedance-2.0", null, {
+      const job = await submitVideoJob(prompt, "seedance-2.0", null, {
         aspect_ratio: "9:16",
         duration: 5,
         resolution: "1080p",
         audio: true,
       });
-      toast.success("Render started — check your Library when it finishes.");
-      navigate("/library");
+      setPendingJobs((prev) => [job, ...prev.filter((j) => j.id !== job.id)]);
+      toast.success("Generating your ad…");
+      window.setTimeout(() => {
+        galleryRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 50);
     } catch (e: any) {
       toast.error(e?.message || "Could not start render");
     } finally {
       setSubmitting(false);
     }
   };
+
+  // Poll pending jobs until they finish
+  useEffect(() => {
+    if (pendingJobs.length === 0) return;
+    let cancelled = false;
+    const interval = window.setInterval(async () => {
+      const snapshot = pendingJobs;
+      for (const job of snapshot) {
+        try {
+          const updated = await pollVideoJob(job.id);
+          if (cancelled) return;
+          if (updated.video_url) {
+            setPendingJobs((prev) => prev.filter((j) => j.id !== job.id));
+            setUserAds((prev) => [
+              {
+                id: updated.id,
+                video_url: updated.video_url!,
+                created_at: new Date().toISOString(),
+              },
+              ...prev.filter((a) => a.id !== updated.id),
+            ]);
+            toast.success("Your ad is ready");
+          } else if (updated.status === "failed" || updated.error) {
+            setPendingJobs((prev) => prev.filter((j) => j.id !== job.id));
+            toast.error(updated.error || "Render failed");
+          }
+        } catch {
+          // ignore transient errors, keep polling
+        }
+      }
+    }, 4000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [pendingJobs]);
 
   const filteredAds = FEATURED_ADS.filter(
     (a) => filter === "All" || a.tag === filter,
