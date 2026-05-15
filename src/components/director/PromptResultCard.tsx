@@ -307,16 +307,23 @@ export function PromptResultCard({ title, prompt, breakdown, directorsNote, onRe
                 Generate video
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="max-h-[420px] overflow-y-auto w-64">
+            <DropdownMenuContent align="end" className="max-h-[420px] overflow-y-auto w-72">
               <DropdownMenuLabel className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                Recommended
+                Top picks
               </DropdownMenuLabel>
-              <DropdownMenuItem onClick={() => openOptionsFor(recommendedModel.id)}>
-                {recommendedModel.label}
-                {recommendedModel.note && (
-                  <span className="ml-auto text-[10px] text-muted-foreground">{recommendedModel.note}</span>
-                )}
-              </DropdownMenuItem>
+              {topPicks.map((m, idx) => (
+                <DropdownMenuItem key={`top-${m.id}`} onClick={() => openOptionsFor(m.id)}>
+                  <span className="truncate">{m.label}</span>
+                  <span className="ml-auto text-[10px] text-muted-foreground shrink-0">
+                    {idx === 0 ? "Best fit" : `Alt #${idx}`}
+                  </span>
+                </DropdownMenuItem>
+              ))}
+              {resolved.reasons.length > 0 && (
+                <div className="px-2 py-1 text-[10px] text-muted-foreground/80 leading-relaxed">
+                  {resolved.reasons.slice(0, 3).join(" · ")}
+                </div>
+              )}
               {VIDEO_MODEL_GROUPS.map((group) => (
                 <div key={group.label}>
                   <DropdownMenuSeparator />
