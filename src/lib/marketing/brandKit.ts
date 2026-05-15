@@ -122,6 +122,25 @@ export function useBrandKit() {
   return { kit, loading, save, uploadLogo, uploadLocationImage };
 }
 
+export type BrandImageAnalysis = {
+  name: string | null;
+  description: string | null;
+  tagline: string | null;
+};
+
+export async function analyzeBrandImage(input: {
+  imagePath?: string | null;
+  imageUrl?: string | null;
+  subject: Subject;
+}): Promise<BrandImageAnalysis> {
+  const { data, error } = await supabase.functions.invoke("analyze-brand-image", {
+    body: input,
+  });
+  if (error) throw error;
+  return data as BrandImageAnalysis;
+}
+
+
 export type LocationInput = {
   place: string;
   imagePath: string | null;
