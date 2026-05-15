@@ -25,6 +25,7 @@ import { VIDEO_MODEL_GROUPS, findVideoModel, type VideoModel } from "@/lib/direc
 import { resolveRecommendation } from "@/lib/director/modelRanking";
 import { VideoOptionsDialog } from "./VideoOptionsDialog";
 import type { VideoOptions } from "@/lib/director/videoModelControls";
+import { useApproval } from "./ApprovalContext";
 
 type Props = {
   title: string;
@@ -92,6 +93,7 @@ function Section({
 
 export function PromptResultCard({ title, prompt, breakdown, directorsNote, onRefine, sessionId }: Props) {
   const { user } = useAuth();
+  const { request: requestApproval } = useApproval();
   const [copied, setCopied] = useState(false);
   const [saved, setSaved] = useState(false);
   const [open, setOpen] = useState(false);
@@ -294,7 +296,16 @@ export function PromptResultCard({ title, prompt, breakdown, directorsNote, onRe
           onConfirm={(opts, finalPrompt, meta) => {
             const m = pendingModel;
             setPendingModel(null);
-            if (m) void generateVideo(m, opts, finalPrompt, meta);
+            if (!m) return;
+            requestApproval({
+              action: "video",
+              label: `Render with ${m.label}`,
+              question: "Approve render?",
+              items: [finalPrompt.slice(0, 140) + (finalPrompt.length > 140 ? "…" : "")],
+              cost: 2.125,
+              alwaysAllowKey: `approval:video:${m.id}`,
+              onConfirm: () => generateVideo(m, opts, finalPrompt, meta),
+            });
           }}
         />
 

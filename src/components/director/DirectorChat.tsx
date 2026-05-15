@@ -29,6 +29,12 @@ import type { Attachment } from "@/lib/director/ingest";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import logoMark from "@/assets/logo-mark.svg";
+import { ApprovalProvider, useApproval } from "./ApprovalContext";
+import {
+  AwaitingApprovalPill,
+  BottomApprovalBar,
+  InlineApprovalCard,
+} from "./ApprovalRequest";
 
 type Bubble =
   | { role: "user"; content: string; attachments?: Attachment[] }
@@ -43,6 +49,14 @@ const WELCOME: Bubble = {
 };
 
 export function DirectorChat() {
+  return (
+    <ApprovalProvider>
+      <DirectorChatInner />
+    </ApprovalProvider>
+  );
+}
+
+function DirectorChatInner() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { sessionId: routeSessionId } = useParams<{ sessionId?: string }>();
@@ -282,6 +296,8 @@ export function DirectorChat() {
     setInput(`Refine this prompt: ${currentPrompt}\n\nMy changes: `);
   };
 
+  const { pending: pendingApproval } = useApproval();
+
   return (
     <div className="flex flex-col gap-3 h-[calc(100vh-180px)] max-h-[820px]">
       <div className="flex items-center justify-between">
@@ -436,9 +452,17 @@ export function DirectorChat() {
               <span>Awaiting your input</span>
             </div>
           )}
+          {pendingApproval && (
+            <>
+              <InlineApprovalCard request={pendingApproval} />
+              <AwaitingApprovalPill />
+            </>
+          )}
           <div className="flex-1" />
         </div>
       </div>
+
+      {pendingApproval && <BottomApprovalBar request={pendingApproval} />}
 
       <Composer
         value={input}
