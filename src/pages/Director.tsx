@@ -31,6 +31,7 @@ type SessionRow = {
   title: string | null;
   updated_at: string;
   needsReply: boolean;
+  pinned: boolean;
 };
 
 export default function Director() {
