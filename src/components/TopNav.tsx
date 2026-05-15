@@ -123,9 +123,9 @@ export function TopNav() {
             <Button
               size="sm"
               onClick={() => navigate("/account/billing")}
-              className="hidden sm:inline-flex h-9 rounded-full px-3 gap-1.5 text-[13px] bg-accent/10 text-accent border border-accent/30 hover:bg-accent/15"
+              className="hidden sm:inline-flex h-9 rounded-full px-3.5 gap-2 text-[13px] font-medium bg-transparent text-accent border border-accent/40 hover:bg-accent/10 hover:border-accent/60 transition-colors"
             >
-              <Coins className="w-3.5 h-3.5" />
+              <Coins className="w-4 h-4" />
               Buy Credits
             </Button>
           )}
