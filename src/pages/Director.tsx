@@ -168,7 +168,7 @@ export default function Director() {
               onClick={() => navigate("/director")}
               className="gap-1.5 justify-start"
             >
-              <Plus className="w-4 h-4" /> New brief
+              <Plus className="w-4 h-4" /> New Task
             </Button>
             <button
               type="button"
