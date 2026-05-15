@@ -273,7 +273,9 @@ function VideoJobCard({
   const [aspect, setAspect] = useState<"portrait" | "landscape" | "square">("portrait");
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [cancelOpen, setCancelOpen] = useState(false);
   const [, force] = useState(0);
+  const health = renderHealth(job.created_at);
 
   // Tick every second so in-progress elapsed time updates
   useEffect(() => {
