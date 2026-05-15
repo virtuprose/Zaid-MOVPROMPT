@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Search, Check, Plus, Sparkles, X } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -46,6 +46,7 @@ export function PresetPickerDialog({
   const [draftCustom, setDraftCustom] = useState<string>(customValue ?? "");
   const [draftLocation, setDraftLocation] = useState<LocationInput | undefined>(locationValue);
   const [customOpen, setCustomOpen] = useState<boolean>(!!(customValue && !selectedId));
+  const cancelledRef = useRef(false);
 
   // Sync drafts when dialog opens
   useEffect(() => {
@@ -56,6 +57,7 @@ export function PresetPickerDialog({
       setCustomOpen(!!(customValue && !selectedId));
       setQ("");
       setTab("all");
+      cancelledRef.current = false;
     }
   }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -70,9 +72,8 @@ export function PresetPickerDialog({
   const noMatch = q.trim().length > 0 && filtered.length === 0;
   const supportsCustom = !!onCustomChange;
 
-  const apply = () => {
+  const commit = useCallback(() => {
     if (supportsCustom) {
-      // Custom takes over when populated and no preset is picked
       if (draftCustom.trim() && !draftId) {
         onCustomChange?.(draftCustom.trim());
         onSelect(undefined);
@@ -84,10 +85,26 @@ export function PresetPickerDialog({
       onSelect(draftId);
     }
     if (onLocationChange && draftLocation) onLocationChange(draftLocation);
+  }, [supportsCustom, draftCustom, draftId, draftLocation, onCustomChange, onSelect, onLocationChange]);
+
+  const apply = () => {
+    commit();
     onOpenChange(false);
   };
 
-  const cancel = () => onOpenChange(false);
+  const cancel = () => {
+    cancelledRef.current = true;
+    onOpenChange(false);
+  };
+
+  const handleOpenChange = (next: boolean) => {
+    if (next) {
+      onOpenChange(true);
+      return;
+    }
+    if (!cancelledRef.current) commit();
+    onOpenChange(false);
+  };
 
   const handleKey = (e: React.KeyboardEvent) => {
     if (e.key === "Escape" && q) {
@@ -97,7 +114,7 @@ export function PresetPickerDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
         className="max-w-4xl rounded-3xl border border-border/60 bg-[hsl(240_5%_8%)] p-0 gap-0 max-h-[90vh] flex flex-col"
         onKeyDown={handleKey}
@@ -311,18 +328,23 @@ export function PresetPickerDialog({
         </div>
 
         <div className="border-t border-border/40 p-4 flex items-center justify-between gap-3 bg-[hsl(240_5%_8%)] rounded-b-3xl">
-          <button
-            type="button"
-            onClick={cancel}
-            className="text-sm text-muted-foreground hover:text-foreground px-2"
-          >
-            Cancel
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={cancel}
+              className="text-sm text-muted-foreground hover:text-foreground px-2"
+            >
+              Cancel
+            </button>
+            <span className="hidden sm:inline text-[11px] text-muted-foreground/70">
+              Selection saves automatically — Cancel to discard.
+            </span>
+          </div>
           <Button
             onClick={apply}
             className="bg-[#F5A524] text-black hover:bg-[#F5A524]/90 font-semibold px-5"
           >
-            Apply settings
+            Done
           </Button>
         </div>
       </DialogContent>
