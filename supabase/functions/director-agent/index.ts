@@ -256,6 +256,103 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
+    const action = (body as { action?: string })?.action;
+
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) {
+      return new Response(JSON.stringify({ error: "Service misconfigured" }), {
+        status: 503,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (action === "rewrite_safe") {
+      const { original_prompt, rejection_reason, categories, model_id } = body as {
+        original_prompt?: string;
+        rejection_reason?: string;
+        categories?: string[];
+        model_id?: string;
+      };
+      const orig = typeof original_prompt === "string" ? original_prompt.trim() : "";
+      const reason = typeof rejection_reason === "string" ? rejection_reason : "content moderation";
+      if (!orig || orig.length > 6000) {
+        return new Response(JSON.stringify({ error: "Valid original_prompt required" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const catLine = categories?.length ? ` Categories flagged: ${categories.join(", ")}.` : "";
+      const sys = `You are a senior cinematographer rewriting an AI video prompt that was rejected by ${model_id || "the target model"}'s content moderation.
+Reason: ${reason}.${catLine}
+
+Rules:
+- Preserve cinematography, camera (lens/angle/movement), lighting, color grade, environment, and mood.
+- Remove or soften ONLY the flagged element. Do not introduce new subjects, brands, or characters.
+- Keep the original structure (paragraph or shooting script) intact.
+- Do not add disclaimers or meta-commentary.
+- Output JSON ONLY via the provided tool — never plain text.`;
+
+      const rewriteResp = await callGatewayWithRetry(
+        {
+          model: "google/gemini-2.5-flash",
+          messages: [
+            { role: "system", content: sys },
+            { role: "user", content: `Original prompt:\n\n${orig}` },
+          ],
+          tools: [
+            {
+              type: "function",
+              function: {
+                name: "safe_rewrite",
+                description: "Return a safe rewrite of the prompt.",
+                parameters: {
+                  type: "object",
+                  properties: {
+                    rewritten_prompt: { type: "string", description: "The rewritten prompt." },
+                    changes_summary: { type: "string", description: "1 short sentence describing what was changed." },
+                  },
+                  required: ["rewritten_prompt", "changes_summary"],
+                  additionalProperties: false,
+                },
+              },
+            },
+          ],
+          tool_choice: { type: "function", function: { name: "safe_rewrite" } },
+        },
+        LOVABLE_API_KEY,
+      );
+
+      if (!rewriteResp.ok) {
+        const t = await rewriteResp.text();
+        console.error("rewrite_safe gateway error", rewriteResp.status, t);
+        return new Response(JSON.stringify({ error: "Rewrite failed" }), {
+          status: 502,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const rData = await rewriteResp.json();
+      const tc = rData.choices?.[0]?.message?.tool_calls?.[0];
+      let parsed: { rewritten_prompt?: string; changes_summary?: string } = {};
+      try {
+        parsed = JSON.parse(tc?.function?.arguments || "{}");
+      } catch {
+        parsed = {};
+      }
+      if (!parsed.rewritten_prompt) {
+        return new Response(JSON.stringify({ error: "Rewrite produced no output" }), {
+          status: 502,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      return new Response(
+        JSON.stringify({
+          rewritten_prompt: parsed.rewritten_prompt,
+          changes_summary: parsed.changes_summary || "Softened flagged content while keeping cinematography intact.",
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
     const { messages, attachments, stream } = body as {
       messages: Array<{ role: "user" | "assistant"; content: string }>;
       attachments?: Array<{
