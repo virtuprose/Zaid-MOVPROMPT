@@ -29,6 +29,8 @@ export function PresetPickerDialog({
   selectedId,
   onSelect,
   categories,
+  locationValue,
+  onLocationChange,
 }: Props) {
   const [tab, setTab] = useState<string>("all");
   const [q, setQ] = useState("");
