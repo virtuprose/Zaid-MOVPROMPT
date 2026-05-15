@@ -184,7 +184,7 @@ export type VideoJob = {
 
 export async function submitVideoJob(
   prompt: string,
-  provider: "seedance" | "veo" | "kling",
+  provider: string,
   sessionId?: string | null,
 ): Promise<VideoJob> {
   const { data, error } = await supabase.functions.invoke("generate-video", {

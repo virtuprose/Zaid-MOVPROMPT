@@ -12,6 +12,8 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
@@ -19,6 +21,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import type { Breakdown } from "@/lib/director/api";
 import { submitVideoJob, pollVideoJob, type VideoJob } from "@/lib/director/api";
+import { VIDEO_MODEL_GROUPS, pickRecommendedModel, findVideoModel } from "@/lib/director/videoModels";
 
 type Props = {
   title: string;
@@ -29,17 +32,15 @@ type Props = {
   sessionId?: string | null;
 };
 
-const MODEL_LINKS: { id: "seedance" | "veo" | "kling" | "runway"; label: string; url: string }[] = [
-  { id: "seedance", label: "Seedance", url: "https://seedance.ai" },
-  { id: "veo", label: "Veo (Google)", url: "https://deepmind.google/technologies/veo/" },
-  { id: "kling", label: "Kling", url: "https://klingai.com" },
-  { id: "runway", label: "Runway", url: "https://runwayml.com" },
-];
-
-function detectRecommendedModel(rec?: string): typeof MODEL_LINKS[number] {
-  const r = (rec || "").toLowerCase();
-  return MODEL_LINKS.find((m) => r.includes(m.id)) || MODEL_LINKS[0];
-}
+const EXTERNAL_LINKS: Record<string, { label: string; url: string }> = {
+  kling: { label: "Kling", url: "https://klingai.com" },
+  veo: { label: "Veo (Google)", url: "https://deepmind.google/technologies/veo/" },
+  seedance: { label: "Seedance", url: "https://seedance.ai" },
+  hailuo: { label: "Hailuo (MiniMax)", url: "https://hailuoai.video/" },
+  runway: { label: "Runway", url: "https://runwayml.com" },
+  ltx: { label: "LTX Studio", url: "https://ltx.studio/" },
+  wan: { label: "Wan", url: "https://wan.video/" },
+};
 
 function CopyBtn({ text, label = "Copy", className = "" }: { text: string; label?: string; className?: string }) {
   const [done, setDone] = useState(false);
@@ -98,7 +99,8 @@ export function PromptResultCard({ title, prompt, breakdown, directorsNote, onRe
   const film = breakdown.film_emulation;
   const negative = breakdown.negative_prompt;
   const recommendation = breakdown.model_recommendation;
-  const recommendedModel = detectRecommendedModel(recommendation);
+  const recommendedModel = pickRecommendedModel(recommendation);
+  const externalLink = EXTERNAL_LINKS[recommendedModel.family];
 
   const fullText = [
     `# ${title}`,
@@ -163,16 +165,17 @@ export function PromptResultCard({ title, prompt, breakdown, directorsNote, onRe
     };
   }, [job]);
 
-  const generateVideo = async (provider: "seedance" | "veo" | "kling") => {
+  const generateVideo = async (modelId: string) => {
     if (!user) {
       toast.error("Sign in to generate videos");
       return;
     }
+    const m = findVideoModel(modelId);
     setGenerating(true);
     try {
-      const newJob = await submitVideoJob(prompt, provider, sessionId);
+      const newJob = await submitVideoJob(prompt, modelId, sessionId);
       setJob(newJob);
-      toast.success(`Rendering with ${provider} — this can take a few minutes`);
+      toast.success(`Rendering with ${m?.label ?? modelId} — this can take a few minutes`);
     } catch (e: any) {
       toast.error(e?.message || "Could not start video generation");
     } finally {
@@ -289,33 +292,48 @@ export function PromptResultCard({ title, prompt, breakdown, directorsNote, onRe
                 Generate video
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => generateVideo("seedance")}>Seedance Pro</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => generateVideo("veo")}>Veo 3 Fast</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => generateVideo("kling")}>Kling 2 Master</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button size="sm" variant="outline" className="gap-1.5">
-                <ExternalLink className="w-4 h-4" /> Open in {recommendedModel.label}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {MODEL_LINKS.map((m) => (
-                <DropdownMenuItem
-                  key={m.id}
-                  onClick={async () => {
-                    await navigator.clipboard.writeText(prompt);
-                    toast.success(`Prompt copied — opening ${m.label}`);
-                    window.open(m.url, "_blank", "noopener,noreferrer");
-                  }}
-                >
-                  {m.label}
-                </DropdownMenuItem>
+            <DropdownMenuContent align="end" className="max-h-[420px] overflow-y-auto w-64">
+              <DropdownMenuLabel className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                Recommended
+              </DropdownMenuLabel>
+              <DropdownMenuItem onClick={() => generateVideo(recommendedModel.id)}>
+                {recommendedModel.label}
+                {recommendedModel.note && (
+                  <span className="ml-auto text-[10px] text-muted-foreground">{recommendedModel.note}</span>
+                )}
+              </DropdownMenuItem>
+              {VIDEO_MODEL_GROUPS.map((group) => (
+                <div key={group.label}>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuLabel className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                    {group.label}
+                  </DropdownMenuLabel>
+                  {group.models.map((m) => (
+                    <DropdownMenuItem key={m.id} onClick={() => generateVideo(m.id)}>
+                      <span className="truncate">{m.label}</span>
+                      {m.note && (
+                        <span className="ml-auto text-[10px] text-muted-foreground shrink-0">{m.note}</span>
+                      )}
+                    </DropdownMenuItem>
+                  ))}
+                </div>
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
+          {externalLink && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="gap-1.5"
+              onClick={async () => {
+                await navigator.clipboard.writeText(prompt);
+                toast.success(`Prompt copied — opening ${externalLink.label}`);
+                window.open(externalLink.url, "_blank", "noopener,noreferrer");
+              }}
+            >
+              <ExternalLink className="w-4 h-4" /> Open in {externalLink.label}
+            </Button>
+          )}
         </div>
       </div>
 
