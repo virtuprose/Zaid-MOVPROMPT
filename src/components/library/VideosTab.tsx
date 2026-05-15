@@ -127,11 +127,24 @@ function timeAgo(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString();
 }
 
+// Elapsed since render started, formatted MM:SS (or HH:MM:SS for very old jobs)
 function elapsedShort(dateStr: string): string {
   const sec = Math.max(0, Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000));
-  const m = Math.floor(sec / 60);
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
   const s = sec % 60;
-  return `${m}:${s.toString().padStart(2, "0")}`;
+  const pad = (n: number) => n.toString().padStart(2, "0");
+  if (h > 0) return `${pad(h)}:${pad(m)}:${pad(s)}`;
+  return `${pad(m)}:${pad(s)}`;
+}
+
+// Render-state classification by elapsed time
+type RenderHealth = "normal" | "slow" | "stuck";
+function renderHealth(dateStr: string): RenderHealth {
+  const mins = (Date.now() - new Date(dateStr).getTime()) / 60000;
+  if (mins > 15) return "stuck";
+  if (mins > 5) return "slow";
+  return "normal";
 }
 
 // ─── Status pill ────────────────────────────────────────────────────────
@@ -260,7 +273,9 @@ function VideoJobCard({
   const [aspect, setAspect] = useState<"portrait" | "landscape" | "square">("portrait");
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [cancelOpen, setCancelOpen] = useState(false);
   const [, force] = useState(0);
+  const health = renderHealth(job.created_at);
 
   // Tick every second so in-progress elapsed time updates
   useEffect(() => {
@@ -276,9 +291,11 @@ function VideoJobCard({
 
   return (
     <Card
-      className={`group bg-card border-border overflow-hidden cursor-pointer transition-all hover:border-accent/50 hover:shadow-[0_0_24px_hsl(var(--accent)/0.2)] flex flex-col ${
-        selected ? "ring-2 ring-accent/60" : ""
-      }`}
+      className={`group bg-card border overflow-hidden cursor-pointer transition-all flex flex-col ${
+        group === "Failed"
+          ? "border-destructive/40 hover:border-destructive/70 hover:shadow-[0_0_24px_hsl(var(--destructive)/0.18)]"
+          : "border-border hover:border-accent/50 hover:shadow-[0_0_24px_hsl(var(--accent)/0.2)]"
+      } ${selected ? "ring-2 ring-accent/80 border-accent/60" : ""}`}
     >
       <div
         className={`relative w-full overflow-hidden bg-gradient-to-br from-secondary/40 to-background ${aspectClass}`}
@@ -310,30 +327,48 @@ function VideoJobCard({
               }}
               className="w-full h-full object-contain bg-black"
             />
-            {/* Play overlay */}
-            <div className="pointer-events-none absolute inset-0 flex items-center justify-center opacity-100 group-hover:opacity-0 transition-opacity">
-              <div className="h-12 w-12 rounded-full bg-black/55 backdrop-blur-sm border border-white/15 flex items-center justify-center">
-                <Play className="w-5 h-5 text-white fill-white ms-0.5" />
+            {/* Play overlay — large amber circle, hidden on hover so video shows */}
+            <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/20 opacity-100 group-hover:opacity-0 transition-opacity">
+              <div className="h-16 w-16 rounded-full bg-accent flex items-center justify-center shadow-[0_0_24px_hsl(var(--accent)/0.45)] transition-transform group-hover:scale-110">
+                <Play className="w-7 h-7 text-black fill-black ms-0.5" />
               </div>
             </div>
           </>
         ) : (
-          <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-muted-foreground/70">
+          <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-muted-foreground/70 px-4 text-center">
             {group === "In progress" ? (
               <>
                 <div className="relative">
-                  <Loader2 className="w-10 h-10 animate-spin text-[hsl(35_90%_55%)]" />
-                  <span className="absolute inset-0 rounded-full animate-ping bg-[hsl(35_90%_55%)]/20" />
+                  <Loader2
+                    className={`w-12 h-12 animate-spin ${
+                      health === "stuck" ? "text-destructive" : "text-[hsl(35_90%_55%)]"
+                    }`}
+                  />
+                  <span
+                    className={`absolute inset-0 rounded-full animate-ping ${
+                      health === "stuck" ? "bg-destructive/20" : "bg-[hsl(35_90%_55%)]/20"
+                    }`}
+                  />
                 </div>
-                <span className="text-[11px] font-medium text-[hsl(35_90%_70%)]">Rendering…</span>
-                <span className="text-[10px] text-muted-foreground tabular-nums">
-                  Elapsed {elapsedShort(job.created_at)}
+                <span className="text-xs font-medium text-[hsl(35_90%_70%)]">
+                  {health === "stuck" ? "Render appears stuck" : "Rendering…"}
                 </span>
+                <span className="text-base font-semibold tabular-nums text-foreground">
+                  {elapsedShort(job.created_at)}
+                </span>
+                {health === "slow" && (
+                  <span className="text-[10px] text-[hsl(35_90%_70%)]">Taking longer than expected</span>
+                )}
+                {health === "stuck" && (
+                  <span className="text-[10px] text-destructive">Cancel and retry recommended</span>
+                )}
               </>
             ) : group === "Failed" ? (
               <>
-                <AlertTriangle className="w-10 h-10 text-destructive" />
-                <span className="text-[11px] font-medium text-destructive">{failureReason(job)}</span>
+                <div className="h-12 w-12 rounded-full bg-destructive/15 border border-destructive/40 flex items-center justify-center">
+                  <AlertTriangle className="w-6 h-6 text-destructive" />
+                </div>
+                <span className="text-xs font-semibold text-destructive">{failureReason(job)}</span>
               </>
             ) : (
               <Film className="w-8 h-8" />
@@ -421,19 +456,26 @@ function VideoJobCard({
             </>
           ) : group === "In progress" ? (
             <>
-              <span className="text-[11px] text-muted-foreground tabular-nums">
-                Elapsed {elapsedShort(job.created_at)}
-              </span>
               <div className="flex-1" />
-              <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={(e) => { e.stopPropagation(); onCancel(); }}>
-                Cancel
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 px-3 text-xs gap-1 border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                onClick={(e) => { e.stopPropagation(); setCancelOpen(true); }}
+              >
+                <X className="w-3 h-3" /> Cancel render
               </Button>
             </>
           ) : (
             <>
               <span className="text-[11px] text-destructive">{failureReason(job)}</span>
               <div className="flex-1" />
-              <Button size="sm" variant="outline" className="h-7 px-2 text-xs gap-1 border-accent/40 text-accent hover:bg-accent/10" onClick={(e) => { e.stopPropagation(); onRetry(); }}>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 px-3 text-xs gap-1 border-accent/50 text-accent hover:bg-accent/10"
+                onClick={(e) => { e.stopPropagation(); onRetry(); }}
+              >
                 <RotateCcw className="w-3 h-3" /> Retry
               </Button>
             </>
@@ -456,6 +498,26 @@ function VideoJobCard({
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={cancelOpen} onOpenChange={setCancelOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancel this render?</AlertDialogTitle>
+            <AlertDialogDescription>
+              You'll lose your place in the queue. Any credits committed to this render will be partially refunded (50%) once the provider confirms the cancellation.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep rendering</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => { onCancel(); setCancelOpen(false); }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Cancel render
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -750,7 +812,10 @@ export function VideosTab() {
   };
 
   const handleRemix = (job: VideoJob) => {
-    navigate("/", { state: { restorePrompt: job.prompt } });
+    const target = job.session_id ? "/director" : "/";
+    const where = job.session_id ? "AI Director" : "Studio";
+    navigate(target, { state: { restorePrompt: job.prompt } });
+    toast({ title: "Remixing…", description: `Prompt loaded into ${where}. Edit and regenerate.` });
   };
 
   const handleRetry = (job: VideoJob) => {
@@ -899,15 +964,58 @@ export function VideosTab() {
         </div>
       </div>
 
-      {/* Bulk action bar */}
+      {/* Bulk action bar — fixed to bottom of viewport when in select mode */}
       {selectMode && selectedIds.size > 0 && (
-        <div className="sticky top-16 z-20 rounded-lg border border-accent/40 bg-accent/10 backdrop-blur px-3 py-2 flex items-center gap-3">
-          <span className="text-xs font-medium text-accent">{selectedIds.size} selected</span>
-          <div className="flex-1" />
-          <Button size="sm" variant="destructive" onClick={() => setBulkConfirmOpen(true)} className="h-8 text-xs">
-            <Trash2 className="w-3.5 h-3.5 me-1.5" /> Delete
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 rounded-full border border-accent/50 bg-card/95 backdrop-blur-md shadow-[0_8px_32px_-8px_hsl(var(--accent)/0.4)] px-4 py-2 flex items-center gap-2">
+          <span className="text-xs font-semibold text-accent pe-1">
+            {selectedIds.size} selected
+          </span>
+          <div className="h-5 w-px bg-border" />
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => {
+              const completed = sorted.filter((j) => selectedIds.has(j.id) && j.video_url);
+              completed.forEach((j) => {
+                const a = document.createElement("a");
+                a.href = j.video_url!;
+                a.download = "";
+                a.target = "_blank";
+                a.rel = "noreferrer";
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+              });
+              toast({ title: "Downloads started", description: `${completed.length} video${completed.length === 1 ? "" : "s"}.` });
+            }}
+            className="h-8 text-xs gap-1.5"
+          >
+            <Download className="w-3.5 h-3.5" /> Download
           </Button>
-          <Button size="sm" variant="ghost" onClick={() => { setSelectMode(false); setSelectedIds(new Set()); }} className="h-8 text-xs">
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={async () => {
+              const urls = sorted.filter((j) => selectedIds.has(j.id) && j.video_url).map((j) => j.video_url).join("\n");
+              if (urls) {
+                await navigator.clipboard.writeText(urls);
+                toast({ title: "Links copied", description: "Video URLs copied to clipboard." });
+              }
+            }}
+            className="h-8 text-xs gap-1.5"
+          >
+            <Share2 className="w-3.5 h-3.5" /> Share
+          </Button>
+          <Button size="sm" variant="destructive" onClick={() => setBulkConfirmOpen(true)} className="h-8 text-xs gap-1.5">
+            <Trash2 className="w-3.5 h-3.5" /> Delete
+          </Button>
+          <div className="h-5 w-px bg-border" />
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => { setSelectMode(false); setSelectedIds(new Set()); }}
+            className="h-8 text-xs"
+          >
             Cancel
           </Button>
         </div>
