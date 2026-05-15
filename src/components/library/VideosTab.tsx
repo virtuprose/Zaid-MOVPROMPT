@@ -456,19 +456,26 @@ function VideoJobCard({
             </>
           ) : group === "In progress" ? (
             <>
-              <span className="text-[11px] text-muted-foreground tabular-nums">
-                Elapsed {elapsedShort(job.created_at)}
-              </span>
               <div className="flex-1" />
-              <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={(e) => { e.stopPropagation(); onCancel(); }}>
-                Cancel
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 px-3 text-xs gap-1 border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                onClick={(e) => { e.stopPropagation(); setCancelOpen(true); }}
+              >
+                <X className="w-3 h-3" /> Cancel render
               </Button>
             </>
           ) : (
             <>
               <span className="text-[11px] text-destructive">{failureReason(job)}</span>
               <div className="flex-1" />
-              <Button size="sm" variant="outline" className="h-7 px-2 text-xs gap-1 border-accent/40 text-accent hover:bg-accent/10" onClick={(e) => { e.stopPropagation(); onRetry(); }}>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 px-3 text-xs gap-1 border-accent/50 text-accent hover:bg-accent/10"
+                onClick={(e) => { e.stopPropagation(); onRetry(); }}
+              >
                 <RotateCcw className="w-3 h-3" /> Retry
               </Button>
             </>
