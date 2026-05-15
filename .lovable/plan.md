@@ -1,71 +1,78 @@
-## Save multiple brand kits per user (Products & Apps library)
+## Goal
 
-Today each user has exactly one brand kit. Switch to a **library**: many named brands per user, each marked as Product or App, reusable across every Ads Studio session and any future preset that needs brand context.
+Split the Library page into two clearly separated sections:
 
-### Data model
+1. **Prompts** — existing `prompt_history` entries (Single frame, Two frames, Multi-shot)
+2. **Videos** — generated videos from `video_jobs` table (Ads Studio + AI Director renders)
 
-Migrate `brand_kits` from one-row-per-user to many-rows-per-user.
+## UX
 
-- Add `id uuid PRIMARY KEY DEFAULT gen_random_uuid()`
-- Drop the implicit single-row constraint on `user_id`; keep it as `NOT NULL` with an index
-- Keep existing columns: `subject`, `name`, `description`, `tagline`, `url`, `audience`, `logo_path`, timestamps
-- RLS policies stay the same (own-row CRUD)
+Top-level segmented toggle right under the page title:
 
-Add a `brand_kit_selection` table to remember which brand the user last used in Ads Studio:
-- `user_id uuid PK` → `brand_kit_id uuid` (nullable, FK with `ON DELETE SET NULL`)
-- Own-row RLS
-
-### `useBrandKit` hook (rewritten)
-
-Returns:
-- `kits: BrandKit[]` — all of the user's saved brands
-- `activeKit: BrandKit | null` — the currently selected one (from selection table, falls back to most recently updated)
-- `setActive(id)` — persists selection
-- `saveKit(draft)` — insert if no `id`, update if `id` exists; auto-selects the saved kit
-- `deleteKit(id)`
-- `uploadLogo(file)` — unchanged
-
-### Ads Studio composer — Brand chip becomes a picker
-
-Replace the single "Brand" button with a popover:
-
-```
-┌─ Your brands ──────────────────┐
-│ ✓ Acme Sneakers      [Product] │
-│   Sleepy App          [App]    │
-│   Foo Coffee          [Product]│
-├────────────────────────────────┤
-│ + New brand                    │
-│ ✎ Edit selected                │
-└────────────────────────────────┘
+```text
+   [ Prompts (42) ]   [ Videos (7) ]
 ```
 
-- Each row shows logo thumb, name, subject pill (red-tint border for active).
-- Selecting a row sets it active for the next generation.
-- "+ New brand" opens `BrandKitSheet` blank.
-- "✎ Edit selected" opens `BrandKitSheet` pre-filled.
-- Auto-fill from logo upload still works (already implemented).
+- Toggle switches between the two collections; only one is visible at a time.
+- Each section keeps its own search + filter bar (independent state).
+- Defaults to Prompts (current behavior preserved).
+- URL syncs via `?tab=prompts|videos` so a refresh keeps you in place.
 
-### `BrandKitSheet` updates
+## Prompts section (unchanged)
 
-- Accept optional `kitId` prop. When set, edit that row; when null, create new.
-- Add a small "Delete" button (ghost, danger color) when editing existing.
-- After save, the picker reflects the new/updated kit and selects it.
+Reuses existing `HistoryCard`, `ExpandedPromptModal`, search, workflow / model filters, and sort dropdown — no behavior change.
 
-### Generation wiring
+## Videos section (new)
 
-`composeStudioPrompt` still receives a single `BrandContext` — no changes to prompt code. The Studio just feeds it from `activeKit` instead of the previous singleton.
+Fetches from `video_jobs` filtered by `user_id = auth.uid()`, ordered newest first.
 
-### Files
+**Card layout** (`VideoJobCard`):
+- 9:16 video thumbnail with autoplay-muted-loop on hover (poster frame when idle).
+- Source pill (top-left): "Ads Studio" if `session_id IS NULL`, "AI Director" if `session_id` is set.
+- Status pill (top-right): `queued` / `processing` (amber spinner) / `completed` / `failed`.
+- Time-ago label.
+- Footer actions:
+  - **Open** → `<video>` modal with full-size playback + Download button (link to `video_url`).
+  - **Copy prompt** → copies `prompt` field.
+  - **Delete** kebab → soft delete (table currently lacks DELETE policy; see Data note).
 
-- migration: schema change + new `brand_kit_selection` table
-- edit: `src/lib/marketing/brandKit.ts` — list + active + CRUD
-- new: `src/components/marketing/BrandPickerPopover.tsx`
-- edit: `src/components/marketing/BrandKitSheet.tsx` — accept `kitId`, add delete
-- edit: `src/pages/MarketingStudio.tsx` — swap Brand button for the picker
+**Filters for Videos**:
+- Source chips: Ads Studio · AI Director
+- Status chips: Completed · In progress · Failed
+- Search across `prompt` text.
 
-### Out of scope
+**Empty states**:
+- No videos yet → CTA "Create your first ad" → `/marketing`, secondary "Open AI Director" → `/`.
+- Filtered with no results → Clear filters.
 
-- No changes to Location, Format, Hook, Setting.
-- No sharing/teams — kits stay private per user.
-- No brand-asset library (extra logos, color tokens) — single logo per kit, same as today.
+## Data note
+
+`video_jobs` RLS currently allows SELECT/INSERT/UPDATE for own rows but no DELETE. For "Delete" to work on video cards, the migration needs to add a DELETE policy:
+
+```sql
+CREATE POLICY "Users delete own video jobs"
+  ON public.video_jobs FOR DELETE TO authenticated
+  USING (auth.uid() = user_id);
+```
+
+If you'd rather not allow deletion yet, the kebab is omitted from video cards in v1.
+
+## Files
+
+- `src/pages/Library.tsx` — add tab state, split data fetching, mount Prompts vs Videos branch.
+- `src/components/library/VideoJobCard.tsx` — new, card + status pills.
+- `src/components/library/VideoJobModal.tsx` — new, full-size playback + download + copy prompt.
+- `src/components/library/VideosTab.tsx` — new, holds video list + filters/search/empty state.
+- `src/components/library/PromptsTab.tsx` — extracted from current Library body (no logic change).
+- (Optional) Supabase migration adding `video_jobs` DELETE policy.
+
+## Out of scope
+
+- No changes to Ads Studio or AI Director composers.
+- No realtime updates of in-progress jobs (initial load only; can add later).
+- No bulk select / multi-delete.
+
+## Open questions
+
+1. Should "Delete" be enabled for videos (requires the new RLS policy), or omitted for now?
+2. Should in-progress jobs poll until completion, or just show their last-known status until refresh?
