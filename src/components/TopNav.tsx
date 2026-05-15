@@ -94,6 +94,7 @@ export function TopNav() {
         <nav className="hidden lg:flex items-center gap-0.5">
           {NAV_ITEMS.map((item) => {
             const active = isActive(item.to);
+            const isAds = item.to === "/marketing";
             return (
               <NavLink
                 key={item.to}
@@ -105,7 +106,8 @@ export function TopNav() {
                     : "text-muted-foreground hover:text-foreground",
                 )}
               >
-                {active && <Sparkles className="w-3.5 h-3.5" />}
+                {active && !isAds && <Sparkles className="w-3.5 h-3.5" />}
+                {isAds && <Megaphone className={cn("w-3.5 h-3.5", active ? "text-accent" : "")} />}
                 <span>{item.label}</span>
                 {item.badge && (
                   <span className="ml-1 px-1.5 py-0.5 rounded-md bg-accent/15 text-accent text-[10px] font-semibold uppercase tracking-wider border border-accent/25">
