@@ -27,6 +27,7 @@ import {
   Pin,
   Trash2,
   MessageSquare,
+  Megaphone,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { trackPageVisit } from "@/lib/analytics";
