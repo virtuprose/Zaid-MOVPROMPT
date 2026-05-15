@@ -57,7 +57,7 @@ export function QuestionCard({ reason, questions, disabled, onContinue, onSkip }
         }
       }}
     >
-      {reason && <div className="text-xs text-accent/80 italic">{reason}</div>}
+      {reason && <div className="text-xs text-muted-foreground/80 italic">{reason}</div>}
 
       <div className="space-y-4">
         {questions.map((q, i) => {
