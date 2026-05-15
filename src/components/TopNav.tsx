@@ -42,6 +42,7 @@ type NavItem = { to: string; label: string; badge?: string };
 const NAV_ITEMS: NavItem[] = [
   { to: "/", label: "Studio" },
   { to: "/director", label: "AI Director", badge: "New" },
+  { to: "/marketing", label: "Ads Studio" },
   { to: "/gallery", label: "Gallery" },
 ];
 
