@@ -142,21 +142,43 @@ export function Composer({ value, onChange, attachments, onAttachmentsChange, on
             className="w-full resize-none bg-transparent px-4 pt-3 pb-2 text-sm leading-relaxed placeholder:text-muted-foreground focus:outline-none min-h-[64px]"
           />
 
-          {attachments.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 px-3 pb-2">
+          {(attachments.length > 0 || pendingCount > 0) && (
+            <div className="flex flex-wrap gap-2 px-3 pb-2">
               {attachments.map((a, i) => (
-                <div key={i} className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-muted text-xs">
-                  {iconFor(a)}
-                  <span className="max-w-[160px] truncate">{a.name}</span>
-                  <button
-                    type="button"
-                    onClick={() => remove(i)}
-                    className="text-muted-foreground hover:text-foreground"
-                    aria-label="Remove"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                </div>
+                <Tooltip key={i}>
+                  <TooltipTrigger asChild>
+                    <div className="group relative h-16 w-16 overflow-hidden rounded-lg bg-muted ring-1 ring-border">
+                      {isImageLike(a) && "url" in a ? (
+                        <img
+                          src={(a as any).url}
+                          alt={a.name}
+                          loading="lazy"
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-full w-full flex-col items-center justify-center gap-0.5 px-1 text-muted-foreground">
+                          {iconFor(a)}
+                          <span className="w-full truncate text-center text-[9px] leading-tight">{a.name}</span>
+                        </div>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => remove(i)}
+                        aria-label="Remove"
+                        className="absolute right-0.5 top-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-background/80 text-foreground opacity-0 backdrop-blur transition-opacity group-hover:opacity-100 hover:bg-background"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent side="top">{a.name}</TooltipContent>
+                </Tooltip>
+              ))}
+              {Array.from({ length: pendingCount }).map((_, i) => (
+                <div
+                  key={`skeleton-${i}`}
+                  className="h-16 w-16 animate-pulse rounded-lg bg-muted ring-1 ring-border"
+                />
               ))}
             </div>
           )}
