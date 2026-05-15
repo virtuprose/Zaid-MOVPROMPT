@@ -15,6 +15,9 @@ export type Breakdown = {
   film_emulation?: string;
   negative_prompt?: string;
   model_recommendation?: string;
+  recommended_model_id?: string;
+  recommended_alternatives?: string[];
+  recommendation_reason?: string;
 };
 
 export type AgentResponse =

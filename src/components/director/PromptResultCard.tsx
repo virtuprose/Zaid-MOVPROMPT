@@ -21,7 +21,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import type { Breakdown } from "@/lib/director/api";
 import { submitVideoJob, pollVideoJob, type VideoJob } from "@/lib/director/api";
-import { VIDEO_MODEL_GROUPS, pickRecommendedModel, findVideoModel, type VideoModel } from "@/lib/director/videoModels";
+import { VIDEO_MODEL_GROUPS, findVideoModel, type VideoModel } from "@/lib/director/videoModels";
+import { resolveRecommendation } from "@/lib/director/modelRanking";
 import { VideoOptionsDialog } from "./VideoOptionsDialog";
 import type { VideoOptions } from "@/lib/director/videoModelControls";
 
@@ -101,8 +102,14 @@ export function PromptResultCard({ title, prompt, breakdown, directorsNote, onRe
   const cameraLighting = [breakdown.camera, breakdown.lighting].filter(Boolean).join(" · ");
   const film = breakdown.film_emulation;
   const negative = breakdown.negative_prompt;
-  const recommendation = breakdown.model_recommendation;
-  const recommendedModel = pickRecommendedModel(recommendation);
+  const recommendation =
+    breakdown.recommendation_reason || breakdown.model_recommendation;
+  const resolved = resolveRecommendation(breakdown);
+  const recommendedModel =
+    findVideoModel(resolved.primary.id) ?? findVideoModel("seedance-v1-pro")!;
+  const topPicks = [resolved.primary, ...resolved.alternatives]
+    .map((c) => findVideoModel(c.id))
+    .filter((m): m is VideoModel => !!m);
   const externalLink = EXTERNAL_LINKS[recommendedModel.family];
 
   const fullText = [
@@ -300,16 +307,23 @@ export function PromptResultCard({ title, prompt, breakdown, directorsNote, onRe
                 Generate video
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="max-h-[420px] overflow-y-auto w-64">
+            <DropdownMenuContent align="end" className="max-h-[420px] overflow-y-auto w-72">
               <DropdownMenuLabel className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                Recommended
+                Top picks
               </DropdownMenuLabel>
-              <DropdownMenuItem onClick={() => openOptionsFor(recommendedModel.id)}>
-                {recommendedModel.label}
-                {recommendedModel.note && (
-                  <span className="ml-auto text-[10px] text-muted-foreground">{recommendedModel.note}</span>
-                )}
-              </DropdownMenuItem>
+              {topPicks.map((m, idx) => (
+                <DropdownMenuItem key={`top-${m.id}`} onClick={() => openOptionsFor(m.id)}>
+                  <span className="truncate">{m.label}</span>
+                  <span className="ml-auto text-[10px] text-muted-foreground shrink-0">
+                    {idx === 0 ? "Best fit" : `Alt #${idx}`}
+                  </span>
+                </DropdownMenuItem>
+              ))}
+              {resolved.reasons.length > 0 && (
+                <div className="px-2 py-1 text-[10px] text-muted-foreground/80 leading-relaxed">
+                  {resolved.reasons.slice(0, 3).join(" · ")}
+                </div>
+              )}
               {VIDEO_MODEL_GROUPS.map((group) => (
                 <div key={group.label}>
                   <DropdownMenuSeparator />

@@ -1,88 +1,124 @@
-# Per-model video options before generation
+# Smarter model recommendation with structured catalog + ranked fallback
 
 ## Goal
 
-When the user clicks **Generate video** and picks a model, instead of submitting immediately, open a small **"Render settings"** dialog showing only the controls that the chosen model actually supports. After they confirm, submit the job with those options.
+Replace the current "LLM picks one of 3 hardcoded names → regex maps to id" flow with a system where:
 
-Each model family on fal.ai exposes a different set of inputs. We tailor the form to that model.
+1. The Director LLM sees the **full catalog** (all ~25 models) with structured capability tags and picks a concrete `model_id` directly.
+2. The frontend computes its **own ranked shortlist** from the scene breakdown, so when the LLM's pick is missing/ambiguous/unavailable we always have a deterministic fallback — and we can surface a "Top picks" group in the dropdown.
 
-## Per-model control matrix
+## Part 1 — Structured model catalog
 
-| Model family | Aspect ratio | Duration | Resolution / Quality | Audio | Other |
-|---|---|---|---|---|---|
-| Veo 3.1 / 3.1 Fast | 16:9, 9:16, 1:1 | 4s, 6s, 8s | 720p, 1080p | on / off (native audio) | — |
-| Veo 3.1 Lite / Veo 3 / Veo 3 Fast | 16:9, 9:16 | 8s | 720p, 1080p | on / off | — |
-| Veo 2 | 16:9, 9:16 | 5s, 6s, 7s, 8s | 720p | — (no audio) | — |
-| Kling 2.5 Turbo Pro / 2.1 Master / 2 Master | 16:9, 9:16, 1:1 | 5s, 10s | — | — | cfg_scale slider (0.1–1) |
-| Kling 1.6 Pro / 1.5 Pro / 1.6 Std / 1.0 Pro / 1.0 Std | 16:9, 9:16, 1:1 | 5s, 10s | — | — | cfg_scale |
-| Seedance 2.0 / 2.0 Fast | 16:9, 9:16, 1:1, 4:3, 3:4, 21:9 | 5s, 10s | 480p, 720p, 1080p | on / off (native audio) | — |
-| Seedance 1 Pro / 1 Lite | same aspects | 5s, 10s | 480p, 720p, 1080p | — | — |
-| Hailuo 02 Pro | 16:9 | 6s, 10s | 768p, 1080p | — | prompt_optimizer toggle |
-| Hailuo 02 Standard / 01 | 16:9 | 6s | 768p | — | — |
-| Runway Gen-3 Turbo | 16:9, 9:16 | 5s, 10s | — | — | — |
-| LTX Video / 13B | 16:9, 9:16, 1:1 | 5s | — | — | — |
-| Wan Pro / 2.2 A14B | 16:9, 9:16, 1:1 | 5s, 10s | 480p, 720p | — | — |
+### New file: `src/lib/director/videoModelCatalog.ts`
 
-(Defaults: 16:9, lowest duration option, highest resolution available, audio on when supported.)
-
-## What to build
-
-### 1. New file: `src/lib/director/videoModelControls.ts`
-
-Declares a `getModelControls(modelId)` returning the schema for that model:
+Extend each entry from `videoModels.ts` with capability metadata used for both the LLM prompt and the ranking heuristic:
 
 ```ts
-type ModelControls = {
-  aspectRatios?: string[];        // e.g. ["16:9","9:16","1:1"]
-  durations?: number[];            // seconds
-  resolutions?: string[];          // ["720p","1080p"]
-  audio?: boolean;                 // show audio toggle
-  cfgScale?: boolean;              // show cfg slider (Kling)
-  promptOptimizer?: boolean;       // Hailuo
-  defaults: { aspect_ratio?: string; duration?: number; resolution?: string; audio?: boolean; cfg_scale?: number; prompt_optimizer?: boolean };
+type ModelCapabilities = {
+  id: VideoModelId;
+  family: VideoModel["family"];
+  label: string;
+  // Capabilities
+  audio: boolean;                      // native audio generation
+  maxDurationSec: number;              // 5 | 8 | 10 | …
+  maxResolution: "480p"|"720p"|"768p"|"1080p";
+  aspects: string[];                   // ["16:9","9:16",…]
+  speed: "fast"|"balanced"|"slow";     // generation latency tier
+  cost: "low"|"mid"|"high";            // relative price tier
+  // Qualitative tags used for matching
+  strengths: Array<
+    | "cinematic" | "photoreal" | "stylized" | "anime"
+    | "portrait" | "product" | "landscape" | "action"
+    | "complex_motion" | "stable_subject" | "long_take"
+    | "film_grain" | "text_in_frame" | "dialogue"
+  >;
 };
 ```
 
-Encodes the matrix above keyed by model id, plus a small fallback for unknown models (16:9 only).
+Filled out for all 25 models. Examples:
+- `veo-3.1`: audio ✓, 8s, 1080p, photoreal+dialogue+complex_motion, slow, high
+- `seedance-2.0`: audio ✓, 10s, 1080p, cinematic+photoreal+film_grain, balanced, mid
+- `kling-v2.5-turbo-pro`: no audio, 10s, photoreal+complex_motion+long_take, balanced, mid
+- `hailuo-02-pro`: no audio, 10s, 1080p, stylized+portrait, balanced, mid
+- `ltx-video-13b`: no audio, 5s, 720p, stylized, fast, low
+- `runway-gen3-turbo`: no audio, 10s, photoreal+cinematic, fast, mid
 
-### 2. New file: `src/components/director/VideoOptionsDialog.tsx`
+This file becomes the single source of truth; `videoModels.ts` keeps its existing `VIDEO_MODEL_GROUPS` shape but is built from the catalog.
 
-Small shadcn `Dialog` rendered from `PromptResultCard`. Props: `open`, `model`, `onCancel`, `onConfirm(options)`. Renders only the controls returned by `getModelControls(model.id)`:
+## Part 2 — LLM picks a concrete model_id
 
-- Aspect ratio → button group / `ToggleGroup`
-- Duration → segmented buttons
-- Resolution → segmented buttons
-- Audio → `Switch`
-- cfg_scale → `Slider` 0.1–1, default 0.5
-- prompt_optimizer → `Switch`
+### Edit: `supabase/functions/director-agent/index.ts`
 
-Confirm button label: "Render with {model.label}".
+- Stop hardcoding `VIDEO_MODELS = ["Seedance Pro","Veo 3","Kling 2"]`.
+- At request time, build a compact catalog string (one line per model: `id — family, max Ns, [audio], strengths…`) and inject it into the system prompt.
+- Tighten the `generate_prompt` tool schema so the breakdown returns **two new structured fields** alongside the existing free text:
 
-### 3. Update `PromptResultCard.tsx`
+```ts
+breakdown.recommended_model_id: string  // must be one of the catalog ids
+breakdown.recommended_alternatives: string[]  // 2–3 backup ids, ranked
+breakdown.recommendation_reason: string  // one sentence "why"
+```
 
-- Replace direct `generateVideo(modelId)` from the dropdown with a two-step flow: clicking a model in the dropdown sets `pendingModel` and opens `VideoOptionsDialog`. Confirming the dialog calls `generateVideo(modelId, options)`.
-- `generateVideo` now passes `options` through to `submitVideoJob`.
+The existing `model_recommendation` free-text field stays (for display), but the source of truth becomes the structured ids.
 
-### 4. Update `src/lib/director/api.ts`
+## Part 3 — Deterministic fallback ranking on the client
 
-- Add `VideoOptions` type matching the union of fields above.
-- `submitVideoJob(prompt, provider, sessionId, options?)` includes `options` in the request body.
+### New file: `src/lib/director/modelRanking.ts`
 
-### 5. Update `supabase/functions/generate-video/index.ts`
+A pure function:
 
-- Accept `options` from the request body. Build the fal payload starting from `{ prompt }` and merge model-appropriate fields:
-  - Veo: `aspect_ratio`, `duration`, `resolution`, `generate_audio`
-  - Kling: `aspect_ratio`, `duration`, `cfg_scale`
-  - Seedance: `aspect_ratio`, `duration`, `resolution`, `generate_audio`
-  - Hailuo: `duration`, `resolution`, `prompt_optimizer`
-  - Runway: `aspect_ratio`, `duration`
-  - LTX: `aspect_ratio`
-  - Wan: `aspect_ratio`, `duration`, `resolution`
-- A small `buildFalPayload(provider, prompt, options)` helper keeps this isolated. Unknown fields are dropped — never forwarded to fal.
+```ts
+function rankModels(breakdown: Breakdown): Array<{ model: ModelCapabilities; score: number; reasons: string[] }>
+```
 
-No DB migration needed (the options are just forwarded to fal; we already store `prompt` and `provider`).
+Scoring rules (additive, all bounded so no single signal dominates):
+
+```text
++3  audio required (mood/film_emulation mentions music, dialogue, sound, voice, ambient) AND model has audio
+-4  audio required AND model lacks audio
++2  duration_hint ≥ 8s AND model.maxDurationSec ≥ that hint
+-3  duration_hint exceeds model.maxDurationSec
++2  scene tag match (e.g. "portrait" subject → portrait strength; "action" verbs → action/complex_motion)
++1  film_emulation present AND model has film_grain or cinematic
++1  resolution hint "4k"/"1080" AND model.maxResolution = "1080p"
++1  speed preference: short brief / "quick" / "draft" → fast tier
+-1  cost: prefer mid over high when no signal demands top quality
++0.5 family hint in model_recommendation free text matches
+```
+
+Tag detection is plain regex/keyword on `breakdown.{subject, action, mood, environment, color_palette, film_emulation, model_recommendation}`. Scores are deterministic and explainable (`reasons[]` lists which rules fired — useful for tooltips and debugging).
+
+### Resolution flow used by `PromptResultCard`
+
+Replace `pickRecommendedModel(rec)` with `resolveRecommendation(breakdown)`:
+
+1. If `breakdown.recommended_model_id` exists in the catalog → that's the **primary**.
+2. Compute `rankModels(breakdown)` to get the ranked list.
+3. Primary's **alternatives** = first 3 ranked entries (excluding primary, deduped against `recommended_alternatives` if present).
+4. If the LLM's primary is missing/invalid → top-ranked entry becomes primary, and the ranking provides alternatives. Fallback path also fires when the free-text recommendation is ambiguous (e.g. just "Kling" with no version → ranking decides which Kling).
+5. Returns `{ primary, alternatives, reasons }`.
+
+## Part 4 — UI surfacing
+
+### Edit: `src/components/director/PromptResultCard.tsx`
+
+- Dropdown gains a new "Top picks" section above "Recommended": shows primary + 2 alternatives with a small `?` tooltip listing the matched reasons (e.g. "Has audio · Supports 10s · Cinematic strength").
+- Existing "Recommended" item keeps the LLM's pick (which is now usually the same as primary).
+- Full grouped list of all models stays underneath, unchanged.
+- "Model recommendation" section in the card body shows `recommendation_reason` from the breakdown when present, falling back to the old free-text line.
+
+## Part 5 — Tests
+
+### New file: `src/lib/director/__tests__/modelRanking.test.ts`
+
+Cover the deterministic-ranking guarantees:
+- Brief mentioning "dialogue" forces audio-capable models above Kling/Runway/LTX/Wan.
+- `duration_hint: "10s"` filters out Veo 3 (8s max).
+- Free-text `"Kling"` with no version resolves to the highest-ranked Kling, not the first in list order.
+- When primary id is invalid, the top-ranked model is promoted and surfaces in the UI shortlist.
 
 ## Out of scope
 
-- No changes to the AI Director's chat conversation itself — the questions are asked via a focused settings dialog rather than free-form chat (faster, less error-prone, and won't burn AI credits).
-- No new auth, analytics or tour additions.
+- No DB schema changes (everything fits in the existing `breakdown` JSON).
+- No changes to the per-model render-settings dialog from the previous plan — it already keys off model id.
+- No automated benchmarking of model output quality; this plan is about *matching* user intent to model capabilities, not measuring real-world fidelity.
