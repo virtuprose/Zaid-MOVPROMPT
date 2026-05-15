@@ -120,17 +120,6 @@ export function TopNav() {
 
           {!loading && user && (
             <>
-              {/* Buy Credits */}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => navigate("/account/billing")}
-                className="hidden sm:inline-flex h-9 rounded-full px-3 border-border/60 bg-transparent hover:bg-[hsl(240_5%_9%)] gap-1.5 text-[13px]"
-              >
-                <Disc className="w-3.5 h-3.5 text-destructive fill-destructive" />
-                Buy Credits
-              </Button>
-
               {/* Assets */}
               <Button
                 size="sm"
