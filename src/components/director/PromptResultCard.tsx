@@ -24,8 +24,18 @@ import { submitVideoJob, pollVideoJob, type VideoJob } from "@/lib/director/api"
 import { VIDEO_MODEL_GROUPS, findVideoModel, type VideoModel } from "@/lib/director/videoModels";
 import { resolveRecommendation } from "@/lib/director/modelRanking";
 import { VideoOptionsDialog } from "./VideoOptionsDialog";
+import { ConfirmRightsDialog } from "./ConfirmRightsDialog";
 import type { VideoOptions } from "@/lib/director/videoModelControls";
 import { useApproval } from "./ApprovalContext";
+
+const RIGHTS_ACK_KEY = "vidoprompt:rights-ack";
+
+type PendingRender = {
+  model: VideoModel;
+  opts: VideoOptions;
+  finalPrompt: string;
+  meta: { rewritten: boolean; summary?: string; original?: string };
+};
 
 type Props = {
   title: string;
