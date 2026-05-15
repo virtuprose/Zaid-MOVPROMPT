@@ -75,6 +75,7 @@ export default function MarketingStudio() {
 
   const [openPicker, setOpenPicker] = useState<"format" | "hook" | "setting" | null>(null);
   const [brandOpen, setBrandOpen] = useState(false);
+  const [brandEditId, setBrandEditId] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
