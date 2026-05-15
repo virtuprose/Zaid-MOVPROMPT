@@ -49,6 +49,9 @@ export default function Director() {
   const { sessionId } = useParams<{ sessionId?: string }>();
   const [sessions, setSessions] = useState<SessionRow[]>([]);
   const [tasksOpen, setTasksOpen] = useState(true);
+  const [renameTarget, setRenameTarget] = useState<SessionRow | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<SessionRow | null>(null);
 
   useEffect(() => {
     trackPageVisit("/director");
