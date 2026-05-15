@@ -323,6 +323,16 @@ export function TopNav() {
                       >
                         <FolderOpen className="w-4 h-4 me-2" /> Assets
                       </Button>
+                      <Button
+                        variant="ghost"
+                        className="justify-start"
+                        onClick={() => {
+                          setMobileOpen(false);
+                          navigate("/learn");
+                        }}
+                      >
+                        <GraduationCap className="w-4 h-4 me-2" /> Learn
+                      </Button>
                       <div className="flex items-center justify-between px-3 py-2">
                         <span className="text-xs text-muted-foreground">Language</span>
                         <LanguageToggle />
