@@ -7,7 +7,38 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+// Stable model ids ↔ fal.ai endpoints. Keep in sync with
+// src/lib/director/videoModels.ts on the frontend.
 const FAL_MODELS: Record<string, string> = {
+  // Kling
+  "kling-v2.5-turbo-pro": "fal-ai/kling-video/v2.5-turbo/pro/text-to-video",
+  "kling-v2.1-master": "fal-ai/kling-video/v2.1/master/text-to-video",
+  "kling-v2-master": "fal-ai/kling-video/v2/master/text-to-video",
+  "kling-v1.6-pro": "fal-ai/kling-video/v1.6/pro/text-to-video",
+  "kling-v1.6-standard": "fal-ai/kling-video/v1.6/standard/text-to-video",
+  "kling-v1.5-pro": "fal-ai/kling-video/v1.5/pro/text-to-video",
+  "kling-v1-pro": "fal-ai/kling-video/v1/pro/text-to-video",
+  "kling-v1-standard": "fal-ai/kling-video/v1/standard/text-to-video",
+  // Veo
+  "veo-3": "fal-ai/veo3",
+  "veo-3-fast": "fal-ai/veo3/fast",
+  "veo-2": "fal-ai/veo2",
+  // Seedance
+  "seedance-v1-pro": "fal-ai/bytedance/seedance/v1/pro/text-to-video",
+  "seedance-v1-lite": "fal-ai/bytedance/seedance/v1/lite/text-to-video",
+  // Hailuo / MiniMax
+  "hailuo-02-pro": "fal-ai/minimax/hailuo-02/pro/text-to-video",
+  "hailuo-02-standard": "fal-ai/minimax/hailuo-02/standard/text-to-video",
+  "hailuo-01": "fal-ai/minimax/video-01",
+  // Runway
+  "runway-gen3-turbo": "fal-ai/runway-gen3/turbo/text-to-video",
+  // LTX
+  "ltx-video-13b": "fal-ai/ltx-video-13b-distilled",
+  "ltx-video": "fal-ai/ltx-video",
+  // Wan
+  "wan-pro": "fal-ai/wan-pro/text-to-video",
+  "wan-v2.2-a14b": "fal-ai/wan/v2.2-a14b/text-to-video",
+  // Legacy aliases (kept so older saved jobs / clients still resolve)
   seedance: "fal-ai/bytedance/seedance/v1/pro/text-to-video",
   veo: "fal-ai/veo3/fast",
   kling: "fal-ai/kling-video/v2/master/text-to-video",
