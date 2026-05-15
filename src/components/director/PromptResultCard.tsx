@@ -165,16 +165,17 @@ export function PromptResultCard({ title, prompt, breakdown, directorsNote, onRe
     };
   }, [job]);
 
-  const generateVideo = async (provider: "seedance" | "veo" | "kling") => {
+  const generateVideo = async (modelId: string) => {
     if (!user) {
       toast.error("Sign in to generate videos");
       return;
     }
+    const m = findVideoModel(modelId);
     setGenerating(true);
     try {
-      const newJob = await submitVideoJob(prompt, provider, sessionId);
+      const newJob = await submitVideoJob(prompt, modelId, sessionId);
       setJob(newJob);
-      toast.success(`Rendering with ${provider} — this can take a few minutes`);
+      toast.success(`Rendering with ${m?.label ?? modelId} — this can take a few minutes`);
     } catch (e: any) {
       toast.error(e?.message || "Could not start video generation");
     } finally {
