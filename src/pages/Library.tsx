@@ -331,7 +331,7 @@ function HistoryCard({
         <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-primary">
           {modelLabel}
         </span>
-        <p className="font-mono text-[12px] leading-relaxed text-muted-foreground line-clamp-2 min-h-[2.4rem]">
+        <p className="text-[13px] leading-snug text-[#A1A1AA] line-clamp-3 min-h-[3.4rem]">
           {preview}{mainPrompt.length > 120 ? "…" : ""}
         </p>
       </div>
