@@ -1,76 +1,51 @@
-# Image-time moderation via Lovable AI
+# Director sidebar — recents restyle
 
-## Why
+Match the attached reference for the recents list in `src/pages/Director.tsx`. Visual restyle only — the menu items are wired as placeholders (toast "Coming soon"), no DB schema changes.
 
-The current eligibility flow runs at "Generate Video" click and checks the prompt against a fal.ai endpoint that does not exist (returns 404, fail-open). You want the check to happen **the moment an image is uploaded**, on the image itself, so flagged content is caught before the user invests time writing prompts or picking models.
+## What changes
 
-## How
+1. **Group header** — Rename "Recent" to **"Tasks"**, render as a larger label with a chevron on the right that toggles the list open/closed (local `useState`, defaults to open). Same column width.
 
-**New edge function: `moderate-image`** (`supabase/functions/moderate-image/index.ts`)
+2. **Row style**
+   - Pill-shaped (`rounded-full`), single-line, `px-3 py-1.5`, subtle border.
+   - Inactive: transparent bg + `border-border/40` + `text-foreground/80`, hover lifts to `bg-muted/40`.
+   - Active: `bg-muted/60` + `border-border` + `text-foreground` (matches the reference's lighter pill on the selected row).
+   - Drop the `MessageSquare` icon — reference rows are text-only.
+   - Title truncates with ellipsis; pill and 3-dot stay pinned to the right.
 
-- Input: `{ image_url: string }` (signed URL from `director-uploads`, or video keyframe).
-- Calls Lovable AI Gateway, model `google/gemini-2.5-flash` (cheap, fast, multimodal).
-- Uses `Output.object()` with this Zod schema:
+3. **"Needs reply" pill** (right of the title, before the 3-dot)
+   - Shown only when the session is awaiting the user's reply, i.e. the **last message in that session was from the assistant**.
+   - Compute via a single query on mount/refresh: `director_messages` grouped by `session_id`, taking the latest row's `role`. Sessions where `role = 'assistant'` get the flag. Add `needsReply: boolean` to the `SessionRow` shape kept in `Director.tsx` state.
+   - Style: `text-[10px]`, `px-2 py-0.5`, `rounded-full`, `bg-accent/15 text-accent border border-accent/30` (uses existing amber accent token — matches the reference's amber tone).
+
+4. **3-dot menu** — `MoreVertical` icon button, `size-6`, opens a shadcn `DropdownMenu`:
+   - **Edit** (Pencil icon) — `toast("Rename coming soon")`
+   - **Pin** (Pin icon) — `toast("Pin coming soon")`
+   - separator
+   - **Delete** (Trash icon, `text-destructive`) — `toast("Delete coming soon")`
+   - Stop click propagation so opening the menu doesn't navigate to the session.
+   - Button only visible on row hover or when its menu is open (`opacity-0 group-hover:opacity-100 data-[state=open]:opacity-100`).
+
+5. **Container** — Group header row uses `flex items-center justify-between` with the chevron button. List wrapper gains a smooth collapse (Tailwind `data-[state=closed]:hidden`, or simple conditional render — no animation needed to match the reference).
+
+## Technical notes
+
+- All work in **`src/pages/Director.tsx`**. No new files.
+- New imports: `ChevronDown`, `MoreVertical`, `Pencil`, `Pin`, `Trash2` from `lucide-react`; `DropdownMenu`, `DropdownMenuTrigger`, `DropdownMenuContent`, `DropdownMenuItem`, `DropdownMenuSeparator` from `@/components/ui/dropdown-menu`; `toast` from `sonner`.
+- Extra fetch in the existing `load()` effect:
   ```ts
-  {
-    eligible: boolean,
-    severity: "safe" | "borderline" | "blocked",
-    categories: string[],   // e.g. ["nudity","violence","minors","weapons","hate","copyright"]
-    reason: string          // ≤200 chars, explains why if not eligible
-  }
+  const { data: latest } = await supabase
+    .from("director_messages")
+    .select("session_id, role, created_at")
+    .in("session_id", sessionIds)
+    .order("created_at", { ascending: false });
   ```
-- System prompt: strict commercial-video safety classifier modeled on Seedance / Veo policies (no nudity, no minors in suggestive contexts, no graphic violence, no real-person likeness, no hate symbols, no extremist content, no copyrighted characters/logos).
-- Returns 200 with the structured result. CORS via `npm:@supabase/supabase-js@2/cors`. JWT-validated.
-
-**Attachment type extension** (`src/lib/director/ingest.ts`)
-
-Add an optional `moderation` field to image and video_keyframes attachments:
-```ts
-moderation?: { state: "scanning" | "ok" | "blocked"; reason?: string; categories?: string[] }
-```
-
-**Wire-in: `AttachmentDropzone.tsx`**
-
-After `ingestImage` / `ingestVideo` returns, push the attachment with `moderation.state = "scanning"`, then `await` `moderate-image` for each image/keyframe URL in parallel. On result, patch the attachment in state.
-
-- **Blocked** → red shield icon on the chip, hover/tap shows the reason and categories. Toast: *"Image blocked: {reason}"*.
-- **OK** → small green check, no fuss.
-- **Failure / 5xx** → silent fail-open with a small "Couldn't verify" tooltip; user can still proceed.
-
-**Send-time guard: `Composer.tsx` (or whichever component triggers director-agent)**
-
-Disable the Send button while any attachment is `scanning` (with tooltip *"Scanning attachments…"*), and block sending with a toast if any attachment is `blocked` (*"Remove the flagged images to continue"*).
-
-**Prompt-time check removal**
-
-- `VideoOptionsDialog`: remove the `requiresEligibilityCheck` branch, the `checkVideoEligibility` call, the rewriting state machine, and the blocked banner. The dialog goes back to `idle → submit`.
-- `videoModelControls.ts`: remove `requiresEligibilityCheck` and the `ELIGIBILITY_CHECK_MODELS` set.
-- `generate-video/index.ts`: remove the `check_eligibility` action, the `ELIGIBILITY_ENDPOINTS` map, the server-side enforcement block in `submit`, and the related helpers.
-- `director-agent/index.ts`: keep `rewrite_safe` for now (still useful as an explicit user action; not auto-invoked).
-- `api.ts`: remove `checkVideoEligibility`; keep `rewritePromptSafe` (no caller, but lightweight) or remove — out of scope unless you say otherwise.
+  Reduce to a `Map<sessionId, role>` keeping the first occurrence per id (latest), then merge `needsReply` into each `SessionRow`. Skip the query when `sessions` is empty.
+- Active row detection (`s.id === sessionId`) and `navigate(...)` behavior unchanged.
+- No DB migration, no changes to `DirectorChat`, no changes outside `Director.tsx`.
 
 ## Out of scope
 
-- Document and audio moderation (text references rarely violate image-safety policies; can be added later).
-- Re-running moderation when a signed URL expires.
-- Persisting moderation results to a DB table.
-- Auto-rewrite of the prompt — image moderation can't be solved by rephrasing.
-
-## Open question
-
-When an image is flagged, should the app:
-- **(default in this plan)** Keep the chip visible with a red marker and block Send until the user removes it, or
-- Auto-remove the attachment and just toast the reason?
-
-I'll go with the first (visible + blocking) unless you say otherwise.
-
-## Files
-
-- `supabase/functions/moderate-image/index.ts` — new
-- `src/lib/director/ingest.ts` — add `moderation` field
-- `src/lib/director/api.ts` — add `moderateImage()` helper, remove `checkVideoEligibility`
-- `src/components/director/AttachmentDropzone.tsx` — kick off moderation, render badges
-- `src/components/director/Composer.tsx` — gate Send on moderation state
-- `src/components/director/VideoOptionsDialog.tsx` — remove eligibility flow
-- `src/lib/director/videoModelControls.ts` — drop `requiresEligibilityCheck`
-- `supabase/functions/generate-video/index.ts` — drop eligibility action + enforcement
+- Real Edit / Pin / Delete behavior (deferred — would need a `pinned` column and a rename/delete mutation).
+- Drag-to-reorder, search, or grouping by date.
+- Mobile sidebar (recents list is already `hidden lg:flex`).
