@@ -148,8 +148,14 @@ serve(async (req) => {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
+      const statusUrl =
+        (job as { fal_status_url?: string | null }).fal_status_url ||
+        `https://queue.fal.run/${model}/requests/${job.fal_request_id}/status`;
+      const responseUrl =
+        (job as { fal_response_url?: string | null }).fal_response_url ||
+        `https://queue.fal.run/${model}/requests/${job.fal_request_id}/response`;
       const statusResp = await fetch(
-        `https://queue.fal.run/${model}/requests/${job.fal_request_id}/status`,
+        statusUrl,
         { headers: { Authorization: `Key ${FAL_KEY}` } },
       );
       const statusPayload = await readJsonResponse(statusResp);
@@ -162,7 +168,7 @@ serve(async (req) => {
       }
       if (statusData.status === "COMPLETED") {
         const resultResp = await fetch(
-          `https://queue.fal.run/${model}/requests/${job.fal_request_id}`,
+          responseUrl,
           { headers: { Authorization: `Key ${FAL_KEY}` } },
         );
         const resultPayload = await readJsonResponse(resultResp);
@@ -295,11 +301,22 @@ serve(async (req) => {
     }
     await admin
       .from("video_jobs")
-      .update({ fal_request_id: submitData.request_id, status: "processing" })
+      .update({
+        fal_request_id: submitData.request_id,
+        fal_status_url: submitData.status_url ?? null,
+        fal_response_url: submitData.response_url ?? null,
+        status: "processing",
+      })
       .eq("id", job.id);
 
     return new Response(
-      JSON.stringify({ ...job, fal_request_id: submitData.request_id, status: "processing" }),
+      JSON.stringify({
+        ...job,
+        fal_request_id: submitData.request_id,
+        fal_status_url: submitData.status_url ?? null,
+        fal_response_url: submitData.response_url ?? null,
+        status: "processing",
+      }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (e) {
