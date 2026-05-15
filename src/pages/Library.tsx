@@ -1067,6 +1067,7 @@ const Library = () => {
                         onDelete={handleDelete}
                         isExpanded={isExpanded}
                         onToggle={() => setExpandedId(isExpanded ? null : entry.id)}
+                        onOpen={() => setExpandedId(entry.id)}
                         selectMode={selectMode}
                         selected={selectedIds.has(entry.id)}
                         onToggleSelect={() => setSelectedIds((prev) => {
