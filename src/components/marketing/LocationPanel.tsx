@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { useBrandKit, type LocationInput, EMPTY_LOCATION } from "@/lib/marketing/brandKit";
 
-const TRENDING: string[] = ["Tokyo", "Dubai", "Paris", "LA", "Seoul"];
+const TRENDING: string[] = ["Dubai", "Tokyo", "NYC", "Paris", "LA"];
 
 const REGIONS: { label: string; cities: string[] }[] = [
   { label: "MENA", cities: ["Dubai", "Riyadh", "Doha", "Istanbul", "Cairo", "Marrakech"] },
