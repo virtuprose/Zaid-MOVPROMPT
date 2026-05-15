@@ -131,10 +131,11 @@ export default function MarketingStudio() {
     !!formatId ||
     !!hookId ||
     !!settingId ||
+    !!customSetting.trim() ||
     !!brandKit?.name ||
     !!location.place ||
     !!location.imagePath;
-  const ready = !!(formatId && hookId && settingId);
+  const ready = !!(formatId && hookId && (settingId || customSetting.trim()));
 
   const startGenerate = () => {
     if (!ready) {
