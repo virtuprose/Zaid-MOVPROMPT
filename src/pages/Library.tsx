@@ -242,12 +242,17 @@ function HistoryCard({
 
   return (
     <Card
-      className={`bg-card border-border overflow-hidden flex flex-col group transition-shadow ${
+      className={`bg-card border-border overflow-hidden flex flex-col group transition-all duration-200 hover:-translate-y-0.5 hover:border-accent/40 hover:shadow-[0_8px_24px_-12px_hsl(var(--accent)/0.35)] ${
         isExpanded ? "ring-2 ring-primary/40 shadow-lg" : ""
       } ${selected ? "ring-2 ring-accent/60" : ""}`}
     >
-      {/* Media banner */}
-      <div className="relative aspect-video w-full overflow-hidden">
+      {/* Media banner — click to open preview */}
+      <button
+        type="button"
+        onClick={onOpen}
+        className="relative aspect-video w-full overflow-hidden block text-start"
+        aria-label="Open prompt preview"
+      >
         {showComposite ? (
           <div className="grid grid-cols-2 grid-rows-2 gap-px w-full h-full bg-border/50">
             {Array.from({ length: 4 }).map((_, i) => (
@@ -266,7 +271,12 @@ function HistoryCard({
             loading="lazy"
           />
         ) : (
-          <CinematicPlaceholder family={family} workflow={entry.workflow_type} prompt={mainPrompt} />
+          <CinematicPlaceholder
+            family={family}
+            workflow={entry.workflow_type}
+            prompt={mainPrompt}
+            seed={entry.id}
+          />
         )}
 
         {/* Workflow pill */}
