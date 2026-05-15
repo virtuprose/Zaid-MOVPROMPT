@@ -44,27 +44,34 @@ export function BrandsRow({
   return (
     <section className="mb-6">
       <SectionHeader count={kits.length} />
-      <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-thin">
+      <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1">
         {kits.map((k) => {
           const active = k.id === activeId;
           return (
             <div
               key={k.id}
               className={cn(
-                "group relative shrink-0 w-[180px] rounded-2xl border bg-[hsl(240_5%_8%)]/70 backdrop-blur transition-all",
+                "group relative shrink-0 w-[200px] h-[84px] rounded-2xl border bg-[hsl(240_5%_8%)]/70 backdrop-blur transition-all overflow-hidden",
                 active
-                  ? "border-[#F5A524] shadow-[0_0_0_1px_hsl(35_90%_55%/0.3)]"
+                  ? "border-[#F5A524] ring-1 ring-[#F5A524]/40"
                   : "border-border/60 hover:border-[#F5A524]/50",
               )}
             >
               <button
                 type="button"
                 onClick={() => k.id && onSelect(k.id)}
-                className="w-full text-left p-3 flex items-center gap-3"
+                className="w-full h-full text-left p-3 flex items-center gap-3"
               >
-                <div className="w-12 h-12 rounded-lg border border-border/50 bg-muted/30 overflow-hidden flex items-center justify-center shrink-0">
+                <div className="w-12 h-12 rounded-lg border border-border/40 bg-white/5 overflow-hidden flex items-center justify-center shrink-0">
                   {k.logo_url ? (
-                    <img src={k.logo_url} alt="" className="w-full h-full object-cover" />
+                    <img
+                      src={k.logo_url}
+                      alt=""
+                      className="w-full h-full object-contain"
+                      onError={(e) => {
+                        (e.currentTarget as HTMLImageElement).style.display = "none";
+                      }}
+                    />
                   ) : (
                     <Building2 className="w-5 h-5 text-muted-foreground" />
                   )}
@@ -73,17 +80,16 @@ export function BrandsRow({
                   <div className="truncate text-sm font-medium text-foreground">
                     {k.name || "Untitled"}
                   </div>
-                  <div className="text-[10px] uppercase tracking-wide text-muted-foreground mt-0.5">
+                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground mt-0.5">
                     {k.subject}
                   </div>
                 </div>
+                {active && (
+                  <div className="w-5 h-5 rounded-full bg-[#F5A524] text-black flex items-center justify-center shrink-0">
+                    <Check className="w-3 h-3" strokeWidth={3} />
+                  </div>
+                )}
               </button>
-
-              {active && (
-                <div className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-[#F5A524] text-black flex items-center justify-center shadow-md">
-                  <Check className="w-3 h-3" strokeWidth={3} />
-                </div>
-              )}
 
               <div className="absolute top-1.5 right-1.5 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                 <button
@@ -92,7 +98,7 @@ export function BrandsRow({
                     e.stopPropagation();
                     k.id && onEdit(k.id);
                   }}
-                  className="w-6 h-6 rounded-md bg-background/80 backdrop-blur border border-border/60 text-muted-foreground hover:text-foreground flex items-center justify-center"
+                  className="w-6 h-6 rounded-md bg-background/90 backdrop-blur border border-border/60 text-muted-foreground hover:text-foreground flex items-center justify-center"
                   aria-label="Edit"
                 >
                   <Pencil className="w-3 h-3" />
@@ -103,7 +109,7 @@ export function BrandsRow({
                     e.stopPropagation();
                     k.id && onDelete(k.id);
                   }}
-                  className="w-6 h-6 rounded-md bg-background/80 backdrop-blur border border-border/60 text-muted-foreground hover:text-destructive flex items-center justify-center"
+                  className="w-6 h-6 rounded-md bg-background/90 backdrop-blur border border-border/60 text-muted-foreground hover:text-destructive flex items-center justify-center"
                   aria-label="Delete"
                 >
                   <Trash2 className="w-3 h-3" />
@@ -117,11 +123,9 @@ export function BrandsRow({
         <button
           type="button"
           onClick={onNew}
-          className="shrink-0 w-[140px] rounded-2xl border border-dashed border-border/60 bg-secondary/10 hover:border-[#F5A524]/60 hover:bg-[#F5A524]/5 transition-all p-3 flex flex-col items-center justify-center gap-2 text-muted-foreground hover:text-foreground"
+          className="shrink-0 w-[140px] h-[84px] rounded-2xl border border-dashed border-border/60 bg-secondary/10 hover:border-[#F5A524]/60 hover:bg-[#F5A524]/5 transition-all flex flex-col items-center justify-center gap-1.5 text-muted-foreground hover:text-foreground"
         >
-          <div className="w-10 h-10 rounded-full bg-secondary/40 flex items-center justify-center">
-            <Plus className="w-4 h-4" />
-          </div>
+          <Plus className="w-4 h-4" />
           <span className="text-xs font-medium">New brand</span>
         </button>
       </div>
