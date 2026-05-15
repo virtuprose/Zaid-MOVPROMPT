@@ -150,13 +150,13 @@ export function TopNav() {
 
           {!loading && user && (
             <>
-              {/* Assets */}
+              {/* Assets — neutral */}
               <Button
                 size="sm"
                 onClick={() => navigate("/library")}
-                className="hidden sm:inline-flex h-9 rounded-full px-3 gap-1.5 text-[13px] bg-[hsl(150_45%_12%)] text-[hsl(150_70%_70%)] border border-[hsl(150_50%_25%)] hover:bg-[hsl(150_45%_15%)]"
+                className="hidden sm:inline-flex h-9 rounded-full px-3 gap-1.5 text-[13px] bg-transparent text-foreground border border-[#27272A] hover:bg-[hsl(240_5%_10%)] hover:border-border"
               >
-                <FolderOpen className="w-3.5 h-3.5" />
+                <FolderOpen className="w-3.5 h-3.5 text-muted-foreground" />
                 Assets
               </Button>
 
