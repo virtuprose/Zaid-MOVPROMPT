@@ -327,10 +327,10 @@ function VideoJobCard({
               }}
               className="w-full h-full object-contain bg-black"
             />
-            {/* Play overlay */}
-            <div className="pointer-events-none absolute inset-0 flex items-center justify-center opacity-100 group-hover:opacity-0 transition-opacity">
-              <div className="h-12 w-12 rounded-full bg-black/55 backdrop-blur-sm border border-white/15 flex items-center justify-center">
-                <Play className="w-5 h-5 text-white fill-white ms-0.5" />
+            {/* Play overlay — large amber circle, hidden on hover so video shows */}
+            <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/20 opacity-100 group-hover:opacity-0 transition-opacity">
+              <div className="h-16 w-16 rounded-full bg-accent flex items-center justify-center shadow-[0_0_24px_hsl(var(--accent)/0.45)] transition-transform group-hover:scale-110">
+                <Play className="w-7 h-7 text-black fill-black ms-0.5" />
               </div>
             </div>
           </>
