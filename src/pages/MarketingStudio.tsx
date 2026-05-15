@@ -188,6 +188,20 @@ export default function MarketingStudio() {
     (a) => filter === "All" || a.tag === filter,
   );
 
+  const adCount = userAds.length;
+  const mode: "empty" | "mixed" | "full" =
+    adCount === 0 ? "empty" : adCount < 10 ? "mixed" : "full";
+
+  const applyTemplate = (tpl: { formatId: string; hookId: string; settingId: string }) => {
+    setFormatId(tpl.formatId);
+    setHookId(tpl.hookId);
+    setSettingId(tpl.settingId);
+    setFlashChips(true);
+    window.setTimeout(() => setFlashChips(false), 900);
+    composerRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    toast.success("Template loaded — tweak and generate.");
+  };
+
   const btnLabel = submitting
     ? "Generating..."
     : !hasInputs
