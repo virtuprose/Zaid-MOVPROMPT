@@ -502,6 +502,26 @@ function VideoJobCard({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <AlertDialog open={cancelOpen} onOpenChange={setCancelOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancel this render?</AlertDialogTitle>
+            <AlertDialogDescription>
+              You'll lose your place in the queue. Any credits committed to this render will be partially refunded (50%) once the provider confirms the cancellation.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep rendering</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => { onCancel(); setCancelOpen(false); }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Cancel render
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }
