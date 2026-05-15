@@ -83,6 +83,7 @@ export default function MarketingStudio() {
   const [formatId, setFormatId] = useState<string | undefined>();
   const [hookId, setHookId] = useState<string | undefined>();
   const [settingId, setSettingId] = useState<string | undefined>();
+  const [customSetting, setCustomSetting] = useState<string>("");
   const [location, setLocation] = useState<LocationInput>(EMPTY_LOCATION);
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>("All");
 
@@ -130,10 +131,11 @@ export default function MarketingStudio() {
     !!formatId ||
     !!hookId ||
     !!settingId ||
+    !!customSetting.trim() ||
     !!brandKit?.name ||
     !!location.place ||
     !!location.imagePath;
-  const ready = !!(formatId && hookId && settingId);
+  const ready = !!(formatId && hookId && (settingId || customSetting.trim()));
 
   const startGenerate = () => {
     if (!ready) {
@@ -156,6 +158,7 @@ export default function MarketingStudio() {
         formatId,
         hookId,
         settingId,
+        customSetting: customSetting || undefined,
         brand: brandKit
           ? {
               name: brandKit.name,
@@ -351,11 +354,20 @@ export default function MarketingStudio() {
               <PresetChip
                 icon={<Globe2 className="w-3.5 h-3.5" />}
                 label="Setting"
-                value={
-                  setting?.label
-                    ? `${setting.label}${location.place ? ` · ${location.place}` : location.imagePath ? " · Custom" : ""}`
-                    : location.place || (location.imagePath ? "Custom location" : undefined)
-                }
+                value={(() => {
+                  const sceneLabel =
+                    setting?.label ||
+                    (customSetting.trim()
+                      ? `Custom: ${customSetting.trim().slice(0, 28)}${customSetting.trim().length > 28 ? "…" : ""}`
+                      : undefined);
+                  const locSuffix = location.place
+                    ? ` · ${location.place}`
+                    : location.imagePath
+                      ? " · Custom"
+                      : "";
+                  if (sceneLabel) return `${sceneLabel}${locSuffix}`;
+                  return location.place || (location.imagePath ? "Custom location" : undefined);
+                })()}
                 tooltip="Scene type and location"
                 onClick={() => setOpenPicker("setting")}
                 flash={flashChips}
@@ -499,16 +511,18 @@ export default function MarketingStudio() {
           open={openPicker === "setting"}
           onOpenChange={(o) => !o && setOpenPicker(null)}
           title="Settings that set the scene"
-          subtitle="Pick the scene type and where in the world it unfolds."
+          subtitle="Choose a scene type. Add a location for geographic context."
           presets={SETTINGS}
           selectedId={settingId}
           onSelect={setSettingId}
           categories={[
-            { id: "realistic", label: "Realistic" },
-            { id: "unrealistic", label: "Unrealistic" },
+            { id: "realistic", label: "Real", tooltip: "Real-world settings — bedrooms, kitchens, streets" },
+            { id: "unrealistic", label: "Stylized", tooltip: "Stylized scenes — surreal, dramatic, cinematic" },
           ]}
           locationValue={location}
           onLocationChange={setLocation}
+          customValue={customSetting}
+          onCustomChange={setCustomSetting}
         />
 
         <BrandKitSheet
