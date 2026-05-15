@@ -95,9 +95,11 @@ export default function MarketingStudio() {
   const [submitting, setSubmitting] = useState(false);
 
   const [userAds, setUserAds] = useState<UserAd[]>([]);
+  const [pendingJobs, setPendingJobs] = useState<VideoJob[]>([]);
   const [showCommunity, setShowCommunity] = useState(false);
   const [flashChips, setFlashChips] = useState(false);
   const composerRef = useRef<HTMLDivElement | null>(null);
+  const galleryRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     if (!loading && !user) navigate("/auth");
