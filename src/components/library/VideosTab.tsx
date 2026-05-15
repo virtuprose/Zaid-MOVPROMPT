@@ -724,6 +724,7 @@ export function VideosTab() {
       const { data, error } = await supabase
         .from("video_jobs")
         .select("*")
+        .not("video_url", "is", null)
         .order("created_at", { ascending: false })
         .limit(100);
       if (cancelled) return;
