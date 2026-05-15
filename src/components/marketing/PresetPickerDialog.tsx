@@ -4,6 +4,8 @@ import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/compone
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import type { StudioPreset } from "@/lib/marketingStudio";
+import { LocationPanel } from "@/components/marketing/LocationPanel";
+import type { LocationInput } from "@/lib/marketing/brandKit";
 
 type Props = {
   open: boolean;
@@ -14,6 +16,8 @@ type Props = {
   selectedId?: string;
   onSelect: (id: string) => void;
   categories?: { id: string; label: string }[];
+  locationValue?: LocationInput;
+  onLocationChange?: (v: LocationInput) => void;
 };
 
 export function PresetPickerDialog({
