@@ -312,7 +312,7 @@ export function PresetPickerDialog({
           {supportsCustom && customOpen && (
             <div className="mt-4 rounded-2xl border border-[#F5A524]/40 bg-muted/10 p-4 space-y-2">
               <div className="flex items-center justify-between">
-                <div className="text-sm font-semibold text-foreground">Custom scene</div>
+                <div className="text-sm font-semibold text-foreground">{customLabel}</div>
                 <button
                   type="button"
                   onClick={() => {
@@ -327,7 +327,7 @@ export function PresetPickerDialog({
               <Textarea
                 value={draftCustom}
                 onChange={(e) => setDraftCustom(e.target.value)}
-                placeholder="Describe your scene… e.g. 'Sunlit Marrakech rooftop at golden hour with lanterns'"
+                placeholder={`Describe your ${customLabel.toLowerCase()}…`}
                 className="min-h-[80px] bg-background/60"
                 autoFocus
               />
