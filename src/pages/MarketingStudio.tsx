@@ -36,6 +36,7 @@ import {
 } from "@/lib/marketingStudio";
 import { useBrandKit, EMPTY_LOCATION, type LocationInput } from "@/lib/marketing/brandKit";
 import { BrandKitSheet } from "@/components/marketing/BrandKitSheet";
+import { BrandPickerPopover } from "@/components/marketing/BrandPickerPopover";
 import { LocationPopover } from "@/components/marketing/LocationPopover";
 import { submitVideoJob } from "@/lib/director/api";
 import loopKitchen from "@/assets/loop-kitchen.mp4.asset.json";
@@ -64,7 +65,7 @@ export default function MarketingStudio() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
 
-  const { kit: brandKit } = useBrandKit();
+  const { kits, activeKit: brandKit, activeId: brandActiveId, setActive: setBrandActive, deleteKit: deleteBrand } = useBrandKit();
   const subject: Subject = brandKit?.subject ?? "product";
   const [master, setMaster] = useState("");
   const [formatId, setFormatId] = useState<string | undefined>();
@@ -75,6 +76,7 @@ export default function MarketingStudio() {
 
   const [openPicker, setOpenPicker] = useState<"format" | "hook" | "setting" | null>(null);
   const [brandOpen, setBrandOpen] = useState(false);
+  const [brandEditId, setBrandEditId] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
@@ -208,18 +210,40 @@ export default function MarketingStudio() {
             />
 
             <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-border/30">
-              <PresetChip
-                icon={
-                  brandKit?.logo_url ? (
-                    <img src={brandKit.logo_url} alt="" className="w-4 h-4 rounded-sm object-cover" />
-                  ) : (
-                    <Building2 className="w-3.5 h-3.5" />
-                  )
+              <BrandPickerPopover
+                kits={kits}
+                activeId={brandActiveId}
+                onSelect={(id) => void setBrandActive(id)}
+                onNew={() => {
+                  setBrandEditId(null);
+                  setBrandOpen(true);
+                }}
+                onEdit={(id) => {
+                  setBrandEditId(id);
+                  setBrandOpen(true);
+                }}
+                onDelete={(id) => void deleteBrand(id)}
+                trigger={
+                  <button
+                    type="button"
+                    className={cn(
+                      "inline-flex items-center gap-1.5 rounded-full border px-3 h-9 text-xs transition-colors",
+                      brandKit?.name
+                        ? "border-[hsl(0_72%_55%)]/50 bg-[hsl(0_72%_55%)]/10 text-foreground"
+                        : "border-border/40 bg-muted/20 text-muted-foreground hover:text-foreground hover:border-border",
+                    )}
+                  >
+                    {brandKit?.logo_url ? (
+                      <img src={brandKit.logo_url} alt="" className="w-4 h-4 rounded-sm object-cover" />
+                    ) : (
+                      <Building2 className="w-3.5 h-3.5" />
+                    )}
+                    <span className="font-medium">
+                      {brandKit?.name ? `Brand: ${brandKit.name}` : "Brand"}
+                    </span>
+                    <ChevronDown className="w-3.5 h-3.5 opacity-60" />
+                  </button>
                 }
-                label="Brand"
-                value={brandKit?.name || undefined}
-                tooltip="Tell the AI what you're advertising"
-                onClick={() => setBrandOpen(true)}
               />
 
               <LocationPopover
@@ -408,7 +432,14 @@ export default function MarketingStudio() {
           ]}
         />
 
-        <BrandKitSheet open={brandOpen} onOpenChange={setBrandOpen} />
+        <BrandKitSheet
+          open={brandOpen}
+          onOpenChange={(o) => {
+            setBrandOpen(o);
+            if (!o) setBrandEditId(null);
+          }}
+          kitId={brandEditId}
+        />
 
         <ConfirmRightsDialog
           open={confirmOpen}

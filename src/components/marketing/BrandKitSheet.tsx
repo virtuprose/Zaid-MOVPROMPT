@@ -20,12 +20,15 @@ export function BrandKitSheet({
   open,
   onOpenChange,
   onSaved,
+  kitId,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSaved?: (kit: BrandKit) => void;
+  /** When set, edit this kit. When null/undefined, create a new one. */
+  kitId?: string | null;
 }) {
-  const { kit, save, uploadLogo } = useBrandKit();
+  const { kits, saveKit, deleteKit, uploadLogo } = useBrandKit();
   const [draft, setDraft] = useState<BrandKit>(EMPTY_BRAND_KIT);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -36,8 +39,14 @@ export function BrandKitSheet({
   const urlDebounce = useRef<number | null>(null);
 
   useEffect(() => {
-    if (open) setDraft(kit ?? EMPTY_BRAND_KIT);
-  }, [open, kit]);
+    if (!open) return;
+    if (kitId) {
+      const found = kits.find((k) => k.id === kitId);
+      setDraft(found ?? EMPTY_BRAND_KIT);
+    } else {
+      setDraft(EMPTY_BRAND_KIT);
+    }
+  }, [open, kitId, kits]);
 
   const update = <K extends keyof BrandKit>(k: K, v: BrandKit[K]) =>
     setDraft((d) => ({ ...d, [k]: v }));
@@ -97,9 +106,9 @@ export function BrandKitSheet({
     }
     setSaving(true);
     try {
-      await save(draft);
+      const saved = await saveKit(draft);
       toast.success("Brand kit saved");
-      onSaved?.(draft);
+      onSaved?.(saved);
       onOpenChange(false);
     } catch (e: any) {
       toast.error(e?.message || "Could not save");
@@ -108,13 +117,25 @@ export function BrandKitSheet({
     }
   };
 
+  const handleDelete = async () => {
+    if (!draft.id) return;
+    if (!window.confirm("Delete this brand?")) return;
+    try {
+      await deleteKit(draft.id);
+      toast.success("Brand deleted");
+      onOpenChange(false);
+    } catch (e: any) {
+      toast.error(e?.message || "Could not delete");
+    }
+  };
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full sm:max-w-md overflow-y-auto">
         <SheetHeader>
-          <SheetTitle>Your brand</SheetTitle>
+          <SheetTitle>{draft.id ? "Edit brand" : "New brand"}</SheetTitle>
           <SheetDescription>
-            Fill this once. The AI uses it to ground every ad in your real product.
+            Saved to your brand library — reuse it on any ad.
           </SheetDescription>
         </SheetHeader>
 
@@ -257,7 +278,16 @@ export function BrandKitSheet({
             max={60}
           />
 
-          <div className="pt-2 flex gap-2">
+          <div className="pt-2 flex gap-2 items-center">
+            {draft.id && (
+              <Button
+                variant="ghost"
+                onClick={handleDelete}
+                className="text-destructive hover:text-destructive hover:bg-destructive/10"
+              >
+                Delete
+              </Button>
+            )}
             <Button
               variant="ghost"
               onClick={() => onOpenChange(false)}
@@ -271,7 +301,7 @@ export function BrandKitSheet({
               className="flex-1 bg-[#F5A524] text-black hover:bg-[#F5A524]/90"
             >
               {saving && <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />}
-              Save brand
+              {draft.id ? "Save changes" : "Save brand"}
             </Button>
           </div>
         </div>

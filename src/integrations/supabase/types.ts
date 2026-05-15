@@ -139,11 +139,38 @@ export type Database = {
           },
         ]
       }
+      brand_kit_selection: {
+        Row: {
+          brand_kit_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          brand_kit_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          brand_kit_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brand_kit_selection_brand_kit_id_fkey"
+            columns: ["brand_kit_id"]
+            isOneToOne: false
+            referencedRelation: "brand_kits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       brand_kits: {
         Row: {
           audience: string | null
           created_at: string
           description: string
+          id: string
           logo_path: string | null
           name: string
           subject: string
@@ -156,6 +183,7 @@ export type Database = {
           audience?: string | null
           created_at?: string
           description?: string
+          id?: string
           logo_path?: string | null
           name?: string
           subject?: string
@@ -168,6 +196,7 @@ export type Database = {
           audience?: string | null
           created_at?: string
           description?: string
+          id?: string
           logo_path?: string | null
           name?: string
           subject?: string
