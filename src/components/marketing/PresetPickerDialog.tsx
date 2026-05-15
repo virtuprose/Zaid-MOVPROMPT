@@ -114,7 +114,7 @@ export function PresetPickerDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
         className="max-w-4xl rounded-3xl border border-border/60 bg-[hsl(240_5%_8%)] p-0 gap-0 max-h-[90vh] flex flex-col"
         onKeyDown={handleKey}
