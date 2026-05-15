@@ -73,7 +73,8 @@ export async function ingestVideo(file: File, frameCount = 3): Promise<Attachmen
     canvas.height = h;
     const ctx = canvas.getContext("2d")!;
 
-    const frames: Attachment[] = [];
+    // Extract frames sequentially (canvas is shared), then upload in parallel.
+    const blobs: { blob: Blob; name: string; label: string }[] = [];
     for (let i = 0; i < frameCount; i++) {
       const t = (duration * (i + 1)) / (frameCount + 1);
       await new Promise<void>((resolve) => {
@@ -88,15 +89,18 @@ export async function ingestVideo(file: File, frameCount = 3): Promise<Attachmen
           0.85,
         ),
       );
-      const name = `${file.name}.frame-${i + 1}.jpg`;
-      const { storage_path, url } = await uploadAndSign(blob, uid, name, "image/jpeg");
-      frames.push({
-        kind: "video_keyframes",
-        name: `${file.name} · frame ${i + 1}/${frameCount}`,
-        url,
-        storage_path,
+      blobs.push({
+        blob,
+        name: `${file.name}.frame-${i + 1}.jpg`,
+        label: `${file.name} · frame ${i + 1}/${frameCount}`,
       });
     }
+    const frames: Attachment[] = await Promise.all(
+      blobs.map(async ({ blob, name, label }) => {
+        const { storage_path, url } = await uploadAndSign(blob, uid, name, "image/jpeg");
+        return { kind: "video_keyframes", name: label, url, storage_path } as Attachment;
+      }),
+    );
     return frames;
   } finally {
     URL.revokeObjectURL(blobUrl);
