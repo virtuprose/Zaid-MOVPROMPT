@@ -318,20 +318,6 @@ serve(async (req) => {
       });
     }
 
-    // Server-side enforcement for models with eligibility checks.
-    if (ELIGIBILITY_ENDPOINTS[provider]) {
-      const elig = await runEligibilityCheck(provider, normalizedPrompt, FAL_KEY);
-      if (!elig.eligible) {
-        return new Response(
-          JSON.stringify({
-            error: "not_eligible",
-            reason: elig.reason,
-            categories: elig.categories,
-          }),
-          { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-        );
-      }
-    }
 
     // Create job row
     const { data: job, error: insErr } = await admin
