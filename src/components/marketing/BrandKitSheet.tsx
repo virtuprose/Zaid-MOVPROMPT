@@ -133,9 +133,9 @@ export function BrandKitSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full sm:max-w-md overflow-y-auto">
         <SheetHeader>
-          <SheetTitle>Your brand</SheetTitle>
+          <SheetTitle>{draft.id ? "Edit brand" : "New brand"}</SheetTitle>
           <SheetDescription>
-            Fill this once. The AI uses it to ground every ad in your real product.
+            Saved to your brand library — reuse it on any ad.
           </SheetDescription>
         </SheetHeader>
 
