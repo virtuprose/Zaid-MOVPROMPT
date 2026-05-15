@@ -792,7 +792,7 @@ const Library = () => {
           </p>
         </div>
 
-        {/* Tab toggle */}
+        {/* Tab toggle — amber active */}
         <div className="flex justify-center mb-6">
           <div className="inline-flex items-center gap-1 rounded-full bg-secondary/40 border border-border p-1">
             <button
@@ -800,22 +800,22 @@ const Library = () => {
               onClick={() => setTab("prompts")}
               className={`px-4 h-8 text-xs font-medium rounded-full transition-colors ${
                 tab === "prompts"
-                  ? "bg-background text-foreground border border-border/60"
-                  : "text-muted-foreground hover:text-foreground"
+                  ? "bg-accent/15 text-accent border border-accent/60"
+                  : "text-muted-foreground hover:text-foreground border border-transparent"
               }`}
             >
-              Prompts {history.length > 0 && <span className="opacity-60">({history.length})</span>}
+              Prompts {history.length > 0 && <span className="opacity-70">({history.length})</span>}
             </button>
             <button
               type="button"
               onClick={() => setTab("videos")}
               className={`px-4 h-8 text-xs font-medium rounded-full transition-colors ${
                 tab === "videos"
-                  ? "bg-background text-foreground border border-border/60"
-                  : "text-muted-foreground hover:text-foreground"
+                  ? "bg-accent/15 text-accent border border-accent/60"
+                  : "text-muted-foreground hover:text-foreground border border-transparent"
               }`}
             >
-              Videos {videoCount !== null && videoCount > 0 && <span className="opacity-60">({videoCount})</span>}
+              Videos {videoCount !== null && videoCount > 0 && <span className="opacity-70">({videoCount})</span>}
             </button>
           </div>
         </div>
