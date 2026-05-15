@@ -104,7 +104,7 @@ export function rankModels(breakdown: Breakdown): RankedModel[] {
       score -= 1;
     }
     if (familyHint && model.family === familyHint) {
-      score += 0.5; reasons.push(`Matches "${familyHint}" hint`);
+      score += 2.5; reasons.push(`Matches "${familyHint}" hint`);
     }
 
     return { model, score, reasons };
