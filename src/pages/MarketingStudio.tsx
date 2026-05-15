@@ -450,7 +450,7 @@ export default function MarketingStudio() {
           </div>
 
           {/* Ads gallery */}
-          <section className="mt-14">
+          <section ref={galleryRef} className="mt-14 scroll-mt-20">
             {mode === "empty" && (
               <>
                 <SectionHeader
@@ -471,19 +471,28 @@ export default function MarketingStudio() {
               <div>
                 <SectionHeader
                   title="Your recent ads"
-                  subtitle="Pick up where you left off — or remix one of yours."
+                  subtitle={
+                    pendingJobs.length > 0
+                      ? "Your ad is rendering — it'll appear here in a moment."
+                      : "Pick up where you left off — or remix one of yours."
+                  }
                   right={
-                    <button
-                      type="button"
-                      onClick={() => navigate("/library")}
-                      className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      Browse all {adCount} →
-                    </button>
+                    adCount > 0 ? (
+                      <button
+                        type="button"
+                        onClick={() => navigate("/library")}
+                        className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        Browse all {adCount} →
+                      </button>
+                    ) : null
                   }
                 />
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {userAds.slice(0, 3).map((ad) => (
+                  {pendingJobs.map((job) => (
+                    <PendingAdCard key={job.id} />
+                  ))}
+                  {userAds.slice(0, Math.max(0, 3 - pendingJobs.length)).map((ad) => (
                     <UserAdCard key={ad.id} ad={ad} onClick={() => navigate("/library")} />
                   ))}
                 </div>
@@ -497,7 +506,9 @@ export default function MarketingStudio() {
                   subtitle={
                     showCommunity
                       ? "Click any template to load its format, hook and setting."
-                      : "Tap one to revisit it in your Library."
+                      : pendingJobs.length > 0
+                        ? "Your ad is rendering — it'll appear here in a moment."
+                        : "Tap one to revisit it in your Library."
                   }
                   right={
                     <div className="flex items-center gap-1 rounded-full bg-muted/30 p-1">
@@ -517,7 +528,10 @@ export default function MarketingStudio() {
                   />
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {userAds.slice(0, 6).map((ad) => (
+                    {pendingJobs.map((job) => (
+                      <PendingAdCard key={job.id} />
+                    ))}
+                    {userAds.slice(0, Math.max(0, 6 - pendingJobs.length)).map((ad) => (
                       <UserAdCard key={ad.id} ad={ad} onClick={() => navigate("/library")} />
                     ))}
                   </div>
