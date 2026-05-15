@@ -55,8 +55,9 @@ export default function Director() {
     const load = async () => {
       const { data } = await supabase
         .from("director_sessions")
-        .select("id, title, updated_at, messages")
+        .select("id, title, updated_at, messages, pinned")
         .eq("user_id", user.id)
+        .order("pinned", { ascending: false })
         .order("updated_at", { ascending: false })
         .limit(30);
       if (active && data) {
@@ -65,7 +66,7 @@ export default function Director() {
             const msgs = Array.isArray(s.messages) ? s.messages : [];
             const last = msgs[msgs.length - 1];
             const needsReply = !!last && last.role === "assistant";
-            return { id: s.id, title: s.title, updated_at: s.updated_at, needsReply };
+            return { id: s.id, title: s.title, updated_at: s.updated_at, needsReply, pinned: !!s.pinned };
           }),
         );
       }
