@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Film } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -64,7 +64,7 @@ export function VideoOptionsDialog({ open, model, onCancel, onConfirm }: Props) 
   const [options, setOptions] = useState<VideoOptions>({});
 
   // Reset to defaults whenever the model changes
-  useMemo(() => {
+  useEffect(() => {
     if (controls) setOptions({ ...controls.defaults });
   }, [controls]);
 
