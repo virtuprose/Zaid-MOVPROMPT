@@ -29,6 +29,12 @@ import type { Attachment } from "@/lib/director/ingest";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import logoMark from "@/assets/logo-mark.svg";
+import { ApprovalProvider, useApproval } from "./ApprovalContext";
+import {
+  AwaitingApprovalPill,
+  BottomApprovalBar,
+  InlineApprovalCard,
+} from "./ApprovalRequest";
 
 type Bubble =
   | { role: "user"; content: string; attachments?: Attachment[] }
@@ -43,6 +49,14 @@ const WELCOME: Bubble = {
 };
 
 export function DirectorChat() {
+  return (
+    <ApprovalProvider>
+      <DirectorChatInner />
+    </ApprovalProvider>
+  );
+}
+
+function DirectorChatInner() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { sessionId: routeSessionId } = useParams<{ sessionId?: string }>();
