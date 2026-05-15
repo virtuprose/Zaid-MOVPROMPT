@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Paperclip, Send, Loader2, X, FileText, Image as ImageIcon, Music } from "lucide-react";
+import { Paperclip, Send, Loader2, X, FileText, Image as ImageIcon, Music, ShieldCheck, ShieldAlert, ShieldQuestion } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { toast } from "sonner";
@@ -12,6 +12,7 @@ import {
   ingestVideo,
   type Attachment,
 } from "@/lib/director/ingest";
+import { moderateImage } from "@/lib/director/api";
 
 type Props = {
   value: string;
