@@ -1,15 +1,14 @@
-## Fix user message bubble for multi-line content
+## Make Director chat fill the viewport height
 
-The user bubble in `DirectorChat.tsx` uses `rounded-full`, which turns into an awkward stadium/oval when the content wraps to multiple lines (e.g. numbered answers like "1. wardrobe / 2. room / 3. a heroic sci-fi entrance" in the screenshot).
+The chat container is capped at `max-h-[820px]`, so on taller viewports there's a big empty band below the composer. Remove the cap and tighten the height calc so the chat stretches to the bottom of the page.
 
-### Change — `src/components/director/DirectorChat.tsx` (lines ~370–376)
+### Change — `src/components/director/DirectorChat.tsx` (line 302)
 
-Swap the user bubble shape so single-line stays pill-like and multi-line gets a proper rounded rectangle:
+- From: `flex flex-col gap-3 h-[calc(100vh-180px)] max-h-[820px]`
+- To:   `flex flex-col gap-3 h-[calc(100vh-120px)]`
 
-- Replace `rounded-full` with `rounded-2xl` on both the outer `MessageContent` className and the `group-[.is-user]:` overrides.
-- Keep `bg-muted/40 border border-border/40 px-4 py-2 text-sm` as-is.
-- Single-line short messages still look clean with `rounded-2xl` (16px radius), and multi-line ones no longer balloon.
+That drops the hard cap and reduces the top offset (no more in-page header above it since we removed Back/AI Director earlier), so the scrollable messages area + composer + helper link expand to fill the available space.
 
 ### Out of scope
-- No changes to assistant bubbles, QuestionCard, or composer.
-- No copy, spacing, or color token changes elsewhere.
+- No changes to the composer, message bubbles, sidebar, or page chrome.
+- No new responsive breakpoints — the existing `flex-1` on the scroll area already distributes the extra height to the messages list.
