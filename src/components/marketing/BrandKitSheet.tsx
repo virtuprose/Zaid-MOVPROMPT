@@ -204,19 +204,12 @@ export function BrandKitSheet({
             max={120}
           />
           <Field
-            label="Website / App Store URL"
-            value={draft.url ?? ""}
-            onChange={(v) => update("url", v || null)}
-            placeholder="https://"
-          />
-          <Field
             label="Tagline"
             value={draft.tagline ?? ""}
             onChange={(v) => update("tagline", v || null)}
             placeholder="Sleep smarter. Run faster."
             max={60}
           />
-
 
           <div className="pt-2 flex gap-2">
             <Button
