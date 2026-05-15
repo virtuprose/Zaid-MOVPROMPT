@@ -102,17 +102,23 @@ const CONTROLS: Record<string, ModelControls> = {
   // Seedance
   "seedance-2.0": {
     aspectRatios: SEEDANCE_ASPECTS,
-    durations: [5, 10],
+    durationMin: 4,
+    durationMax: 15,
+    durationStep: 1,
+    durationAuto: true,
     resolutions: ["480p", "720p", "1080p"],
     audio: true,
-    defaults: { aspect_ratio: "16:9", duration: 5, resolution: "1080p", audio: true },
+    defaults: { aspect_ratio: "16:9", duration: "auto", resolution: "1080p", audio: true },
   },
   "seedance-2.0-fast": {
     aspectRatios: SEEDANCE_ASPECTS,
-    durations: [5, 10],
+    durationMin: 4,
+    durationMax: 15,
+    durationStep: 1,
+    durationAuto: true,
     resolutions: ["480p", "720p", "1080p"],
     audio: true,
-    defaults: { aspect_ratio: "16:9", duration: 5, resolution: "1080p", audio: true },
+    defaults: { aspect_ratio: "16:9", duration: "auto", resolution: "1080p", audio: true },
   },
   "seedance-v1-pro": {
     aspectRatios: SEEDANCE_ASPECTS,
@@ -128,23 +134,22 @@ const CONTROLS: Record<string, ModelControls> = {
   },
 
   // Hailuo
+  // hailuo-02-pro and hailuo-01 do not expose a duration parameter — fixed length.
   "hailuo-02-pro": {
     aspectRatios: ["16:9"],
-    durations: [6, 10],
     resolutions: ["768p", "1080p"],
     promptOptimizer: true,
-    defaults: { aspect_ratio: "16:9", duration: 6, resolution: "1080p", prompt_optimizer: true },
+    defaults: { aspect_ratio: "16:9", resolution: "1080p", prompt_optimizer: true },
   },
   "hailuo-02-standard": {
     aspectRatios: ["16:9"],
-    durations: [6],
+    durations: [6, 10],
     resolutions: ["768p"],
     defaults: { aspect_ratio: "16:9", duration: 6, resolution: "768p" },
   },
   "hailuo-01": {
     aspectRatios: ["16:9"],
-    durations: [6],
-    defaults: { aspect_ratio: "16:9", duration: 6 },
+    defaults: { aspect_ratio: "16:9" },
   },
 
   // Runway
