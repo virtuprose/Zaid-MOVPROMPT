@@ -91,13 +91,22 @@ serve(async (req) => {
 
   try {
     const url = new URL(req.url);
-    const action = url.searchParams.get("action") || "submit";
+    let body: any = {};
+    try {
+      const text = await req.text();
+      body = text ? JSON.parse(text) : {};
+    } catch (_e) {
+      body = {};
+    }
+    const action = url.searchParams.get("action") || body.action || "submit";
 
     if (action === "status") {
-      const jobId = url.searchParams.get("job_id");
+      const jobId = url.searchParams.get("job_id") || body.job_id;
       if (!jobId) {
         return new Response(JSON.stringify({ error: "job_id required" }), {
           status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
