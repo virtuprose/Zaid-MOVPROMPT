@@ -351,8 +351,12 @@ export default function MarketingStudio() {
               <PresetChip
                 icon={<Globe2 className="w-3.5 h-3.5" />}
                 label="Setting"
-                value={setting?.label}
-                tooltip="Scene type — kitchen, studio, rooftop"
+                value={
+                  setting?.label
+                    ? `${setting.label}${location.place ? ` · ${location.place}` : location.imagePath ? " · Custom" : ""}`
+                    : location.place || (location.imagePath ? "Custom location" : undefined)
+                }
+                tooltip="Scene type and location"
                 onClick={() => setOpenPicker("setting")}
                 flash={flashChips}
               />
