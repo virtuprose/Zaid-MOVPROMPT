@@ -187,39 +187,44 @@ export function BrandKitSheet({
 
             {logoMode === "upload" ? (
               hasLogo ? (
-                <div className="mt-3 flex items-center gap-3 p-3 rounded-xl border border-border/60 bg-secondary/20">
-                  <div className="relative w-20 h-20 rounded-lg overflow-hidden bg-muted/30 shrink-0">
+                <div className="mt-3 flex items-center gap-4 p-3 pr-4 rounded-xl border border-border/60 bg-secondary/20">
+                  <div className="relative w-16 h-16 rounded-lg overflow-hidden bg-muted/30 shrink-0">
                     <img src={draft.logo_url!} alt="Brand" className="w-full h-full object-cover" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">
-                      {draft.logo_path ? "Uploaded image" : "Image preview"}
+                    <p className="text-sm font-medium text-foreground/90 truncate">
+                      {draft.name?.trim() || "Brand image"}
                     </p>
-                    <p className="text-xs text-muted-foreground mt-0.5">PNG, JPG, WEBP — up to 5 MB</p>
-                    <div className="flex gap-2 mt-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        disabled={uploading}
-                        onClick={() => fileRef.current?.click()}
-                      >
-                        {uploading ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Upload className="w-3.5 h-3.5 mr-1.5" />}
-                        Replace
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          update("logo_path", null);
-                          update("logo_url", null);
-                        }}
-                      >
-                        <X className="w-3.5 h-3.5 mr-1.5" />
-                        Remove
-                      </Button>
-                    </div>
+                    <p className="text-xs text-muted-foreground mt-0.5 inline-flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                      {analyzing ? "Analyzing…" : "Ready"}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      disabled={uploading}
+                      onClick={() => fileRef.current?.click()}
+                      className="h-8"
+                    >
+                      {uploading ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Upload className="w-3.5 h-3.5 mr-1.5" />}
+                      Replace
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => {
+                        update("logo_path", null);
+                        update("logo_url", null);
+                      }}
+                      className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                      aria-label="Remove image"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
                   </div>
                 </div>
               ) : (
