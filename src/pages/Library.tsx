@@ -1097,6 +1097,15 @@ const Library = () => {
               </motion.div>
             ) : (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-2">
+                <div className="flex items-center justify-between text-xs text-muted-foreground px-1 mb-1">
+                  <span>
+                    {hasActiveFilters
+                      ? <>Showing <span className="text-foreground font-medium">{sorted.length}</span> of {history.length} prompts.{" "}
+                          <button onClick={() => { setSearch(""); setWorkflowFilter(null); setFamilyFilter(null); setVariantFilter(null); }} className="text-accent hover:underline">Clear filters</button>
+                        </>
+                      : <>Showing <span className="text-foreground font-medium">{sorted.length}</span> prompts</>}
+                  </span>
+                </div>
                 {sorted.map((entry) => (
                   <HistoryRow
                     key={entry.id}
