@@ -352,6 +352,8 @@ export type StudioBrief = {
   formatId?: string;
   hookId?: string;
   settingId?: string;
+  /** Free-text scene description used when no preset is picked. */
+  customSetting?: string;
   brand?: BrandContext;
   location?: LocationContext;
 };
