@@ -246,15 +246,17 @@ function HistoryCard({
         isExpanded ? "ring-2 ring-primary/40 shadow-lg" : ""
       } ${selected ? "ring-2 ring-accent/60" : ""}`}
     >
-      {/* Media banner — click to open preview */}
-      <button
-        type="button"
-        onClick={onOpen}
-        className="relative aspect-video w-full overflow-hidden block text-start"
-        aria-label="Open prompt preview"
-      >
+      {/* Media banner — click anywhere on media to open preview */}
+      <div className="relative aspect-video w-full overflow-hidden">
+        {/* click overlay sits behind floating UI; pills/kebab/checkbox use z-10 */}
+        <button
+          type="button"
+          onClick={onOpen}
+          aria-label="Open prompt preview"
+          className="absolute inset-0 z-0 cursor-pointer"
+        />
         {showComposite ? (
-          <div className="grid grid-cols-2 grid-rows-2 gap-px w-full h-full bg-border/50">
+          <div className="grid grid-cols-2 grid-rows-2 gap-px w-full h-full bg-border/50 pointer-events-none">
             {Array.from({ length: 4 }).map((_, i) => (
               <div key={i} className="bg-background/40 overflow-hidden">
                 {thumbUrls[i] ? (
@@ -267,16 +269,18 @@ function HistoryCard({
           <img
             src={thumbUrls[0]}
             alt="Reference"
-            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.02] pointer-events-none"
             loading="lazy"
           />
         ) : (
-          <CinematicPlaceholder
-            family={family}
-            workflow={entry.workflow_type}
-            prompt={mainPrompt}
-            seed={entry.id}
-          />
+          <div className="w-full h-full pointer-events-none">
+            <CinematicPlaceholder
+              family={family}
+              workflow={entry.workflow_type}
+              prompt={mainPrompt}
+              seed={entry.id}
+            />
+          </div>
         )}
 
         {/* Workflow pill */}
