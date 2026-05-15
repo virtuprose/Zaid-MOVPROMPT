@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Loader2, Film, Play, Download, AlertCircle } from "lucide-react";
 import { Copy, Check, BookmarkPlus, Sparkles, Wand2, ExternalLink, Maximize2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,6 +18,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import type { Breakdown } from "@/lib/director/api";
+import { submitVideoJob, pollVideoJob, type VideoJob } from "@/lib/director/api";
 
 type Props = {
   title: string;
@@ -24,9 +26,10 @@ type Props = {
   breakdown: Breakdown;
   directorsNote?: string;
   onRefine?: () => void;
+  sessionId?: string | null;
 };
 
-const MODEL_LINKS: { id: string; label: string; url: string }[] = [
+const MODEL_LINKS: { id: "seedance" | "veo" | "kling" | "runway"; label: string; url: string }[] = [
   { id: "seedance", label: "Seedance", url: "https://seedance.ai" },
   { id: "veo", label: "Veo (Google)", url: "https://deepmind.google/technologies/veo/" },
   { id: "kling", label: "Kling", url: "https://klingai.com" },
@@ -83,11 +86,13 @@ function Section({
   );
 }
 
-export function PromptResultCard({ title, prompt, breakdown, directorsNote, onRefine }: Props) {
+export function PromptResultCard({ title, prompt, breakdown, directorsNote, onRefine, sessionId }: Props) {
   const { user } = useAuth();
   const [copied, setCopied] = useState(false);
   const [saved, setSaved] = useState(false);
   const [open, setOpen] = useState(false);
+  const [job, setJob] = useState<VideoJob | null>(null);
+  const [generating, setGenerating] = useState(false);
 
   const cameraLighting = [breakdown.camera, breakdown.lighting].filter(Boolean).join(" · ");
   const film = breakdown.film_emulation;
@@ -130,11 +135,96 @@ export function PromptResultCard({ title, prompt, breakdown, directorsNote, onRe
     if (!silent) toast.success("Saved to your library");
   };
 
-  // Auto-save once when card mounts (item 7)
   useEffect(() => {
     if (user) void saveToLibrary(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
+
+  // Poll active video job
+  useEffect(() => {
+    if (!job || job.status === "completed" || job.status === "failed") return;
+    let cancelled = false;
+    const tick = async () => {
+      try {
+        const next = await pollVideoJob(job.id);
+        if (cancelled) return;
+        setJob(next);
+        if (next.status === "completed" || next.status === "failed") return;
+        setTimeout(tick, 4000);
+      } catch (e) {
+        console.error(e);
+        if (!cancelled) setTimeout(tick, 8000);
+      }
+    };
+    const t = setTimeout(tick, 4000);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+  }, [job]);
+
+  const generateVideo = async (provider: "seedance" | "veo" | "kling") => {
+    if (!user) {
+      toast.error("Sign in to generate videos");
+      return;
+    }
+    setGenerating(true);
+    try {
+      const newJob = await submitVideoJob(prompt, provider, sessionId);
+      setJob(newJob);
+      toast.success(`Rendering with ${provider} — this can take a few minutes`);
+    } catch (e: any) {
+      toast.error(e?.message || "Could not start video generation");
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const renderVideoPanel = () => {
+    if (!job) return null;
+    if (job.status === "completed" && job.video_url) {
+      return (
+        <div className="rounded-lg border border-primary/30 bg-[hsl(240_5%_8%)] p-3 space-y-2">
+          <div className="flex items-center gap-2 text-xs text-primary">
+            <Play className="w-3.5 h-3.5" />
+            <span className="font-medium">Rendered with {job.provider}</span>
+          </div>
+          <video
+            src={job.video_url}
+            controls
+            playsInline
+            className="w-full rounded-md aspect-video bg-black"
+          />
+          <a
+            href={job.video_url}
+            download
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+          >
+            <Download className="w-3 h-3" /> Download MP4
+          </a>
+        </div>
+      );
+    }
+    if (job.status === "failed") {
+      return (
+        <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 flex items-start gap-2 text-xs">
+          <AlertCircle className="w-3.5 h-3.5 text-destructive mt-0.5" />
+          <div>
+            <div className="font-medium text-destructive">Generation failed</div>
+            <div className="text-muted-foreground mt-0.5">{job.error || "Provider error"}</div>
+          </div>
+        </div>
+      );
+    }
+    return (
+      <div className="rounded-lg border border-border bg-[hsl(240_5%_8%)] p-3 flex items-center gap-2 text-xs text-muted-foreground">
+        <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
+        Rendering with {job.provider}… this usually takes 1–3 minutes.
+      </div>
+    );
+  };
 
   return (
     <>
@@ -165,7 +255,9 @@ export function PromptResultCard({ title, prompt, breakdown, directorsNote, onRe
           </div>
         )}
 
-        <div className="flex flex-wrap gap-2 pt-1 border-t border-border/60 pt-3">
+        {renderVideoPanel()}
+
+        <div className="flex flex-wrap gap-2 pt-3 border-t border-border/60">
           <Button size="sm" onClick={copyAll} className="gap-1.5">
             {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
             {copied ? "Copied" : "Copy full prompt"}
@@ -182,6 +274,27 @@ export function PromptResultCard({ title, prompt, breakdown, directorsNote, onRe
           >
             <BookmarkPlus className="w-4 h-4" /> {saved ? "Saved" : "Save to library"}
           </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                size="sm"
+                disabled={generating || (!!job && job.status !== "completed" && job.status !== "failed")}
+                className="gap-1.5 bg-primary/15 text-primary border border-primary/30 hover:bg-primary/25"
+              >
+                {generating ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Film className="w-4 h-4" />
+                )}
+                Generate video
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => generateVideo("seedance")}>Seedance Pro</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => generateVideo("veo")}>Veo 3 Fast</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => generateVideo("kling")}>Kling 2 Master</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button size="sm" variant="outline" className="gap-1.5">

@@ -1,56 +1,85 @@
-## Goal
+# AI Director — Production Hardening
 
-Replace the current top bar everywhere with a Higgsfield-style horizontal nav: logo on the left, route links in the middle, and a right cluster with Search (⌘K), Buy Credits, Assets, Notifications, and a ringed avatar.
+Six upgrades to take the Director from MVP to production-solid. Each is independently shippable; recommended order below.
 
-## Visual reference
+## 1. Session persistence
 
-Dark bar, no card chrome. Logo mark + small divider, then nav links (active link uses cyan with a small leading sparkle). Pill search with ⌘K shortcut. Outlined "Buy Credits" pill with a record-dot. Green-tinted "Assets" pill with a folder glyph. Avatar with an amber gradient ring and a small badge dot.
+Today: chat lives only in component state. Refresh = lost.
 
-## Implementation
+**DB:** new tables
+- `director_sessions` — `id, user_id, title, created_at, updated_at`
+- `director_messages` — `id, session_id, role, content, attachments jsonb, result jsonb, created_at`
 
-### 1. New shared component: `src/components/TopNav.tsx`
+RLS: owner-only via `auth.uid() = user_id` on sessions; messages joined through session.
 
-- Sticky top bar (`sticky top-0 z-40 backdrop-blur bg-background/80 border-b border-border/40`).
-- Left: `logo-mark.svg` + "MovPrompt" wordmark, vertical divider.
-- Center nav links (mapped to existing routes):
-  - Studio → `/`
-  - AI Director → `/director` (amber `New` pill badge)
-  - Library → `/library`
-  - Learn → `/learn`
-  - Gallery → `/gallery`
-  - Active link: `text-primary` with a leading 2-dot sparkle glyph.
-- Right cluster (in order):
-  - Search pill: read-only input styled like the reference, opens nothing yet but shows a `⌘K` kbd chip on the right. (Hook can be wired later.)
-  - Buy Credits: outlined pill, red record-dot, navigates to `/account/billing`.
-  - Assets: green-tinted pill with folder icon, navigates to `/library`.
-  - `NotificationBell` (existing).
-  - `LanguageToggle` (existing, condensed).
-  - Avatar wrapped in a 2px amber→primary gradient ring with a tiny amber dot badge; opens the existing profile `DropdownMenu` (reuse the menu already built in `Index.tsx`, extracted into the component).
-- Mobile (`< sm`): collapses to logo + hamburger `Sheet` with the same links and right-cluster items stacked.
+**UI:**
+- Left rail on `/director` listing recent sessions (title from `generate_prompt.title`, fallback "Untitled brief").
+- New "+" button starts a fresh session.
+- `DirectorChat` loads/saves messages by `sessionId` (URL: `/director/:sessionId`).
+- Auto-create a session on first user message; auto-title from the first prompt result.
 
-### 2. Extract profile dropdown
+## 2. Signed-URL image uploads (replace data URLs)
 
-Move the existing dropdown JSX from `src/pages/Index.tsx` into `TopNav.tsx` so every page gets the same menu. Keep current items, tour state, and sign-out behavior unchanged.
+Today: 4 MB images are inlined as base64 → 33% bloat, single request can hit 40 MB.
 
-### 3. Wire it up across pages
+**Change:**
+- `ingestImage` and `ingestVideo` upload originals/keyframes to the existing `director-uploads` bucket under `{userId}/{sessionId}/{ts}-{name}`.
+- Return `{ kind, name, url }` where `url` is a **signed URL** (1 hr TTL) created via `supabase.storage.from('director-uploads').createSignedUrl(path, 3600)`.
+- Edge function already accepts `url` — no server change needed beyond confirming the AI Gateway can fetch signed URLs (it can; they are plain HTTPS).
+- Add a cleanup edge function `director-cleanup` invoked nightly (or on session delete) to purge orphan files older than 7 days.
 
-Add `<TopNav />` at the top of each page that currently renders its own header:
-- `src/pages/Index.tsx` (remove old top-bar JSX, keep `AnnouncementBanner`).
-- `src/pages/Director.tsx`, `src/pages/Library.tsx`, `src/pages/Learn.tsx`, `src/pages/Gallery.tsx`, `src/pages/Referrals.tsx`, `src/pages/account/*`.
-- Skip `Auth`, `Landing`, `SharedPrompt`, `NotFound`, admin and onboarding routes.
+## 3. Real audio transcription
 
-### 4. Tokens
+Today: audio uploads but the model only sees a placeholder string.
 
-Use semantic tokens only — `bg-background`, `text-foreground`, `text-muted-foreground`, `border-border`, `text-primary` (cyan), `text-accent` (amber), `bg-accent/10`, etc. The green Assets pill uses an inline HSL accent (`hsl(150 60% 45%)`) wrapped in a tiny utility class added to `index.css` so it stays themable.
+**Change:**
+- New edge function `transcribe-audio` that downloads the uploaded file from `director-uploads` and calls **Lovable AI Gateway** with `google/gemini-2.5-flash` as a multimodal request (audio input → text). No external Whisper key needed.
+- `ingestAudio` uploads the file, calls `transcribe-audio`, and returns `{ kind: "audio_transcript", name, text: <real transcript> }`.
+- Show a "Transcribing…" chip in the composer while it runs; fail-soft to placeholder if transcription errors.
 
-## Out of scope
+## 4. Streaming responses
 
-- Wiring the search to a real command palette.
-- Real billing flow behind Buy Credits (links to existing billing page).
-- Visual restyling of pages below the nav.
+Today: single blocking request; user stares at a spinner for ~5–15 s on `gemini-3.1-pro-preview`.
 
-## Files
+**Change:**
+- Switch `director-agent` to `stream: true`, return the gateway's SSE body directly with `Content-Type: text/event-stream`.
+- Frontend uses the line-by-line SSE parser pattern (per the AI Gateway streaming guide).
+- Streaming + tool calls: accumulate `tool_calls[0].function.arguments` deltas as they arrive; once `[DONE]`, parse the assembled JSON and dispatch to `PromptResultCard` / clarification UI.
+- Show a skeleton card that progressively fills as fields arrive (title → prompt → breakdown → director's note).
 
-- new: `src/components/TopNav.tsx`
-- edit: `src/pages/Index.tsx`, `src/pages/Director.tsx`, `src/pages/Library.tsx`, `src/pages/Learn.tsx`, `src/pages/Gallery.tsx`, `src/pages/Referrals.tsx`, `src/pages/account/AccountSettings.tsx`, `src/pages/account/AccountBilling.tsx`, `src/pages/account/AccountPreferences.tsx`
-- edit: `src/index.css` (one helper class for the green Assets pill)
+## 5. Ship real video generation (or remove the seam)
+
+Today: `request_video_generation` returns "coming soon". `FAL_KEY` secret is already configured.
+
+**Change:** wire it up.
+- New edge function `generate-video` — accepts `{ prompt, provider, aspect_ratio, duration }`, calls fal.ai (`fal-ai/seedance/v1/pro`, `fal-ai/veo3`, or `fal-ai/kling-video/v2`) with the user's prompt.
+- Returns a job id; poll for completion (fal exposes a queue API).
+- New table `video_jobs` — `id, user_id, session_id, message_id, provider, prompt, status, video_url, error, created_at, completed_at`. RLS owner-only.
+- `PromptResultCard` gets a "Generate this video" button → calls the function → shows progress + final `<video>` player when done.
+- `request_video_generation` tool in the agent now triggers this flow instead of returning the placeholder.
+
+## 6. Retry, backoff, and dynamic model list
+
+- Wrap the AI Gateway call in a 2-attempt retry with 500 ms / 1.5 s backoff for 5xx and transient network errors. Never retry on 402/429 — surface those directly.
+- Move the hard-coded `Seedance Pro / Veo 3 / Kling 2` list out of the system prompt into a constant injected at request time, so adding a new provider only requires updating one array.
+
+## Out of scope (intentionally)
+
+- **Distributed rate limiting** — backend doesn't have proper primitives yet; keep the existing in-memory limiter as best-effort.
+- Multi-user collaboration on a session.
+- Versioning/branching of prompt results inside a session (can be added later via `parent_message_id`).
+
+## Technical details
+
+**Migrations:** 2 new tables (`director_sessions`, `director_messages`, `video_jobs`) with RLS policies using `auth.uid() = user_id`. No triggers needed; `updated_at` maintained by client on write.
+
+**Edge functions to add:** `transcribe-audio`, `generate-video`, `director-cleanup`. Modify: `director-agent` (streaming + retry + dynamic providers).
+
+**Files touched (frontend):**
+- `src/lib/director/ingest.ts` — uploads + signed URLs + transcription call
+- `src/lib/director/api.ts` — SSE streaming client
+- `src/pages/Director.tsx` — session routing + sidebar
+- `src/components/director/DirectorChat.tsx` — load/save by session, progressive rendering
+- `src/components/director/PromptResultCard.tsx` — "Generate video" CTA + job polling
+
+**Recommended ship order:** 1 (persistence) → 2 (signed URLs) → 4 (streaming) → 3 (transcription) → 5 (video gen) → 6 (retries). Each PR independently testable.

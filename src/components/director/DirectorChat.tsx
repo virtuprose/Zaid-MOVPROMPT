@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
-import { Loader2, RotateCcw, FileText, Music } from "lucide-react";
+import { Loader2, RotateCcw, FileText, Music, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -15,7 +15,12 @@ import {
 import { toast } from "sonner";
 import { Composer } from "./Composer";
 import { PromptResultCard } from "./PromptResultCard";
-import { callDirectorAgent, type DirectorMsg, type AgentResponse } from "@/lib/director/api";
+import {
+  streamDirectorAgent,
+  submitVideoJob,
+  type DirectorMsg,
+  type AgentResponse,
+} from "@/lib/director/api";
 import type { Attachment } from "@/lib/director/ingest";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -24,7 +29,7 @@ import logoMark from "@/assets/logo-mark.svg";
 type Bubble =
   | { role: "user"; content: string; attachments?: Attachment[] }
   | { role: "assistant"; content: string }
-  | { role: "result"; data: Extract<AgentResponse, { kind: "generate_prompt" }> }
+  | { role: "result"; data: Extract<AgentResponse, { kind: "generate_prompt" }>; partial?: boolean }
   | { role: "questions"; questions: string[]; reason: string };
 
 const WELCOME: Bubble = {
@@ -36,6 +41,7 @@ const WELCOME: Bubble = {
 export function DirectorChat() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { sessionId: routeSessionId } = useParams<{ sessionId?: string }>();
   const [bubbles, setBubbles] = useState<Bubble[]>([WELCOME]);
   const [input, setInput] = useState("");
   const [attachments, setAttachments] = useState<Attachment[]>([]);
@@ -43,6 +49,30 @@ export function DirectorChat() {
   const [resetOpen, setResetOpen] = useState(false);
   const sessionIdRef = useRef<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Load session from route param
+  useEffect(() => {
+    if (!user || !routeSessionId) {
+      sessionIdRef.current = null;
+      return;
+    }
+    if (sessionIdRef.current === routeSessionId) return;
+    (async () => {
+      const { data, error } = await supabase
+        .from("director_sessions")
+        .select("id, messages")
+        .eq("id", routeSessionId)
+        .maybeSingle();
+      if (error || !data) {
+        toast.error("Could not load that session");
+        navigate("/director", { replace: true });
+        return;
+      }
+      sessionIdRef.current = data.id;
+      const loaded = (data.messages as Bubble[]) || [WELCOME];
+      setBubbles(loaded.length ? loaded : [WELCOME]);
+    })();
+  }, [routeSessionId, user, navigate]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
@@ -65,12 +95,14 @@ export function DirectorChat() {
           .single();
         if (error) throw error;
         sessionIdRef.current = data.id;
+        navigate(`/director/${data.id}`, { replace: true });
       } else {
         await supabase
           .from("director_sessions")
           .update({
             messages: next as any,
             final_prompt: finalPrompt,
+            updated_at: new Date().toISOString(),
             ...(title ? { title } : {}),
           })
           .eq("id", sessionIdRef.current);
@@ -94,7 +126,7 @@ export function DirectorChat() {
       content: text || fallback,
       attachments: attachments.length ? attachments : undefined,
     };
-    const next = [...bubbles, userBubble];
+    const next: Bubble[] = [...bubbles, userBubble];
     setBubbles(next);
     setInput("");
     setBusy(true);
@@ -106,7 +138,40 @@ export function DirectorChat() {
         )
         .map((b) => ({ role: b.role as "user" | "assistant", content: b.content }));
 
-      const resp = await callDirectorAgent(history, attachments);
+      // Insert a placeholder bubble that we'll progressively fill
+      const placeholderIndex = next.length;
+      let lastKind: AgentResponse["kind"] | null = null;
+
+      const handlePartial = (partial: AgentResponse) => {
+        lastKind = partial.kind;
+        setBubbles((prev) => {
+          const copy = [...prev];
+          if (partial.kind === "generate_prompt") {
+            // Build a result bubble with whatever fields we have so far
+            const data = {
+              kind: "generate_prompt" as const,
+              title: (partial as any).title || "Composing…",
+              prompt: (partial as any).prompt || "",
+              breakdown: (partial as any).breakdown || {},
+              directors_note: (partial as any).directors_note,
+            };
+            copy[placeholderIndex] = { role: "result", data, partial: true };
+          } else if (partial.kind === "ask_clarification") {
+            copy[placeholderIndex] = {
+              role: "questions",
+              questions: (partial as any).questions || [],
+              reason: (partial as any).reason || "",
+            };
+          }
+          return copy;
+        });
+      };
+
+      // Reserve the placeholder slot
+      setBubbles((prev) => [...prev, { role: "assistant", content: "…" }]);
+
+      const resp = await streamDirectorAgent(history, attachments, handlePartial);
+
       let added: Bubble;
       let finalPrompt: string | null = null;
       let title: string | null = null;
@@ -117,22 +182,43 @@ export function DirectorChat() {
         title = resp.title;
       } else if (resp.kind === "ask_clarification") {
         added = { role: "questions", questions: resp.questions, reason: resp.reason };
-      } else if (resp.kind === "video_request") {
-        added = { role: "assistant", content: resp.message };
+      } else if (resp.kind === "request_video_generation") {
+        // Trigger render directly
+        added = {
+          role: "assistant",
+          content: `Sending this to the ${resp.provider_preference || "seedance"} renderer…`,
+        };
+        try {
+          const provider =
+            resp.provider_preference && resp.provider_preference !== "any"
+              ? resp.provider_preference
+              : "seedance";
+          await submitVideoJob(resp.prompt, provider, sessionIdRef.current);
+          toast.success("Render started — check your Library when it finishes.");
+        } catch (e: any) {
+          toast.error(e?.message || "Could not start render");
+        }
       } else {
         added = { role: "assistant", content: (resp as any).content || "..." };
       }
 
-      const finalNext = [...next, added];
+      const finalNext: Bubble[] = [...next, added];
       setBubbles(finalNext);
       setAttachments([]);
       void persist(finalNext, finalPrompt, title);
     } catch (e: any) {
       toast.error(e?.message || "Director couldn't respond — try again");
-      setBubbles((b) => [
-        ...b,
-        { role: "assistant", content: "Hit a snag reaching the model. Try again in a moment." },
-      ]);
+      setBubbles((b) => {
+        // Remove the placeholder if it's still a "…" bubble
+        const trimmed =
+          b.length && b[b.length - 1].role === "assistant" && (b[b.length - 1] as any).content === "…"
+            ? b.slice(0, -1)
+            : b;
+        return [
+          ...trimmed,
+          { role: "assistant", content: "Hit a snag reaching the model. Try again in a moment." },
+        ];
+      });
     } finally {
       setBusy(false);
     }
@@ -140,7 +226,6 @@ export function DirectorChat() {
 
   const startFresh = (save: boolean) => {
     if (!save && sessionIdRef.current) {
-      // discard: best-effort delete
       void supabase.from("director_sessions").delete().eq("id", sessionIdRef.current);
     }
     sessionIdRef.current = null;
@@ -148,6 +233,7 @@ export function DirectorChat() {
     setAttachments([]);
     setInput("");
     setResetOpen(false);
+    navigate("/director", { replace: true });
   };
 
   const onResetClick = () => {
@@ -173,7 +259,7 @@ export function DirectorChat() {
     lastBubble?.role === "questions"
       ? "Gathering details to craft your prompt…"
       : lastBubble?.role === "result"
-        ? "Prompt ready. Refine or open in your video model."
+        ? "Prompt ready. Refine, render, or open in your video model."
         : "Smart one-shot — I'll only ask if something would change the shot.";
 
   const handleRefine = (currentPrompt: string) => {
@@ -202,14 +288,21 @@ export function DirectorChat() {
           {bubbles.map((b, i) => {
             if (b.role === "result") {
               return (
-                <PromptResultCard
-                  key={i}
-                  title={b.data.title}
-                  prompt={b.data.prompt}
-                  breakdown={b.data.breakdown}
-                  directorsNote={b.data.directors_note}
-                  onRefine={() => handleRefine(b.data.prompt)}
-                />
+                <div key={i} className="relative">
+                  {b.partial && (
+                    <div className="absolute top-2 right-2 z-10 inline-flex items-center gap-1 text-[10px] text-primary bg-background/80 px-2 py-0.5 rounded-full border border-primary/30">
+                      <Sparkles className="w-2.5 h-2.5 animate-pulse" /> composing
+                    </div>
+                  )}
+                  <PromptResultCard
+                    title={b.data.title}
+                    prompt={b.data.prompt}
+                    breakdown={b.data.breakdown}
+                    directorsNote={b.data.directors_note}
+                    onRefine={() => handleRefine(b.data.prompt)}
+                    sessionId={sessionIdRef.current}
+                  />
+                </div>
               );
             }
             if (b.role === "questions") {
@@ -296,7 +389,6 @@ export function DirectorChat() {
               <Loader2 className="w-3.5 h-3.5 animate-spin" /> Director is reading the brief…
             </div>
           )}
-          {/* Spacer pushes content up so empty space sits below */}
           <div className="flex-1" />
         </div>
       </div>

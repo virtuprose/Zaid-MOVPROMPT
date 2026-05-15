@@ -1,0 +1,219 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+};
+
+const FAL_MODELS: Record<string, string> = {
+  seedance: "fal-ai/bytedance/seedance/v1/pro/text-to-video",
+  veo: "fal-ai/veo3/fast",
+  kling: "fal-ai/kling-video/v2/master/text-to-video",
+};
+
+serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+
+  const auth = req.headers.get("Authorization");
+  if (!auth?.startsWith("Bearer ")) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  const userClient = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_ANON_KEY")!,
+    { global: { headers: { Authorization: auth } } },
+  );
+  const { data: claims, error: claimsErr } = await userClient.auth.getClaims(
+    auth.replace("Bearer ", ""),
+  );
+  if (claimsErr || !claims?.claims) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+  const uid = claims.claims.sub as string;
+
+  const FAL_KEY = Deno.env.get("FAL_KEY");
+  if (!FAL_KEY) {
+    return new Response(JSON.stringify({ error: "Video provider not configured" }), {
+      status: 503,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  const admin = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+  );
+
+  try {
+    const url = new URL(req.url);
+    const action = url.searchParams.get("action") || "submit";
+
+    if (action === "status") {
+      const jobId = url.searchParams.get("job_id");
+      if (!jobId) {
+        return new Response(JSON.stringify({ error: "job_id required" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const { data: job, error } = await admin
+        .from("video_jobs")
+        .select("*")
+        .eq("id", jobId)
+        .eq("user_id", uid)
+        .maybeSingle();
+      if (error || !job) {
+        return new Response(JSON.stringify({ error: "Job not found" }), {
+          status: 404,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Already finished — return as-is
+      if (job.status === "completed" || job.status === "failed") {
+        return new Response(JSON.stringify(job), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Poll fal
+      const model = FAL_MODELS[job.provider];
+      if (!model || !job.fal_request_id) {
+        return new Response(JSON.stringify(job), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const statusResp = await fetch(
+        `https://queue.fal.run/${model}/requests/${job.fal_request_id}/status`,
+        { headers: { Authorization: `Key ${FAL_KEY}` } },
+      );
+      const statusData = await statusResp.json();
+      if (statusData.status === "COMPLETED") {
+        const resultResp = await fetch(
+          `https://queue.fal.run/${model}/requests/${job.fal_request_id}`,
+          { headers: { Authorization: `Key ${FAL_KEY}` } },
+        );
+        const result = await resultResp.json();
+        const videoUrl = result.video?.url || result.output?.[0] || result.video_url;
+        await admin
+          .from("video_jobs")
+          .update({
+            status: "completed",
+            video_url: videoUrl,
+            completed_at: new Date().toISOString(),
+          })
+          .eq("id", jobId);
+        return new Response(
+          JSON.stringify({ ...job, status: "completed", video_url: videoUrl }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+      if (statusData.status === "FAILED" || statusData.status === "ERROR") {
+        await admin
+          .from("video_jobs")
+          .update({
+            status: "failed",
+            error: statusData.error || "Provider error",
+            completed_at: new Date().toISOString(),
+          })
+          .eq("id", jobId);
+        return new Response(
+          JSON.stringify({ ...job, status: "failed", error: statusData.error }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+      return new Response(JSON.stringify({ ...job, status: "processing" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Submit new job
+    const body = await req.json();
+    const { prompt, provider = "seedance", session_id } = body as {
+      prompt?: string;
+      provider?: keyof typeof FAL_MODELS;
+      session_id?: string;
+    };
+
+    if (!prompt || typeof prompt !== "string" || prompt.length > 2000) {
+      return new Response(JSON.stringify({ error: "Valid prompt required" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const model = FAL_MODELS[provider];
+    if (!model) {
+      return new Response(JSON.stringify({ error: "Unknown provider" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Create job row
+    const { data: job, error: insErr } = await admin
+      .from("video_jobs")
+      .insert({
+        user_id: uid,
+        session_id: session_id || null,
+        provider,
+        prompt,
+        status: "queued",
+      })
+      .select("*")
+      .single();
+    if (insErr || !job) {
+      console.error("insert video_job failed", insErr);
+      return new Response(JSON.stringify({ error: "Could not create job" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Submit to fal queue
+    const submitResp = await fetch(`https://queue.fal.run/${model}`, {
+      method: "POST",
+      headers: {
+        Authorization: `Key ${FAL_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ prompt }),
+    });
+    if (!submitResp.ok) {
+      const t = await submitResp.text();
+      console.error("fal submit error", submitResp.status, t);
+      await admin
+        .from("video_jobs")
+        .update({ status: "failed", error: `Provider error ${submitResp.status}` })
+        .eq("id", job.id);
+      return new Response(JSON.stringify({ error: "Provider rejected request" }), {
+        status: 502,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const submitData = await submitResp.json();
+    await admin
+      .from("video_jobs")
+      .update({ fal_request_id: submitData.request_id, status: "processing" })
+      .eq("id", job.id);
+
+    return new Response(
+      JSON.stringify({ ...job, fal_request_id: submitData.request_id, status: "processing" }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
+  } catch (e) {
+    console.error("generate-video error", e);
+    return new Response(
+      JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
+  }
+});

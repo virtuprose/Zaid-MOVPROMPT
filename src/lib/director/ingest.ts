@@ -1,36 +1,55 @@
 // Client-side ingestion utilities for the AI Director.
-// Converts uploads into normalized Attachment payloads the edge fn understands.
+// Uploads to the private `director-uploads` bucket and returns short-lived signed URLs.
 
 import { supabase } from "@/integrations/supabase/client";
 
 export type Attachment =
-  | { kind: "image"; name: string; url: string }
-  | { kind: "video_keyframes"; name: string; url: string } // single keyframe per attachment chip
-  | { kind: "audio_transcript"; name: string; text: string }
+  | { kind: "image"; name: string; url: string; storage_path?: string }
+  | { kind: "video_keyframes"; name: string; url: string; storage_path?: string }
+  | { kind: "audio_transcript"; name: string; text: string; storage_path?: string }
   | { kind: "document"; name: string; text: string };
 
-const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
-const MAX_VIDEO_BYTES = 30 * 1024 * 1024;
+const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
+const MAX_VIDEO_BYTES = 50 * 1024 * 1024;
 const MAX_DOC_BYTES = 10 * 1024 * 1024;
+const MAX_AUDIO_BYTES = 25 * 1024 * 1024;
+const SIGNED_URL_TTL = 60 * 60; // 1 hour
 
-async function fileToDataUrl(file: File | Blob): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const r = new FileReader();
-    r.onload = () => resolve(r.result as string);
-    r.onerror = reject;
-    r.readAsDataURL(file);
-  });
+async function uploadAndSign(
+  blob: Blob,
+  userId: string,
+  fileName: string,
+  contentType: string,
+): Promise<{ storage_path: string; url: string }> {
+  const safe = fileName.replace(/[^a-zA-Z0-9._-]/g, "_");
+  const path = `${userId}/${Date.now()}-${crypto.randomUUID().slice(0, 8)}-${safe}`;
+  const { error } = await supabase.storage
+    .from("director-uploads")
+    .upload(path, blob, { contentType, upsert: false });
+  if (error) throw error;
+  const { data, error: signErr } = await supabase.storage
+    .from("director-uploads")
+    .createSignedUrl(path, SIGNED_URL_TTL);
+  if (signErr || !data?.signedUrl) throw signErr || new Error("Could not sign URL");
+  return { storage_path: path, url: data.signedUrl };
+}
+
+async function requireUserId(): Promise<string> {
+  const { data } = await supabase.auth.getUser();
+  if (!data.user) throw new Error("Sign in to attach references");
+  return data.user.id;
 }
 
 export async function ingestImage(file: File): Promise<Attachment> {
-  if (file.size > MAX_IMAGE_BYTES) throw new Error(`${file.name} is over 4MB`);
-  const url = await fileToDataUrl(file);
-  return { kind: "image", name: file.name, url };
+  if (file.size > MAX_IMAGE_BYTES) throw new Error(`${file.name} is over 8MB`);
+  const uid = await requireUserId();
+  const { storage_path, url } = await uploadAndSign(file, uid, file.name, file.type || "image/jpeg");
+  return { kind: "image", name: file.name, url, storage_path };
 }
 
-// Extract N keyframes evenly spaced across the video, return as image attachments
 export async function ingestVideo(file: File, frameCount = 3): Promise<Attachment[]> {
-  if (file.size > MAX_VIDEO_BYTES) throw new Error(`${file.name} is over 30MB`);
+  if (file.size > MAX_VIDEO_BYTES) throw new Error(`${file.name} is over 50MB`);
+  const uid = await requireUserId();
   const blobUrl = URL.createObjectURL(file);
   try {
     const video = document.createElement("video");
@@ -62,11 +81,20 @@ export async function ingestVideo(file: File, frameCount = 3): Promise<Attachmen
         video.currentTime = t;
       });
       ctx.drawImage(video, 0, 0, w, h);
-      const dataUrl = canvas.toDataURL("image/jpeg", 0.82);
+      const blob: Blob = await new Promise((resolve, reject) =>
+        canvas.toBlob(
+          (b) => (b ? resolve(b) : reject(new Error("Could not encode frame"))),
+          "image/jpeg",
+          0.85,
+        ),
+      );
+      const name = `${file.name}.frame-${i + 1}.jpg`;
+      const { storage_path, url } = await uploadAndSign(blob, uid, name, "image/jpeg");
       frames.push({
         kind: "video_keyframes",
         name: `${file.name} · frame ${i + 1}/${frameCount}`,
-        url: dataUrl,
+        url,
+        storage_path,
       });
     }
     return frames;
@@ -75,28 +103,35 @@ export async function ingestVideo(file: File, frameCount = 3): Promise<Attachmen
   }
 }
 
-// Audio: upload to bucket, return a placeholder text reference (transcription deferred)
 export async function ingestAudio(file: File, userId: string): Promise<Attachment> {
-  if (file.size > 25 * 1024 * 1024) throw new Error(`${file.name} is over 25MB`);
-  const path = `${userId}/${Date.now()}-${file.name}`;
-  const { error } = await supabase.storage.from("director-uploads").upload(path, file);
+  if (file.size > MAX_AUDIO_BYTES) throw new Error(`${file.name} is over 25MB`);
+  const safe = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+  const path = `${userId}/${Date.now()}-${crypto.randomUUID().slice(0, 8)}-${safe}`;
+  const { error } = await supabase.storage.from("director-uploads").upload(path, file, {
+    contentType: file.type || "audio/mpeg",
+  });
   if (error) throw error;
-  return {
-    kind: "audio_transcript",
-    name: file.name,
-    text: `[Audio brief attached: ${file.name}. Transcription will be available in a future update — please add any spoken intent as text in the chat for now.]`,
-  };
+
+  // Try real transcription; fall back to placeholder if it fails
+  let text = `[Audio brief attached: ${file.name}. Transcription unavailable — please add intent as text.]`;
+  try {
+    const { data, error: fnErr } = await supabase.functions.invoke("transcribe-audio", {
+      body: { storage_path: path },
+    });
+    if (!fnErr && data?.transcript) text = data.transcript;
+  } catch (e) {
+    console.warn("transcription failed, using placeholder", e);
+  }
+
+  return { kind: "audio_transcript", name: file.name, text, storage_path: path };
 }
 
-// Read TXT / MD directly
 async function readText(file: File): Promise<string> {
   return await file.text();
 }
 
-// PDF parsing via pdfjs-dist (lazy import — keeps bundle smaller)
 async function readPdf(file: File): Promise<string> {
   const pdfjs: any = await import("pdfjs-dist");
-  // Worker via CDN to avoid bundler config
   pdfjs.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
   const buf = await file.arrayBuffer();
   const doc = await pdfjs.getDocument({ data: buf }).promise;
@@ -110,7 +145,6 @@ async function readPdf(file: File): Promise<string> {
   return pages.join("\n\n");
 }
 
-// DOCX parsing via mammoth
 async function readDocx(file: File): Promise<string> {
   const mammoth: any = await import("mammoth/mammoth.browser");
   const buf = await file.arrayBuffer();
@@ -129,6 +163,14 @@ export async function ingestDocument(file: File): Promise<Attachment> {
   text = text.trim().slice(0, 12000);
   if (!text) throw new Error(`No text could be extracted from ${file.name}`);
   return { kind: "document", name: file.name, text };
+}
+
+// Refresh a signed URL when loading an old session whose URL has expired.
+export async function refreshSignedUrl(storage_path: string): Promise<string | null> {
+  const { data } = await supabase.storage
+    .from("director-uploads")
+    .createSignedUrl(storage_path, SIGNED_URL_TTL);
+  return data?.signedUrl || null;
 }
 
 export function classifyFile(file: File): "image" | "video" | "audio" | "document" | "unknown" {
