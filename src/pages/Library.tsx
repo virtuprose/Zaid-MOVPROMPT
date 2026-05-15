@@ -194,6 +194,7 @@ function HistoryCard({
   onDelete,
   isExpanded,
   onToggle,
+  onOpen,
   selectMode,
   selected,
   onToggleSelect,
@@ -205,6 +206,7 @@ function HistoryCard({
   onDelete: (id: string) => void;
   isExpanded: boolean;
   onToggle: () => void;
+  onOpen: () => void;
   selectMode: boolean;
   selected: boolean;
   onToggleSelect: () => void;
@@ -240,14 +242,21 @@ function HistoryCard({
 
   return (
     <Card
-      className={`bg-card border-border overflow-hidden flex flex-col group transition-shadow ${
+      className={`bg-card border-border overflow-hidden flex flex-col group transition-all duration-200 hover:-translate-y-0.5 hover:border-accent/40 hover:shadow-[0_8px_24px_-12px_hsl(var(--accent)/0.35)] ${
         isExpanded ? "ring-2 ring-primary/40 shadow-lg" : ""
       } ${selected ? "ring-2 ring-accent/60" : ""}`}
     >
-      {/* Media banner */}
+      {/* Media banner — click anywhere on media to open preview */}
       <div className="relative aspect-video w-full overflow-hidden">
+        {/* click overlay sits behind floating UI; pills/kebab/checkbox use z-10 */}
+        <button
+          type="button"
+          onClick={onOpen}
+          aria-label="Open prompt preview"
+          className="absolute inset-0 z-0 cursor-pointer"
+        />
         {showComposite ? (
-          <div className="grid grid-cols-2 grid-rows-2 gap-px w-full h-full bg-border/50">
+          <div className="grid grid-cols-2 grid-rows-2 gap-px w-full h-full bg-border/50 pointer-events-none">
             {Array.from({ length: 4 }).map((_, i) => (
               <div key={i} className="bg-background/40 overflow-hidden">
                 {thumbUrls[i] ? (
@@ -260,11 +269,18 @@ function HistoryCard({
           <img
             src={thumbUrls[0]}
             alt="Reference"
-            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.02] pointer-events-none"
             loading="lazy"
           />
         ) : (
-          <CinematicPlaceholder family={family} workflow={entry.workflow_type} prompt={mainPrompt} />
+          <div className="w-full h-full pointer-events-none">
+            <CinematicPlaceholder
+              family={family}
+              workflow={entry.workflow_type}
+              prompt={mainPrompt}
+              seed={entry.id}
+            />
+          </div>
         )}
 
         {/* Workflow pill */}
@@ -315,7 +331,7 @@ function HistoryCard({
         <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-primary">
           {modelLabel}
         </span>
-        <p className="font-mono text-[12px] leading-relaxed text-muted-foreground line-clamp-2 min-h-[2.4rem]">
+        <p className="text-[13px] leading-snug text-[#A1A1AA] line-clamp-3 min-h-[3.4rem]">
           {preview}{mainPrompt.length > 120 ? "…" : ""}
         </p>
       </div>
@@ -382,16 +398,25 @@ function HistoryRow({
   const mainPrompt = getMainPrompt(entry);
   const preview = mainPrompt.slice(0, 200);
   const modelLabel = friendlyModelLabel(entry.target_model);
+  const family = modelFamily(entry.target_model);
 
   return (
     <div
-      className={`flex items-center gap-3 px-3 py-2.5 rounded-lg border bg-card hover:bg-secondary/30 transition-colors ${
+      className={`flex items-center gap-3 px-3 py-2.5 rounded-lg border bg-card hover:bg-secondary/30 hover:border-accent/30 transition-all ${
         selected ? "border-accent/60 ring-1 ring-accent/30" : "border-border"
       }`}
     >
       {selectMode && (
         <Checkbox checked={selected} onCheckedChange={onToggleSelect} />
       )}
+      <button
+        type="button"
+        onClick={onOpen}
+        className="shrink-0 w-10 h-10 rounded-md overflow-hidden border border-border/60"
+        aria-label="Open preview"
+      >
+        <CinematicPlaceholder family={family} workflow={entry.workflow_type} prompt={mainPrompt} seed={entry.id} />
+      </button>
       <span
         className={`shrink-0 inline-flex items-center text-[10px] font-medium uppercase tracking-wider px-2 py-1 rounded-md bg-secondary/60 ${wf.color}`}
       >
@@ -792,7 +817,7 @@ const Library = () => {
           </p>
         </div>
 
-        {/* Tab toggle */}
+        {/* Tab toggle — amber active */}
         <div className="flex justify-center mb-6">
           <div className="inline-flex items-center gap-1 rounded-full bg-secondary/40 border border-border p-1">
             <button
@@ -800,22 +825,22 @@ const Library = () => {
               onClick={() => setTab("prompts")}
               className={`px-4 h-8 text-xs font-medium rounded-full transition-colors ${
                 tab === "prompts"
-                  ? "bg-background text-foreground border border-border/60"
-                  : "text-muted-foreground hover:text-foreground"
+                  ? "bg-accent/15 text-accent border border-accent/60"
+                  : "text-muted-foreground hover:text-foreground border border-transparent"
               }`}
             >
-              Prompts {history.length > 0 && <span className="opacity-60">({history.length})</span>}
+              Prompts {history.length > 0 && <span className="opacity-70">({history.length})</span>}
             </button>
             <button
               type="button"
               onClick={() => setTab("videos")}
               className={`px-4 h-8 text-xs font-medium rounded-full transition-colors ${
                 tab === "videos"
-                  ? "bg-background text-foreground border border-border/60"
-                  : "text-muted-foreground hover:text-foreground"
+                  ? "bg-accent/15 text-accent border border-accent/60"
+                  : "text-muted-foreground hover:text-foreground border border-transparent"
               }`}
             >
-              Videos {videoCount !== null && videoCount > 0 && <span className="opacity-60">({videoCount})</span>}
+              Videos {videoCount !== null && videoCount > 0 && <span className="opacity-70">({videoCount})</span>}
             </button>
           </div>
         </div>
@@ -843,37 +868,47 @@ const Library = () => {
                     )}
                   </div>
 
-                  <Button
-                    variant={selectMode ? "secondary" : "outline"}
-                    size="sm"
-                    onClick={() => { setSelectMode((v) => !v); setSelectedIds(new Set()); }}
-                    className="h-10 text-xs"
-                  >
-                    {selectMode ? "Cancel" : "Select"}
-                  </Button>
-
                   <div className="inline-flex items-center rounded-md border border-border bg-secondary/30 p-0.5 h-10">
                     <button
                       type="button"
                       onClick={() => setView("grid")}
                       aria-label="Grid view"
+                      title="Grid view"
                       className={`h-9 w-9 inline-flex items-center justify-center rounded-[5px] transition-colors ${
-                        view === "grid" ? "bg-background text-foreground" : "text-muted-foreground hover:text-foreground"
+                        view === "grid"
+                          ? "bg-accent text-accent-foreground"
+                          : "text-muted-foreground hover:text-foreground"
                       }`}
                     >
-                      <LayoutGrid className="w-4 h-4" />
+                      <LayoutGrid className="w-5 h-5" />
                     </button>
                     <button
                       type="button"
                       onClick={() => setView("list")}
                       aria-label="List view"
+                      title="List view"
                       className={`h-9 w-9 inline-flex items-center justify-center rounded-[5px] transition-colors ${
-                        view === "list" ? "bg-background text-foreground" : "text-muted-foreground hover:text-foreground"
+                        view === "list"
+                          ? "bg-accent text-accent-foreground"
+                          : "text-muted-foreground hover:text-foreground"
                       }`}
                     >
-                      <ListIcon className="w-4 h-4" />
+                      <ListIcon className="w-5 h-5" />
                     </button>
                   </div>
+
+                  <Button
+                    variant={selectMode ? "secondary" : "outline"}
+                    size="sm"
+                    onClick={() => { setSelectMode((v) => !v); setSelectedIds(new Set()); }}
+                    className="h-10 text-xs gap-1.5"
+                  >
+                    {selectMode ? (
+                      <>Cancel</>
+                    ) : (
+                      <><Checkbox checked={false} className="pointer-events-none" /> Select multiple</>
+                    )}
+                  </Button>
 
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -1019,7 +1054,11 @@ const Library = () => {
               </motion.div>
             ) : filtered.length === 0 ? (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-12 space-y-3">
-                <p className="text-muted-foreground">No prompts match these filters. Try removing some.</p>
+                <p className="text-muted-foreground">
+                  {search.trim()
+                    ? <>No results for <span className="text-foreground">"{search}"</span>.</>
+                    : "No prompts match these filters. Try removing some."}
+                </p>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -1030,6 +1069,15 @@ const Library = () => {
               </motion.div>
             ) : view === "grid" ? (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-3">
+                <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
+                  <span>
+                    {hasActiveFilters
+                      ? <>Showing <span className="text-foreground font-medium">{sorted.length}</span> of {history.length} prompts.{" "}
+                          <button onClick={() => { setSearch(""); setWorkflowFilter(null); setFamilyFilter(null); setVariantFilter(null); }} className="text-accent hover:underline">Clear filters</button>
+                        </>
+                      : <>Showing <span className="text-foreground font-medium">{sorted.length}</span> prompts</>}
+                  </span>
+                </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                   {sorted.map((entry) => {
                     const isExpanded = expandedId === entry.id;
@@ -1041,6 +1089,7 @@ const Library = () => {
                         onDelete={handleDelete}
                         isExpanded={isExpanded}
                         onToggle={() => setExpandedId(isExpanded ? null : entry.id)}
+                        onOpen={() => setExpandedId(entry.id)}
                         selectMode={selectMode}
                         selected={selectedIds.has(entry.id)}
                         onToggleSelect={() => setSelectedIds((prev) => {
@@ -1057,6 +1106,15 @@ const Library = () => {
               </motion.div>
             ) : (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-2">
+                <div className="flex items-center justify-between text-xs text-muted-foreground px-1 mb-1">
+                  <span>
+                    {hasActiveFilters
+                      ? <>Showing <span className="text-foreground font-medium">{sorted.length}</span> of {history.length} prompts.{" "}
+                          <button onClick={() => { setSearch(""); setWorkflowFilter(null); setFamilyFilter(null); setVariantFilter(null); }} className="text-accent hover:underline">Clear filters</button>
+                        </>
+                      : <>Showing <span className="text-foreground font-medium">{sorted.length}</span> prompts</>}
+                  </span>
+                </div>
                 {sorted.map((entry) => (
                   <HistoryRow
                     key={entry.id}
