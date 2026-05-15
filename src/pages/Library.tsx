@@ -398,16 +398,25 @@ function HistoryRow({
   const mainPrompt = getMainPrompt(entry);
   const preview = mainPrompt.slice(0, 200);
   const modelLabel = friendlyModelLabel(entry.target_model);
+  const family = modelFamily(entry.target_model);
 
   return (
     <div
-      className={`flex items-center gap-3 px-3 py-2.5 rounded-lg border bg-card hover:bg-secondary/30 transition-colors ${
+      className={`flex items-center gap-3 px-3 py-2.5 rounded-lg border bg-card hover:bg-secondary/30 hover:border-accent/30 transition-all ${
         selected ? "border-accent/60 ring-1 ring-accent/30" : "border-border"
       }`}
     >
       {selectMode && (
         <Checkbox checked={selected} onCheckedChange={onToggleSelect} />
       )}
+      <button
+        type="button"
+        onClick={onOpen}
+        className="shrink-0 w-10 h-10 rounded-md overflow-hidden border border-border/60"
+        aria-label="Open preview"
+      >
+        <CinematicPlaceholder family={family} workflow={entry.workflow_type} prompt={mainPrompt} seed={entry.id} />
+      </button>
       <span
         className={`shrink-0 inline-flex items-center text-[10px] font-medium uppercase tracking-wider px-2 py-1 rounded-md bg-secondary/60 ${wf.color}`}
       >
