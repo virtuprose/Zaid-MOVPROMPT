@@ -123,8 +123,8 @@ export function DirectorChat() {
     }
   };
 
-  const send = async () => {
-    const text = input.trim();
+  const send = async (textOverride?: string) => {
+    const text = (textOverride ?? input).trim();
     if (!text && attachments.length === 0) {
       toast.error("Add a brief or some references");
       return;
