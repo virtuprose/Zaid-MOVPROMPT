@@ -130,14 +130,14 @@ export function BrandKitSheet({
   };
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-md overflow-y-auto">
-        <SheetHeader>
-          <SheetTitle>{draft.id ? "Edit brand" : "New brand"}</SheetTitle>
-          <SheetDescription>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>{draft.id ? "Edit brand" : "New brand"}</DialogTitle>
+          <DialogDescription>
             Saved to your brand library — reuse it on any ad.
-          </SheetDescription>
-        </SheetHeader>
+          </DialogDescription>
+        </DialogHeader>
 
         <div className="mt-6 space-y-5">
           {/* Subject toggle */}
