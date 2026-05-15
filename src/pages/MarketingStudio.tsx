@@ -382,65 +382,94 @@ export default function MarketingStudio() {
             )}
           </div>
 
-          {/* Featured ads grid */}
+          {/* Ads gallery */}
           <section className="mt-14">
-            <div className="flex items-end justify-between gap-4 flex-wrap mb-5">
-              <div>
-                <h2 className="font-display text-2xl sm:text-3xl tracking-tight uppercase">
-                  Ads made with Ads Studio
-                </h2>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Click any ad to use it as a template.
-                </p>
-              </div>
-              <div className="flex items-center gap-1 rounded-full bg-muted/30 p-1">
-                {FILTERS.map((f) => (
-                  <button
-                    key={f}
-                    type="button"
-                    onClick={() => setFilter(f)}
-                    className={cn(
-                      "px-3 py-1 text-xs rounded-full transition-colors",
-                      filter === f
-                        ? "bg-background text-foreground border border-border/60"
-                        : "text-muted-foreground hover:text-foreground",
-                    )}
-                  >
-                    {f}
-                  </button>
-                ))}
-              </div>
-            </div>
+            {mode === "empty" && (
+              <>
+                <SectionHeader
+                  title="Ads made with Ads Studio"
+                  subtitle="New to Ads Studio? Click any template below to start."
+                  right={
+                    <FilterTabs value={filter} onChange={setFilter} />
+                  }
+                />
+                <CommunityGrid
+                  ads={filteredAds}
+                  onPick={(ad) => applyTemplate(ad.template)}
+                />
+              </>
+            )}
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredAds.map((ad) => (
-                <article
-                  key={ad.url}
-                  className="group relative overflow-hidden rounded-2xl border border-border/40 bg-muted/10 cursor-pointer hover:border-border transition-colors"
-                >
-                  <div className="aspect-[9/12] overflow-hidden">
-                    <video
-                      src={ad.url}
-                      autoPlay
-                      muted
-                      loop
-                      playsInline
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                    />
+            {mode === "mixed" && (
+              <div className="space-y-12">
+                <div>
+                  <SectionHeader
+                    title="Your recent ads"
+                    subtitle="Pick up where you left off — or remix one of yours."
+                    right={
+                      <button
+                        type="button"
+                        onClick={() => navigate("/library")}
+                        className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        Browse all {adCount} →
+                      </button>
+                    }
+                  />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {userAds.slice(0, 3).map((ad) => (
+                      <UserAdCard key={ad.id} ad={ad} onClick={() => navigate("/library")} />
+                    ))}
                   </div>
-                  <div className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-black/60 backdrop-blur text-[10px] uppercase tracking-wide text-white/90">
-                    {ad.tag}
+                </div>
+                <div>
+                  <SectionHeader
+                    title="More from community"
+                    subtitle="Click any template to load its format, hook and setting."
+                  />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {filteredAds.slice(0, 3).map((ad) => (
+                      <CommunityCard key={ad.url} ad={ad} onClick={() => applyTemplate(ad.template)} />
+                    ))}
                   </div>
-                  <div className="absolute bottom-0 inset-x-0 p-3 bg-gradient-to-t from-black/80 to-transparent flex items-center justify-between text-white">
-                    <span className="text-sm font-medium">{ad.handle}</span>
-                    <span className="inline-flex items-center gap-1 text-xs">
-                      <Heart className="w-3.5 h-3.5 fill-current" />
-                      {ad.likes.toLocaleString()}
-                    </span>
+                </div>
+              </div>
+            )}
+
+            {mode === "full" && (
+              <>
+                <SectionHeader
+                  title={showCommunity ? "Community ads" : "Your ads"}
+                  subtitle={
+                    showCommunity
+                      ? "Click any template to load its format, hook and setting."
+                      : "Tap one to revisit it in your Library."
+                  }
+                  right={
+                    <div className="flex items-center gap-1 rounded-full bg-muted/30 p-1">
+                      <ToggleTab active={!showCommunity} onClick={() => setShowCommunity(false)}>
+                        Yours ({adCount})
+                      </ToggleTab>
+                      <ToggleTab active={showCommunity} onClick={() => setShowCommunity(true)}>
+                        Community
+                      </ToggleTab>
+                    </div>
+                  }
+                />
+                {showCommunity ? (
+                  <CommunityGrid
+                    ads={filteredAds}
+                    onPick={(ad) => applyTemplate(ad.template)}
+                  />
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {userAds.slice(0, 6).map((ad) => (
+                      <UserAdCard key={ad.id} ad={ad} onClick={() => navigate("/library")} />
+                    ))}
                   </div>
-                </article>
-              ))}
-            </div>
+                )}
+              </>
+            )}
           </section>
         </div>
 
