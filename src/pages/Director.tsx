@@ -72,7 +72,7 @@ export default function Director() {
     const load = async () => {
       const { data } = await supabase
         .from("director_sessions")
-        .select("id, title, updated_at, messages, pinned")
+        .select("id, title, updated_at, messages, pinned, final_prompt")
         .eq("user_id", user.id)
         .order("pinned", { ascending: false })
         .order("updated_at", { ascending: false })
@@ -83,7 +83,32 @@ export default function Director() {
             const msgs = Array.isArray(s.messages) ? s.messages : [];
             const last = msgs[msgs.length - 1];
             const needsReply = !!last && last.role === "assistant";
-            return { id: s.id, title: s.title, updated_at: s.updated_at, needsReply, pinned: !!s.pinned };
+            let thumbnail: string | null = null;
+            for (const m of msgs) {
+              if (m?.role === "user" && Array.isArray(m.attachments)) {
+                const img = m.attachments.find(
+                  (a: any) => a?.url && (a.kind === "image" || a.kind === "video_keyframes"),
+                );
+                if (img?.url) {
+                  thumbnail = img.url;
+                  break;
+                }
+              }
+            }
+            const status: SessionStatus = s.final_prompt
+              ? "completed"
+              : needsReply
+                ? "in_progress"
+                : "draft";
+            return {
+              id: s.id,
+              title: s.title,
+              updated_at: s.updated_at,
+              needsReply,
+              pinned: !!s.pinned,
+              status,
+              thumbnail,
+            };
           }),
         );
       }
