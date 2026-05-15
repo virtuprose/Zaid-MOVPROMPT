@@ -205,16 +205,49 @@ export const SETTINGS: StudioPreset[] = [
   },
 ];
 
+export type BrandContext = {
+  name?: string;
+  description?: string;
+  url?: string | null;
+  tagline?: string | null;
+  audience?: string | null;
+};
+
+export type LocationContext = {
+  place?: string;
+  hasImage?: boolean;
+};
+
 export type StudioBrief = {
   subject: Subject;
   master: string;
   formatId?: string;
   hookId?: string;
   settingId?: string;
+  brand?: BrandContext;
+  location?: LocationContext;
 };
 
 const find = (list: StudioPreset[], id?: string) =>
   id ? list.find((p) => p.id === id) : undefined;
+
+function brandLine(b?: BrandContext): string | null {
+  if (!b || !b.name) return null;
+  const bits = [`Brand: ${b.name}`];
+  if (b.description) bits.push(b.description);
+  if (b.tagline) bits.push(`Tagline: "${b.tagline}"`);
+  if (b.audience) bits.push(`Audience: ${b.audience}`);
+  if (b.url) bits.push(`Ref: ${b.url}`);
+  return bits.join(" — ");
+}
+
+function locationLine(l?: LocationContext): string | null {
+  if (!l || (!l.place && !l.hasImage)) return null;
+  const parts: string[] = [];
+  if (l.place) parts.push(`Location: ${l.place} — match the city's architecture, light and cultural styling`);
+  if (l.hasImage) parts.push("A reference photo of the real location is provided — match its look");
+  return parts.join(". ");
+}
 
 export function composeStudioPrompt(brief: StudioBrief): string {
   const format = find(FORMATS, brief.formatId);
@@ -228,9 +261,11 @@ export function composeStudioPrompt(brief: StudioBrief): string {
   const parts = [
     "Cinematic 9:16 social ad, 5 seconds, native audio.",
     subjectLine,
+    brandLine(brief.brand),
     hook?.fragment,
     format?.fragment,
     setting?.fragment,
+    locationLine(brief.location),
     brief.master.trim() ? `Story: ${brief.master.trim()}` : null,
     "End on a confident product hero frame. Keep text-on-screen minimal and legible.",
   ].filter(Boolean);
