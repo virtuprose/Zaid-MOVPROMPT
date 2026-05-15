@@ -130,13 +130,14 @@ export default function MarketingStudio() {
   const hasInputs =
     master.trim().length > 0 ||
     !!formatId ||
+    !!customFormat.trim() ||
     !!hookId ||
     !!settingId ||
     !!customSetting.trim() ||
     !!brandKit?.name ||
     !!location.place ||
     !!location.imagePath;
-  const ready = !!(formatId && hookId && (settingId || customSetting.trim()));
+  const ready = !!((formatId || customFormat.trim()) && hookId && (settingId || customSetting.trim()));
 
   const startGenerate = () => {
     if (!ready) {
