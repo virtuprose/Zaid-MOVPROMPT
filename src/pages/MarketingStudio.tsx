@@ -499,7 +499,7 @@ export default function MarketingStudio() {
           open={openPicker === "setting"}
           onOpenChange={(o) => !o && setOpenPicker(null)}
           title="Settings that set the scene"
-          subtitle="Choose where the story unfolds. Pick a setting that frames your ad with the right mood."
+          subtitle="Pick the scene type and where in the world it unfolds."
           presets={SETTINGS}
           selectedId={settingId}
           onSelect={setSettingId}
@@ -507,6 +507,8 @@ export default function MarketingStudio() {
             { id: "realistic", label: "Realistic" },
             { id: "unrealistic", label: "Unrealistic" },
           ]}
+          locationValue={location}
+          onLocationChange={setLocation}
         />
 
         <BrandKitSheet
