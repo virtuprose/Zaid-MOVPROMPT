@@ -239,6 +239,13 @@ export function PresetPickerDialog({
                     <div className="text-sm font-semibold text-white">{p.label}</div>
                     <div className="text-[11px] text-white/70 line-clamp-2">{p.description}</div>
                   </div>
+                  {!active && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                      <span className="px-3 py-1 rounded-full bg-[#F5A524] text-black text-[11px] font-semibold">
+                        Click to use
+                      </span>
+                    </div>
+                  )}
                   {active && (
                     <div className="absolute top-2 right-2 w-6 h-6 rounded-full bg-[#F5A524] text-black inline-flex items-center justify-center shadow-md">
                       <Check className="w-3.5 h-3.5" />
