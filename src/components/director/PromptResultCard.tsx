@@ -24,8 +24,18 @@ import { submitVideoJob, pollVideoJob, type VideoJob } from "@/lib/director/api"
 import { VIDEO_MODEL_GROUPS, findVideoModel, type VideoModel } from "@/lib/director/videoModels";
 import { resolveRecommendation } from "@/lib/director/modelRanking";
 import { VideoOptionsDialog } from "./VideoOptionsDialog";
+import { ConfirmRightsDialog } from "./ConfirmRightsDialog";
 import type { VideoOptions } from "@/lib/director/videoModelControls";
 import { useApproval } from "./ApprovalContext";
+
+const RIGHTS_ACK_KEY = "vidoprompt:rights-ack";
+
+type PendingRender = {
+  model: VideoModel;
+  opts: VideoOptions;
+  finalPrompt: string;
+  meta: { rewritten: boolean; summary?: string; original?: string };
+};
 
 type Props = {
   title: string;
@@ -100,6 +110,7 @@ export function PromptResultCard({ title, prompt, breakdown, directorsNote, onRe
   const [job, setJob] = useState<VideoJob | null>(null);
   const [generating, setGenerating] = useState(false);
   const [pendingModel, setPendingModel] = useState<VideoModel | null>(null);
+  const [pendingRender, setPendingRender] = useState<PendingRender | null>(null);
 
   const cameraLighting = [breakdown.camera, breakdown.lighting].filter(Boolean).join(" · ");
   const film = breakdown.film_emulation;
@@ -297,14 +308,43 @@ export function PromptResultCard({ title, prompt, breakdown, directorsNote, onRe
             const m = pendingModel;
             setPendingModel(null);
             if (!m) return;
+            const proceed = () => {
+              requestApproval({
+                action: "video",
+                label: `Render with ${m.label}`,
+                question: "Approve render?",
+                items: [finalPrompt.slice(0, 140) + (finalPrompt.length > 140 ? "…" : "")],
+                cost: 2.125,
+                alwaysAllowKey: `approval:video:${m.id}`,
+                onConfirm: () => generateVideo(m, opts, finalPrompt, meta),
+              });
+            };
+            if (typeof window !== "undefined" && sessionStorage.getItem(RIGHTS_ACK_KEY) === "1") {
+              proceed();
+            } else {
+              setPendingRender({ model: m, opts, finalPrompt, meta });
+            }
+          }}
+        />
+
+        <ConfirmRightsDialog
+          open={!!pendingRender}
+          onCancel={() => setPendingRender(null)}
+          onConfirm={(dontShowAgain) => {
+            const p = pendingRender;
+            setPendingRender(null);
+            if (!p) return;
+            if (dontShowAgain && typeof window !== "undefined") {
+              sessionStorage.setItem(RIGHTS_ACK_KEY, "1");
+            }
             requestApproval({
               action: "video",
-              label: `Render with ${m.label}`,
+              label: `Render with ${p.model.label}`,
               question: "Approve render?",
-              items: [finalPrompt.slice(0, 140) + (finalPrompt.length > 140 ? "…" : "")],
+              items: [p.finalPrompt.slice(0, 140) + (p.finalPrompt.length > 140 ? "…" : "")],
               cost: 2.125,
-              alwaysAllowKey: `approval:video:${m.id}`,
-              onConfirm: () => generateVideo(m, opts, finalPrompt, meta),
+              alwaysAllowKey: `approval:video:${p.model.id}`,
+              onConfirm: () => generateVideo(p.model, p.opts, p.finalPrompt, p.meta),
             });
           }}
         />
