@@ -12,6 +12,8 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
@@ -19,6 +21,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import type { Breakdown } from "@/lib/director/api";
 import { submitVideoJob, pollVideoJob, type VideoJob } from "@/lib/director/api";
+import { VIDEO_MODEL_GROUPS, pickRecommendedModel, findVideoModel } from "@/lib/director/videoModels";
 
 type Props = {
   title: string;
