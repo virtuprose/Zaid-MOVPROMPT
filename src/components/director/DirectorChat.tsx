@@ -284,13 +284,36 @@ function DirectorChatInner() {
     "🎬 Documentary narrative shot",
   ];
 
+  const [sessionTitle, setSessionTitle] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!routeSessionId) {
+      setSessionTitle(null);
+      return;
+    }
+    let cancel = false;
+    (async () => {
+      const { data } = await supabase
+        .from("director_sessions")
+        .select("title")
+        .eq("id", routeSessionId)
+        .maybeSingle();
+      if (!cancel) setSessionTitle((data as any)?.title ?? null);
+    })();
+    return () => {
+      cancel = true;
+    };
+  }, [routeSessionId]);
+
   const lastBubble = bubbles[bubbles.length - 1];
   const subhead =
     lastBubble?.role === "questions"
       ? "Gathering details to craft your prompt…"
       : lastBubble?.role === "result"
         ? "Prompt ready. Refine, render, or open in your video model."
-        : "Smart one-shot — I'll only ask if something would change the shot.";
+        : sessionTitle
+          ? `Working on: ${sessionTitle}`
+          : "Smart one-shot — I'll only ask if something would change the shot.";
 
   const handleRefine = (currentPrompt: string) => {
     setInput(`Refine this prompt: ${currentPrompt}\n\nMy changes: `);
