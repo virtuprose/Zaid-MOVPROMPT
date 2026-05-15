@@ -49,6 +49,19 @@ const FAL_MODELS: Record<string, string> = {
   kling: "fal-ai/kling-video/v2/master/text-to-video",
 };
 
+async function readJsonResponse(resp: Response) {
+  const text = await resp.text();
+  if (!text.trim()) {
+    return { text, data: null as Record<string, any> | null };
+  }
+
+  try {
+    return { text, data: JSON.parse(text) as Record<string, any> };
+  } catch {
+    return { text, data: null as Record<string, any> | null };
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -139,13 +152,27 @@ serve(async (req) => {
         `https://queue.fal.run/${model}/requests/${job.fal_request_id}/status`,
         { headers: { Authorization: `Key ${FAL_KEY}` } },
       );
-      const statusData = await statusResp.json();
+      const statusPayload = await readJsonResponse(statusResp);
+      const statusData = statusPayload.data;
+      if (!statusResp.ok || !statusData) {
+        console.warn("fal status response unreadable", statusResp.status, statusPayload.text);
+        return new Response(JSON.stringify({ ...job, status: "processing" }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
       if (statusData.status === "COMPLETED") {
         const resultResp = await fetch(
           `https://queue.fal.run/${model}/requests/${job.fal_request_id}`,
           { headers: { Authorization: `Key ${FAL_KEY}` } },
         );
-        const result = await resultResp.json();
+        const resultPayload = await readJsonResponse(resultResp);
+        const result = resultPayload.data;
+        if (!resultResp.ok || !result) {
+          console.warn("fal result response unreadable", resultResp.status, resultPayload.text);
+          return new Response(JSON.stringify({ ...job, status: "processing" }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
         const videoUrl = result.video?.url || result.output?.[0] || result.video_url;
         await admin
           .from("video_jobs")
@@ -253,7 +280,19 @@ serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    const submitData = await submitResp.json();
+    const submitPayload = await readJsonResponse(submitResp);
+    const submitData = submitPayload.data;
+    if (!submitData?.request_id) {
+      console.error("fal submit response unreadable", submitResp.status, submitPayload.text);
+      await admin
+        .from("video_jobs")
+        .update({ status: "failed", error: "Provider returned an invalid submission response" })
+        .eq("id", job.id);
+      return new Response(JSON.stringify({ error: "Provider rejected request" }), {
+        status: 502,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
     await admin
       .from("video_jobs")
       .update({ fal_request_id: submitData.request_id, status: "processing" })
