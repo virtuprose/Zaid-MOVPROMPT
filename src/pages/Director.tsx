@@ -315,7 +315,7 @@ export default function Director() {
               variant="destructive"
               className="rounded-full"
             >
-              Delete permanently
+              Delete
             </Button>
           </DialogFooter>
         </DialogContent>
