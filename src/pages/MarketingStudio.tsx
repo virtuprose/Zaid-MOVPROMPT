@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Helmet } from "react-helmet-async";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -80,10 +80,11 @@ export default function MarketingStudio() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  if (!loading && !user) {
-    navigate("/auth");
-    return null;
-  }
+  useEffect(() => {
+    if (!loading && !user) navigate("/auth");
+  }, [loading, user, navigate]);
+
+  if (!loading && !user) return null;
 
   const format = find(FORMATS, formatId);
   const hook = find(HOOKS, hookId);
