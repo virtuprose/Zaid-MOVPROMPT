@@ -131,7 +131,7 @@ export function QuestionCard({ reason, questions, disabled, onContinue, onSkip }
           type="button"
           size="sm"
           onClick={submit}
-          className="rounded-full gap-2"
+          className="rounded-full gap-2 bg-foreground/10 text-foreground hover:bg-foreground/15 border border-border/30"
         >
           Continue
           <span className="hidden sm:inline-flex items-center gap-0.5 text-[10px] opacity-70">
