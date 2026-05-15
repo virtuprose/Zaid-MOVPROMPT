@@ -320,20 +320,6 @@ export function PromptResultCard({ title, prompt, breakdown, directorsNote, onRe
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
-          {externalLink && (
-            <Button
-              size="sm"
-              variant="outline"
-              className="gap-1.5"
-              onClick={async () => {
-                await navigator.clipboard.writeText(prompt);
-                toast.success(`Prompt copied — opening ${externalLink.label}`);
-                window.open(externalLink.url, "_blank", "noopener,noreferrer");
-              }}
-            >
-              <ExternalLink className="w-4 h-4" /> Open in {externalLink.label}
-            </Button>
-          )}
         </div>
       </div>
 
