@@ -210,13 +210,26 @@ export function BrandKitSheet({
               <div className="mt-3">
                 <Input
                   value={draft.logo_url ?? ""}
-                  onChange={(e) => {
-                    update("logo_path", null);
-                    update("logo_url", e.target.value || null);
-                  }}
+                  onChange={(e) => handleUrlChange(e.target.value)}
                   placeholder="https://example.com/logo.png"
                 />
                 <p className="text-xs text-muted-foreground mt-1.5">Paste a direct link to an image</p>
+              </div>
+            )}
+
+            {(analyzing || justFilled) && (
+              <div className="mt-2.5 inline-flex items-center gap-1.5 text-xs text-[#F5A524]">
+                {analyzing ? (
+                  <>
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                    Reading your brand…
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-3 h-3" />
+                    Filled by AI — edit anything
+                  </>
+                )}
               </div>
             )}
           </div>
