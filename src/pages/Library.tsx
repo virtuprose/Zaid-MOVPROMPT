@@ -583,6 +583,38 @@ const Library = () => {
           )}
         </motion.div>
 
+        {/* Tab toggle */}
+        <div className="flex justify-center mb-6">
+          <div className="inline-flex items-center gap-1 rounded-full bg-secondary/40 border border-border p-1">
+            <button
+              type="button"
+              onClick={() => setTab("prompts")}
+              className={`px-4 h-8 text-xs font-medium rounded-full transition-colors ${
+                tab === "prompts"
+                  ? "bg-background text-foreground border border-border/60"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Prompts {history.length > 0 && <span className="opacity-60">({history.length})</span>}
+            </button>
+            <button
+              type="button"
+              onClick={() => setTab("videos")}
+              className={`px-4 h-8 text-xs font-medium rounded-full transition-colors ${
+                tab === "videos"
+                  ? "bg-background text-foreground border border-border/60"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Videos {videoCount !== null && videoCount > 0 && <span className="opacity-60">({videoCount})</span>}
+            </button>
+          </div>
+        </div>
+
+        {tab === "videos" ? (
+          <VideosTab />
+        ) : (
+          <>
         {/* Search & Filters */}
         {!loading && history.length > 0 && (
           <motion.div
