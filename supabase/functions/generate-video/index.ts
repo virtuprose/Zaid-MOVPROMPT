@@ -107,8 +107,6 @@ serve(async (req) => {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
       }
       const { data: job, error } = await admin
         .from("video_jobs")
