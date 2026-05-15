@@ -3,16 +3,15 @@ import { Helmet } from "react-helmet-async";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import {
-  Gift,
-  Smartphone,
   Sparkles,
   Target,
   Globe2,
   Loader2,
   Wand2,
   ChevronDown,
-  Info,
   Heart,
+  Building2,
+  MapPin,
 } from "lucide-react";
 import { TopNav } from "@/components/TopNav";
 import { Button } from "@/components/ui/button";
