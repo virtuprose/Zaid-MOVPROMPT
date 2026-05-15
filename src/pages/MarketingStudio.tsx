@@ -13,6 +13,7 @@ import {
   Heart,
   Building2,
   MapPin,
+  X,
 } from "lucide-react";
 import { TopNav } from "@/components/TopNav";
 import { Button } from "@/components/ui/button";
