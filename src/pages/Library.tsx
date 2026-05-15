@@ -1045,7 +1045,11 @@ const Library = () => {
               </motion.div>
             ) : filtered.length === 0 ? (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-12 space-y-3">
-                <p className="text-muted-foreground">No prompts match these filters. Try removing some.</p>
+                <p className="text-muted-foreground">
+                  {search.trim()
+                    ? <>No results for <span className="text-foreground">"{search}"</span>.</>
+                    : "No prompts match these filters. Try removing some."}
+                </p>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -1056,6 +1060,15 @@ const Library = () => {
               </motion.div>
             ) : view === "grid" ? (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-3">
+                <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
+                  <span>
+                    {hasActiveFilters
+                      ? <>Showing <span className="text-foreground font-medium">{sorted.length}</span> of {history.length} prompts.{" "}
+                          <button onClick={() => { setSearch(""); setWorkflowFilter(null); setFamilyFilter(null); setVariantFilter(null); }} className="text-accent hover:underline">Clear filters</button>
+                        </>
+                      : <>Showing <span className="text-foreground font-medium">{sorted.length}</span> prompts</>}
+                  </span>
+                </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                   {sorted.map((entry) => {
                     const isExpanded = expandedId === entry.id;
