@@ -787,6 +787,8 @@ const Library = () => {
             />
           </motion.div>
         )}
+          </>
+        )}
       </div>
     </div>
   );
