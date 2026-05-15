@@ -2,9 +2,11 @@
 // Mirrors fal.ai input schemas — only fields the model actually accepts are
 // surfaced in the UI and forwarded to the edge function.
 
+export type DurationValue = number | "auto";
+
 export type VideoOptions = {
   aspect_ratio?: string;
-  duration?: number;
+  duration?: DurationValue;
   resolution?: string;
   audio?: boolean;
   cfg_scale?: number;
@@ -13,7 +15,14 @@ export type VideoOptions = {
 
 export type ModelControls = {
   aspectRatios?: string[];
+  /** Discrete set of allowed durations (slider snaps to these). */
   durations?: number[];
+  /** Continuous range — used when a model accepts any integer duration in [min,max]. */
+  durationMin?: number;
+  durationMax?: number;
+  durationStep?: number;
+  /** Model also accepts `"auto"` as a duration value. */
+  durationAuto?: boolean;
   resolutions?: string[];
   audio?: boolean;
   cfgScale?: boolean;
