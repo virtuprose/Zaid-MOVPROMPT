@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { VideosTab } from "@/components/library/VideosTab";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/i18n/LanguageContext";
@@ -452,6 +453,23 @@ const Library = () => {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { t } = useLanguage();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tab = (searchParams.get("tab") === "videos" ? "videos" : "prompts") as "prompts" | "videos";
+  const setTab = (next: "prompts" | "videos") => {
+    const sp = new URLSearchParams(searchParams);
+    if (next === "prompts") sp.delete("tab");
+    else sp.set("tab", next);
+    setSearchParams(sp, { replace: true });
+  };
+  const [videoCount, setVideoCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!user) return;
+    void supabase
+      .from("video_jobs")
+      .select("id", { count: "exact", head: true })
+      .then(({ count }) => setVideoCount(count ?? 0));
+  }, [user]);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -565,6 +583,38 @@ const Library = () => {
           )}
         </motion.div>
 
+        {/* Tab toggle */}
+        <div className="flex justify-center mb-6">
+          <div className="inline-flex items-center gap-1 rounded-full bg-secondary/40 border border-border p-1">
+            <button
+              type="button"
+              onClick={() => setTab("prompts")}
+              className={`px-4 h-8 text-xs font-medium rounded-full transition-colors ${
+                tab === "prompts"
+                  ? "bg-background text-foreground border border-border/60"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Prompts {history.length > 0 && <span className="opacity-60">({history.length})</span>}
+            </button>
+            <button
+              type="button"
+              onClick={() => setTab("videos")}
+              className={`px-4 h-8 text-xs font-medium rounded-full transition-colors ${
+                tab === "videos"
+                  ? "bg-background text-foreground border border-border/60"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Videos {videoCount !== null && videoCount > 0 && <span className="opacity-60">({videoCount})</span>}
+            </button>
+          </div>
+        </div>
+
+        {tab === "videos" ? (
+          <VideosTab />
+        ) : (
+          <>
         {/* Search & Filters */}
         {!loading && history.length > 0 && (
           <motion.div
@@ -736,6 +786,8 @@ const Library = () => {
               onClose={() => setExpandedId(null)}
             />
           </motion.div>
+        )}
+          </>
         )}
       </div>
     </div>
