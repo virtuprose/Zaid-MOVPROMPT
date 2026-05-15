@@ -291,9 +291,11 @@ function VideoJobCard({
 
   return (
     <Card
-      className={`group bg-card border-border overflow-hidden cursor-pointer transition-all hover:border-accent/50 hover:shadow-[0_0_24px_hsl(var(--accent)/0.2)] flex flex-col ${
-        selected ? "ring-2 ring-accent/60" : ""
-      }`}
+      className={`group bg-card border overflow-hidden cursor-pointer transition-all flex flex-col ${
+        group === "Failed"
+          ? "border-destructive/40 hover:border-destructive/70 hover:shadow-[0_0_24px_hsl(var(--destructive)/0.18)]"
+          : "border-border hover:border-accent/50 hover:shadow-[0_0_24px_hsl(var(--accent)/0.2)]"
+      } ${selected ? "ring-2 ring-accent/80 border-accent/60" : ""}`}
     >
       <div
         className={`relative w-full overflow-hidden bg-gradient-to-br from-secondary/40 to-background ${aspectClass}`}
