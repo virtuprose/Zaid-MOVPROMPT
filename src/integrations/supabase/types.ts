@@ -139,6 +139,45 @@ export type Database = {
           },
         ]
       }
+      brand_kits: {
+        Row: {
+          audience: string | null
+          created_at: string
+          description: string
+          logo_path: string | null
+          name: string
+          subject: string
+          tagline: string | null
+          updated_at: string
+          url: string | null
+          user_id: string
+        }
+        Insert: {
+          audience?: string | null
+          created_at?: string
+          description?: string
+          logo_path?: string | null
+          name?: string
+          subject?: string
+          tagline?: string | null
+          updated_at?: string
+          url?: string | null
+          user_id: string
+        }
+        Update: {
+          audience?: string | null
+          created_at?: string
+          description?: string
+          logo_path?: string | null
+          name?: string
+          subject?: string
+          tagline?: string | null
+          updated_at?: string
+          url?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       custom_presets: {
         Row: {
           anim_class: string | null
