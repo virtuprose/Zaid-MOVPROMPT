@@ -91,8 +91,8 @@ export function QuestionCard({ reason, questions, disabled, onContinue, onSkip }
                         className={cn(
                           "rounded-full px-3 py-1 text-xs border transition-colors",
                           active
-                            ? "bg-foreground/10 border-border text-foreground"
-                            : "border-border/40 text-muted-foreground hover:text-foreground hover:border-border",
+                            ? "bg-foreground/10 border-border/50 text-foreground"
+                            : "bg-transparent border-border/30 text-muted-foreground hover:text-foreground hover:border-border/60",
                         )}
                       >
                         {p}
