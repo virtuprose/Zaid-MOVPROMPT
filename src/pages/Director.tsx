@@ -80,6 +80,48 @@ export default function Director() {
     };
   }, [user, sessionId]);
 
+  const handleRename = async (s: SessionRow) => {
+    const next = window.prompt("Rename brief", s.title || "Untitled brief");
+    if (next === null) return;
+    const trimmed = next.trim().slice(0, 120);
+    if (!trimmed || trimmed === s.title) return;
+    setSessions((prev) => prev.map((x) => (x.id === s.id ? { ...x, title: trimmed } : x)));
+    const { error } = await supabase
+      .from("director_sessions")
+      .update({ title: trimmed })
+      .eq("id", s.id);
+    if (error) toast.error("Couldn't rename brief");
+    else toast.success("Renamed");
+  };
+
+  const handleTogglePin = async (s: SessionRow) => {
+    const next = !s.pinned;
+    setSessions((prev) =>
+      [...prev.map((x) => (x.id === s.id ? { ...x, pinned: next } : x))].sort((a, b) => {
+        if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
+        return a.updated_at < b.updated_at ? 1 : -1;
+      }),
+    );
+    const { error } = await supabase
+      .from("director_sessions")
+      .update({ pinned: next })
+      .eq("id", s.id);
+    if (error) toast.error("Couldn't update pin");
+    else toast.success(next ? "Pinned" : "Unpinned");
+  };
+
+  const handleDelete = async (s: SessionRow) => {
+    if (!window.confirm(`Delete "${s.title || "Untitled brief"}"? This can't be undone.`)) return;
+    setSessions((prev) => prev.filter((x) => x.id !== s.id));
+    const { error } = await supabase.from("director_sessions").delete().eq("id", s.id);
+    if (error) {
+      toast.error("Couldn't delete brief");
+      return;
+    }
+    toast.success("Deleted");
+    if (sessionId === s.id) navigate("/director");
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Helmet>
