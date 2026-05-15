@@ -127,11 +127,24 @@ function timeAgo(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString();
 }
 
+// Elapsed since render started, formatted MM:SS (or HH:MM:SS for very old jobs)
 function elapsedShort(dateStr: string): string {
   const sec = Math.max(0, Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000));
-  const m = Math.floor(sec / 60);
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
   const s = sec % 60;
-  return `${m}:${s.toString().padStart(2, "0")}`;
+  const pad = (n: number) => n.toString().padStart(2, "0");
+  if (h > 0) return `${pad(h)}:${pad(m)}:${pad(s)}`;
+  return `${pad(m)}:${pad(s)}`;
+}
+
+// Render-state classification by elapsed time
+type RenderHealth = "normal" | "slow" | "stuck";
+function renderHealth(dateStr: string): RenderHealth {
+  const mins = (Date.now() - new Date(dateStr).getTime()) / 60000;
+  if (mins > 15) return "stuck";
+  if (mins > 5) return "slow";
+  return "normal";
 }
 
 // ─── Status pill ────────────────────────────────────────────────────────
