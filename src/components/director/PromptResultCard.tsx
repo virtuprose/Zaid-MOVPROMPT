@@ -385,11 +385,12 @@ export function PromptResultCard({ title, prompt, breakdown, directorsNote, onRe
       <VideoOptionsDialog
         open={!!pendingModel}
         model={pendingModel}
+        prompt={prompt}
         onCancel={() => setPendingModel(null)}
-        onConfirm={(opts) => {
+        onConfirm={(opts, finalPrompt, meta) => {
           const m = pendingModel;
           setPendingModel(null);
-          if (m) void generateVideo(m, opts);
+          if (m) void generateVideo(m, opts, finalPrompt, meta);
         }}
       />
     </>
