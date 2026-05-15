@@ -195,19 +195,11 @@ export function VideoOptionsDialog({ open, model, prompt, onCancel, onConfirm }:
             </div>
           )}
 
-          {controls.durations && controls.durations.length > 1 && (
-            <div className="space-y-2">
-              <Label className="text-xs uppercase tracking-wider text-muted-foreground">
-                Duration
-              </Label>
-              <Segmented
-                value={options.duration}
-                options={controls.durations}
-                onChange={(v) => set({ duration: v })}
-                format={(v) => `${v}s`}
-              />
-            </div>
-          )}
+          <DurationControl
+            controls={controls}
+            value={options.duration}
+            onChange={(v) => set({ duration: v })}
+          />
 
           {controls.resolutions && controls.resolutions.length > 1 && (
             <div className="space-y-2">
