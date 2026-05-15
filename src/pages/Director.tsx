@@ -297,7 +297,7 @@ export default function Director() {
               <Trash2 className="w-4 h-4" />
             </div>
             <DialogTitle className="font-display text-2xl tracking-tight">
-              Delete this brief?
+              Delete this task?
             </DialogTitle>
             <DialogDescription className="text-muted-foreground leading-relaxed">
               <span className="text-foreground/90 font-medium">
@@ -308,14 +308,14 @@ export default function Director() {
           </DialogHeader>
           <DialogFooter className="gap-2 sm:gap-2">
             <Button variant="ghost" onClick={() => setDeleteTarget(null)} className="rounded-full">
-              Keep brief
+              Keep
             </Button>
             <Button
               onClick={confirmDelete}
               variant="destructive"
               className="rounded-full"
             >
-              Delete permanently
+              Delete
             </Button>
           </DialogFooter>
         </DialogContent>
