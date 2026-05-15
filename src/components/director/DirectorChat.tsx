@@ -372,8 +372,11 @@ export function DirectorChat() {
                               )}
                             </div>
                           )}
-                          <span className="text-[11px] text-muted-foreground max-w-[140px] truncate">
-                            {a.name}
+                          <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground max-w-[160px] truncate">
+                            <span className="inline-flex h-4 min-w-[16px] items-center justify-center rounded bg-accent/20 px-1 text-[10px] font-semibold text-accent">
+                              @{j + 1}
+                            </span>
+                            <span className="truncate">{a.name}</span>
                           </span>
                         </div>
                       );
