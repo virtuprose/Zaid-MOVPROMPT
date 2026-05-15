@@ -40,7 +40,7 @@ import { useBrandKit, EMPTY_LOCATION, type LocationInput } from "@/lib/marketing
 import { BrandKitSheet } from "@/components/marketing/BrandKitSheet";
 import { BrandsRow } from "@/components/marketing/BrandsRow";
 
-import { submitVideoJob } from "@/lib/director/api";
+import { submitVideoJob, pollVideoJob, type VideoJob } from "@/lib/director/api";
 import loopKitchen from "@/assets/loop-kitchen.mp4.asset.json";
 import loopCyberpunk from "@/assets/loop-cyberpunk.mp4.asset.json";
 import loopDesert from "@/assets/loop-desert.mp4.asset.json";
@@ -95,9 +95,11 @@ export default function MarketingStudio() {
   const [submitting, setSubmitting] = useState(false);
 
   const [userAds, setUserAds] = useState<UserAd[]>([]);
+  const [pendingJobs, setPendingJobs] = useState<VideoJob[]>([]);
   const [showCommunity, setShowCommunity] = useState(false);
   const [flashChips, setFlashChips] = useState(false);
   const composerRef = useRef<HTMLDivElement | null>(null);
+  const galleryRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     if (!loading && !user) navigate("/auth");
@@ -176,14 +178,17 @@ export default function MarketingStudio() {
           hasImage: !!location.imagePath,
         },
       });
-      await submitVideoJob(prompt, "seedance-2.0", null, {
+      const job = await submitVideoJob(prompt, "seedance-2.0", null, {
         aspect_ratio: "9:16",
         duration: 5,
         resolution: "1080p",
         audio: true,
       });
-      toast.success("Render started — check your Library when it finishes.");
-      navigate("/library");
+      setPendingJobs((prev) => [job, ...prev.filter((j) => j.id !== job.id)]);
+      toast.success("Generating your ad…");
+      window.setTimeout(() => {
+        galleryRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 50);
     } catch (e: any) {
       toast.error(e?.message || "Could not start render");
     } finally {
@@ -191,13 +196,50 @@ export default function MarketingStudio() {
     }
   };
 
+  // Poll pending jobs until they finish
+  useEffect(() => {
+    if (pendingJobs.length === 0) return;
+    let cancelled = false;
+    const interval = window.setInterval(async () => {
+      const snapshot = pendingJobs;
+      for (const job of snapshot) {
+        try {
+          const updated = await pollVideoJob(job.id);
+          if (cancelled) return;
+          if (updated.video_url) {
+            setPendingJobs((prev) => prev.filter((j) => j.id !== job.id));
+            setUserAds((prev) => [
+              {
+                id: updated.id,
+                video_url: updated.video_url!,
+                created_at: new Date().toISOString(),
+              },
+              ...prev.filter((a) => a.id !== updated.id),
+            ]);
+            toast.success("Your ad is ready");
+          } else if (updated.status === "failed" || updated.error) {
+            setPendingJobs((prev) => prev.filter((j) => j.id !== job.id));
+            toast.error(updated.error || "Render failed");
+          }
+        } catch {
+          // ignore transient errors, keep polling
+        }
+      }
+    }, 4000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [pendingJobs]);
+
   const filteredAds = FEATURED_ADS.filter(
     (a) => filter === "All" || a.tag === filter,
   );
 
   const adCount = userAds.length;
+  const totalCount = adCount + pendingJobs.length;
   const mode: "empty" | "mixed" | "full" =
-    adCount === 0 ? "empty" : adCount < 10 ? "mixed" : "full";
+    totalCount === 0 ? "empty" : totalCount < 10 ? "mixed" : "full";
 
   const applyTemplate = (tpl: { formatId: string; hookId: string; settingId: string }) => {
     setFormatId(tpl.formatId);
@@ -408,7 +450,7 @@ export default function MarketingStudio() {
           </div>
 
           {/* Ads gallery */}
-          <section className="mt-14">
+          <section ref={galleryRef} className="mt-14 scroll-mt-20">
             {mode === "empty" && (
               <>
                 <SectionHeader
@@ -429,19 +471,28 @@ export default function MarketingStudio() {
               <div>
                 <SectionHeader
                   title="Your recent ads"
-                  subtitle="Pick up where you left off — or remix one of yours."
+                  subtitle={
+                    pendingJobs.length > 0
+                      ? "Your ad is rendering — it'll appear here in a moment."
+                      : "Pick up where you left off — or remix one of yours."
+                  }
                   right={
-                    <button
-                      type="button"
-                      onClick={() => navigate("/library")}
-                      className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      Browse all {adCount} →
-                    </button>
+                    adCount > 0 ? (
+                      <button
+                        type="button"
+                        onClick={() => navigate("/library")}
+                        className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        Browse all {adCount} →
+                      </button>
+                    ) : null
                   }
                 />
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {userAds.slice(0, 3).map((ad) => (
+                  {pendingJobs.map((job) => (
+                    <PendingAdCard key={job.id} />
+                  ))}
+                  {userAds.slice(0, Math.max(0, 3 - pendingJobs.length)).map((ad) => (
                     <UserAdCard key={ad.id} ad={ad} onClick={() => navigate("/library")} />
                   ))}
                 </div>
@@ -455,7 +506,9 @@ export default function MarketingStudio() {
                   subtitle={
                     showCommunity
                       ? "Click any template to load its format, hook and setting."
-                      : "Tap one to revisit it in your Library."
+                      : pendingJobs.length > 0
+                        ? "Your ad is rendering — it'll appear here in a moment."
+                        : "Tap one to revisit it in your Library."
                   }
                   right={
                     <div className="flex items-center gap-1 rounded-full bg-muted/30 p-1">
@@ -475,7 +528,10 @@ export default function MarketingStudio() {
                   />
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {userAds.slice(0, 6).map((ad) => (
+                    {pendingJobs.map((job) => (
+                      <PendingAdCard key={job.id} />
+                    ))}
+                    {userAds.slice(0, Math.max(0, 6 - pendingJobs.length)).map((ad) => (
                       <UserAdCard key={ad.id} ad={ad} onClick={() => navigate("/library")} />
                     ))}
                   </div>
@@ -752,6 +808,28 @@ function UserAdCard({ ad, onClick }: { ad: UserAd; onClick: () => void }) {
         <span className="text-xs opacity-80">
           {new Date(ad.created_at).toLocaleDateString()}
         </span>
+      </div>
+    </article>
+  );
+}
+
+function PendingAdCard() {
+  return (
+    <article
+      aria-busy="true"
+      className="group relative overflow-hidden rounded-2xl border border-[hsl(35_90%_55%)]/60 bg-muted/10 shadow-[0_0_24px_hsl(35_90%_55%/0.25)]"
+    >
+      <div className="aspect-[9/12] relative bg-gradient-to-br from-muted/40 via-muted/20 to-muted/40 animate-pulse">
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
+          <Loader2 className="w-8 h-8 text-[hsl(35_90%_55%)] animate-spin" />
+          <span className="text-xs uppercase tracking-[0.18em] text-foreground/80 font-semibold">
+            Generating…
+          </span>
+          <span className="text-[11px] text-muted-foreground">This usually takes ~30s</span>
+        </div>
+      </div>
+      <div className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-[hsl(35_90%_55%)]/90 backdrop-blur text-[10px] uppercase tracking-wide text-black font-semibold">
+        Generating
       </div>
     </article>
   );
