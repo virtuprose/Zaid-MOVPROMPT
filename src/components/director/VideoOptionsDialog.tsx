@@ -68,6 +68,94 @@ function Segmented<T extends string | number>({
   );
 }
 
+function nearest(values: number[], target: number) {
+  return values.reduce((best, v) =>
+    Math.abs(v - target) < Math.abs(best - target) ? v : best,
+  );
+}
+
+function DurationControl({
+  controls,
+  value,
+  onChange,
+}: {
+  controls: ReturnType<typeof getModelControls>;
+  value: number | "auto" | undefined;
+  onChange: (v: number | "auto") => void;
+}) {
+  const discrete = controls.durations;
+  const hasRange =
+    typeof controls.durationMin === "number" &&
+    typeof controls.durationMax === "number";
+  const hasAuto = !!controls.durationAuto;
+
+  // Nothing to choose
+  if (!hasRange && (!discrete || discrete.length === 0)) return null;
+
+  // Single fixed value — show a static chip
+  if (!hasRange && discrete && discrete.length === 1) {
+    return (
+      <div className="space-y-2">
+        <Label className="text-xs uppercase tracking-wider text-muted-foreground">
+          Duration
+        </Label>
+        <div className="text-xs text-foreground/80">{discrete[0]}s (fixed)</div>
+      </div>
+    );
+  }
+
+  const min = hasRange ? (controls.durationMin as number) : Math.min(...(discrete || [0]));
+  const max = hasRange ? (controls.durationMax as number) : Math.max(...(discrete || [0]));
+  const step = hasRange ? (controls.durationStep ?? 1) : 1;
+
+  const isAuto = value === "auto";
+  const numericValue = typeof value === "number" ? value : Math.round((min + max) / 2);
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <Label className="text-xs uppercase tracking-wider text-muted-foreground">
+          Duration
+        </Label>
+        <div className="flex items-center gap-2">
+          {hasAuto && (
+            <button
+              type="button"
+              onClick={() => onChange(isAuto ? Math.round((min + max) / 2) : "auto")}
+              className={`px-2 py-0.5 text-[10px] rounded border transition-colors ${
+                isAuto
+                  ? "bg-primary/20 text-primary border-primary/40"
+                  : "border-border text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Auto
+            </button>
+          )}
+          <span className="text-xs tabular-nums text-foreground/80 min-w-[2.5rem] text-right">
+            {isAuto ? "auto" : `${numericValue}s`}
+          </span>
+        </div>
+      </div>
+      <Slider
+        min={min}
+        max={max}
+        step={step}
+        disabled={isAuto}
+        value={[numericValue]}
+        onValueChange={([v]) => {
+          const snapped = discrete && !hasRange ? nearest(discrete, v) : v;
+          onChange(snapped);
+        }}
+      />
+      <div className="flex justify-between text-[10px] text-muted-foreground/70">
+        <span>{min}s</span>
+        <span>{max}s</span>
+      </div>
+    </div>
+  );
+}
+
+
 export function VideoOptionsDialog({ open, model, prompt, onCancel, onConfirm }: Props) {
   const controls = useMemo(
     () => (model ? getModelControls(model.id) : null),
