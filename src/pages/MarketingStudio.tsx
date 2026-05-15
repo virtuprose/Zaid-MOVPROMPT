@@ -158,6 +158,7 @@ export default function MarketingStudio() {
         formatId,
         hookId,
         settingId,
+        customSetting: customSetting || undefined,
         brand: brandKit
           ? {
               name: brandKit.name,
