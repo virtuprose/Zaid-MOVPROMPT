@@ -296,6 +296,8 @@ function DirectorChatInner() {
     setInput(`Refine this prompt: ${currentPrompt}\n\nMy changes: `);
   };
 
+  const { pending: pendingApproval } = useApproval();
+
   return (
     <div className="flex flex-col gap-3 h-[calc(100vh-180px)] max-h-[820px]">
       <div className="flex items-center justify-between">
