@@ -19,11 +19,13 @@ type Props = {
   selectedId?: string;
   onSelect: (id: string | undefined) => void;
   categories?: { id: string; label: string; tooltip?: string }[];
+  searchPlaceholder?: string;
   locationValue?: LocationInput;
   onLocationChange?: (v: LocationInput) => void;
-  /** Optional: enables the "Custom scene" card. */
+  /** Optional: enables the "Custom" card. */
   customValue?: string;
   onCustomChange?: (v: string) => void;
+  customLabel?: string;
 };
 
 export function PresetPickerDialog({
@@ -35,10 +37,12 @@ export function PresetPickerDialog({
   selectedId,
   onSelect,
   categories,
+  searchPlaceholder = "Search presets…",
   locationValue,
   onLocationChange,
   customValue,
   onCustomChange,
+  customLabel = "Custom",
 }: Props) {
   const [tab, setTab] = useState<string>("all");
   const [q, setQ] = useState("");
