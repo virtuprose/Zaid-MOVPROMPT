@@ -1,5 +1,8 @@
 import { useState, useRef, useEffect } from "react";
-import { Loader2, RotateCcw, FileText, Music, Sparkles } from "lucide-react";
+import { RotateCcw, FileText, Music, Sparkles, MessageCircleMore } from "lucide-react";
+import { Shimmer } from "@/components/ai-elements/shimmer";
+import { Message, MessageContent } from "@/components/ai-elements/message";
+import { QuestionCard } from "./QuestionCard";
 import { Button } from "@/components/ui/button";
 import { useNavigate, useParams } from "react-router-dom";
 import {
