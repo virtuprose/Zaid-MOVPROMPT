@@ -257,9 +257,9 @@ export default function Director() {
       <Dialog open={!!renameTarget} onOpenChange={(o) => !o && setRenameTarget(null)}>
         <DialogContent className="rounded-2xl border-border/60 bg-[hsl(240_5%_8%)] sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="font-display text-2xl tracking-tight">Rename brief</DialogTitle>
+            <DialogTitle className="font-display text-2xl tracking-tight">Rename Task</DialogTitle>
             <DialogDescription className="text-muted-foreground">
-              Give this brief a clearer name to find it faster later.
+              Give this task a clearer name to find it faster later.
             </DialogDescription>
           </DialogHeader>
           <Input
