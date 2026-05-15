@@ -58,26 +58,36 @@ export function Composer({ value, onChange, attachments, onAttachmentsChange, on
     };
   }, []);
 
+  const [pendingCount, setPendingCount] = useState(0);
+
   const handleFiles = useCallback(
     async (files: FileList | File[]) => {
-      if (!files || (files as FileList).length === 0) return;
+      const arr = Array.from(files || []);
+      if (arr.length === 0) return;
       setIngesting(true);
-      const next = [...attachments];
-      for (const f of Array.from(files)) {
-        try {
-          const kind = classifyFile(f);
-          if (kind === "image") next.push(await ingestImage(f));
-          else if (kind === "video") next.push(...(await ingestVideo(f)));
-          else if (kind === "audio") {
-            if (!user) throw new Error("Sign in to upload audio");
-            next.push(await ingestAudio(f, user.id));
-          } else if (kind === "document") next.push(await ingestDocument(f));
-          else toast.error(`Unsupported file: ${f.name}`);
-        } catch (e: any) {
-          toast.error(e?.message || `Could not read ${f.name}`);
+      setPendingCount((c) => c + arr.length);
+
+      const ingestOne = async (f: File): Promise<Attachment[]> => {
+        const kind = classifyFile(f);
+        if (kind === "image") return [await ingestImage(f)];
+        if (kind === "video") return await ingestVideo(f);
+        if (kind === "audio") {
+          if (!user) throw new Error("Sign in to upload audio");
+          return [await ingestAudio(f, user.id)];
         }
-      }
-      onAttachmentsChange(next.slice(0, 12));
+        if (kind === "document") return [await ingestDocument(f)];
+        throw new Error(`Unsupported file: ${f.name}`);
+      };
+
+      const results = await Promise.allSettled(arr.map(ingestOne));
+      const fresh: Attachment[] = [];
+      results.forEach((r, i) => {
+        if (r.status === "fulfilled") fresh.push(...r.value);
+        else toast.error(r.reason?.message || `Could not read ${arr[i].name}`);
+      });
+
+      onAttachmentsChange([...attachments, ...fresh].slice(0, 12));
+      setPendingCount((c) => Math.max(0, c - arr.length));
       setIngesting(false);
     },
     [attachments, onAttachmentsChange, user],
@@ -85,10 +95,10 @@ export function Composer({ value, onChange, attachments, onAttachmentsChange, on
 
   const remove = (i: number) => onAttachmentsChange(attachments.filter((_, idx) => idx !== i));
 
+  const isImageLike = (a: Attachment) => a.kind === "image" || a.kind === "video_keyframes";
   const iconFor = (a: Attachment) => {
-    if (a.kind === "image" || a.kind === "video_keyframes") return <ImageIcon className="w-3 h-3" />;
-    if (a.kind === "audio_transcript") return <Music className="w-3 h-3" />;
-    return <FileText className="w-3 h-3" />;
+    if (a.kind === "audio_transcript") return <Music className="w-5 h-5" />;
+    return <FileText className="w-5 h-5" />;
   };
 
   const highlight = drag || pageDrag;
