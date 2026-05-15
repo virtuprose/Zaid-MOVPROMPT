@@ -297,7 +297,7 @@ export default function Director() {
               <Trash2 className="w-4 h-4" />
             </div>
             <DialogTitle className="font-display text-2xl tracking-tight">
-              Delete this brief?
+              Delete this task?
             </DialogTitle>
             <DialogDescription className="text-muted-foreground leading-relaxed">
               <span className="text-foreground/90 font-medium">
