@@ -341,7 +341,12 @@ export default function MarketingStudio() {
               <PresetChip
                 icon={<Sparkles className="w-3.5 h-3.5" />}
                 label="Format"
-                value={format?.label}
+                value={
+                  format?.label ||
+                  (customFormat.trim()
+                    ? `Custom: ${customFormat.trim().slice(0, 24)}${customFormat.trim().length > 24 ? "…" : ""}`
+                    : undefined)
+                }
                 tooltip="The visual style of your ad"
                 onClick={() => setOpenPicker("format")}
                 flash={flashChips}
