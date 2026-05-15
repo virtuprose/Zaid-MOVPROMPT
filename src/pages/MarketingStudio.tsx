@@ -812,3 +812,25 @@ function UserAdCard({ ad, onClick }: { ad: UserAd; onClick: () => void }) {
     </article>
   );
 }
+
+function PendingAdCard() {
+  return (
+    <article
+      aria-busy="true"
+      className="group relative overflow-hidden rounded-2xl border border-[hsl(35_90%_55%)]/60 bg-muted/10 shadow-[0_0_24px_hsl(35_90%_55%/0.25)]"
+    >
+      <div className="aspect-[9/12] relative bg-gradient-to-br from-muted/40 via-muted/20 to-muted/40 animate-pulse">
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
+          <Loader2 className="w-8 h-8 text-[hsl(35_90%_55%)] animate-spin" />
+          <span className="text-xs uppercase tracking-[0.18em] text-foreground/80 font-semibold">
+            Generating…
+          </span>
+          <span className="text-[11px] text-muted-foreground">This usually takes ~30s</span>
+        </div>
+      </div>
+      <div className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-[hsl(35_90%_55%)]/90 backdrop-blur text-[10px] uppercase tracking-wide text-black font-semibold">
+        Generating
+      </div>
+    </article>
+  );
+}
