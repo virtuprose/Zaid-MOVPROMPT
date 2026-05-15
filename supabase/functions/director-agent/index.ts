@@ -7,9 +7,9 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-// In-memory rate limiter
+// Best-effort in-memory throttle (per-instance only — see plan note)
 const RL_WINDOW = 60_000;
-const RL_MAX = 8;
+const RL_MAX = 12;
 const log = new Map<string, number[]>();
 function rateLimited(ip: string) {
   const now = Date.now();
@@ -19,6 +19,9 @@ function rateLimited(ip: string) {
   ts.push(now);
   return false;
 }
+
+// Editable in one place
+const VIDEO_MODELS = ["Seedance Pro", "Veo 3", "Kling 2"];
 
 const SYSTEM_PROMPT = `You are an AI Director — a professional cinematographer and creative director who turns a user's brief into a polished, production-ready cinematic prompt for AI video generation.
 
@@ -35,7 +38,7 @@ WHEN YOU GENERATE A PROMPT:
 - The \`prompt\` field is the final cinematic prompt the user will paste into a video model. Write it as a single dense paragraph (60–140 words), packed with concrete visual detail: subject + action, camera (lens, angle, movement), lighting (key/fill/practicals, time of day, color temp), environment, mood, color palette, film/look reference if relevant.
 - The \`breakdown\` is a structured snapshot of your decisions for the user to scan and tweak.
 - ALWAYS fill \`breakdown.negative_prompt\` with concrete things to avoid (face artifacts, motion blur, text/watermark, modern items if vintage, etc).
-- ALWAYS fill \`breakdown.model_recommendation\` with one of: Seedance Pro, Veo 3, Kling 2, plus a 4–8 word reason. Pick what genuinely fits the shot.
+- ALWAYS fill \`breakdown.model_recommendation\` with one of: ${VIDEO_MODELS.join(", ")}, plus a 4–8 word reason. Pick what genuinely fits the shot.
 - ALWAYS fill \`breakdown.film_emulation\` if a film/look reference is implied (stock + grade), otherwise leave blank.
 - Always be opinionated. If the brief is vague, MAKE strong creative choices and explain them in \`directors_note\`.
 
@@ -94,15 +97,18 @@ const TOOLS = [
               duration_hint: { type: "string", description: "e.g. '5s' or '10s'." },
               film_emulation: {
                 type: "string",
-                description: "Film stock / color grading / aesthetic notes (e.g. '35mm Kodak Portra, teal-orange grade').",
+                description:
+                  "Film stock / color grading / aesthetic notes (e.g. '35mm Kodak Portra, teal-orange grade').",
               },
               negative_prompt: {
                 type: "string",
-                description: "Comma-separated negatives the model should avoid (e.g. 'blurry face, motion blur, watermark, text overlay').",
+                description:
+                  "Comma-separated negatives the model should avoid (e.g. 'blurry face, motion blur, watermark, text overlay').",
               },
               model_recommendation: {
                 type: "string",
-                description: "Single short line: which model fits best and why (e.g. 'Seedance Pro — best for portrait + film grain').",
+                description:
+                  "Single short line: which model fits best and why (e.g. 'Seedance Pro — best for portrait + film grain').",
               },
             },
             required: ["subject", "camera", "lighting", "mood", "negative_prompt", "model_recommendation"],
@@ -123,7 +129,7 @@ const TOOLS = [
     function: {
       name: "request_video_generation",
       description:
-        "User explicitly asked to generate the actual video. Currently returns coming-soon — the seam exists for future integration.",
+        "User explicitly asked to render the actual video. The frontend will route this to the video-generation pipeline.",
       parameters: {
         type: "object",
         properties: {
@@ -139,6 +145,28 @@ const TOOLS = [
     },
   },
 ];
+
+async function callGatewayWithRetry(body: unknown, apiKey: string): Promise<Response> {
+  const delays = [0, 500, 1500];
+  let lastResp: Response | null = null;
+  for (let i = 0; i < delays.length; i++) {
+    if (delays[i]) await new Promise((r) => setTimeout(r, delays[i]));
+    const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+    // Don't retry on auth/credit/rate-limit errors — surface them
+    if (resp.ok || resp.status === 402 || resp.status === 429 || resp.status === 401) {
+      return resp;
+    }
+    lastResp = resp;
+  }
+  return lastResp!;
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -176,14 +204,15 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { messages, attachments } = body as {
+    const { messages, attachments, stream } = body as {
       messages: Array<{ role: "user" | "assistant"; content: string }>;
       attachments?: Array<{
         kind: "image" | "video_keyframes" | "audio_transcript" | "document";
         name: string;
-        url?: string; // public/signed URL for images/keyframes
-        text?: string; // transcript / parsed doc text
+        url?: string;
+        text?: string;
       }>;
+      stream?: boolean;
     };
 
     if (!Array.isArray(messages) || messages.length === 0) {
@@ -207,18 +236,14 @@ serve(async (req) => {
       });
     }
 
-    // Build attachment context block
     let attachmentBlock = "";
     const imageUrls: string[] = [];
     if (Array.isArray(attachments) && attachments.length > 0) {
       attachmentBlock = "\n\n═══ ATTACHED REFERENCES ═══\n";
       for (const a of attachments.slice(0, 12)) {
-        if (a.kind === "image" && a.url) {
+        if ((a.kind === "image" || a.kind === "video_keyframes") && a.url) {
           imageUrls.push(a.url);
-          attachmentBlock += `- Image: ${a.name}\n`;
-        } else if (a.kind === "video_keyframes" && a.url) {
-          imageUrls.push(a.url);
-          attachmentBlock += `- Video keyframe: ${a.name}\n`;
+          attachmentBlock += `- ${a.kind === "image" ? "Image" : "Video keyframe"}: ${a.name}\n`;
         } else if (a.kind === "audio_transcript" && a.text) {
           attachmentBlock += `- Voice brief transcript (${a.name}): "${a.text.slice(0, 1500)}"\n`;
         } else if (a.kind === "document" && a.text) {
@@ -227,7 +252,6 @@ serve(async (req) => {
       }
     }
 
-    // Build multimodal last user message if we have images
     const last = messages[messages.length - 1];
     const prior = messages.slice(0, -1);
     const lastUserContent: any =
@@ -244,19 +268,15 @@ serve(async (req) => {
       { role: last.role, content: lastUserContent },
     ];
 
-    const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-3.1-pro-preview",
-        messages: aiMessages,
-        tools: TOOLS,
-        tool_choice: "auto",
-      }),
-    });
+    const requestBody = {
+      model: "google/gemini-3.1-pro-preview",
+      messages: aiMessages,
+      tools: TOOLS,
+      tool_choice: "auto" as const,
+      stream: !!stream,
+    };
+
+    const aiResp = await callGatewayWithRetry(requestBody, LOVABLE_API_KEY);
 
     if (!aiResp.ok) {
       const t = await aiResp.text();
@@ -274,11 +294,19 @@ serve(async (req) => {
         );
       }
       return new Response(JSON.stringify({ error: "AI gateway error" }), {
-        status: 500,
+        status: 502,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
+    // Streaming: pipe through
+    if (stream) {
+      return new Response(aiResp.body, {
+        headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
+      });
+    }
+
+    // Non-streaming JSON path
     const data = await aiResp.json();
     const choice = data.choices?.[0]?.message;
     const toolCall = choice?.tool_calls?.[0];
@@ -291,27 +319,11 @@ serve(async (req) => {
       } catch {
         args = {};
       }
-
-      if (fnName === "request_video_generation") {
-        return new Response(
-          JSON.stringify({
-            kind: "video_request",
-            status: "coming_soon",
-            message:
-              "Video generation arrives in a future update. Your prompt is ready to paste into Seedance, Veo, or Kling now.",
-            args,
-          }),
-          { headers: { ...corsHeaders, "Content-Type": "application/json" } },
-        );
-      }
-
-      return new Response(
-        JSON.stringify({ kind: fnName, ...args }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
+      return new Response(JSON.stringify({ kind: fnName, ...args }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-    // Fallback to plain text
     return new Response(
       JSON.stringify({ kind: "message", content: choice?.content || "..." }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
