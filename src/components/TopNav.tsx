@@ -157,7 +157,7 @@ export function TopNav() {
                 className="hidden sm:inline-flex h-9 rounded-full px-3 gap-1.5 text-[13px] bg-transparent text-foreground border border-[#27272A] hover:bg-[hsl(240_5%_10%)] hover:border-border"
               >
                 <FolderOpen className="w-3.5 h-3.5 text-muted-foreground" />
-                Assets
+                Library
               </Button>
 
               <div className="hidden sm:block">
@@ -337,7 +337,7 @@ export function TopNav() {
                           navigate("/library");
                         }}
                       >
-                        <FolderOpen className="w-4 h-4 me-2" /> Assets
+                        <FolderOpen className="w-4 h-4 me-2" /> Library
                       </Button>
                       <Button
                         variant="ghost"
