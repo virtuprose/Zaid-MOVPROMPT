@@ -27,6 +27,7 @@ import {
   Pin,
   Trash2,
   MessageSquare,
+  Megaphone,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { trackPageVisit } from "@/lib/analytics";
@@ -169,6 +170,13 @@ export default function Director() {
               className="gap-1.5 justify-start"
             >
               <Plus className="w-4 h-4" /> New Task
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => navigate("/marketing")}
+              className="gap-1.5 justify-start rounded-md bg-gradient-to-br from-[hsl(340_85%_60%)] to-[hsl(355_85%_50%)] text-white hover:opacity-90 border-0"
+            >
+              <Megaphone className="w-4 h-4" /> Marketing Studio
             </Button>
             <button
               type="button"
