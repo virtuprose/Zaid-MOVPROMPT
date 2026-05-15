@@ -493,22 +493,31 @@ export default function MarketingStudio() {
           presets={FORMATS}
           selectedId={formatId}
           onSelect={setFormatId}
+          searchPlaceholder="Search formats… (try 'UGC' or 'unboxing')"
+          customLabel="Custom format"
+          customValue={customFormat}
+          onCustomChange={setCustomFormat}
           categories={[
-            { id: "ugc", label: "UGC" },
-            { id: "commercial", label: "Commercial" },
+            { id: "ugc", label: "UGC", tooltip: "Casual social-media formats" },
+            { id: "commercial", label: "Commercial", tooltip: "Polished brand formats" },
+            { id: "avatar", label: "Avatar", tooltip: "Avatar-led formats" },
+            { id: "animated", label: "Animated", tooltip: "Motion-graphic formats" },
           ]}
         />
         <PresetPickerDialog
           open={openPicker === "hook"}
           onOpenChange={(o) => !o && setOpenPicker(null)}
-          title="Hooks that stop the scroll"
+          title="Pick the hook that grabs"
           subtitle="The first 3 seconds decide if your ad gets watched or skipped. Pick a proven opener."
           presets={HOOKS}
           selectedId={hookId}
           onSelect={setHookId}
+          searchPlaceholder="Search hooks… (try 'POV' or 'question')"
           categories={[
-            { id: "stunt", label: "Stunt" },
-            { id: "subtle", label: "Subtle" },
+            { id: "surprise", label: "Surprise", tooltip: "Pattern interrupts and stunts" },
+            { id: "curiosity", label: "Curiosity", tooltip: "Open loops and reveals" },
+            { id: "bold-claim", label: "Bold claim", tooltip: "Statements and stats" },
+            { id: "emotional", label: "Emotional", tooltip: "Feeling-led openers" },
           ]}
         />
         <PresetPickerDialog
@@ -519,6 +528,8 @@ export default function MarketingStudio() {
           presets={SETTINGS}
           selectedId={settingId}
           onSelect={setSettingId}
+          searchPlaceholder="Search scenes… (try 'rooftop' or 'cafe')"
+          customLabel="Custom scene"
           categories={[
             { id: "realistic", label: "Real", tooltip: "Real-world settings — bedrooms, kitchens, streets" },
             { id: "unrealistic", label: "Stylized", tooltip: "Stylized scenes — surreal, dramatic, cinematic" },
