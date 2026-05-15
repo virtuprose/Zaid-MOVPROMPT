@@ -377,14 +377,6 @@ Rules:
       });
     }
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      return new Response(JSON.stringify({ error: "Service misconfigured" }), {
-        status: 503,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
     let attachmentBlock = "";
     const imageUrls: string[] = [];
     if (Array.isArray(attachments) && attachments.length > 0) {
