@@ -250,6 +250,73 @@ export default function Director() {
           </div>
         </div>
       </div>
+
+      <Dialog open={!!renameTarget} onOpenChange={(o) => !o && setRenameTarget(null)}>
+        <DialogContent className="rounded-2xl border-border/60 bg-[hsl(240_5%_8%)] sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-display text-2xl tracking-tight">Rename brief</DialogTitle>
+            <DialogDescription className="text-muted-foreground">
+              Give this brief a clearer name to find it faster later.
+            </DialogDescription>
+          </DialogHeader>
+          <Input
+            value={renameValue}
+            onChange={(e) => setRenameValue(e.target.value)}
+            placeholder="Untitled brief"
+            maxLength={120}
+            autoFocus
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                void confirmRename();
+              }
+            }}
+          />
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button variant="ghost" onClick={() => setRenameTarget(null)} className="rounded-full">
+              Cancel
+            </Button>
+            <Button
+              onClick={confirmRename}
+              disabled={!renameValue.trim()}
+              className="rounded-full bg-primary/15 text-primary border border-primary/30 hover:bg-primary/25"
+            >
+              Save name
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
+        <DialogContent className="rounded-2xl border-border/60 bg-[hsl(240_5%_8%)] sm:max-w-md">
+          <DialogHeader>
+            <div className="inline-flex items-center justify-center w-9 h-9 rounded-md bg-destructive/15 text-destructive mb-2">
+              <Trash2 className="w-4 h-4" />
+            </div>
+            <DialogTitle className="font-display text-2xl tracking-tight">
+              Delete this brief?
+            </DialogTitle>
+            <DialogDescription className="text-muted-foreground leading-relaxed">
+              <span className="text-foreground/90 font-medium">
+                {deleteTarget?.title || "Untitled brief"}
+              </span>{" "}
+              and its full conversation will be removed permanently. This can't be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button variant="ghost" onClick={() => setDeleteTarget(null)} className="rounded-full">
+              Keep brief
+            </Button>
+            <Button
+              onClick={confirmDelete}
+              variant="destructive"
+              className="rounded-full"
+            >
+              Delete permanently
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
