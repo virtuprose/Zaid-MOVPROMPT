@@ -31,6 +31,7 @@ type SessionRow = {
   title: string | null;
   updated_at: string;
   needsReply: boolean;
+  pinned: boolean;
 };
 
 export default function Director() {
@@ -54,8 +55,9 @@ export default function Director() {
     const load = async () => {
       const { data } = await supabase
         .from("director_sessions")
-        .select("id, title, updated_at, messages")
+        .select("id, title, updated_at, messages, pinned")
         .eq("user_id", user.id)
+        .order("pinned", { ascending: false })
         .order("updated_at", { ascending: false })
         .limit(30);
       if (active && data) {
@@ -64,7 +66,7 @@ export default function Director() {
             const msgs = Array.isArray(s.messages) ? s.messages : [];
             const last = msgs[msgs.length - 1];
             const needsReply = !!last && last.role === "assistant";
-            return { id: s.id, title: s.title, updated_at: s.updated_at, needsReply };
+            return { id: s.id, title: s.title, updated_at: s.updated_at, needsReply, pinned: !!s.pinned };
           }),
         );
       }
@@ -77,6 +79,48 @@ export default function Director() {
       clearInterval(t);
     };
   }, [user, sessionId]);
+
+  const handleRename = async (s: SessionRow) => {
+    const next = window.prompt("Rename brief", s.title || "Untitled brief");
+    if (next === null) return;
+    const trimmed = next.trim().slice(0, 120);
+    if (!trimmed || trimmed === s.title) return;
+    setSessions((prev) => prev.map((x) => (x.id === s.id ? { ...x, title: trimmed } : x)));
+    const { error } = await supabase
+      .from("director_sessions")
+      .update({ title: trimmed })
+      .eq("id", s.id);
+    if (error) toast.error("Couldn't rename brief");
+    else toast.success("Renamed");
+  };
+
+  const handleTogglePin = async (s: SessionRow) => {
+    const next = !s.pinned;
+    setSessions((prev) =>
+      [...prev.map((x) => (x.id === s.id ? { ...x, pinned: next } : x))].sort((a, b) => {
+        if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
+        return a.updated_at < b.updated_at ? 1 : -1;
+      }),
+    );
+    const { error } = await supabase
+      .from("director_sessions")
+      .update({ pinned: next })
+      .eq("id", s.id);
+    if (error) toast.error("Couldn't update pin");
+    else toast.success(next ? "Pinned" : "Unpinned");
+  };
+
+  const handleDelete = async (s: SessionRow) => {
+    if (!window.confirm(`Delete "${s.title || "Untitled brief"}"? This can't be undone.`)) return;
+    setSessions((prev) => prev.filter((x) => x.id !== s.id));
+    const { error } = await supabase.from("director_sessions").delete().eq("id", s.id);
+    if (error) {
+      toast.error("Couldn't delete brief");
+      return;
+    }
+    toast.success("Deleted");
+    if (sessionId === s.id) navigate("/director");
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -158,15 +202,16 @@ export default function Director() {
                           align="end"
                           onClick={(e) => e.stopPropagation()}
                         >
-                          <DropdownMenuItem onSelect={() => toast("Rename coming soon")}>
+                          <DropdownMenuItem onSelect={() => handleRename(s)}>
                             <Pencil className="w-4 h-4 mr-2" /> Edit
                           </DropdownMenuItem>
-                          <DropdownMenuItem onSelect={() => toast("Pin coming soon")}>
-                            <Pin className="w-4 h-4 mr-2" /> Pin
+                          <DropdownMenuItem onSelect={() => handleTogglePin(s)}>
+                            <Pin className={cn("w-4 h-4 mr-2", s.pinned && "fill-current text-accent")} />
+                            {s.pinned ? "Unpin" : "Pin"}
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
-                            onSelect={() => toast("Delete coming soon")}
+                            onSelect={() => handleDelete(s)}
                             className="text-destructive focus:text-destructive"
                           >
                             <Trash2 className="w-4 h-4 mr-2" /> Delete
