@@ -62,6 +62,17 @@ async function readJsonResponse(resp: Response) {
   }
 }
 
+function getLegacyFalUrls(provider: string, model: string, requestId: string) {
+  const base = provider.startsWith("kling")
+    ? "fal-ai/kling-video"
+    : model;
+
+  return {
+    statusUrl: `https://queue.fal.run/${base}/requests/${requestId}/status`,
+    responseUrl: `https://queue.fal.run/${base}/requests/${requestId}/response`,
+  };
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -148,12 +159,13 @@ serve(async (req) => {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
+      const legacyUrls = getLegacyFalUrls(job.provider, model, job.fal_request_id);
       const statusUrl =
         (job as { fal_status_url?: string | null }).fal_status_url ||
-        `https://queue.fal.run/${model}/requests/${job.fal_request_id}/status`;
+        legacyUrls.statusUrl;
       const responseUrl =
         (job as { fal_response_url?: string | null }).fal_response_url ||
-        `https://queue.fal.run/${model}/requests/${job.fal_request_id}/response`;
+        legacyUrls.responseUrl;
       const statusResp = await fetch(
         statusUrl,
         { headers: { Authorization: `Key ${FAL_KEY}` } },
