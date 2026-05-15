@@ -308,10 +308,26 @@ export function Composer({ value, onChange, attachments, onAttachmentsChange, on
 
           {(attachments.length > 0 || pendingCount > 0) && (
             <div className="flex flex-wrap gap-2 px-3 pb-2">
-              {attachments.map((a, i) => (
+              {attachments.map((a, i) => {
+                const mod = (a as any).moderation as
+                  | { state: "scanning" | "ok" | "blocked" | "unknown"; reason?: string; categories?: string[] }
+                  | undefined;
+                const blocked = mod?.state === "blocked";
+                const tooltip = blocked
+                  ? `Blocked: ${mod?.reason || "content policy"}${mod?.categories?.length ? ` (${mod.categories.join(", ")})` : ""}`
+                  : mod?.state === "scanning"
+                    ? `Scanning ${a.name}…`
+                    : mod?.state === "unknown"
+                      ? `Couldn't verify ${a.name}`
+                      : a.name;
+                return (
                 <Tooltip key={i}>
                   <TooltipTrigger asChild>
-                    <div className="group relative h-16 w-16 overflow-hidden rounded-lg bg-muted ring-1 ring-border">
+                    <div
+                      className={`group relative h-16 w-16 overflow-hidden rounded-lg bg-muted ring-1 transition-colors ${
+                        blocked ? "ring-2 ring-destructive" : "ring-border"
+                      }`}
+                    >
                       <span className="absolute left-0.5 top-0.5 z-10 inline-flex h-4 min-w-[16px] items-center justify-center rounded bg-accent px-1 text-[10px] font-semibold text-accent-foreground shadow">
                         {i + 1}
                       </span>
@@ -320,13 +336,37 @@ export function Composer({ value, onChange, attachments, onAttachmentsChange, on
                           src={(a as any).url}
                           alt={a.name}
                           loading="lazy"
-                          className="h-full w-full object-cover"
+                          className={`h-full w-full object-cover ${blocked ? "opacity-50" : ""}`}
                         />
                       ) : (
                         <div className="flex h-full w-full flex-col items-center justify-center gap-0.5 px-1 text-muted-foreground">
                           {iconFor(a)}
                           <span className="w-full truncate text-center text-[9px] leading-tight">{a.name}</span>
                         </div>
+                      )}
+                      {mod?.state === "scanning" && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-background/40 backdrop-blur-[1px]">
+                          <Loader2 className="h-4 w-4 animate-spin text-foreground/80" />
+                        </div>
+                      )}
+                      {mod && mod.state !== "scanning" && (
+                        <span
+                          className={`absolute bottom-0.5 left-0.5 z-10 inline-flex h-4 w-4 items-center justify-center rounded-full shadow ${
+                            blocked
+                              ? "bg-destructive text-destructive-foreground"
+                              : mod.state === "ok"
+                                ? "bg-emerald-500/90 text-white"
+                                : "bg-muted text-muted-foreground"
+                          }`}
+                        >
+                          {blocked ? (
+                            <ShieldAlert className="h-2.5 w-2.5" />
+                          ) : mod.state === "ok" ? (
+                            <ShieldCheck className="h-2.5 w-2.5" />
+                          ) : (
+                            <ShieldQuestion className="h-2.5 w-2.5" />
+                          )}
+                        </span>
                       )}
                       <button
                         type="button"
@@ -338,9 +378,10 @@ export function Composer({ value, onChange, attachments, onAttachmentsChange, on
                       </button>
                     </div>
                   </TooltipTrigger>
-                  <TooltipContent side="top">{a.name}</TooltipContent>
+                  <TooltipContent side="top">{tooltip}</TooltipContent>
                 </Tooltip>
-              ))}
+                );
+              })}
               {Array.from({ length: pendingCount }).map((_, i) => (
                 <div
                   key={`skeleton-${i}`}
