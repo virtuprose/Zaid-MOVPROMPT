@@ -99,7 +99,8 @@ export function PromptResultCard({ title, prompt, breakdown, directorsNote, onRe
   const film = breakdown.film_emulation;
   const negative = breakdown.negative_prompt;
   const recommendation = breakdown.model_recommendation;
-  const recommendedModel = detectRecommendedModel(recommendation);
+  const recommendedModel = pickRecommendedModel(recommendation);
+  const externalLink = EXTERNAL_LINKS[recommendedModel.family];
 
   const fullText = [
     `# ${title}`,
