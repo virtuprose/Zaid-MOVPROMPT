@@ -11,8 +11,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  ArrowLeft,
-  Clapperboard,
   Plus,
   ChevronDown,
   MoreVertical,
