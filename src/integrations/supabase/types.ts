@@ -638,6 +638,56 @@ export type Database = {
         }
         Relationships: []
       }
+      video_jobs: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          error: string | null
+          fal_request_id: string | null
+          id: string
+          prompt: string
+          provider: string
+          session_id: string | null
+          status: string
+          user_id: string
+          video_url: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          error?: string | null
+          fal_request_id?: string | null
+          id?: string
+          prompt: string
+          provider: string
+          session_id?: string | null
+          status?: string
+          user_id: string
+          video_url?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          error?: string | null
+          fal_request_id?: string | null
+          id?: string
+          prompt?: string
+          provider?: string
+          session_id?: string | null
+          status?: string
+          user_id?: string
+          video_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "video_jobs_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "director_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       welcome_popups: {
         Row: {
           created_at: string
