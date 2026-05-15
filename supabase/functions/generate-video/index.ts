@@ -173,7 +173,13 @@ serve(async (req) => {
     }
 
     // Submit new job
-    const body = await req.json();
+    let body: any = {};
+    try {
+      const text = await req.text();
+      body = text ? JSON.parse(text) : {};
+    } catch (_e) {
+      body = {};
+    }
     const { prompt, provider = "seedance-v1-pro", session_id } = body as {
       prompt?: string;
       provider?: string;
