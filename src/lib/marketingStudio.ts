@@ -14,7 +14,12 @@ export type StudioPreset = {
   category?: string;
   /** Optional emoji icon used as a thumbnail fallback. */
   emoji?: string;
+  /** Optional cover image URL shown in preset cards. */
+  image?: string;
 };
+
+const u = (id: string) =>
+  `https://images.unsplash.com/${id}?w=600&auto=format&fit=crop&q=80`;
 
 export const FORMATS: StudioPreset[] = [
   {
