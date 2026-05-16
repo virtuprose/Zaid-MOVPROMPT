@@ -40,7 +40,7 @@ type Brief = {
   setting?: { label?: string; fragment?: string; custom?: string };
   brand?: { name?: string; description?: string; tagline?: string; audience?: string } | null;
   character?: { name?: string; role?: string; description?: string } | null;
-  location?: { place?: string } | null;
+  location?: { place?: string; hasImage?: boolean } | null;
 };
 
 function buildUserContent(b: Brief): string {
