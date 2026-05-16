@@ -82,6 +82,13 @@ function normalizeFalQueueUrl(
   if (!url) return null;
   const trimmed = url.replace(/\/+$/, "");
 
+  if (kind === "response") {
+    if (trimmed.endsWith("/status")) return trimmed.replace(/\/status$/, "");
+    if (trimmed.endsWith("/cancel")) return trimmed.replace(/\/cancel$/, "");
+    if (trimmed.endsWith("/response")) return trimmed.replace(/\/response$/, "");
+    return trimmed;
+  }
+
   if (trimmed.endsWith(`/${kind}`)) return trimmed;
   if (trimmed.endsWith("/status")) return trimmed.replace(/\/status$/, `/${kind}`);
   if (trimmed.endsWith("/response")) return trimmed.replace(/\/response$/, `/${kind}`);
@@ -93,7 +100,7 @@ function getFallbackFalUrls(model: string, requestId: string) {
   const base = `https://queue.fal.run/${model}/requests/${requestId}`;
   return {
     statusUrl: `${base}/status`,
-    responseUrl: `${base}/response`,
+    responseUrl: base,
     cancelUrl: `${base}/cancel`,
   };
 }
@@ -272,7 +279,7 @@ serve(async (req) => {
             [
               normalizeFalQueueUrl(statusData.response_url as string | null | undefined, "response"),
               normalizeFalQueueUrl((job as { fal_response_url?: string | null }).fal_response_url, "response"),
-              statusUrl.replace(/\/status$/, "/response"),
+              statusUrl.replace(/\/status$/, ""),
               fallbackUrls.responseUrl,
             ].filter((value): value is string => Boolean(value)),
           ),
@@ -490,7 +497,7 @@ serve(async (req) => {
       fallbackUrls.statusUrl;
     const normalizedResponseUrl =
       normalizeFalQueueUrl(submitData.response_url as string | null | undefined, "response") ||
-      normalizedStatusUrl.replace(/\/status$/, "/response");
+      normalizedStatusUrl.replace(/\/status$/, "");
 
     await admin
       .from("video_jobs")
