@@ -1,6 +1,16 @@
 import { useEffect, useState } from "react";
-import { Loader2, Film, Play, Download, AlertCircle } from "lucide-react";
+import { Loader2, Film, Play, Download, AlertCircle, Heart, Trash2 } from "lucide-react";
 import { Copy, Check, BookmarkPlus, Sparkles, Wand2, ExternalLink, Maximize2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
