@@ -771,6 +771,7 @@ export type Database = {
           id: string
           prompt: string
           provider: string
+          reference_image_urls: Json | null
           session_id: string | null
           status: string
           user_id: string
@@ -786,6 +787,7 @@ export type Database = {
           id?: string
           prompt: string
           provider: string
+          reference_image_urls?: Json | null
           session_id?: string | null
           status?: string
           user_id: string
@@ -801,6 +803,7 @@ export type Database = {
           id?: string
           prompt?: string
           provider?: string
+          reference_image_urls?: Json | null
           session_id?: string | null
           status?: string
           user_id?: string
