@@ -689,7 +689,7 @@ export default function MarketingStudio() {
             </div>
 
             {ready && (
-              <div className="mt-4 rounded-xl border border-border/30 bg-muted/10 p-3 text-xs text-muted-foreground">
+              <div className="mt-4 rounded-xl border border-border/30 bg-muted/10 px-3 py-2 text-[11px] text-muted-foreground">
                 <span className="text-foreground/80 font-medium">Renders as:</span>{" "}
                 {hook?.label} · {format?.label || "Custom format"} · {setting?.label || "Custom scene"} · {renderSettings.aspect_ratio} · {renderSettings.duration}s · {renderSettings.resolution} · audio on
               </div>
