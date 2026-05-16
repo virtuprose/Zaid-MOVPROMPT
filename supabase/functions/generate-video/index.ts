@@ -10,7 +10,11 @@ const corsHeaders = {
 // Stable model ids ↔ fal.ai endpoints. Keep in sync with
 // src/lib/director/videoModels.ts on the frontend.
 const FAL_MODELS: Record<string, string> = {
-  // Kling
+  // Kling v3
+  "kling-v3-pro": "fal-ai/kling-video/v3/pro/text-to-video",
+  "kling-v3-standard": "fal-ai/kling-video/v3/standard/text-to-video",
+  "kling-v3-4k": "fal-ai/kling-video/v3/4k/text-to-video",
+  // Kling (legacy)
   "kling-v2.5-turbo-pro": "fal-ai/kling-video/v2.5-turbo/pro/text-to-video",
   "kling-v2.1-master": "fal-ai/kling-video/v2.1/master/text-to-video",
   "kling-v2-master": "fal-ai/kling-video/v2/master/text-to-video",
