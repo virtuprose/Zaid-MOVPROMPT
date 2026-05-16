@@ -1,34 +1,48 @@
 ## Goal
+Make in-flight ad renders survive page refresh on `/marketing`, and show clearer in-progress UI.
 
-When the user picks a Format + Hook + Setting (with optional Product / Avatar / Location attached), automatically write a ready-to-shoot scene description into the describe box using AI. Re-write it every time any of those picks change.
+## Why it breaks today
+`MarketingStudio.tsx` initial load only fetches jobs with a `video_url` (completed). Queued/processing jobs from `video_jobs` are not re-hydrated, so the "Generating…" tile vanishes on refresh even though the job is still running server-side on fal.ai.
 
-## How it works
+## Changes
 
-1. **Trigger**: a `useEffect` watches `formatId | hookId | settingId | customFormat | customSetting | brandKit?.id | characterKit?.id | location.place | subject`. As soon as the required trio (format-or-custom, hook, setting-or-custom) is present, fire a debounced (400ms) call to a new edge function `write-ad-scene`.
-2. **Edge function `write-ad-scene`** (Lovable AI, `google/gemini-3-flash-preview`):
-   - Input: the three preset fragments (looked up server-side from the same `FORMATS` / `HOOKS` / `SETTINGS` ids — duplicated in the function), subject (product|app), brand `{name, description, tagline, audience}`, character `{name, role, description}`, location `{place}`.
-   - Output (structured): `{ scene: string }` — 2–4 sentences, present tense, names the product and avatar explicitly, opens on the hook beat and ends on a hero shot.
-   - System prompt tells it to write a director's beat-by-beat, not marketing copy, and to keep it under 90 words.
-3. **Apply to the box**: result replaces `master` state. Per the user's pick, every new trio change rewrites — including over edits the user made.
-4. **UX while writing**:
-   - Textarea shows a small inline shimmer placeholder ("Writing scene…") while the fetch is in flight; disable Generate during that window.
-   - Abort in-flight request when a new trio change comes in (`AbortController`).
-   - On AI error: keep whatever was there, toast a small "Couldn't draft scene — type your own."
-5. **Prompt composition stays the same** — `composeStudioPrompt()` already uses `master` as the Story line, so the AI-written scene flows straight into the final Seedance prompt alongside the Brand / Character / reference image lines.
+### 1. Hydrate pending jobs on mount (`src/pages/MarketingStudio.tsx`)
+Replace the single completed-only query with two parallel reads:
+- Completed (current query) → `userAds`
+- Active: `status in ('queued','processing')` from the last ~24h → `pendingJobs`
 
-## Scope
+```ts
+const [{ data: done }, { data: active }] = await Promise.all([
+  supabase.from("video_jobs")
+    .select("id,video_url,created_at")
+    .eq("user_id", user.id).not("video_url","is",null)
+    .order("created_at",{ascending:false}).limit(24),
+  supabase.from("video_jobs")
+    .select("id,status,provider,prompt,created_at")
+    .eq("user_id", user.id)
+    .in("status", ["queued","processing"])
+    .gte("created_at", new Date(Date.now()-24*3600*1000).toISOString())
+    .order("created_at",{ascending:false}),
+]);
+```
 
-- New: `supabase/functions/write-ad-scene/index.ts` (Lovable AI Gateway, structured output via `Output.object`).
-- Edited: `src/pages/MarketingStudio.tsx` — add the debounced effect, abort controller, "Writing scene…" state, and replace `master` with AI result.
-- Edited: `src/lib/director/api.ts` — thin `writeAdScene(brief): Promise<string>` helper.
+The existing polling `useEffect` (line 329) will then pick them up automatically and move them to `userAds` when fal returns the URL.
 
-## Out of scope
+### 2. Surface progress in the gallery
+Render `pendingJobs` as skeleton tiles above `userAds` with a spinner + "Rendering… ~1–3 min" label, so users know what's in flight after a refresh.
 
-- No "Regenerate" button, no template/manual modes (user picked auto-rewrite-every-time).
-- No changes to Format / Hook / Setting catalogs, render endpoint, or reference-image plumbing.
-- No persistence of generated drafts — they live only in component state.
+### 3. (Optional) Toast on rehydrate
+If `pendingJobs.length > 0` after mount: `toast.message("Resuming N render(s) in progress…")`.
 
-## Notes / risks
+## Not in scope
+- No edge function changes — `generate-video` already submits to fal and stores `fal_request_id`, and `pollVideoJob` already calls fal status on demand. Nothing server-side needs to change.
+- No queue/worker rework (the fal queue already plays that role).
+- No change to the "describe" auto-writer.
 
-- Overwriting user edits on every chip change is by design (user's pick). If a user types and then nudges a chip, their text is replaced. We can add a "lock" toggle later if it becomes annoying.
-- Latency ~1–2 s per pick. The debounce + shimmer cover it; Generate is gated until the draft lands.
+## Files touched
+- `src/pages/MarketingStudio.tsx` — hydrate query, render pending tiles.
+
+## Validation
+1. Start a render → refresh page → pending tile reappears, polling resumes, completes into gallery.
+2. Old completed renders still appear in `userAds`.
+3. Jobs older than 24h that never finished are ignored (avoid zombie spinners).

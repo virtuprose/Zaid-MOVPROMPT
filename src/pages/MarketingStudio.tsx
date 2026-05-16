@@ -142,15 +142,28 @@ export default function MarketingStudio() {
     if (!user) return;
     let cancelled = false;
     void (async () => {
-      const { data } = await supabase
-        .from("video_jobs")
-        .select("id,video_url,created_at")
-        .eq("user_id", user.id)
-        .not("video_url", "is", null)
-        .order("created_at", { ascending: false })
-        .limit(24);
-      if (!cancelled && data) {
-        setUserAds(data.filter((d) => d.video_url) as UserAd[]);
+      const since = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
+      const [{ data: done }, { data: active }] = await Promise.all([
+        supabase
+          .from("video_jobs")
+          .select("id,video_url,created_at")
+          .eq("user_id", user.id)
+          .not("video_url", "is", null)
+          .order("created_at", { ascending: false })
+          .limit(24),
+        supabase
+          .from("video_jobs")
+          .select("id,status,provider,prompt,created_at")
+          .eq("user_id", user.id)
+          .in("status", ["queued", "processing"])
+          .gte("created_at", since)
+          .order("created_at", { ascending: false }),
+      ]);
+      if (cancelled) return;
+      if (done) setUserAds(done.filter((d) => d.video_url) as UserAd[]);
+      if (active && active.length > 0) {
+        setPendingJobs(active as unknown as VideoJob[]);
+        toast.message(`Resuming ${active.length} render${active.length > 1 ? "s" : ""} in progress…`);
       }
     })();
     return () => { cancelled = true; };
