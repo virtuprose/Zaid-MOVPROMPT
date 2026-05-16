@@ -2,6 +2,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { detectMediaAsk } from "@/lib/director/questionIntent";
+import {
+  detectSuggestion,
+  isChipActive,
+  toggleChip,
+} from "@/lib/director/questionSuggestions";
 import { QuestionUploadSlot } from "./QuestionUploadSlot";
 import type { Attachment } from "@/lib/director/ingest";
 
