@@ -610,6 +610,7 @@ export default function MarketingStudio() {
               </div>
             )}
           </div>
+          </div>
 
           {/* Ads gallery */}
           <section ref={galleryRef} className="mt-14 scroll-mt-20">
