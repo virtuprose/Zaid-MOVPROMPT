@@ -1,22 +1,22 @@
-## Status
+## Change
 
-The current `DirectorChat.tsx` already does exactly what you asked for:
+Remove the visible border around the composer (the rounded card that wraps the textarea, attach button, model picker, and send button).
 
-```ts
-const isEmpty = bubbles.length === 1 && bubbles[0].role === "assistant";
+## File
+
+`src/components/director/Composer.tsx`, line 224:
+
+```diff
+- className={`relative rounded-2xl border bg-card transition-colors ${
+-   highlight ? "border-dashed border-accent bg-accent/5" : "border-border"
+- }`}
++ className={`relative rounded-2xl bg-card transition-colors ${
++   highlight ? "ring-2 ring-dashed ring-accent bg-accent/5" : ""
++ }`}
 ```
 
-The hero (animated logo + greeting + composer + category tabs + arrow-prefixed suggestions) renders while `isEmpty` is true and collapses into the regular chat stream the moment the user sends their first message — matching your "as soon as user sends first message" choice.
+The default 1px border is dropped. The drag-over "highlight" state is preserved using a ring so users still get clear feedback when dragging files onto the composer.
 
-## Plan
+## Out of scope
 
-No code changes required. Verification only:
-
-1. Open `/director`, confirm the hero shows on load with the floating + glowing logo.
-2. Focus the composer → glow speeds up (listening state).
-3. Switch tabs (Cinema / UGC / Storyboard / Animate) → 3 arrow-prefixed suggestions swap instantly.
-4. Click a suggestion → fills composer, hero still visible.
-5. Send the message → hero is replaced by the standard chat scroll layout with the presence header.
-6. Click "New brief" reset → hero returns.
-
-If any of these steps fails in the live preview, I'll patch the specific issue. Otherwise the redesign is already meeting the spec.
+No other borders are touched (question cards, suggestion rows, attachment thumbs, etc.).

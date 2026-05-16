@@ -221,8 +221,8 @@ export function Composer({ value, onChange, attachments, onAttachmentsChange, on
             setDrag(false);
             handleFiles(e.dataTransfer.files);
           }}
-          className={`relative rounded-2xl border bg-card transition-colors ${
-            highlight ? "border-dashed border-accent bg-accent/5" : "border-border"
+          className={`relative rounded-2xl bg-card transition-colors ${
+            highlight ? "ring-2 ring-accent bg-accent/5" : ""
           }`}
         >
           {highlight && (
