@@ -650,7 +650,7 @@ export default function MarketingStudio() {
 
                 <Button
                   size="lg"
-                  disabled={!hasInputs || submitting}
+                  disabled={!hasInputs || submitting || drafting}
                   onClick={startGenerate}
                   className={cn(
                     "rounded-2xl px-6 h-12 font-semibold text-base transition-all",
