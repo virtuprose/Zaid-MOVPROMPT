@@ -236,6 +236,13 @@ function DirectorChatInner() {
         title = resp.title;
       } else if (resp.kind === "ask_clarification") {
         added = { role: "questions", questions: resp.questions, reason: resp.reason };
+      } else if (resp.kind === "ask_model_choice") {
+        added = {
+          role: "model_choice",
+          recommended_model_id: resp.recommended_model_id,
+          alternatives: resp.alternatives,
+          reason: resp.reason,
+        };
       } else if (resp.kind === "request_video_generation") {
         // Trigger render directly
         added = {
