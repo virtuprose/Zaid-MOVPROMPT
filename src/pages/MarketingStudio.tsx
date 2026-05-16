@@ -1076,13 +1076,13 @@ function PendingAdCard() {
       aria-busy="true"
       className="group relative overflow-hidden rounded-2xl border border-[hsl(35_90%_55%)]/60 bg-muted/10 shadow-[0_0_24px_hsl(35_90%_55%/0.25)]"
     >
-      <div className="aspect-[3/4] relative bg-gradient-to-br from-muted/40 via-muted/20 to-muted/40 animate-pulse">
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
-          <Loader2 className="w-8 h-8 text-[hsl(35_90%_55%)] animate-spin" />
+      <div className="aspect-[3/4] relative bg-gradient-to-br from-muted/25 via-muted/10 to-muted/25 animate-pulse">
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2.5">
+          <Loader2 className="w-6 h-6 text-[hsl(35_90%_55%)] animate-spin" />
           <span className="text-xs uppercase tracking-[0.18em] text-foreground/80 font-semibold">
             Generating…
           </span>
-          <span className="text-[11px] text-muted-foreground">Rendering — usually 1–3 minutes</span>
+          <span className="text-[10.5px] text-muted-foreground">Rendering — usually 1–3 minutes</span>
         </div>
       </div>
       <div className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-[hsl(35_90%_55%)]/90 backdrop-blur text-[10px] uppercase tracking-wide text-black font-semibold">
