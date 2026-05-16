@@ -698,7 +698,7 @@ export default function MarketingStudio() {
           </div>
 
           {/* Ads gallery */}
-          <section ref={galleryRef} className="mt-14 scroll-mt-20">
+          <section ref={galleryRef} className="mt-10 scroll-mt-20">
             {mode === "empty" && (
               <>
                 <SectionHeader
