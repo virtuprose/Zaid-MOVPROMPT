@@ -18,6 +18,7 @@ import {
 import { toast } from "sonner";
 import { Composer } from "./Composer";
 import { PromptResultCard } from "./PromptResultCard";
+import { ModelChoiceCard } from "./ModelChoiceCard";
 import {
   streamDirectorAgent,
   submitVideoJob,
