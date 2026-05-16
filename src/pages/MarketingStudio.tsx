@@ -351,6 +351,7 @@ export default function MarketingStudio() {
               setCharacterOpen(true);
             }}
             onDelete={(id) => void deleteCharacter(id)}
+            onManageAll={() => setManageCharactersOpen(true)}
           />
 
           {/* Composer card */}
