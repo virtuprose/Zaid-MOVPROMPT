@@ -900,6 +900,26 @@ export default function MarketingStudio() {
             void doGenerate();
           }}
         />
+
+        <AlertDialog open={cancelJobId !== null} onOpenChange={(o) => !o && setCancelJobId(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Cancel this generation?</AlertDialogTitle>
+              <AlertDialogDescription>
+                You won't be charged for canceled jobs, but any in-progress work will be lost.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Keep generating</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={confirmCancelJob}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Cancel generation
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </TooltipProvider>
   );
