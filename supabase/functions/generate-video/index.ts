@@ -305,12 +305,16 @@ serve(async (req) => {
 
 
     // Submit new job
-    let { prompt, provider = "seedance-v1-pro", session_id, options } = body as {
+    let { prompt, provider = "seedance-v1-pro", session_id, options, reference_image_urls } = body as {
       prompt?: string;
       provider?: string;
       session_id?: string;
       options?: VideoOptions;
+      reference_image_urls?: string[];
     };
+    const refImages = Array.isArray(reference_image_urls)
+      ? reference_image_urls.filter((u): u is string => typeof u === "string" && u.length > 0)
+      : [];
 
     if ((!prompt || !prompt.trim()) && session_id) {
       const { data: session } = await admin
