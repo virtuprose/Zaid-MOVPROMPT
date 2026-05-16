@@ -145,7 +145,7 @@ export function QuestionCard({ reason, questions, disabled, attachments = [], on
                   type="text"
                   value={value}
                   onChange={(e) => setAnswer(i, e.target.value)}
-                  placeholder="Enter your answer"
+                  placeholder={ask ? "Add a note (optional)" : "Enter your answer"}
                   className="w-full rounded-full bg-background/30 border border-transparent px-4 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:bg-background/50 focus:border-border/40 transition-colors"
                 />
               )}
