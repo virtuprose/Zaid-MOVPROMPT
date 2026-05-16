@@ -23,6 +23,12 @@ export type Breakdown = {
 export type AgentResponse =
   | { kind: "ask_clarification"; questions: string[]; reason: string }
   | {
+      kind: "ask_model_choice";
+      recommended_model_id: string;
+      alternatives?: string[];
+      reason: string;
+    }
+  | {
       kind: "generate_prompt";
       title: string;
       prompt: string;
