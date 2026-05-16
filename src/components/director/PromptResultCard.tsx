@@ -121,6 +121,36 @@ export function PromptResultCard({ title, prompt, breakdown, directorsNote, onRe
   const [generating, setGenerating] = useState(false);
   const [pendingModel, setPendingModel] = useState<VideoModel | null>(null);
   const [pendingRender, setPendingRender] = useState<PendingRender | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  const toggleLike = async () => {
+    if (!job) return;
+    const next = !job.liked;
+    setJob({ ...job, liked: next });
+    const { error } = await supabase
+      .from("video_jobs")
+      .update({ liked: next })
+      .eq("id", job.id);
+    if (error) {
+      setJob({ ...job, liked: !next });
+      toast.error("Could not update like");
+    }
+  };
+
+  const deleteVideo = async () => {
+    if (!job) return;
+    setDeleting(true);
+    const { error } = await supabase.from("video_jobs").delete().eq("id", job.id);
+    setDeleting(false);
+    setConfirmDelete(false);
+    if (error) {
+      toast.error("Could not delete video");
+      return;
+    }
+    setJob(null);
+    toast.success("Video deleted");
+  };
 
   const cameraLighting = [breakdown.camera, breakdown.lighting].filter(Boolean).join(" · ");
   const film = breakdown.film_emulation;
