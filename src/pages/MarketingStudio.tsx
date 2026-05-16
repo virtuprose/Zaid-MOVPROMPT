@@ -997,7 +997,7 @@ function CommunityCard({ ad, onClick }: { ad: FeaturedAd; onClick: () => void })
       onClick={onClick}
       className="group relative overflow-hidden rounded-2xl border border-border/40 bg-muted/10 cursor-pointer transition-all hover:border-[hsl(35_90%_55%)]/60 hover:shadow-[0_0_24px_hsl(35_90%_55%/0.25)]"
     >
-      <div className="aspect-[9/12] overflow-hidden">
+      <div className="aspect-[3/4] overflow-hidden">
         <video
           src={ad.url}
           autoPlay
@@ -1034,7 +1034,7 @@ function CommunityGrid({
   onPick: (ad: FeaturedAd) => void;
 }) {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
       {ads.map((ad) => (
         <CommunityCard key={ad.url} ad={ad} onClick={() => onPick(ad)} />
       ))}
@@ -1048,7 +1048,7 @@ function UserAdCard({ ad, onClick }: { ad: UserAd; onClick: () => void }) {
       onClick={onClick}
       className="group relative overflow-hidden rounded-2xl border border-border/40 bg-muted/10 cursor-pointer transition-all hover:border-[hsl(35_90%_55%)]/60 hover:shadow-[0_0_24px_hsl(35_90%_55%/0.25)]"
     >
-      <div className="aspect-[9/12] overflow-hidden">
+      <div className="aspect-[3/4] overflow-hidden">
         <video
           src={ad.video_url}
           autoPlay
@@ -1076,7 +1076,7 @@ function PendingAdCard() {
       aria-busy="true"
       className="group relative overflow-hidden rounded-2xl border border-[hsl(35_90%_55%)]/60 bg-muted/10 shadow-[0_0_24px_hsl(35_90%_55%/0.25)]"
     >
-      <div className="aspect-[9/12] relative bg-gradient-to-br from-muted/40 via-muted/20 to-muted/40 animate-pulse">
+      <div className="aspect-[3/4] relative bg-gradient-to-br from-muted/40 via-muted/20 to-muted/40 animate-pulse">
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
           <Loader2 className="w-8 h-8 text-[hsl(35_90%_55%)] animate-spin" />
           <span className="text-xs uppercase tracking-[0.18em] text-foreground/80 font-semibold">
