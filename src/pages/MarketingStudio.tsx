@@ -410,6 +410,71 @@ export default function MarketingStudio() {
     }
   };
 
+  const handleDownloadAd = async (ad: UserAd) => {
+    try {
+      const res = await fetch(ad.video_url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `vidoprompt-${ad.id.slice(0, 8)}.mp4`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast.success("Download started");
+    } catch (e: any) {
+      toast.error(e?.message || "Could not download video");
+    }
+  };
+
+  const handleToggleLike = async (ad: UserAd) => {
+    const next = !ad.liked;
+    setUserAds((prev) => prev.map((a) => (a.id === ad.id ? { ...a, liked: next } : a)));
+    const { error } = await supabase
+      .from("video_jobs")
+      .update({ liked: next })
+      .eq("id", ad.id);
+    if (error) {
+      setUserAds((prev) => prev.map((a) => (a.id === ad.id ? { ...a, liked: !next } : a)));
+      toast.error("Couldn't update like");
+    }
+  };
+
+  const confirmDeleteAd = async () => {
+    const adId = deleteAdId;
+    if (!adId) return;
+    setDeleteAdId(null);
+    const removed = userAds.find((a) => a.id === adId);
+    setUserAds((prev) => prev.filter((a) => a.id !== adId));
+    const { error } = await supabase
+      .from("video_jobs")
+      .update({ deleted_at: new Date().toISOString() })
+      .eq("id", adId);
+    if (error) {
+      if (removed) setUserAds((prev) => [removed, ...prev]);
+      toast.error("Couldn't delete ad");
+      return;
+    }
+    toast.success("Ad deleted", {
+      action: {
+        label: "Undo",
+        onClick: async () => {
+          const { error: undoErr } = await supabase
+            .from("video_jobs")
+            .update({ deleted_at: null })
+            .eq("id", adId);
+          if (undoErr) {
+            toast.error("Couldn't restore ad");
+            return;
+          }
+          if (removed) setUserAds((prev) => [removed, ...prev.filter((a) => a.id !== adId)]);
+        },
+      },
+    });
+  };
+
   const filteredAds = FEATURED_ADS.filter(
     (a) => filter === "All" || a.tag === filter,
   );
