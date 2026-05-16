@@ -42,7 +42,8 @@ type Bubble =
   | { role: "user"; content: string; attachments?: Attachment[] }
   | { role: "assistant"; content: string; animate?: boolean }
   | { role: "result"; data: Extract<AgentResponse, { kind: "generate_prompt" }>; partial?: boolean }
-  | { role: "questions"; questions: string[]; reason: string };
+  | { role: "questions"; questions: string[]; reason: string }
+  | { role: "model_choice"; recommended_model_id: string; alternatives?: string[]; reason: string; chosen?: string };
 
 const WELCOME: Bubble = {
   role: "assistant",
