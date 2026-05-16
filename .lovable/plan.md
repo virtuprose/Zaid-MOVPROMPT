@@ -1,42 +1,61 @@
-## Goal
+## Make the AI Director chat feel like a real person
 
-After clicking "Generate ad", the user should stay on `/marketing` and see a "generating…" card appear at the top of **Your recent ads**. When the render finishes, that card swaps to the finished video in place. No more navigating away to `/library`.
+Right now the Director responds with a single static shimmer ("Director is reading the brief…") and bubbles just appear. We'll add presence cues, identity, and human cadence — without touching backend or prompt logic.
 
-## Changes
+### 1. Give the Director a face and identity
+- Add an animated **assistant avatar** next to every assistant bubble: a soft glowing circle with the logo mark, with a subtle breathing/pulse halo when idle and a faster pulse when "thinking".
+- Add a small persistent header strip inside the chat with: avatar · name ("Director") · live status dot (green = ready, amber = thinking, cyan pulsing = typing) · short status text ("online", "thinking…", "typing…", "looking at your references…").
+- First-time greeting: replace the static welcome with a short staged sequence — avatar fades in, status flips to "typing…", then the welcome text streams in character-by-character.
 
-### 1. `src/pages/MarketingStudio.tsx` — keep the user on the page
+### 2. Replace the single shimmer with staged "presence" states
+While `busy`, cycle through realistic, context-aware micro-statuses instead of one line:
+  - "Looking at your references…" (only when attachments were sent)
+  - "Thinking about the shot…"
+  - "Sketching the prompt…"
+  - "Almost there…"
+- Render as a **typing indicator bubble** (three bouncing dots in an assistant bubble) with the current status as a tiny caption under it.
+- When the stream starts producing tokens, switch from dots → live cursor caret blinking at the end of the streaming text.
 
-- In `doGenerate()`:
-  - Remove `navigate("/library")`.
-  - Change toast to `"Generating your ad…"`.
-  - Capture the returned `VideoJob` from `submitVideoJob(...)` and prepend it to a new `pendingJobs` state list.
-  - Scroll the gallery section into view so the new pending card is visible.
-- Add `pendingJobs` state (`VideoJob[]`) alongside `userAds`.
-- Add a polling effect: while `pendingJobs` is non-empty, every ~4s call `pollVideoJob(id)` for each pending job. When a job's `video_url` arrives:
-  - Move it from `pendingJobs` into `userAds` (prepend).
-  - Show a `toast.success("Your ad is ready")`.
-  - On `error`, remove it from `pendingJobs` and toast the error.
-- Update the gallery so the "Your recent ads" section renders whenever `pendingJobs.length > 0 || userAds.length > 0` — the empty/community state only shows when both are empty. Effectively: treat `pendingJobs.length + userAds.length` as the count that drives `mode`.
-- Render pending cards before finished `userAds` cards in the grid.
+### 3. Human-cadence text reveal
+- For non-streamed assistant lines (welcome, error recoveries, transitional messages like "Sending this to the renderer…"), reveal text with a typewriter effect (~25–40ms/char, faster for long messages, respects `prefers-reduced-motion`).
+- For streamed responses, keep server tokens but append a blinking caret span until the stream ends.
 
-### 2. New component — pending ad card
+### 4. Micro-interactions that signal "someone is there"
+- New bubbles animate in with `fade-in + slide-up` (use existing `animate-fade-in` keyframes, add a slight Y translate).
+- Avatar **reacts** to events:
+  - User hits send → avatar nods (quick scale 1 → 0.95 → 1).
+  - Attachments added → avatar briefly shows a small eye/scan ring sweep ("I see them").
+  - Prompt result arrives → avatar flashes a soft cyan glow + tiny check pulse.
+- When the user is typing in the composer, the assistant status flips to "listening…" with a subtle waveform/ear glyph (debounced, hides after 800ms of inactivity).
+- Idle nudge: if the chat sits idle for ~45s after the first welcome with no input, the Director sends a short prompt-style nudge ("Still there? Tell me the vibe and I'll take it from there.") with the typing indicator first.
 
-- Add an inline `PendingAdCard` (in the same file, next to `UserAdCard`) shaped like `UserAdCard`:
-  - Same `aspect-[9/12]` rounded card with amber border glow.
-  - Centered spinner + "Generating…" label.
-  - Subtle shimmer background using existing `bg-muted/20` and a Tailwind `animate-pulse`.
-  - "Generating" badge in the top-left corner (amber).
-  - Non-clickable (or clickable to do nothing).
+### 5. Conversational warmth (copy-only, frontend)
+- Vary the "thinking" captions and starter chips so it doesn't feel scripted.
+- Add a tiny **mood line** under the status dot that rotates between idle phrases: "Ready when you are.", "Pitch me the scene.", "I'm all eyes."
+- Soften error fallback copy ("Hit a snag reaching the model…" → "Lost you for a sec — mind sending that again?").
 
-### 3. Out of scope
+### 6. Sound (optional, off by default)
+- Add a muted speaker toggle in the chat header. When enabled:
+  - Soft "tick" on each user send.
+  - Subtle "chime" when a prompt result lands.
+- Persist preference in `localStorage`. Default OFF so we don't surprise anyone.
 
-- Library page changes.
-- Backend / `generate-video` edge function.
-- Realtime subscriptions (polling is enough for one or two concurrent jobs from this surface).
-- Persistence across reload — if the user reloads while generating, the next `userAds` fetch will pick up the finished job once it completes; no need to persist `pendingJobs` to localStorage in v1.
+### Scope / files touched
+Frontend only, no backend, no prompt changes:
+- `src/components/director/DirectorChat.tsx` — avatar, header strip, status state machine, idle nudge, animated bubble mount, typing indicator, mood line.
+- `src/components/director/Composer.tsx` — emit "user is typing" signal up via a new prop.
+- New `src/components/director/AssistantAvatar.tsx` — animated avatar with reaction states (`idle | thinking | listening | success | scanning`).
+- New `src/components/director/TypingIndicator.tsx` — 3-dot bubble + rotating caption.
+- New `src/components/director/TypewriterText.tsx` — character reveal with reduced-motion fallback.
+- New `src/hooks/useDirectorPresence.ts` — small state machine for status + rotating captions.
+- `tailwind.config.ts` — add a couple of keyframes (`breath`, `dot-bounce`, `caret-blink`, `nod`).
+- Optional sound assets in `src/assets/sfx/` only if you want the audio toggle.
 
-## Notes
+### Out of scope
+- No changes to `director-agent` edge function, prompt templates, streaming protocol, or persistence.
+- No real voice/TTS — strictly visual/textual presence cues (audio toggle is optional UI chrome only).
+- No changes to the prompt result card, approval flow, or attachment moderation.
 
-- `submitVideoJob` already returns the inserted `VideoJob` row (with `id`, `status`, `video_url: null`), so we can build the pending card immediately without a refetch.
-- `pollVideoJob` already exists in `src/lib/director/api.ts` and is used elsewhere — reuse it as-is.
-- The `mode === "empty"` branch (community grid) should only show when there are zero pending and zero finished ads, otherwise a freshly-generating user would still see the community grid.
+### Accessibility
+- All animations honor `prefers-reduced-motion`: typewriter falls back to instant text, avatar breath/nod disabled, dots replaced with a static "Director is typing" caption.
+- Status changes are announced via `aria-live="polite"` on the header status line.

@@ -1,6 +1,5 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { RotateCcw, FileText, Music, Sparkles, MessageCircleMore } from "lucide-react";
-import { Shimmer } from "@/components/ai-elements/shimmer";
 import { Message, MessageContent } from "@/components/ai-elements/message";
 import { QuestionCard } from "./QuestionCard";
 import { cn } from "@/lib/utils";
@@ -35,18 +34,32 @@ import {
   BottomApprovalBar,
   InlineApprovalCard,
 } from "./ApprovalRequest";
+import { AssistantAvatar, type AvatarState } from "./AssistantAvatar";
+import { TypingIndicator } from "./TypingIndicator";
+import { TypewriterText } from "./TypewriterText";
 
 type Bubble =
   | { role: "user"; content: string; attachments?: Attachment[] }
-  | { role: "assistant"; content: string }
+  | { role: "assistant"; content: string; animate?: boolean }
   | { role: "result"; data: Extract<AgentResponse, { kind: "generate_prompt" }>; partial?: boolean }
   | { role: "questions"; questions: string[]; reason: string };
 
 const WELCOME: Bubble = {
   role: "assistant",
+  animate: true,
   content:
-    "I'm your AI Director. Drop your references and tell me what you're making. More context = sharper prompts.",
+    "Hey — I'm your Director. Drop your references and tell me what you're making. More context means sharper prompts.",
 };
+
+const MOOD_LINES = [
+  "Ready when you are.",
+  "Pitch me the scene.",
+  "I'm all eyes.",
+  "Let's make something cinematic.",
+];
+
+const IDLE_NUDGE =
+  "Still there? Tell me the vibe — a couple words is plenty and I'll take it from there.";
 
 export function DirectorChat() {
   return (
@@ -159,6 +172,9 @@ function DirectorChatInner() {
     setBubbles(next);
     setInput("");
     setBusy(true);
+    setAvatarPulse("nod");
+    window.setTimeout(() => setAvatarPulse("idle"), 650);
+    idleNudgedRef.current = true;
 
     try {
       const history: DirectorMsg[] = next
@@ -215,6 +231,7 @@ function DirectorChatInner() {
         // Trigger render directly
         added = {
           role: "assistant",
+          animate: true,
           content: `Sending this to the ${resp.provider_preference || "seedance"} renderer…`,
         };
         try {
@@ -229,7 +246,7 @@ function DirectorChatInner() {
           toast.error(e?.message || "Could not start render");
         }
       } else {
-        added = { role: "assistant", content: (resp as any).content || "..." };
+        added = { role: "assistant", animate: true, content: (resp as any).content || "..." };
       }
 
       const finalNext: Bubble[] = [...next, added];
@@ -246,7 +263,11 @@ function DirectorChatInner() {
             : b;
         return [
           ...trimmed,
-          { role: "assistant", content: "Hit a snag reaching the model. Try again in a moment." },
+          {
+            role: "assistant",
+            animate: true,
+            content: "Lost you for a sec — mind sending that again?",
+          },
         ];
       });
     } finally {
@@ -321,10 +342,139 @@ function DirectorChatInner() {
 
   const { pending: pendingApproval } = useApproval();
 
+  // --- Presence state machine ---------------------------------------------
+  const [avatarPulse, setAvatarPulse] = useState<AvatarState>("idle");
+  const [isUserTyping, setIsUserTyping] = useState(false);
+  const [moodIndex, setMoodIndex] = useState(0);
+  const prevAttachCount = useRef(attachments.length);
+  const typingTimer = useRef<number | null>(null);
+  const idleTimer = useRef<number | null>(null);
+  const idleNudgedRef = useRef(false);
+
+  // Rotate mood lines when idle
+  useEffect(() => {
+    const id = window.setInterval(() => setMoodIndex((n) => (n + 1) % MOOD_LINES.length), 4200);
+    return () => window.clearInterval(id);
+  }, []);
+
+  // Detect "listening" while the user types in the composer
+  useEffect(() => {
+    if (busy) return;
+    if (!input) {
+      setIsUserTyping(false);
+      return;
+    }
+    setIsUserTyping(true);
+    if (typingTimer.current) window.clearTimeout(typingTimer.current);
+    typingTimer.current = window.setTimeout(() => setIsUserTyping(false), 900);
+    return () => {
+      if (typingTimer.current) window.clearTimeout(typingTimer.current);
+    };
+  }, [input, busy]);
+
+  // React when attachments are added (scanning sweep)
+  useEffect(() => {
+    if (attachments.length > prevAttachCount.current) {
+      setAvatarPulse("scanning");
+      const id = window.setTimeout(() => setAvatarPulse("idle"), 1400);
+      prevAttachCount.current = attachments.length;
+      return () => window.clearTimeout(id);
+    }
+    prevAttachCount.current = attachments.length;
+  }, [attachments.length]);
+
+  // React when a finished prompt result arrives (success flash)
+  useEffect(() => {
+    const last = bubbles[bubbles.length - 1];
+    if (last?.role === "result" && !(last as any).partial) {
+      setAvatarPulse("success");
+      const id = window.setTimeout(() => setAvatarPulse("idle"), 1600);
+      return () => window.clearTimeout(id);
+    }
+  }, [bubbles]);
+
+  // Idle nudge: send a soft prompt if the user has been silent on a fresh chat
+  useEffect(() => {
+    if (idleTimer.current) window.clearTimeout(idleTimer.current);
+    const onlyWelcome = bubbles.length === 1 && bubbles[0].role === "assistant";
+    if (!onlyWelcome || idleNudgedRef.current || busy || input || attachments.length) return;
+    idleTimer.current = window.setTimeout(() => {
+      idleNudgedRef.current = true;
+      setBubbles((prev) => [...prev, { role: "assistant", content: IDLE_NUDGE, animate: true }]);
+    }, 45000);
+    return () => {
+      if (idleTimer.current) window.clearTimeout(idleTimer.current);
+    };
+  }, [bubbles, busy, input, attachments.length]);
+
+  const avatarState: AvatarState = busy
+    ? (attachments.length > 0 ? "scanning" : "thinking")
+    : avatarPulse !== "idle"
+      ? avatarPulse
+      : isUserTyping
+        ? "listening"
+        : "idle";
+
+  const statusText = busy
+    ? attachments.length > 0
+      ? "Looking at your references…"
+      : "Thinking…"
+    : isUserTyping
+      ? "Listening…"
+      : lastBubble?.role === "questions"
+        ? "Waiting on you"
+        : "Online";
+
+  const statusDotClass = busy
+    ? "bg-amber-400 motion-safe:animate-pulse"
+    : isUserTyping
+      ? "bg-primary motion-safe:animate-pulse"
+      : "bg-emerald-400";
+
+  const typingCaptions = useMemo(() => {
+    if (attachments.length > 0) {
+      return [
+        "Looking at your references…",
+        "Reading the mood…",
+        "Pulling it together…",
+        "Almost there…",
+      ];
+    }
+    return [
+      "Thinking about the shot…",
+      "Sketching the prompt…",
+      "Framing it up…",
+      "Almost there…",
+    ];
+  }, [attachments.length]);
+
   return (
     <div className="flex flex-col gap-3 h-[calc(100vh-120px)]">
-      <div className="flex items-center justify-between">
-        <div className="text-xs text-muted-foreground transition-colors">{subhead}</div>
+      {/* Presence header */}
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <AssistantAvatar size="sm" state={avatarState} />
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5 text-sm font-medium text-foreground">
+              <span>Director</span>
+              <span className={cn("h-1.5 w-1.5 rounded-full", statusDotClass)} aria-hidden />
+              <span
+                className="text-[11px] font-normal text-muted-foreground"
+                aria-live="polite"
+              >
+                {statusText}
+              </span>
+            </div>
+            <div className="text-[11px] text-muted-foreground/70 transition-opacity truncate">
+              {sessionTitle
+                ? `Working on: ${sessionTitle}`
+                : lastBubble?.role === "result"
+                  ? "Prompt ready. Refine, render, or open in your video model."
+                  : MOOD_LINES[moodIndex]}
+            </div>
+          </div>
+        </div>
+        <div className="text-[11px] text-muted-foreground/70 hidden sm:block">{subhead}</div>
       </div>
 
       <div
@@ -379,12 +529,22 @@ function DirectorChatInner() {
             }
             const isUser = b.role === "user";
             if (!isUser) {
+              // Hide the streaming placeholder bubble; TypingIndicator covers it.
+              if (b.content === "…" || b.content === "") return null;
+              const animate = (b as any).animate === true;
               return (
-                <Message key={i} from="assistant">
-                  <MessageContent className="whitespace-pre-wrap leading-relaxed text-foreground/90">
-                    {b.content}
-                  </MessageContent>
-                </Message>
+                <div key={i} className="flex items-start gap-2 motion-safe:animate-fade-up">
+                  <AssistantAvatar size="sm" state="idle" className="mt-1" />
+                  <Message from="assistant" className="flex-1">
+                    <MessageContent className="whitespace-pre-wrap leading-relaxed text-foreground/90">
+                      {animate ? (
+                        <TypewriterText text={b.content} speed={20} />
+                      ) : (
+                        b.content
+                      )}
+                    </MessageContent>
+                  </Message>
+                </div>
               );
             }
             return (
@@ -463,9 +623,10 @@ function DirectorChatInner() {
             </div>
           )}
           {busy && (
-            <Shimmer className="text-sm" duration={2}>
-              Director is reading the brief…
-            </Shimmer>
+            <TypingIndicator
+              captions={typingCaptions}
+              state={attachments.length > 0 ? "scanning" : "thinking"}
+            />
           )}
           {!busy && lastBubble?.role === "questions" && (
             <div className="flex items-center gap-2 text-sm text-primary">

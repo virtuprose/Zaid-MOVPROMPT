@@ -84,11 +84,37 @@ export default {
           "0%, 100%": { opacity: "0.4" },
           "50%": { opacity: "0.8" },
         },
+        breath: {
+          "0%, 100%": { transform: "scale(1)", opacity: "0.55" },
+          "50%": { transform: "scale(1.12)", opacity: "0.9" },
+        },
+        "dot-bounce": {
+          "0%, 80%, 100%": { transform: "translateY(0)", opacity: "0.4" },
+          "40%": { transform: "translateY(-4px)", opacity: "1" },
+        },
+        "caret-blink": {
+          "0%, 49%": { opacity: "1" },
+          "50%, 100%": { opacity: "0" },
+        },
+        nod: {
+          "0%, 100%": { transform: "scale(1)" },
+          "40%": { transform: "scale(0.92)" },
+          "70%": { transform: "scale(1.04)" },
+        },
+        "fade-up": {
+          "0%": { opacity: "0", transform: "translateY(6px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
         "pulse-glow": "pulse-glow 3s ease-in-out infinite",
+        breath: "breath 3.4s ease-in-out infinite",
+        "dot-bounce": "dot-bounce 1.2s ease-in-out infinite",
+        "caret-blink": "caret-blink 1s steps(1) infinite",
+        nod: "nod 0.6s ease-out",
+        "fade-up": "fade-up 0.35s ease-out",
       },
     },
   },
