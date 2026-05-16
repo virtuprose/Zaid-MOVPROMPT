@@ -17,13 +17,14 @@ type Props = {
   ask: MediaAsk;
   attachments: Attachment[];
   onAttach: (next: Attachment[]) => void;
+  onCountChange?: (count: number) => void;
   disabled?: boolean;
 };
 
 const isImageLike = (a: Attachment) =>
   a.kind === "image" || a.kind === "video_keyframes";
 
-export function QuestionUploadSlot({ ask, attachments, onAttach, disabled }: Props) {
+export function QuestionUploadSlot({ ask, attachments, onAttach, onCountChange, disabled }: Props) {
   const { user } = useAuth();
   const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
