@@ -424,13 +424,13 @@ export default function MarketingStudio() {
 
         <TopNav />
 
-        <div className="relative z-10 container max-w-7xl mx-auto px-4 py-8 sm:py-10">
-          <div className="text-center mb-8">
-            <h1 className="font-display text-[40px] sm:text-[52px] tracking-tight uppercase leading-[1]">
+        <div className="relative z-10 container max-w-7xl mx-auto px-4 py-6 sm:py-8">
+          <div className="text-center mb-6">
+            <h1 className="font-display text-[32px] sm:text-[44px] tracking-tight uppercase leading-[1]">
               Turn any product
               <br /> into a video ad
             </h1>
-            <p className="text-muted-foreground mt-3 max-w-xl mx-auto text-sm">
+            <p className="text-muted-foreground mt-3 max-w-lg mx-auto text-sm leading-snug">
               Pick a format, a scroll-stopping hook and a setting. We compose the prompt and render your ad.
             </p>
           </div>
