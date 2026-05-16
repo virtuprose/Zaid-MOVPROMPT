@@ -1082,7 +1082,7 @@ function PendingAdCard() {
           <span className="text-xs uppercase tracking-[0.18em] text-foreground/80 font-semibold">
             Generating…
           </span>
-          <span className="text-[11px] text-muted-foreground">This usually takes ~30s</span>
+          <span className="text-[11px] text-muted-foreground">Rendering — usually 1–3 minutes</span>
         </div>
       </div>
       <div className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-[hsl(35_90%_55%)]/90 backdrop-blur text-[10px] uppercase tracking-wide text-black font-semibold">
