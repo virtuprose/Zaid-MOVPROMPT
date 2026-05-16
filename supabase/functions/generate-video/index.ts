@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
+import { fal } from "npm:@fal-ai/client";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -75,19 +76,44 @@ async function readJsonResponse(resp: Response) {
   }
 }
 
-function falAppNamespace(model: string): string {
-  // Fal queue URLs are rooted at the app namespace (first 2 path segments),
-  // not the full model variant. e.g. "fal-ai/bytedance/seedance-2.0/text-to-video"
-  // -> "fal-ai/bytedance".
-  const parts = model.split("/");
-  return parts.slice(0, 2).join("/");
+function extractFalError(error: unknown): { status?: number; message: string } {
+  if (error instanceof Error) {
+    const maybe = error as Error & { status?: number; body?: { detail?: string; error?: string; message?: string } };
+    return {
+      status: maybe.status,
+      message: maybe.body?.detail || maybe.body?.error || maybe.body?.message || maybe.message,
+    };
+  }
+  return { message: "Unknown provider error" };
 }
 
-function getLegacyFalUrls(_provider: string, model: string, requestId: string) {
-  const base = falAppNamespace(model);
+function normalizeFalQueueUrl(
+  url: string | null | undefined,
+  kind: "status" | "response" | "cancel",
+): string | null {
+  if (!url) return null;
+  const trimmed = url.replace(/\/+$/, "");
+
+  if (kind === "response") {
+    if (trimmed.endsWith("/status")) return trimmed.replace(/\/status$/, "");
+    if (trimmed.endsWith("/cancel")) return trimmed.replace(/\/cancel$/, "");
+    if (trimmed.endsWith("/response")) return trimmed.replace(/\/response$/, "");
+    return trimmed;
+  }
+
+  if (trimmed.endsWith(`/${kind}`)) return trimmed;
+  if (trimmed.endsWith("/status")) return trimmed.replace(/\/status$/, `/${kind}`);
+  if (trimmed.endsWith("/response")) return trimmed.replace(/\/response$/, `/${kind}`);
+  if (trimmed.endsWith("/cancel")) return trimmed.replace(/\/cancel$/, `/${kind}`);
+  return `${trimmed}/${kind}`;
+}
+
+function getFallbackFalUrls(model: string, requestId: string) {
+  const base = `https://queue.fal.run/${model}/requests/${requestId}`;
   return {
-    statusUrl: `https://queue.fal.run/${base}/requests/${requestId}/status`,
-    responseUrl: `https://queue.fal.run/${base}/requests/${requestId}`,
+    statusUrl: `${base}/status`,
+    responseUrl: base,
+    cancelUrl: `${base}/cancel`,
   };
 }
 
@@ -191,6 +217,7 @@ serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
+  fal.config({ credentials: FAL_KEY });
 
   const admin = createClient(
     Deno.env.get("SUPABASE_URL")!,
@@ -243,44 +270,65 @@ serve(async (req) => {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      const legacyUrls = getLegacyFalUrls(job.provider, model, job.fal_request_id);
+      const fallbackUrls = getFallbackFalUrls(model, job.fal_request_id);
       const statusUrl =
-        (job as { fal_status_url?: string | null }).fal_status_url ||
-        legacyUrls.statusUrl;
-      const responseUrl =
-        (job as { fal_response_url?: string | null }).fal_response_url ||
-        legacyUrls.responseUrl;
-      const statusResp = await fetch(
-        statusUrl,
-        { headers: { Authorization: `Key ${FAL_KEY}` } },
-      );
-      const statusPayload = await readJsonResponse(statusResp);
-      const statusData = statusPayload.data;
-      if (!statusResp.ok || !statusData) {
-        console.warn("fal status response unreadable", statusResp.status, statusPayload.text);
+        normalizeFalQueueUrl((job as { fal_status_url?: string | null }).fal_status_url, "status") ||
+        fallbackUrls.statusUrl;
+      let statusData: Record<string, any> | null = null;
+      try {
+        statusData = await fal.queue.status(model, {
+          requestId: job.fal_request_id,
+          logs: true,
+        }) as Record<string, any>;
+      } catch (error) {
+        console.warn("fal status response unreadable", error);
         return new Response(JSON.stringify({ ...job, status: "processing" }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
       if (statusData.status === "COMPLETED") {
-        const resultResp = await fetch(
-          responseUrl,
-          { headers: { Authorization: `Key ${FAL_KEY}` } },
-        );
-        const resultPayload = await readJsonResponse(resultResp);
-        const result = resultPayload.data;
-        if (!resultResp.ok || !result) {
-          console.warn("fal result response unreadable", resultResp.status, resultPayload.text);
+        let result: Record<string, any> | null = null;
+        try {
+          const response = await fal.queue.result(model, {
+            requestId: job.fal_request_id,
+          }) as Record<string, any>;
+          result = (response.data ?? response) as Record<string, any>;
+        } catch (error) {
+          const falError = extractFalError(error);
+          console.warn("fal result response unreadable", falError.status, falError.message);
+          if (falError.status === 404) {
+            await admin
+              .from("video_jobs")
+              .update({
+                status: "failed",
+                error: "The provider completed the render but did not return the video result. Please retry with the same prompt.",
+                completed_at: new Date().toISOString(),
+              })
+              .eq("id", jobId);
+            return new Response(
+              JSON.stringify({
+                ...job,
+                status: "failed",
+                error: "The provider completed the render but did not return the video result. Please retry with the same prompt.",
+              }),
+              { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+            );
+          }
+        }
+
+        if (!result) {
           return new Response(JSON.stringify({ ...job, status: "processing" }), {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
           });
         }
-        const videoUrl = result.video?.url || result.output?.[0] || result.video_url;
+        const firstOutput = Array.isArray(result.output) ? result.output[0] : result.output;
+        const videoUrl = result.video?.url || firstOutput?.url || firstOutput || result.video_url;
         await admin
           .from("video_jobs")
           .update({
             status: "completed",
             video_url: videoUrl,
+            fal_response_url: normalizeFalQueueUrl(statusData.response_url as string | null | undefined, "response") || fallbackUrls.responseUrl,
             completed_at: new Date().toISOString(),
           })
           .eq("id", jobId);
@@ -336,10 +384,10 @@ serve(async (req) => {
       // Best-effort cancel on fal
       const model = FAL_MODELS[job.provider];
       if (model && job.fal_request_id) {
-        const legacyUrls = getLegacyFalUrls(job.provider, model, job.fal_request_id);
         const cancelUrl =
-          (job as { fal_status_url?: string | null }).fal_status_url?.replace(/\/status$/, "/cancel") ||
-          `${legacyUrls.responseUrl}/cancel`;
+          normalizeFalQueueUrl((job as { fal_status_url?: string | null }).fal_status_url, "cancel") ||
+          normalizeFalQueueUrl((job as { fal_response_url?: string | null }).fal_response_url, "cancel") ||
+          getFallbackFalUrls(model, job.fal_request_id).cancelUrl;
         try {
           await fetch(cancelUrl, {
             method: "PUT",
@@ -425,30 +473,24 @@ serve(async (req) => {
     }
 
     // Submit to fal queue
-    const submitResp = await fetch(`https://queue.fal.run/${model}`, {
-      method: "POST",
-      headers: {
-        Authorization: `Key ${FAL_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(buildFalPayload(provider, normalizedPrompt, options, refImages)),
-    });
-    if (!submitResp.ok) {
-      const t = await submitResp.text();
-      console.error("fal submit error", submitResp.status, t);
+    let submitData: Record<string, any> | null = null;
+    try {
+      submitData = await fal.queue.submit(model, {
+        input: buildFalPayload(provider, normalizedPrompt, options, refImages),
+      }) as Record<string, any>;
+    } catch (error) {
+      console.error("fal submit error", error);
       await admin
         .from("video_jobs")
-        .update({ status: "failed", error: `Provider error ${submitResp.status}` })
+        .update({ status: "failed", error: "Provider error" })
         .eq("id", job.id);
       return new Response(JSON.stringify({ error: "Provider rejected request" }), {
         status: 502,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    const submitPayload = await readJsonResponse(submitResp);
-    const submitData = submitPayload.data;
     if (!submitData?.request_id) {
-      console.error("fal submit response unreadable", submitResp.status, submitPayload.text);
+      console.error("fal submit response unreadable", submitData);
       await admin
         .from("video_jobs")
         .update({ status: "failed", error: "Provider returned an invalid submission response" })
@@ -458,12 +500,20 @@ serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+    const fallbackUrls = getFallbackFalUrls(model, submitData.request_id);
+    const normalizedStatusUrl =
+      normalizeFalQueueUrl(submitData.status_url as string | null | undefined, "status") ||
+      fallbackUrls.statusUrl;
+    const normalizedResponseUrl =
+      normalizeFalQueueUrl(submitData.response_url as string | null | undefined, "response") ||
+      normalizedStatusUrl.replace(/\/status$/, "");
+
     await admin
       .from("video_jobs")
       .update({
         fal_request_id: submitData.request_id,
-        fal_status_url: submitData.status_url ?? null,
-        fal_response_url: submitData.response_url ?? null,
+        fal_status_url: normalizedStatusUrl,
+        fal_response_url: normalizedResponseUrl,
         status: "processing",
       })
       .eq("id", job.id);
@@ -472,8 +522,8 @@ serve(async (req) => {
       JSON.stringify({
         ...job,
         fal_request_id: submitData.request_id,
-        fal_status_url: submitData.status_url ?? null,
-        fal_response_url: submitData.response_url ?? null,
+        fal_status_url: normalizedStatusUrl,
+        fal_response_url: normalizedResponseUrl,
         status: "processing",
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
