@@ -127,6 +127,9 @@ function buildFalPayload(provider: string, prompt: string, opts: VideoOptions = 
       if (opts.duration !== undefined) set("duration", String(opts.duration));
       set("resolution", opts.resolution);
       if (opts.audio !== undefined) set("generate_audio", opts.audio);
+      if (provider.endsWith("-ref") && referenceImages.length > 0) {
+        set("reference_image_urls", referenceImages);
+      }
       break;
     case "hailuo":
       if (opts.duration !== undefined) set("duration", String(opts.duration));
