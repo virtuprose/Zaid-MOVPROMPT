@@ -1,4 +1,4 @@
-import { Building2, Check, Pencil, Plus, Trash2 } from "lucide-react";
+import { ArrowRight, Building2, Check, Pencil, Plus, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { BrandKit } from "@/lib/marketing/brandKit";
 
@@ -9,6 +9,7 @@ export function BrandsRow({
   onNew,
   onEdit,
   onDelete,
+  onManageAll,
 }: {
   kits: BrandKit[];
   activeId: string | null;
@@ -16,6 +17,7 @@ export function BrandsRow({
   onNew: () => void;
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
+  onManageAll?: () => void;
 }) {
   if (kits.length === 0) {
     return (
