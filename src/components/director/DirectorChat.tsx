@@ -522,6 +522,8 @@ function DirectorChatInner() {
                   reason={b.reason}
                   questions={b.questions}
                   disabled={!isLatestQuestions || busy}
+                  attachments={attachments}
+                  onAttach={setAttachments}
                   onContinue={(formatted) => void send(formatted)}
                   onSkip={() => void send("Skip")}
                 />
