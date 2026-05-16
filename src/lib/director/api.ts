@@ -191,6 +191,7 @@ export type VideoJob = {
   fal_status_url?: string | null;
   fal_response_url?: string | null;
   session_id?: string | null;
+  liked?: boolean;
 };
 
 import type { VideoOptions } from "./videoModelControls";
