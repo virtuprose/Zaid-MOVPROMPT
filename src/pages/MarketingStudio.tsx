@@ -736,11 +736,11 @@ export default function MarketingStudio() {
                     ) : null
                   }
                 />
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                   {pendingJobs.map((job) => (
                     <PendingAdCard key={job.id} />
                   ))}
-                  {userAds.slice(0, Math.max(0, 3 - pendingJobs.length)).map((ad) => (
+                  {userAds.slice(0, Math.max(0, 4 - pendingJobs.length)).map((ad) => (
                     <UserAdCard key={ad.id} ad={ad} onClick={() => navigate("/library")} />
                   ))}
                 </div>
