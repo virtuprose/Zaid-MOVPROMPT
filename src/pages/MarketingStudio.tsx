@@ -325,6 +325,21 @@ export default function MarketingStudio() {
             onDelete={(id) => void deleteBrand(id)}
           />
 
+          <CharactersRow
+            kits={characterKits}
+            activeId={characterActiveId}
+            onSelect={(id) => void setCharacterActive(id === characterActiveId ? null : id)}
+            onNew={() => {
+              setCharacterEditId(null);
+              setCharacterOpen(true);
+            }}
+            onEdit={(id) => {
+              setCharacterEditId(id);
+              setCharacterOpen(true);
+            }}
+            onDelete={(id) => void deleteCharacter(id)}
+          />
+
           {/* Composer card */}
           <div ref={composerRef} className="rounded-3xl border border-border/60 bg-[hsl(240_5%_8%)]/70 backdrop-blur p-4 sm:p-6 scroll-mt-20">
             {(brandKit?.name || location.imagePath || location.place) && (
