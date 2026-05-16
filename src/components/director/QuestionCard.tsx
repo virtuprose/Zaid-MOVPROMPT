@@ -34,6 +34,16 @@ export function QuestionCard({ reason, questions, disabled, attachments = [], on
     [questions],
   );
 
+  const suggestions = useMemo(
+    () =>
+      questions.map((q, i) => {
+        if (mediaAsks[i]) return null;
+        if (DURATION_RE.test(q)) return null;
+        return detectSuggestion(q);
+      }),
+    [questions, mediaAsks],
+  );
+
   useEffect(() => {
     if (!disabled) firstInputRef.current?.focus();
   }, [disabled]);
