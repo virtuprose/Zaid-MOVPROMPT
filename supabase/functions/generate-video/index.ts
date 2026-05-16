@@ -14,6 +14,10 @@ const FAL_MODELS: Record<string, string> = {
   "kling-v3-pro": "fal-ai/kling-video/v3/pro/text-to-video",
   "kling-v3-standard": "fal-ai/kling-video/v3/standard/text-to-video",
   "kling-v3-4k": "fal-ai/kling-video/v3/4k/text-to-video",
+  // Kling 3.0 Omni (o3 family)
+  "kling-omni": "fal-ai/kling-video/o3/pro/text-to-video",
+  "kling-omni-edit": "fal-ai/kling-video/o3/standard/video-to-video/edit",
+  "kling-motion-control": "fal-ai/kling-video/v3/standard/motion-control",
   // Kling (legacy)
   "kling-v2.5-turbo-pro": "fal-ai/kling-video/v2.5-turbo/pro/text-to-video",
   "kling-v2.1-master": "fal-ai/kling-video/v2.1/master/text-to-video",
