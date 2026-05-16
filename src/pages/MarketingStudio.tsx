@@ -582,6 +582,50 @@ export default function MarketingStudio() {
               <RenderSettingsPopover value={renderSettings} onChange={setRenderSettings} />
 
               <div className="ml-auto flex items-center gap-2">
+                {brandKit?.logo_url && (
+                  <BrandPickerPopover
+                    kits={kits}
+                    activeId={brandActiveId}
+                    onSelect={(id) => void setBrandActive(id === brandActiveId ? null : id)}
+                    onNew={() => { setBrandEditId(null); setBrandOpen(true); }}
+                    onEdit={(id) => { setBrandEditId(id); setBrandOpen(true); }}
+                    onDelete={(id) => void deleteBrand(id)}
+                    trigger={
+                      <button
+                        type="button"
+                        aria-label="Brand preview"
+                        className="relative w-14 h-14 rounded-2xl overflow-hidden border border-white/10 bg-white/5 hover:border-[#F5A524]/60 transition-colors shrink-0"
+                      >
+                        <img src={brandKit.logo_url} alt="" className="w-full h-full object-cover" />
+                        <span className="absolute inset-x-0 bottom-0 bg-black/60 text-white text-[9px] font-semibold tracking-wider uppercase text-center py-0.5">
+                          {subject === "app" ? "App" : "Product"}
+                        </span>
+                      </button>
+                    }
+                  />
+                )}
+                {characterKit?.reference_url && (
+                  <CharacterPickerPopover
+                    kits={characterKits}
+                    activeId={characterActiveId}
+                    onSelect={(id) => void setCharacterActive(id === characterActiveId ? null : id)}
+                    onNew={() => { setCharacterEditId(null); setCharacterOpen(true); }}
+                    onEdit={(id) => { setCharacterEditId(id); setCharacterOpen(true); }}
+                    onDelete={(id) => void deleteCharacter(id)}
+                    trigger={
+                      <button
+                        type="button"
+                        aria-label="Character preview"
+                        className="relative w-14 h-14 rounded-2xl overflow-hidden border border-white/10 bg-white/5 hover:border-[#F5A524]/60 transition-colors shrink-0"
+                      >
+                        <img src={characterKit.reference_url} alt="" className="w-full h-full object-cover" />
+                        <span className="absolute inset-x-0 bottom-0 bg-black/60 text-white text-[9px] font-semibold tracking-wider uppercase text-center py-0.5">
+                          Avatar
+                        </span>
+                      </button>
+                    }
+                  />
+                )}
                 <Button
                   size="lg"
                   disabled={!hasInputs || submitting}
