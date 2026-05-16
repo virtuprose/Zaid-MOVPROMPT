@@ -150,6 +150,7 @@ export default function MarketingStudio() {
     !!settingId ||
     !!customSetting.trim() ||
     !!brandKit?.name ||
+    !!characterKit?.name ||
     !!location.place ||
     !!location.imagePath;
   const ready = !!((formatId || customFormat.trim()) && hookId && (settingId || customSetting.trim()));
