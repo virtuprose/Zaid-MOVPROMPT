@@ -1,6 +1,16 @@
 import { useEffect, useState } from "react";
-import { Loader2, Film, Play, Download, AlertCircle } from "lucide-react";
+import { Loader2, Film, Play, Download, AlertCircle, Heart, Trash2 } from "lucide-react";
 import { Copy, Check, BookmarkPlus, Sparkles, Wand2, ExternalLink, Maximize2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -111,6 +121,36 @@ export function PromptResultCard({ title, prompt, breakdown, directorsNote, onRe
   const [generating, setGenerating] = useState(false);
   const [pendingModel, setPendingModel] = useState<VideoModel | null>(null);
   const [pendingRender, setPendingRender] = useState<PendingRender | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  const toggleLike = async () => {
+    if (!job) return;
+    const next = !job.liked;
+    setJob({ ...job, liked: next });
+    const { error } = await supabase
+      .from("video_jobs")
+      .update({ liked: next })
+      .eq("id", job.id);
+    if (error) {
+      setJob({ ...job, liked: !next });
+      toast.error("Could not update like");
+    }
+  };
+
+  const deleteVideo = async () => {
+    if (!job) return;
+    setDeleting(true);
+    const { error } = await supabase.from("video_jobs").delete().eq("id", job.id);
+    setDeleting(false);
+    setConfirmDelete(false);
+    if (error) {
+      toast.error("Could not delete video");
+      return;
+    }
+    setJob(null);
+    toast.success("Video deleted");
+  };
 
   const cameraLighting = [breakdown.camera, breakdown.lighting].filter(Boolean).join(" · ");
   const film = breakdown.film_emulation;
@@ -235,17 +275,44 @@ export function PromptResultCard({ title, prompt, breakdown, directorsNote, onRe
             src={job.video_url}
             controls
             playsInline
-            className="w-full rounded-md aspect-video bg-black"
+            className="w-full rounded-md bg-black max-h-[70vh] object-contain"
           />
-          <a
-            href={job.video_url}
-            download
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
-          >
-            <Download className="w-3 h-3" /> Download MP4
-          </a>
+          <div className="flex items-center justify-end gap-1 pt-1">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={toggleLike}
+              aria-label={job.liked ? "Unlike video" : "Like video"}
+              className="h-8 px-2"
+            >
+              <Heart
+                className={`w-4 h-4 ${job.liked ? "fill-primary text-primary" : ""}`}
+              />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              asChild
+              aria-label="Download video"
+              className="h-8 px-2"
+            >
+              <a href={job.video_url} download target="_blank" rel="noopener noreferrer">
+                <Download className="w-4 h-4" />
+              </a>
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setConfirmDelete(true)}
+              aria-label="Delete video"
+              className="h-8 px-2 text-muted-foreground hover:text-destructive"
+            >
+              <Trash2 className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
       );
     }
@@ -445,6 +512,29 @@ export function PromptResultCard({ title, prompt, breakdown, directorsNote, onRe
         </DialogContent>
       </Dialog>
 
+      <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this video?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently remove the rendered video. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                deleteVideo();
+              }}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? "Deleting…" : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
