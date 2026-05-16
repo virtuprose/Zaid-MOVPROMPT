@@ -175,6 +175,77 @@ export default function MarketingStudio() {
     !!location.imagePath;
   const ready = !!((formatId || customFormat.trim()) && hookId && (settingId || customSetting.trim()));
 
+  // Auto-write the describe box from the current Format/Hook/Setting + brand/avatar/location.
+  // Re-runs on every trio change. Aborts in-flight requests when picks change again.
+  useEffect(() => {
+    if (!ready) return;
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => {
+      setDrafting(true);
+      writeAdScene(
+        {
+          subject,
+          format: format
+            ? { label: format.label, fragment: format.fragment }
+            : customFormat.trim()
+              ? { custom: customFormat.trim() }
+              : undefined,
+          hook: hook ? { label: hook.label, fragment: hook.fragment } : undefined,
+          setting: setting
+            ? { label: setting.label, fragment: setting.fragment }
+            : customSetting.trim()
+              ? { custom: customSetting.trim() }
+              : undefined,
+          brand: brandKit
+            ? {
+                name: brandKit.name,
+                description: brandKit.description,
+                tagline: brandKit.tagline,
+                audience: brandKit.audience,
+              }
+            : null,
+          character: characterKit
+            ? {
+                name: characterKit.name,
+                role: characterKit.role,
+                description: characterKit.description,
+              }
+            : null,
+          location: location.place ? { place: location.place } : null,
+        },
+        controller.signal,
+      )
+        .then((scene) => {
+          if (controller.signal.aborted) return;
+          if (scene) setMaster(scene);
+        })
+        .catch((err) => {
+          if (controller.signal.aborted || err?.name === "AbortError") return;
+          console.warn("write-ad-scene failed", err);
+          toast.message("Couldn't draft the scene — type your own.");
+        })
+        .finally(() => {
+          if (!controller.signal.aborted) setDrafting(false);
+        });
+    }, 400);
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+      setDrafting(false);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    formatId,
+    customFormat,
+    hookId,
+    settingId,
+    customSetting,
+    brandKit?.id,
+    characterKit?.id,
+    location.place,
+    subject,
+  ]);
+
   const startGenerate = () => {
     if (!ready) {
       toast.error("Pick a format, hook and setting first.");
