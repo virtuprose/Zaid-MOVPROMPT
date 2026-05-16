@@ -100,6 +100,7 @@ export function QuestionCard({ reason, questions, disabled, attachments = [], on
         {questions.map((q, i) => {
           const isDuration = DURATION_RE.test(q);
           const ask = mediaAsks[i];
+          const suggestion = suggestions[i];
           const showOther = !!otherOpen[i];
           const value = answers[i] ?? "";
           return (
@@ -154,13 +155,40 @@ export function QuestionCard({ reason, questions, disabled, attachments = [], on
                 </div>
               )}
 
+              {!isDuration && suggestion && (
+                <div className="flex flex-wrap gap-1.5">
+                  {suggestion.chips.map((chip) => {
+                    const active = isChipActive(value, chip);
+                    return (
+                      <button
+                        key={chip}
+                        type="button"
+                        onClick={() => setAnswer(i, toggleChip(value, chip))}
+                        className={cn(
+                          "rounded-full px-3 py-1 text-xs border transition-colors",
+                          active
+                            ? "bg-foreground/10 border-border/50 text-foreground"
+                            : "bg-transparent border-border/30 text-muted-foreground hover:text-foreground hover:border-border/60",
+                        )}
+                      >
+                        {chip}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
               {(!isDuration || showOther) && (
                 <input
                   ref={i === 0 ? firstInputRef : undefined}
                   type="text"
                   value={value}
                   onChange={(e) => setAnswer(i, e.target.value)}
-                  placeholder={ask ? "Add a note (optional)" : "Enter your answer"}
+                  placeholder={
+                    ask
+                      ? "Add a note (optional)"
+                      : suggestion?.example ?? "Enter your answer"
+                  }
                   className="w-full rounded-full bg-background/30 border border-transparent px-4 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:bg-background/50 focus:border-border/40 transition-colors"
                 />
               )}
