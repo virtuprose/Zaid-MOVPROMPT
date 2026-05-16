@@ -84,6 +84,7 @@ export function QuestionCard({ reason, questions, disabled, attachments = [], on
       <div className="space-y-4">
         {questions.map((q, i) => {
           const isDuration = DURATION_RE.test(q);
+          const ask = mediaAsks[i];
           const showOther = !!otherOpen[i];
           const value = answers[i] ?? "";
           return (
@@ -92,6 +93,20 @@ export function QuestionCard({ reason, questions, disabled, attachments = [], on
                 <span className="text-muted-foreground/70 mr-1.5">{i + 1}.</span>
                 {q}
               </div>
+
+              {ask && onAttach && (
+                <QuestionUploadSlot
+                  ask={ask}
+                  attachments={attachments}
+                  onAttach={onAttach}
+                  onCountChange={(count) =>
+                    setSlotCounts((prev) =>
+                      prev[i] === count ? prev : { ...prev, [i]: count },
+                    )
+                  }
+                  disabled={disabled}
+                />
+              )}
 
               {isDuration && (
                 <div className="flex flex-wrap gap-1.5">
