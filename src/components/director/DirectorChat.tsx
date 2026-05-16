@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from "react";
-import { RotateCcw, FileText, Music, Sparkles, MessageCircleMore } from "lucide-react";
+import { RotateCcw, FileText, Music, Sparkles, MessageCircleMore, ArrowRight, Film, Megaphone, LayoutGrid, Wand2 } from "lucide-react";
 import { Message, MessageContent } from "@/components/ai-elements/message";
 import { QuestionCard } from "./QuestionCard";
 import { cn } from "@/lib/utils";
@@ -298,12 +298,64 @@ function DirectorChatInner() {
 
   const isEmpty = bubbles.length === 1 && bubbles[0].role === "assistant";
 
-  const STARTERS = [
-    "📸 Cinematic product reveal",
-    "🎭 Character introduction scene",
-    "🌅 Atmospheric landscape transition",
-    "🎬 Documentary narrative shot",
-  ];
+  const firstName = (() => {
+    const meta = (user as any)?.user_metadata?.full_name as string | undefined;
+    if (meta) return meta.split(" ")[0];
+    const email = user?.email;
+    if (email) {
+      const local = email.split("@")[0];
+      return local.charAt(0).toUpperCase() + local.slice(1);
+    }
+    return "Director";
+  })();
+
+  const CATEGORIES = [
+    {
+      id: "cinema",
+      label: "Cinema",
+      icon: Film,
+      prompts: [
+        "Slow dolly-in on a neon-lit ramen bar at dusk, anamorphic flares",
+        "Anamorphic 2.39:1 chase through a rain-slick Tokyo alley",
+        "Golden-hour aerial sweep over coastal cliffs, gentle parallax",
+      ],
+    },
+    {
+      id: "ugc",
+      label: "UGC",
+      icon: Megaphone,
+      prompts: [
+        "Selfie-style product review of my serum with a green-haired creator",
+        "Virtual try-on of my hoodie, mirror angle, natural light",
+        "Unboxing reel of my sneakers on a bedroom desk, vertical 9:16",
+      ],
+    },
+    {
+      id: "storyboard",
+      label: "Storyboard",
+      icon: LayoutGrid,
+      prompts: [
+        "Three-shot intro: establishing wide, medium reveal, close-up emotion",
+        "Five-shot product launch sequence with matched color grade",
+        "Two-frame transition: dawn skyline to character waking up",
+      ],
+    },
+    {
+      id: "animate",
+      label: "Animate",
+      icon: Wand2,
+      prompts: [
+        "Anime portrait, soft wind moving hair, 2D Ghibli palette",
+        "Cartoon mascot bouncing across a candy-colored landscape",
+        "Stylized 3D character waving, Pixar lighting, shallow depth",
+      ],
+    },
+  ] as const;
+
+  const [activeCategory, setActiveCategory] = useState<string>("cinema");
+  const [composerFocused, setComposerFocused] = useState(false);
+  const activeCat = CATEGORIES.find((c) => c.id === activeCategory) ?? CATEGORIES[0];
+
 
   const [sessionTitle, setSessionTitle] = useState<string | null>(null);
 
@@ -447,6 +499,99 @@ function DirectorChatInner() {
       "Almost there…",
     ];
   }, [attachments.length]);
+
+  if (isEmpty) {
+    return (
+      <div className="flex flex-col gap-8 min-h-[calc(100vh-120px)] justify-center max-w-3xl mx-auto w-full px-2 sm:px-0">
+        {/* Hero: logo + greeting */}
+        <div className="flex items-center gap-5 sm:gap-7">
+          <div
+            className={cn(
+              "relative shrink-0 rounded-2xl border border-primary/20 bg-gradient-to-br from-[hsl(240_10%_8%)] to-[hsl(240_12%_5%)] p-3 sm:p-4 hero-logo-glow",
+              composerFocused && "hero-logo-glow-listening",
+            )}
+          >
+            <img
+              src={logoMark}
+              alt="VidoPrompt"
+              className="w-20 h-20 sm:w-24 sm:h-24 hero-logo-float"
+            />
+          </div>
+          <h1 className="font-display text-3xl sm:text-4xl md:text-5xl font-semibold leading-[1.05] tracking-tight text-foreground">
+            {firstName}, <span className="text-muted-foreground/80">what are we</span>
+            <br className="hidden sm:block" />
+            <span className="text-muted-foreground/80"> filming </span>today?
+          </h1>
+        </div>
+
+        {/* Composer */}
+        <div
+          onFocusCapture={() => setComposerFocused(true)}
+          onBlurCapture={() => setComposerFocused(false)}
+        >
+          <Composer
+            value={input}
+            onChange={setInput}
+            attachments={attachments}
+            onAttachmentsChange={setAttachments}
+            onSend={send}
+            busy={busy}
+            showHelper={false}
+          />
+        </div>
+
+        {/* Category tabs */}
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-wrap gap-2">
+            {CATEGORIES.map((c) => {
+              const Icon = c.icon;
+              const active = c.id === activeCategory;
+              return (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => setActiveCategory(c.id)}
+                  className={cn(
+                    "inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm transition-all",
+                    active
+                      ? "border border-primary/60 bg-primary/10 text-foreground shadow-[0_0_24px_-8px_hsl(var(--primary)/0.6)]"
+                      : "border border-border/40 bg-muted/10 text-muted-foreground hover:border-border hover:text-foreground hover:-translate-y-0.5",
+                  )}
+                >
+                  <Icon className={cn("w-4 h-4", active ? "text-primary" : "text-muted-foreground")} />
+                  <span>{c.label}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Suggestions */}
+          <div className="flex flex-col">
+            {activeCat.prompts.map((p) => (
+              <button
+                key={p}
+                type="button"
+                onClick={() => setInput(p)}
+                className="group flex items-center gap-3 py-3 text-left text-sm text-muted-foreground hover:text-foreground transition-colors border-b border-border/20 last:border-b-0"
+              >
+                <ArrowRight className="w-4 h-4 text-muted-foreground/50 group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
+                <span>{p}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="text-center">
+          <button
+            onClick={() => navigate("/")}
+            className="text-xs text-muted-foreground hover:text-primary transition-colors"
+          >
+            Want more control? Switch to structured mode →
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-3 h-[calc(100vh-120px)]">
@@ -610,20 +755,6 @@ function DirectorChatInner() {
               </Message>
             );
           })}
-          {isEmpty && (
-            <div className="flex flex-wrap gap-2 pt-1">
-              {STARTERS.map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => setInput(s)}
-                  className="text-xs px-3 py-1.5 rounded-full border border-border/40 bg-muted/20 hover:border-border hover:text-accent transition-colors"
-                >
-                  {s}
-                </button>
-              ))}
-            </div>
-          )}
           {busy && (
             <TypingIndicator
               captions={typingCaptions}
