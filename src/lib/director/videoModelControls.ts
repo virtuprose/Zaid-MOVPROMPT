@@ -77,6 +77,25 @@ const CONTROLS: Record<string, ModelControls> = {
     defaults: { aspect_ratio: "16:9", duration: 5, resolution: "720p" },
   },
 
+  // Kling 3.0 Omni (o3 family) — text-to-video w/ multi-reference + native audio
+  "kling-omni": {
+    aspectRatios: STD_ASPECTS,
+    durations: [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+    audio: true,
+    defaults: { aspect_ratio: "16:9", duration: 5, audio: false },
+  },
+  "kling-omni-edit": {
+    aspectRatios: STD_ASPECTS,
+    durations: [3, 4, 5, 6, 7, 8, 9, 10],
+    audio: true,
+    defaults: { aspect_ratio: "16:9", duration: 5, audio: false },
+  },
+  "kling-motion-control": {
+    aspectRatios: STD_ASPECTS,
+    durations: [5, 10],
+    defaults: { aspect_ratio: "16:9", duration: 5 },
+  },
+
   // Kling v3 — native audio + extended duration enum (Pro accepts 3–15)
   "kling-v3-pro": {
     aspectRatios: STD_ASPECTS,

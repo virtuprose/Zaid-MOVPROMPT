@@ -37,6 +37,15 @@ const STD = ["16:9", "9:16", "1:1"];
 const SEEDANCE = ["16:9", "9:16", "1:1", "4:3", "3:4", "21:9"];
 
 export const MODEL_CATALOG: ModelCapabilities[] = [
+  { id: "kling-omni", family: "kling", label: "Kling 3.0 Omni", note: "Multi-reference characters + elements",
+    audio: true, maxDurationSec: 15, maxResolution: "1080p", aspects: STD, speed: "balanced", cost: "high",
+    strengths: ["cinematic", "photoreal", "complex_motion", "long_take", "dialogue", "stable_subject"] },
+  { id: "kling-omni-edit", family: "kling", label: "Kling 3.0 Omni Edit", note: "Restyle / edit an existing video",
+    audio: true, maxDurationSec: 10, maxResolution: "1080p", aspects: STD, speed: "balanced", cost: "high",
+    strengths: ["cinematic", "stylized", "stable_subject"] },
+  { id: "kling-motion-control", family: "kling", label: "Kling 3.0 Motion Control", note: "Drive a character with a reference video",
+    audio: false, maxDurationSec: 10, maxResolution: "1080p", aspects: STD, speed: "balanced", cost: "high",
+    strengths: ["photoreal", "complex_motion", "action", "stable_subject"] },
   // Kling
   { id: "kling-v3-pro", family: "kling", label: "Kling 3.0 Pro", note: "Newest, native audio, multi-shot",
     audio: true, maxDurationSec: 15, maxResolution: "1080p", aspects: STD, speed: "balanced", cost: "high",
