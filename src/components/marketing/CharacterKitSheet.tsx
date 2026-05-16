@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Loader2, Upload, X, ImagePlus, UserRound } from "lucide-react";
+import { Loader2, Upload, X, ImagePlus, UserRound, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 import {
   useCharacterKit,
   EMPTY_CHARACTER_KIT,
+  analyzeCharacterImage,
   type CharacterKit,
 } from "@/lib/marketing/characterKit";
 
