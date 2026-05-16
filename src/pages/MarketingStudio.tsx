@@ -370,6 +370,8 @@ export default function MarketingStudio() {
                 id: updated.id,
                 video_url: updated.video_url!,
                 created_at: new Date().toISOString(),
+                liked: false,
+                prompt: (updated as any).prompt ?? null,
               },
               ...prev.filter((a) => a.id !== updated.id),
             ]);
