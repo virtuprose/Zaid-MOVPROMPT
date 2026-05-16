@@ -323,7 +323,7 @@ export default function MarketingStudio() {
 
         <TopNav />
 
-        <div className="relative z-10 container max-w-6xl mx-auto px-4 py-8 sm:py-10">
+        <div className="relative z-10 container max-w-7xl mx-auto px-4 py-8 sm:py-10">
           <div className="text-center mb-8">
             <h1 className="font-display text-[40px] sm:text-[52px] tracking-tight uppercase leading-[1]">
               Turn any product
