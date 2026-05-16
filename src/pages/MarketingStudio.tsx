@@ -42,6 +42,7 @@ import { BrandKitSheet } from "@/components/marketing/BrandKitSheet";
 import { BrandsRow } from "@/components/marketing/BrandsRow";
 import { CharactersRow } from "@/components/marketing/CharactersRow";
 import { CharacterKitSheet } from "@/components/marketing/CharacterKitSheet";
+import { ManageLibraryDialog } from "@/components/marketing/ManageLibraryDialog";
 import { useCharacterKit } from "@/lib/marketing/characterKit";
 
 import { submitVideoJob, pollVideoJob, type VideoJob } from "@/lib/director/api";
