@@ -42,7 +42,6 @@ import { BrandKitSheet } from "@/components/marketing/BrandKitSheet";
 import { BrandsRow } from "@/components/marketing/BrandsRow";
 import { CharactersRow } from "@/components/marketing/CharactersRow";
 import { CharacterKitSheet } from "@/components/marketing/CharacterKitSheet";
-import { ManageLibraryDialog } from "@/components/marketing/ManageLibraryDialog";
 import { useCharacterKit } from "@/lib/marketing/characterKit";
 
 import { submitVideoJob, pollVideoJob, type VideoJob } from "@/lib/director/api";
@@ -105,8 +104,6 @@ export default function MarketingStudio() {
   const [brandEditId, setBrandEditId] = useState<string | null>(null);
   const [characterOpen, setCharacterOpen] = useState(false);
   const [characterEditId, setCharacterEditId] = useState<string | null>(null);
-  const [manageBrandsOpen, setManageBrandsOpen] = useState(false);
-  const [manageCharactersOpen, setManageCharactersOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
@@ -335,7 +332,6 @@ export default function MarketingStudio() {
               setBrandOpen(true);
             }}
             onDelete={(id) => void deleteBrand(id)}
-            onManageAll={() => setManageBrandsOpen(true)}
           />
 
           <CharactersRow
@@ -351,7 +347,6 @@ export default function MarketingStudio() {
               setCharacterOpen(true);
             }}
             onDelete={(id) => void deleteCharacter(id)}
-            onManageAll={() => setManageCharactersOpen(true)}
           />
 
           {/* Composer card */}
@@ -682,60 +677,7 @@ export default function MarketingStudio() {
             setBrandOpen(o);
             if (!o) setBrandEditId(null);
           }}
-        />
-
-        <ManageLibraryDialog
-          open={manageBrandsOpen}
-          onOpenChange={setManageBrandsOpen}
-          kind="brand"
-          items={kits.map((k) => ({
-            id: k.id,
-            name: k.name,
-            subtitle: k.subject,
-            imageUrl: k.logo_url ?? null,
-            updatedAt: (k as any).updated_at,
-            createdAt: (k as any).created_at,
-          }))}
-          activeId={brandActiveId}
-          onSelect={(id) => void setBrandActive(id)}
-          onNew={() => {
-            setBrandEditId(null);
-            setManageBrandsOpen(false);
-            setBrandOpen(true);
-          }}
-          onEdit={(id) => {
-            setBrandEditId(id);
-            setManageBrandsOpen(false);
-            setBrandOpen(true);
-          }}
-          onDelete={(id) => void deleteBrand(id)}
-        />
-
-        <ManageLibraryDialog
-          open={manageCharactersOpen}
-          onOpenChange={setManageCharactersOpen}
-          kind="character"
-          items={characterKits.map((k) => ({
-            id: k.id,
-            name: k.name,
-            subtitle: k.role ?? "Character",
-            imageUrl: k.reference_url ?? null,
-            updatedAt: (k as any).updated_at,
-            createdAt: (k as any).created_at,
-          }))}
-          activeId={characterActiveId}
-          onSelect={(id) => void setCharacterActive(id === characterActiveId ? null : id)}
-          onNew={() => {
-            setCharacterEditId(null);
-            setManageCharactersOpen(false);
-            setCharacterOpen(true);
-          }}
-          onEdit={(id) => {
-            setCharacterEditId(id);
-            setManageCharactersOpen(false);
-            setCharacterOpen(true);
-          }}
-          onDelete={(id) => void deleteCharacter(id)}
+          kitId={brandEditId}
         />
 
         <ConfirmRightsDialog
