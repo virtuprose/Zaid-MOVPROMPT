@@ -101,7 +101,7 @@ const FEATURED_ADS: FeaturedAd[] = [
 
 const FILTERS = ["All", "Product", "App", "UGC", "Cinematic"] as const;
 
-type UserAd = { id: string; video_url: string; created_at: string };
+type UserAd = { id: string; video_url: string; created_at: string; liked: boolean; prompt?: string | null };
 
 export default function MarketingStudio() {
   const { user, loading } = useAuth();
