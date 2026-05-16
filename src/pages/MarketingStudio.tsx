@@ -394,15 +394,7 @@ export default function MarketingStudio() {
             <Textarea
               value={master}
               onChange={(e) => setMaster(e.target.value)}
-              placeholder={
-                brandKit?.name && characterKit?.name
-                  ? ""
-                  : brandKit?.name
-                    ? "Add a note about the character (optional)"
-                    : characterKit?.name
-                      ? "Add a note about the product (optional)"
-                      : "Describe what happens in the ad…"
-              }
+              placeholder="Describe what happens in the ad…"
               className="min-h-[80px] bg-transparent border-0 resize-none text-base placeholder:text-muted-foreground/70 focus-visible:ring-0 px-0"
               maxLength={800}
             />
