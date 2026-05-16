@@ -35,6 +35,8 @@ export function CharacterKitSheet({
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [justFilled, setJustFilled] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -50,6 +52,25 @@ export function CharacterKitSheet({
   const update = <K extends keyof CharacterKit>(k: K, v: CharacterKit[K]) =>
     setDraft((d) => ({ ...d, [k]: v }));
 
+  const runAnalyze = async (imagePath: string) => {
+    setAnalyzing(true);
+    try {
+      const res = await analyzeCharacterImage({ imagePath });
+      setDraft((d) => ({
+        ...d,
+        name: d.name?.trim() ? d.name : (res.name ?? d.name),
+        role: d.role?.trim() ? d.role : (res.role ?? d.role),
+        description: d.description?.trim() ? d.description : (res.description ?? d.description),
+      }));
+      setJustFilled(true);
+      window.setTimeout(() => setJustFilled(false), 4000);
+    } catch (e: any) {
+      toast.error("Couldn't auto-read the photo — fill it in manually");
+    } finally {
+      setAnalyzing(false);
+    }
+  };
+
   const handleFile = async (file?: File | null) => {
     if (!file) return;
     if (file.size > 25 * 1024 * 1024) {
@@ -61,12 +82,14 @@ export function CharacterKitSheet({
       const path = await uploadReference(file);
       update("reference_path", path);
       update("reference_url", URL.createObjectURL(file));
+      void runAnalyze(path);
     } catch (e: any) {
       toast.error(e?.message || "Upload failed");
     } finally {
       setUploading(false);
     }
   };
+
 
   const handleSave = async () => {
     if (!draft.name.trim()) {
