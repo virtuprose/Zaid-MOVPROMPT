@@ -675,6 +675,33 @@ function DirectorChatInner() {
                 />
               );
             }
+            if (b.role === "model_choice") {
+              // Only the most recent model_choice block is interactive.
+              const isLatest = (() => {
+                for (let k = bubbles.length - 1; k >= 0; k -= 1) {
+                  if (bubbles[k].role === "model_choice") return k === i;
+                }
+                return false;
+              })();
+              return (
+                <div key={i} className="motion-safe:animate-fade-up">
+                  <ModelChoiceCard
+                    recommendedId={b.recommended_model_id}
+                    alternatives={b.alternatives}
+                    reason={b.reason}
+                    disabled={!isLatest || busy || !!b.chosen}
+                    onConfirm={(modelId) => {
+                      setBubbles((prev) => {
+                        const copy = [...prev];
+                        copy[i] = { ...b, chosen: modelId };
+                        return copy;
+                      });
+                      void send(`Target model: ${modelId}`);
+                    }}
+                  />
+                </div>
+              );
+            }
             const isUser = b.role === "user";
             if (!isUser) {
               // Hide the streaming placeholder bubble; TypingIndicator covers it.
