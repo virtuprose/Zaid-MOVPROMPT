@@ -454,16 +454,25 @@ export default function MarketingStudio() {
                     <button
                       type="button"
                       aria-label="Brand preview"
-                      className="relative w-14 h-14 rounded-2xl overflow-hidden border border-white/10 bg-white/5 hover:border-[#F5A524]/60 transition-colors shrink-0 flex items-center justify-center"
+                      className="relative w-14 h-14 rounded-2xl overflow-hidden border border-white/10 bg-white/5 hover:border-[#F5A524]/60 transition-colors shrink-0"
                     >
                       {brandKit?.logo_url ? (
-                        <img src={brandKit.logo_url} alt="" className="w-full h-full object-cover" />
+                        <>
+                          <img src={brandKit.logo_url} alt="" className="w-full h-full object-cover" />
+                          <span className="absolute inset-x-0 bottom-0 bg-black/60 text-white text-[9px] font-semibold tracking-wider uppercase text-center py-0.5">
+                            {subject === "app" ? "App" : "Product"}
+                          </span>
+                        </>
                       ) : (
-                        <Building2 className="w-5 h-5 text-muted-foreground" />
+                        <>
+                          <span className="absolute top-1 left-1 w-[18px] h-[18px] rounded-full border border-white/30 flex items-center justify-center">
+                            <Plus className="w-3 h-3 text-white/80" />
+                          </span>
+                          <span className="absolute bottom-1 left-1.5 text-[9px] font-bold tracking-wider uppercase text-white">
+                            {subject === "app" ? "App" : "Product"}
+                          </span>
+                        </>
                       )}
-                      <span className="absolute inset-x-0 bottom-0 bg-black/60 text-white text-[9px] font-semibold tracking-wider uppercase text-center py-0.5">
-                        {subject === "app" ? "App" : "Product"}
-                      </span>
                     </button>
                   }
                 />
@@ -478,19 +487,29 @@ export default function MarketingStudio() {
                     <button
                       type="button"
                       aria-label="Character preview"
-                      className="relative w-14 h-14 rounded-2xl overflow-hidden border border-white/10 bg-white/5 hover:border-[#F5A524]/60 transition-colors shrink-0 flex items-center justify-center"
+                      className="relative w-14 h-14 rounded-2xl overflow-hidden border border-white/10 bg-white/5 hover:border-[#F5A524]/60 transition-colors shrink-0"
                     >
                       {characterKit?.reference_url ? (
-                        <img src={characterKit.reference_url} alt="" className="w-full h-full object-cover" />
+                        <>
+                          <img src={characterKit.reference_url} alt="" className="w-full h-full object-cover" />
+                          <span className="absolute inset-x-0 bottom-0 bg-black/60 text-white text-[9px] font-semibold tracking-wider uppercase text-center py-0.5">
+                            Avatar
+                          </span>
+                        </>
                       ) : (
-                        <UserRound className="w-5 h-5 text-muted-foreground" />
+                        <>
+                          <span className="absolute top-1 left-1 w-[18px] h-[18px] rounded-full border border-white/30 flex items-center justify-center">
+                            <Plus className="w-3 h-3 text-white/80" />
+                          </span>
+                          <span className="absolute bottom-1 left-1.5 text-[9px] font-bold tracking-wider uppercase text-white">
+                            Avatar
+                          </span>
+                        </>
                       )}
-                      <span className="absolute inset-x-0 bottom-0 bg-black/60 text-white text-[9px] font-semibold tracking-wider uppercase text-center py-0.5">
-                        Avatar
-                      </span>
                     </button>
                   }
                 />
+
 
                 <Button
                   size="lg"
