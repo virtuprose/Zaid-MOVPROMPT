@@ -500,6 +500,8 @@ export default function MarketingStudio() {
                 flash={flashChips}
               />
 
+              <RenderSettingsPopover value={renderSettings} onChange={setRenderSettings} />
+
               <div className="ml-auto flex items-center gap-2">
                 <Button
                   size="lg"
