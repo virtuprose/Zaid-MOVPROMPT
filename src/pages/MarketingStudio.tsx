@@ -101,7 +101,11 @@ export default function MarketingStudio() {
     setActive: setCharacterActive,
     deleteKit: deleteCharacter,
   } = useCharacterKit();
-  const subject: Subject = brandKit?.subject ?? "product";
+  const [subjectOverride, setSubjectOverride] = useState<Subject | null>(null);
+  const subject: Subject = subjectOverride ?? brandKit?.subject ?? "product";
+  useEffect(() => {
+    if (brandKit?.subject) setSubjectOverride(brandKit.subject);
+  }, [brandKit?.subject]);
   const [master, setMaster] = useState("");
   const [formatId, setFormatId] = useState<string | undefined>();
   const [customFormat, setCustomFormat] = useState<string>("");
