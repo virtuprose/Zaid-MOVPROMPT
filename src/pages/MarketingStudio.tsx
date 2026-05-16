@@ -191,6 +191,14 @@ export default function MarketingStudio() {
           place: location.place || undefined,
           hasImage: !!location.imagePath,
         },
+        character: characterKit
+          ? {
+              name: characterKit.name,
+              description: characterKit.description,
+              role: characterKit.role,
+              hasImage: !!characterKit.reference_path,
+            }
+          : undefined,
       });
       const job = await submitVideoJob(prompt, "seedance-2.0", null, {
         aspect_ratio: "9:16",
