@@ -1,40 +1,40 @@
-# Move "Your brand" + "Your character" next to Generate
+## Goal
 
-Today both live as full-width rows above the composer card. They take a lot of vertical space and split attention from the prompt + Generate flow. We'll collapse each into a single compact picker button, sit them side-by-side just above the Generate button inside the composer, and open a popover on click that lists saved items + a "New …" option.
-
-## UX
-
-- Remove the `BrandsRow` and `CharactersRow` sections above the composer.
-- Inside the composer card, add a thin row directly above the Format / Hook / Setting chips that contains exactly two pill buttons, left-aligned and matching each other:
-  - **Your brand** — shows brand logo + name when one is active, otherwise icon + "Add brand". A small `×` clears the active brand.
-  - **Your character** — shows reference avatar + name when one is active, otherwise icon + "Add character". A small `×` clears the active character.
-- Clicking either pill opens a popover anchored under the button:
-  - Lists saved items (avatar/logo + name + role/subject, check mark on active).
-  - Each row has hover edit/delete actions (reuse existing patterns).
-  - Footer button "New brand" / "New character" opens the existing `BrandKitSheet` / `CharacterKitSheet` in create mode.
-  - Empty state: short hint + the same New button.
-- The detached-chip strip that currently lives at the top of the composer (lines 354–437) keeps working as-is for Location, but the brand/character chips there become redundant — remove the brand and character chips from that strip (Location chip stays). The new pills are the single place to see/edit the attached brand and character.
+Add a small icon button (sliders icon) next to the **Setting** chip in the composer card on `/marketing`. Clicking it opens a popover with three rows — **Aspect ratio**, **Quality**, **Duration** — matching the uploaded screenshot, so users can override the currently hard-coded render config (9:16 / 1080p / 5s).
 
 ## Files
 
-- `src/pages/MarketingStudio.tsx`
-  - Delete the `BrandsRow` and `CharactersRow` JSX blocks above the composer (lines ~322–350).
-  - Inside the composer, add a new row above the chips row containing two `<BrandPickerPopover>` / `<CharacterPickerPopover>` triggers.
-  - Trim the existing detached-chip strip so it only renders for `location`.
-- `src/components/marketing/BrandPickerPopover.tsx` — already exists, reuse. Confirm `onEdit`/`onDelete` callbacks fire and wire to existing `setBrandEditId` / `deleteBrand`.
-- `src/components/marketing/CharacterPickerPopover.tsx` — **new**, mirror of `BrandPickerPopover` using `CharacterKit` fields (`reference_url`, `name`, `role`). Same trigger/popover structure.
-- `src/components/marketing/BrandsRow.tsx` and `CharactersRow.tsx` — no longer rendered; leave files in place for now (can be removed in a follow-up) to keep the diff small.
+- `src/pages/MarketingStudio.tsx` — add state + button + popover, feed values into `submitVideoJob`, update the "Renders as" summary.
+- `src/components/marketing/RenderSettingsPopover.tsx` *(new)* — self-contained Popover UI with three expandable rows (aspect / quality / duration), mirroring the screenshot's dark glass style.
 
-## Visual
+No backend or business-logic changes — render call already accepts `aspect_ratio`, `duration`, `resolution`, `audio`.
 
-```text
-┌─ Composer card ──────────────────────────────────────────────┐
-│ [ Your brand: ◉ Acme  × ]   [ Your character: ◉ Maya  × ]    │
-│                                                              │
-│ Describe what happens in the ad…                             │
-│                                                              │
-│ [Format] [Hook] [Setting]                       [Generate ad]│
-└──────────────────────────────────────────────────────────────┘
+## UX
+
+Chip row becomes:
+
+```
+[Format] [Hook] [Setting] [⚙︎]                    [Generate ad]
 ```
 
-Both pills share the same height (h-9), rounded-xl, border + subtle background, and align on a single flex row with `gap-2`. On narrow screens they wrap but stay aligned to each other. No business-logic changes — brand/character selection state, generate flow, and kit sheets stay the same.
+- Trigger button: 36×36, `rounded-full`, border + `bg-secondary/40`, `Sliders` icon (lucide), hover lifts border to amber when any value differs from defaults.
+- Popover (≈ 320px, anchored bottom-start): three stacked rows, each a `rounded-xl` row with icon + label on the left, current value + chevron on the right. Tapping a row expands inline segmented controls (like the screenshot's drill-in style — kept inline rather than nested popovers for simplicity).
+  - **Aspect ratio**: 9:16, 16:9, 1:1, 4:3, 3:4, 21:9 (seedance-2.0 supports all).
+  - **Quality**: 480p, 720p, 1080p.
+  - **Duration**: 5s, 8s, 10s, 15s (snap set from seedance-2.0 range 4–15).
+- Defaults stay 9:16 / 1080p / 5s; audio stays on.
+
+## Wiring
+
+- New state in `MarketingStudio`:
+  ```ts
+  const [render, setRender] = useState({ aspect_ratio: "9:16", resolution: "1080p", duration: 5 });
+  ```
+- Pass `render` into `submitVideoJob(prompt, "seedance-2.0", null, { ...render, audio: true })`.
+- Update the "Renders as" line to read from `render` instead of literals.
+
+## Out of scope
+
+- No model picker — still locked to `seedance-2.0`.
+- No audio toggle in this dropdown (kept always on, matching current behavior).
+- `VideoOptionsDialog` is not reused — it's a larger inline panel intended for the Director flow; this Marketing popover is a lighter trigger-anchored UI matching the screenshot.

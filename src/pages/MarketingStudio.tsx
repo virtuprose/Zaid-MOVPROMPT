@@ -43,6 +43,11 @@ import { BrandPickerPopover } from "@/components/marketing/BrandPickerPopover";
 import { CharacterPickerPopover } from "@/components/marketing/CharacterPickerPopover";
 import { CharacterKitSheet } from "@/components/marketing/CharacterKitSheet";
 import { useCharacterKit } from "@/lib/marketing/characterKit";
+import {
+  RenderSettingsPopover,
+  RENDER_DEFAULTS,
+  type RenderSettings,
+} from "@/components/marketing/RenderSettingsPopover";
 
 import { submitVideoJob, pollVideoJob, type VideoJob } from "@/lib/director/api";
 import loopKitchen from "@/assets/loop-kitchen.mp4.asset.json";
@@ -106,6 +111,7 @@ export default function MarketingStudio() {
   const [characterEditId, setCharacterEditId] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [renderSettings, setRenderSettings] = useState<RenderSettings>(RENDER_DEFAULTS);
 
   const [userAds, setUserAds] = useState<UserAd[]>([]);
   const [pendingJobs, setPendingJobs] = useState<VideoJob[]>([]);
@@ -201,9 +207,9 @@ export default function MarketingStudio() {
           : undefined,
       });
       const job = await submitVideoJob(prompt, "seedance-2.0", null, {
-        aspect_ratio: "9:16",
-        duration: 5,
-        resolution: "1080p",
+        aspect_ratio: renderSettings.aspect_ratio,
+        duration: renderSettings.duration,
+        resolution: renderSettings.resolution,
         audio: true,
       });
       setPendingJobs((prev) => [job, ...prev.filter((j) => j.id !== job.id)]);
@@ -494,6 +500,8 @@ export default function MarketingStudio() {
                 flash={flashChips}
               />
 
+              <RenderSettingsPopover value={renderSettings} onChange={setRenderSettings} />
+
               <div className="ml-auto flex items-center gap-2">
                 <Button
                   size="lg"
@@ -519,7 +527,7 @@ export default function MarketingStudio() {
             {ready && (
               <div className="mt-4 rounded-xl border border-border/30 bg-muted/10 p-3 text-xs text-muted-foreground">
                 <span className="text-foreground/80 font-medium">Renders as:</span>{" "}
-                {hook?.label} · {format?.label || "Custom format"} · {setting?.label || "Custom scene"} · 9:16 · 5s · audio on
+                {hook?.label} · {format?.label || "Custom format"} · {setting?.label || "Custom scene"} · {renderSettings.aspect_ratio} · {renderSettings.duration}s · {renderSettings.resolution} · audio on
               </div>
             )}
           </div>
