@@ -50,8 +50,8 @@ export function LocationPopover({
 
   const handleFile = async (file?: File | null) => {
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("Image must be under 5MB");
+    if (file.size > 25 * 1024 * 1024) {
+      toast.error("Image must be under 25MB");
       return;
     }
     if (!/^image\/(png|jpeg|jpg|webp)$/i.test(file.type)) {
@@ -251,7 +251,7 @@ export function LocationPopover({
                   <Upload className="w-5 h-5" />
                 )}
                 <span className="text-xs">Drop a photo or click to upload</span>
-                <span className="text-[10px] text-muted-foreground/70">PNG or JPG · max 5MB</span>
+                <span className="text-[10px] text-muted-foreground/70">PNG or JPG · max 25MB</span>
               </button>
             )}
             <p className="text-xs text-muted-foreground">

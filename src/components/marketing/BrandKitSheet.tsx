@@ -72,8 +72,8 @@ export function BrandKitSheet({
 
   const handleFile = async (file?: File | null) => {
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("Image must be under 5MB");
+    if (file.size > 25 * 1024 * 1024) {
+      toast.error("Image must be under 25MB");
       return;
     }
     setUploading(true);
@@ -252,7 +252,7 @@ export function BrandKitSheet({
                     <ImagePlus className="w-6 h-6 text-muted-foreground" />
                   )}
                   <p className="text-sm font-medium text-foreground/90">Drag & drop or click to upload</p>
-                  <p className="text-xs text-muted-foreground">PNG, JPG, WEBP — up to 5 MB</p>
+                  <p className="text-xs text-muted-foreground">PNG, JPG, WEBP — up to 25 MB</p>
                 </button>
               )
             ) : (
