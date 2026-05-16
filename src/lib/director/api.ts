@@ -275,7 +275,7 @@ export type AdSceneBrief = {
   setting?: { label?: string; fragment?: string; custom?: string };
   brand?: { name?: string; description?: string; tagline?: string | null; audience?: string | null } | null;
   character?: { name?: string; role?: string | null; description?: string | null } | null;
-  location?: { place?: string } | null;
+  location?: { place?: string; hasImage?: boolean } | null;
 };
 
 export async function writeAdScene(
