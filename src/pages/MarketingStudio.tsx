@@ -16,6 +16,8 @@ import {
   UserRound,
   X,
   Plus,
+  Package,
+  AppWindow,
 } from "lucide-react";
 import {
   DropdownMenu,
