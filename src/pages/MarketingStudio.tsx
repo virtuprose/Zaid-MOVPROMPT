@@ -306,10 +306,6 @@ export default function MarketingStudio() {
 
         <div className="relative z-10 container max-w-6xl mx-auto px-4 py-8 sm:py-10">
           <div className="text-center mb-8">
-            <div className="inline-flex items-center gap-2 text-[14px] tracking-[0.1em] uppercase mb-4 pb-1 border-b border-[hsl(0_72%_55%)]/40 text-[hsl(0_72%_60%)] font-medium">
-              <span className="w-1.5 h-1.5 rounded-full bg-[hsl(0_72%_55%)]" />
-              Ads Studio
-            </div>
             <h1 className="font-display text-[40px] sm:text-[52px] tracking-tight uppercase leading-[1]">
               Turn any product
               <br /> into a video ad
