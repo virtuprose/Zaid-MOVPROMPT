@@ -18,6 +18,7 @@ import {
 import { toast } from "sonner";
 import { Composer } from "./Composer";
 import { PromptResultCard } from "./PromptResultCard";
+import { ModelChoiceCard } from "./ModelChoiceCard";
 import {
   streamDirectorAgent,
   submitVideoJob,
@@ -42,7 +43,8 @@ type Bubble =
   | { role: "user"; content: string; attachments?: Attachment[] }
   | { role: "assistant"; content: string; animate?: boolean }
   | { role: "result"; data: Extract<AgentResponse, { kind: "generate_prompt" }>; partial?: boolean }
-  | { role: "questions"; questions: string[]; reason: string };
+  | { role: "questions"; questions: string[]; reason: string }
+  | { role: "model_choice"; recommended_model_id: string; alternatives?: string[]; reason: string; chosen?: string };
 
 const WELCOME: Bubble = {
   role: "assistant",
@@ -207,6 +209,16 @@ function DirectorChatInner() {
               questions: (partial as any).questions || [],
               reason: (partial as any).reason || "",
             };
+          } else if (partial.kind === "ask_model_choice") {
+            const rec = (partial as any).recommended_model_id;
+            if (rec) {
+              copy[placeholderIndex] = {
+                role: "model_choice",
+                recommended_model_id: rec,
+                alternatives: (partial as any).alternatives || [],
+                reason: (partial as any).reason || "",
+              };
+            }
           }
           return copy;
         });
@@ -227,6 +239,13 @@ function DirectorChatInner() {
         title = resp.title;
       } else if (resp.kind === "ask_clarification") {
         added = { role: "questions", questions: resp.questions, reason: resp.reason };
+      } else if (resp.kind === "ask_model_choice") {
+        added = {
+          role: "model_choice",
+          recommended_model_id: resp.recommended_model_id,
+          alternatives: resp.alternatives,
+          reason: resp.reason,
+        };
       } else if (resp.kind === "request_video_generation") {
         // Trigger render directly
         added = {
@@ -672,6 +691,33 @@ function DirectorChatInner() {
                   onContinue={(formatted) => void send(formatted)}
                   onSkip={() => void send("Skip")}
                 />
+              );
+            }
+            if (b.role === "model_choice") {
+              // Only the most recent model_choice block is interactive.
+              const isLatest = (() => {
+                for (let k = bubbles.length - 1; k >= 0; k -= 1) {
+                  if (bubbles[k].role === "model_choice") return k === i;
+                }
+                return false;
+              })();
+              return (
+                <div key={i} className="motion-safe:animate-fade-up">
+                  <ModelChoiceCard
+                    recommendedId={b.recommended_model_id}
+                    alternatives={b.alternatives}
+                    reason={b.reason}
+                    disabled={!isLatest || busy || !!b.chosen}
+                    onConfirm={(modelId) => {
+                      setBubbles((prev) => {
+                        const copy = [...prev];
+                        copy[i] = { ...b, chosen: modelId };
+                        return copy;
+                      });
+                      void send(`Target model: ${modelId}`);
+                    }}
+                  />
+                </div>
               );
             }
             const isUser = b.role === "user";

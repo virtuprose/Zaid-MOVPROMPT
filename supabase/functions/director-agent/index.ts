@@ -95,8 +95,15 @@ STEP 4 — Output:
   • \`recommended_alternatives\` = #2 and #3 from the same ranked list (never duplicate #1, never list a model that failed Step 1 or Step 2).
   • \`recommendation_reason\` = one sentence naming the deciding factor (e.g. "Source video attached → only model that can edit it" or "Native lip-sync dialogue + readable on-screen text in 1080p 9:16").
 
+CONFIRM THE TARGET MODEL BEFORE GENERATING (HARD RULE):
+- Before you EVER call \`generate_prompt\`, you MUST first call \`ask_model_choice\` so the user picks the target video model. The final cinematic prompt is tuned to that exact model's strengths (camera vocabulary, audio capability, prompt length, structure), so this choice cannot be skipped.
+- Exception 1: if the user's brief already names a specific model id from the playbook (e.g. "for veo-3.1", "use kling-v3-pro"), skip \`ask_model_choice\` and go straight to \`generate_prompt\` with \`breakdown.recommended_model_id\` = that id.
+- Exception 2: if you already asked \`ask_model_choice\` earlier in this conversation AND the user's latest message picks one (e.g. starts with "Target model:" or names a model id), do NOT ask again — call \`generate_prompt\` with that exact id pinned in \`breakdown.recommended_model_id\`.
+- When you call \`ask_model_choice\`, populate \`recommended_model_id\` using the 4-step MODEL SELECTION ALGORITHM above, plus 2 ranked \`alternatives\` and a one-sentence \`reason\`. Never invent ids — only use values from the playbook.
+
 WHEN YOU GENERATE A PROMPT:
 - The \`prompt\` field is the final cinematic prompt the user will paste into a video model. Write it as a single dense paragraph (60–140 words), packed with concrete visual detail: subject + action, camera (lens, angle, movement), lighting (key/fill/practicals, time of day, color temp), environment, mood, color palette, film/look reference if relevant.
+- Tailor the wording to the model the user picked (or that they confirmed): for veo/seedance audio-capable models include explicit dialogue/SFX cues; for kling-omni-edit phrase as edit instructions on the source; for hailuo keep it tight; etc.
 - The \`breakdown\` is a structured snapshot of your decisions for the user to scan and tweak.
 - ALWAYS fill \`breakdown.negative_prompt\` with concrete things to avoid (face artifacts, motion blur, text/watermark, modern items if vintage, etc).
 - ALWAYS fill \`breakdown.recommended_model_id\` with EXACTLY ONE id from the MODEL PLAYBOOK below. Do NOT invent ids. Run the 4-step algorithm above.
@@ -145,7 +152,35 @@ const TOOLS = [
   {
     type: "function",
     function: {
-      name: "generate_prompt",
+      name: "ask_model_choice",
+      description:
+        "Ask the user which target video model the final prompt should be tuned for. MUST be called before `generate_prompt` unless the user already named a model id.",
+      parameters: {
+        type: "object",
+        properties: {
+          recommended_model_id: {
+            type: "string",
+            enum: MODEL_IDS,
+            description: "Your top pick from the MODEL SELECTION ALGORITHM.",
+          },
+          alternatives: {
+            type: "array",
+            minItems: 0,
+            maxItems: 3,
+            items: { type: "string", enum: MODEL_IDS },
+            description: "Up to 3 ranked backup ids (no duplicates of recommended_model_id).",
+          },
+          reason: {
+            type: "string",
+            description: "One short sentence on why the recommended pick fits this brief.",
+          },
+        },
+        required: ["recommended_model_id", "reason"],
+        additionalProperties: false,
+      },
+    },
+  },
+  {
       description: "Produce the final cinematic prompt and structured breakdown.",
       parameters: {
         type: "object",
