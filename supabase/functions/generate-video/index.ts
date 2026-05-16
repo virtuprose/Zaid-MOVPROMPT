@@ -76,6 +76,17 @@ async function readJsonResponse(resp: Response) {
   }
 }
 
+function extractFalError(error: unknown): { status?: number; message: string } {
+  if (error instanceof Error) {
+    const maybe = error as Error & { status?: number; body?: { detail?: string; error?: string; message?: string } };
+    return {
+      status: maybe.status,
+      message: maybe.body?.detail || maybe.body?.error || maybe.body?.message || maybe.message,
+    };
+  }
+  return { message: "Unknown provider error" };
+}
+
 function normalizeFalQueueUrl(
   url: string | null | undefined,
   kind: "status" | "response" | "cancel",
@@ -283,7 +294,26 @@ serve(async (req) => {
           }) as Record<string, any>;
           result = (response.data ?? response) as Record<string, any>;
         } catch (error) {
-          console.warn("fal result response unreadable", error);
+          const falError = extractFalError(error);
+          console.warn("fal result response unreadable", falError.status, falError.message);
+          if (falError.status === 404) {
+            await admin
+              .from("video_jobs")
+              .update({
+                status: "failed",
+                error: "The provider completed the render but did not return the video result. Please retry with the same prompt.",
+                completed_at: new Date().toISOString(),
+              })
+              .eq("id", jobId);
+            return new Response(
+              JSON.stringify({
+                ...job,
+                status: "failed",
+                error: "The provider completed the render but did not return the video result. Please retry with the same prompt.",
+              }),
+              { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+            );
+          }
         }
 
         if (!result) {
