@@ -13,6 +13,7 @@ import {
   Heart,
   Building2,
   MapPin,
+  UserRound,
   X,
 } from "lucide-react";
 import { TopNav } from "@/components/TopNav";
@@ -39,6 +40,9 @@ import {
 import { useBrandKit, EMPTY_LOCATION, type LocationInput } from "@/lib/marketing/brandKit";
 import { BrandKitSheet } from "@/components/marketing/BrandKitSheet";
 import { BrandsRow } from "@/components/marketing/BrandsRow";
+import { CharactersRow } from "@/components/marketing/CharactersRow";
+import { CharacterKitSheet } from "@/components/marketing/CharacterKitSheet";
+import { useCharacterKit } from "@/lib/marketing/characterKit";
 
 import { submitVideoJob, pollVideoJob, type VideoJob } from "@/lib/director/api";
 import loopKitchen from "@/assets/loop-kitchen.mp4.asset.json";
@@ -78,6 +82,13 @@ export default function MarketingStudio() {
   const navigate = useNavigate();
 
   const { kits, activeKit: brandKit, activeId: brandActiveId, setActive: setBrandActive, deleteKit: deleteBrand } = useBrandKit();
+  const {
+    kits: characterKits,
+    activeKit: characterKit,
+    activeId: characterActiveId,
+    setActive: setCharacterActive,
+    deleteKit: deleteCharacter,
+  } = useCharacterKit();
   const subject: Subject = brandKit?.subject ?? "product";
   const [master, setMaster] = useState("");
   const [formatId, setFormatId] = useState<string | undefined>();
@@ -91,6 +102,8 @@ export default function MarketingStudio() {
   const [openPicker, setOpenPicker] = useState<"format" | "hook" | "setting" | null>(null);
   const [brandOpen, setBrandOpen] = useState(false);
   const [brandEditId, setBrandEditId] = useState<string | null>(null);
+  const [characterOpen, setCharacterOpen] = useState(false);
+  const [characterEditId, setCharacterEditId] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
@@ -137,6 +150,7 @@ export default function MarketingStudio() {
     !!settingId ||
     !!customSetting.trim() ||
     !!brandKit?.name ||
+    !!characterKit?.name ||
     !!location.place ||
     !!location.imagePath;
   const ready = !!((formatId || customFormat.trim()) && hookId && (settingId || customSetting.trim()));
@@ -177,6 +191,14 @@ export default function MarketingStudio() {
           place: location.place || undefined,
           hasImage: !!location.imagePath,
         },
+        character: characterKit
+          ? {
+              name: characterKit.name,
+              description: characterKit.description,
+              role: characterKit.role,
+              hasImage: !!characterKit.reference_path,
+            }
+          : undefined,
       });
       const job = await submitVideoJob(prompt, "seedance-2.0", null, {
         aspect_ratio: "9:16",
@@ -312,9 +334,24 @@ export default function MarketingStudio() {
             onDelete={(id) => void deleteBrand(id)}
           />
 
+          <CharactersRow
+            kits={characterKits}
+            activeId={characterActiveId}
+            onSelect={(id) => void setCharacterActive(id === characterActiveId ? null : id)}
+            onNew={() => {
+              setCharacterEditId(null);
+              setCharacterOpen(true);
+            }}
+            onEdit={(id) => {
+              setCharacterEditId(id);
+              setCharacterOpen(true);
+            }}
+            onDelete={(id) => void deleteCharacter(id)}
+          />
+
           {/* Composer card */}
           <div ref={composerRef} className="rounded-3xl border border-border/60 bg-[hsl(240_5%_8%)]/70 backdrop-blur p-4 sm:p-6 scroll-mt-20">
-            {(brandKit?.name || location.imagePath || location.place) && (
+            {(brandKit?.name || characterKit?.name || location.imagePath || location.place) && (
               <div className="flex flex-wrap items-center gap-2 mb-3 pb-3 border-b border-border/30">
                 {brandKit?.name && (
                   <div className="inline-flex items-center gap-2 h-9 pl-1 pr-1.5 rounded-xl border border-border/60 bg-secondary/40 text-xs">
@@ -340,6 +377,35 @@ export default function MarketingStudio() {
                       onClick={() => void setBrandActive(null)}
                       className="w-6 h-6 rounded-md text-muted-foreground hover:text-foreground hover:bg-background/60 flex items-center justify-center shrink-0"
                       aria-label="Detach brand"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
+                {characterKit?.name && (
+                  <div className="inline-flex items-center gap-2 h-9 pl-1 pr-1.5 rounded-xl border border-border/60 bg-secondary/40 text-xs">
+                    <div className="w-7 h-7 rounded-full bg-white/5 overflow-hidden flex items-center justify-center shrink-0">
+                      {characterKit.reference_url ? (
+                        <img
+                          src={characterKit.reference_url}
+                          alt=""
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            (e.currentTarget as HTMLImageElement).style.display = "none";
+                          }}
+                        />
+                      ) : (
+                        <UserRound className="w-3.5 h-3.5 text-muted-foreground" />
+                      )}
+                    </div>
+                    <span className="font-medium text-foreground truncate max-w-[160px]">
+                      {characterKit.name}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => void setCharacterActive(null)}
+                      className="w-6 h-6 rounded-md text-muted-foreground hover:text-foreground hover:bg-background/60 flex items-center justify-center shrink-0"
+                      aria-label="Detach character"
                     >
                       <X className="w-3.5 h-3.5" />
                     </button>
@@ -594,6 +660,15 @@ export default function MarketingStudio() {
           onLocationChange={setLocation}
           customValue={customSetting}
           onCustomChange={setCustomSetting}
+        />
+
+        <CharacterKitSheet
+          open={characterOpen}
+          onOpenChange={(o) => {
+            setCharacterOpen(o);
+            if (!o) setCharacterEditId(null);
+          }}
+          kitId={characterEditId}
         />
 
         <BrandKitSheet

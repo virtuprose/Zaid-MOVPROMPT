@@ -207,6 +207,57 @@ export type Database = {
         }
         Relationships: []
       }
+      character_kit_selection: {
+        Row: {
+          character_kit_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          character_kit_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          character_kit_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      character_kits: {
+        Row: {
+          created_at: string
+          description: string
+          id: string
+          name: string
+          reference_path: string | null
+          role: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string
+          id?: string
+          name?: string
+          reference_path?: string | null
+          role?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          id?: string
+          name?: string
+          reference_path?: string | null
+          role?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       custom_presets: {
         Row: {
           anim_class: string | null

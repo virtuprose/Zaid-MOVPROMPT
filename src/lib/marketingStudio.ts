@@ -511,6 +511,13 @@ export type LocationContext = {
   hasImage?: boolean;
 };
 
+export type CharacterContext = {
+  name: string;
+  description?: string | null;
+  role?: string | null;
+  hasImage?: boolean;
+};
+
 export type StudioBrief = {
   subject: Subject;
   master: string;
@@ -523,6 +530,7 @@ export type StudioBrief = {
   customSetting?: string;
   brand?: BrandContext;
   location?: LocationContext;
+  character?: CharacterContext;
 };
 
 const find = (list: StudioPreset[], id?: string) =>
@@ -546,6 +554,15 @@ function locationLine(l?: LocationContext): string | null {
   return parts.join(". ");
 }
 
+function characterLine(c?: CharacterContext): string | null {
+  if (!c || !c.name) return null;
+  const bits = [`Character: ${c.name}`];
+  if (c.role) bits.push(`Role: ${c.role}`);
+  if (c.description) bits.push(c.description);
+  if (c.hasImage) bits.push("A reference photo of the character is provided — match their face, hair and styling consistently");
+  return bits.join(" — ");
+}
+
 export function composeStudioPrompt(brief: StudioBrief): string {
   const format = find(FORMATS, brief.formatId);
   const hook = find(HOOKS, brief.hookId);
@@ -559,6 +576,7 @@ export function composeStudioPrompt(brief: StudioBrief): string {
     "Cinematic 9:16 social ad, 5 seconds, native audio.",
     subjectLine,
     brandLine(brief.brand),
+    characterLine(brief.character),
     hook?.fragment,
     format?.fragment ?? (brief.customFormat?.trim() ? `Format: ${brief.customFormat.trim()}` : null),
     setting?.fragment ?? (brief.customSetting?.trim() ? `Setting: ${brief.customSetting.trim()}` : null),
