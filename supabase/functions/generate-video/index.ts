@@ -352,6 +352,7 @@ serve(async (req) => {
         provider,
         prompt: normalizedPrompt,
         status: "queued",
+        reference_image_urls: refImages.length > 0 ? refImages : null,
       })
       .select("*")
       .single();
