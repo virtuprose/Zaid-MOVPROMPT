@@ -20,43 +20,424 @@ function rateLimited(ip: string) {
   return false;
 }
 
-// Compact catalog the LLM uses to pick a concrete model id. Keep in sync with
-// src/lib/director/videoModelCatalog.ts on the frontend.
-const MODEL_CATALOG_LINES = [
-  "kling-omni — kling (o3 Omni), 15s, 1080p, AUDIO, multi-reference characters+elements, cinematic+photoreal+complex_motion+dialogue+stable_subject",
-  "kling-omni-edit — kling (o3 Omni), 10s, 1080p, AUDIO, REQUIRES source video_url, restyle/edit an existing clip, cinematic+stylized+stable_subject",
-  "kling-motion-control — kling (v3 Motion Control), 10s, 1080p, no-audio, REQUIRES reference image_url + driving video_url, photoreal+complex_motion+action+stable_subject",
-  "kling-v3-pro — kling, 15s, 1080p, AUDIO, cinematic+photoreal+complex_motion+long_take+dialogue+multi_shot",
-  "kling-v3-standard — kling, 10s, 1080p, AUDIO, cinematic+photoreal+dialogue+multi_shot",
-  "kling-v3-4k — kling, 10s, native_4K, AUDIO, cinematic+photoreal+long_take",
-  "kling-v2.5-turbo-pro — kling, 10s, 1080p, no-audio, photoreal+complex_motion+long_take+action",
-  "kling-v2.1-master — kling, 10s, 1080p, no-audio, cinematic+photoreal+complex_motion+long_take",
-  "kling-v2-master — kling, 10s, 1080p, no-audio, cinematic+photoreal+complex_motion",
-  "kling-v1.6-pro — kling, 10s, 1080p, no-audio, photoreal+stable_subject",
-  "kling-v1.6-standard — kling, 10s, 720p, no-audio, photoreal+stable_subject",
-  "kling-v1.5-pro — kling, 10s, 1080p, no-audio, photoreal",
-  "kling-v1-pro — kling, 10s, 720p, no-audio, photoreal",
-  "kling-v1-standard — kling, 10s, 720p, no-audio, photoreal",
-  "veo-3.1 — veo, 8s, 1080p, AUDIO, photoreal+cinematic+dialogue+complex_motion+text_in_frame",
-  "veo-3.1-fast — veo, 8s, 1080p, AUDIO, photoreal+dialogue+complex_motion",
-  "veo-3.1-lite — veo, 8s, 1080p, AUDIO, photoreal+dialogue (16:9/9:16 only)",
-  "veo-3 — veo, 8s, 1080p, AUDIO, photoreal+cinematic+dialogue (16:9/9:16 only)",
-  "veo-3-fast — veo, 8s, 1080p, AUDIO, photoreal+dialogue (16:9/9:16 only)",
-  "veo-2 — veo, 8s, 720p, no-audio, photoreal+cinematic",
-  "seedance-2.0 — seedance, 10s, 1080p, AUDIO, cinematic+photoreal+film_grain+portrait+dialogue",
-  "seedance-2.0-fast — seedance, 10s, 1080p, AUDIO, cinematic+photoreal+film_grain",
-  "seedance-v1-pro — seedance, 10s, 1080p, no-audio, cinematic+film_grain+portrait",
-  "seedance-v1-lite — seedance, 10s, 720p, no-audio, cinematic+stylized",
-  "hailuo-02-pro — hailuo, 10s, 1080p, no-audio, stylized+portrait+anime+complex_motion (16:9 only)",
-  "hailuo-02-standard — hailuo, 6s, 768p, no-audio, stylized+portrait+anime (16:9 only)",
-  "hailuo-01 — hailuo, 6s, 768p, no-audio, stylized+anime (16:9 only)",
-  "runway-gen3-turbo — runway, 10s, 720p, no-audio, cinematic+photoreal+stylized",
-  "ltx-video-13b — ltx, 5s, 720p, no-audio, stylized+stable_subject",
-  "ltx-video — ltx, 5s, 720p, no-audio, stylized",
-  "wan-pro — wan, 10s, 720p, no-audio, photoreal+stylized",
-  "wan-v2.2-a14b — wan, 10s, 720p, no-audio, stylized",
+// Per-model "playbook" the LLM uses to pick a concrete model id. Each entry
+// is rich enough that the agent knows what the model DOES, what it NEEDS, and
+// when to prefer it over a sibling. Keep ids in sync with the frontend
+// catalog at src/lib/director/videoModelCatalog.ts.
+type Playbook = {
+  id: string;
+  tier: string;              // family + tier label
+  input: string;             // input mode (text-to-video, image-to-video, edit, motion-control, ...)
+  needs?: string;            // extra inputs the user must provide
+  duration: string;          // allowed durations
+  aspect: string;            // allowed aspect ratios
+  resolution: string;        // native max
+  audio: string;             // none / native / preserve-source
+  bestFor: string[];         // 2–4 concrete shot types
+  avoidFor?: string[];       // known weaknesses
+  preferWhen: string;        // tiebreaker vs nearest sibling
+};
+
+const MODEL_PLAYBOOK: Playbook[] = [
+  // ─── Kling 3.0 Omni (o3) — reference-driven, character/element consistency ──
+  {
+    id: "kling-omni",
+    tier: "Kuaishou Kling 3.0 / Omni (o3)",
+    input: "text-to-video with multi-reference characters + elements",
+    needs: "optional: up to 7 reference images and/or named elements for consistent characters & locations",
+    duration: "3–15s",
+    aspect: "16:9, 9:16, 1:1",
+    resolution: "1080p",
+    audio: "native generation (English/Chinese voice, music, SFX)",
+    bestFor: ["multi-shot storyboards with recurring characters", "branded product spots with consistent hero objects", "narrative scenes mixing 2+ characters in a defined location"],
+    avoidFor: ["one-off shots with no recurring subjects (overkill — use kling-v3-pro)", "pure VFX/abstract loops"],
+    preferWhen: "the brief mentions a character/product/location that must look identical across shots",
+  },
+  {
+    id: "kling-omni-edit",
+    tier: "Kuaishou Kling 3.0 / Omni Edit (o3)",
+    input: "video-to-video edit",
+    needs: "REQUIRED: source video (3–10s, mp4/mov, ≤200MB). Optional: up to 4 reference images/elements via @Image1 / @Element1 in prompt",
+    duration: "matches source (3–10s)",
+    aspect: "16:9, 9:16, 1:1",
+    resolution: "1080p",
+    audio: "can preserve source audio (keep_audio) or regenerate",
+    bestFor: ["restyle an existing clip (anime, oil-paint, cyberpunk, etc.)", "swap a character into an existing scene", "change wardrobe / lighting / background of an existing take"],
+    avoidFor: ["any task without a source video (cannot run)"],
+    preferWhen: "the user attached a clip and wants to EDIT it, not generate fresh footage",
+  },
+  {
+    id: "kling-motion-control",
+    tier: "Kuaishou Kling 3.0 / Motion Control (v3)",
+    input: "motion-control (image + driving video)",
+    needs: "REQUIRED: 1 reference image (the character to render) + 1 driving video (the motion to copy). Max 10s for image-orientation, 30s for video-orientation",
+    duration: "≤10s image-mode, ≤30s video-mode",
+    aspect: "16:9, 9:16, 1:1",
+    resolution: "1080p",
+    audio: "none",
+    bestFor: ["make a still character perform a specific dance/action from a reference clip", "transplant gestures or choreography onto a custom subject"],
+    avoidFor: ["scenes with multiple interacting characters", "dialogue (no audio)"],
+    preferWhen: "the user wants their character to MIMIC the motion of another existing clip",
+  },
+
+  // ─── Kling v3 — top-tier text-to-video with native audio ──
+  {
+    id: "kling-v3-pro",
+    tier: "Kuaishou Kling 3.0 / Pro",
+    input: "text-to-video",
+    duration: "3–15s",
+    aspect: "16:9, 9:16, 1:1",
+    resolution: "1080p",
+    audio: "native generation, multi-shot",
+    bestFor: ["cinematic single-take 8–15s shots", "complex camera moves with photoreal subjects", "long-take dialogue without character consistency needs"],
+    avoidFor: ["sub-5s quick iterations (use kling-v3-standard or veo-3.1-lite)"],
+    preferWhen: "you need the LONGEST audio-capable Kling shot (up to 15s) at top quality",
+  },
+  {
+    id: "kling-v3-standard",
+    tier: "Kuaishou Kling 3.0 / Standard",
+    input: "text-to-video",
+    duration: "5s or 10s",
+    aspect: "16:9, 9:16, 1:1",
+    resolution: "1080p",
+    audio: "native generation, multi-shot",
+    bestFor: ["fast cinematic iterations with dialogue", "social-ready 5–10s shots with sound"],
+    preferWhen: "you want kling-v3-pro quality but faster/cheaper and 10s is enough",
+  },
+  {
+    id: "kling-v3-4k",
+    tier: "Kuaishou Kling 3.0 / 4K",
+    input: "text-to-video",
+    duration: "5s or 10s",
+    aspect: "16:9, 9:16, 1:1",
+    resolution: "native 4K",
+    audio: "native generation",
+    bestFor: ["hero shots that will be projected / displayed on large screens", "footage that needs to survive heavy color grading"],
+    avoidFor: ["quick previews (slow + expensive)"],
+    preferWhen: "the user explicitly asks for 4K or theatrical-grade resolution",
+  },
+
+  // ─── Kling legacy (no native audio) ──
+  {
+    id: "kling-v2.5-turbo-pro",
+    tier: "Kuaishou Kling 2.5 / Turbo Pro",
+    input: "text-to-video",
+    duration: "5s or 10s",
+    aspect: "16:9, 9:16, 1:1",
+    resolution: "1080p",
+    audio: "none",
+    bestFor: ["fast photoreal action with complex motion", "stunt/parkour/sports beats", "VFX-heavy single takes"],
+    preferWhen: "you need Kling's best motion realism but DON'T need audio",
+  },
+  {
+    id: "kling-v2.1-master",
+    tier: "Kuaishou Kling 2.1 / Master",
+    input: "text-to-video",
+    duration: "5s or 10s",
+    aspect: "16:9, 9:16, 1:1",
+    resolution: "1080p",
+    audio: "none",
+    bestFor: ["high-quality cinematic photoreal long takes"],
+    preferWhen: "kling-v2.5-turbo-pro misses on look but audio isn't needed",
+  },
+  {
+    id: "kling-v2-master",
+    tier: "Kuaishou Kling 2.0 / Master",
+    input: "text-to-video",
+    duration: "5s or 10s",
+    aspect: "16:9, 9:16, 1:1",
+    resolution: "1080p",
+    audio: "none",
+    bestFor: ["cinematic photoreal with complex motion (legacy baseline)"],
+    preferWhen: "v2.1 master is unavailable or you specifically want the older look",
+  },
+  {
+    id: "kling-v1.6-pro",
+    tier: "Kuaishou Kling 1.6 / Pro",
+    input: "text-to-video",
+    duration: "5s or 10s",
+    aspect: "16:9, 9:16, 1:1",
+    resolution: "1080p",
+    audio: "none",
+    bestFor: ["stable photoreal subjects (portraits, products)"],
+    preferWhen: "you need rock-stable subject identity without paying for v2+",
+  },
+  {
+    id: "kling-v1.6-standard",
+    tier: "Kuaishou Kling 1.6 / Standard",
+    input: "text-to-video",
+    duration: "5s or 10s",
+    aspect: "16:9, 9:16, 1:1",
+    resolution: "720p",
+    audio: "none",
+    bestFor: ["cheap 720p photoreal drafts"],
+    preferWhen: "budget/speed matter more than 1080p",
+  },
+  {
+    id: "kling-v1.5-pro",
+    tier: "Kuaishou Kling 1.5 / Pro",
+    input: "text-to-video",
+    duration: "5s or 10s",
+    aspect: "16:9, 9:16, 1:1",
+    resolution: "1080p",
+    audio: "none",
+    bestFor: ["legacy photoreal baseline"],
+    preferWhen: "1.6 unavailable",
+  },
+  {
+    id: "kling-v1-pro",
+    tier: "Kuaishou Kling 1.0 / Pro",
+    input: "text-to-video",
+    duration: "5s or 10s",
+    aspect: "16:9, 9:16, 1:1",
+    resolution: "720p",
+    audio: "none",
+    bestFor: ["legacy 720p photoreal"],
+    preferWhen: "only when explicitly requested",
+  },
+  {
+    id: "kling-v1-standard",
+    tier: "Kuaishou Kling 1.0 / Standard",
+    input: "text-to-video",
+    duration: "5s or 10s",
+    aspect: "16:9, 9:16, 1:1",
+    resolution: "720p",
+    audio: "none",
+    bestFor: ["cheapest Kling baseline"],
+    preferWhen: "rarely — only for retro comparisons",
+  },
+
+  // ─── Google Veo ──
+  {
+    id: "veo-3.1",
+    tier: "Google Veo 3.1",
+    input: "text-to-video",
+    duration: "4s, 6s, or 8s",
+    aspect: "16:9, 9:16, 1:1",
+    resolution: "1080p",
+    audio: "native generation incl. lip-sync dialogue",
+    bestFor: ["talking-head dialogue close-ups", "photoreal cinematic with on-screen text/signage", "complex motion with sync sound"],
+    avoidFor: ["shots longer than 8s", "highly stylized / anime looks"],
+    preferWhen: "the brief needs SPOKEN DIALOGUE or readable text in frame",
+  },
+  {
+    id: "veo-3.1-fast",
+    tier: "Google Veo 3.1 / Fast",
+    input: "text-to-video",
+    duration: "4s, 6s, or 8s",
+    aspect: "16:9, 9:16, 1:1",
+    resolution: "1080p",
+    audio: "native generation",
+    bestFor: ["quick dialogue iterations", "social ads needing voice + photoreal"],
+    preferWhen: "veo-3.1 quality is overkill and you want 2-3× faster turnaround",
+  },
+  {
+    id: "veo-3.1-lite",
+    tier: "Google Veo 3.1 / Lite",
+    input: "text-to-video",
+    duration: "4s, 6s, or 8s",
+    aspect: "16:9, 9:16 ONLY",
+    resolution: "1080p",
+    audio: "native generation",
+    bestFor: ["cheapest Veo with audio for drafts"],
+    avoidFor: ["square (1:1) deliverables"],
+    preferWhen: "you need audio but budget is the deciding factor",
+  },
+  {
+    id: "veo-3",
+    tier: "Google Veo 3",
+    input: "text-to-video",
+    duration: "8s only",
+    aspect: "16:9, 9:16 ONLY",
+    resolution: "1080p",
+    audio: "native generation incl. dialogue",
+    bestFor: ["8s cinematic dialogue beats (legacy baseline)"],
+    preferWhen: "veo-3.1 unavailable or specifically requested",
+  },
+  {
+    id: "veo-3-fast",
+    tier: "Google Veo 3 / Fast",
+    input: "text-to-video",
+    duration: "8s only",
+    aspect: "16:9, 9:16 ONLY",
+    resolution: "1080p",
+    audio: "native generation",
+    bestFor: ["faster veo-3 dialogue iterations"],
+    preferWhen: "veo-3.1-fast unavailable",
+  },
+  {
+    id: "veo-2",
+    tier: "Google Veo 2",
+    input: "text-to-video",
+    duration: "5–8s",
+    aspect: "16:9, 9:16 ONLY",
+    resolution: "720p",
+    audio: "none",
+    bestFor: ["silent photoreal cinematic at 720p"],
+    preferWhen: "you need Veo's photoreal look without paying for v3",
+  },
+
+  // ─── ByteDance Seedance — cinematic film-look ──
+  {
+    id: "seedance-2.0",
+    tier: "ByteDance Seedance 2.0",
+    input: "text-to-video",
+    duration: "4–15s or 'auto'",
+    aspect: "16:9, 9:16, 1:1, 4:3, 3:4, 21:9",
+    resolution: "1080p (also 480p/720p)",
+    audio: "native generation",
+    bestFor: ["cinematic film-grain wide shots", "21:9 anamorphic / scope deliveries", "portrait dialogue with grain & soft halation"],
+    preferWhen: "the brief asks for FILM LOOK (35mm, anamorphic, Portra, Vision3) or non-standard aspect ratios",
+  },
+  {
+    id: "seedance-2.0-fast",
+    tier: "ByteDance Seedance 2.0 / Fast",
+    input: "text-to-video",
+    duration: "4–15s or 'auto'",
+    aspect: "16:9, 9:16, 1:1, 4:3, 3:4, 21:9",
+    resolution: "1080p",
+    audio: "native generation",
+    bestFor: ["fast cinematic drafts with grain", "iteration on shot framing"],
+    preferWhen: "you want seedance-2.0's look at lower cost / faster turnaround",
+  },
+  {
+    id: "seedance-v1-pro",
+    tier: "ByteDance Seedance 1 / Pro",
+    input: "text-to-video",
+    duration: "5s or 10s",
+    aspect: "16:9, 9:16, 1:1, 4:3, 3:4, 21:9",
+    resolution: "1080p",
+    audio: "none",
+    bestFor: ["silent cinematic film-grain portrait/wide"],
+    preferWhen: "you want Seedance's look without audio",
+  },
+  {
+    id: "seedance-v1-lite",
+    tier: "ByteDance Seedance 1 / Lite",
+    input: "text-to-video",
+    duration: "5s or 10s",
+    aspect: "16:9, 9:16, 1:1, 4:3, 3:4, 21:9",
+    resolution: "720p",
+    audio: "none",
+    bestFor: ["cheap stylized cinematic drafts"],
+    preferWhen: "cost is the deciding factor and audio isn't needed",
+  },
+
+  // ─── MiniMax Hailuo — stylized / anime ──
+  {
+    id: "hailuo-02-pro",
+    tier: "MiniMax Hailuo 02 / Pro",
+    input: "text-to-video",
+    duration: "fixed (model-defined)",
+    aspect: "16:9 ONLY",
+    resolution: "1080p",
+    audio: "none",
+    bestFor: ["anime/stylized portraits with complex character motion", "2.5D illustration looks"],
+    avoidFor: ["vertical/square deliveries", "photoreal humans"],
+    preferWhen: "the brief asks for ANIME or strongly STYLIZED illustration in 16:9",
+  },
+  {
+    id: "hailuo-02-standard",
+    tier: "MiniMax Hailuo 02 / Standard",
+    input: "text-to-video",
+    duration: "6s or 10s",
+    aspect: "16:9 ONLY",
+    resolution: "768p",
+    audio: "none",
+    bestFor: ["cheap anime/stylized 6–10s drafts at 768p"],
+    preferWhen: "you want Hailuo's anime look on a budget",
+  },
+  {
+    id: "hailuo-01",
+    tier: "MiniMax Hailuo 01",
+    input: "text-to-video",
+    duration: "fixed (~6s)",
+    aspect: "16:9 ONLY",
+    resolution: "768p",
+    audio: "none",
+    bestFor: ["legacy stylized/anime baseline"],
+    preferWhen: "only when explicitly requested",
+  },
+
+  // ─── Runway ──
+  {
+    id: "runway-gen3-turbo",
+    tier: "Runway Gen-3 / Turbo",
+    input: "text-to-video",
+    duration: "5s or 10s",
+    aspect: "16:9, 9:16",
+    resolution: "720p",
+    audio: "none",
+    bestFor: ["stylized cinematic with Runway's signature painterly look", "music-video moments"],
+    avoidFor: ["square (1:1) deliveries", "1080p hero shots"],
+    preferWhen: "the brief specifically references Runway's aesthetic",
+  },
+
+  // ─── Lightricks LTX — open, fast, stylized ──
+  {
+    id: "ltx-video-13b",
+    tier: "Lightricks LTX Video 13B Distilled",
+    input: "text-to-video",
+    duration: "5s",
+    aspect: "16:9, 9:16, 1:1",
+    resolution: "720p",
+    audio: "none",
+    bestFor: ["very fast 5s stylized drafts with stable subjects"],
+    preferWhen: "you need the cheapest/fastest 5s preview",
+  },
+  {
+    id: "ltx-video",
+    tier: "Lightricks LTX Video",
+    input: "text-to-video",
+    duration: "5s",
+    aspect: "16:9, 9:16, 1:1",
+    resolution: "720p",
+    audio: "none",
+    bestFor: ["fast 5s stylized drafts"],
+    preferWhen: "LTX 13B unavailable",
+  },
+
+  // ─── Alibaba Wan ──
+  {
+    id: "wan-pro",
+    tier: "Alibaba Wan / Pro",
+    input: "text-to-video",
+    duration: "5s or 10s",
+    aspect: "16:9, 9:16, 1:1",
+    resolution: "720p",
+    audio: "none",
+    bestFor: ["photoreal/stylized 720p drafts with predictable motion"],
+    preferWhen: "Kling/Seedance are unavailable and budget matters",
+  },
+  {
+    id: "wan-v2.2-a14b",
+    tier: "Alibaba Wan 2.2 / A14B",
+    input: "text-to-video",
+    duration: "5s or 10s",
+    aspect: "16:9, 9:16, 1:1",
+    resolution: "720p",
+    audio: "none",
+    bestFor: ["cheap stylized 720p iterations"],
+    preferWhen: "cost is the deciding factor for non-photoreal work",
+  },
 ];
-const MODEL_IDS = MODEL_CATALOG_LINES.map((l) => l.split(" — ")[0]);
+
+function formatPlaybook(): string {
+  return MODEL_PLAYBOOK.map((m) => {
+    const lines = [
+      `• ${m.id} — ${m.tier}`,
+      `    input: ${m.input}${m.needs ? ` | needs: ${m.needs}` : ""}`,
+      `    duration: ${m.duration} | aspect: ${m.aspect} | resolution: ${m.resolution} | audio: ${m.audio}`,
+      `    best for: ${m.bestFor.join("; ")}`,
+    ];
+    if (m.avoidFor && m.avoidFor.length) lines.push(`    avoid for: ${m.avoidFor.join("; ")}`);
+    lines.push(`    prefer when: ${m.preferWhen}`);
+    return lines.join("\n");
+  }).join("\n");
+}
+
+const MODEL_IDS = MODEL_PLAYBOOK.map((m) => m.id);
+
 
 const SYSTEM_PROMPT = `You are an AI Director — a professional cinematographer and creative director who turns a user's brief into a polished, production-ready cinematic prompt for AI video generation.
 
@@ -76,35 +457,66 @@ ASK_CLARIFICATION COHERENCE:
 - Phrase the media ask plainly with a verb the UI can detect: "Drop a reference image…", "Share a short clip…", "Upload the brief PDF…".
 
 MODEL-ROUTING QUESTIONS:
-Before generating a prompt, you MUST know enough to pick a model. The brief usually tells you the aesthetic and motion complexity. The three details that most often decide the model — and that briefs usually omit — are:
-1. Duration — target clip length in seconds (drives 5s/6s/8s/10s model families).
-2. Audio & dialogue — does the shot need spoken lines, sync sound, music, SFX, or is it silent? (veo-3.x and seedance-2.0 are the only audio-capable families.)
-3. Aspect ratio / orientation — 16:9, 9:16, 1:1, or other? (hailuo and several veo variants are constrained.)
+Before generating a prompt, you MUST know enough to pick a model. Four axes most often decide the pick — and briefs usually omit some of them:
+1. Input mode — fresh generation, edit an existing video, mimic motion from a clip, or keep characters consistent across shots? This selects between text-to-video and the Omni / Omni Edit / Motion Control family.
+2. Duration — target clip length in seconds (drives 5s/6s/8s/10s/15s tiers).
+3. Audio & dialogue — spoken lines, sync sound, music, SFX, or silent? (Audio-capable families: veo-3/3.1, seedance-2.0/2.0-fast, kling-v3 family, kling-omni, kling-omni-edit.)
+4. Aspect ratio / orientation — 16:9, 9:16, 1:1, 4:3, 3:4, or 21:9? (hailuo and several veo variants are constrained.)
 
 Rules:
-- If you already know at least 2 of the 3 above (from the brief or references), just pick the best model and generate.
-- If 2 or 3 of them are missing AND the brief is otherwise enough to generate, call \`ask_clarification\` with one question per missing axis (max 3, in this order: duration → audio/dialogue → aspect ratio).
-- Always include concrete options inline so the user can answer in one tap. Use exactly these shapes:
+- If you already know at least 3 of the 4 above (from the brief or references), just pick the best model and generate.
+- If 2+ axes are missing AND the brief is otherwise enough to generate, call \`ask_clarification\` with one question per missing axis (max 3, in this priority: input mode → duration → audio → aspect ratio).
+- Always include concrete options inline so the user can answer in one tap:
+  • "Do you want to restyle this exact clip, drive a character with this clip's motion, or generate a fresh video inspired by it?"
   • "How long should the clip be — 5s, 8s, 10s, or other?"
   • "Does it need spoken dialogue, ambient sound + music, or fully silent?"
   • "What aspect ratio — 16:9 landscape, 9:16 vertical, or 1:1 square?"
-- Do NOT ask a routing question whose answer is already implied by the brief (e.g. "vertical TikTok ad" → 9:16 known; "silent loop" → audio known; "8-second clip" → duration known).
+- Do NOT ask a routing question whose answer is already implied by the brief (e.g. "vertical TikTok ad" → 9:16 known; "silent loop" → audio known; "8-second clip" → duration known; "restyle this clip" → edit mode known).
 - Do NOT mix routing questions with a media-drop ask in the same batch (see ASK_CLARIFICATION COHERENCE) — handle media first, routing in the next turn.
 - Echo the user's answers back into the breakdown (\`duration_seconds\`, \`audio\`/\`dialogue\`, \`aspect_ratio\` where supported) and use them as the primary drivers when filling \`recommended_model_id\`, \`recommended_alternatives\`, and \`recommendation_reason\`.
+
+MODEL SELECTION ALGORITHM (run this in order before filling \`recommended_model_id\`):
+
+STEP 1 — Input gating (HARD filter, eliminates candidates):
+  • If the user attached a SOURCE VIDEO they want to edit/restyle → ONLY \`kling-omni-edit\` qualifies.
+  • If the user wants a character to COPY MOTION from another clip → ONLY \`kling-motion-control\` qualifies (needs 1 reference image + 1 driving video).
+  • If the user attached IMAGES of characters/products that MUST stay consistent across shots → strongly prefer \`kling-omni\` (multi-reference + named elements).
+  • Otherwise all text-to-video models are eligible.
+
+STEP 2 — Capability gating (HARD filter):
+  • Drop any model whose max duration < requested duration.
+  • Drop any model whose aspect ratios don't include the requested ratio.
+  • If audio/dialogue is required, keep only audio-capable models (veo-3/3.1 family, seedance-2.0/2.0-fast, kling-v3 family, kling-omni, kling-omni-edit).
+  • If native 4K is explicitly requested, keep only \`kling-v3-4k\`.
+
+STEP 3 — Aesthetic ranking (SOFT score) among remaining candidates:
+  • photoreal dialogue close-up → veo-3.1 > seedance-2.0 > kling-v3-pro
+  • cinematic film-look wide shot (35mm/anamorphic/Portra) → seedance-2.0 > kling-v3-pro > veo-3.1
+  • anime / stylized portrait → hailuo-02-pro > seedance-v1-lite > ltx-video-13b
+  • multi-shot storyboard with recurring characters → kling-omni > kling-v3-pro
+  • VFX-heavy action / complex motion → kling-v2.5-turbo-pro > kling-v3-pro
+  • on-screen readable text / signage → veo-3.1 (strongly preferred)
+  • non-standard aspect (4:3 / 3:4 / 21:9) → seedance family only
+  • fast cheap iteration → veo-3.1-lite / seedance-2.0-fast / wan-v2.2-a14b / ltx-video-13b
+
+STEP 4 — Output:
+  • \`recommended_model_id\` = top of the ranked list.
+  • \`recommended_alternatives\` = #2 and #3 from the same ranked list (never duplicate #1, never list a model that failed Step 1 or Step 2).
+  • \`recommendation_reason\` = one sentence naming the deciding factor (e.g. "Source video attached → only model that can edit it" or "Native lip-sync dialogue + readable on-screen text in 1080p 9:16").
 
 WHEN YOU GENERATE A PROMPT:
 - The \`prompt\` field is the final cinematic prompt the user will paste into a video model. Write it as a single dense paragraph (60–140 words), packed with concrete visual detail: subject + action, camera (lens, angle, movement), lighting (key/fill/practicals, time of day, color temp), environment, mood, color palette, film/look reference if relevant.
 - The \`breakdown\` is a structured snapshot of your decisions for the user to scan and tweak.
 - ALWAYS fill \`breakdown.negative_prompt\` with concrete things to avoid (face artifacts, motion blur, text/watermark, modern items if vintage, etc).
-- ALWAYS fill \`breakdown.recommended_model_id\` with EXACTLY ONE id from the AVAILABLE MODELS list below. Do NOT invent ids. Pick based on capability fit (audio needs, max duration, aesthetic strengths).
-- ALWAYS fill \`breakdown.recommended_alternatives\` with 2 backup ids from the same list, ranked by suitability.
-- ALWAYS fill \`breakdown.recommendation_reason\` with one sentence explaining the pick (e.g. "Native audio + 8s dialogue support").
+- ALWAYS fill \`breakdown.recommended_model_id\` with EXACTLY ONE id from the MODEL PLAYBOOK below. Do NOT invent ids. Run the 4-step algorithm above.
+- ALWAYS fill \`breakdown.recommended_alternatives\` with 2 backup ids from the same playbook, ranked by suitability and respecting Steps 1–2 hard filters.
+- ALWAYS fill \`breakdown.recommendation_reason\` with one sentence naming the deciding factor from the algorithm (input gate / capability gate / aesthetic match).
 - ALWAYS fill \`breakdown.model_recommendation\` with a friendly one-line label + reason for display (the structured ids above are the source of truth, this is for humans).
 - ALWAYS fill \`breakdown.film_emulation\` if a film/look reference is implied (stock + grade), otherwise leave blank.
 - Always be opinionated. If the brief is vague, MAKE strong creative choices and explain them in \`directors_note\`.
 
-═══ AVAILABLE MODELS (id — family, max duration, max resolution, audio?, strengths) ═══
-${MODEL_CATALOG_LINES.join("\n")}
+═══ MODEL PLAYBOOK — what each model does, what it needs, when to pick it ═══
+${formatPlaybook()}
 
 NEVER:
 - Output the prompt as plain assistant text. Always use a tool.
@@ -178,7 +590,7 @@ const TOOLS = [
               recommended_model_id: {
                 type: "string",
                 enum: MODEL_IDS,
-                description: "EXACT model id from the AVAILABLE MODELS list. Source of truth for the picker.",
+                description: "EXACT model id from the MODEL PLAYBOOK. Source of truth for the picker.",
               },
               recommended_alternatives: {
                 type: "array",
