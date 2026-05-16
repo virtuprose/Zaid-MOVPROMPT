@@ -464,7 +464,7 @@ export default function MarketingStudio() {
             </div>
 
           {/* Composer card */}
-          <div ref={composerRef} className="flex-1 min-w-0 rounded-3xl border border-border/60 bg-[hsl(240_5%_8%)]/70 backdrop-blur p-4 sm:p-6 scroll-mt-20">
+          <div ref={composerRef} className="flex-1 min-w-0 rounded-3xl border border-border/60 bg-[hsl(240_5%_8%)]/70 backdrop-blur p-4 sm:p-5 scroll-mt-20">
             {(brandKit || characterKit || location.place || location.imagePath) && (
               <div className="flex flex-wrap items-center gap-2 mb-3 pb-3 border-b border-border/30">
                 {brandKit && (
