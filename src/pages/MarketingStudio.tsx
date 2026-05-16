@@ -1177,7 +1177,23 @@ function CommunityGrid({
   );
 }
 
-function UserAdCard({ ad, onClick }: { ad: UserAd; onClick: () => void }) {
+function UserAdCard({
+  ad,
+  onClick,
+  onDownload,
+  onToggleLike,
+  onDelete,
+}: {
+  ad: UserAd;
+  onClick: () => void;
+  onDownload?: () => void;
+  onToggleLike?: () => void;
+  onDelete?: () => void;
+}) {
+  const stop = (fn?: () => void) => (e: React.MouseEvent) => {
+    e.stopPropagation();
+    fn?.();
+  };
   return (
     <article
       onClick={onClick}
@@ -1195,6 +1211,38 @@ function UserAdCard({ ad, onClick }: { ad: UserAd; onClick: () => void }) {
       </div>
       <div className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-[hsl(35_90%_55%)]/90 backdrop-blur text-[10px] uppercase tracking-wide text-black font-semibold">
         Yours
+      </div>
+      <div className="absolute top-2 right-2 flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+        {onToggleLike && (
+          <button
+            type="button"
+            onClick={stop(onToggleLike)}
+            aria-label={ad.liked ? "Unlike" : "Like"}
+            className="h-8 w-8 rounded-full bg-black/55 backdrop-blur border border-white/10 grid place-items-center text-white hover:bg-black/75 hover:border-[hsl(35_90%_55%)]/60 hover:text-[hsl(35_90%_55%)] transition"
+          >
+            <Heart className="h-4 w-4" fill={ad.liked ? "currentColor" : "none"} />
+          </button>
+        )}
+        {onDownload && (
+          <button
+            type="button"
+            onClick={stop(onDownload)}
+            aria-label="Download"
+            className="h-8 w-8 rounded-full bg-black/55 backdrop-blur border border-white/10 grid place-items-center text-white hover:bg-black/75 hover:border-[hsl(190_90%_50%)]/60 hover:text-[hsl(190_90%_50%)] transition"
+          >
+            <Download className="h-4 w-4" />
+          </button>
+        )}
+        {onDelete && (
+          <button
+            type="button"
+            onClick={stop(onDelete)}
+            aria-label="Delete"
+            className="h-8 w-8 rounded-full bg-black/55 backdrop-blur border border-white/10 grid place-items-center text-white hover:bg-destructive/80 hover:border-destructive transition"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+        )}
       </div>
       <div className="absolute bottom-0 inset-x-0 p-3 bg-gradient-to-t from-black/80 to-transparent text-white">
         <span className="text-xs opacity-80">
