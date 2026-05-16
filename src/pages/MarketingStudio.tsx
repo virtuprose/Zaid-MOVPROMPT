@@ -842,7 +842,14 @@ export default function MarketingStudio() {
                     <PendingAdCard key={job.id} onCancel={() => handleCancelJob(job.id)} />
                   ))}
                   {userAds.slice(0, Math.max(0, 4 - pendingJobs.length)).map((ad) => (
-                    <UserAdCard key={ad.id} ad={ad} onClick={() => navigate("/library")} />
+                    <UserAdCard
+                      key={ad.id}
+                      ad={ad}
+                      onClick={() => navigate("/library")}
+                      onDownload={() => handleDownloadAd(ad)}
+                      onToggleLike={() => handleToggleLike(ad)}
+                      onDelete={() => setDeleteAdId(ad.id)}
+                    />
                   ))}
                 </div>
               </div>
