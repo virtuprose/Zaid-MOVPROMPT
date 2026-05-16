@@ -222,6 +222,14 @@ export async function pollVideoJob(jobId: string): Promise<VideoJob> {
   return data as VideoJob;
 }
 
+export async function cancelVideoJob(jobId: string): Promise<VideoJob> {
+  const { data, error } = await supabase.functions.invoke("generate-video", {
+    body: { action: "cancel", job_id: jobId },
+  });
+  if (error) throw new Error(error.message || "Could not cancel job");
+  return data as VideoJob;
+}
+
 export type ModerateImageResult = {
   eligible: boolean;
   severity: "safe" | "borderline" | "blocked";
