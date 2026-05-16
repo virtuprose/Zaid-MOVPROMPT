@@ -590,7 +590,7 @@ const TOOLS = [
               recommended_model_id: {
                 type: "string",
                 enum: MODEL_IDS,
-                description: "EXACT model id from the AVAILABLE MODELS list. Source of truth for the picker.",
+                description: "EXACT model id from the MODEL PLAYBOOK. Source of truth for the picker.",
               },
               recommended_alternatives: {
                 type: "array",
