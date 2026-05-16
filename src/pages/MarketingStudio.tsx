@@ -58,7 +58,7 @@ import {
   type RenderSettings,
 } from "@/components/marketing/RenderSettingsPopover";
 
-import { submitVideoJob, pollVideoJob, writeAdScene, type VideoJob } from "@/lib/director/api";
+import { submitVideoJob, pollVideoJob, cancelVideoJob, writeAdScene, type VideoJob } from "@/lib/director/api";
 import loopKitchen from "@/assets/loop-kitchen.mp4.asset.json";
 import loopCyberpunk from "@/assets/loop-cyberpunk.mp4.asset.json";
 import loopDesert from "@/assets/loop-desert.mp4.asset.json";
