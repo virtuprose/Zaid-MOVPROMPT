@@ -298,12 +298,64 @@ function DirectorChatInner() {
 
   const isEmpty = bubbles.length === 1 && bubbles[0].role === "assistant";
 
-  const STARTERS = [
-    "📸 Cinematic product reveal",
-    "🎭 Character introduction scene",
-    "🌅 Atmospheric landscape transition",
-    "🎬 Documentary narrative shot",
-  ];
+  const firstName = (() => {
+    const meta = (user as any)?.user_metadata?.full_name as string | undefined;
+    if (meta) return meta.split(" ")[0];
+    const email = user?.email;
+    if (email) {
+      const local = email.split("@")[0];
+      return local.charAt(0).toUpperCase() + local.slice(1);
+    }
+    return "Director";
+  })();
+
+  const CATEGORIES = [
+    {
+      id: "cinema",
+      label: "Cinema",
+      icon: Film,
+      prompts: [
+        "Slow dolly-in on a neon-lit ramen bar at dusk, anamorphic flares",
+        "Anamorphic 2.39:1 chase through a rain-slick Tokyo alley",
+        "Golden-hour aerial sweep over coastal cliffs, gentle parallax",
+      ],
+    },
+    {
+      id: "ugc",
+      label: "UGC",
+      icon: Megaphone,
+      prompts: [
+        "Selfie-style product review of my serum with a green-haired creator",
+        "Virtual try-on of my hoodie, mirror angle, natural light",
+        "Unboxing reel of my sneakers on a bedroom desk, vertical 9:16",
+      ],
+    },
+    {
+      id: "storyboard",
+      label: "Storyboard",
+      icon: LayoutGrid,
+      prompts: [
+        "Three-shot intro: establishing wide, medium reveal, close-up emotion",
+        "Five-shot product launch sequence with matched color grade",
+        "Two-frame transition: dawn skyline to character waking up",
+      ],
+    },
+    {
+      id: "animate",
+      label: "Animate",
+      icon: Wand2,
+      prompts: [
+        "Anime portrait, soft wind moving hair, 2D Ghibli palette",
+        "Cartoon mascot bouncing across a candy-colored landscape",
+        "Stylized 3D character waving, Pixar lighting, shallow depth",
+      ],
+    },
+  ] as const;
+
+  const [activeCategory, setActiveCategory] = useState<string>("cinema");
+  const [composerFocused, setComposerFocused] = useState(false);
+  const activeCat = CATEGORIES.find((c) => c.id === activeCategory) ?? CATEGORIES[0];
+
 
   const [sessionTitle, setSessionTitle] = useState<string | null>(null);
 
