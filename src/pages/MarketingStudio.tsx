@@ -610,7 +610,7 @@ export default function MarketingStudio() {
                     <button
                       type="button"
                       aria-label="Brand preview"
-                      className="relative w-14 h-14 rounded-2xl overflow-hidden border border-white/10 bg-white/5 hover:border-[#F5A524]/60 transition-colors shrink-0"
+                      className="relative w-12 h-12 rounded-xl overflow-hidden border border-white/10 bg-white/5 hover:border-[#F5A524]/60 transition-colors shrink-0"
                     >
                       {brandKit?.logo_url ? (
                         <>
@@ -643,7 +643,7 @@ export default function MarketingStudio() {
                     <button
                       type="button"
                       aria-label="Character preview"
-                      className="relative w-14 h-14 rounded-2xl overflow-hidden border border-white/10 bg-white/5 hover:border-[#F5A524]/60 transition-colors shrink-0"
+                      className="relative w-12 h-12 rounded-xl overflow-hidden border border-white/10 bg-white/5 hover:border-[#F5A524]/60 transition-colors shrink-0"
                     >
                       {characterKit?.reference_url ? (
                         <>
