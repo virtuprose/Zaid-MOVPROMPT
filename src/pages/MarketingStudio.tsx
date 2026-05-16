@@ -211,7 +211,10 @@ export default function MarketingStudio() {
                 description: characterKit.description,
               }
             : null,
-          location: location.place ? { place: location.place } : null,
+          location:
+            location.place || location.imagePath
+              ? { place: location.place || undefined, hasImage: !!location.imagePath }
+              : null,
         },
         controller.signal,
       )
