@@ -662,6 +662,15 @@ export default function MarketingStudio() {
           onCustomChange={setCustomSetting}
         />
 
+        <CharacterKitSheet
+          open={characterOpen}
+          onOpenChange={(o) => {
+            setCharacterOpen(o);
+            if (!o) setCharacterEditId(null);
+          }}
+          kitId={characterEditId}
+        />
+
         <BrandKitSheet
           open={brandOpen}
           onOpenChange={(o) => {
