@@ -334,8 +334,36 @@ export default function MarketingStudio() {
             </p>
           </div>
 
+          {/* Composer with sidebar */}
+          <div className="flex flex-col sm:flex-row gap-3 items-stretch">
+            {/* Subject sidebar */}
+            <div className="flex sm:flex-col gap-2 shrink-0">
+              {([
+                { id: "product", label: "Product", icon: Package },
+                { id: "app", label: "App", icon: AppWindow },
+              ] as const).map(({ id, label, icon: Icon }) => {
+                const active = subject === id;
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => setSubjectOverride(id)}
+                    className={cn(
+                      "w-[72px] h-[72px] rounded-2xl border flex flex-col items-center justify-center gap-1 text-[11px] font-medium transition-all",
+                      active
+                        ? "border-[#F5A524]/50 bg-[#F5A524]/10 text-foreground"
+                        : "border-border/60 bg-secondary/40 text-muted-foreground hover:text-foreground hover:border-border",
+                    )}
+                  >
+                    <Icon className="w-5 h-5" />
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+
           {/* Composer card */}
-          <div ref={composerRef} className="rounded-3xl border border-border/60 bg-[hsl(240_5%_8%)]/70 backdrop-blur p-4 sm:p-6 scroll-mt-20">
+          <div ref={composerRef} className="flex-1 min-w-0 rounded-3xl border border-border/60 bg-[hsl(240_5%_8%)]/70 backdrop-blur p-4 sm:p-6 scroll-mt-20">
             {/* Brand + Character chips — compact pill row */}
             <div className="flex flex-wrap items-center gap-2 mb-3 pb-3 border-b border-border/30">
               <DropdownMenu>
