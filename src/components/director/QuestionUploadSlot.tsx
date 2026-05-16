@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Upload, Loader2, X, Image as ImageIcon, Video, Music, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
@@ -67,6 +67,10 @@ export function QuestionUploadSlot({ ask, attachments, onAttach, onCountChange, 
   const buttonLabel = `Upload ${ask.label}`;
 
   const mine = attachments.filter((a) => mineIds.has(a.name + a.kind));
+
+  useEffect(() => {
+    onCountChange?.(mine.length);
+  }, [mine.length, onCountChange]);
 
   return (
     <div className="space-y-2">
