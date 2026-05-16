@@ -172,6 +172,9 @@ function DirectorChatInner() {
     setBubbles(next);
     setInput("");
     setBusy(true);
+    setAvatarPulse("nod");
+    window.setTimeout(() => setAvatarPulse("idle"), 650);
+    idleNudgedRef.current = true;
 
     try {
       const history: DirectorMsg[] = next
@@ -228,6 +231,7 @@ function DirectorChatInner() {
         // Trigger render directly
         added = {
           role: "assistant",
+          animate: true,
           content: `Sending this to the ${resp.provider_preference || "seedance"} renderer…`,
         };
         try {
@@ -242,7 +246,7 @@ function DirectorChatInner() {
           toast.error(e?.message || "Could not start render");
         }
       } else {
-        added = { role: "assistant", content: (resp as any).content || "..." };
+        added = { role: "assistant", animate: true, content: (resp as any).content || "..." };
       }
 
       const finalNext: Bubble[] = [...next, added];
