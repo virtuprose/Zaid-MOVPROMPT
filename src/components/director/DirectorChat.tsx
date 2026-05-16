@@ -1,6 +1,5 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { RotateCcw, FileText, Music, Sparkles, MessageCircleMore } from "lucide-react";
-import { Shimmer } from "@/components/ai-elements/shimmer";
 import { Message, MessageContent } from "@/components/ai-elements/message";
 import { QuestionCard } from "./QuestionCard";
 import { cn } from "@/lib/utils";
@@ -35,18 +34,32 @@ import {
   BottomApprovalBar,
   InlineApprovalCard,
 } from "./ApprovalRequest";
+import { AssistantAvatar, type AvatarState } from "./AssistantAvatar";
+import { TypingIndicator } from "./TypingIndicator";
+import { TypewriterText } from "./TypewriterText";
 
 type Bubble =
   | { role: "user"; content: string; attachments?: Attachment[] }
-  | { role: "assistant"; content: string }
+  | { role: "assistant"; content: string; animate?: boolean }
   | { role: "result"; data: Extract<AgentResponse, { kind: "generate_prompt" }>; partial?: boolean }
   | { role: "questions"; questions: string[]; reason: string };
 
 const WELCOME: Bubble = {
   role: "assistant",
+  animate: true,
   content:
-    "I'm your AI Director. Drop your references and tell me what you're making. More context = sharper prompts.",
+    "Hey — I'm your Director. Drop your references and tell me what you're making. More context means sharper prompts.",
 };
+
+const MOOD_LINES = [
+  "Ready when you are.",
+  "Pitch me the scene.",
+  "I'm all eyes.",
+  "Let's make something cinematic.",
+];
+
+const IDLE_NUDGE =
+  "Still there? Tell me the vibe — a couple words is plenty and I'll take it from there.";
 
 export function DirectorChat() {
   return (
