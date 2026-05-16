@@ -17,7 +17,7 @@ export function LocationPanel({
 
   const handleFile = async (file?: File | null) => {
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) return toast.error("Image must be under 5MB");
+    if (file.size > 25 * 1024 * 1024) return toast.error("Image must be under 25MB");
     if (!/^image\/(png|jpeg|jpg|webp)$/i.test(file.type)) return toast.error("Use PNG or JPG");
     setUploading(true);
     try {
@@ -92,7 +92,7 @@ export function LocationPanel({
         >
           {uploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Upload className="w-5 h-5" />}
           <span className="text-xs font-medium">Drop a photo or click to upload</span>
-          <span className="text-[10px] text-muted-foreground/70">PNG/JPG · ≤5MB</span>
+          <span className="text-[10px] text-muted-foreground/70">PNG/JPG · ≤25MB</span>
         </button>
       )}
 
