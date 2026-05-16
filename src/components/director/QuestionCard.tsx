@@ -21,7 +21,13 @@ type Props = {
 export function QuestionCard({ reason, questions, disabled, attachments = [], onAttach, onContinue, onSkip }: Props) {
   const [answers, setAnswers] = useState<string[]>(() => questions.map(() => ""));
   const [otherOpen, setOtherOpen] = useState<Record<number, boolean>>({});
+  const [slotCounts, setSlotCounts] = useState<Record<number, number>>({});
   const firstInputRef = useRef<HTMLInputElement>(null);
+
+  const mediaAsks = useMemo(
+    () => questions.map((q) => detectMediaAsk(q)),
+    [questions],
+  );
 
   useEffect(() => {
     if (!disabled) firstInputRef.current?.focus();
@@ -37,11 +43,22 @@ export function QuestionCard({ reason, questions, disabled, attachments = [], on
 
   const submit = () => {
     if (disabled) return;
-    const formatted = questions
-      .map((_, i) => answers[i]?.trim())
-      .map((a, i) => (a ? `${i + 1}. ${a}` : null))
-      .filter(Boolean)
-      .join("\n");
+    const lines = questions
+      .map((_, i) => {
+        const txt = answers[i]?.trim();
+        const count = slotCounts[i] || 0;
+        const ask = mediaAsks[i];
+        if (txt && count > 0) {
+          return `${i + 1}. ${txt} (attached ${count} ${ask?.label || "file"}${count > 1 ? "s" : ""})`;
+        }
+        if (txt) return `${i + 1}. ${txt}`;
+        if (count > 0 && ask) {
+          return `${i + 1}. [attached ${count} ${ask.label}${count > 1 ? "s" : ""}]`;
+        }
+        return null;
+      })
+      .filter(Boolean) as string[];
+    const formatted = lines.join("\n");
     if (!formatted) {
       onSkip();
       return;
