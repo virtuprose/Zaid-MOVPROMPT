@@ -141,9 +141,9 @@ export function CharacterKitSheet({
               Reference photo
             </Label>
             {hasImage ? (
-              <div className="mt-2 flex items-center gap-4 p-3 pr-4 rounded-xl border border-border/60 bg-secondary/20">
-                <div className="relative w-16 h-16 rounded-full overflow-hidden bg-muted/30 shrink-0">
-                  <img src={draft.reference_url!} alt="" className="w-full h-full object-cover" />
+             <div className="mt-2 flex items-center gap-3 p-2.5 pr-3 rounded-xl border border-border/60 bg-secondary/20">
+                <div className="relative w-14 h-14 rounded-lg overflow-hidden bg-muted/30 shrink-0">
+                  <img src={draft.reference_url!} alt="" className="w-full h-full object-contain" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-foreground/90 truncate">
