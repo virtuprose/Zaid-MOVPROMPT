@@ -18,6 +18,8 @@ import {
   Plus,
   Package,
   AppWindow,
+  Download,
+  Trash2,
 } from "lucide-react";
 import {
   DropdownMenu,
