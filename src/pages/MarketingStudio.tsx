@@ -105,6 +105,8 @@ export default function MarketingStudio() {
   const [brandEditId, setBrandEditId] = useState<string | null>(null);
   const [characterOpen, setCharacterOpen] = useState(false);
   const [characterEditId, setCharacterEditId] = useState<string | null>(null);
+  const [manageBrandsOpen, setManageBrandsOpen] = useState(false);
+  const [manageCharactersOpen, setManageCharactersOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
