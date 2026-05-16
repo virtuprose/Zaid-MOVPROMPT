@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Upload, Loader2, X, Image as ImageIcon, Video, Music, FileText } from "lucide-react";
+import { Upload, Loader2, X, Music, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import {
