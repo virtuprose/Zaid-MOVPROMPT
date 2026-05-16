@@ -267,3 +267,42 @@ export async function rewritePromptSafe(
   if (error) throw error;
   return data as { rewritten_prompt: string; changes_summary: string };
 }
+
+export type AdSceneBrief = {
+  subject?: "product" | "app";
+  format?: { label?: string; fragment?: string; custom?: string };
+  hook?: { label?: string; fragment?: string };
+  setting?: { label?: string; fragment?: string; custom?: string };
+  brand?: { name?: string; description?: string; tagline?: string | null; audience?: string | null } | null;
+  character?: { name?: string; role?: string | null; description?: string | null } | null;
+  location?: { place?: string } | null;
+};
+
+export async function writeAdScene(
+  brief: AdSceneBrief,
+  signal?: AbortSignal,
+): Promise<string> {
+  // We need AbortSignal support and supabase.functions.invoke doesn't expose it,
+  // so call the function URL directly with fetch.
+  const { data: { session } } = await supabase.auth.getSession();
+  const token = session?.access_token;
+  if (!token) throw new Error("Not authenticated");
+  const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/write-ad-scene`;
+  const resp = await fetch(url, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+      apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string,
+    },
+    body: JSON.stringify(brief),
+    signal,
+  });
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({}));
+    throw new Error(err?.error || `Scene draft failed (${resp.status})`);
+  }
+  const data = await resp.json();
+  return typeof data?.scene === "string" ? data.scene : "";
+}
+

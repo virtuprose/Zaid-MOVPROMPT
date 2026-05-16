@@ -58,7 +58,7 @@ import {
   type RenderSettings,
 } from "@/components/marketing/RenderSettingsPopover";
 
-import { submitVideoJob, pollVideoJob, type VideoJob } from "@/lib/director/api";
+import { submitVideoJob, pollVideoJob, writeAdScene, type VideoJob } from "@/lib/director/api";
 import loopKitchen from "@/assets/loop-kitchen.mp4.asset.json";
 import loopCyberpunk from "@/assets/loop-cyberpunk.mp4.asset.json";
 import loopDesert from "@/assets/loop-desert.mp4.asset.json";
@@ -124,6 +124,7 @@ export default function MarketingStudio() {
   const [characterEditId, setCharacterEditId] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [drafting, setDrafting] = useState(false);
   const [renderSettings, setRenderSettings] = useState<RenderSettings>(RENDER_DEFAULTS);
 
   const [userAds, setUserAds] = useState<UserAd[]>([]);
@@ -173,6 +174,77 @@ export default function MarketingStudio() {
     !!location.place ||
     !!location.imagePath;
   const ready = !!((formatId || customFormat.trim()) && hookId && (settingId || customSetting.trim()));
+
+  // Auto-write the describe box from the current Format/Hook/Setting + brand/avatar/location.
+  // Re-runs on every trio change. Aborts in-flight requests when picks change again.
+  useEffect(() => {
+    if (!ready) return;
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => {
+      setDrafting(true);
+      writeAdScene(
+        {
+          subject,
+          format: format
+            ? { label: format.label, fragment: format.fragment }
+            : customFormat.trim()
+              ? { custom: customFormat.trim() }
+              : undefined,
+          hook: hook ? { label: hook.label, fragment: hook.fragment } : undefined,
+          setting: setting
+            ? { label: setting.label, fragment: setting.fragment }
+            : customSetting.trim()
+              ? { custom: customSetting.trim() }
+              : undefined,
+          brand: brandKit
+            ? {
+                name: brandKit.name,
+                description: brandKit.description,
+                tagline: brandKit.tagline,
+                audience: brandKit.audience,
+              }
+            : null,
+          character: characterKit
+            ? {
+                name: characterKit.name,
+                role: characterKit.role,
+                description: characterKit.description,
+              }
+            : null,
+          location: location.place ? { place: location.place } : null,
+        },
+        controller.signal,
+      )
+        .then((scene) => {
+          if (controller.signal.aborted) return;
+          if (scene) setMaster(scene);
+        })
+        .catch((err) => {
+          if (controller.signal.aborted || err?.name === "AbortError") return;
+          console.warn("write-ad-scene failed", err);
+          toast.message("Couldn't draft the scene — type your own.");
+        })
+        .finally(() => {
+          if (!controller.signal.aborted) setDrafting(false);
+        });
+    }, 400);
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+      setDrafting(false);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    formatId,
+    customFormat,
+    hookId,
+    settingId,
+    customSetting,
+    brandKit?.id,
+    characterKit?.id,
+    location.place,
+    subject,
+  ]);
 
   const startGenerate = () => {
     if (!ready) {
@@ -445,14 +517,25 @@ export default function MarketingStudio() {
               </div>
             )}
 
-            <Textarea
-              value={master}
-              onChange={(e) => setMaster(e.target.value)}
-              placeholder="Describe what happens in the ad…"
-              className="min-h-[80px] bg-transparent border-0 resize-none text-base placeholder:text-muted-foreground/70 focus-visible:ring-0 px-0"
-              maxLength={800}
-            />
-
+            <div className="relative">
+              <Textarea
+                value={master}
+                onChange={(e) => setMaster(e.target.value)}
+                placeholder={drafting ? "Writing scene…" : "Describe what happens in the ad…"}
+                disabled={drafting}
+                className={cn(
+                  "min-h-[80px] bg-transparent border-0 resize-none text-base placeholder:text-muted-foreground/70 focus-visible:ring-0 px-0",
+                  drafting && "opacity-70",
+                )}
+                maxLength={800}
+              />
+              {drafting && (
+                <div className="absolute top-2 right-0 inline-flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  Drafting…
+                </div>
+              )}
+            </div>
             <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-border/30">
 
               <PresetChip
@@ -567,7 +650,7 @@ export default function MarketingStudio() {
 
                 <Button
                   size="lg"
-                  disabled={!hasInputs || submitting}
+                  disabled={!hasInputs || submitting || drafting}
                   onClick={startGenerate}
                   className={cn(
                     "rounded-2xl px-6 h-12 font-semibold text-base transition-all",
