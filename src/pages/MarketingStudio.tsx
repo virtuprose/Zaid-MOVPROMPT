@@ -43,6 +43,11 @@ import { BrandPickerPopover } from "@/components/marketing/BrandPickerPopover";
 import { CharacterPickerPopover } from "@/components/marketing/CharacterPickerPopover";
 import { CharacterKitSheet } from "@/components/marketing/CharacterKitSheet";
 import { useCharacterKit } from "@/lib/marketing/characterKit";
+import {
+  RenderSettingsPopover,
+  RENDER_DEFAULTS,
+  type RenderSettings,
+} from "@/components/marketing/RenderSettingsPopover";
 
 import { submitVideoJob, pollVideoJob, type VideoJob } from "@/lib/director/api";
 import loopKitchen from "@/assets/loop-kitchen.mp4.asset.json";
