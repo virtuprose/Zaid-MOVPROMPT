@@ -764,11 +764,13 @@ export type Database = {
         Row: {
           completed_at: string | null
           created_at: string
+          deleted_at: string | null
           error: string | null
           fal_request_id: string | null
           fal_response_url: string | null
           fal_status_url: string | null
           id: string
+          liked: boolean
           prompt: string
           provider: string
           reference_image_urls: Json | null
@@ -780,11 +782,13 @@ export type Database = {
         Insert: {
           completed_at?: string | null
           created_at?: string
+          deleted_at?: string | null
           error?: string | null
           fal_request_id?: string | null
           fal_response_url?: string | null
           fal_status_url?: string | null
           id?: string
+          liked?: boolean
           prompt: string
           provider: string
           reference_image_urls?: Json | null
@@ -796,11 +800,13 @@ export type Database = {
         Update: {
           completed_at?: string | null
           created_at?: string
+          deleted_at?: string | null
           error?: string | null
           fal_request_id?: string | null
           fal_response_url?: string | null
           fal_status_url?: string | null
           id?: string
+          liked?: boolean
           prompt?: string
           provider?: string
           reference_image_urls?: Json | null

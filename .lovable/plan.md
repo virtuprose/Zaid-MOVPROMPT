@@ -1,36 +1,40 @@
-## Ads Studio — design polish
+## Goal
+Add Download, Like, and Delete actions to each generated video card on the Marketing Studio (`UserAdCard`), plus a couple of optional extras worth considering.
 
-Scope: visual/presentation only in `src/pages/MarketingStudio.tsx`. No logic, copy, or behavior changes beyond what's listed.
+## Changes
 
-### 1. Hero block
-- Reduce title from `text-[40px] sm:text-[52px]` → `text-[32px] sm:text-[44px]`, keep uppercase + tight tracking.
-- Subtitle: bump max width `max-w-xl` → `max-w-lg` and tighten leading.
-- Section spacing: page wrapper `py-8 sm:py-10` → `py-6 sm:py-8`, hero `mb-8` → `mb-6`.
+### 1. Database (migration)
+- Add `liked boolean NOT NULL default false` to `video_jobs` (per-user likes; each job already belongs to one user, so a column is simpler than a join table).
+- Add a `DELETE` RLS policy on `video_jobs`: `auth.uid() = user_id`.
+- (Optional) Add `deleted_at timestamptz` for soft-delete + an undo toast — safer than hard delete. **Recommendation: soft-delete.**
 
-### 2. Subject sidebar (Product / App)
-- Shrink tiles `w-[72px] h-[72px]` → `w-16 h-16`, gap `gap-2` → `gap-1.5`, so they align flush with composer top/bottom edges on desktop.
+### 2. Card UI (`UserAdCard` in `src/pages/MarketingStudio.tsx`)
+Overlay action bar appearing top-right on hover (and always visible on touch), using the existing dark cinematic tokens — circular icon buttons with `bg-black/50 backdrop-blur` and cyan/amber hover glow:
 
-### 3. Composer card
-- Padding `p-4 sm:p-6` → `p-4 sm:p-5`.
-- Action row: brand/avatar trigger tiles `w-14 h-14` → `w-12 h-12 rounded-xl` to match chip height (h-9) and Generate button rhythm.
-- Generate button: `h-12 px-6 text-base` → `h-11 px-5 text-sm` so it stops dominating the row.
-- Chip row gap `gap-2` already fine; ensure `ml-auto` cluster aligns center via `items-center` (already set).
-- "Renders as:" footer: `p-3` → `px-3 py-2`, smaller `text-[11px]`.
+- **Download** (`Download` icon) — fetches `video_url` as a blob and triggers a `.mp4` download with filename `vidoprompt-<shortId>.mp4`. Avoids opening a new tab.
+- **Like** (`Heart` icon) — toggles `liked`, optimistic update, filled amber when liked.
+- **Delete** (`Trash2` icon) — opens the same themed `AlertDialog` pattern used for cancel ("Delete this ad? This can't be undone." or "Move to trash" if soft-delete), then removes from `userAds` and DB.
 
-### 4. Recent Ads section
-- Section top margin `mt-14` → `mt-10`.
-- `SectionHeader` title `text-2xl sm:text-3xl` → `text-xl sm:text-2xl`, `mb-5` → `mb-4`.
-- Grid gap `gap-4` → `gap-3`.
-- Cards (UserAdCard, PendingAdCard, CommunityCard): aspect `aspect-[9/12]` → `aspect-[9/16]` only feels right for vertical ads, but they currently render way too tall at 3-cols on desktop. Switch to `aspect-[3/4]` so a 3-up row stays balanced (≈480×640 → ≈480×640 stays similar, but visual weight reduced when combined with 4-col on `xl`).
-- Add `xl:grid-cols-4` to the two "Your recent ads" grids so on wide viewports cards shrink instead of stretching; update slice budgets to `Math.max(0, 4 - pendingJobs.length)` (mixed) and `Math.max(0, 8 - pendingJobs.length)` (full).
-- PendingAdCard inner: spinner `w-8 h-8` → `w-6 h-6`, label tracking unchanged, subtext `text-[11px]` → `text-[10.5px]` and tone down `from-muted/40` shimmer.
+Click on the video body still navigates to `/library`; action buttons `stopPropagation`.
 
-### 5. Misc
-- Background blur orb `w-[700px] h-[400px]` → `w-[560px] h-[320px]` so it doesn't push perceived headline higher.
-- No changes to TopNav, dialogs, or any non-visible logic.
+### 3. Data layer (`src/lib/director/api.ts` or inline)
+- `toggleLikeAd(id, liked)` → update `video_jobs`.
+- `deleteAd(id)` → delete (or set `deleted_at`).
+- Update the initial fetch query to exclude soft-deleted rows if we go that route.
 
-### Files touched
-- `src/pages/MarketingStudio.tsx` (only)
+### 4. Suggested extras (let me know which to include)
+- **Copy prompt** (`Copy` icon) — pulls `video_jobs.prompt` to clipboard. Very useful for iterating.
+- **Regenerate / Remix** (`RefreshCw` icon) — loads the original prompt back into the composer for a new variation.
+- **Share link** (`Share2` icon) — copies the public video URL (or a `/library/:id` route) to clipboard.
+- **Aspect-ratio badge** in the corner so users can see at a glance whether it's 9:16 / 16:9 / 1:1.
+- Show **liked-only filter** in the Recent Ads header.
 
-### Out of scope
-- Backend/video polling, copy rewrites, new components, mobile-specific overhauls beyond the responsive tweaks above.
+## Technical notes
+- Reuse the `AlertDialog` already imported for cancellation — same visual language for destructive confirms.
+- Action bar uses `opacity-0 group-hover:opacity-100 transition` on desktop, `opacity-100` on `sm:` and below so mobile users can always tap.
+- Download via `fetch(video_url).then(r => r.blob())` + `URL.createObjectURL` — works for the signed Supabase URLs already in use.
+- Sonner toasts for feedback: "Downloaded", "Added to favorites", "Ad deleted".
+
+## Open questions for you
+1. **Delete**: hard delete or soft-delete with an "Undo" toast? (I recommend soft-delete.)
+2. Want any of the extras above (copy prompt, remix, share, aspect badge, liked filter)?
