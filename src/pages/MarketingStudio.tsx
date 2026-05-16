@@ -16,6 +16,8 @@ import {
   UserRound,
   X,
   Plus,
+  Package,
+  AppWindow,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -101,7 +103,11 @@ export default function MarketingStudio() {
     setActive: setCharacterActive,
     deleteKit: deleteCharacter,
   } = useCharacterKit();
-  const subject: Subject = brandKit?.subject ?? "product";
+  const [subjectOverride, setSubjectOverride] = useState<Subject | null>(null);
+  const subject: Subject = subjectOverride ?? brandKit?.subject ?? "product";
+  useEffect(() => {
+    if (brandKit?.subject) setSubjectOverride(brandKit.subject);
+  }, [brandKit?.subject]);
   const [master, setMaster] = useState("");
   const [formatId, setFormatId] = useState<string | undefined>();
   const [customFormat, setCustomFormat] = useState<string>("");
@@ -317,7 +323,7 @@ export default function MarketingStudio() {
 
         <TopNav />
 
-        <div className="relative z-10 container max-w-6xl mx-auto px-4 py-8 sm:py-10">
+        <div className="relative z-10 container max-w-7xl mx-auto px-4 py-8 sm:py-10">
           <div className="text-center mb-8">
             <h1 className="font-display text-[40px] sm:text-[52px] tracking-tight uppercase leading-[1]">
               Turn any product
@@ -328,8 +334,36 @@ export default function MarketingStudio() {
             </p>
           </div>
 
+          {/* Composer with sidebar */}
+          <div className="flex flex-col sm:flex-row gap-3 items-stretch">
+            {/* Subject sidebar */}
+            <div className="flex sm:flex-col gap-2 shrink-0">
+              {([
+                { id: "product", label: "Product", icon: Package },
+                { id: "app", label: "App", icon: AppWindow },
+              ] as const).map(({ id, label, icon: Icon }) => {
+                const active = subject === id;
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => setSubjectOverride(id)}
+                    className={cn(
+                      "w-[72px] h-[72px] rounded-2xl border flex flex-col items-center justify-center gap-1 text-[11px] font-medium transition-all",
+                      active
+                        ? "border-[#F5A524]/50 bg-[#F5A524]/10 text-foreground"
+                        : "border-border/60 bg-secondary/40 text-muted-foreground hover:text-foreground hover:border-border",
+                    )}
+                  >
+                    <Icon className="w-5 h-5" />
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+
           {/* Composer card */}
-          <div ref={composerRef} className="rounded-3xl border border-border/60 bg-[hsl(240_5%_8%)]/70 backdrop-blur p-4 sm:p-6 scroll-mt-20">
+          <div ref={composerRef} className="flex-1 min-w-0 rounded-3xl border border-border/60 bg-[hsl(240_5%_8%)]/70 backdrop-blur p-4 sm:p-6 scroll-mt-20">
             {/* Brand + Character chips — compact pill row */}
             <div className="flex flex-wrap items-center gap-2 mb-3 pb-3 border-b border-border/30">
               <DropdownMenu>
@@ -548,6 +582,50 @@ export default function MarketingStudio() {
               <RenderSettingsPopover value={renderSettings} onChange={setRenderSettings} />
 
               <div className="ml-auto flex items-center gap-2">
+                {brandKit?.logo_url && (
+                  <BrandPickerPopover
+                    kits={kits}
+                    activeId={brandActiveId}
+                    onSelect={(id) => void setBrandActive(id === brandActiveId ? null : id)}
+                    onNew={() => { setBrandEditId(null); setBrandOpen(true); }}
+                    onEdit={(id) => { setBrandEditId(id); setBrandOpen(true); }}
+                    onDelete={(id) => void deleteBrand(id)}
+                    trigger={
+                      <button
+                        type="button"
+                        aria-label="Brand preview"
+                        className="relative w-14 h-14 rounded-2xl overflow-hidden border border-white/10 bg-white/5 hover:border-[#F5A524]/60 transition-colors shrink-0"
+                      >
+                        <img src={brandKit.logo_url} alt="" className="w-full h-full object-cover" />
+                        <span className="absolute inset-x-0 bottom-0 bg-black/60 text-white text-[9px] font-semibold tracking-wider uppercase text-center py-0.5">
+                          {subject === "app" ? "App" : "Product"}
+                        </span>
+                      </button>
+                    }
+                  />
+                )}
+                {characterKit?.reference_url && (
+                  <CharacterPickerPopover
+                    kits={characterKits}
+                    activeId={characterActiveId}
+                    onSelect={(id) => void setCharacterActive(id === characterActiveId ? null : id)}
+                    onNew={() => { setCharacterEditId(null); setCharacterOpen(true); }}
+                    onEdit={(id) => { setCharacterEditId(id); setCharacterOpen(true); }}
+                    onDelete={(id) => void deleteCharacter(id)}
+                    trigger={
+                      <button
+                        type="button"
+                        aria-label="Character preview"
+                        className="relative w-14 h-14 rounded-2xl overflow-hidden border border-white/10 bg-white/5 hover:border-[#F5A524]/60 transition-colors shrink-0"
+                      >
+                        <img src={characterKit.reference_url} alt="" className="w-full h-full object-cover" />
+                        <span className="absolute inset-x-0 bottom-0 bg-black/60 text-white text-[9px] font-semibold tracking-wider uppercase text-center py-0.5">
+                          Avatar
+                        </span>
+                      </button>
+                    }
+                  />
+                )}
                 <Button
                   size="lg"
                   disabled={!hasInputs || submitting}
@@ -575,6 +653,7 @@ export default function MarketingStudio() {
                 {hook?.label} · {format?.label || "Custom format"} · {setting?.label || "Custom scene"} · {renderSettings.aspect_ratio} · {renderSettings.duration}s · {renderSettings.resolution} · audio on
               </div>
             )}
+          </div>
           </div>
 
           {/* Ads gallery */}
