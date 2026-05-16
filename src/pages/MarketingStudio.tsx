@@ -1094,15 +1094,6 @@ function PendingAdCard({ onCancel }: { onCancel?: () => void }) {
             Generating…
           </span>
           <span className="text-[10.5px] text-muted-foreground">Rendering — usually 1–3 minutes</span>
-          {onCancel && (
-            <button
-              type="button"
-              onClick={onCancel}
-              className="mt-2 inline-flex items-center gap-1.5 px-3 h-7 rounded-full border border-border/60 bg-background/70 text-[11px] text-muted-foreground hover:text-foreground hover:border-foreground/40 transition-colors"
-            >
-              <X className="w-3 h-3" /> Cancel
-            </button>
-          )}
         </div>
       </div>
       <div className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-[hsl(35_90%_55%)]/90 backdrop-blur text-[10px] uppercase tracking-wide text-black font-semibold">
