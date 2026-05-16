@@ -23,6 +23,9 @@ function rateLimited(ip: string) {
 // Compact catalog the LLM uses to pick a concrete model id. Keep in sync with
 // src/lib/director/videoModelCatalog.ts on the frontend.
 const MODEL_CATALOG_LINES = [
+  "kling-v3-pro — kling, 15s, 1080p, AUDIO, cinematic+photoreal+complex_motion+long_take+dialogue+multi_shot",
+  "kling-v3-standard — kling, 10s, 1080p, AUDIO, cinematic+photoreal+dialogue+multi_shot",
+  "kling-v3-4k — kling, 10s, native_4K, AUDIO, cinematic+photoreal+long_take",
   "kling-v2.5-turbo-pro — kling, 10s, 1080p, no-audio, photoreal+complex_motion+long_take+action",
   "kling-v2.1-master — kling, 10s, 1080p, no-audio, cinematic+photoreal+complex_motion+long_take",
   "kling-v2-master — kling, 10s, 1080p, no-audio, cinematic+photoreal+complex_motion",
