@@ -529,6 +529,8 @@ function DirectorChatInner() {
             }
             const isUser = b.role === "user";
             if (!isUser) {
+              // Hide the streaming placeholder bubble; TypingIndicator covers it.
+              if (b.content === "…" || b.content === "") return null;
               const animate = (b as any).animate === true;
               return (
                 <div key={i} className="flex items-start gap-2 motion-safe:animate-fade-up">
