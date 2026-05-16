@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
+import { fal } from "npm:@fal-ai/client";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -205,6 +206,7 @@ serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
+  fal.config({ credentials: FAL_KEY });
 
   const admin = createClient(
     Deno.env.get("SUPABASE_URL")!,
@@ -261,44 +263,27 @@ serve(async (req) => {
       const statusUrl =
         normalizeFalQueueUrl((job as { fal_status_url?: string | null }).fal_status_url, "status") ||
         fallbackUrls.statusUrl;
-      const statusResp = await fetch(
-        statusUrl,
-        { headers: { Authorization: `Key ${FAL_KEY}` } },
-      );
-      const statusPayload = await readJsonResponse(statusResp);
-      const statusData = statusPayload.data;
-      if (!statusResp.ok || !statusData) {
-        console.warn("fal status response unreadable", statusResp.status, statusPayload.text);
+      let statusData: Record<string, any> | null = null;
+      try {
+        statusData = await fal.queue.status(model, {
+          requestId: job.fal_request_id,
+          logs: true,
+        }) as Record<string, any>;
+      } catch (error) {
+        console.warn("fal status response unreadable", error);
         return new Response(JSON.stringify({ ...job, status: "processing" }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
       if (statusData.status === "COMPLETED") {
-        const responseCandidates = Array.from(
-          new Set(
-            [
-              normalizeFalQueueUrl(statusData.response_url as string | null | undefined, "response"),
-              normalizeFalQueueUrl((job as { fal_response_url?: string | null }).fal_response_url, "response"),
-              statusUrl.replace(/\/status$/, ""),
-              fallbackUrls.responseUrl,
-            ].filter((value): value is string => Boolean(value)),
-          ),
-        );
-
         let result: Record<string, any> | null = null;
-        let resolvedResponseUrl: string | null = null;
-
-        for (const candidate of responseCandidates) {
-          const resultResp = await fetch(candidate, {
-            headers: { Authorization: `Key ${FAL_KEY}` },
-          });
-          const resultPayload = await readJsonResponse(resultResp);
-          if (resultResp.ok && resultPayload.data) {
-            result = resultPayload.data;
-            resolvedResponseUrl = candidate;
-            break;
-          }
-          console.warn("fal result response unreadable", resultResp.status, candidate, resultPayload.text);
+        try {
+          const response = await fal.queue.result(model, {
+            requestId: job.fal_request_id,
+          }) as Record<string, any>;
+          result = (response.data ?? response) as Record<string, any>;
+        } catch (error) {
+          console.warn("fal result response unreadable", error);
         }
 
         if (!result) {
@@ -313,7 +298,7 @@ serve(async (req) => {
           .update({
             status: "completed",
             video_url: videoUrl,
-            fal_response_url: resolvedResponseUrl,
+            fal_response_url: normalizeFalQueueUrl(statusData.response_url as string | null | undefined, "response") || fallbackUrls.responseUrl,
             completed_at: new Date().toISOString(),
           })
           .eq("id", jobId);
@@ -458,30 +443,24 @@ serve(async (req) => {
     }
 
     // Submit to fal queue
-    const submitResp = await fetch(`https://queue.fal.run/${model}`, {
-      method: "POST",
-      headers: {
-        Authorization: `Key ${FAL_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(buildFalPayload(provider, normalizedPrompt, options, refImages)),
-    });
-    if (!submitResp.ok) {
-      const t = await submitResp.text();
-      console.error("fal submit error", submitResp.status, t);
+    let submitData: Record<string, any> | null = null;
+    try {
+      submitData = await fal.queue.submit(model, {
+        input: buildFalPayload(provider, normalizedPrompt, options, refImages),
+      }) as Record<string, any>;
+    } catch (error) {
+      console.error("fal submit error", error);
       await admin
         .from("video_jobs")
-        .update({ status: "failed", error: `Provider error ${submitResp.status}` })
+        .update({ status: "failed", error: "Provider error" })
         .eq("id", job.id);
       return new Response(JSON.stringify({ error: "Provider rejected request" }), {
         status: 502,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    const submitPayload = await readJsonResponse(submitResp);
-    const submitData = submitPayload.data;
     if (!submitData?.request_id) {
-      console.error("fal submit response unreadable", submitResp.status, submitPayload.text);
+      console.error("fal submit response unreadable", submitData);
       await admin
         .from("video_jobs")
         .update({ status: "failed", error: "Provider returned an invalid submission response" })
