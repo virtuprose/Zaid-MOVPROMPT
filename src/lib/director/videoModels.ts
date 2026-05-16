@@ -20,6 +20,9 @@ export const VIDEO_MODEL_GROUPS: VideoModelGroup[] = [
   {
     label: "Kuaishou — Kling",
     models: [
+      { id: "kling-v3-pro", label: "Kling 3.0 Pro", family: "kling", note: "Newest, native audio, multi-shot" },
+      { id: "kling-v3-standard", label: "Kling 3.0 Standard", family: "kling", note: "Native audio, multi-shot" },
+      { id: "kling-v3-4k", label: "Kling 3.0 4K", family: "kling", note: "Native 4K output" },
       { id: "kling-v2.5-turbo-pro", label: "Kling 2.5 Turbo Pro", family: "kling", note: "Latest, fastest pro tier" },
       { id: "kling-v2.1-master", label: "Kling 2.1 Master", family: "kling" },
       { id: "kling-v2-master", label: "Kling 2 Master", family: "kling" },
