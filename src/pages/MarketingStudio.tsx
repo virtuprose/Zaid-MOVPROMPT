@@ -111,6 +111,7 @@ export default function MarketingStudio() {
   const [characterEditId, setCharacterEditId] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [renderSettings, setRenderSettings] = useState<RenderSettings>(RENDER_DEFAULTS);
 
   const [userAds, setUserAds] = useState<UserAd[]>([]);
   const [pendingJobs, setPendingJobs] = useState<VideoJob[]>([]);
