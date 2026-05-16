@@ -374,6 +374,17 @@ export default function MarketingStudio() {
     };
   }, [pendingJobs]);
 
+  const handleCancelJob = async (jobId: string) => {
+    // optimistic remove
+    setPendingJobs((prev) => prev.filter((j) => j.id !== jobId));
+    try {
+      await cancelVideoJob(jobId);
+      toast.success("Generation canceled");
+    } catch (e: any) {
+      toast.error(e?.message || "Could not cancel — it may have already finished");
+    }
+  };
+
   const filteredAds = FEATURED_ADS.filter(
     (a) => filter === "All" || a.tag === filter,
   );
