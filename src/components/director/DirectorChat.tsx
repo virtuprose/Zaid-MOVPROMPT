@@ -209,6 +209,13 @@ function DirectorChatInner() {
               questions: (partial as any).questions || [],
               reason: (partial as any).reason || "",
             };
+          } else if (partial.kind === "ask_model_choice") {
+            copy[placeholderIndex] = {
+              role: "model_choice",
+              recommended_model_id: (partial as any).recommended_model_id || "",
+              alternatives: (partial as any).alternatives || [],
+              reason: (partial as any).reason || "",
+            };
           }
           return copy;
         });
