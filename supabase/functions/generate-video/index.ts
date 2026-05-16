@@ -75,14 +75,19 @@ async function readJsonResponse(resp: Response) {
   }
 }
 
-function getLegacyFalUrls(provider: string, model: string, requestId: string) {
-  const base = provider.startsWith("kling")
-    ? "fal-ai/kling-video"
-    : model;
+function falAppNamespace(model: string): string {
+  // Fal queue URLs are rooted at the app namespace (first 2 path segments),
+  // not the full model variant. e.g. "fal-ai/bytedance/seedance-2.0/text-to-video"
+  // -> "fal-ai/bytedance".
+  const parts = model.split("/");
+  return parts.slice(0, 2).join("/");
+}
 
+function getLegacyFalUrls(_provider: string, model: string, requestId: string) {
+  const base = falAppNamespace(model);
   return {
     statusUrl: `https://queue.fal.run/${base}/requests/${requestId}/status`,
-    responseUrl: `https://queue.fal.run/${base}/requests/${requestId}/response`,
+    responseUrl: `https://queue.fal.run/${base}/requests/${requestId}`,
   };
 }
 
