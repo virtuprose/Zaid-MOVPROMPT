@@ -302,8 +302,8 @@ function Field({
   max?: number;
 }) {
   return (
-    <div>
-      <Label className="text-[11px] font-medium text-muted-foreground">
+    <div className="space-y-2">
+      <Label className="text-[11px] uppercase tracking-wider font-medium text-muted-foreground">
         {label}
         {required && <span className="text-[hsl(0_72%_60%)]"> *</span>}
       </Label>
@@ -312,7 +312,6 @@ function Field({
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         maxLength={max}
-        className="mt-1.5"
       />
     </div>
   );
@@ -333,9 +332,9 @@ function FieldArea({
 }) {
   const count = value?.length ?? 0;
   return (
-    <div>
+    <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <Label className="text-[11px] font-medium text-muted-foreground">{label}</Label>
+        <Label className="text-[11px] uppercase tracking-wider font-medium text-muted-foreground">{label}</Label>
         {max && (
           <span className="text-[10px] text-muted-foreground/70 tabular-nums">
             {count}/{max}
@@ -347,7 +346,7 @@ function FieldArea({
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         maxLength={max}
-        className="mt-1.5 min-h-[96px] resize-none"
+        className="min-h-[96px] resize-none"
       />
     </div>
   );
