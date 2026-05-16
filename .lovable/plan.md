@@ -1,57 +1,36 @@
-## Root cause
-In `supabase/functions/generate-video/index.ts`, `getLegacyFalUrls()` builds:
-```
-queue.fal.run/{full-model-path}/requests/{id}/status|response
-```
-But fal's queue API is rooted at the **app namespace**, not the model variant. So `fal-ai/bytedance/seedance-2.0/text-to-video/requests/{id}/response` 404s; the correct URL is `fal-ai/bytedance/requests/{id}` (or `/status`). Jobs that were submitted before `fal_status_url`/`fal_response_url` were captured fall through to this broken fallback and never resolve, so the UI spins forever.
+## Ads Studio — design polish
 
-## Fix
+Scope: visual/presentation only in `src/pages/MarketingStudio.tsx`. No logic, copy, or behavior changes beyond what's listed.
 
-### 1. `supabase/functions/generate-video/index.ts` — correct the legacy URL builder
-Reduce the model path to the fal app namespace before building request URLs.
+### 1. Hero block
+- Reduce title from `text-[40px] sm:text-[52px]` → `text-[32px] sm:text-[44px]`, keep uppercase + tight tracking.
+- Subtitle: bump max width `max-w-xl` → `max-w-lg` and tighten leading.
+- Section spacing: page wrapper `py-8 sm:py-10` → `py-6 sm:py-8`, hero `mb-8` → `mb-6`.
 
-```ts
-function falAppNamespace(model: string): string {
-  // model examples:
-  //   "fal-ai/bytedance/seedance-2.0/text-to-video"   -> "fal-ai/bytedance"
-  //   "fal-ai/bytedance/seedance/v1/pro/text-to-video" -> "fal-ai/bytedance"
-  //   "fal-ai/kling-video/v3/pro/text-to-video"       -> "fal-ai/kling-video"
-  //   "fal-ai/veo3.1"                                  -> "fal-ai/veo3.1"
-  //   "fal-ai/veo3/fast"                               -> "fal-ai/veo3"
-  //   "fal-ai/minimax/hailuo-02/pro/text-to-video"    -> "fal-ai/minimax"
-  //   "fal-ai/runway-gen3/turbo/text-to-video"        -> "fal-ai/runway-gen3"
-  //   "fal-ai/ltx-video-13b-distilled"                 -> "fal-ai/ltx-video-13b-distilled"
-  //   "fal-ai/wan-pro/text-to-video"                   -> "fal-ai/wan-pro"
-  //   "fal-ai/wan/v2.2-a14b/text-to-video"            -> "fal-ai/wan"
-  const parts = model.split("/");
-  // Always at least "fal-ai/<name>"; keep only the first two segments.
-  return parts.slice(0, 2).join("/");
-}
+### 2. Subject sidebar (Product / App)
+- Shrink tiles `w-[72px] h-[72px]` → `w-16 h-16`, gap `gap-2` → `gap-1.5`, so they align flush with composer top/bottom edges on desktop.
 
-function getLegacyFalUrls(_provider: string, model: string, requestId: string) {
-  const base = falAppNamespace(model);
-  return {
-    statusUrl: `https://queue.fal.run/${base}/requests/${requestId}/status`,
-    responseUrl: `https://queue.fal.run/${base}/requests/${requestId}`,
-  };
-}
-```
+### 3. Composer card
+- Padding `p-4 sm:p-6` → `p-4 sm:p-5`.
+- Action row: brand/avatar trigger tiles `w-14 h-14` → `w-12 h-12 rounded-xl` to match chip height (h-9) and Generate button rhythm.
+- Generate button: `h-12 px-6 text-base` → `h-11 px-5 text-sm` so it stops dominating the row.
+- Chip row gap `gap-2` already fine; ensure `ml-auto` cluster aligns center via `items-center` (already set).
+- "Renders as:" footer: `p-3` → `px-3 py-2`, smaller `text-[11px]`.
 
-Two changes vs current code:
-- Use namespace, not full model path.
-- Drop the `/response` suffix (fal returns the result at `/requests/{id}` directly).
+### 4. Recent Ads section
+- Section top margin `mt-14` → `mt-10`.
+- `SectionHeader` title `text-2xl sm:text-3xl` → `text-xl sm:text-2xl`, `mb-5` → `mb-4`.
+- Grid gap `gap-4` → `gap-3`.
+- Cards (UserAdCard, PendingAdCard, CommunityCard): aspect `aspect-[9/12]` → `aspect-[9/16]` only feels right for vertical ads, but they currently render way too tall at 3-cols on desktop. Switch to `aspect-[3/4]` so a 3-up row stays balanced (≈480×640 → ≈480×640 stays similar, but visual weight reduced when combined with 4-col on `xl`).
+- Add `xl:grid-cols-4` to the two "Your recent ads" grids so on wide viewports cards shrink instead of stretching; update slice budgets to `Math.max(0, 4 - pendingJobs.length)` (mixed) and `Math.max(0, 8 - pendingJobs.length)` (full).
+- PendingAdCard inner: spinner `w-8 h-8` → `w-6 h-6`, label tracking unchanged, subtext `text-[11px]` → `text-[10.5px]` and tone down `from-muted/40` shimmer.
 
-### 2. Heal stuck rows
-For existing rows where `fal_status_url` / `fal_response_url` are NULL but `fal_request_id` is set, the corrected fallback now resolves them on the next poll — no migration needed.
+### 5. Misc
+- Background blur orb `w-[700px] h-[400px]` → `w-[560px] h-[320px]` so it doesn't push perceived headline higher.
+- No changes to TopNav, dialogs, or any non-visible logic.
 
-## Not in scope
-- No client changes.
-- No new queue/worker. The fal queue + edge-function polling already work.
-- No change to submit path (already uses returned `status_url`/`response_url` going forward).
+### Files touched
+- `src/pages/MarketingStudio.tsx` (only)
 
-## Validation
-- Watch existing in-flight job (provider `seedance-2.0`) — next poll should return `COMPLETED` and video URL populates.
-- Logs should no longer show `Path /…/text-to-video not found`.
-
-## Files touched
-- `supabase/functions/generate-video/index.ts`
+### Out of scope
+- Backend/video polling, copy rewrites, new components, mobile-specific overhauls beyond the responsive tweaks above.

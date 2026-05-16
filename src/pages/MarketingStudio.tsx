@@ -411,7 +411,7 @@ export default function MarketingStudio() {
         </Helmet>
 
         <div className="fixed inset-0 pointer-events-none overflow-hidden">
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[700px] h-[400px] bg-[hsl(35_90%_55%)]/12 rounded-full blur-[140px]" />
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[560px] h-[320px] bg-[hsl(35_90%_55%)]/12 rounded-full blur-[140px]" />
           <div
             className="absolute inset-0 opacity-[0.04]"
             style={{
@@ -424,13 +424,13 @@ export default function MarketingStudio() {
 
         <TopNav />
 
-        <div className="relative z-10 container max-w-7xl mx-auto px-4 py-8 sm:py-10">
-          <div className="text-center mb-8">
-            <h1 className="font-display text-[40px] sm:text-[52px] tracking-tight uppercase leading-[1]">
+        <div className="relative z-10 container max-w-7xl mx-auto px-4 py-6 sm:py-8">
+          <div className="text-center mb-6">
+            <h1 className="font-display text-[32px] sm:text-[44px] tracking-tight uppercase leading-[1]">
               Turn any product
               <br /> into a video ad
             </h1>
-            <p className="text-muted-foreground mt-3 max-w-xl mx-auto text-sm">
+            <p className="text-muted-foreground mt-3 max-w-lg mx-auto text-sm leading-snug">
               Pick a format, a scroll-stopping hook and a setting. We compose the prompt and render your ad.
             </p>
           </div>
@@ -438,7 +438,7 @@ export default function MarketingStudio() {
           {/* Composer with sidebar */}
           <div className="flex flex-col sm:flex-row gap-3 items-stretch">
             {/* Subject sidebar */}
-            <div className="flex sm:flex-col gap-2 shrink-0">
+            <div className="flex sm:flex-col gap-1.5 shrink-0">
               {([
                 { id: "product", label: "Product", icon: Package },
                 { id: "app", label: "App", icon: AppWindow },
@@ -450,7 +450,7 @@ export default function MarketingStudio() {
                     type="button"
                     onClick={() => setSubjectOverride(id)}
                     className={cn(
-                      "w-[72px] h-[72px] rounded-2xl border flex flex-col items-center justify-center gap-1 text-[11px] font-medium transition-all",
+                      "w-16 h-16 rounded-2xl border flex flex-col items-center justify-center gap-1 text-[11px] font-medium transition-all",
                       active
                         ? "border-[#F5A524]/50 bg-[#F5A524]/10 text-foreground"
                         : "border-border/60 bg-secondary/40 text-muted-foreground hover:text-foreground hover:border-border",
@@ -464,7 +464,7 @@ export default function MarketingStudio() {
             </div>
 
           {/* Composer card */}
-          <div ref={composerRef} className="flex-1 min-w-0 rounded-3xl border border-border/60 bg-[hsl(240_5%_8%)]/70 backdrop-blur p-4 sm:p-6 scroll-mt-20">
+          <div ref={composerRef} className="flex-1 min-w-0 rounded-3xl border border-border/60 bg-[hsl(240_5%_8%)]/70 backdrop-blur p-4 sm:p-5 scroll-mt-20">
             {(brandKit || characterKit || location.place || location.imagePath) && (
               <div className="flex flex-wrap items-center gap-2 mb-3 pb-3 border-b border-border/30">
                 {brandKit && (
@@ -610,7 +610,7 @@ export default function MarketingStudio() {
                     <button
                       type="button"
                       aria-label="Brand preview"
-                      className="relative w-14 h-14 rounded-2xl overflow-hidden border border-white/10 bg-white/5 hover:border-[#F5A524]/60 transition-colors shrink-0"
+                      className="relative w-12 h-12 rounded-xl overflow-hidden border border-white/10 bg-white/5 hover:border-[#F5A524]/60 transition-colors shrink-0"
                     >
                       {brandKit?.logo_url ? (
                         <>
@@ -643,7 +643,7 @@ export default function MarketingStudio() {
                     <button
                       type="button"
                       aria-label="Character preview"
-                      className="relative w-14 h-14 rounded-2xl overflow-hidden border border-white/10 bg-white/5 hover:border-[#F5A524]/60 transition-colors shrink-0"
+                      className="relative w-12 h-12 rounded-xl overflow-hidden border border-white/10 bg-white/5 hover:border-[#F5A524]/60 transition-colors shrink-0"
                     >
                       {characterKit?.reference_url ? (
                         <>
@@ -672,7 +672,7 @@ export default function MarketingStudio() {
                   disabled={!hasInputs || submitting || drafting}
                   onClick={startGenerate}
                   className={cn(
-                    "rounded-2xl px-6 h-12 font-semibold text-base transition-all",
+                    "rounded-2xl px-5 h-11 font-semibold text-sm transition-all",
                     hasInputs
                       ? "bg-[#F5A524] text-black hover:bg-[#F5A524]/90 shadow-lg shadow-[#F5A524]/25"
                       : "bg-muted text-muted-foreground hover:bg-muted",
@@ -689,7 +689,7 @@ export default function MarketingStudio() {
             </div>
 
             {ready && (
-              <div className="mt-4 rounded-xl border border-border/30 bg-muted/10 p-3 text-xs text-muted-foreground">
+              <div className="mt-4 rounded-xl border border-border/30 bg-muted/10 px-3 py-2 text-[11px] text-muted-foreground">
                 <span className="text-foreground/80 font-medium">Renders as:</span>{" "}
                 {hook?.label} · {format?.label || "Custom format"} · {setting?.label || "Custom scene"} · {renderSettings.aspect_ratio} · {renderSettings.duration}s · {renderSettings.resolution} · audio on
               </div>
@@ -698,7 +698,7 @@ export default function MarketingStudio() {
           </div>
 
           {/* Ads gallery */}
-          <section ref={galleryRef} className="mt-14 scroll-mt-20">
+          <section ref={galleryRef} className="mt-10 scroll-mt-20">
             {mode === "empty" && (
               <>
                 <SectionHeader
@@ -736,11 +736,11 @@ export default function MarketingStudio() {
                     ) : null
                   }
                 />
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                   {pendingJobs.map((job) => (
                     <PendingAdCard key={job.id} />
                   ))}
-                  {userAds.slice(0, Math.max(0, 3 - pendingJobs.length)).map((ad) => (
+                  {userAds.slice(0, Math.max(0, 4 - pendingJobs.length)).map((ad) => (
                     <UserAdCard key={ad.id} ad={ad} onClick={() => navigate("/library")} />
                   ))}
                 </div>
@@ -775,11 +775,11 @@ export default function MarketingStudio() {
                     onPick={(ad) => applyTemplate(ad.template)}
                   />
                 ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                     {pendingJobs.map((job) => (
                       <PendingAdCard key={job.id} />
                     ))}
-                    {userAds.slice(0, Math.max(0, 6 - pendingJobs.length)).map((ad) => (
+                    {userAds.slice(0, Math.max(0, 8 - pendingJobs.length)).map((ad) => (
                       <UserAdCard key={ad.id} ad={ad} onClick={() => navigate("/library")} />
                     ))}
                   </div>
@@ -928,9 +928,9 @@ function SectionHeader({
   right?: React.ReactNode;
 }) {
   return (
-    <div className="flex items-end justify-between gap-4 flex-wrap mb-5">
+    <div className="flex items-end justify-between gap-4 flex-wrap mb-4">
       <div>
-        <h2 className="font-display text-2xl sm:text-3xl tracking-tight uppercase">{title}</h2>
+        <h2 className="font-display text-xl sm:text-2xl tracking-tight uppercase">{title}</h2>
         {subtitle && <p className="text-sm text-muted-foreground mt-1">{subtitle}</p>}
       </div>
       {right}
@@ -997,7 +997,7 @@ function CommunityCard({ ad, onClick }: { ad: FeaturedAd; onClick: () => void })
       onClick={onClick}
       className="group relative overflow-hidden rounded-2xl border border-border/40 bg-muted/10 cursor-pointer transition-all hover:border-[hsl(35_90%_55%)]/60 hover:shadow-[0_0_24px_hsl(35_90%_55%/0.25)]"
     >
-      <div className="aspect-[9/12] overflow-hidden">
+      <div className="aspect-[3/4] overflow-hidden">
         <video
           src={ad.url}
           autoPlay
@@ -1034,7 +1034,7 @@ function CommunityGrid({
   onPick: (ad: FeaturedAd) => void;
 }) {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
       {ads.map((ad) => (
         <CommunityCard key={ad.url} ad={ad} onClick={() => onPick(ad)} />
       ))}
@@ -1048,7 +1048,7 @@ function UserAdCard({ ad, onClick }: { ad: UserAd; onClick: () => void }) {
       onClick={onClick}
       className="group relative overflow-hidden rounded-2xl border border-border/40 bg-muted/10 cursor-pointer transition-all hover:border-[hsl(35_90%_55%)]/60 hover:shadow-[0_0_24px_hsl(35_90%_55%/0.25)]"
     >
-      <div className="aspect-[9/12] overflow-hidden">
+      <div className="aspect-[3/4] overflow-hidden">
         <video
           src={ad.video_url}
           autoPlay
@@ -1076,13 +1076,13 @@ function PendingAdCard() {
       aria-busy="true"
       className="group relative overflow-hidden rounded-2xl border border-[hsl(35_90%_55%)]/60 bg-muted/10 shadow-[0_0_24px_hsl(35_90%_55%/0.25)]"
     >
-      <div className="aspect-[9/12] relative bg-gradient-to-br from-muted/40 via-muted/20 to-muted/40 animate-pulse">
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
-          <Loader2 className="w-8 h-8 text-[hsl(35_90%_55%)] animate-spin" />
+      <div className="aspect-[3/4] relative bg-gradient-to-br from-muted/25 via-muted/10 to-muted/25 animate-pulse">
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2.5">
+          <Loader2 className="w-6 h-6 text-[hsl(35_90%_55%)] animate-spin" />
           <span className="text-xs uppercase tracking-[0.18em] text-foreground/80 font-semibold">
             Generating…
           </span>
-          <span className="text-[11px] text-muted-foreground">Rendering — usually 1–3 minutes</span>
+          <span className="text-[10.5px] text-muted-foreground">Rendering — usually 1–3 minutes</span>
         </div>
       </div>
       <div className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-[hsl(35_90%_55%)]/90 backdrop-blur text-[10px] uppercase tracking-wide text-black font-semibold">
