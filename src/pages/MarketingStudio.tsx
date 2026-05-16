@@ -375,6 +375,10 @@ export default function MarketingStudio() {
   }, [pendingJobs]);
 
   const handleCancelJob = async (jobId: string) => {
+    const confirmed = window.confirm(
+      "Cancel this generation? You won't be charged for canceled jobs, but any in-progress work will be lost.",
+    );
+    if (!confirmed) return;
     // optimistic remove
     setPendingJobs((prev) => prev.filter((j) => j.id !== jobId));
     try {
