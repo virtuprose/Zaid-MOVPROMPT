@@ -207,9 +207,9 @@ export default function MarketingStudio() {
           : undefined,
       });
       const job = await submitVideoJob(prompt, "seedance-2.0", null, {
-        aspect_ratio: "9:16",
-        duration: 5,
-        resolution: "1080p",
+        aspect_ratio: renderSettings.aspect_ratio,
+        duration: renderSettings.duration,
+        resolution: renderSettings.resolution,
         audio: true,
       });
       setPendingJobs((prev) => [job, ...prev.filter((j) => j.id !== job.id)]);
