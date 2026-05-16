@@ -194,6 +194,7 @@ export async function submitVideoJob(
   provider: string,
   sessionId?: string | null,
   options?: VideoOptions,
+  referenceImages?: string[],
 ): Promise<VideoJob> {
   const normalizedPrompt = prompt.trim();
   if (!normalizedPrompt) {
@@ -201,7 +202,13 @@ export async function submitVideoJob(
   }
 
   const { data, error } = await supabase.functions.invoke("generate-video", {
-    body: { prompt: normalizedPrompt, provider, session_id: sessionId, options },
+    body: {
+      prompt: normalizedPrompt,
+      provider,
+      session_id: sessionId,
+      options,
+      reference_image_urls: referenceImages && referenceImages.length > 0 ? referenceImages : undefined,
+    },
   });
   if (error) throw error;
   return data as VideoJob;

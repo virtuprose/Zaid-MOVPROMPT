@@ -219,12 +219,22 @@ export default function MarketingStudio() {
             }
           : undefined,
       });
-      const job = await submitVideoJob(prompt, "seedance-2.0", null, {
-        aspect_ratio: renderSettings.aspect_ratio,
-        duration: renderSettings.duration,
-        resolution: renderSettings.resolution,
-        audio: true,
-      });
+      const referenceImages = [brandKit?.logo_url, characterKit?.reference_url].filter(
+        (u): u is string => typeof u === "string" && u.length > 0,
+      );
+      const provider = referenceImages.length > 0 ? "seedance-2.0-ref" : "seedance-2.0";
+      const job = await submitVideoJob(
+        prompt,
+        provider,
+        null,
+        {
+          aspect_ratio: renderSettings.aspect_ratio,
+          duration: renderSettings.duration,
+          resolution: renderSettings.resolution,
+          audio: true,
+        },
+        referenceImages,
+      );
       setPendingJobs((prev) => [job, ...prev.filter((j) => j.id !== job.id)]);
       toast.success("Generating your ad…");
       window.setTimeout(() => {
@@ -364,8 +374,52 @@ export default function MarketingStudio() {
 
           {/* Composer card */}
           <div ref={composerRef} className="flex-1 min-w-0 rounded-3xl border border-border/60 bg-[hsl(240_5%_8%)]/70 backdrop-blur p-4 sm:p-6 scroll-mt-20">
-            {(location.place || location.imagePath) && (
+            {(brandKit || characterKit || location.place || location.imagePath) && (
               <div className="flex flex-wrap items-center gap-2 mb-3 pb-3 border-b border-border/30">
+                {brandKit && (
+                  <div className="inline-flex items-center gap-2 h-9 pl-1 pr-1.5 rounded-xl border border-[#F5A524]/40 bg-[#F5A524]/10 text-xs">
+                    <div className="w-7 h-7 rounded-md bg-white/5 overflow-hidden flex items-center justify-center shrink-0">
+                      {brandKit.logo_url ? (
+                        <img src={brandKit.logo_url} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <Building2 className="w-3.5 h-3.5 text-muted-foreground" />
+                      )}
+                    </div>
+                    <span className="font-medium text-foreground truncate max-w-[160px]">
+                      {brandKit.name || (subject === "app" ? "App" : "Product")}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => void setBrandActive(null)}
+                      className="w-6 h-6 rounded-md text-muted-foreground hover:text-foreground hover:bg-background/60 flex items-center justify-center shrink-0"
+                      aria-label="Detach brand"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
+                {characterKit && (
+                  <div className="inline-flex items-center gap-2 h-9 pl-1 pr-1.5 rounded-xl border border-[#F5A524]/40 bg-[#F5A524]/10 text-xs">
+                    <div className="w-7 h-7 rounded-md bg-white/5 overflow-hidden flex items-center justify-center shrink-0">
+                      {characterKit.reference_url ? (
+                        <img src={characterKit.reference_url} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <UserRound className="w-3.5 h-3.5 text-muted-foreground" />
+                      )}
+                    </div>
+                    <span className="font-medium text-foreground truncate max-w-[160px]">
+                      {characterKit.name || "Avatar"}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => void setCharacterActive(null)}
+                      className="w-6 h-6 rounded-md text-muted-foreground hover:text-foreground hover:bg-background/60 flex items-center justify-center shrink-0"
+                      aria-label="Detach character"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
                 {(location.place || location.imagePath) && (
                   <div className="inline-flex items-center gap-2 h-9 pl-1 pr-1.5 rounded-xl border border-border/60 bg-secondary/40 text-xs">
                     <div className="w-7 h-7 rounded-md bg-white/5 overflow-hidden flex items-center justify-center shrink-0">

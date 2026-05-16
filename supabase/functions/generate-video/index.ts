@@ -37,7 +37,9 @@ const FAL_MODELS: Record<string, string> = {
   // Seedance
   "seedance-2.0": "fal-ai/bytedance/seedance-2.0/text-to-video",
   "seedance-2.0-fast": "fal-ai/bytedance/seedance-2.0/fast/text-to-video",
+  "seedance-2.0-ref": "fal-ai/bytedance/seedance/v1/pro/reference-to-video",
   "seedance-v1-pro": "fal-ai/bytedance/seedance/v1/pro/text-to-video",
+  "seedance-v1-pro-ref": "fal-ai/bytedance/seedance/v1/pro/reference-to-video",
   "seedance-v1-lite": "fal-ai/bytedance/seedance/v1/lite/text-to-video",
   // Hailuo / MiniMax
   "hailuo-02-pro": "fal-ai/minimax/hailuo-02/pro/text-to-video",
@@ -93,7 +95,7 @@ type VideoOptions = {
   prompt_optimizer?: boolean;
 };
 
-function buildFalPayload(provider: string, prompt: string, opts: VideoOptions = {}) {
+function buildFalPayload(provider: string, prompt: string, opts: VideoOptions = {}, referenceImages: string[] = []) {
   const payload: Record<string, unknown> = { prompt };
   const family = provider.split("-")[0]; // kling | veo | seedance | hailuo | runway | ltx | wan
   const set = (k: string, v: unknown) => {
@@ -125,6 +127,9 @@ function buildFalPayload(provider: string, prompt: string, opts: VideoOptions = 
       if (opts.duration !== undefined) set("duration", String(opts.duration));
       set("resolution", opts.resolution);
       if (opts.audio !== undefined) set("generate_audio", opts.audio);
+      if (provider.endsWith("-ref") && referenceImages.length > 0) {
+        set("reference_image_urls", referenceImages);
+      }
       break;
     case "hailuo":
       if (opts.duration !== undefined) set("duration", String(opts.duration));
@@ -300,12 +305,16 @@ serve(async (req) => {
 
 
     // Submit new job
-    let { prompt, provider = "seedance-v1-pro", session_id, options } = body as {
+    let { prompt, provider = "seedance-v1-pro", session_id, options, reference_image_urls } = body as {
       prompt?: string;
       provider?: string;
       session_id?: string;
       options?: VideoOptions;
+      reference_image_urls?: string[];
     };
+    const refImages = Array.isArray(reference_image_urls)
+      ? reference_image_urls.filter((u): u is string => typeof u === "string" && u.length > 0)
+      : [];
 
     if ((!prompt || !prompt.trim()) && session_id) {
       const { data: session } = await admin
@@ -343,6 +352,7 @@ serve(async (req) => {
         provider,
         prompt: normalizedPrompt,
         status: "queued",
+        reference_image_urls: refImages.length > 0 ? refImages : null,
       })
       .select("*")
       .single();
@@ -361,7 +371,7 @@ serve(async (req) => {
         Authorization: `Key ${FAL_KEY}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(buildFalPayload(provider, normalizedPrompt, options)),
+      body: JSON.stringify(buildFalPayload(provider, normalizedPrompt, options, refImages)),
     });
     if (!submitResp.ok) {
       const t = await submitResp.text();
