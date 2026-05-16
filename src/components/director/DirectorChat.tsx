@@ -755,20 +755,6 @@ function DirectorChatInner() {
               </Message>
             );
           })}
-          {isEmpty && (
-            <div className="flex flex-wrap gap-2 pt-1">
-              {STARTERS.map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => setInput(s)}
-                  className="text-xs px-3 py-1.5 rounded-full border border-border/40 bg-muted/20 hover:border-border hover:text-accent transition-colors"
-                >
-                  {s}
-                </button>
-              ))}
-            </div>
-          )}
           {busy && (
             <TypingIndicator
               captions={typingCaptions}
