@@ -1,61 +1,59 @@
-## Make the AI Director chat feel like a real person
+## Inline upload affordance when the Director asks for files
 
-Right now the Director responds with a single static shimmer ("Director is reading the brief…") and bubbles just appear. We'll add presence cues, identity, and human cadence — without touching backend or prompt logic.
+When the Director's question contains a "send me images/video/audio/files" intent, surface an inline upload control directly under that question so the user doesn't have to scroll to the composer.
 
-### 1. Give the Director a face and identity
-- Add an animated **assistant avatar** next to every assistant bubble: a soft glowing circle with the logo mark, with a subtle breathing/pulse halo when idle and a faster pulse when "thinking".
-- Add a small persistent header strip inside the chat with: avatar · name ("Director") · live status dot (green = ready, amber = thinking, cyan pulsing = typing) · short status text ("online", "thinking…", "typing…", "looking at your references…").
-- First-time greeting: replace the static welcome with a short staged sequence — avatar fades in, status flips to "typing…", then the welcome text streams in character-by-character.
+### Detection
+- Add a small helper `detectMediaAsk(text)` in `src/lib/director/questionIntent.ts` that returns `null` or `{ kinds: ("image"|"video"|"audio"|"document")[] }`.
+- Regex-based, case-insensitive, English + Arabic keywords (project supports AR). Examples that should match:
+  - "drop / share / send / upload / attach / paste"
+  - "image, photo, picture, screenshot, frame, reference"
+  - "video, clip, footage, reel"
+  - "audio, voice, sound, music, track"
+  - "file, document, pdf, doc"
+  - AR: "صور", "صورة", "فيديو", "ملف", "ارفع", "أرسل"
+- Pure function, unit-testable, no React deps.
 
-### 2. Replace the single shimmer with staged "presence" states
-While `busy`, cycle through realistic, context-aware micro-statuses instead of one line:
-  - "Looking at your references…" (only when attachments were sent)
-  - "Thinking about the shot…"
-  - "Sketching the prompt…"
-  - "Almost there…"
-- Render as a **typing indicator bubble** (three bouncing dots in an assistant bubble) with the current status as a tiny caption under it.
-- When the stream starts producing tokens, switch from dots → live cursor caret blinking at the end of the streaming text.
+### UI: per-question upload slot in `QuestionCard.tsx`
+- For each question, run `detectMediaAsk(q)`. If it matches, render an inline upload row directly below the question text (before/instead of the text input).
+- The row shows:
+  - A primary "Upload {label}" button (label adapts: "image", "video", "audio", "file" — plural when multiple kinds).
+  - A small "or drop here" dashed hint area that accepts drag-and-drop.
+  - Thumbnails of files added via this slot, with an X to remove.
+  - File input is scoped with an `accept` attribute matching the detected kinds (`image/*`, `video/*`, `audio/*`, `.pdf,.docx,.txt,.md`).
+- Files uploaded through this slot go into the existing chat-level `attachments` state via a new `onAttach(files)` callback on `QuestionCard`. They appear as @-mention attachments just like composer uploads — same ingestion pipeline (`classifyFile` + `ingestImage/Video/Audio/Document`), same moderation, same 12-file cap.
+- The text input below the upload slot stays optional so the user can still add a note ("here are the frames, focus on lighting").
 
-### 3. Human-cadence text reveal
-- For non-streamed assistant lines (welcome, error recoveries, transitional messages like "Sending this to the renderer…"), reveal text with a typewriter effect (~25–40ms/char, faster for long messages, respects `prefers-reduced-motion`).
-- For streamed responses, keep server tokens but append a blinking caret span until the stream ends.
+### Wiring in `DirectorChat.tsx`
+- Pass two new props to `QuestionCard`:
+  - `attachments` (current chat attachments) — to show what's already attached for that question.
+  - `onAttach(next: Attachment[])` — same setter used by Composer.
+- Submit behavior change for media questions: when the user clicks Continue, the formatted answer includes a marker like `1. [attached 3 images]` (or the user's typed note + attachment count) so the agent sees the references were provided. Existing attachments flow through `send()` unchanged.
 
-### 4. Micro-interactions that signal "someone is there"
-- New bubbles animate in with `fade-in + slide-up` (use existing `animate-fade-in` keyframes, add a slight Y translate).
-- Avatar **reacts** to events:
-  - User hits send → avatar nods (quick scale 1 → 0.95 → 1).
-  - Attachments added → avatar briefly shows a small eye/scan ring sweep ("I see them").
-  - Prompt result arrives → avatar flashes a soft cyan glow + tiny check pulse.
-- When the user is typing in the composer, the assistant status flips to "listening…" with a subtle waveform/ear glyph (debounced, hides after 800ms of inactivity).
-- Idle nudge: if the chat sits idle for ~45s after the first welcome with no input, the Director sends a short prompt-style nudge ("Still there? Tell me the vibe and I'll take it from there.") with the typing indicator first.
+### Reuse, don't duplicate
+- Lift the ingestion logic out of `Composer.tsx` into a shared hook `useAttachmentIngest()` in `src/lib/director/useAttachmentIngest.ts` (returns `{ ingest(files), busy }`) so both `Composer`, `AttachmentDropzone`, and the new `QuestionCard` upload slot share one implementation. Composer keeps its existing UX; only the internals change.
+- Keep the existing `AttachmentDropzone` untouched (it's used elsewhere).
 
-### 5. Conversational warmth (copy-only, frontend)
-- Vary the "thinking" captions and starter chips so it doesn't feel scripted.
-- Add a tiny **mood line** under the status dot that rotates between idle phrases: "Ready when you are.", "Pitch me the scene.", "I'm all eyes."
-- Soften error fallback copy ("Hit a snag reaching the model…" → "Lost you for a sec — mind sending that again?").
-
-### 6. Sound (optional, off by default)
-- Add a muted speaker toggle in the chat header. When enabled:
-  - Soft "tick" on each user send.
-  - Subtle "chime" when a prompt result lands.
-- Persist preference in `localStorage`. Default OFF so we don't surprise anyone.
-
-### Scope / files touched
-Frontend only, no backend, no prompt changes:
-- `src/components/director/DirectorChat.tsx` — avatar, header strip, status state machine, idle nudge, animated bubble mount, typing indicator, mood line.
-- `src/components/director/Composer.tsx` — emit "user is typing" signal up via a new prop.
-- New `src/components/director/AssistantAvatar.tsx` — animated avatar with reaction states (`idle | thinking | listening | success | scanning`).
-- New `src/components/director/TypingIndicator.tsx` — 3-dot bubble + rotating caption.
-- New `src/components/director/TypewriterText.tsx` — character reveal with reduced-motion fallback.
-- New `src/hooks/useDirectorPresence.ts` — small state machine for status + rotating captions.
-- `tailwind.config.ts` — add a couple of keyframes (`breath`, `dot-bounce`, `caret-blink`, `nod`).
-- Optional sound assets in `src/assets/sfx/` only if you want the audio toggle.
+### Visual style
+- Match the muted card aesthetic of `QuestionCard` (`bg-muted/15`, rounded, dashed border on drop area).
+- Use cinematic accents: cyan focus ring on the button, amber pulse while ingesting, scanning-style ring on each thumbnail until moderation passes (reuse the moderation chip pattern from Composer).
+- Respect `prefers-reduced-motion`.
 
 ### Out of scope
-- No changes to `director-agent` edge function, prompt templates, streaming protocol, or persistence.
-- No real voice/TTS — strictly visual/textual presence cues (audio toggle is optional UI chrome only).
-- No changes to the prompt result card, approval flow, or attachment moderation.
+- No backend / edge function changes.
+- No changes to the agent's question generation prompt — pure client-side detection.
+- No new attachment storage; reuses the existing per-session attachments list.
+- No camera capture (could be a follow-up).
 
-### Accessibility
-- All animations honor `prefers-reduced-motion`: typewriter falls back to instant text, avatar breath/nod disabled, dots replaced with a static "Director is typing" caption.
-- Status changes are announced via `aria-live="polite"` on the header status line.
+### Files touched
+- New: `src/lib/director/questionIntent.ts` (+ small Vitest in `src/lib/director/__tests__/questionIntent.test.ts`)
+- New: `src/lib/director/useAttachmentIngest.ts`
+- New: `src/components/director/QuestionUploadSlot.tsx`
+- Edit: `src/components/director/QuestionCard.tsx` — render `QuestionUploadSlot` when intent matches; accept `attachments` + `onAttach` props.
+- Edit: `src/components/director/DirectorChat.tsx` — pass `attachments` + `setAttachments` down to `QuestionCard`.
+- Edit: `src/components/director/Composer.tsx` — swap internal ingest for the shared hook (no UX change).
+
+### Acceptance check
+1. Agent asks "Drop a few reference images of the look you want" → upload button + dashed drop area appears under that question, accepting only images.
+2. Agent asks "Share a short video clip or any audio mood" → button labeled "Upload video or audio", `accept` includes both.
+3. Files uploaded through the slot show as @1, @2 in the eventual user message and are sent with the next turn.
+4. Non-media questions render exactly as today (no regression).
