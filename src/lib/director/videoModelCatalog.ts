@@ -38,6 +38,15 @@ const SEEDANCE = ["16:9", "9:16", "1:1", "4:3", "3:4", "21:9"];
 
 export const MODEL_CATALOG: ModelCapabilities[] = [
   // Kling
+  { id: "kling-v3-pro", family: "kling", label: "Kling 3.0 Pro", note: "Newest, native audio, multi-shot",
+    audio: true, maxDurationSec: 15, maxResolution: "1080p", aspects: STD, speed: "balanced", cost: "high",
+    strengths: ["cinematic", "photoreal", "complex_motion", "long_take", "dialogue"] },
+  { id: "kling-v3-standard", family: "kling", label: "Kling 3.0 Standard", note: "Native audio, multi-shot",
+    audio: true, maxDurationSec: 10, maxResolution: "1080p", aspects: STD, speed: "fast", cost: "mid",
+    strengths: ["cinematic", "photoreal", "dialogue"] },
+  { id: "kling-v3-4k", family: "kling", label: "Kling 3.0 4K", note: "Native 4K, single-step",
+    audio: true, maxDurationSec: 10, maxResolution: "1080p", aspects: STD, speed: "slow", cost: "high",
+    strengths: ["cinematic", "photoreal", "long_take"] },
   { id: "kling-v2.5-turbo-pro", family: "kling", label: "Kling 2.5 Turbo Pro", note: "Latest, fastest pro tier",
     audio: false, maxDurationSec: 10, maxResolution: "1080p", aspects: STD, speed: "fast", cost: "mid",
     strengths: ["photoreal", "complex_motion", "long_take", "action"] },
