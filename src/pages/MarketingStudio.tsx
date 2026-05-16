@@ -246,6 +246,7 @@ export default function MarketingStudio() {
     brandKit?.id,
     characterKit?.id,
     location.place,
+    location.imagePath,
     subject,
   ]);
 
