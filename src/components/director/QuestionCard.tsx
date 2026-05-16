@@ -1,6 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { detectMediaAsk } from "@/lib/director/questionIntent";
+import { QuestionUploadSlot } from "./QuestionUploadSlot";
+import type { Attachment } from "@/lib/director/ingest";
 
 const DURATION_RE = /(duration|length|how long|seconds|how many seconds|how long should)/i;
 const DURATION_PRESETS = ["10s", "15s", "30s", "45s", "Other"];
@@ -9,14 +12,22 @@ type Props = {
   reason: string;
   questions: string[];
   disabled?: boolean;
+  attachments?: Attachment[];
+  onAttach?: (next: Attachment[]) => void;
   onContinue: (formatted: string) => void;
   onSkip: () => void;
 };
 
-export function QuestionCard({ reason, questions, disabled, onContinue, onSkip }: Props) {
+export function QuestionCard({ reason, questions, disabled, attachments = [], onAttach, onContinue, onSkip }: Props) {
   const [answers, setAnswers] = useState<string[]>(() => questions.map(() => ""));
   const [otherOpen, setOtherOpen] = useState<Record<number, boolean>>({});
+  const [slotCounts, setSlotCounts] = useState<Record<number, number>>({});
   const firstInputRef = useRef<HTMLInputElement>(null);
+
+  const mediaAsks = useMemo(
+    () => questions.map((q) => detectMediaAsk(q)),
+    [questions],
+  );
 
   useEffect(() => {
     if (!disabled) firstInputRef.current?.focus();
@@ -32,11 +43,22 @@ export function QuestionCard({ reason, questions, disabled, onContinue, onSkip }
 
   const submit = () => {
     if (disabled) return;
-    const formatted = questions
-      .map((_, i) => answers[i]?.trim())
-      .map((a, i) => (a ? `${i + 1}. ${a}` : null))
-      .filter(Boolean)
-      .join("\n");
+    const lines = questions
+      .map((_, i) => {
+        const txt = answers[i]?.trim();
+        const count = slotCounts[i] || 0;
+        const ask = mediaAsks[i];
+        if (txt && count > 0) {
+          return `${i + 1}. ${txt} (attached ${count} ${ask?.label || "file"}${count > 1 ? "s" : ""})`;
+        }
+        if (txt) return `${i + 1}. ${txt}`;
+        if (count > 0 && ask) {
+          return `${i + 1}. [attached ${count} ${ask.label}${count > 1 ? "s" : ""}]`;
+        }
+        return null;
+      })
+      .filter(Boolean) as string[];
+    const formatted = lines.join("\n");
     if (!formatted) {
       onSkip();
       return;
@@ -62,6 +84,7 @@ export function QuestionCard({ reason, questions, disabled, onContinue, onSkip }
       <div className="space-y-4">
         {questions.map((q, i) => {
           const isDuration = DURATION_RE.test(q);
+          const ask = mediaAsks[i];
           const showOther = !!otherOpen[i];
           const value = answers[i] ?? "";
           return (
@@ -70,6 +93,20 @@ export function QuestionCard({ reason, questions, disabled, onContinue, onSkip }
                 <span className="text-muted-foreground/70 mr-1.5">{i + 1}.</span>
                 {q}
               </div>
+
+              {ask && onAttach && (
+                <QuestionUploadSlot
+                  ask={ask}
+                  attachments={attachments}
+                  onAttach={onAttach}
+                  onCountChange={(count) =>
+                    setSlotCounts((prev) =>
+                      prev[i] === count ? prev : { ...prev, [i]: count },
+                    )
+                  }
+                  disabled={disabled}
+                />
+              )}
 
               {isDuration && (
                 <div className="flex flex-wrap gap-1.5">
@@ -108,7 +145,7 @@ export function QuestionCard({ reason, questions, disabled, onContinue, onSkip }
                   type="text"
                   value={value}
                   onChange={(e) => setAnswer(i, e.target.value)}
-                  placeholder="Enter your answer"
+                  placeholder={ask ? "Add a note (optional)" : "Enter your answer"}
                   className="w-full rounded-full bg-background/30 border border-transparent px-4 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:bg-background/50 focus:border-border/40 transition-colors"
                 />
               )}
