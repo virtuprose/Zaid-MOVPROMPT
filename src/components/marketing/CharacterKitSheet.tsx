@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Loader2, Upload, X, ImagePlus, UserRound } from "lucide-react";
+import { Loader2, Upload, X, ImagePlus, UserRound, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 import {
   useCharacterKit,
   EMPTY_CHARACTER_KIT,
+  analyzeCharacterImage,
   type CharacterKit,
 } from "@/lib/marketing/characterKit";
 
@@ -34,6 +35,8 @@ export function CharacterKitSheet({
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [justFilled, setJustFilled] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -49,6 +52,25 @@ export function CharacterKitSheet({
   const update = <K extends keyof CharacterKit>(k: K, v: CharacterKit[K]) =>
     setDraft((d) => ({ ...d, [k]: v }));
 
+  const runAnalyze = async (imagePath: string) => {
+    setAnalyzing(true);
+    try {
+      const res = await analyzeCharacterImage({ imagePath });
+      setDraft((d) => ({
+        ...d,
+        name: d.name?.trim() ? d.name : (res.name ?? d.name),
+        role: d.role?.trim() ? d.role : (res.role ?? d.role),
+        description: d.description?.trim() ? d.description : (res.description ?? d.description),
+      }));
+      setJustFilled(true);
+      window.setTimeout(() => setJustFilled(false), 4000);
+    } catch (e: any) {
+      toast.error("Couldn't auto-read the photo — fill it in manually");
+    } finally {
+      setAnalyzing(false);
+    }
+  };
+
   const handleFile = async (file?: File | null) => {
     if (!file) return;
     if (file.size > 25 * 1024 * 1024) {
@@ -60,12 +82,14 @@ export function CharacterKitSheet({
       const path = await uploadReference(file);
       update("reference_path", path);
       update("reference_url", URL.createObjectURL(file));
+      void runAnalyze(path);
     } catch (e: any) {
       toast.error(e?.message || "Upload failed");
     } finally {
       setUploading(false);
     }
   };
+
 
   const handleSave = async () => {
     if (!draft.name.trim()) {
@@ -126,8 +150,8 @@ export function CharacterKitSheet({
                     {draft.name?.trim() || "Reference photo"}
                   </p>
                   <p className="text-xs text-muted-foreground mt-0.5 inline-flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                    Ready
+                    <span className={cn("w-1.5 h-1.5 rounded-full", analyzing ? "bg-accent animate-pulse" : "bg-emerald-500")} />
+                    {analyzing ? "Reading the photo…" : "Ready"}
                   </p>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
@@ -192,6 +216,22 @@ export function CharacterKitSheet({
               className="hidden"
               onChange={(e) => handleFile(e.target.files?.[0])}
             />
+
+            {(analyzing || justFilled) && (
+              <div className="mt-2.5 inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-accent/10 text-accent text-[11px] font-medium">
+                {analyzing ? (
+                  <>
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                    Writing a detailed description…
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-3 h-3" />
+                    Filled by AI — edit anything below
+                  </>
+                )}
+              </div>
+            )}
           </div>
 
           <Field
