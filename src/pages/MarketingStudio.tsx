@@ -13,6 +13,7 @@ import {
   Heart,
   Building2,
   MapPin,
+  UserRound,
   X,
 } from "lucide-react";
 import { TopNav } from "@/components/TopNav";
@@ -39,6 +40,9 @@ import {
 import { useBrandKit, EMPTY_LOCATION, type LocationInput } from "@/lib/marketing/brandKit";
 import { BrandKitSheet } from "@/components/marketing/BrandKitSheet";
 import { BrandsRow } from "@/components/marketing/BrandsRow";
+import { CharactersRow } from "@/components/marketing/CharactersRow";
+import { CharacterKitSheet } from "@/components/marketing/CharacterKitSheet";
+import { useCharacterKit } from "@/lib/marketing/characterKit";
 
 import { submitVideoJob, pollVideoJob, type VideoJob } from "@/lib/director/api";
 import loopKitchen from "@/assets/loop-kitchen.mp4.asset.json";
