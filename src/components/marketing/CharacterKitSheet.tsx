@@ -150,8 +150,8 @@ export function CharacterKitSheet({
                     {draft.name?.trim() || "Reference photo"}
                   </p>
                   <p className="text-xs text-muted-foreground mt-0.5 inline-flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                    Ready
+                    <span className={cn("w-1.5 h-1.5 rounded-full", analyzing ? "bg-accent animate-pulse" : "bg-emerald-500")} />
+                    {analyzing ? "Reading the photo…" : "Ready"}
                   </p>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
@@ -216,6 +216,22 @@ export function CharacterKitSheet({
               className="hidden"
               onChange={(e) => handleFile(e.target.files?.[0])}
             />
+
+            {(analyzing || justFilled) && (
+              <div className="mt-2.5 inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-accent/10 text-accent text-[11px] font-medium">
+                {analyzing ? (
+                  <>
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                    Writing a detailed description…
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-3 h-3" />
+                    Filled by AI — edit anything below
+                  </>
+                )}
+              </div>
+            )}
           </div>
 
           <Field
