@@ -308,6 +308,61 @@ serve(async (req) => {
       });
     }
 
+    if (action === "cancel") {
+      const jobId = url.searchParams.get("job_id") || body.job_id;
+      if (!jobId) {
+        return new Response(JSON.stringify({ error: "job_id required" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const { data: job, error } = await admin
+        .from("video_jobs")
+        .select("*")
+        .eq("id", jobId)
+        .eq("user_id", uid)
+        .maybeSingle();
+      if (error || !job) {
+        return new Response(JSON.stringify({ error: "Job not found" }), {
+          status: 404,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (job.status === "completed" || job.status === "failed") {
+        return new Response(JSON.stringify(job), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      // Best-effort cancel on fal
+      const model = FAL_MODELS[job.provider];
+      if (model && job.fal_request_id) {
+        const legacyUrls = getLegacyFalUrls(job.provider, model, job.fal_request_id);
+        const cancelUrl =
+          (job as { fal_status_url?: string | null }).fal_status_url?.replace(/\/status$/, "/cancel") ||
+          `${legacyUrls.responseUrl}/cancel`;
+        try {
+          await fetch(cancelUrl, {
+            method: "PUT",
+            headers: { Authorization: `Key ${FAL_KEY}` },
+          });
+        } catch (e) {
+          console.warn("fal cancel failed", e);
+        }
+      }
+      const { data: updated } = await admin
+        .from("video_jobs")
+        .update({
+          status: "failed",
+          error: "Canceled by user",
+          completed_at: new Date().toISOString(),
+        })
+        .eq("id", jobId)
+        .select("*")
+        .maybeSingle();
+      return new Response(JSON.stringify(updated || { ...job, status: "failed", error: "Canceled by user" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     // Submit new job
     let { prompt, provider = "seedance-v1-pro", session_id, options, reference_image_urls } = body as {

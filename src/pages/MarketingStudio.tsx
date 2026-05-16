@@ -58,7 +58,7 @@ import {
   type RenderSettings,
 } from "@/components/marketing/RenderSettingsPopover";
 
-import { submitVideoJob, pollVideoJob, writeAdScene, type VideoJob } from "@/lib/director/api";
+import { submitVideoJob, pollVideoJob, cancelVideoJob, writeAdScene, type VideoJob } from "@/lib/director/api";
 import loopKitchen from "@/assets/loop-kitchen.mp4.asset.json";
 import loopCyberpunk from "@/assets/loop-cyberpunk.mp4.asset.json";
 import loopDesert from "@/assets/loop-desert.mp4.asset.json";
@@ -373,6 +373,17 @@ export default function MarketingStudio() {
       window.clearInterval(interval);
     };
   }, [pendingJobs]);
+
+  const handleCancelJob = async (jobId: string) => {
+    // optimistic remove
+    setPendingJobs((prev) => prev.filter((j) => j.id !== jobId));
+    try {
+      await cancelVideoJob(jobId);
+      toast.success("Generation canceled");
+    } catch (e: any) {
+      toast.error(e?.message || "Could not cancel — it may have already finished");
+    }
+  };
 
   const filteredAds = FEATURED_ADS.filter(
     (a) => filter === "All" || a.tag === filter,
@@ -738,7 +749,7 @@ export default function MarketingStudio() {
                 />
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                   {pendingJobs.map((job) => (
-                    <PendingAdCard key={job.id} />
+                    <PendingAdCard key={job.id} onCancel={() => handleCancelJob(job.id)} />
                   ))}
                   {userAds.slice(0, Math.max(0, 4 - pendingJobs.length)).map((ad) => (
                     <UserAdCard key={ad.id} ad={ad} onClick={() => navigate("/library")} />
@@ -777,7 +788,7 @@ export default function MarketingStudio() {
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                     {pendingJobs.map((job) => (
-                      <PendingAdCard key={job.id} />
+                      <PendingAdCard key={job.id} onCancel={() => handleCancelJob(job.id)} />
                     ))}
                     {userAds.slice(0, Math.max(0, 8 - pendingJobs.length)).map((ad) => (
                       <UserAdCard key={ad.id} ad={ad} onClick={() => navigate("/library")} />
@@ -1070,7 +1081,7 @@ function UserAdCard({ ad, onClick }: { ad: UserAd; onClick: () => void }) {
   );
 }
 
-function PendingAdCard() {
+function PendingAdCard({ onCancel }: { onCancel?: () => void }) {
   return (
     <article
       aria-busy="true"
@@ -1088,6 +1099,16 @@ function PendingAdCard() {
       <div className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-[hsl(35_90%_55%)]/90 backdrop-blur text-[10px] uppercase tracking-wide text-black font-semibold">
         Generating
       </div>
+      {onCancel && (
+        <button
+          type="button"
+          onClick={onCancel}
+          aria-label="Cancel generation"
+          className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/60 backdrop-blur text-white/90 hover:text-white hover:bg-black/80 flex items-center justify-center transition-colors"
+        >
+          <X className="w-3.5 h-3.5" />
+        </button>
+      )}
     </article>
   );
 }
