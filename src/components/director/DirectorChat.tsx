@@ -521,12 +521,20 @@ function DirectorChatInner() {
             }
             const isUser = b.role === "user";
             if (!isUser) {
+              const animate = (b as any).animate === true;
               return (
-                <Message key={i} from="assistant">
-                  <MessageContent className="whitespace-pre-wrap leading-relaxed text-foreground/90">
-                    {b.content}
-                  </MessageContent>
-                </Message>
+                <div key={i} className="flex items-start gap-2 motion-safe:animate-fade-up">
+                  <AssistantAvatar size="sm" state="idle" className="mt-1" />
+                  <Message from="assistant" className="flex-1">
+                    <MessageContent className="whitespace-pre-wrap leading-relaxed text-foreground/90">
+                      {animate ? (
+                        <TypewriterText text={b.content} speed={20} />
+                      ) : (
+                        b.content
+                      )}
+                    </MessageContent>
+                  </Message>
+                </div>
               );
             }
             return (
@@ -605,9 +613,10 @@ function DirectorChatInner() {
             </div>
           )}
           {busy && (
-            <Shimmer className="text-sm" duration={2}>
-              Director is reading the brief…
-            </Shimmer>
+            <TypingIndicator
+              captions={typingCaptions}
+              state={attachments.length > 0 ? "scanning" : "thinking"}
+            />
           )}
           {!busy && lastBubble?.role === "questions" && (
             <div className="flex items-center gap-2 text-sm text-primary">
