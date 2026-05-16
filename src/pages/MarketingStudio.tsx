@@ -672,7 +672,7 @@ export default function MarketingStudio() {
                   disabled={!hasInputs || submitting || drafting}
                   onClick={startGenerate}
                   className={cn(
-                    "rounded-2xl px-6 h-12 font-semibold text-base transition-all",
+                    "rounded-2xl px-5 h-11 font-semibold text-sm transition-all",
                     hasInputs
                       ? "bg-[#F5A524] text-black hover:bg-[#F5A524]/90 shadow-lg shadow-[#F5A524]/25"
                       : "bg-muted text-muted-foreground hover:bg-muted",
