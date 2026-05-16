@@ -143,9 +143,17 @@ export function CharacterKitSheet({
             </Label>
             {hasImage ? (
               <div className="flex items-center gap-3 p-2.5 sm:pr-3 rounded-xl border border-border/60 bg-secondary/20">
-                <div className="relative w-14 h-14 rounded-lg overflow-hidden bg-muted/30 shrink-0 flex items-center justify-center">
+                <button
+                  type="button"
+                  onClick={() => setLightboxOpen(true)}
+                  className="group relative w-14 h-14 rounded-lg overflow-hidden bg-muted/30 shrink-0 flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60"
+                  aria-label="View full size"
+                >
                   <img src={draft.reference_url!} alt="" className="w-full h-full object-contain" />
-                </div>
+                  <span className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center">
+                    <Maximize2 className="w-4 h-4 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </span>
+                </button>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-foreground/90 truncate leading-tight">
                     {draft.name?.trim() || "Reference photo"}
