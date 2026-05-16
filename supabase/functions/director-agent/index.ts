@@ -152,7 +152,35 @@ const TOOLS = [
   {
     type: "function",
     function: {
-      name: "generate_prompt",
+      name: "ask_model_choice",
+      description:
+        "Ask the user which target video model the final prompt should be tuned for. MUST be called before `generate_prompt` unless the user already named a model id.",
+      parameters: {
+        type: "object",
+        properties: {
+          recommended_model_id: {
+            type: "string",
+            enum: MODEL_IDS,
+            description: "Your top pick from the MODEL SELECTION ALGORITHM.",
+          },
+          alternatives: {
+            type: "array",
+            minItems: 0,
+            maxItems: 3,
+            items: { type: "string", enum: MODEL_IDS },
+            description: "Up to 3 ranked backup ids (no duplicates of recommended_model_id).",
+          },
+          reason: {
+            type: "string",
+            description: "One short sentence on why the recommended pick fits this brief.",
+          },
+        },
+        required: ["recommended_model_id", "reason"],
+        additionalProperties: false,
+      },
+    },
+  },
+  {
       description: "Produce the final cinematic prompt and structured breakdown.",
       parameters: {
         type: "object",
