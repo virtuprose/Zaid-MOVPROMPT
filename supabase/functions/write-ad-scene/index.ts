@@ -40,7 +40,7 @@ type Brief = {
   setting?: { label?: string; fragment?: string; custom?: string };
   brand?: { name?: string; description?: string; tagline?: string; audience?: string } | null;
   character?: { name?: string; role?: string; description?: string } | null;
-  location?: { place?: string } | null;
+  location?: { place?: string; hasImage?: boolean } | null;
 };
 
 function buildUserContent(b: Brief): string {
@@ -70,6 +70,9 @@ function buildUserContent(b: Brief): string {
   }
   if (b.location?.place) {
     lines.push(`Real-world location: ${b.location.place} (match its architecture, light, culture).`);
+  }
+  if (b.location?.hasImage) {
+    lines.push(`A reference image of the location is attached and will be passed to the video model — describe the scene so it matches the look, framing, lighting and palette of that reference.`);
   }
   lines.push("\nWrite the scene now.");
   return lines.join("\n");
