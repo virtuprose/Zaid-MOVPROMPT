@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Loader2, Upload, X, ImagePlus, UserRound, Sparkles } from "lucide-react";
+import { Loader2, Upload, X, ImagePlus, UserRound, Sparkles, Maximize2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   Dialog,
