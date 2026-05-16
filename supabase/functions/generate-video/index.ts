@@ -107,6 +107,10 @@ function buildFalPayload(provider: string, prompt: string, opts: VideoOptions = 
       set("aspect_ratio", opts.aspect_ratio);
       if (opts.duration !== undefined) set("duration", String(opts.duration));
       set("cfg_scale", opts.cfg_scale);
+      // Kling v3 supports native audio via `generate_audio`. Legacy Kling silently ignores it.
+      if (provider.startsWith("kling-v3") && opts.audio !== undefined) {
+        set("generate_audio", opts.audio);
+      }
       break;
     case "seedance":
       set("aspect_ratio", opts.aspect_ratio);
