@@ -388,7 +388,7 @@ serve(async (req) => {
 
     const normalizedPrompt = typeof prompt === "string" ? prompt.trim() : "";
 
-    if (!normalizedPrompt || normalizedPrompt.length > 2000) {
+    if (!normalizedPrompt || normalizedPrompt.length > 8000) {
       return new Response(JSON.stringify({ error: "Valid prompt required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
