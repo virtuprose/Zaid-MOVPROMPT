@@ -263,7 +263,11 @@ function DirectorChatInner() {
             : b;
         return [
           ...trimmed,
-          { role: "assistant", content: "Hit a snag reaching the model. Try again in a moment." },
+          {
+            role: "assistant",
+            animate: true,
+            content: "Lost you for a sec — mind sending that again?",
+          },
         ];
       });
     } finally {
