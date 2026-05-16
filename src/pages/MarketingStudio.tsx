@@ -219,12 +219,22 @@ export default function MarketingStudio() {
             }
           : undefined,
       });
-      const job = await submitVideoJob(prompt, "seedance-2.0", null, {
-        aspect_ratio: renderSettings.aspect_ratio,
-        duration: renderSettings.duration,
-        resolution: renderSettings.resolution,
-        audio: true,
-      });
+      const referenceImages = [brandKit?.logo_url, characterKit?.reference_url].filter(
+        (u): u is string => typeof u === "string" && u.length > 0,
+      );
+      const provider = referenceImages.length > 0 ? "seedance-2.0-ref" : "seedance-2.0";
+      const job = await submitVideoJob(
+        prompt,
+        provider,
+        null,
+        {
+          aspect_ratio: renderSettings.aspect_ratio,
+          duration: renderSettings.duration,
+          resolution: renderSettings.resolution,
+          audio: true,
+        },
+        referenceImages,
+      );
       setPendingJobs((prev) => [job, ...prev.filter((j) => j.id !== job.id)]);
       toast.success("Generating your ad…");
       window.setTimeout(() => {
