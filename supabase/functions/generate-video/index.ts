@@ -75,19 +75,26 @@ async function readJsonResponse(resp: Response) {
   }
 }
 
-function falAppNamespace(model: string): string {
-  // Fal queue URLs are rooted at the app namespace (first 2 path segments),
-  // not the full model variant. e.g. "fal-ai/bytedance/seedance-2.0/text-to-video"
-  // -> "fal-ai/bytedance".
-  const parts = model.split("/");
-  return parts.slice(0, 2).join("/");
+function normalizeFalQueueUrl(
+  url: string | null | undefined,
+  kind: "status" | "response" | "cancel",
+): string | null {
+  if (!url) return null;
+  const trimmed = url.replace(/\/+$/, "");
+
+  if (trimmed.endsWith(`/${kind}`)) return trimmed;
+  if (trimmed.endsWith("/status")) return trimmed.replace(/\/status$/, `/${kind}`);
+  if (trimmed.endsWith("/response")) return trimmed.replace(/\/response$/, `/${kind}`);
+  if (trimmed.endsWith("/cancel")) return trimmed.replace(/\/cancel$/, `/${kind}`);
+  return `${trimmed}/${kind}`;
 }
 
-function getLegacyFalUrls(_provider: string, model: string, requestId: string) {
-  const base = falAppNamespace(model);
+function getFallbackFalUrls(model: string, requestId: string) {
+  const base = `https://queue.fal.run/${model}/requests/${requestId}`;
   return {
-    statusUrl: `https://queue.fal.run/${base}/requests/${requestId}/status`,
-    responseUrl: `https://queue.fal.run/${base}/requests/${requestId}`,
+    statusUrl: `${base}/status`,
+    responseUrl: `${base}/response`,
+    cancelUrl: `${base}/cancel`,
   };
 }
 
@@ -243,13 +250,10 @@ serve(async (req) => {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      const legacyUrls = getLegacyFalUrls(job.provider, model, job.fal_request_id);
+      const fallbackUrls = getFallbackFalUrls(model, job.fal_request_id);
       const statusUrl =
-        (job as { fal_status_url?: string | null }).fal_status_url ||
-        legacyUrls.statusUrl;
-      const responseUrl =
-        (job as { fal_response_url?: string | null }).fal_response_url ||
-        legacyUrls.responseUrl;
+        normalizeFalQueueUrl((job as { fal_status_url?: string | null }).fal_status_url, "status") ||
+        fallbackUrls.statusUrl;
       const statusResp = await fetch(
         statusUrl,
         { headers: { Authorization: `Key ${FAL_KEY}` } },
@@ -263,24 +267,46 @@ serve(async (req) => {
         });
       }
       if (statusData.status === "COMPLETED") {
-        const resultResp = await fetch(
-          responseUrl,
-          { headers: { Authorization: `Key ${FAL_KEY}` } },
+        const responseCandidates = Array.from(
+          new Set(
+            [
+              normalizeFalQueueUrl(statusData.response_url as string | null | undefined, "response"),
+              normalizeFalQueueUrl((job as { fal_response_url?: string | null }).fal_response_url, "response"),
+              statusUrl.replace(/\/status$/, "/response"),
+              fallbackUrls.responseUrl,
+            ].filter((value): value is string => Boolean(value)),
+          ),
         );
-        const resultPayload = await readJsonResponse(resultResp);
-        const result = resultPayload.data;
-        if (!resultResp.ok || !result) {
-          console.warn("fal result response unreadable", resultResp.status, resultPayload.text);
+
+        let result: Record<string, any> | null = null;
+        let resolvedResponseUrl: string | null = null;
+
+        for (const candidate of responseCandidates) {
+          const resultResp = await fetch(candidate, {
+            headers: { Authorization: `Key ${FAL_KEY}` },
+          });
+          const resultPayload = await readJsonResponse(resultResp);
+          if (resultResp.ok && resultPayload.data) {
+            result = resultPayload.data;
+            resolvedResponseUrl = candidate;
+            break;
+          }
+          console.warn("fal result response unreadable", resultResp.status, candidate, resultPayload.text);
+        }
+
+        if (!result) {
           return new Response(JSON.stringify({ ...job, status: "processing" }), {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
           });
         }
-        const videoUrl = result.video?.url || result.output?.[0] || result.video_url;
+        const firstOutput = Array.isArray(result.output) ? result.output[0] : result.output;
+        const videoUrl = result.video?.url || firstOutput?.url || firstOutput || result.video_url;
         await admin
           .from("video_jobs")
           .update({
             status: "completed",
             video_url: videoUrl,
+            fal_response_url: resolvedResponseUrl,
             completed_at: new Date().toISOString(),
           })
           .eq("id", jobId);
@@ -336,10 +362,10 @@ serve(async (req) => {
       // Best-effort cancel on fal
       const model = FAL_MODELS[job.provider];
       if (model && job.fal_request_id) {
-        const legacyUrls = getLegacyFalUrls(job.provider, model, job.fal_request_id);
         const cancelUrl =
-          (job as { fal_status_url?: string | null }).fal_status_url?.replace(/\/status$/, "/cancel") ||
-          `${legacyUrls.responseUrl}/cancel`;
+          normalizeFalQueueUrl((job as { fal_status_url?: string | null }).fal_status_url, "cancel") ||
+          normalizeFalQueueUrl((job as { fal_response_url?: string | null }).fal_response_url, "cancel") ||
+          getFallbackFalUrls(model, job.fal_request_id).cancelUrl;
         try {
           await fetch(cancelUrl, {
             method: "PUT",
@@ -458,12 +484,20 @@ serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+    const fallbackUrls = getFallbackFalUrls(model, submitData.request_id);
+    const normalizedStatusUrl =
+      normalizeFalQueueUrl(submitData.status_url as string | null | undefined, "status") ||
+      fallbackUrls.statusUrl;
+    const normalizedResponseUrl =
+      normalizeFalQueueUrl(submitData.response_url as string | null | undefined, "response") ||
+      normalizedStatusUrl.replace(/\/status$/, "/response");
+
     await admin
       .from("video_jobs")
       .update({
         fal_request_id: submitData.request_id,
-        fal_status_url: submitData.status_url ?? null,
-        fal_response_url: submitData.response_url ?? null,
+        fal_status_url: normalizedStatusUrl,
+        fal_response_url: normalizedResponseUrl,
         status: "processing",
       })
       .eq("id", job.id);
@@ -472,8 +506,8 @@ serve(async (req) => {
       JSON.stringify({
         ...job,
         fal_request_id: submitData.request_id,
-        fal_status_url: submitData.status_url ?? null,
-        fal_response_url: submitData.response_url ?? null,
+        fal_status_url: normalizedStatusUrl,
+        fal_response_url: normalizedResponseUrl,
         status: "processing",
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
