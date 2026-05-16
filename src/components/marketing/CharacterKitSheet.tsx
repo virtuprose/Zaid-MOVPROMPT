@@ -37,6 +37,7 @@ export function CharacterKitSheet({
   const [dragOver, setDragOver] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const [justFilled, setJustFilled] = useState(false);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
