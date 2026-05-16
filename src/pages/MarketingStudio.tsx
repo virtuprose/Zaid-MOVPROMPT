@@ -18,6 +18,8 @@ import {
   Plus,
   Package,
   AppWindow,
+  Download,
+  Trash2,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -99,7 +101,7 @@ const FEATURED_ADS: FeaturedAd[] = [
 
 const FILTERS = ["All", "Product", "App", "UGC", "Cinematic"] as const;
 
-type UserAd = { id: string; video_url: string; created_at: string };
+type UserAd = { id: string; video_url: string; created_at: string; liked: boolean; prompt?: string | null };
 
 export default function MarketingStudio() {
   const { user, loading } = useAuth();
@@ -139,6 +141,7 @@ export default function MarketingStudio() {
 
   const [userAds, setUserAds] = useState<UserAd[]>([]);
   const [pendingJobs, setPendingJobs] = useState<VideoJob[]>([]);
+  const [deleteAdId, setDeleteAdId] = useState<string | null>(null);
   const [cancelJobId, setCancelJobId] = useState<string | null>(null);
   const [showCommunity, setShowCommunity] = useState(false);
   const [flashChips, setFlashChips] = useState(false);
@@ -157,8 +160,9 @@ export default function MarketingStudio() {
       const [{ data: done }, { data: active }] = await Promise.all([
         supabase
           .from("video_jobs")
-          .select("id,video_url,created_at")
+          .select("id,video_url,created_at,liked,prompt")
           .eq("user_id", user.id)
+          .is("deleted_at", null)
           .not("video_url", "is", null)
           .order("created_at", { ascending: false })
           .limit(24),
@@ -166,6 +170,7 @@ export default function MarketingStudio() {
           .from("video_jobs")
           .select("id,status,provider,prompt,created_at")
           .eq("user_id", user.id)
+          .is("deleted_at", null)
           .in("status", ["queued", "processing"])
           .gte("created_at", since)
           .order("created_at", { ascending: false }),
@@ -366,6 +371,8 @@ export default function MarketingStudio() {
                 id: updated.id,
                 video_url: updated.video_url!,
                 created_at: new Date().toISOString(),
+                liked: false,
+                prompt: (updated as any).prompt ?? null,
               },
               ...prev.filter((a) => a.id !== updated.id),
             ]);
@@ -401,6 +408,71 @@ export default function MarketingStudio() {
     } catch (e: any) {
       toast.error(e?.message || "Could not cancel — it may have already finished");
     }
+  };
+
+  const handleDownloadAd = async (ad: UserAd) => {
+    try {
+      const res = await fetch(ad.video_url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `vidoprompt-${ad.id.slice(0, 8)}.mp4`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast.success("Download started");
+    } catch (e: any) {
+      toast.error(e?.message || "Could not download video");
+    }
+  };
+
+  const handleToggleLike = async (ad: UserAd) => {
+    const next = !ad.liked;
+    setUserAds((prev) => prev.map((a) => (a.id === ad.id ? { ...a, liked: next } : a)));
+    const { error } = await supabase
+      .from("video_jobs")
+      .update({ liked: next })
+      .eq("id", ad.id);
+    if (error) {
+      setUserAds((prev) => prev.map((a) => (a.id === ad.id ? { ...a, liked: !next } : a)));
+      toast.error("Couldn't update like");
+    }
+  };
+
+  const confirmDeleteAd = async () => {
+    const adId = deleteAdId;
+    if (!adId) return;
+    setDeleteAdId(null);
+    const removed = userAds.find((a) => a.id === adId);
+    setUserAds((prev) => prev.filter((a) => a.id !== adId));
+    const { error } = await supabase
+      .from("video_jobs")
+      .update({ deleted_at: new Date().toISOString() })
+      .eq("id", adId);
+    if (error) {
+      if (removed) setUserAds((prev) => [removed, ...prev]);
+      toast.error("Couldn't delete ad");
+      return;
+    }
+    toast.success("Ad deleted", {
+      action: {
+        label: "Undo",
+        onClick: async () => {
+          const { error: undoErr } = await supabase
+            .from("video_jobs")
+            .update({ deleted_at: null })
+            .eq("id", adId);
+          if (undoErr) {
+            toast.error("Couldn't restore ad");
+            return;
+          }
+          if (removed) setUserAds((prev) => [removed, ...prev.filter((a) => a.id !== adId)]);
+        },
+      },
+    });
   };
 
   const filteredAds = FEATURED_ADS.filter(
@@ -770,7 +842,14 @@ export default function MarketingStudio() {
                     <PendingAdCard key={job.id} onCancel={() => handleCancelJob(job.id)} />
                   ))}
                   {userAds.slice(0, Math.max(0, 4 - pendingJobs.length)).map((ad) => (
-                    <UserAdCard key={ad.id} ad={ad} onClick={() => navigate("/library")} />
+                    <UserAdCard
+                      key={ad.id}
+                      ad={ad}
+                      onClick={() => navigate("/library")}
+                      onDownload={() => handleDownloadAd(ad)}
+                      onToggleLike={() => handleToggleLike(ad)}
+                      onDelete={() => setDeleteAdId(ad.id)}
+                    />
                   ))}
                 </div>
               </div>
@@ -809,7 +888,14 @@ export default function MarketingStudio() {
                       <PendingAdCard key={job.id} onCancel={() => handleCancelJob(job.id)} />
                     ))}
                     {userAds.slice(0, Math.max(0, 8 - pendingJobs.length)).map((ad) => (
-                      <UserAdCard key={ad.id} ad={ad} onClick={() => navigate("/library")} />
+                      <UserAdCard
+                        key={ad.id}
+                        ad={ad}
+                        onClick={() => navigate("/library")}
+                        onDownload={() => handleDownloadAd(ad)}
+                        onToggleLike={() => handleToggleLike(ad)}
+                        onDelete={() => setDeleteAdId(ad.id)}
+                      />
                     ))}
                   </div>
                 )}
@@ -916,6 +1002,26 @@ export default function MarketingStudio() {
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               >
                 Cancel generation
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        <AlertDialog open={deleteAdId !== null} onOpenChange={(o) => !o && setDeleteAdId(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete this ad?</AlertDialogTitle>
+              <AlertDialogDescription>
+                The ad will be removed from your library. You can undo from the toast for a few seconds.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Keep it</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={confirmDeleteAd}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Delete
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
@@ -1091,7 +1197,23 @@ function CommunityGrid({
   );
 }
 
-function UserAdCard({ ad, onClick }: { ad: UserAd; onClick: () => void }) {
+function UserAdCard({
+  ad,
+  onClick,
+  onDownload,
+  onToggleLike,
+  onDelete,
+}: {
+  ad: UserAd;
+  onClick: () => void;
+  onDownload?: () => void;
+  onToggleLike?: () => void;
+  onDelete?: () => void;
+}) {
+  const stop = (fn?: () => void) => (e: React.MouseEvent) => {
+    e.stopPropagation();
+    fn?.();
+  };
   return (
     <article
       onClick={onClick}
@@ -1109,6 +1231,38 @@ function UserAdCard({ ad, onClick }: { ad: UserAd; onClick: () => void }) {
       </div>
       <div className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-[hsl(35_90%_55%)]/90 backdrop-blur text-[10px] uppercase tracking-wide text-black font-semibold">
         Yours
+      </div>
+      <div className="absolute top-2 right-2 flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+        {onToggleLike && (
+          <button
+            type="button"
+            onClick={stop(onToggleLike)}
+            aria-label={ad.liked ? "Unlike" : "Like"}
+            className="h-8 w-8 rounded-full bg-black/55 backdrop-blur border border-white/10 grid place-items-center text-white hover:bg-black/75 hover:border-[hsl(35_90%_55%)]/60 hover:text-[hsl(35_90%_55%)] transition"
+          >
+            <Heart className="h-4 w-4" fill={ad.liked ? "currentColor" : "none"} />
+          </button>
+        )}
+        {onDownload && (
+          <button
+            type="button"
+            onClick={stop(onDownload)}
+            aria-label="Download"
+            className="h-8 w-8 rounded-full bg-black/55 backdrop-blur border border-white/10 grid place-items-center text-white hover:bg-black/75 hover:border-[hsl(190_90%_50%)]/60 hover:text-[hsl(190_90%_50%)] transition"
+          >
+            <Download className="h-4 w-4" />
+          </button>
+        )}
+        {onDelete && (
+          <button
+            type="button"
+            onClick={stop(onDelete)}
+            aria-label="Delete"
+            className="h-8 w-8 rounded-full bg-black/55 backdrop-blur border border-white/10 grid place-items-center text-white hover:bg-destructive/80 hover:border-destructive transition"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+        )}
       </div>
       <div className="absolute bottom-0 inset-x-0 p-3 bg-gradient-to-t from-black/80 to-transparent text-white">
         <span className="text-xs opacity-80">
