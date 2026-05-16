@@ -438,7 +438,7 @@ export default function MarketingStudio() {
           {/* Composer with sidebar */}
           <div className="flex flex-col sm:flex-row gap-3 items-stretch">
             {/* Subject sidebar */}
-            <div className="flex sm:flex-col gap-2 shrink-0">
+            <div className="flex sm:flex-col gap-1.5 shrink-0">
               {([
                 { id: "product", label: "Product", icon: Package },
                 { id: "app", label: "App", icon: AppWindow },
@@ -450,7 +450,7 @@ export default function MarketingStudio() {
                     type="button"
                     onClick={() => setSubjectOverride(id)}
                     className={cn(
-                      "w-[72px] h-[72px] rounded-2xl border flex flex-col items-center justify-center gap-1 text-[11px] font-medium transition-all",
+                      "w-16 h-16 rounded-2xl border flex flex-col items-center justify-center gap-1 text-[11px] font-medium transition-all",
                       active
                         ? "border-[#F5A524]/50 bg-[#F5A524]/10 text-foreground"
                         : "border-border/60 bg-secondary/40 text-muted-foreground hover:text-foreground hover:border-border",
