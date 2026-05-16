@@ -500,6 +500,99 @@ function DirectorChatInner() {
     ];
   }, [attachments.length]);
 
+  if (isEmpty) {
+    return (
+      <div className="flex flex-col gap-8 min-h-[calc(100vh-120px)] justify-center max-w-3xl mx-auto w-full px-2 sm:px-0">
+        {/* Hero: logo + greeting */}
+        <div className="flex items-center gap-5 sm:gap-7">
+          <div
+            className={cn(
+              "relative shrink-0 rounded-2xl border border-primary/20 bg-gradient-to-br from-[hsl(240_10%_8%)] to-[hsl(240_12%_5%)] p-3 sm:p-4 hero-logo-glow",
+              composerFocused && "hero-logo-glow-listening",
+            )}
+          >
+            <img
+              src={logoMark}
+              alt="VidoPrompt"
+              className="w-20 h-20 sm:w-24 sm:h-24 hero-logo-float"
+            />
+          </div>
+          <h1 className="font-display text-3xl sm:text-4xl md:text-5xl font-semibold leading-[1.05] tracking-tight text-foreground">
+            {firstName}, <span className="text-muted-foreground/80">what are we</span>
+            <br className="hidden sm:block" />
+            <span className="text-muted-foreground/80"> filming </span>today?
+          </h1>
+        </div>
+
+        {/* Composer */}
+        <div
+          onFocusCapture={() => setComposerFocused(true)}
+          onBlurCapture={() => setComposerFocused(false)}
+        >
+          <Composer
+            value={input}
+            onChange={setInput}
+            attachments={attachments}
+            onAttachmentsChange={setAttachments}
+            onSend={send}
+            busy={busy}
+            showHelper={false}
+          />
+        </div>
+
+        {/* Category tabs */}
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-wrap gap-2">
+            {CATEGORIES.map((c) => {
+              const Icon = c.icon;
+              const active = c.id === activeCategory;
+              return (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => setActiveCategory(c.id)}
+                  className={cn(
+                    "inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm transition-all",
+                    active
+                      ? "border border-primary/60 bg-primary/10 text-foreground shadow-[0_0_24px_-8px_hsl(var(--primary)/0.6)]"
+                      : "border border-border/40 bg-muted/10 text-muted-foreground hover:border-border hover:text-foreground hover:-translate-y-0.5",
+                  )}
+                >
+                  <Icon className={cn("w-4 h-4", active ? "text-primary" : "text-muted-foreground")} />
+                  <span>{c.label}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Suggestions */}
+          <div className="flex flex-col">
+            {activeCat.prompts.map((p) => (
+              <button
+                key={p}
+                type="button"
+                onClick={() => setInput(p)}
+                className="group flex items-center gap-3 py-3 text-left text-sm text-muted-foreground hover:text-foreground transition-colors border-b border-border/20 last:border-b-0"
+              >
+                <ArrowRight className="w-4 h-4 text-muted-foreground/50 group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
+                <span>{p}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="text-center">
+          <button
+            onClick={() => navigate("/")}
+            className="text-xs text-muted-foreground hover:text-primary transition-colors"
+          >
+            Want more control? Switch to structured mode →
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-3 h-[calc(100vh-120px)]">
       {/* Presence header */}
