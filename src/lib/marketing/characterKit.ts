@@ -158,3 +158,20 @@ export function useCharacterKit() {
     reload,
   };
 }
+
+export type CharacterImageAnalysis = {
+  name: string | null;
+  role: string | null;
+  description: string | null;
+};
+
+export async function analyzeCharacterImage(input: {
+  imagePath?: string | null;
+  imageUrl?: string | null;
+}): Promise<CharacterImageAnalysis> {
+  const { data, error } = await supabase.functions.invoke("analyze-character-image", {
+    body: input,
+  });
+  if (error) throw error;
+  return data as CharacterImageAnalysis;
+}
