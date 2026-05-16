@@ -82,6 +82,13 @@ export default function MarketingStudio() {
   const navigate = useNavigate();
 
   const { kits, activeKit: brandKit, activeId: brandActiveId, setActive: setBrandActive, deleteKit: deleteBrand } = useBrandKit();
+  const {
+    kits: characterKits,
+    activeKit: characterKit,
+    activeId: characterActiveId,
+    setActive: setCharacterActive,
+    deleteKit: deleteCharacter,
+  } = useCharacterKit();
   const subject: Subject = brandKit?.subject ?? "product";
   const [master, setMaster] = useState("");
   const [formatId, setFormatId] = useState<string | undefined>();
@@ -95,6 +102,8 @@ export default function MarketingStudio() {
   const [openPicker, setOpenPicker] = useState<"format" | "hook" | "setting" | null>(null);
   const [brandOpen, setBrandOpen] = useState(false);
   const [brandEditId, setBrandEditId] = useState<string | null>(null);
+  const [characterOpen, setCharacterOpen] = useState(false);
+  const [characterEditId, setCharacterEditId] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
