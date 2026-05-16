@@ -141,6 +141,7 @@ export default function MarketingStudio() {
 
   const [userAds, setUserAds] = useState<UserAd[]>([]);
   const [pendingJobs, setPendingJobs] = useState<VideoJob[]>([]);
+  const [deleteAdId, setDeleteAdId] = useState<string | null>(null);
   const [cancelJobId, setCancelJobId] = useState<string | null>(null);
   const [showCommunity, setShowCommunity] = useState(false);
   const [flashChips, setFlashChips] = useState(false);
