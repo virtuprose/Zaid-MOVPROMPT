@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Loader2, Upload, X, ImagePlus, UserRound, Sparkles } from "lucide-react";
+import { Loader2, Upload, X, ImagePlus, UserRound, Sparkles, Maximize2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -37,6 +37,7 @@ export function CharacterKitSheet({
   const [dragOver, setDragOver] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const [justFilled, setJustFilled] = useState(false);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -142,9 +143,17 @@ export function CharacterKitSheet({
             </Label>
             {hasImage ? (
               <div className="flex items-center gap-3 p-2.5 sm:pr-3 rounded-xl border border-border/60 bg-secondary/20">
-                <div className="relative w-14 h-14 rounded-lg overflow-hidden bg-muted/30 shrink-0 flex items-center justify-center">
+                <button
+                  type="button"
+                  onClick={() => setLightboxOpen(true)}
+                  className="group relative w-14 h-14 rounded-lg overflow-hidden bg-muted/30 shrink-0 flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60"
+                  aria-label="View full size"
+                >
                   <img src={draft.reference_url!} alt="" className="w-full h-full object-contain" />
-                </div>
+                  <span className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center">
+                    <Maximize2 className="w-4 h-4 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </span>
+                </button>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-foreground/90 truncate leading-tight">
                     {draft.name?.trim() || "Reference photo"}
@@ -282,6 +291,34 @@ export function CharacterKitSheet({
           </Button>
         </div>
       </DialogContent>
+
+      <Dialog open={lightboxOpen && hasImage} onOpenChange={setLightboxOpen}>
+        <DialogContent className="max-w-[92vw] sm:max-w-[860px] p-0 gap-0 bg-background/95 border-border/60 overflow-hidden">
+          <DialogTitle className="sr-only">Reference photo preview</DialogTitle>
+          <DialogDescription className="sr-only">
+            Full-size view of {draft.name?.trim() || "the reference photo"}.
+          </DialogDescription>
+          <div className="relative w-full max-h-[86vh] flex items-center justify-center bg-black/40 p-4">
+            {draft.reference_url && (
+              <img
+                src={draft.reference_url}
+                alt={draft.name?.trim() || "Reference photo"}
+                className="max-h-[82vh] max-w-full object-contain rounded-md"
+              />
+            )}
+          </div>
+          {(draft.name?.trim() || draft.role?.trim()) && (
+            <div className="px-5 py-3 border-t border-border/60 bg-background/70">
+              <p className="text-sm font-medium text-foreground/90 truncate">
+                {draft.name?.trim() || "Reference photo"}
+              </p>
+              {draft.role?.trim() && (
+                <p className="text-xs text-muted-foreground mt-0.5 truncate">{draft.role}</p>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 }
