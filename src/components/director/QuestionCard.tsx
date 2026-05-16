@@ -1,6 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { detectMediaAsk } from "@/lib/director/questionIntent";
+import { QuestionUploadSlot } from "./QuestionUploadSlot";
+import type { Attachment } from "@/lib/director/ingest";
 
 const DURATION_RE = /(duration|length|how long|seconds|how many seconds|how long should)/i;
 const DURATION_PRESETS = ["10s", "15s", "30s", "45s", "Other"];
@@ -9,11 +12,13 @@ type Props = {
   reason: string;
   questions: string[];
   disabled?: boolean;
+  attachments?: Attachment[];
+  onAttach?: (next: Attachment[]) => void;
   onContinue: (formatted: string) => void;
   onSkip: () => void;
 };
 
-export function QuestionCard({ reason, questions, disabled, onContinue, onSkip }: Props) {
+export function QuestionCard({ reason, questions, disabled, attachments = [], onAttach, onContinue, onSkip }: Props) {
   const [answers, setAnswers] = useState<string[]>(() => questions.map(() => ""));
   const [otherOpen, setOtherOpen] = useState<Record<number, boolean>>({});
   const firstInputRef = useRef<HTMLInputElement>(null);
