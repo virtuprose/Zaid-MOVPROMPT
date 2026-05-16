@@ -1,40 +1,91 @@
 ## Goal
 
-Make the Director proactively ask the small set of questions whose answers actually decide **which video model** to pick. Today the model is chosen from the brief + creative answers; we want the agent to explicitly probe the routing-critical axes when they're unknown.
+Add the **Kling 3.0** family to every layer that knows about video models, so the user can pick it in the UI and the Director agent can recommend/route to it.
 
-Looking at the model catalog, model choice is decided by 5 axes:
+Per fal.ai, Kling 3.0 ships in three tiers — all support **native audio** and multi-shot — endpoints already published:
 
-1. **Duration** — 5s (ltx), 6s (hailuo-01/02-std), 8s (veo), 10s (kling/seedance/runway/wan/hailuo-02-pro)
-2. **Audio / dialogue** — only veo-3/3.1 and seedance-2.0 support native audio + lip-synced dialogue; everything else is silent
-3. **Aspect ratio** — hailuo is 16:9 only; veo-3/3-fast/3.1-lite are 16:9 or 9:16 only; others are flexible
-4. **Aesthetic** — photoreal (kling/veo/wan) vs cinematic film-look (seedance/kling-v2-master) vs anime/stylized (hailuo, ltx, wan, seedance-lite)
-5. **Motion complexity** — heavy action / long takes (kling-v2.5-turbo, veo-3.1) vs stable subject (kling-1.6, ltx-13b)
+| Tier | fal endpoint | Notes |
+|---|---|---|
+| Standard | `fal-ai/kling-video/v3/standard/text-to-video` | Default 1080p, audio, multi-shot |
+| Pro | `fal-ai/kling-video/v3/pro/text-to-video` | Higher fidelity 1080p, audio, multi-shot |
+| 4K | `fal-ai/kling-video/v3/4k/text-to-video` | Native 4K output in one step |
 
-The brief usually answers axis 4 (aesthetic) and partially 5. The almost-always-missing ones are **duration, audio/dialogue, aspect ratio**.
+All three accept the same control surface as older Kling: standard aspect ratios (16:9, 9:16, 1:1), `cfg_scale`, and 5s or 10s duration. The new switch is audio support.
 
-## Change
+## Changes
 
-Single-file edit to `supabase/functions/director-agent/index.ts` — extend `SYSTEM_PROMPT` with a new section right before `WHEN YOU GENERATE A PROMPT`:
+### 1. `src/lib/director/videoModels.ts`
+Add three entries at the top of the `Kuaishou — Kling` group, ahead of `kling-v2.5-turbo-pro`:
 
-> MODEL-ROUTING QUESTIONS:
-> Before generating a prompt, you MUST know enough to pick a model. The brief usually tells you the aesthetic and motion complexity. The three details that most often decide the model — and that briefs usually omit — are:
-> 1. **Duration** — target clip length in seconds (drives 5s/6s/8s/10s model families).
-> 2. **Audio & dialogue** — does the shot need spoken lines, sync sound, music, SFX, or is it silent? (veo-3.x and seedance-2.0 are the only audio-capable families.)
-> 3. **Aspect ratio / orientation** — 16:9, 9:16, 1:1, or other? (hailuo and several veo variants are constrained.)
->
-> Rules:
-> - If you have at least 2 of the 3 above, just pick the best fit and generate.
-> - If 2 or 3 of them are missing AND the brief is otherwise enough, call `ask_clarification` with one question per missing axis (max 3, in this order: duration → audio/dialogue → aspect ratio). Always include concrete options in the question text so the user can answer in one tap, e.g. "How long should the clip be — 5s, 8s, 10s, or other?" / "Does it need spoken dialogue, ambient sound + music, or fully silent?" / "What aspect ratio — 16:9 landscape, 9:16 vertical, or 1:1 square?"
-> - Do NOT ask these routing questions when they're already implied by the brief (e.g. user said "vertical TikTok ad" → 9:16 known; user said "silent loop" → audio known; user said "8-second clip" → duration known).
-> - Do NOT mix these routing questions with a media-drop ask in the same batch (see ASK_CLARIFICATION COHERENCE).
-> - Echo the user's answers back into `breakdown.duration_seconds`, `breakdown.audio` / `breakdown.dialogue`, and `breakdown.aspect_ratio` (whatever the existing breakdown schema supports), and use them as primary inputs when filling `recommended_model_id` / `recommended_alternatives` / `recommendation_reason`.
+```ts
+{ id: "kling-v3-pro", label: "Kling 3.0 Pro", family: "kling", note: "Newest, native audio, multi-shot" },
+{ id: "kling-v3-standard", label: "Kling 3.0 Standard", family: "kling", note: "Native audio, multi-shot" },
+{ id: "kling-v3-4k", label: "Kling 3.0 4K", family: "kling", note: "Native 4K output" },
+```
 
-## Notes
+Update `pickRecommendedModel` so version detection recognizes `"3"` / `"3.0"` for Kling. The existing regex `m.id.includes(\`v${v}\`)` already matches `kling-v3-*` for v=`3`, so no code change is needed beyond verifying.
 
-- The existing `QuestionCard` already detects duration questions and renders preset chips (5s/10s/15s/30s/Other), and `detectSuggestion` already produces chips for audio-style and a generic catch-all — so phrasing questions in this format makes them tap-friendly without any client changes.
-- No tool schema, no client, no DB changes. Pure prompt edit + redeploy of `director-agent`.
+### 2. `src/lib/director/videoModelCatalog.ts`
+Add three `ModelCapabilities` entries at the top of the Kling section:
+
+```ts
+{ id: "kling-v3-pro", family: "kling", label: "Kling 3.0 Pro", note: "Newest, native audio, multi-shot",
+  audio: true, maxDurationSec: 10, maxResolution: "1080p", aspects: STD, speed: "balanced", cost: "high",
+  strengths: ["cinematic", "photoreal", "complex_motion", "long_take", "dialogue"] },
+{ id: "kling-v3-standard", family: "kling", label: "Kling 3.0 Standard", note: "Native audio, multi-shot",
+  audio: true, maxDurationSec: 10, maxResolution: "1080p", aspects: STD, speed: "fast", cost: "mid",
+  strengths: ["cinematic", "photoreal", "dialogue"] },
+{ id: "kling-v3-4k", family: "kling", label: "Kling 3.0 4K", note: "Native 4K, single-step",
+  audio: true, maxDurationSec: 10, maxResolution: "1080p", aspects: STD, speed: "slow", cost: "high",
+  strengths: ["cinematic", "photoreal", "long_take"] },
+```
+
+Keep `maxResolution: "1080p"` for the 4K tier to avoid widening the `maxResolution` union type. The label + note convey "4K" to the user; ranking still treats it as top tier via `cost: "high"`.
+
+### 3. `src/lib/director/videoModelControls.ts`
+Pull the three Kling v3 ids OUT of the shared `Object.fromEntries(...)` loop (because they need `audio: true`, unlike legacy Kling). Add them as explicit entries:
+
+```ts
+"kling-v3-pro": {
+  aspectRatios: STD_ASPECTS,
+  durations: [5, 10],
+  audio: true,
+  cfgScale: true,
+  defaults: { aspect_ratio: "16:9", duration: 5, audio: true, cfg_scale: 0.5 },
+},
+"kling-v3-standard": { /* same shape */ },
+"kling-v3-4k": { /* same shape, default audio: true */ },
+```
+
+Legacy Kling entries stay in the existing shared loop unchanged.
+
+### 4. `supabase/functions/generate-video/index.ts`
+Add three rows to `MODEL_ENDPOINTS`:
+
+```ts
+"kling-v3-pro": "fal-ai/kling-video/v3/pro/text-to-video",
+"kling-v3-standard": "fal-ai/kling-video/v3/standard/text-to-video",
+"kling-v3-4k": "fal-ai/kling-video/v3/4k/text-to-video",
+```
+
+The family dispatch `case "kling"` already handles `aspect_ratio`, `duration`, and `cfg_scale`. Confirm that when `options.audio` is provided for kling v3 it is forwarded; if today's case strips it, add `if (audio !== undefined) input.audio = audio;` inside the `case "kling"` block (Pro/Standard/4K fal schemas accept `audio: boolean`).
+
+### 5. `supabase/functions/director-agent/index.ts`
+Add three lines at the top of `MODEL_CATALOG_LINES` (before the existing Kling entries) so the agent can recommend them:
+
+```
+"kling-v3-pro — kling, 10s, 1080p, AUDIO, cinematic+photoreal+complex_motion+long_take+dialogue+multi_shot",
+"kling-v3-standard — kling, 10s, 1080p, AUDIO, cinematic+photoreal+dialogue+multi_shot",
+"kling-v3-4k — kling, 10s, native_4K, AUDIO, cinematic+photoreal+long_take",
+```
+
+Redeploy the `director-agent` and `generate-video` edge functions after the edits.
+
+### 6. Sanity
+- Run the existing `src/lib/director/__tests__/modelRanking.test.ts`. It pins `kling-v2.5-turbo-pro` for an action scenario; with v3 added as `cost: high`, that test should still pass because v2.5-turbo-pro has `cost: mid` + `speed: fast` and the test scenario favors speed. If it fails, the smallest fix is to demote our new v3 tiers' implicit ranking by leaving them off the `strengths: ["action"]` list (already done — no `"action"` in the three new strength arrays).
 
 ## Out of scope
 
-- Adding a new `aspect_ratio` chip set in `QuestionCard`. Can do later if the user wants tap-pickers for ratios; today they're answerable via free text or existing chips.
-- Changing `recommended_model_id` selection logic — the model list and breakdown already exist.
+- New control fields (`negative_prompt`, custom-elements / lipsync options exposed by Kling v3). The existing kling shared schema already covers aspect/duration/cfg/audio, which is enough to ship the model.
+- Image-to-video and frame-to-frame endpoints for Kling v3. Existing text-to-video route is sufficient for the Director's current flow.
+- Showing "4K" as a real resolution chip in the controls dialog. Adding `"4k"` to the `maxResolution`/`resolutions` union touches more files than the user asked for; the note "Native 4K" communicates it.

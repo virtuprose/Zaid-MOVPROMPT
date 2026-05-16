@@ -77,7 +77,30 @@ const CONTROLS: Record<string, ModelControls> = {
     defaults: { aspect_ratio: "16:9", duration: 5, resolution: "720p" },
   },
 
-  // Kling — all share aspect/duration/cfg_scale
+  // Kling v3 — native audio + extended duration enum (Pro accepts 3–15)
+  "kling-v3-pro": {
+    aspectRatios: STD_ASPECTS,
+    durations: [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+    audio: true,
+    cfgScale: true,
+    defaults: { aspect_ratio: "16:9", duration: 5, audio: true, cfg_scale: 0.5 },
+  },
+  "kling-v3-standard": {
+    aspectRatios: STD_ASPECTS,
+    durations: [5, 10],
+    audio: true,
+    cfgScale: true,
+    defaults: { aspect_ratio: "16:9", duration: 5, audio: true, cfg_scale: 0.5 },
+  },
+  "kling-v3-4k": {
+    aspectRatios: STD_ASPECTS,
+    durations: [5, 10],
+    audio: true,
+    cfgScale: true,
+    defaults: { aspect_ratio: "16:9", duration: 5, audio: true, cfg_scale: 0.5 },
+  },
+
+  // Kling (legacy v1–v2.5) — share aspect/duration/cfg_scale, no audio
   ...Object.fromEntries(
     [
       "kling-v2.5-turbo-pro",
