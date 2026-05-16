@@ -1,56 +1,40 @@
-## Add a "Character" library to Ads Studio
+# Move "Your brand" + "Your character" next to Generate
 
-Add a new saved-Character feature alongside "Your brands" so users can save their custom character references (a portrait photo + name + short description) once and reuse them on every ad.
+Today both live as full-width rows above the composer card. They take a lot of vertical space and split attention from the prompt + Generate flow. We'll collapse each into a single compact picker button, sit them side-by-side just above the Generate button inside the composer, and open a popover on click that lists saved items + a "New …" option.
 
-### UX
+## UX
 
-In `MarketingStudio` (route `/marketing`), right under the existing **Your brands** row, render a new **Your characters** row with the same layout & styling as `BrandsRow`:
+- Remove the `BrandsRow` and `CharactersRow` sections above the composer.
+- Inside the composer card, add a thin row directly above the Format / Hook / Setting chips that contains exactly two pill buttons, left-aligned and matching each other:
+  - **Your brand** — shows brand logo + name when one is active, otherwise icon + "Add brand". A small `×` clears the active brand.
+  - **Your character** — shows reference avatar + name when one is active, otherwise icon + "Add character". A small `×` clears the active character.
+- Clicking either pill opens a popover anchored under the button:
+  - Lists saved items (avatar/logo + name + role/subject, check mark on active).
+  - Each row has hover edit/delete actions (reuse existing patterns).
+  - Footer button "New brand" / "New character" opens the existing `BrandKitSheet` / `CharacterKitSheet` in create mode.
+  - Empty state: short hint + the same New button.
+- The detached-chip strip that currently lives at the top of the composer (lines 354–437) keeps working as-is for Location, but the brand/character chips there become redundant — remove the brand and character chips from that strip (Location chip stays). The new pills are the single place to see/edit the attached brand and character.
 
-- Empty state: full-width dashed tile "Add your first character — we'll reuse this person on every ad."
-- Populated state: horizontal scrolling list of 200×84 tiles (portrait thumb + name + role/description preview), an active tile shows the amber check, hover reveals Edit / Delete, and a trailing dashed "New character" tile.
-- Selecting a tile sets it as the active character; clicking the active tile again deselects.
+## Files
 
-When a character is active, a small chip appears in the composer header next to the brand chip (avatar + name + ✕ to clear), matching the existing brand chip pattern at lines 317–340.
+- `src/pages/MarketingStudio.tsx`
+  - Delete the `BrandsRow` and `CharactersRow` JSX blocks above the composer (lines ~322–350).
+  - Inside the composer, add a new row above the chips row containing two `<BrandPickerPopover>` / `<CharacterPickerPopover>` triggers.
+  - Trim the existing detached-chip strip so it only renders for `location`.
+- `src/components/marketing/BrandPickerPopover.tsx` — already exists, reuse. Confirm `onEdit`/`onDelete` callbacks fire and wire to existing `setBrandEditId` / `deleteBrand`.
+- `src/components/marketing/CharacterPickerPopover.tsx` — **new**, mirror of `BrandPickerPopover` using `CharacterKit` fields (`reference_url`, `name`, `role`). Same trigger/popover structure.
+- `src/components/marketing/BrandsRow.tsx` and `CharactersRow.tsx` — no longer rendered; leave files in place for now (can be removed in a follow-up) to keep the diff small.
 
-### Data model
-
-New table `character_kits` (mirrors `brand_kits`):
+## Visual
 
 ```text
-character_kits
-  id              uuid pk
-  user_id         uuid not null
-  name            text not null default ''
-  description     text not null default ''   -- "30yo barista, short curly hair, warm smile"
-  role            text                       -- optional ("Founder", "Customer", "Talent")
-  reference_path  text                       -- storage path in director-uploads
-  created_at      timestamptz default now()
-  updated_at      timestamptz default now()
+┌─ Composer card ──────────────────────────────────────────────┐
+│ [ Your brand: ◉ Acme  × ]   [ Your character: ◉ Maya  × ]    │
+│                                                              │
+│ Describe what happens in the ad…                             │
+│                                                              │
+│ [Format] [Hook] [Setting]                       [Generate ad]│
+└──────────────────────────────────────────────────────────────┘
 ```
 
-New table `character_kit_selection` (mirrors `brand_kit_selection`, one row per user) tracks the active character.
-
-RLS: same per-user policies already used by `brand_kits` / `brand_kit_selection` (select/insert/update/delete where `auth.uid() = user_id`).
-
-Reference images go to the existing private `director-uploads` bucket under `marketing/{user_id}/character/ref-{ts}.{ext}` and are read via 1-hour signed URLs (same pattern as `signLogo`).
-
-### Code structure
-
-- `src/lib/marketing/characterKit.ts` — `CharacterKit` type, `EMPTY_CHARACTER_KIT`, `useCharacterKit()` hook (list / save / delete / setActive / uploadReference / signed-URL helper). Modeled directly on `useBrandKit`.
-- `src/components/marketing/CharactersRow.tsx` — visual twin of `BrandsRow` but with `UserRound` icon and "Your characters" header.
-- `src/components/marketing/CharacterKitSheet.tsx` — slide-over editor (name, role, description, reference image upload + preview, Save / Delete). Lean version of `BrandKitSheet` — no brand-image-analysis call needed initially.
-- `src/pages/MarketingStudio.tsx`:
-  - Mount `useCharacterKit()` alongside `useBrandKit()`.
-  - Render `<CharactersRow>` right after `<BrandsRow>` (line 313).
-  - Add the character chip to the composer header (line 318 block).
-  - Pass character into the prompt brief.
-- `src/lib/marketingStudio.ts`:
-  - Add `CharacterContext { name; description?; role?; hasImage?: boolean }` and a `characterLine()` helper.
-  - Extend `StudioBrief` with `character?: CharacterContext` and include `characterLine(brief.character)` in the composed prompt (placed right after `brandLine`).
-- Send the character reference image to the video job the same way the location reference image is sent today, so the generator can match the person.
-
-### Out of scope
-
-- No new edge function (analysis of the character photo can be added later).
-- No changes to Director / non-marketing surfaces.
-- No changes to existing brand UI beyond placing the new row beneath it.
+Both pills share the same height (h-9), rounded-xl, border + subtle background, and align on a single flex row with `gap-2`. On narrow screens they wrap but stay aligned to each other. No business-logic changes — brand/character selection state, generate flow, and kit sheets stay the same.
