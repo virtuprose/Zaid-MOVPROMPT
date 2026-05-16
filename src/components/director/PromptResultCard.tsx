@@ -275,17 +275,44 @@ export function PromptResultCard({ title, prompt, breakdown, directorsNote, onRe
             src={job.video_url}
             controls
             playsInline
-            className="w-full rounded-md aspect-video bg-black"
+            className="w-full rounded-md bg-black max-h-[70vh] object-contain"
           />
-          <a
-            href={job.video_url}
-            download
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
-          >
-            <Download className="w-3 h-3" /> Download MP4
-          </a>
+          <div className="flex items-center justify-end gap-1 pt-1">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={toggleLike}
+              aria-label={job.liked ? "Unlike video" : "Like video"}
+              className="h-8 px-2"
+            >
+              <Heart
+                className={`w-4 h-4 ${job.liked ? "fill-primary text-primary" : ""}`}
+              />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              asChild
+              aria-label="Download video"
+              className="h-8 px-2"
+            >
+              <a href={job.video_url} download target="_blank" rel="noopener noreferrer">
+                <Download className="w-4 h-4" />
+              </a>
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setConfirmDelete(true)}
+              aria-label="Delete video"
+              className="h-8 px-2 text-muted-foreground hover:text-destructive"
+            >
+              <Trash2 className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
       );
     }
