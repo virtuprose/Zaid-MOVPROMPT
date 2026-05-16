@@ -25,6 +25,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { TopNav } from "@/components/TopNav";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -129,6 +139,7 @@ export default function MarketingStudio() {
 
   const [userAds, setUserAds] = useState<UserAd[]>([]);
   const [pendingJobs, setPendingJobs] = useState<VideoJob[]>([]);
+  const [cancelJobId, setCancelJobId] = useState<string | null>(null);
   const [showCommunity, setShowCommunity] = useState(false);
   const [flashChips, setFlashChips] = useState(false);
   const composerRef = useRef<HTMLDivElement | null>(null);
@@ -374,11 +385,14 @@ export default function MarketingStudio() {
     };
   }, [pendingJobs]);
 
-  const handleCancelJob = async (jobId: string) => {
-    const confirmed = window.confirm(
-      "Cancel this generation? You won't be charged for canceled jobs, but any in-progress work will be lost.",
-    );
-    if (!confirmed) return;
+  const handleCancelJob = (jobId: string) => {
+    setCancelJobId(jobId);
+  };
+
+  const confirmCancelJob = async () => {
+    const jobId = cancelJobId;
+    if (!jobId) return;
+    setCancelJobId(null);
     // optimistic remove
     setPendingJobs((prev) => prev.filter((j) => j.id !== jobId));
     try {
@@ -886,6 +900,26 @@ export default function MarketingStudio() {
             void doGenerate();
           }}
         />
+
+        <AlertDialog open={cancelJobId !== null} onOpenChange={(o) => !o && setCancelJobId(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Cancel this generation?</AlertDialogTitle>
+              <AlertDialogDescription>
+                You won't be charged for canceled jobs, but any in-progress work will be lost.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Keep generating</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={confirmCancelJob}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Cancel generation
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </TooltipProvider>
   );
