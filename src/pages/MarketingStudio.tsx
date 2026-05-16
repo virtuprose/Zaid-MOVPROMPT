@@ -159,8 +159,9 @@ export default function MarketingStudio() {
       const [{ data: done }, { data: active }] = await Promise.all([
         supabase
           .from("video_jobs")
-          .select("id,video_url,created_at")
+          .select("id,video_url,created_at,liked,prompt")
           .eq("user_id", user.id)
+          .is("deleted_at", null)
           .not("video_url", "is", null)
           .order("created_at", { ascending: false })
           .limit(24),
@@ -168,6 +169,7 @@ export default function MarketingStudio() {
           .from("video_jobs")
           .select("id,status,provider,prompt,created_at")
           .eq("user_id", user.id)
+          .is("deleted_at", null)
           .in("status", ["queued", "processing"])
           .gte("created_at", since)
           .order("created_at", { ascending: false }),
