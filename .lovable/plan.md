@@ -1,91 +1,93 @@
 ## Goal
 
-Add the **Kling 3.0** family to every layer that knows about video models, so the user can pick it in the UI and the Director agent can recommend/route to it.
+Upgrade the AI Director's knowledge of every video model in the picker so it can pick the right one with confidence and explain *why*. Today the agent only sees a one-line spec per model (`id — family, max duration, max resolution, audio?, strengths`). That's enough to filter by capability but not enough to know *what each model actually does well, what inputs it needs, and when to prefer it over a sibling*.
 
-Per fal.ai, Kling 3.0 ships in three tiers — all support **native audio** and multi-shot — endpoints already published:
+## What to change
 
-| Tier | fal endpoint | Notes |
-|---|---|---|
-| Standard | `fal-ai/kling-video/v3/standard/text-to-video` | Default 1080p, audio, multi-shot |
-| Pro | `fal-ai/kling-video/v3/pro/text-to-video` | Higher fidelity 1080p, audio, multi-shot |
-| 4K | `fal-ai/kling-video/v3/4k/text-to-video` | Native 4K output in one step |
+All work is in `supabase/functions/director-agent/index.ts`. No other files change.
 
-All three accept the same control surface as older Kling: standard aspect ratios (16:9, 9:16, 1:1), `cfg_scale`, and 5s or 10s duration. The new switch is audio support.
+### 1. Replace the compact catalog with a structured "Model Playbook"
 
-## Changes
+Today: `MODEL_CATALOG_LINES` — one cryptic line per model.
 
-### 1. `src/lib/director/videoModels.ts`
-Add three entries at the top of the `Kuaishou — Kling` group, ahead of `kling-v2.5-turbo-pro`:
+New: a per-model rich entry the agent reads on every turn, with these fields:
 
-```ts
-{ id: "kling-v3-pro", label: "Kling 3.0 Pro", family: "kling", note: "Newest, native audio, multi-shot" },
-{ id: "kling-v3-standard", label: "Kling 3.0 Standard", family: "kling", note: "Native audio, multi-shot" },
-{ id: "kling-v3-4k", label: "Kling 3.0 4K", family: "kling", note: "Native 4K output" },
+- **id** (unchanged, enum source for `recommended_model_id`)
+- **family + tier** (e.g. "Kling 3.0 / Omni tier")
+- **input mode**: `text-to-video` | `image-to-video` | `reference-to-video (image+elements)` | `video-to-video edit` | `motion-control (image+driving-video)`
+- **required inputs**: what the user must drop before this model can run (e.g. Omni Edit → "source video", Motion Control → "1 reference image + 1 driving video")
+- **duration**: exact allowed values (enum or range)
+- **aspect ratios**: exact allowed set
+- **resolution**: native max
+- **audio**: none / native generation / preserve-source-only
+- **best for**: 2–4 concrete shot types ("dialogue close-ups", "VFX-heavy action", "vertical TikTok product loops")
+- **avoid for**: known weaknesses ("long takes >8s", "complex multi-character interactions", "text in frame")
+- **prefer over siblings when…**: a one-line tiebreaker vs the next closest model in the same family
+
+The full playbook ships inline in the system prompt so the LLM sees it every call. To keep tokens manageable each entry is ~5–7 short lines, total ~5–7k tokens for ~30 models — well within Gemini/GPT context.
+
+### 2. Add a "Model Selection Algorithm" block
+
+Replace the current ad-hoc rules with an explicit decision tree the agent must follow before picking `recommended_model_id`:
+
+```text
+STEP 1 — Input gating (hard filter)
+  • If the user attached a SOURCE VIDEO to edit/restyle → only kling-omni-edit qualifies.
+  • If the user wants a character to copy motion from another clip → only
+    kling-motion-control qualifies (needs 1 reference image + 1 driving video).
+  • If the user attached IMAGES of characters/products to keep consistent across
+    shots → strongly prefer kling-omni (multi-reference + elements).
+  • Otherwise text-to-video models are all eligible.
+
+STEP 2 — Capability gating (hard filter)
+  • Drop any model whose max duration < requested duration.
+  • Drop any model whose aspect ratios don't include the requested ratio.
+  • If audio/dialogue is required, keep only audio-capable models
+    (veo-3/3.1 family, seedance-2.0/2.0-fast, kling-v3 family, kling-omni).
+  • If native 4K is explicitly requested, keep only kling-v3-4k.
+
+STEP 3 — Aesthetic ranking (soft score)
+  Score remaining models by overlap between the brief's tags and the model's
+  "best for" list, then break ties with cost/speed:
+    • photoreal dialogue close-up → veo-3.1 > seedance-2.0 > kling-v3-pro
+    • cinematic film-look wide shot → seedance-2.0 > kling-v3-pro > veo-3.1
+    • anime / stylized portrait → hailuo-02-pro > seedance-v1-lite > ltx-video-13b
+    • multi-shot storyboard with characters → kling-omni > kling-v3-pro
+    • fast cheap iteration → veo-3.1-lite / seedance-2.0-fast / wan-v2.2-a14b
+    • VFX-heavy action / complex motion → kling-v2.5-turbo-pro > kling-v3-pro
+
+STEP 4 — Output
+  • recommended_model_id = top of the ranked list.
+  • recommended_alternatives = #2 and #3 from the same ranked list, never
+    duplicates of #1.
+  • recommendation_reason = one sentence naming the deciding factor
+    (e.g. "Native audio + 8s dialogue support, 1080p photoreal close-up").
 ```
 
-Update `pickRecommendedModel` so version detection recognizes `"3"` / `"3.0"` for Kling. The existing regex `m.id.includes(\`v${v}\`)` already matches `kling-v3-*` for v=`3`, so no code change is needed beyond verifying.
+### 3. Tighten the routing-question rules to cover input-mode questions
 
-### 2. `src/lib/director/videoModelCatalog.ts`
-Add three `ModelCapabilities` entries at the top of the Kling section:
+Today the agent asks about *duration / audio / aspect ratio*. Add a 4th routing axis:
 
-```ts
-{ id: "kling-v3-pro", family: "kling", label: "Kling 3.0 Pro", note: "Newest, native audio, multi-shot",
-  audio: true, maxDurationSec: 10, maxResolution: "1080p", aspects: STD, speed: "balanced", cost: "high",
-  strengths: ["cinematic", "photoreal", "complex_motion", "long_take", "dialogue"] },
-{ id: "kling-v3-standard", family: "kling", label: "Kling 3.0 Standard", note: "Native audio, multi-shot",
-  audio: true, maxDurationSec: 10, maxResolution: "1080p", aspects: STD, speed: "fast", cost: "mid",
-  strengths: ["cinematic", "photoreal", "dialogue"] },
-{ id: "kling-v3-4k", family: "kling", label: "Kling 3.0 4K", note: "Native 4K, single-step",
-  audio: true, maxDurationSec: 10, maxResolution: "1080p", aspects: STD, speed: "slow", cost: "high",
-  strengths: ["cinematic", "photoreal", "long_take"] },
-```
+- **Input mode** — if the brief mentions "edit this video", "make my character do X like in this clip", or "keep this character consistent across shots", the agent should confirm intent before locking in `kling-omni-edit` / `kling-motion-control` / `kling-omni` (since those need extra uploads). Question shape: "Do you want to **restyle this exact clip**, **drive a character with this clip's motion**, or **generate a fresh video inspired by it**?"
 
-Keep `maxResolution: "1080p"` for the 4K tier to avoid widening the `maxResolution` union type. The label + note convey "4K" to the user; ranking still treats it as top tier via `cost: "high"`.
+This question goes through the existing `ask_clarification` flow and respects the existing media-coherence rule (don't mix with unrelated routing asks).
 
-### 3. `src/lib/director/videoModelControls.ts`
-Pull the three Kling v3 ids OUT of the shared `Object.fromEntries(...)` loop (because they need `audio: true`, unlike legacy Kling). Add them as explicit entries:
+### 4. Sync supporting copy
 
-```ts
-"kling-v3-pro": {
-  aspectRatios: STD_ASPECTS,
-  durations: [5, 10],
-  audio: true,
-  cfgScale: true,
-  defaults: { aspect_ratio: "16:9", duration: 5, audio: true, cfg_scale: 0.5 },
-},
-"kling-v3-standard": { /* same shape */ },
-"kling-v3-4k": { /* same shape, default audio: true */ },
-```
+- Update the `AVAILABLE MODELS` section header to reference the new playbook format.
+- Update `breakdown.recommendation_reason` description to require it name the deciding factor from the algorithm (input mode / capability gate / aesthetic match).
+- Leave the `MODEL_IDS` enum derivation as-is — it stays the source of truth for the tool schema.
 
-Legacy Kling entries stay in the existing shared loop unchanged.
+## Technical details
 
-### 4. `supabase/functions/generate-video/index.ts`
-Add three rows to `MODEL_ENDPOINTS`:
-
-```ts
-"kling-v3-pro": "fal-ai/kling-video/v3/pro/text-to-video",
-"kling-v3-standard": "fal-ai/kling-video/v3/standard/text-to-video",
-"kling-v3-4k": "fal-ai/kling-video/v3/4k/text-to-video",
-```
-
-The family dispatch `case "kling"` already handles `aspect_ratio`, `duration`, and `cfg_scale`. Confirm that when `options.audio` is provided for kling v3 it is forwarded; if today's case strips it, add `if (audio !== undefined) input.audio = audio;` inside the `case "kling"` block (Pro/Standard/4K fal schemas accept `audio: boolean`).
-
-### 5. `supabase/functions/director-agent/index.ts`
-Add three lines at the top of `MODEL_CATALOG_LINES` (before the existing Kling entries) so the agent can recommend them:
-
-```
-"kling-v3-pro — kling, 10s, 1080p, AUDIO, cinematic+photoreal+complex_motion+long_take+dialogue+multi_shot",
-"kling-v3-standard — kling, 10s, 1080p, AUDIO, cinematic+photoreal+dialogue+multi_shot",
-"kling-v3-4k — kling, 10s, native_4K, AUDIO, cinematic+photoreal+long_take",
-```
-
-Redeploy the `director-agent` and `generate-video` edge functions after the edits.
-
-### 6. Sanity
-- Run the existing `src/lib/director/__tests__/modelRanking.test.ts`. It pins `kling-v2.5-turbo-pro` for an action scenario; with v3 added as `cost: high`, that test should still pass because v2.5-turbo-pro has `cost: mid` + `speed: fast` and the test scenario favors speed. If it fails, the smallest fix is to demote our new v3 tiers' implicit ranking by leaving them off the `strengths: ["action"]` list (already done — no `"action"` in the three new strength arrays).
+- File touched: `supabase/functions/director-agent/index.ts` only.
+- Constant rename: `MODEL_CATALOG_LINES` → `MODEL_PLAYBOOK` (array of objects), with a `playbookPromptBlock()` helper that serializes it into the system prompt.
+- `MODEL_IDS` becomes `MODEL_PLAYBOOK.map(m => m.id)`.
+- No schema changes to the `generate_prompt` tool — same `recommended_model_id` / `recommended_alternatives` / `recommendation_reason` fields.
+- After the edit, redeploy `director-agent` via the edge-function deploy tool.
 
 ## Out of scope
 
-- New control fields (`negative_prompt`, custom-elements / lipsync options exposed by Kling v3). The existing kling shared schema already covers aspect/duration/cfg/audio, which is enough to ship the model.
-- Image-to-video and frame-to-frame endpoints for Kling v3. Existing text-to-video route is sufficient for the Director's current flow.
-- Showing "4K" as a real resolution chip in the controls dialog. Adding `"4k"` to the `maxResolution`/`resolutions` union touches more files than the user asked for; the note "Native 4K" communicates it.
+- No changes to the picker UI, capability catalog, or generate-video edge function (already done in prior turns).
+- No new input upload plumbing for Omni Edit / Motion Control (still tracked separately).
+- No new models added.
