@@ -135,36 +135,36 @@ export function CharacterKitSheet({
           </DialogDescription>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
-          <div>
+        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
+          <div className="space-y-2">
             <Label className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">
               Reference photo
             </Label>
             {hasImage ? (
-             <div className="mt-2 flex items-center gap-3 p-2.5 pr-3 rounded-xl border border-border/60 bg-secondary/20">
-                <div className="relative w-14 h-14 rounded-lg overflow-hidden bg-muted/30 shrink-0">
+              <div className="flex items-center gap-3 p-2.5 sm:pr-3 rounded-xl border border-border/60 bg-secondary/20">
+                <div className="relative w-14 h-14 rounded-lg overflow-hidden bg-muted/30 shrink-0 flex items-center justify-center">
                   <img src={draft.reference_url!} alt="" className="w-full h-full object-contain" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-foreground/90 truncate">
+                  <p className="text-sm font-medium text-foreground/90 truncate leading-tight">
                     {draft.name?.trim() || "Reference photo"}
                   </p>
-                  <p className="text-xs text-muted-foreground mt-0.5 inline-flex items-center gap-1.5">
+                  <p className="text-xs text-muted-foreground mt-1 inline-flex items-center gap-1.5 leading-none">
                     <span className={cn("w-1.5 h-1.5 rounded-full", analyzing ? "bg-accent animate-pulse" : "bg-emerald-500")} />
                     {analyzing ? "Reading the photo…" : "Ready"}
                   </p>
                 </div>
-                <div className="flex items-center gap-1 shrink-0">
+                <div className="flex items-center gap-0.5 shrink-0">
                   <Button
                     type="button"
                     variant="ghost"
                     size="sm"
                     disabled={uploading}
                     onClick={() => fileRef.current?.click()}
-                    className="h-8"
+                    className="h-8 px-2 sm:px-3"
                   >
-                    {uploading ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Upload className="w-3.5 h-3.5 mr-1.5" />}
-                    Replace
+                    {uploading ? <Loader2 className="w-3.5 h-3.5 sm:mr-1.5 animate-spin" /> : <Upload className="w-3.5 h-3.5 sm:mr-1.5" />}
+                    <span className="hidden sm:inline">Replace</span>
                   </Button>
                   <Button
                     type="button"
@@ -193,7 +193,7 @@ export function CharacterKitSheet({
                   handleFile(e.dataTransfer.files?.[0]);
                 }}
                 className={cn(
-                  "mt-2 w-full h-[140px] rounded-xl border border-dashed flex flex-col items-center justify-center gap-2 transition-all",
+                  "w-full h-[140px] rounded-xl border border-dashed flex flex-col items-center justify-center gap-2 transition-all",
                   "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent/60",
                   dragOver
                     ? "border-accent bg-accent/5"
@@ -218,7 +218,7 @@ export function CharacterKitSheet({
             />
 
             {(analyzing || justFilled) && (
-              <div className="mt-2.5 inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-accent/10 text-accent text-[11px] font-medium">
+              <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-accent/10 text-accent text-[11px] font-medium">
                 {analyzing ? (
                   <>
                     <Loader2 className="w-3 h-3 animate-spin" />
