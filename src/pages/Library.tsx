@@ -295,14 +295,17 @@ function HistoryCard({
         {/* Select checkbox top-left when in select mode */}
         {selectMode && (
           <div className="absolute top-2 start-2 ml-[6.5rem]">
-            <button
-              type="button"
+            <div
+              role="checkbox"
+              aria-checked={selected}
+              tabIndex={0}
               onClick={(e) => { e.stopPropagation(); onToggleSelect(); }}
-              className="h-6 w-6 inline-flex items-center justify-center rounded-md bg-black/70 backdrop-blur-sm border border-white/20"
+              onKeyDown={(e) => { if (e.key === " " || e.key === "Enter") { e.preventDefault(); e.stopPropagation(); onToggleSelect(); } }}
+              className="h-6 w-6 inline-flex items-center justify-center rounded-md bg-black/70 backdrop-blur-sm border border-white/20 cursor-pointer"
               aria-label={selected ? "Deselect" : "Select"}
             >
-              <Checkbox checked={selected} className="pointer-events-none" />
-            </button>
+              <Checkbox checked={selected} className="pointer-events-none" tabIndex={-1} />
+            </div>
           </div>
         )}
 
@@ -908,7 +911,7 @@ const Library = () => {
                     {selectMode ? (
                       <>Cancel</>
                     ) : (
-                      <><Checkbox checked={false} className="pointer-events-none" /> Select multiple</>
+                      <><span className="inline-block h-3.5 w-3.5 rounded border border-current" /> Select multiple</>
                     )}
                   </Button>
 
