@@ -295,9 +295,11 @@ export default function MarketingStudio() {
             }
           : undefined,
       });
-      const referenceImages = [brandKit?.logo_url, characterKit?.reference_url].filter(
-        (u): u is string => typeof u === "string" && u.length > 0,
-      );
+      const referenceImages = [
+        brandKit?.logo_url,
+        characterKit?.reference_url,
+        location.imageUrl,
+      ].filter((u): u is string => typeof u === "string" && u.length > 0);
       const provider = referenceImages.length > 0 ? "seedance-2.0-ref" : "seedance-2.0";
       const job = await submitVideoJob(
         prompt,
