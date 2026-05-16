@@ -335,6 +335,7 @@ export default function MarketingStudio() {
               setBrandOpen(true);
             }}
             onDelete={(id) => void deleteBrand(id)}
+            onManageAll={() => setManageBrandsOpen(true)}
           />
 
           <CharactersRow
