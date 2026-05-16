@@ -411,7 +411,7 @@ export default function MarketingStudio() {
         </Helmet>
 
         <div className="fixed inset-0 pointer-events-none overflow-hidden">
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[700px] h-[400px] bg-[hsl(35_90%_55%)]/12 rounded-full blur-[140px]" />
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[560px] h-[320px] bg-[hsl(35_90%_55%)]/12 rounded-full blur-[140px]" />
           <div
             className="absolute inset-0 opacity-[0.04]"
             style={{
