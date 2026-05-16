@@ -371,7 +371,7 @@ serve(async (req) => {
         Authorization: `Key ${FAL_KEY}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(buildFalPayload(provider, normalizedPrompt, options)),
+      body: JSON.stringify(buildFalPayload(provider, normalizedPrompt, options, refImages)),
     });
     if (!submitResp.ok) {
       const t = await submitResp.text();
