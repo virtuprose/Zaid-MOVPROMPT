@@ -95,7 +95,7 @@ type VideoOptions = {
   prompt_optimizer?: boolean;
 };
 
-function buildFalPayload(provider: string, prompt: string, opts: VideoOptions = {}) {
+function buildFalPayload(provider: string, prompt: string, opts: VideoOptions = {}, referenceImages: string[] = []) {
   const payload: Record<string, unknown> = { prompt };
   const family = provider.split("-")[0]; // kling | veo | seedance | hailuo | runway | ltx | wan
   const set = (k: string, v: unknown) => {
