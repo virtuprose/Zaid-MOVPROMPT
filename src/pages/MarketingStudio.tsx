@@ -682,7 +682,60 @@ export default function MarketingStudio() {
             setBrandOpen(o);
             if (!o) setBrandEditId(null);
           }}
-          kitId={brandEditId}
+        />
+
+        <ManageLibraryDialog
+          open={manageBrandsOpen}
+          onOpenChange={setManageBrandsOpen}
+          kind="brand"
+          items={kits.map((k) => ({
+            id: k.id,
+            name: k.name,
+            subtitle: k.subject,
+            imageUrl: k.logo_url ?? null,
+            updatedAt: (k as any).updated_at,
+            createdAt: (k as any).created_at,
+          }))}
+          activeId={brandActiveId}
+          onSelect={(id) => void setBrandActive(id)}
+          onNew={() => {
+            setBrandEditId(null);
+            setManageBrandsOpen(false);
+            setBrandOpen(true);
+          }}
+          onEdit={(id) => {
+            setBrandEditId(id);
+            setManageBrandsOpen(false);
+            setBrandOpen(true);
+          }}
+          onDelete={(id) => void deleteBrand(id)}
+        />
+
+        <ManageLibraryDialog
+          open={manageCharactersOpen}
+          onOpenChange={setManageCharactersOpen}
+          kind="character"
+          items={characterKits.map((k) => ({
+            id: k.id,
+            name: k.name,
+            subtitle: k.role ?? "Character",
+            imageUrl: k.reference_url ?? null,
+            updatedAt: (k as any).updated_at,
+            createdAt: (k as any).created_at,
+          }))}
+          activeId={characterActiveId}
+          onSelect={(id) => void setCharacterActive(id === characterActiveId ? null : id)}
+          onNew={() => {
+            setCharacterEditId(null);
+            setManageCharactersOpen(false);
+            setCharacterOpen(true);
+          }}
+          onEdit={(id) => {
+            setCharacterEditId(id);
+            setManageCharactersOpen(false);
+            setCharacterOpen(true);
+          }}
+          onDelete={(id) => void deleteCharacter(id)}
         />
 
         <ConfirmRightsDialog
