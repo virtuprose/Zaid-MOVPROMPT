@@ -911,7 +911,7 @@ const Library = () => {
                     {selectMode ? (
                       <>Cancel</>
                     ) : (
-                      <><Checkbox checked={false} className="pointer-events-none" /> Select multiple</>
+                      <><span className="inline-block h-3.5 w-3.5 rounded border border-current" /> Select multiple</>
                     )}
                   </Button>
 
