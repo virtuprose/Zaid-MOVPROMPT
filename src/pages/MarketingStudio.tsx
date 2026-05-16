@@ -342,7 +342,7 @@ export default function MarketingStudio() {
 
           {/* Composer card */}
           <div ref={composerRef} className="rounded-3xl border border-border/60 bg-[hsl(240_5%_8%)]/70 backdrop-blur p-4 sm:p-6 scroll-mt-20">
-            {(brandKit?.name || location.imagePath || location.place) && (
+            {(brandKit?.name || characterKit?.name || location.imagePath || location.place) && (
               <div className="flex flex-wrap items-center gap-2 mb-3 pb-3 border-b border-border/30">
                 {brandKit?.name && (
                   <div className="inline-flex items-center gap-2 h-9 pl-1 pr-1.5 rounded-xl border border-border/60 bg-secondary/40 text-xs">
@@ -368,6 +368,35 @@ export default function MarketingStudio() {
                       onClick={() => void setBrandActive(null)}
                       className="w-6 h-6 rounded-md text-muted-foreground hover:text-foreground hover:bg-background/60 flex items-center justify-center shrink-0"
                       aria-label="Detach brand"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
+                {characterKit?.name && (
+                  <div className="inline-flex items-center gap-2 h-9 pl-1 pr-1.5 rounded-xl border border-border/60 bg-secondary/40 text-xs">
+                    <div className="w-7 h-7 rounded-full bg-white/5 overflow-hidden flex items-center justify-center shrink-0">
+                      {characterKit.reference_url ? (
+                        <img
+                          src={characterKit.reference_url}
+                          alt=""
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            (e.currentTarget as HTMLImageElement).style.display = "none";
+                          }}
+                        />
+                      ) : (
+                        <UserRound className="w-3.5 h-3.5 text-muted-foreground" />
+                      )}
+                    </div>
+                    <span className="font-medium text-foreground truncate max-w-[160px]">
+                      {characterKit.name}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => void setCharacterActive(null)}
+                      className="w-6 h-6 rounded-md text-muted-foreground hover:text-foreground hover:bg-background/60 flex items-center justify-center shrink-0"
+                      aria-label="Detach character"
                     >
                       <X className="w-3.5 h-3.5" />
                     </button>
