@@ -928,9 +928,9 @@ function SectionHeader({
   right?: React.ReactNode;
 }) {
   return (
-    <div className="flex items-end justify-between gap-4 flex-wrap mb-5">
+    <div className="flex items-end justify-between gap-4 flex-wrap mb-4">
       <div>
-        <h2 className="font-display text-2xl sm:text-3xl tracking-tight uppercase">{title}</h2>
+        <h2 className="font-display text-xl sm:text-2xl tracking-tight uppercase">{title}</h2>
         {subtitle && <p className="text-sm text-muted-foreground mt-1">{subtitle}</p>}
       </div>
       {right}
