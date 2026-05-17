@@ -47,7 +47,8 @@ type Bubble =
   | { role: "result"; data: Extract<AgentResponse, { kind: "generate_prompt" }>; partial?: boolean }
   | { role: "questions"; questions: string[]; reason: string }
   | { role: "model_choice"; recommended_model_id: string; alternatives?: string[]; reason: string; chosen?: string }
-  | { role: "error"; message: string; detail?: string; retryable: boolean };
+  | { role: "error"; message: string; detail?: string; retryable: boolean }
+  | { role: "video"; data: import("./VideoBubble").VideoBubbleData };
 
 const WELCOME: Bubble = {
   role: "assistant",
