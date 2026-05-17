@@ -42,7 +42,7 @@ type NavItem = { to: string; label: string; badge?: string };
 const NAV_ITEMS: NavItem[] = [
   { to: "/", label: "MovPrompt" },
   { to: "/director", label: "AI Director" },
-  { to: "/marketing", label: "Ads Studio" },
+  { to: "/marketing", label: "Ads" },
   { to: "/gallery", label: "Gallery" },
 ];
 
