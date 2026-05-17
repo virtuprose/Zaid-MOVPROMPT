@@ -645,27 +645,6 @@ export default function MarketingStudio() {
               )}
             </div>
 
-            {!format && (
-              <div className="relative">
-                <Textarea
-                  value={master}
-                  onChange={(e) => setMaster(e.target.value)}
-                  placeholder={drafting ? "Writing scene…" : "Describe what happens in the ad…"}
-                  disabled={drafting}
-                  className={cn(
-                    "min-h-[80px] bg-transparent border-0 resize-none text-base placeholder:text-muted-foreground/70 focus-visible:ring-0 px-0",
-                    drafting && "opacity-70",
-                  )}
-                  maxLength={800}
-                />
-                {drafting && (
-                  <div className="absolute top-2 right-0 inline-flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                    <Loader2 className="w-3 h-3 animate-spin" />
-                    Drafting…
-                  </div>
-                )}
-              </div>
-            )}
             <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-border/30">
 
               <PresetChip
