@@ -324,7 +324,7 @@ export default function MarketingStudio() {
         characterKit?.reference_url,
         location.imageUrl,
       ].filter((u): u is string => typeof u === "string" && u.length > 0);
-      const provider = referenceImages.length > 0 ? "seedance-2.0-ref" : "seedance-v1-pro";
+      const provider = referenceImages.length > 0 ? "seedance-v1-pro-ref" : "seedance-v1-pro";
       const job = await submitVideoJob(
         prompt,
         provider,

@@ -1,33 +1,35 @@
-# Stop the "provider completed but did not return video" toast on refresh
+# Fix the fresh Seedance reference-render failure
 
-## Root cause
+## Problem
 
-On mount, `MarketingStudio` loads any `queued`/`processing` `video_jobs` from the DB and starts polling them. Old jobs submitted before the Seedance endpoint fix have a fal `request_id` registered against a 404 path — the next poll marks them `failed` and fires `toast.error(updated.error)`, which the user sees on every refresh as long as a stuck job exists.
+The message is still appearing because a brand/avatar render is creating a brand-new `seedance-2.0-ref` job that fails on the provider side. This is not the old refresh toast loop anymore.
 
-## Fix in `src/pages/MarketingStudio.tsx`
+## What to change
 
-1. **Track which jobs the user started in this session.** Add a ref `sessionJobIdsRef = useRef<Set<string>>(new Set())`. Add the job id when `startGenerate` succeeds.
-2. **Suppress error toast for resumed jobs.** In the polling effect (lines 374–378), only call `toast.error(updated.error || "Render failed")` when `sessionJobIdsRef.current.has(job.id)`. For resumed jobs, silently remove them from `pendingJobs` — the success path keeps its toast.
-3. **Drop the noisy "Resuming N renders in progress…" message** at line 179 — it adds nothing and reinforces the impression of a problem. Just load the jobs silently.
+1. **Stop using the broken provider id for new reference renders**
+   - In `src/pages/MarketingStudio.tsx`, change the provider selected when reference images exist from `seedance-2.0-ref` to `seedance-v1-pro-ref`.
+   - Keep the no-reference path on `seedance-v1-pro`.
 
-## Fix in `supabase/functions/generate-video/index.ts`
+2. **Add a backend safety alias**
+   - In `supabase/functions/generate-video/index.ts`, keep support for old saved `seedance-2.0-ref` jobs by mapping that legacy provider id to the working `fal-ai/bytedance/seedance/v1/pro/image-to-video` endpoint.
+   - Add a short comment explaining that the Seedance 2.0 reference endpoint does not exist on fal, so legacy ids are intentionally routed to the v1 Pro image-to-video endpoint.
 
-4. **Mark jobs failed on status 404 too**, not just result 404. Around lines 283–293, when `fal.queue.status` throws and `extractFalError(error).status === 404`, write the same `failed` row to `video_jobs` and return it. Otherwise the job stays `queued`/`processing` forever and gets re-polled on every refresh.
+3. **Verify the failing path is gone**
+   - Deploy the updated `generate-video` function.
+   - Confirm that there are no remaining active jobs using the broken provider path.
+   - Check the latest network or edge-function activity after the change to ensure new reference renders use `seedance-v1-pro-ref`.
 
-## One-time DB cleanup
+## Expected result
 
-5. Run a migration that marks any currently-stuck rows as failed so they stop being resumed:
-   ```sql
-   update public.video_jobs
-   set status = 'failed',
-       error = coalesce(error, 'Stuck job auto-cleaned'),
-       completed_at = now()
-   where status in ('queued','processing')
-     and created_at < now() - interval '10 minutes';
-   ```
+- Refresh should no longer surface this message from new marketing renders.
+- New ads generated with brand/avatar/location references should use the working reference-video model.
+- Older failed rows can remain in history, but they should not keep breaking new renders.
 
-## Out of scope
+## Technical details
 
-- Endpoint mapping (already fixed previously).
-- Generate-button flow, prompt composition, UI layout — unchanged.
-- No schema changes.
+- Confirmed from fal docs/openapi:
+  - `fal-ai/bytedance/seedance/v1/pro/image-to-video` exists
+  - `fal-ai/bytedance/seedance-2.0/image-to-video` returns 404
+- Files involved:
+  - `src/pages/MarketingStudio.tsx`
+  - `supabase/functions/generate-video/index.ts`
