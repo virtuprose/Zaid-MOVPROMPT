@@ -807,7 +807,7 @@ export default function MarketingStudio() {
                   {pendingJobs.map((job) => (
                     <PendingAdCard key={job.id} onCancel={() => handleCancelJob(job.id)} />
                   ))}
-                  {userAds.slice(0, Math.max(0, 4 - pendingJobs.length)).map((ad) => (
+                  {userAds.map((ad) => (
                     <UserAdCard
                       key={ad.id}
                       ad={ad}
