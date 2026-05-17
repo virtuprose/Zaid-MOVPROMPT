@@ -17,6 +17,8 @@ const FAL_MODELS: Record<string, string> = {
   "kling-v3-4k": "fal-ai/kling-video/v3/4k/text-to-video",
   // Kling 3.0 Omni (o3 family)
   "kling-omni": "fal-ai/kling-video/o3/pro/text-to-video",
+  // Kling 3.0 Omni reference-to-video: true multi-reference, keeps character/product/location identity locked.
+  "kling-omni-ref": "fal-ai/kling-video/o3/pro/reference-to-video",
   "kling-omni-edit": "fal-ai/kling-video/o3/standard/video-to-video/edit",
   "kling-motion-control": "fal-ai/kling-video/v3/standard/motion-control",
   // Kling (legacy)
