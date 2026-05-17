@@ -9,6 +9,7 @@ type Props = {
   alternatives?: string[];
   reason: string;
   disabled?: boolean;
+  hasReferenceImage?: boolean;
   onConfirm: (modelId: string) => void;
 };
 
@@ -17,15 +18,19 @@ export function ModelChoiceCard({
   alternatives = [],
   reason,
   disabled,
+  hasReferenceImage = false,
   onConfirm,
 }: Props) {
-  const [selected, setSelected] = useState<string>(recommendedId);
-  const [showAll, setShowAll] = useState(false);
+  const allowModel = (m: { requiresReference?: boolean }) =>
+    hasReferenceImage || !m.requiresReference;
 
-  const recommended = findVideoModel(recommendedId);
+  const recommendedRaw = findVideoModel(recommendedId);
+  const recommended = recommendedRaw && allowModel(recommendedRaw) ? recommendedRaw : undefined;
+  const [selected, setSelected] = useState<string>(recommended?.id ?? recommendedId);
+  const [showAll, setShowAll] = useState(false);
   const altModels = alternatives
     .map((id) => findVideoModel(id))
-    .filter((m): m is NonNullable<typeof m> => !!m && m.id !== recommendedId);
+    .filter((m): m is NonNullable<typeof m> => !!m && m.id !== recommended?.id && allowModel(m));
 
   return (
     <div className="rounded-2xl border border-primary/25 bg-gradient-to-br from-[hsl(240_10%_7%)] to-[hsl(240_8%_5%)] p-4 sm:p-5 space-y-4">
@@ -79,7 +84,7 @@ export function ModelChoiceCard({
                 {group.label}
               </div>
               <div className="flex flex-wrap gap-1.5">
-                {group.models.map((m) => (
+                {group.models.filter(allowModel).map((m) => (
                   <ModelChip
                     key={m.id}
                     model={m}

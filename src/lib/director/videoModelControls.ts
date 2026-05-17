@@ -142,17 +142,7 @@ const CONTROLS: Record<string, ModelControls> = {
   ),
 
   // Seedance
-  "seedance-2.0": {
-    aspectRatios: SEEDANCE_ASPECTS,
-    durationMin: 4,
-    durationMax: 15,
-    durationStep: 1,
-    durationAuto: true,
-    resolutions: ["480p", "720p", "1080p"],
-    audio: true,
-    defaults: { aspect_ratio: "16:9", duration: "auto", resolution: "1080p", audio: true },
-  },
-  "seedance-2.0-fast": {
+  "seedance-2.0-ref": {
     aspectRatios: SEEDANCE_ASPECTS,
     durationMin: 4,
     durationMax: 15,

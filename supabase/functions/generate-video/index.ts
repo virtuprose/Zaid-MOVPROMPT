@@ -36,11 +36,15 @@ const FAL_MODELS: Record<string, string> = {
   "veo-3-fast": "fal-ai/veo3/fast",
   "veo-2": "fal-ai/veo2",
   // Seedance
-  "seedance-2.0": "fal-ai/bytedance/seedance-2.0/text-to-video",
-  "seedance-2.0-fast": "fal-ai/bytedance/seedance-2.0/fast/text-to-video",
-  "seedance-2.0-ref": "fal-ai/bytedance/seedance-2.0/reference-to-video",
+  // NOTE: Seedance 2.0 only exposes image/reference-to-video on fal — there is
+  // no `seedance-2.0/text-to-video` endpoint. We keep the legacy `seedance-2.0`
+  // / `seedance-2.0-fast` ids mapped to the working v1 Pro endpoint so old
+  // saved jobs still resolve, but the UI no longer exposes them.
+  "seedance-2.0": "fal-ai/bytedance/seedance/v1/pro/text-to-video",
+  "seedance-2.0-fast": "fal-ai/bytedance/seedance/v1/pro/text-to-video",
+  "seedance-2.0-ref": "bytedance/seedance-2.0/reference-to-video",
   "seedance-v1-pro": "fal-ai/bytedance/seedance/v1/pro/text-to-video",
-  "seedance-v1-pro-ref": "fal-ai/bytedance/seedance-2.0/reference-to-video",
+  "seedance-v1-pro-ref": "bytedance/seedance-2.0/reference-to-video",
   "seedance-v1-lite": "fal-ai/bytedance/seedance/v1/lite/text-to-video",
   // Hailuo / MiniMax
   "hailuo-02-pro": "fal-ai/minimax/hailuo-02/pro/text-to-video",

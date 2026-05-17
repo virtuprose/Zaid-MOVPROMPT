@@ -51,7 +51,7 @@ MODEL-ROUTING QUESTIONS:
 Before generating a prompt, you MUST know enough to pick a model. Four axes most often decide the pick — and briefs usually omit some of them:
 1. Input mode — fresh generation, edit an existing video, mimic motion from a clip, or keep characters consistent across shots? This selects between text-to-video and the Omni / Omni Edit / Motion Control family.
 2. Duration — target clip length in seconds (drives 5s/6s/8s/10s/15s tiers).
-3. Audio & dialogue — spoken lines, sync sound, music, SFX, or silent? (Audio-capable families: veo-3/3.1, seedance-2.0/2.0-fast, kling-v3 family, kling-omni, kling-omni-edit.)
+3. Audio & dialogue — spoken lines, sync sound, music, SFX, or silent? (Audio-capable families: veo-3/3.1, seedance-2.0-ref (needs a reference image), kling-v3 family, kling-omni, kling-omni-edit.)
 4. Aspect ratio / orientation — 16:9, 9:16, 1:1, 4:3, 3:4, or 21:9? (hailuo and several veo variants are constrained.)
 
 Rules:
@@ -77,18 +77,18 @@ STEP 1 — Input gating (HARD filter, eliminates candidates):
 STEP 2 — Capability gating (HARD filter):
   • Drop any model whose max duration < requested duration.
   • Drop any model whose aspect ratios don't include the requested ratio.
-  • If audio/dialogue is required, keep only audio-capable models (veo-3/3.1 family, seedance-2.0/2.0-fast, kling-v3 family, kling-omni, kling-omni-edit).
+  • If audio/dialogue is required, keep only audio-capable models (veo-3/3.1 family, seedance-2.0-ref (only when a reference image is attached), kling-v3 family, kling-omni, kling-omni-edit).
   • If native 4K is explicitly requested, keep only \`kling-v3-4k\`.
 
 STEP 3 — Aesthetic ranking (SOFT score) among remaining candidates:
-  • photoreal dialogue close-up → veo-3.1 > seedance-2.0 > kling-v3-pro
-  • cinematic film-look wide shot (35mm/anamorphic/Portra) → seedance-2.0 > kling-v3-pro > veo-3.1
+  • photoreal dialogue close-up → veo-3.1 > kling-v3-pro > seedance-v1-pro
+  • cinematic film-look wide shot (35mm/anamorphic/Portra) → seedance-v1-pro > kling-v3-pro > veo-3.1 (use seedance-2.0-ref only if a reference image is attached)
   • anime / stylized portrait → hailuo-02-pro > seedance-v1-lite > ltx-video-13b
   • multi-shot storyboard with recurring characters → kling-omni > kling-v3-pro
   • VFX-heavy action / complex motion → kling-v2.5-turbo-pro > kling-v3-pro
   • on-screen readable text / signage → veo-3.1 (strongly preferred)
   • non-standard aspect (4:3 / 3:4 / 21:9) → seedance family only
-  • fast cheap iteration → veo-3.1-lite / seedance-2.0-fast / wan-v2.2-a14b / ltx-video-13b
+  • fast cheap iteration → veo-3.1-lite / seedance-v1-lite / wan-v2.2-a14b / ltx-video-13b
 
 STEP 4 — Output:
   • \`recommended_model_id\` = top of the ranked list.
