@@ -296,7 +296,6 @@ export default function MarketingStudio() {
         subject,
         master,
         formatId,
-        hookId,
         settingId,
         customFormat: customFormat || undefined,
         customSetting: customSetting || undefined,
