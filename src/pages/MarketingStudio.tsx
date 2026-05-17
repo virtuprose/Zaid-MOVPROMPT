@@ -791,17 +791,6 @@ export default function MarketingStudio() {
                       ? "Your ad is rendering — it'll appear here in a moment."
                       : "Pick up where you left off — or remix one of yours."
                   }
-                  right={
-                    adCount > 0 ? (
-                      <button
-                        type="button"
-                        onClick={() => navigate("/library")}
-                        className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-                      >
-                        Browse all {adCount} →
-                      </button>
-                    ) : null
-                  }
                 />
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                   {pendingJobs.map((job) => (
