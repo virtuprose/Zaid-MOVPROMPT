@@ -379,18 +379,32 @@ function DirectorChatInner() {
           reason: resp.reason,
         };
       } else if (resp.kind === "request_video_generation") {
+        const refCount = referenceImageUrls.length;
+        const provider =
+          refCount >= 2 ? "seedance-2.0-ref" : refCount === 1 ? "seedance-2.0" : "seedance-v1-pro";
         added = {
           role: "assistant",
           animate: true,
-          content: `Sending this to the ${resp.provider_preference || "seedance"} renderer…`,
+          content: `Sending this to the ${provider} renderer…`,
         };
         try {
-          const resolvedPrompt = resp.prompt?.trim() || getLatestGeneratedPrompt();
-          const provider =
-            resp.provider_preference && resp.provider_preference !== "any"
-              ? resp.provider_preference
-              : "seedance";
-          await submitVideoJob(resolvedPrompt, provider, sessionIdRef.current);
+          const basePrompt = resp.prompt?.trim() || getLatestGeneratedPrompt();
+          const slotLabels: Record<"brand" | "character" | "location", string> = {
+            brand: "brand / product",
+            character: "main subject",
+            location: "location / scene",
+          };
+          const tagLines = referenceImageUrls
+            .map((_, i) => `@Image${i + 1} = ${slotLabels[referenceImageSlots[i]] || `reference ${i + 1}`}`)
+            .join("\n");
+          const resolvedPrompt = tagLines ? `${tagLines}\n\n${basePrompt}` : basePrompt;
+          await submitVideoJob(
+            resolvedPrompt,
+            provider,
+            sessionIdRef.current,
+            undefined,
+            referenceImageUrls.length > 0 ? referenceImageUrls : undefined,
+          );
           toast.success("Render started — check your Library when it finishes.");
         } catch (e: any) {
           toast.error(e?.message || "Could not start render");
