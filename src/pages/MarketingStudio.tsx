@@ -501,7 +501,7 @@ export default function MarketingStudio() {
           <title>Ads Studio — MovPrompt</title>
           <meta
             name="description"
-            content="Turn any product or app into a video ad. Pick a format, a scroll-stopping hook and a setting — render in one click with Seedance 2.0."
+            content="Turn any product or app into a video ad. Pick a format and a location — render in one click with Seedance 2.0."
           />
         </Helmet>
 
