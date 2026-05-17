@@ -554,7 +554,7 @@ export default function MarketingStudio() {
           </div>
 
           {/* Composer with sidebar */}
-          <div className="flex flex-col sm:flex-row gap-3 items-stretch">
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 items-stretch">
             {/* Subject sidebar */}
             <div className="flex sm:flex-col gap-1.5 shrink-0 sm:justify-center sm:self-stretch">
               {([
@@ -567,13 +567,13 @@ export default function MarketingStudio() {
                     type="button"
                     onClick={() => setSubjectOverride(id)}
                     className={cn(
-                      "w-16 h-16 rounded-2xl border flex flex-col items-center justify-center gap-1 text-[11px] font-medium transition-all",
+                      "flex-1 sm:flex-none w-full sm:w-16 h-11 sm:h-16 rounded-xl sm:rounded-2xl border flex flex-row sm:flex-col items-center justify-center gap-1.5 sm:gap-1 text-[11px] font-medium transition-all",
                       active
                         ? "border-[#F5A524]/50 bg-[#F5A524]/10 text-foreground"
                         : "border-border/60 bg-secondary/40 text-muted-foreground hover:text-foreground hover:border-border",
                     )}
                   >
-                    <Icon className="w-5 h-5" />
+                    <Icon className="w-4 h-4 sm:w-5 sm:h-5" />
                     {label}
                   </button>
                 );
