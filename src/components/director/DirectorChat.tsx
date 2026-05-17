@@ -168,12 +168,16 @@ function DirectorChatInner() {
     const fallback = attachments.length
       ? `References attached: ${attachments.length} file${attachments.length === 1 ? "" : "s"}`
       : "(See attached references.)";
+    const turnAttachments = attachments;
     const userBubble: Bubble = {
       role: "user",
       content: text || fallback,
-      attachments: attachments.length ? attachments : undefined,
+      attachments: turnAttachments.length ? turnAttachments : undefined,
     };
-    const next: Bubble[] = [...bubbles, userBubble];
+    // Drop any prior error bubble so retry replaces it cleanly
+    const cleaned = bubbles.filter((b) => b.role !== "error");
+    const next: Bubble[] = [...cleaned, userBubble];
+    lastSendRef.current = { text: text || fallback, attachments: turnAttachments };
     setBubbles(next);
     setInput("");
     setBusy(true);
