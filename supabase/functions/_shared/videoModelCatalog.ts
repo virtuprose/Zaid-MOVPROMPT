@@ -846,7 +846,7 @@ export function rankModels(c: SelectionConstraints): ScoredPick[] {
       if (m.speed === "balanced") score += 1;
     }
     // Mild preference for newer Kling/Veo/Seedance flagships
-    if (m.id === "veo-3.1" || m.id === "seedance-2.0" || m.id === "kling-v3-pro" || m.id === "kling-omni") {
+    if (m.id === "veo-3.1" || m.id === "seedance-v1-pro" || m.id === "kling-v3-pro" || m.id === "kling-omni") {
       score += 2;
     }
 
