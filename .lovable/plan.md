@@ -1,29 +1,22 @@
-# Expand recent ads into a full-size video lightbox
+# Hover preview for brand & character chips
 
-## Goal
-On `/marketing`, clicking a card in **Your recent ads** should open the video in a fullscreen overlay at its true aspect ratio (instead of navigating to `/library`).
+When hovering the Bose / Maya chips in the composer (MarketingStudio), show a floating preview above the chip with the full reference image at its native aspect ratio.
 
-## Changes — `src/pages/MarketingStudio.tsx` only
+## What changes
 
-1. **Add lightbox state** near the other dialog state:
-   ```ts
-   const [previewAd, setPreviewAd] = useState<UserAd | null>(null);
-   ```
+`src/pages/MarketingStudio.tsx` — the two chip blocks at lines 586–605 (brand) and 627–646 (character).
 
-2. **Rewire `UserAdCard` clicks** in both the `mixed` (line 780) and `full` (line ~825) sections:
-   - Replace `onClick={() => navigate("/library")}` with `onClick={() => setPreviewAd(ad)}`.
-   - Keep Download / Like / Delete actions as-is (they already `stopPropagation`).
+Wrap each chip in a `HoverCard` (shadcn, already used in `PresetCard`):
 
-3. **Render the lightbox** (new component below the existing Dialogs in the page):
-   - Use the existing shadcn `Dialog` already imported in the file (or add the import if missing).
-   - `DialogContent` sized `max-w-[95vw] max-h-[92vh] p-0 bg-black border-border/40`.
-   - Inside, a centered `<video>` with `controls autoPlay loop playsInline` and `className="max-w-full max-h-[92vh] w-auto h-auto object-contain"` — this preserves the video's intrinsic aspect ratio (9:16, 16:9, 1:1, etc.) automatically.
-   - Small caption row with date + Download / Like buttons reusing the existing handlers (`handleDownloadAd`, `handleToggleLike`).
-   - Close on backdrop click / Esc (default Dialog behavior).
+- `HoverCardTrigger` — the existing chip div (unchanged styles).
+- `HoverCardContent` — `side="top"`, `align="start"`, `sideOffset={8}`, width ~`w-64`, padded `p-2`, rounded, with:
+  - The full image (`brandKit.logo_url` or `characterKit.reference_url`) rendered with `object-contain`, `max-h-72`, preserving native aspect ratio on a subtle `bg-black/40` backdrop.
+  - A small caption row underneath with the name (`brandKit.name` / `characterKit.name`).
+  - Fallback when there's no image: render the existing icon (`Building2` / `UserRound`) centered in the same frame.
+- `openDelay={150}`, `closeDelay={80}` for snappy but non-jittery feel.
 
-4. **No backend, schema, types, or routing changes.** `Browse all N →` link still goes to `/library`.
+No popover for the empty-state pickers (those already open a real popover on click) — only the populated chips get the hover preview.
 
 ## Out of scope
-- `/library` page behavior
-- Director chat video viewer (already has its own viewer)
-- Storing/reading per-ad aspect ratio in the DB
+
+No backend, schema, or behavior changes. Click-to-detach (X) and existing layout stay identical.
