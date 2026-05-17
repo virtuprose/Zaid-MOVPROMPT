@@ -290,6 +290,15 @@ export default function MarketingStudio() {
   const doGenerate = async () => {
     setSubmitting(true);
     try {
+      // Build the ordered ref list first so we can tag @ImageN in the prompt
+      // in the exact order the URLs are sent to Seedance reference-to-video.
+      const refSlots: Array<{ slot: "brand" | "character" | "location"; url: string }> = [];
+      if (brandKit?.logo_url) refSlots.push({ slot: "brand", url: brandKit.logo_url });
+      if (characterKit?.reference_url) refSlots.push({ slot: "character", url: characterKit.reference_url });
+      if (location.imageUrl) refSlots.push({ slot: "location", url: location.imageUrl });
+      const referenceImages = refSlots.map((r) => r.url);
+      const imageRefs = refSlots.map((r) => r.slot);
+
       const prompt = composeStudioPrompt({
         subject,
         master,
@@ -318,12 +327,8 @@ export default function MarketingStudio() {
               hasImage: !!characterKit.reference_path,
             }
           : undefined,
+        imageRefs,
       });
-      const referenceImages = [
-        brandKit?.logo_url,
-        characterKit?.reference_url,
-        location.imageUrl,
-      ].filter((u): u is string => typeof u === "string" && u.length > 0);
       // Provider routing:
       //   0 refs → seedance-v1-pro (text-only, fast/cheap)
       //   1 ref  → seedance-2.0 image-to-video (animate single still + native audio)
