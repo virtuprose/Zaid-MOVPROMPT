@@ -5,7 +5,6 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import {
   Sparkles,
-  Target,
   Globe2,
   Loader2,
   Wand2,
