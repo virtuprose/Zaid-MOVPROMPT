@@ -219,7 +219,6 @@ export default function MarketingStudio() {
             : customFormat.trim()
               ? { custom: customFormat.trim() }
               : undefined,
-          hook: hook ? { label: hook.label, fragment: hook.fragment } : undefined,
           setting: setting
             ? { label: setting.label, fragment: setting.fragment }
             : customSetting.trim()
