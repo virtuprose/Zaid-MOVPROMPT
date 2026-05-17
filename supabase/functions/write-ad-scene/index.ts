@@ -24,11 +24,11 @@ function isRateLimited(ip: string): boolean {
   return bucket.count > RATE_MAX;
 }
 
-const SYSTEM_PROMPT = `You are a video ad director. Given a Format, Hook, Setting and optional product/avatar/location context, write a single ready-to-shoot scene description for a 5-second 9:16 social video ad.
+const SYSTEM_PROMPT = `You are a video ad director. Given a Format, Location and optional product/avatar context, write a single ready-to-shoot scene description for a 5-second 9:16 social video ad.
 
 Rules:
 - 2 to 4 sentences, present tense, plain prose. No lists, no headings, no emojis.
-- Beat-by-beat: open on the Hook beat, deliver the Format style in the Setting, end on a confident product hero frame.
+- Beat-by-beat: open with a strong attention grabber, deliver the Format style in the Location, end on a confident product hero frame.
 - If a product is given, name it explicitly. If an avatar/character is given, refer to them by their name and treat them as the on-camera person.
 - Don't write marketing taglines. Write what the camera sees and what the person does.
 - Stay under 90 words. Output only the scene text — no preamble, no quotes.`;
