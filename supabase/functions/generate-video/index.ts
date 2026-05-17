@@ -164,12 +164,28 @@ function buildFalPayload(provider: string, prompt: string, opts: VideoOptions = 
       break;
     case "seedance":
       set("aspect_ratio", opts.aspect_ratio);
-      // Seedance accepts the string enum "auto" or a numeric second value (sent as string).
-      if (opts.duration !== undefined) set("duration", String(opts.duration));
+      // Seedance 2.0 wants duration as a string enum: "auto" or "4"–"15".
+      // v1 accepts a numeric string. Clamp into 4–15 when numeric so 2.0 doesn't reject it.
+      if (opts.duration !== undefined) {
+        if (typeof opts.duration === "number") {
+          const clamped = Math.min(15, Math.max(4, Math.round(opts.duration)));
+          set("duration", String(clamped));
+        } else {
+          set("duration", String(opts.duration));
+        }
+      }
       set("resolution", opts.resolution);
       if (opts.audio !== undefined) set("generate_audio", opts.audio);
-      if (provider.endsWith("-ref") && referenceImages.length > 0) {
-        // Seedance image-to-video endpoints take a single starting frame.
+      if (provider === "seedance-2.0-ref" && referenceImages.length > 0) {
+        // Seedance 2.0 reference-to-video: up to 9 ref images, refs are bound by
+        // @Image1, @Image2, … tags in the prompt (composed client-side).
+        set("image_urls", referenceImages.slice(0, 9));
+      } else if (provider === "seedance-2.0" && referenceImages.length > 0) {
+        // Seedance 2.0 image-to-video: single start frame, optional end frame.
+        set("image_url", referenceImages[0]);
+        if (referenceImages[1]) set("end_image_url", referenceImages[1]);
+      } else if (provider.endsWith("-ref") && referenceImages.length > 0) {
+        // Legacy Seedance v1 Pro image-to-video: single starting frame.
         set("image_url", referenceImages[0]);
       }
       break;
