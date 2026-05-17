@@ -48,9 +48,7 @@ function buildUserContent(b: Brief): string {
   if (b.format?.label || b.format?.custom) {
     lines.push(`Format: ${b.format.label || "Custom"} — ${b.format.fragment || b.format.custom || ""}`);
   }
-  if (b.hook?.label) {
-    lines.push(`Hook: ${b.hook.label} — ${b.hook.fragment || ""}`);
-  }
+  
   if (b.setting?.label || b.setting?.custom) {
     lines.push(`Setting: ${b.setting.label || "Custom"} — ${b.setting.fragment || b.setting.custom || ""}`);
   }
