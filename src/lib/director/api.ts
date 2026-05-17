@@ -64,28 +64,105 @@ export async function callDirectorAgent(
  * tolerate parse failures and only emit partials when JSON.parse succeeds
  * on the (loosely closed) accumulator.
  */
+export class DirectorTimeoutError extends Error {
+  retryable = true;
+  constructor(message = "The Director took too long to respond.") {
+    super(message);
+    this.name = "DirectorTimeoutError";
+  }
+}
+
+export class DirectorHttpError extends Error {
+  retryable: boolean;
+  status: number;
+  constructor(status: number, message: string, retryable: boolean) {
+    super(message);
+    this.name = "DirectorHttpError";
+    this.status = status;
+    this.retryable = retryable;
+  }
+}
+
+export type StreamOptions = {
+  /** Abort if no chunk is received for this many ms. Default 30s. */
+  idleTimeoutMs?: number;
+  /** Abort the whole request after this many ms. Default 120s. */
+  totalTimeoutMs?: number;
+};
+
 export async function streamDirectorAgent(
   messages: DirectorMsg[],
   attachments: Attachment[],
   onPartial: (partial: AgentResponse) => void,
   signal?: AbortSignal,
+  options: StreamOptions = {},
 ): Promise<AgentResponse> {
+  const idleTimeoutMs = options.idleTimeoutMs ?? 30_000;
+  const totalTimeoutMs = options.totalTimeoutMs ?? 120_000;
+
+  const controller = new AbortController();
+  let timedOut: "idle" | "total" | null = null;
+
+  const onExternalAbort = () => controller.abort();
+  if (signal) {
+    if (signal.aborted) controller.abort();
+    else signal.addEventListener("abort", onExternalAbort);
+  }
+
+  const totalTimer = setTimeout(() => {
+    timedOut = "total";
+    controller.abort();
+  }, totalTimeoutMs);
+
+  let idleTimer: ReturnType<typeof setTimeout> | null = null;
+  const resetIdle = () => {
+    if (idleTimer) clearTimeout(idleTimer);
+    idleTimer = setTimeout(() => {
+      timedOut = "idle";
+      controller.abort();
+    }, idleTimeoutMs);
+  };
+
+  const cleanup = () => {
+    clearTimeout(totalTimer);
+    if (idleTimer) clearTimeout(idleTimer);
+    if (signal) signal.removeEventListener("abort", onExternalAbort);
+  };
+
   const { data: sessionData } = await supabase.auth.getSession();
   const token = sessionData.session?.access_token;
-  if (!token) throw new Error("Not authenticated");
+  if (!token) {
+    cleanup();
+    throw new DirectorHttpError(401, "Not authenticated", false);
+  }
 
-  const resp = await fetch(ENDPOINT, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-      apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-    },
-    body: JSON.stringify({ messages, attachments, stream: true }),
-    signal,
-  });
+  let resp: Response;
+  try {
+    resetIdle();
+    resp = await fetch(ENDPOINT, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+        apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+      },
+      body: JSON.stringify({ messages, attachments, stream: true }),
+      signal: controller.signal,
+    });
+  } catch (err: any) {
+    cleanup();
+    if (timedOut) throw new DirectorTimeoutError(
+      timedOut === "idle"
+        ? "The Director stopped streaming. Check your connection and try again."
+        : "The Director took too long to respond. Try again.",
+    );
+    const e = new Error(err?.message || "Network error contacting the Director.");
+    (e as any).retryable = true;
+    throw e;
+  }
 
   if (!resp.ok || !resp.body) {
+    cleanup();
     let msg = "Director request failed";
     try {
       const j = await resp.json();
@@ -93,10 +170,15 @@ export async function streamDirectorAgent(
     } catch {
       /* ignore */
     }
-    if (resp.status === 429) throw new Error("Too many requests — wait a moment and try again.");
-    if (resp.status === 402) throw new Error("AI credits exhausted. Add credits in Workspace → Usage.");
-    throw new Error(msg);
+    if (resp.status === 429)
+      throw new DirectorHttpError(429, "Too many requests — wait a moment and try again.", true);
+    if (resp.status === 402)
+      throw new DirectorHttpError(402, "AI credits exhausted. Add credits in Workspace → Usage.", false);
+    if (resp.status === 401 || resp.status === 403)
+      throw new DirectorHttpError(resp.status, "Your session expired — please sign in again.", false);
+    throw new DirectorHttpError(resp.status, msg, resp.status >= 500);
   }
+
 
   const reader = resp.body.getReader();
   const decoder = new TextDecoder();
