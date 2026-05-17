@@ -46,11 +46,11 @@ describe("modelRanking", () => {
   it("uses the LLM id when valid and supplies ranked alternatives", () => {
     const result = resolveRecommendation({
       subject: "cinematic landscape",
-      recommended_model_id: "seedance-2.0",
+      recommended_model_id: "seedance-v1-pro",
       recommended_alternatives: ["veo-3.1"],
     });
     expect(result.source).toBe("llm");
-    expect(result.primary.id).toBe("seedance-2.0");
+    expect(result.primary.id).toBe("seedance-v1-pro");
     expect(result.alternatives.length).toBeGreaterThan(0);
     expect(result.alternatives.some((a) => a.id === "veo-3.1")).toBe(true);
   });
