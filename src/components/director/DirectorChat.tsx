@@ -287,7 +287,7 @@ function DirectorChatInner() {
       // Reserve the placeholder slot
       setBubbles((prev) => [...prev, { role: "assistant", content: "…" }]);
 
-      const resp = await streamDirectorAgent(history, attachments, handlePartial);
+      const resp = await streamDirectorAgent(history, mergedAttachments, handlePartial);
 
       let added: Bubble;
       let finalPrompt: string | null = null;
