@@ -1,8 +1,9 @@
 import { Component, ReactNode } from "react";
 import { AlertTriangle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { SendDebugReportButton } from "@/components/SendDebugReportButton";
 
-type Props = { children: ReactNode };
+type Props = { children: ReactNode; sessionId?: string | null };
 type State = { error: Error | null };
 
 export class DirectorErrorBoundary extends Component<Props, State> {
@@ -44,13 +45,14 @@ export class DirectorErrorBoundary extends Component<Props, State> {
             {this.state.error.message}
           </pre>
         )}
-        <div className="flex items-center justify-center gap-2">
+        <div className="flex items-center justify-center gap-2 flex-wrap">
           <Button variant="outline" onClick={this.handleReset} className="rounded-full">
             Try again
           </Button>
           <Button onClick={this.handleReload} className="rounded-full gap-1.5">
             <RefreshCw className="w-3.5 h-3.5" /> Reload
           </Button>
+          <SendDebugReportButton sessionId={this.props.sessionId} className="rounded-full" />
         </div>
       </div>
     );

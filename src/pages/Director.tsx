@@ -303,10 +303,13 @@ export default function Director() {
                 })}
               </div>
             )}
+            <div className="pt-2 mt-auto border-t border-border/30">
+              <SendDebugReportButton sessionId={sessionId} className="w-full justify-start" />
+            </div>
           </aside>
 
           <div className="max-w-3xl w-full mx-auto lg:mx-0">
-            <DirectorErrorBoundary key={sessionId || "new"}>
+            <DirectorErrorBoundary key={sessionId || "new"} sessionId={sessionId}>
               <DirectorChat />
             </DirectorErrorBoundary>
           </div>
