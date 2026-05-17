@@ -95,9 +95,11 @@ function Pill({
 export function RenderSettingsPopover({
   value,
   onChange,
+  trigger,
 }: {
   value: RenderSettings;
   onChange: (v: RenderSettings) => void;
+  trigger?: React.ReactNode;
 }) {
   const [section, setSection] = useState<Section>("duration");
   const customized =
