@@ -27,6 +27,7 @@ import {
   type AgentResponse,
 } from "@/lib/director/api";
 import type { Attachment } from "@/lib/director/ingest";
+import * as localState from "@/lib/director/localState";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import logoMark from "@/assets/logo-mark.svg";
@@ -85,6 +86,8 @@ function DirectorChatInner() {
   const sessionIdRef = useRef<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const lastSendRef = useRef<{ text: string; attachments: Attachment[] } | null>(null);
+  const hydratedRef = useRef<string | null>(null);
+  const localScope = routeSessionId ?? "new";
 
   const getLatestGeneratedPrompt = () => {
     for (let i = bubbles.length - 1; i >= 0; i -= 1) {
@@ -97,13 +100,31 @@ function DirectorChatInner() {
     return "";
   };
 
-  // Load session from route param
+  // Hydrate from localStorage immediately on scope change (instant restore on reload).
+  useEffect(() => {
+    const userId = user?.id ?? null;
+    const hydrationKey = `${userId}:${localScope}`;
+    if (hydratedRef.current === hydrationKey) return;
+    hydratedRef.current = hydrationKey;
+    const cached = localState.load(userId, localScope);
+    if (cached) {
+      if (cached.bubbles?.length) setBubbles(cached.bubbles as Bubble[]);
+      if (typeof cached.input === "string") setInput(cached.input);
+      if (Array.isArray(cached.attachments)) setAttachments(cached.attachments);
+      if (cached.sessionId) sessionIdRef.current = cached.sessionId;
+    } else if (!routeSessionId) {
+      // Fresh "new" scope with no cache — reset transient state
+      sessionIdRef.current = null;
+    }
+  }, [user?.id, localScope, routeSessionId]);
+
+  // Load server-side session from route param. Only override local cache when
+  // the server has a longer (newer) message history, to avoid flicker.
   useEffect(() => {
     if (!user || !routeSessionId) {
-      sessionIdRef.current = null;
+      if (!routeSessionId) sessionIdRef.current = null;
       return;
     }
-    if (sessionIdRef.current === routeSessionId) return;
     (async () => {
       const { data, error } = await supabase
         .from("director_sessions")
@@ -117,13 +138,32 @@ function DirectorChatInner() {
       }
       sessionIdRef.current = data.id;
       const loaded = (data.messages as Bubble[]) || [WELCOME];
-      setBubbles(loaded.length ? loaded : [WELCOME]);
+      const remote = loaded.length ? loaded : [WELCOME];
+      setBubbles((prev) => (remote.length >= prev.length ? remote : prev));
     })();
   }, [routeSessionId, user, navigate]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [bubbles]);
+
+  // Debounced localStorage save of in-progress draft.
+  useEffect(() => {
+    if (busy) return; // avoid persisting transient "…" placeholders
+    const onlyWelcome =
+      bubbles.length <= 1 && !input && attachments.length === 0;
+    if (onlyWelcome) return;
+    const userId = user?.id ?? null;
+    const handle = window.setTimeout(() => {
+      localState.save(userId, localScope, {
+        sessionId: sessionIdRef.current,
+        bubbles,
+        input,
+        attachments,
+      });
+    }, 250);
+    return () => window.clearTimeout(handle);
+  }, [bubbles, input, attachments, busy, user?.id, localScope]);
 
   const persist = async (next: Bubble[], finalPrompt: string | null, title: string | null) => {
     if (!user) return;
@@ -142,6 +182,7 @@ function DirectorChatInner() {
           .single();
         if (error) throw error;
         sessionIdRef.current = data.id;
+        localState.migrate(user.id, "new", data.id);
         navigate(`/director/${data.id}`, { replace: true });
       } else {
         await supabase
@@ -407,10 +448,14 @@ function DirectorChatInner() {
   };
 
   const startFresh = (save: boolean) => {
+    const uid = user?.id ?? null;
     if (!save && sessionIdRef.current) {
       void supabase.from("director_sessions").delete().eq("id", sessionIdRef.current);
+      localState.clear(uid, sessionIdRef.current);
     }
+    localState.clear(uid, "new");
     sessionIdRef.current = null;
+    hydratedRef.current = null;
     setBubbles([{ role: "assistant", content: "Fresh brief. What are we directing?" }]);
     setAttachments([]);
     setInput("");
