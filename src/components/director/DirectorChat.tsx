@@ -668,6 +668,15 @@ function DirectorChatInner() {
                     directorsNote={b.data.directors_note}
                     onRefine={() => handleRefine(b.data.prompt)}
                     sessionId={sessionIdRef.current}
+                    hasReferenceImage={
+                      attachments.length > 0 ||
+                      bubbles.some(
+                        (x) =>
+                          x.role === "user" &&
+                          Array.isArray(x.attachments) &&
+                          x.attachments.length > 0,
+                      )
+                    }
                   />
                 </div>
               );
