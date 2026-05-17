@@ -9,6 +9,8 @@ export type VideoModel = {
   label: string;
   family: "kling" | "seedance" | "veo" | "hailuo" | "runway" | "ltx" | "wan";
   note?: string;
+  /** When true, this model must have at least one reference image attached. */
+  requiresReference?: boolean;
 };
 
 export type VideoModelGroup = {
