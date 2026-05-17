@@ -324,7 +324,16 @@ export default function MarketingStudio() {
         characterKit?.reference_url,
         location.imageUrl,
       ].filter((u): u is string => typeof u === "string" && u.length > 0);
-      const provider = referenceImages.length > 0 ? "kling-omni-ref" : "seedance-v1-pro";
+      // Provider routing:
+      //   0 refs → seedance-v1-pro (text-only, fast/cheap)
+      //   1 ref  → seedance-2.0 image-to-video (animate single still + native audio)
+      //   2+ refs → seedance-2.0 reference-to-video (multi-ref identity lock, up to 9 images)
+      const provider =
+        referenceImages.length === 0
+          ? "seedance-v1-pro"
+          : referenceImages.length === 1
+            ? "seedance-2.0"
+            : "seedance-2.0-ref";
       const job = await submitVideoJob(
         prompt,
         provider,
