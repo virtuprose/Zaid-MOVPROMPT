@@ -668,16 +668,8 @@ export default function MarketingStudio() {
                 flash={flashChips}
               />
               <PresetChip
-                icon={<Target className="w-3.5 h-3.5" />}
-                label="Hook"
-                value={hook?.label}
-                tooltip="The attention-grabber in the first 3 seconds"
-                onClick={() => setOpenPicker("hook")}
-                flash={flashChips}
-              />
-              <PresetChip
                 icon={<Globe2 className="w-3.5 h-3.5" />}
-                label="Setting"
+                label="Location"
                 value={(() => {
                   const sceneLabel =
                     setting?.label ||
@@ -688,8 +680,8 @@ export default function MarketingStudio() {
                   if (sceneLabel) return `${sceneLabel}${locSuffix}`;
                   return location.imagePath ? "Reference image" : undefined;
                 })()}
-                tooltip="Scene type and optional reference image"
-                onClick={() => setOpenPicker("setting")}
+                tooltip="Where the ad takes place — pick a scene or attach a reference image"
+                onClick={() => setOpenPicker("location")}
                 flash={flashChips}
               />
 
