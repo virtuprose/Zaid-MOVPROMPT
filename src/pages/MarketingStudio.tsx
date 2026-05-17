@@ -277,7 +277,7 @@ export default function MarketingStudio() {
 
   const startGenerate = () => {
     if (!ready) {
-      toast.error("Pick a format, hook and setting first.");
+      toast.error("Pick a format and a location first.");
       return;
     }
     if (sessionStorage.getItem(RIGHTS_KEY) === "1") {
