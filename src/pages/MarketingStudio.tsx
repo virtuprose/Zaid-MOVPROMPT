@@ -51,7 +51,6 @@ import { ConfirmRightsDialog } from "@/components/director/ConfirmRightsDialog";
 import { PresetPickerDialog } from "@/components/marketing/PresetPickerDialog";
 import {
   FORMATS,
-  HOOKS,
   SETTINGS,
   composeStudioPrompt,
   type Subject,
