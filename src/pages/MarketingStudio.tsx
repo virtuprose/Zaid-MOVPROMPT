@@ -912,31 +912,15 @@ export default function MarketingStudio() {
           ]}
         />
         <PresetPickerDialog
-          open={openPicker === "hook"}
+          open={openPicker === "location"}
           onOpenChange={(o) => !o && setOpenPicker(null)}
-          title="Pick the hook that grabs"
-          subtitle="The first 3 seconds decide if your ad gets watched or skipped. Pick a proven opener."
-          presets={HOOKS}
-          selectedId={hookId}
-          onSelect={setHookId}
-          searchPlaceholder="Search hooks… (try 'POV' or 'question')"
-          categories={[
-            { id: "surprise", label: "Surprise", tooltip: "Pattern interrupts and stunts" },
-            { id: "curiosity", label: "Curiosity", tooltip: "Open loops and reveals" },
-            { id: "bold-claim", label: "Bold claim", tooltip: "Statements and stats" },
-            { id: "emotional", label: "Emotional", tooltip: "Feeling-led openers" },
-          ]}
-        />
-        <PresetPickerDialog
-          open={openPicker === "setting"}
-          onOpenChange={(o) => !o && setOpenPicker(null)}
-          title="Settings that set the scene"
-          subtitle="Choose a scene type. Add a location for geographic context."
+          title="Pick the location"
+          subtitle="Where does the ad take place? Pick a scene type, add a real-world place, or attach a reference image."
           presets={SETTINGS}
           selectedId={settingId}
           onSelect={setSettingId}
-          searchPlaceholder="Search scenes… (try 'rooftop' or 'cafe')"
-          customLabel="Custom scene"
+          searchPlaceholder="Search locations… (try 'rooftop' or 'cafe')"
+          customLabel="Custom location"
           categories={[
             { id: "realistic", label: "Real", tooltip: "Real-world settings — bedrooms, kitchens, streets" },
             { id: "unrealistic", label: "Stylized", tooltip: "Stylized scenes — surreal, dramatic, cinematic" },
