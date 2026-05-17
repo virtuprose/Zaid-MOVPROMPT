@@ -1,42 +1,43 @@
-## Goal
+# Move Product & Avatar into the textarea composer
 
-On the Ads tool (`/marketing`):
-1. **Remove the Hook chip/picker** from the composer (drop the button, drop hook from readiness, drop hook from draft + final prompt).
-2. **Rename the Setting chip/picker to "Location"** so the existing scene-type + reference-image control reads as the location of the ad.
+Treat Product and Avatar as part of "describe what happens in the ad" — they live inside the composer textarea zone, not as separate right-side buttons.
 
-No behavior change to Format, Master prompt, brand, avatar, or render settings.
+## Layout change in `src/pages/MarketingStudio.tsx`
 
-## Behavior changes
+Composer card becomes:
 
-- Composer chips become: **Format · Location · Render settings**, then brand/avatar/Generate on the right.
-- Readiness becomes: `(formatId || customFormat.trim()) && (settingId || customSetting.trim() || location.imagePath || location.place)`.
-- `writeAdScene` call stops sending `hook`.
-- `composeStudioPrompt` stops including the hook fragment.
-- Summary line ("Renders as: …") drops the hook segment.
-- Template auto-fills (`applyTemplate`) keep working but ignore `hookId` (still accepted in the type so existing data doesn't break — just not applied).
+```text
+┌─ Composer card ──────────────────────────────────┐
+│  [+ Product]  [+ Avatar]   ← inline add buttons │
+│  (or filled chip with thumb + name + ✕)         │
+│                                                  │
+│  Describe what happens in the ad…               │
+│  (textarea, borderless, grows)                  │
+│                                                  │
+│  ──────────────────────────────────────────     │
+│  [Format] [Location] [Render]      [Generate]   │
+└──────────────────────────────────────────────────┘
+```
 
-## Files to touch
+## Specific edits
 
-- `src/pages/MarketingStudio.tsx`
-  - Remove the `Hook` `PresetChip` (~line 674) and its `PresetPickerDialog` instance.
-  - Rename the `Setting` `PresetChip` label to `"Location"` and its tooltip to something like `"Where the ad takes place — pick a scene or attach a reference image"`.
-  - Update the Format chip's "Custom: …" prefix to "Master: …" if Master-prompt rename is in scope (skip if not — confirm).
-  - Update `ready`, the `writeAdScene` payload, and the "Renders as" summary to drop hook.
-  - Update `applyTemplate` to skip `setHookId`.
-  - Update the `PresetPickerDialog` for the renamed picker: `title="Pick the location"`, `subtitle` rewritten around location, `customLabel="Custom location"`, `searchPlaceholder` updated.
-- `src/lib/marketingStudio.ts` (`composeStudioPrompt`) — remove `hookId` from the signature/usage. Verify shape before editing.
-- `supabase/functions/write-ad-scene/index.ts` — accept payload without `hook`; remove hook from the model brief. Verify shape before editing.
+1. **Remove** the top conditional chip strip (lines 563–632) that only renders when something is attached.
+2. **Remove** the right-side 12×12 `BrandPickerPopover` and `CharacterPickerPopover` preview buttons (lines 688–754). `Generate` stays on the right, alone.
+3. **Add** a new always-visible row directly above the `<Textarea>` (before line 634):
+   - **Product slot**: if `brandKit` → chip with logo thumb + name + ✕ (detaches). If empty → `BrandPickerPopover` trigger styled as a dashed `+ Product` pill.
+   - **Avatar slot**: same pattern with `characterKit` / `CharacterPickerPopover` → `+ Avatar` pill.
+   - Both open the existing popovers (kits list, new, edit, delete) — no picker logic changes.
+4. **Keep** Location attachment chip behavior — but since Location already has its own bottom-row `PresetChip`, drop the top Location chip entirely (it was duplicative). The bottom `Location` chip continues to show "Scene · Ref image" state.
+5. Bottom chip row stays: `Format`, `Location`, `Render`, then `ml-auto` `Generate`.
+
+## Visual spec for the inline slots
+
+- Empty state: `h-9 px-2.5 rounded-xl border border-dashed border-border/60 bg-secondary/30 text-xs text-muted-foreground hover:border-[#F5A524]/50 hover:text-foreground`, icon (`Building2` / `UserRound`) + `+ Product` / `+ Avatar`.
+- Filled state: reuse the existing `h-9 pl-1 pr-1.5 rounded-xl border border-[#F5A524]/40 bg-[#F5A524]/10` chip with 7×7 thumb, name (truncate 160px), ✕ detach.
+- Row: `flex flex-wrap items-center gap-2 mb-3`.
 
 ## Out of scope
 
-- Hook presets file (`HOOKS`) stays in the codebase untouched in case we re-introduce it later.
-- No DB / kit changes.
-- Master-prompt rename is a separate request — not included here.
-
-## Verification
-
-- `/marketing` composer shows only **Format · Location · Render settings** chips.
-- Picking a Format + a Location (preset or custom or reference image) enables Generate.
-- Auto-drafted scene and final prompt contain no hook phrasing.
-- "Renders as" summary reads `Format · Location · 9:16 · 5s · 1080p · audio on`.
-- Clicking a template card still fills Format + Location without errors.
+- No changes to BrandPickerPopover / CharacterPickerPopover internals.
+- No DB / edge-function / prompt-generation changes — `brandKit` & `characterKit` are still attached the same way and flow into generation unchanged.
+- Location attachment popover / scene picker untouched.

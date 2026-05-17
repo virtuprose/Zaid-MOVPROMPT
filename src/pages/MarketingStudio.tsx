@@ -560,76 +560,90 @@ export default function MarketingStudio() {
 
           {/* Composer card */}
           <div ref={composerRef} className="flex-1 min-w-0 rounded-3xl border border-border/60 bg-[hsl(240_5%_8%)]/70 backdrop-blur p-4 sm:p-5 scroll-mt-20">
-            {(brandKit || characterKit || location.place || location.imagePath) && (
-              <div className="flex flex-wrap items-center gap-2 mb-3 pb-3 border-b border-border/30">
-                {brandKit && (
-                  <div className="inline-flex items-center gap-2 h-9 pl-1 pr-1.5 rounded-xl border border-[#F5A524]/40 bg-[#F5A524]/10 text-xs">
-                    <div className="w-7 h-7 rounded-md bg-white/5 overflow-hidden flex items-center justify-center shrink-0">
-                      {brandKit.logo_url ? (
-                        <img src={brandKit.logo_url} alt="" className="w-full h-full object-cover" />
-                      ) : (
-                        <Building2 className="w-3.5 h-3.5 text-muted-foreground" />
-                      )}
-                    </div>
-                    <span className="font-medium text-foreground truncate max-w-[160px]">
-                      {brandKit.name || (subject === "app" ? "App" : "Product")}
-                    </span>
+            <div className="flex flex-wrap items-center gap-2 mb-3">
+              {brandKit ? (
+                <div className="inline-flex items-center gap-2 h-9 pl-1 pr-1.5 rounded-xl border border-[#F5A524]/40 bg-[#F5A524]/10 text-xs">
+                  <div className="w-7 h-7 rounded-md bg-white/5 overflow-hidden flex items-center justify-center shrink-0">
+                    {brandKit.logo_url ? (
+                      <img src={brandKit.logo_url} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <Building2 className="w-3.5 h-3.5 text-muted-foreground" />
+                    )}
+                  </div>
+                  <span className="font-medium text-foreground truncate max-w-[160px]">
+                    {brandKit.name || (subject === "app" ? "App" : "Product")}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => void setBrandActive(null)}
+                    className="w-6 h-6 rounded-md text-muted-foreground hover:text-foreground hover:bg-background/60 flex items-center justify-center shrink-0"
+                    aria-label="Detach brand"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ) : (
+                <BrandPickerPopover
+                  kits={kits}
+                  activeId={brandActiveId}
+                  onSelect={(id) => void setBrandActive(id === brandActiveId ? null : id)}
+                  onNew={() => { setBrandEditId(null); setBrandOpen(true); }}
+                  onEdit={(id) => { setBrandEditId(id); setBrandOpen(true); }}
+                  onDelete={(id) => void deleteBrand(id)}
+                  trigger={
                     <button
                       type="button"
-                      onClick={() => void setBrandActive(null)}
-                      className="w-6 h-6 rounded-md text-muted-foreground hover:text-foreground hover:bg-background/60 flex items-center justify-center shrink-0"
-                      aria-label="Detach brand"
+                      className="inline-flex items-center gap-1.5 h-9 px-2.5 rounded-xl border border-dashed border-border/60 bg-secondary/30 text-xs text-muted-foreground hover:border-[#F5A524]/50 hover:text-foreground transition-colors"
                     >
-                      <X className="w-3.5 h-3.5" />
+                      <Building2 className="w-3.5 h-3.5" />
+                      <Plus className="w-3 h-3" />
+                      {subject === "app" ? "App" : "Product"}
                     </button>
+                  }
+                />
+              )}
+              {characterKit ? (
+                <div className="inline-flex items-center gap-2 h-9 pl-1 pr-1.5 rounded-xl border border-[#F5A524]/40 bg-[#F5A524]/10 text-xs">
+                  <div className="w-7 h-7 rounded-md bg-white/5 overflow-hidden flex items-center justify-center shrink-0">
+                    {characterKit.reference_url ? (
+                      <img src={characterKit.reference_url} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <UserRound className="w-3.5 h-3.5 text-muted-foreground" />
+                    )}
                   </div>
-                )}
-                {characterKit && (
-                  <div className="inline-flex items-center gap-2 h-9 pl-1 pr-1.5 rounded-xl border border-[#F5A524]/40 bg-[#F5A524]/10 text-xs">
-                    <div className="w-7 h-7 rounded-md bg-white/5 overflow-hidden flex items-center justify-center shrink-0">
-                      {characterKit.reference_url ? (
-                        <img src={characterKit.reference_url} alt="" className="w-full h-full object-cover" />
-                      ) : (
-                        <UserRound className="w-3.5 h-3.5 text-muted-foreground" />
-                      )}
-                    </div>
-                    <span className="font-medium text-foreground truncate max-w-[160px]">
-                      {characterKit.name || "Avatar"}
-                    </span>
+                  <span className="font-medium text-foreground truncate max-w-[160px]">
+                    {characterKit.name || "Avatar"}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => void setCharacterActive(null)}
+                    className="w-6 h-6 rounded-md text-muted-foreground hover:text-foreground hover:bg-background/60 flex items-center justify-center shrink-0"
+                    aria-label="Detach character"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ) : (
+                <CharacterPickerPopover
+                  kits={characterKits}
+                  activeId={characterActiveId}
+                  onSelect={(id) => void setCharacterActive(id === characterActiveId ? null : id)}
+                  onNew={() => { setCharacterEditId(null); setCharacterOpen(true); }}
+                  onEdit={(id) => { setCharacterEditId(id); setCharacterOpen(true); }}
+                  onDelete={(id) => void deleteCharacter(id)}
+                  trigger={
                     <button
                       type="button"
-                      onClick={() => void setCharacterActive(null)}
-                      className="w-6 h-6 rounded-md text-muted-foreground hover:text-foreground hover:bg-background/60 flex items-center justify-center shrink-0"
-                      aria-label="Detach character"
+                      className="inline-flex items-center gap-1.5 h-9 px-2.5 rounded-xl border border-dashed border-border/60 bg-secondary/30 text-xs text-muted-foreground hover:border-[#F5A524]/50 hover:text-foreground transition-colors"
                     >
-                      <X className="w-3.5 h-3.5" />
+                      <UserRound className="w-3.5 h-3.5" />
+                      <Plus className="w-3 h-3" />
+                      Avatar
                     </button>
-                  </div>
-                )}
-                {(location.place || location.imagePath) && (
-                  <div className="inline-flex items-center gap-2 h-9 pl-1 pr-1.5 rounded-xl border border-border/60 bg-secondary/40 text-xs">
-                    <div className="w-7 h-7 rounded-md bg-white/5 overflow-hidden flex items-center justify-center shrink-0">
-                      {location.imageUrl ? (
-                        <img src={location.imageUrl} alt="" className="w-full h-full object-cover" />
-                      ) : (
-                        <MapPin className="w-3.5 h-3.5 text-muted-foreground" />
-                      )}
-                    </div>
-                    <span className="font-medium text-foreground truncate max-w-[160px]">
-                      {location.place || "Location image"}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setLocation(EMPTY_LOCATION)}
-                      className="w-6 h-6 rounded-md text-muted-foreground hover:text-foreground hover:bg-background/60 flex items-center justify-center shrink-0"
-                      aria-label="Detach location"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
+                  }
+                />
+              )}
+            </div>
 
             <div className="relative">
               <Textarea
@@ -686,74 +700,6 @@ export default function MarketingStudio() {
               <RenderSettingsPopover value={renderSettings} onChange={setRenderSettings} />
 
               <div className="ml-auto flex items-center gap-2">
-                <BrandPickerPopover
-                  kits={kits}
-                  activeId={brandActiveId}
-                  onSelect={(id) => void setBrandActive(id === brandActiveId ? null : id)}
-                  onNew={() => { setBrandEditId(null); setBrandOpen(true); }}
-                  onEdit={(id) => { setBrandEditId(id); setBrandOpen(true); }}
-                  onDelete={(id) => void deleteBrand(id)}
-                  trigger={
-                    <button
-                      type="button"
-                      aria-label="Brand preview"
-                      className="relative w-12 h-12 rounded-xl overflow-hidden border border-white/10 bg-white/5 hover:border-[#F5A524]/60 transition-colors shrink-0"
-                    >
-                      {brandKit?.logo_url ? (
-                        <>
-                          <img src={brandKit.logo_url} alt="" className="w-full h-full object-cover" />
-                          <span className="absolute inset-x-0 bottom-0 bg-black/60 text-white text-[9px] font-semibold tracking-wider uppercase text-center py-0.5">
-                            {subject === "app" ? "App" : "Product"}
-                          </span>
-                        </>
-                      ) : (
-                        <>
-                          <span className="absolute top-1 left-1 w-[18px] h-[18px] rounded-full border border-white/30 flex items-center justify-center">
-                            <Plus className="w-3 h-3 text-white/80" />
-                          </span>
-                          <span className="absolute bottom-1 left-1.5 text-[9px] font-bold tracking-wider uppercase text-white">
-                            {subject === "app" ? "App" : "Product"}
-                          </span>
-                        </>
-                      )}
-                    </button>
-                  }
-                />
-                <CharacterPickerPopover
-                  kits={characterKits}
-                  activeId={characterActiveId}
-                  onSelect={(id) => void setCharacterActive(id === characterActiveId ? null : id)}
-                  onNew={() => { setCharacterEditId(null); setCharacterOpen(true); }}
-                  onEdit={(id) => { setCharacterEditId(id); setCharacterOpen(true); }}
-                  onDelete={(id) => void deleteCharacter(id)}
-                  trigger={
-                    <button
-                      type="button"
-                      aria-label="Character preview"
-                      className="relative w-12 h-12 rounded-xl overflow-hidden border border-white/10 bg-white/5 hover:border-[#F5A524]/60 transition-colors shrink-0"
-                    >
-                      {characterKit?.reference_url ? (
-                        <>
-                          <img src={characterKit.reference_url} alt="" className="w-full h-full object-cover" />
-                          <span className="absolute inset-x-0 bottom-0 bg-black/60 text-white text-[9px] font-semibold tracking-wider uppercase text-center py-0.5">
-                            Avatar
-                          </span>
-                        </>
-                      ) : (
-                        <>
-                          <span className="absolute top-1 left-1 w-[18px] h-[18px] rounded-full border border-white/30 flex items-center justify-center">
-                            <Plus className="w-3 h-3 text-white/80" />
-                          </span>
-                          <span className="absolute bottom-1 left-1.5 text-[9px] font-bold tracking-wider uppercase text-white">
-                            Avatar
-                          </span>
-                        </>
-                      )}
-                    </button>
-                  }
-                />
-
-
                 <Button
                   size="lg"
                   disabled={!hasInputs || submitting || drafting}
