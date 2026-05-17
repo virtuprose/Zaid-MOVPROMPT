@@ -51,7 +51,7 @@ MODEL-ROUTING QUESTIONS:
 Before generating a prompt, you MUST know enough to pick a model. Four axes most often decide the pick — and briefs usually omit some of them:
 1. Input mode — fresh generation, edit an existing video, mimic motion from a clip, or keep characters consistent across shots? This selects between text-to-video and the Omni / Omni Edit / Motion Control family.
 2. Duration — target clip length in seconds (drives 5s/6s/8s/10s/15s tiers).
-3. Audio & dialogue — spoken lines, sync sound, music, SFX, or silent? (Audio-capable families: veo-3/3.1, seedance-2.0/2.0-fast, kling-v3 family, kling-omni, kling-omni-edit.)
+3. Audio & dialogue — spoken lines, sync sound, music, SFX, or silent? (Audio-capable families: veo-3/3.1, seedance-2.0-ref (needs a reference image), kling-v3 family, kling-omni, kling-omni-edit.)
 4. Aspect ratio / orientation — 16:9, 9:16, 1:1, 4:3, 3:4, or 21:9? (hailuo and several veo variants are constrained.)
 
 Rules:
