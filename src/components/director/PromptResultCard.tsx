@@ -161,9 +161,10 @@ export function PromptResultCard({ title, prompt, breakdown, directorsNote, onRe
   const resolved = resolveRecommendation(breakdown);
   const recommendedModel =
     findVideoModel(resolved.primary.id) ?? findVideoModel("seedance-v1-pro")!;
+  const allowModel = (m: VideoModel) => hasReferenceImage || !m.requiresReference;
   const topPicks = [resolved.primary, ...resolved.alternatives]
     .map((c) => findVideoModel(c.id))
-    .filter((m): m is VideoModel => !!m);
+    .filter((m): m is VideoModel => !!m && allowModel(m));
   const externalLink = EXTERNAL_LINKS[recommendedModel.family];
 
   const fullText = [
