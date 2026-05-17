@@ -19,6 +19,7 @@ import {
   AppWindow,
   Download,
   Trash2,
+  SlidersHorizontal,
 } from "lucide-react";
 import {
   DropdownMenu,
