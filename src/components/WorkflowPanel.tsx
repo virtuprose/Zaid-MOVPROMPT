@@ -1210,10 +1210,10 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
         {modeToggleBlock}
       </div>
       {showOnboarding && <OnboardingExamples onPick={handlePickExample} />}
+      {modelBlock}
       <div className="pt-2">
         {uploadBlock}
       </div>
-      {modelBlock}
       {/* On breakdown/generate: textarea first, then Generate at the bottom. */}
       {isBreakdownLike && descriptionBlock}
       {ctaRowBlock}
