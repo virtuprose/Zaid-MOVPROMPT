@@ -1,42 +1,54 @@
-## Goal
-In the Director chat video result panel (PromptResultCard), add **Download**, **Like**, and **Delete** action buttons, and make the inline video player match the generated clip's real aspect ratio (no black letterbox bars).
+## The two bugs you're seeing
 
-## Changes
+Both come from the same place — `src/components/director/DirectorChat.tsx` `send()` and `src/lib/director/api.ts`:
 
-### 1. `src/components/director/PromptResultCard.tsx` — action buttons
-Replace the current "Download MP4" link row (lines ~240–248) with a compact action toolbar under the video:
+1. **The Director forgets your uploads.** Every turn only sends the *current* composer attachments. After you upload an image and hit send, `setAttachments([])` clears them — so on your next message the agent literally receives zero images and has to ask you to drop it again.
+2. **The Director forgets what it just said.** The history we send to the model filters down to only plain `user` / `assistant` text bubbles. The bubbles for *generated prompts*, *clarification questions*, and *model-choice cards* are dropped. So when you ask "give me 3 ideas for this image" after a result already exists, the model has no memory of having produced anything, no memory of the image, and just writes one new prompt.
 
-- **Download** — keep the existing `<a href download>` behavior, restyle as an icon button (lucide `Download`).
-- **Like** — heart icon (lucide `Heart`), filled + primary color when `job.liked === true`. Clicking toggles `video_jobs.liked` via `supabase.from("video_jobs").update({ liked: !job.liked }).eq("id", job.id)` and updates local `job` state. Optimistic update + toast on error.
-- **Delete** — trash icon (lucide `Trash2`). Opens a small `AlertDialog` ("Delete this video? This cannot be undone."). On confirm, `supabase.from("video_jobs").delete().eq("id", job.id)` (RLS already allows owner delete), then `setJob(null)` so the panel disappears, plus a success toast.
+And the model-selection question:
 
-All three buttons styled as `Button variant="ghost" size="sm"` in a flex row with `gap-1`, right-aligned, with `aria-label`s for a11y.
+3. **How the model is chosen today.** The edge function (`supabase/functions/director-agent/index.ts`) runs a 4-step algorithm — input gating → capability gating → aesthetic ranking → output — and *should* call `ask_model_choice` before `generate_prompt`. In practice it often skips straight to generation because the system prompt lets it skip the question when the brief looks "complete enough." You want it to **always** confirm the target model up front, since the final wording is tuned per model.
 
-### 2. Aspect ratio fix (same file, line 238)
-The `<video>` currently has `aspect-video` which forces 16:9 and produces black bars for 9:16 / 1:1 / 4:3 clips.
+## Fix
 
-Replace with intrinsic sizing:
-```tsx
-<video
-  src={job.video_url}
-  controls
-  playsInline
-  className="w-full rounded-md bg-black max-h-[70vh] object-contain"
-/>
-```
-This lets the browser use the video's real intrinsic ratio. `max-h-[70vh]` prevents tall 9:16 clips from dominating the chat. `bg-black` only shows if the user resizes the player — there are no forced letterbox bars because the container hugs the video.
+### 1. Carry every attachment from the whole chat into every turn
 
-(Optional small enhancement, deferred unless you want it: also pass `style={{ aspectRatio: knownRatio }}` before metadata loads to avoid a layout shift. Will skip unless requested.)
+In `DirectorChat.tsx` `send()`, instead of just passing the current `attachments` state, collect attachments from every prior `user` bubble in `bubbles` + the ones being sent now, dedupe by `url`/`name`, and pass the combined list to `streamDirectorAgent`. Cap at ~12 (the edge function already slices to 12 / 8 images) so we don't blow the token budget; prefer the most recent.
 
-### 3. Library tab consistency (small touch-up)
-`src/components/library/VideosTab.tsx` already has Like / Delete / Download in its detail dialog — but the inline grid card thumbnail also uses `object-cover` which crops. Leave the grid (thumbnails should be uniform) but verify the **detail dialog `<video>`** uses `object-contain` (it already does at line 652). No change needed.
+### 2. Serialize non-text bubbles into the history so the agent remembers them
+
+Still in `send()`, replace the current `history` filter. For each bubble produce a `DirectorMsg`:
+- `user` → as today (text + a short "[Attached: image.png, brief.pdf]" suffix so the model knows what was attached on that turn).
+- `assistant` text → as today.
+- `result` → assistant message summarizing the generated prompt: title, the full prompt text, recommended model id, and the key breakdown fields. This is what makes "give me 3 variations" actually variations of *that* prompt.
+- `questions` → assistant message: "I asked: 1) … 2) …".
+- `model_choice` → assistant message: "I recommended model X (alts: Y, Z) because …" — and, if the user later picked one, also add a synthetic user line "Target model: X" so the agent treats it as locked.
+
+This makes the conversation self-describing without changing the DB shape (bubbles are still persisted as today).
+
+### 3. Make "which model?" the first real question
+
+In `supabase/functions/director-agent/index.ts` `SYSTEM_PROMPT`:
+- Tighten the "CONFIRM THE TARGET MODEL BEFORE GENERATING" block so `ask_model_choice` runs on the **first turn that has enough info to generate**, not only "when 2+ axes missing." The two existing exceptions stay: user already named a model, or user already picked one earlier in the thread.
+- Add an explicit rule: when the user attaches a reference image / video, fire `ask_model_choice` first (so they can choose between e.g. seedance-v1-pro vs veo-3.1 vs kling-omni for that exact image) and **only after** the pick, generate the prompt.
+- Add a rule: if the user's latest message contains "ideas", "variations", "options", "N versions", do NOT call `generate_prompt` once — call it once per idea (the frontend already shows a list of result bubbles) or, simpler, return `ask_clarification` asking which of N concepts to develop. I'll go with the simpler "produce a single best one + offer to expand" pattern and update the system prompt to acknowledge "N ideas" requests explicitly so it never silently collapses to one.
+
+### 4. Small UX hint in the model-choice card
+
+The card already exists (`ModelChoiceCard.tsx`). When the user clicks a model, the next `send()` already adds a synthetic message; we'll standardize it to `"Target model: <id>"` so the rule in step 3's exception is unambiguous.
+
+## Technical scope
+
+Files touched (frontend + one edge function — no DB migration):
+- `src/components/director/DirectorChat.tsx` — rewrite the history + attachments construction inside `send()`.
+- `src/lib/director/api.ts` — no signature change; just make sure `Attachment[]` accepts the merged list (it already does).
+- `src/components/director/ModelChoiceCard.tsx` — confirm the click handler sends the `Target model: <id>` line (1-line tweak if needed).
+- `supabase/functions/director-agent/index.ts` — update `SYSTEM_PROMPT` rules around `ask_model_choice` and "N ideas" requests. No tool-schema changes.
 
 ## Out of scope
-- No DB migration (the `liked` and `deleted_at` columns already exist; we'll use a hard `delete` rather than soft delete since the RLS policy permits it and the column is unused elsewhere).
-- No changes to the generation pipeline or fal payload — aspect ratio is already passed correctly; this is purely a player display fix.
-- No changes to the Library page beyond what's noted.
 
-## Files touched
-- `src/components/director/PromptResultCard.tsx` (only — ~30 lines changed in the `renderVideoPanel` function, plus a new `AlertDialog` import).
+- No change to the model selection *algorithm itself* (Steps 1–4 in the system prompt stay; they're already good — they just need to be invoked at the right time).
+- No DB schema change. Bubbles are already persisted with their attachments.
+- No change to video generation, Library, or Ads Studio.
 
 Approve and I'll implement.

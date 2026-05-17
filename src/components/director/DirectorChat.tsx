@@ -179,11 +179,71 @@ function DirectorChatInner() {
     idleNudgedRef.current = true;
 
     try {
-      const history: DirectorMsg[] = next
-        .filter((b): b is Bubble & { role: "user" | "assistant"; content: string } =>
-          (b.role === "user" || b.role === "assistant") && typeof (b as any).content === "string",
-        )
-        .map((b) => ({ role: b.role as "user" | "assistant", content: b.content }));
+      // Serialize EVERY bubble (including result / questions / model_choice) into the
+      // history so the agent remembers what it already asked, generated, and recommended.
+      const history: DirectorMsg[] = [];
+      for (const b of next) {
+        if (b.role === "user") {
+          const attachLine =
+            Array.isArray(b.attachments) && b.attachments.length
+              ? `\n[Attached on this turn: ${b.attachments.map((a) => `${a.kind}:${a.name}`).join(", ")}]`
+              : "";
+          history.push({ role: "user", content: (b.content || "") + attachLine });
+        } else if (b.role === "assistant") {
+          if (b.content && b.content !== "…") {
+            history.push({ role: "assistant", content: b.content });
+          }
+        } else if (b.role === "result") {
+          const br: any = b.data.breakdown || {};
+          const summary =
+            `[Previously generated prompt — "${b.data.title || "Untitled"}"]\n` +
+            `Prompt: ${b.data.prompt}\n` +
+            (br.recommended_model_id ? `Target model: ${br.recommended_model_id}\n` : "") +
+            (br.subject ? `Subject: ${br.subject}\n` : "") +
+            (br.camera ? `Camera: ${br.camera}\n` : "") +
+            (br.lighting ? `Lighting: ${br.lighting}\n` : "") +
+            (br.mood ? `Mood: ${br.mood}\n` : "") +
+            (br.negative_prompt ? `Negative: ${br.negative_prompt}` : "");
+          history.push({ role: "assistant", content: summary.trim() });
+        } else if (b.role === "questions") {
+          history.push({
+            role: "assistant",
+            content:
+              `[I asked the user: ${b.reason}]\n` +
+              b.questions.map((q, i) => `${i + 1}) ${q}`).join("\n"),
+          });
+        } else if (b.role === "model_choice") {
+          const alts = b.alternatives?.length ? ` (alternatives: ${b.alternatives.join(", ")})` : "";
+          history.push({
+            role: "assistant",
+            content: `[I asked the user to pick a target video model. Recommended: ${b.recommended_model_id}${alts}. Reason: ${b.reason}]`,
+          });
+          if (b.chosen) {
+            history.push({ role: "user", content: `Target model: ${b.chosen}` });
+          }
+        }
+      }
+
+      // Aggregate attachments from EVERY prior user bubble + current ones, deduped,
+      // most-recent first, capped at 12 (edge function further limits images to 8).
+      const allAttachments: Attachment[] = [];
+      const seen = new Set<string>();
+      const pushAttachment = (a: Attachment) => {
+        const key = (a as any).url || (a as any).storage_path || `${a.kind}:${a.name}`;
+        if (seen.has(key)) return;
+        seen.add(key);
+        allAttachments.push(a);
+      };
+      // current turn first (most relevant)
+      for (const a of attachments) pushAttachment(a);
+      // then walk history newest → oldest
+      for (let i = next.length - 1; i >= 0; i -= 1) {
+        const b = next[i];
+        if (b.role === "user" && Array.isArray(b.attachments)) {
+          for (const a of b.attachments) pushAttachment(a);
+        }
+      }
+      const mergedAttachments = allAttachments.slice(0, 12);
 
       // Insert a placeholder bubble that we'll progressively fill
       const placeholderIndex = next.length;
@@ -227,7 +287,7 @@ function DirectorChatInner() {
       // Reserve the placeholder slot
       setBubbles((prev) => [...prev, { role: "assistant", content: "…" }]);
 
-      const resp = await streamDirectorAgent(history, attachments, handlePartial);
+      const resp = await streamDirectorAgent(history, mergedAttachments, handlePartial);
 
       let added: Bubble;
       let finalPrompt: string | null = null;
