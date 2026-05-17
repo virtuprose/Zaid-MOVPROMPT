@@ -481,9 +481,8 @@ export default function MarketingStudio() {
   const mode: "empty" | "mixed" | "full" =
     totalCount === 0 ? "empty" : totalCount < 10 ? "mixed" : "full";
 
-  const applyTemplate = (tpl: { formatId: string; hookId: string; settingId: string }) => {
+  const applyTemplate = (tpl: { formatId: string; hookId?: string; settingId: string }) => {
     setFormatId(tpl.formatId);
-    setHookId(tpl.hookId);
     setSettingId(tpl.settingId);
     setFlashChips(true);
     window.setTimeout(() => setFlashChips(false), 900);
