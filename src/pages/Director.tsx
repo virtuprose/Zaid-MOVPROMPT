@@ -32,6 +32,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { trackPageVisit } from "@/lib/analytics";
 import { DirectorChat } from "@/components/director/DirectorChat";
+import { DirectorErrorBoundary } from "@/components/director/DirectorErrorBoundary";
 import { TopNav } from "@/components/TopNav";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
@@ -304,7 +305,9 @@ export default function Director() {
           </aside>
 
           <div className="max-w-3xl w-full mx-auto lg:mx-0">
-            <DirectorChat key={sessionId || "new"} />
+            <DirectorErrorBoundary key={sessionId || "new"}>
+              <DirectorChat />
+            </DirectorErrorBoundary>
           </div>
         </div>
       </div>
