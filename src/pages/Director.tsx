@@ -33,6 +33,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { trackPageVisit } from "@/lib/analytics";
 import { DirectorChat } from "@/components/director/DirectorChat";
 import { DirectorErrorBoundary } from "@/components/director/DirectorErrorBoundary";
+import { SendDebugReportButton } from "@/components/SendDebugReportButton";
 import { TopNav } from "@/components/TopNav";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
@@ -302,10 +303,13 @@ export default function Director() {
                 })}
               </div>
             )}
+            <div className="pt-2 mt-auto border-t border-border/30">
+              <SendDebugReportButton sessionId={sessionId} className="w-full justify-start" />
+            </div>
           </aside>
 
           <div className="max-w-3xl w-full mx-auto lg:mx-0">
-            <DirectorErrorBoundary key={sessionId || "new"}>
+            <DirectorErrorBoundary key={sessionId || "new"} sessionId={sessionId}>
               <DirectorChat />
             </DirectorErrorBoundary>
           </div>

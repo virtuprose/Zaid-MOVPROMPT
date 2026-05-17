@@ -3,7 +3,9 @@ import { LanguageProvider } from "./i18n/LanguageContext";
 import App from "./App.tsx";
 import "./index.css";
 import { captureRefFromUrl } from "./lib/referrals";
+import { installDebugRecorder } from "./lib/debugRecorder";
 
+installDebugRecorder();
 captureRefFromUrl();
 
 // Hide splash screen once React mounts
