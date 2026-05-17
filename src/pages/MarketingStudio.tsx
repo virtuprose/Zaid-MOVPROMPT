@@ -581,8 +581,8 @@ export default function MarketingStudio() {
             </div>
 
           {/* Composer card */}
-          <div ref={composerRef} className="flex-1 min-w-0 rounded-3xl border border-border/60 bg-[hsl(240_5%_8%)]/70 backdrop-blur p-4 sm:p-5 scroll-mt-20">
-            <div className="flex flex-wrap items-center gap-2 mb-3">
+          <div ref={composerRef} className="flex-1 min-w-0 rounded-3xl border border-border/60 bg-[hsl(240_5%_8%)]/70 backdrop-blur p-3 sm:p-4 scroll-mt-20">
+            <div className="flex flex-wrap items-center gap-2 mb-2">
               {brandKit ? (
                 <HoverCard openDelay={150} closeDelay={80}>
                   <HoverCardTrigger asChild>
@@ -699,8 +699,7 @@ export default function MarketingStudio() {
               )}
             </div>
 
-            <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-border/30">
-
+            <div className="flex flex-wrap items-center gap-2 pt-2 mt-1 border-t border-border/30">
               <PresetChip
                 icon={<Sparkles className="w-3.5 h-3.5" />}
                 label="Format"
@@ -734,22 +733,22 @@ export default function MarketingStudio() {
 
               <RenderSettingsPopover value={renderSettings} onChange={setRenderSettings} />
 
-              <div className="ml-auto flex items-center gap-2">
+              <div className="ml-auto flex items-center">
                 <Button
-                  size="lg"
+                  size="sm"
                   disabled={!hasInputs || submitting || drafting}
                   onClick={startGenerate}
                   className={cn(
-                    "rounded-2xl px-5 h-11 font-semibold text-sm transition-all",
+                    "rounded-full px-4 h-9 font-semibold text-xs transition-all",
                     hasInputs
                       ? "bg-[#F5A524] text-black hover:bg-[#F5A524]/90 shadow-lg shadow-[#F5A524]/25"
                       : "bg-muted text-muted-foreground hover:bg-muted",
                   )}
                 >
                   {submitting ? (
-                    <Loader2 className="w-4 h-4 animate-spin mr-1.5" />
+                    <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
                   ) : hasInputs ? (
-                    <Wand2 className="w-4 h-4 mr-1.5" />
+                    <Wand2 className="w-3.5 h-3.5 mr-1.5" />
                   ) : null}
                   {btnLabel}
                 </Button>
@@ -757,7 +756,7 @@ export default function MarketingStudio() {
             </div>
 
             {ready && (
-              <div className="mt-4 rounded-xl border border-border/30 bg-muted/10 px-3 py-2 text-[11px] text-muted-foreground">
+              <div className="mt-2 rounded-xl border border-border/30 bg-muted/10 px-3 py-2 text-[11px] text-muted-foreground">
                 <span className="text-foreground/80 font-medium">Renders as:</span>{" "}
                 {format?.label || "Custom format"} · {setting?.label || customSetting.trim() || location.place || "Reference image"} · {renderSettings.aspect_ratio} · {renderSettings.duration}s · {renderSettings.resolution} · audio on
               </div>
