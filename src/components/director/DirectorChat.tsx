@@ -401,14 +401,29 @@ function DirectorChatInner() {
             .map((_, i) => `@Image${i + 1} = ${slotLabels[referenceImageSlots[i]] || `reference ${i + 1}`}`)
             .join("\n");
           const resolvedPrompt = tagLines ? `${tagLines}\n\n${basePrompt}` : basePrompt;
-          await submitVideoJob(
+          const job = await submitVideoJob(
             resolvedPrompt,
             provider,
             sessionIdRef.current,
             undefined,
             referenceImageUrls.length > 0 ? referenceImageUrls : undefined,
           );
-          toast.success("Render started — check your Library when it finishes.");
+          const videoBubble: Bubble = {
+            role: "video",
+            data: {
+              jobId: job.id,
+              prompt: resolvedPrompt,
+              provider,
+              status: (job.status as any) || "queued",
+              videoUrl: job.video_url || undefined,
+            },
+          };
+          const withVideo: Bubble[] = [...next, added, videoBubble];
+          setBubbles(withVideo);
+          setAttachments([]);
+          void persist(withVideo, finalPrompt, title);
+          toast.success("Rendering — it'll appear here when ready.");
+          return;
         } catch (e: any) {
           toast.error(e?.message || "Could not start render");
         }
