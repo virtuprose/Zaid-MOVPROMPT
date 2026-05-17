@@ -1,27 +1,25 @@
-## Goal
+## Problem
 
-On the MovPrompt home page, surface "Pick your target AI model" first, then the reference upload section — so users choose the model before uploading.
+In `QuestionCard`, the duration question "How long should the clip be — 5s, 8s, 10s, or other?" renders a video upload slot. The word "clip" is in `VIDEO_RE` and is also in the "strong standalone noun" allowlist inside `detectMediaAsk()`, so the question is misclassified as an upload ask. `QuestionCard` already hides chip suggestions for duration questions, but the upload slot is rendered unconditionally whenever `ask && onAttach` is truthy.
 
-## Change
+## Fix
 
-In `src/components/WorkflowPanel.tsx`, inside the `leftPanel` JSX (around lines 1213–1216), swap the order of two blocks:
+Single small change in `src/components/director/QuestionCard.tsx`:
 
-Before:
+- Gate the `QuestionUploadSlot` render with `!isDuration`, mirroring the existing pattern used for `suggestion`. The cleanest form is to also null out `mediaAsks[i]` when `DURATION_RE.test(q)` (same place where `suggestions` is already null-guarded), so downstream code (slot render, submit summary line, placeholder copy) all consistently treat duration questions as non-media.
+
+Concretely, in the `mediaAsks` `useMemo`:
+
+```ts
+const mediaAsks = useMemo(
+  () => questions.map((q) => (DURATION_RE.test(q) ? null : detectMediaAsk(q))),
+  [questions],
+);
 ```
-<div className="pt-2">{uploadBlock}</div>
-{modelBlock}
-```
 
-After:
-```
-{modelBlock}
-<div className="pt-2">{uploadBlock}</div>
-```
+No other files need to change. `detectMediaAsk()` stays generic (other features may still want "clip" to count as a video ask), and the suppression lives next to the existing duration handling.
 
-That's it — both blocks already exist as variables, no logic, state, or styling changes. The collapsed/expanded model strip, audio toggle, and upload behavior are unaffected; only their vertical order in the left column changes.
+## Verification
 
-## Out of scope
-
-- No change to the breakdown/generate phases (they don't render `uploadBlock`).
-- No copy changes, no new headings, no analytics changes.
-- Marketing Studio / Director pages untouched.
+- Reload the affected session (`/director/<id>`); the second question should now show only the duration chips (`10s / 15s / 30s / 45s / Other`) and no upload slot.
+- A genuine video ask like "Drop any reference clips you have" still renders the upload slot.

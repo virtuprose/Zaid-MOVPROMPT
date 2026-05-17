@@ -30,7 +30,7 @@ export function QuestionCard({ reason, questions, disabled, attachments = [], on
   const firstInputRef = useRef<HTMLInputElement>(null);
 
   const mediaAsks = useMemo(
-    () => questions.map((q) => detectMediaAsk(q)),
+    () => questions.map((q) => (DURATION_RE.test(q) ? null : detectMediaAsk(q))),
     [questions],
   );
 
