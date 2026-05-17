@@ -45,7 +45,8 @@ type Bubble =
   | { role: "assistant"; content: string; animate?: boolean }
   | { role: "result"; data: Extract<AgentResponse, { kind: "generate_prompt" }>; partial?: boolean }
   | { role: "questions"; questions: string[]; reason: string }
-  | { role: "model_choice"; recommended_model_id: string; alternatives?: string[]; reason: string; chosen?: string };
+  | { role: "model_choice"; recommended_model_id: string; alternatives?: string[]; reason: string; chosen?: string }
+  | { role: "error"; message: string; detail?: string; retryable: boolean };
 
 const WELCOME: Bubble = {
   role: "assistant",
@@ -83,6 +84,7 @@ function DirectorChatInner() {
   const [resetOpen, setResetOpen] = useState(false);
   const sessionIdRef = useRef<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const lastSendRef = useRef<{ text: string; attachments: Attachment[] } | null>(null);
 
   const getLatestGeneratedPrompt = () => {
     for (let i = bubbles.length - 1; i >= 0; i -= 1) {
@@ -166,12 +168,16 @@ function DirectorChatInner() {
     const fallback = attachments.length
       ? `References attached: ${attachments.length} file${attachments.length === 1 ? "" : "s"}`
       : "(See attached references.)";
+    const turnAttachments = attachments;
     const userBubble: Bubble = {
       role: "user",
       content: text || fallback,
-      attachments: attachments.length ? attachments : undefined,
+      attachments: turnAttachments.length ? turnAttachments : undefined,
     };
-    const next: Bubble[] = [...bubbles, userBubble];
+    // Drop any prior error bubble so retry replaces it cleanly
+    const cleaned = bubbles.filter((b) => b.role !== "error");
+    const next: Bubble[] = [...cleaned, userBubble];
+    lastSendRef.current = { text: text || fallback, attachments: turnAttachments };
     setBubbles(next);
     setInput("");
     setBusy(true);
@@ -288,7 +294,31 @@ function DirectorChatInner() {
       // Reserve the placeholder slot
       setBubbles((prev) => [...prev, { role: "assistant", content: "…" }]);
 
-      const resp = await streamDirectorAgent(history, mergedAttachments, handlePartial);
+      // Retry up to 2 times on transient errors (timeouts, 5xx, network).
+      const MAX_ATTEMPTS = 3;
+      let resp: AgentResponse | null = null;
+      let lastErr: any = null;
+      for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
+        try {
+          resp = await streamDirectorAgent(history, mergedAttachments, handlePartial, undefined, {
+            idleTimeoutMs: 30_000,
+            totalTimeoutMs: 120_000,
+          });
+          lastErr = null;
+          break;
+        } catch (err: any) {
+          lastErr = err;
+          const retryable = err?.retryable === true;
+          if (!retryable || attempt === MAX_ATTEMPTS) break;
+          const backoff = 600 * attempt;
+          toast.message(`Retrying… (${attempt}/${MAX_ATTEMPTS - 1})`, {
+            description: err?.message,
+          });
+          await new Promise((r) => setTimeout(r, backoff));
+        }
+      }
+
+      if (!resp) throw lastErr ?? new Error("Director didn't respond.");
 
       let added: Bubble;
       let finalPrompt: string | null = null;
@@ -308,7 +338,6 @@ function DirectorChatInner() {
           reason: resp.reason,
         };
       } else if (resp.kind === "request_video_generation") {
-        // Trigger render directly
         added = {
           role: "assistant",
           animate: true,
@@ -334,25 +363,47 @@ function DirectorChatInner() {
       setAttachments([]);
       void persist(finalNext, finalPrompt, title);
     } catch (e: any) {
-      toast.error(e?.message || "Director couldn't respond — try again");
+      const retryable = e?.retryable !== false;
+      const message =
+        e?.name === "DirectorTimeoutError"
+          ? "The Director didn't respond in time"
+          : e?.message || "The Director couldn't respond";
+      toast.error(message);
       setBubbles((b) => {
-        // Remove the placeholder if it's still a "…" bubble
         const trimmed =
-          b.length && b[b.length - 1].role === "assistant" && (b[b.length - 1] as any).content === "…"
+          b.length &&
+          b[b.length - 1].role === "assistant" &&
+          (b[b.length - 1] as any).content === "…"
             ? b.slice(0, -1)
             : b;
-        return [
-          ...trimmed,
-          {
-            role: "assistant",
-            animate: true,
-            content: "Lost you for a sec — mind sending that again?",
-          },
-        ];
+        const errorBubble: Bubble = {
+          role: "error",
+          message,
+          detail: retryable
+            ? "Your message is saved — tap Retry to try again."
+            : e?.message && e.message !== message
+              ? e.message
+              : undefined,
+          retryable,
+        };
+        return [...trimmed, errorBubble];
       });
     } finally {
       setBusy(false);
     }
+  };
+
+  const retryLast = async () => {
+    const last = lastSendRef.current;
+    if (!last || busy) return;
+    setBubbles((prev) => {
+      const copy = [...prev];
+      if (copy.length && copy[copy.length - 1].role === "error") copy.pop();
+      if (copy.length && copy[copy.length - 1].role === "user") copy.pop();
+      return copy;
+    });
+    setAttachments(last.attachments);
+    setTimeout(() => void send(last.text), 0);
   };
 
   const startFresh = (save: boolean) => {
@@ -799,6 +850,34 @@ function DirectorChatInner() {
                       void send(`Target model: ${modelId}`);
                     }}
                   />
+                </div>
+              );
+            }
+            if (b.role === "error") {
+              return (
+                <div key={i} className="flex items-start gap-2 motion-safe:animate-fade-up">
+                  <AssistantAvatar size="sm" state="idle" className="mt-1" />
+                  <div className="flex-1 rounded-2xl border border-destructive/40 bg-destructive/5 px-4 py-3 text-sm">
+                    <div className="font-medium text-foreground">{b.message}</div>
+                    {b.detail && (
+                      <div className="mt-1 text-[12px] text-muted-foreground whitespace-pre-wrap">
+                        {b.detail}
+                      </div>
+                    )}
+                    {b.retryable && (
+                      <div className="mt-3 flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="rounded-full h-7 text-xs"
+                          onClick={() => void retryLast()}
+                          disabled={busy}
+                        >
+                          <RotateCcw className="w-3 h-3 mr-1" /> Retry
+                        </Button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               );
             }
