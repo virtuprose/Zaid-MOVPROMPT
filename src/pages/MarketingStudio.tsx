@@ -5,7 +5,6 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import {
   Sparkles,
-  Target,
   Globe2,
   Loader2,
   Wand2,
@@ -52,7 +51,6 @@ import { ConfirmRightsDialog } from "@/components/director/ConfirmRightsDialog";
 import { PresetPickerDialog } from "@/components/marketing/PresetPickerDialog";
 import {
   FORMATS,
-  HOOKS,
   SETTINGS,
   composeStudioPrompt,
   type Subject,
@@ -123,13 +121,12 @@ export default function MarketingStudio() {
   const [master, setMaster] = useState("");
   const [formatId, setFormatId] = useState<string | undefined>();
   const [customFormat, setCustomFormat] = useState<string>("");
-  const [hookId, setHookId] = useState<string | undefined>();
   const [settingId, setSettingId] = useState<string | undefined>();
   const [customSetting, setCustomSetting] = useState<string>("");
   const [location, setLocation] = useState<LocationInput>(EMPTY_LOCATION);
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>("All");
 
-  const [openPicker, setOpenPicker] = useState<"format" | "hook" | "setting" | null>(null);
+  const [openPicker, setOpenPicker] = useState<"format" | "location" | null>(null);
   const [brandOpen, setBrandOpen] = useState(false);
   const [brandEditId, setBrandEditId] = useState<string | null>(null);
   const [characterOpen, setCharacterOpen] = useState(false);
@@ -188,21 +185,22 @@ export default function MarketingStudio() {
   if (!loading && !user) return null;
 
   const format = find(FORMATS, formatId);
-  const hook = find(HOOKS, hookId);
   const setting = find(SETTINGS, settingId);
 
   const hasInputs =
     master.trim().length > 0 ||
     !!formatId ||
     !!customFormat.trim() ||
-    !!hookId ||
     !!settingId ||
     !!customSetting.trim() ||
     !!brandKit?.name ||
     !!characterKit?.name ||
     !!location.place ||
     !!location.imagePath;
-  const ready = !!((formatId || customFormat.trim()) && hookId && (settingId || customSetting.trim()));
+  const ready = !!(
+    (formatId || customFormat.trim()) &&
+    (settingId || customSetting.trim() || location.place || location.imagePath)
+  );
 
   // Auto-write the describe box from the current Format/Hook/Setting + brand/avatar/location.
   // Re-runs on every trio change. Aborts in-flight requests when picks change again.
@@ -219,7 +217,6 @@ export default function MarketingStudio() {
             : customFormat.trim()
               ? { custom: customFormat.trim() }
               : undefined,
-          hook: hook ? { label: hook.label, fragment: hook.fragment } : undefined,
           setting: setting
             ? { label: setting.label, fragment: setting.fragment }
             : customSetting.trim()
@@ -269,7 +266,6 @@ export default function MarketingStudio() {
   }, [
     formatId,
     customFormat,
-    hookId,
     settingId,
     customSetting,
     brandKit?.id,
@@ -281,7 +277,7 @@ export default function MarketingStudio() {
 
   const startGenerate = () => {
     if (!ready) {
-      toast.error("Pick a format, hook and setting first.");
+      toast.error("Pick a format and a location first.");
       return;
     }
     if (sessionStorage.getItem(RIGHTS_KEY) === "1") {
@@ -298,7 +294,6 @@ export default function MarketingStudio() {
         subject,
         master,
         formatId,
-        hookId,
         settingId,
         customFormat: customFormat || undefined,
         customSetting: customSetting || undefined,
@@ -484,9 +479,8 @@ export default function MarketingStudio() {
   const mode: "empty" | "mixed" | "full" =
     totalCount === 0 ? "empty" : totalCount < 10 ? "mixed" : "full";
 
-  const applyTemplate = (tpl: { formatId: string; hookId: string; settingId: string }) => {
+  const applyTemplate = (tpl: { formatId: string; hookId?: string; settingId: string }) => {
     setFormatId(tpl.formatId);
-    setHookId(tpl.hookId);
     setSettingId(tpl.settingId);
     setFlashChips(true);
     window.setTimeout(() => setFlashChips(false), 900);
@@ -507,7 +501,7 @@ export default function MarketingStudio() {
           <title>Ads Studio — MovPrompt</title>
           <meta
             name="description"
-            content="Turn any product or app into a video ad. Pick a format, a scroll-stopping hook and a setting — render in one click with Seedance 2.0."
+            content="Turn any product or app into a video ad. Pick a format and a location — render in one click with Seedance 2.0."
           />
         </Helmet>
 
@@ -532,7 +526,7 @@ export default function MarketingStudio() {
               <br /> into a video ad
             </h1>
             <p className="text-muted-foreground mt-3 max-w-lg mx-auto text-sm leading-snug">
-              Pick a format, a scroll-stopping hook and a setting. We compose the prompt and render your ad.
+              Pick a format and a location. We compose the prompt and render your ad.
             </p>
           </div>
 
@@ -672,16 +666,8 @@ export default function MarketingStudio() {
                 flash={flashChips}
               />
               <PresetChip
-                icon={<Target className="w-3.5 h-3.5" />}
-                label="Hook"
-                value={hook?.label}
-                tooltip="The attention-grabber in the first 3 seconds"
-                onClick={() => setOpenPicker("hook")}
-                flash={flashChips}
-              />
-              <PresetChip
                 icon={<Globe2 className="w-3.5 h-3.5" />}
-                label="Setting"
+                label="Location"
                 value={(() => {
                   const sceneLabel =
                     setting?.label ||
@@ -692,8 +678,8 @@ export default function MarketingStudio() {
                   if (sceneLabel) return `${sceneLabel}${locSuffix}`;
                   return location.imagePath ? "Reference image" : undefined;
                 })()}
-                tooltip="Scene type and optional reference image"
-                onClick={() => setOpenPicker("setting")}
+                tooltip="Where the ad takes place — pick a scene or attach a reference image"
+                onClick={() => setOpenPicker("location")}
                 flash={flashChips}
               />
 
@@ -792,7 +778,7 @@ export default function MarketingStudio() {
             {ready && (
               <div className="mt-4 rounded-xl border border-border/30 bg-muted/10 px-3 py-2 text-[11px] text-muted-foreground">
                 <span className="text-foreground/80 font-medium">Renders as:</span>{" "}
-                {hook?.label} · {format?.label || "Custom format"} · {setting?.label || "Custom scene"} · {renderSettings.aspect_ratio} · {renderSettings.duration}s · {renderSettings.resolution} · audio on
+                {format?.label || "Custom format"} · {setting?.label || customSetting.trim() || location.place || "Reference image"} · {renderSettings.aspect_ratio} · {renderSettings.duration}s · {renderSettings.resolution} · audio on
               </div>
             )}
           </div>
@@ -861,7 +847,7 @@ export default function MarketingStudio() {
                   title={showCommunity ? "Community ads" : "Your ads"}
                   subtitle={
                     showCommunity
-                      ? "Click any template to load its format, hook and setting."
+                      ? "Click any template to load its format and location."
                       : pendingJobs.length > 0
                         ? "Your ad is rendering — it'll appear here in a moment."
                         : "Tap one to revisit it in your Library."
@@ -924,31 +910,15 @@ export default function MarketingStudio() {
           ]}
         />
         <PresetPickerDialog
-          open={openPicker === "hook"}
+          open={openPicker === "location"}
           onOpenChange={(o) => !o && setOpenPicker(null)}
-          title="Pick the hook that grabs"
-          subtitle="The first 3 seconds decide if your ad gets watched or skipped. Pick a proven opener."
-          presets={HOOKS}
-          selectedId={hookId}
-          onSelect={setHookId}
-          searchPlaceholder="Search hooks… (try 'POV' or 'question')"
-          categories={[
-            { id: "surprise", label: "Surprise", tooltip: "Pattern interrupts and stunts" },
-            { id: "curiosity", label: "Curiosity", tooltip: "Open loops and reveals" },
-            { id: "bold-claim", label: "Bold claim", tooltip: "Statements and stats" },
-            { id: "emotional", label: "Emotional", tooltip: "Feeling-led openers" },
-          ]}
-        />
-        <PresetPickerDialog
-          open={openPicker === "setting"}
-          onOpenChange={(o) => !o && setOpenPicker(null)}
-          title="Settings that set the scene"
-          subtitle="Choose a scene type. Add a location for geographic context."
+          title="Pick the location"
+          subtitle="Where does the ad take place? Pick a scene type, add a real-world place, or attach a reference image."
           presets={SETTINGS}
           selectedId={settingId}
           onSelect={setSettingId}
-          searchPlaceholder="Search scenes… (try 'rooftop' or 'cafe')"
-          customLabel="Custom scene"
+          searchPlaceholder="Search locations… (try 'rooftop' or 'cafe')"
+          customLabel="Custom location"
           categories={[
             { id: "realistic", label: "Real", tooltip: "Real-world settings — bedrooms, kitchens, streets" },
             { id: "unrealistic", label: "Stylized", tooltip: "Stylized scenes — surreal, dramatic, cinematic" },

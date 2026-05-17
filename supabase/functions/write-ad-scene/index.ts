@@ -24,11 +24,11 @@ function isRateLimited(ip: string): boolean {
   return bucket.count > RATE_MAX;
 }
 
-const SYSTEM_PROMPT = `You are a video ad director. Given a Format, Hook, Setting and optional product/avatar/location context, write a single ready-to-shoot scene description for a 5-second 9:16 social video ad.
+const SYSTEM_PROMPT = `You are a video ad director. Given a Format, Location and optional product/avatar context, write a single ready-to-shoot scene description for a 5-second 9:16 social video ad.
 
 Rules:
 - 2 to 4 sentences, present tense, plain prose. No lists, no headings, no emojis.
-- Beat-by-beat: open on the Hook beat, deliver the Format style in the Setting, end on a confident product hero frame.
+- Beat-by-beat: open with a strong attention grabber, deliver the Format style in the Location, end on a confident product hero frame.
 - If a product is given, name it explicitly. If an avatar/character is given, refer to them by their name and treat them as the on-camera person.
 - Don't write marketing taglines. Write what the camera sees and what the person does.
 - Stay under 90 words. Output only the scene text — no preamble, no quotes.`;
@@ -36,7 +36,6 @@ Rules:
 type Brief = {
   subject?: "product" | "app";
   format?: { label?: string; fragment?: string; custom?: string };
-  hook?: { label?: string; fragment?: string };
   setting?: { label?: string; fragment?: string; custom?: string };
   brand?: { name?: string; description?: string; tagline?: string; audience?: string } | null;
   character?: { name?: string; role?: string; description?: string } | null;
@@ -49,9 +48,7 @@ function buildUserContent(b: Brief): string {
   if (b.format?.label || b.format?.custom) {
     lines.push(`Format: ${b.format.label || "Custom"} — ${b.format.fragment || b.format.custom || ""}`);
   }
-  if (b.hook?.label) {
-    lines.push(`Hook: ${b.hook.label} — ${b.hook.fragment || ""}`);
-  }
+  
   if (b.setting?.label || b.setting?.custom) {
     lines.push(`Setting: ${b.setting.label || "Custom"} — ${b.setting.fragment || b.setting.custom || ""}`);
   }
@@ -106,10 +103,9 @@ Deno.serve(async (req) => {
       });
     }
     const hasFormat = !!(body.format?.label || body.format?.custom);
-    const hasHook = !!body.hook?.label;
-    const hasSetting = !!(body.setting?.label || body.setting?.custom);
-    if (!hasFormat || !hasHook || !hasSetting) {
-      return new Response(JSON.stringify({ error: "format, hook and setting are required" }), {
+    const hasSetting = !!(body.setting?.label || body.setting?.custom || body.location?.place || body.location?.hasImage);
+    if (!hasFormat || !hasSetting) {
+      return new Response(JSON.stringify({ error: "format and location are required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
