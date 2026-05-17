@@ -163,7 +163,8 @@ function buildFalPayload(provider: string, prompt: string, opts: VideoOptions = 
       set("resolution", opts.resolution);
       if (opts.audio !== undefined) set("generate_audio", opts.audio);
       if (provider.endsWith("-ref") && referenceImages.length > 0) {
-        set("reference_image_urls", referenceImages);
+        // Seedance image-to-video endpoints take a single starting frame.
+        set("image_url", referenceImages[0]);
       }
       break;
     case "hailuo":
