@@ -123,7 +123,6 @@ export default function MarketingStudio() {
   const [master, setMaster] = useState("");
   const [formatId, setFormatId] = useState<string | undefined>();
   const [customFormat, setCustomFormat] = useState<string>("");
-  const [hookId, setHookId] = useState<string | undefined>();
   const [settingId, setSettingId] = useState<string | undefined>();
   const [customSetting, setCustomSetting] = useState<string>("");
   const [location, setLocation] = useState<LocationInput>(EMPTY_LOCATION);
