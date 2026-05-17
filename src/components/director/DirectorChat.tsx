@@ -905,9 +905,9 @@ function DirectorChatInner() {
   }
 
   return (
-    <div className="flex flex-col gap-3 h-[calc(100vh-120px)]">
+    <div className="flex flex-col gap-2 h-[calc(100vh-120px)]">
       {/* Presence header */}
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex items-center justify-between gap-3 max-w-3xl mx-auto w-full">
         <div className="flex items-center gap-2.5 min-w-0">
           <AssistantAvatar size="sm" state={avatarState} />
           <div className="min-w-0">
