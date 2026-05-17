@@ -28,6 +28,12 @@ type CategoryDef = {
 // Order = priority when multiple categories match (first wins for `category`/`example`).
 const CATEGORIES: CategoryDef[] = [
   {
+    category: "aspect_ratio",
+    re: /(aspect ratio|aspect-ratio|\b16:9\b|\b9:16\b|\b1:1\b|\b4:5\b|\b21:9\b|landscape or (vertical|portrait)|vertical or (landscape|horizontal))/i,
+    example: "e.g. 9:16 vertical",
+    chips: ["16:9 landscape", "9:16 vertical", "1:1 square", "4:5 portrait", "21:9 cinematic"],
+  },
+  {
     category: "subject",
     re: /(subject|who['’]?s|who is|main character|protagonist|what is in|what['’]?s in|focus of)/i,
     example: "e.g. lone astronaut on a dune",
