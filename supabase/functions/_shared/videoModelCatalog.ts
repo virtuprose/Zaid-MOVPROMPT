@@ -29,7 +29,8 @@ export type ModelStrength =
   | "long_take"
   | "film_grain"
   | "text_in_frame"
-  | "dialogue";
+  | "dialogue"
+  | "reference";
 
 export type ResolutionTier = "480p" | "720p" | "768p" | "1080p";
 export type SpeedTier = "fast" | "balanced" | "slow";
