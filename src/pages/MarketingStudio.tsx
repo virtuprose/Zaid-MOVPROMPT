@@ -187,21 +187,22 @@ export default function MarketingStudio() {
   if (!loading && !user) return null;
 
   const format = find(FORMATS, formatId);
-  const hook = find(HOOKS, hookId);
   const setting = find(SETTINGS, settingId);
 
   const hasInputs =
     master.trim().length > 0 ||
     !!formatId ||
     !!customFormat.trim() ||
-    !!hookId ||
     !!settingId ||
     !!customSetting.trim() ||
     !!brandKit?.name ||
     !!characterKit?.name ||
     !!location.place ||
     !!location.imagePath;
-  const ready = !!((formatId || customFormat.trim()) && hookId && (settingId || customSetting.trim()));
+  const ready = !!(
+    (formatId || customFormat.trim()) &&
+    (settingId || customSetting.trim() || location.place || location.imagePath)
+  );
 
   // Auto-write the describe box from the current Format/Hook/Setting + brand/avatar/location.
   // Re-runs on every trio change. Aborts in-flight requests when picks change again.
