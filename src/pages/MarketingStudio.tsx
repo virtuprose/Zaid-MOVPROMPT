@@ -1204,18 +1204,34 @@ function UserAdCard({
     e.stopPropagation();
     fn?.();
   };
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const playVideo = () => {
+    videoRef.current?.play().catch(() => {});
+  };
+  const pauseVideo = () => {
+    const v = videoRef.current;
+    if (v) {
+      v.pause();
+      v.currentTime = 0;
+    }
+  };
   return (
     <article
       onClick={onClick}
+      onMouseEnter={playVideo}
+      onMouseLeave={pauseVideo}
+      onFocus={playVideo}
+      onBlur={pauseVideo}
       className="group relative overflow-hidden rounded-2xl border border-border/40 bg-muted/10 cursor-pointer transition-all hover:border-[hsl(35_90%_55%)]/60 hover:shadow-[0_0_24px_hsl(35_90%_55%/0.25)]"
     >
       <div className="aspect-[3/4] overflow-hidden">
         <video
+          ref={videoRef}
           src={ad.video_url}
-          autoPlay
           muted
           loop
           playsInline
+          preload="metadata"
           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
         />
       </div>
