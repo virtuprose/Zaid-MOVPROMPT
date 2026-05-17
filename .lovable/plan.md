@@ -1,35 +1,72 @@
-# Fix the fresh Seedance reference-render failure
+# Wire Seedance 2.0 (multi-reference) into our pipeline
 
-## Problem
+You were right — I missed the right endpoint. Seedance 2.0 ships **two** variants on FAL:
 
-The message is still appearing because a brand/avatar render is creating a brand-new `seedance-2.0-ref` job that fails on the provider side. This is not the old refresh toast loop anymore.
+| Endpoint | Inputs | Use case |
+|---|---|---|
+| `bytedance/seedance-2.0/image-to-video` | 1 starting image (+ optional end image) | Animate one still |
+| `bytedance/seedance-2.0/reference-to-video` | **up to 9 images + 3 videos + 3 audio (12 total)** | Multi-reference identity lock |
 
-## What to change
+The reference-to-video one is what your "12 reference files" matches. It supports native audio, 4–15s, 480p/720p/1080p, all the aspect ratios we already use (9:16 / 16:9 / 1:1 / etc.), and pricing is the same $0.30 / sec at 720p (drops to $0.18 if video refs are attached). References are addressed inline as `@Image1`, `@Image2`, `@Video1`, etc. in the prompt.
 
-1. **Stop using the broken provider id for new reference renders**
-   - In `src/pages/MarketingStudio.tsx`, change the provider selected when reference images exist from `seedance-2.0-ref` to `seedance-v1-pro-ref`.
-   - Keep the no-reference path on `seedance-v1-pro`.
+This means we can drop Kling Omni and standardize on Seedance 2.0 for everything — same provider, lower complexity, native audio across the board, and proper identity lock.
 
-2. **Add a backend safety alias**
-   - In `supabase/functions/generate-video/index.ts`, keep support for old saved `seedance-2.0-ref` jobs by mapping that legacy provider id to the working `fal-ai/bytedance/seedance/v1/pro/image-to-video` endpoint.
-   - Add a short comment explaining that the Seedance 2.0 reference endpoint does not exist on fal, so legacy ids are intentionally routed to the v1 Pro image-to-video endpoint.
+## What changes
 
-3. **Verify the failing path is gone**
-   - Deploy the updated `generate-video` function.
-   - Confirm that there are no remaining active jobs using the broken provider path.
-   - Check the latest network or edge-function activity after the change to ensure new reference renders use `seedance-v1-pro-ref`.
+**1. `supabase/functions/generate-video/index.ts` — endpoint mapping**
 
-## Expected result
+Replace the broken Seedance 2.0 aliases with the real endpoints (no `fal-ai/` prefix — FAL serves these under bare `bytedance/...`):
 
-- Refresh should no longer surface this message from new marketing renders.
-- New ads generated with brand/avatar/location references should use the working reference-video model.
-- Older failed rows can remain in history, but they should not keep breaking new renders.
+- `seedance-2.0` → `bytedance/seedance-2.0/image-to-video` (single image, optional end frame)
+- `seedance-2.0-ref` → `bytedance/seedance-2.0/reference-to-video` (multi-ref, up to 12 files)
+- Keep `seedance-v1-pro` as the text-only fallback.
+- Keep `kling-omni-ref` mapping for in-flight jobs (graceful), but stop routing new jobs there.
 
-## Technical details
+Confirm our queue caller handles a bare `bytedance/...` path the same way it handles `fal-ai/...` paths. Normalize in one place if not.
 
-- Confirmed from fal docs/openapi:
-  - `fal-ai/bytedance/seedance/v1/pro/image-to-video` exists
-  - `fal-ai/bytedance/seedance-2.0/image-to-video` returns 404
-- Files involved:
-  - `src/pages/MarketingStudio.tsx`
-  - `supabase/functions/generate-video/index.ts`
+**2. `supabase/functions/generate-video/index.ts` — `buildFalPayload`**
+
+Extend the `seedance` branch:
+
+- For `seedance-2.0-ref`: send `image_urls: referenceImages.slice(0, 9)` (array, NOT `image_url`). Optionally `video_urls` and `audio_urls` if we ever start collecting those.
+- For `seedance-2.0` (image-to-video): keep `image_url = referenceImages[0]`, optional `end_image_url = referenceImages[1]`.
+- Map our `duration` (number) → Seedance enum string ("4"–"15" or "auto"), clamping into range.
+- Pass `resolution`, `aspect_ratio`, `generate_audio`.
+
+**3. `src/pages/MarketingStudio.tsx` — provider routing**
+
+```
+refs = 0   → seedance-v1-pro              (text-only, fast)
+refs = 1   → seedance-2.0  (image-to-video)
+refs ≥ 2   → seedance-2.0-ref (reference-to-video, all refs passed)
+```
+
+Pass all up to 9 brand+character+location refs to the function.
+
+**4. Prompt composition — `src/lib/marketingStudio.ts`**
+
+Reference-to-video relies on `@Image1`, `@Image2`, ... tags inside the prompt to bind each ref to a subject. Update `composeStudioPrompt` so when refs exist:
+- Brand line mentions `@Image1` for the logo/product.
+- Character line mentions `@Image2` for the avatar.
+- Location line mentions `@Image3` for the place.
+- Order must match the order we pass to `image_urls`.
+
+This is what actually makes the identity lock work — without `@ImageN` tags Seedance treats the refs as loose style hints.
+
+**5. Verify**
+
+- Deploy `generate-video`.
+- Curl with prompt + 3 refs (brand + character + location) → confirm FAL request body contains `image_urls: [3 urls]` and resulting clip preserves all three.
+- Curl with prompt + 1 ref → confirm it routes to `image-to-video` with `image_url`.
+- Curl with prompt only → confirm v1 Pro text-to-video still works.
+- Watch a fresh render in the UI end-to-end.
+
+## Trade-offs
+
+- Cheaper than Kling Omni at the same quality tier and with up to 12 inputs vs Kling's 7.
+- Same native audio support, same aspect ratios.
+- Only catch: the `@ImageN` prompt tags must line up with the order of `image_urls` — that's a prompt-composition discipline thing, handled in step 4.
+
+## Out of scope
+
+UI layout, Director chat, DB schema. No new secrets — `FAL_KEY` covers it.
