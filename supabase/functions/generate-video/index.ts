@@ -42,9 +42,9 @@ const FAL_MODELS: Record<string, string> = {
   // saved jobs still resolve, but the UI no longer exposes them.
   "seedance-2.0": "fal-ai/bytedance/seedance/v1/pro/text-to-video",
   "seedance-2.0-fast": "fal-ai/bytedance/seedance/v1/pro/text-to-video",
-  "seedance-2.0-ref": "bytedance/seedance-2.0/reference-to-video",
+  "seedance-2.0-ref": "fal-ai/bytedance/seedance-2.0/image-to-video",
   "seedance-v1-pro": "fal-ai/bytedance/seedance/v1/pro/text-to-video",
-  "seedance-v1-pro-ref": "bytedance/seedance-2.0/reference-to-video",
+  "seedance-v1-pro-ref": "fal-ai/bytedance/seedance/v1/pro/image-to-video",
   "seedance-v1-lite": "fal-ai/bytedance/seedance/v1/lite/text-to-video",
   // Hailuo / MiniMax
   "hailuo-02-pro": "fal-ai/minimax/hailuo-02/pro/text-to-video",
