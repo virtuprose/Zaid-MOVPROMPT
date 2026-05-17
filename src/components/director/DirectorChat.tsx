@@ -701,6 +701,11 @@ function DirectorChatInner() {
                 }
                 return false;
               })();
+              const hasReferenceImage =
+                attachments.length > 0 ||
+                bubbles.some(
+                  (x) => x.role === "user" && Array.isArray(x.attachments) && x.attachments.length > 0,
+                );
               return (
                 <div key={i} className="motion-safe:animate-fade-up">
                   <ModelChoiceCard
@@ -708,6 +713,7 @@ function DirectorChatInner() {
                     alternatives={b.alternatives}
                     reason={b.reason}
                     disabled={!isLatest || busy || !!b.chosen}
+                    hasReferenceImage={hasReferenceImage}
                     onConfirm={(modelId) => {
                       setBubbles((prev) => {
                         const copy = [...prev];
