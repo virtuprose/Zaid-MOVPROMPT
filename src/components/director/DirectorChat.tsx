@@ -84,6 +84,7 @@ function DirectorChatInner() {
   const [resetOpen, setResetOpen] = useState(false);
   const sessionIdRef = useRef<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const lastSendRef = useRef<{ text: string; attachments: Attachment[] } | null>(null);
 
   const getLatestGeneratedPrompt = () => {
     for (let i = bubbles.length - 1; i >= 0; i -= 1) {
