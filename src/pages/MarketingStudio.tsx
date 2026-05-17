@@ -542,7 +542,6 @@ export default function MarketingStudio() {
             <div className="flex sm:flex-col gap-1.5 shrink-0">
               {([
                 { id: "product", label: "Product", icon: Package },
-                { id: "app", label: "App", icon: AppWindow },
               ] as const).map(({ id, label, icon: Icon }) => {
                 const active = subject === id;
                 return (
