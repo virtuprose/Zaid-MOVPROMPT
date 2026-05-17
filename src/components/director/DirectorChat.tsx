@@ -936,7 +936,7 @@ function DirectorChatInner() {
 
       <div
         ref={scrollRef}
-        className="relative flex-1 overflow-y-auto border-[hsl(240_5%_13%)] bg-[hsl(240_8%_5.5%)] p-3 sm:p-4 border-0 rounded-none"
+        className="relative flex-1 overflow-y-auto border-[hsl(240_5%_13%)] p-3 sm:p-4 border-0 rounded-none"
       >
         {isEmpty && (
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center">

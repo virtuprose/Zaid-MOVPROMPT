@@ -1,10 +1,6 @@
-## Remove the "Model recommendation" section from the prompt result card
+## Remove the chat panel background
 
-Based on our last exchange, you want the Model recommendation block gone from generated prompt cards.
+The selected panel (line 937) has a dark fill `bg-[hsl(240_8%_5.5%)]`. I'll drop that class so the panel becomes transparent and shows the page background through it.
 
-### Change (`src/components/director/PromptResultCard.tsx`)
-- Remove the two `<Section label="Model recommendation" body={recommendation} />` renders (lines 408 and 548).
-- Remove line 204 that appends `## Model recommendation` to the "Copy all" text.
-- Leave the data fields (`recommended_model_id`, `recommendation_reason`) intact — they still drive routing internally; we just stop showing them to the user.
-
-No other UI changes. The model badge / picker stays where it is.
+### Change (`src/components/director/DirectorChat.tsx`, line 939)
+- Remove `bg-[hsl(240_8%_5.5%)]` from the className. Keep layout/spacing/border-reset classes intact.
