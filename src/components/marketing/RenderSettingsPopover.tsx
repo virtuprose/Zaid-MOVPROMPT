@@ -112,18 +112,20 @@ export function RenderSettingsPopover({
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <button
-          type="button"
-          aria-label="Render settings"
-          className={cn(
-            "w-9 h-9 rounded-full border flex items-center justify-center bg-secondary/40 transition-colors",
-            customized
-              ? "border-[#F5A524]/50 text-[#F5A524] hover:border-[#F5A524]"
-              : "border-border/60 text-muted-foreground hover:text-foreground hover:border-border",
-          )}
-        >
-          <Sliders className="w-4 h-4" />
-        </button>
+        {trigger ?? (
+          <button
+            type="button"
+            aria-label="Render settings"
+            className={cn(
+              "w-9 h-9 rounded-full border flex items-center justify-center bg-secondary/40 transition-colors",
+              customized
+                ? "border-[#F5A524]/50 text-[#F5A524] hover:border-[#F5A524]"
+                : "border-border/60 text-muted-foreground hover:text-foreground hover:border-border",
+            )}
+          >
+            <Sliders className="w-4 h-4" />
+          </button>
+        )}
       </PopoverTrigger>
       <PopoverContent
         align="start"
