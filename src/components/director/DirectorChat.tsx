@@ -448,10 +448,14 @@ function DirectorChatInner() {
   };
 
   const startFresh = (save: boolean) => {
+    const uid = user?.id ?? null;
     if (!save && sessionIdRef.current) {
       void supabase.from("director_sessions").delete().eq("id", sessionIdRef.current);
+      localState.clear(uid, sessionIdRef.current);
     }
+    localState.clear(uid, "new");
     sessionIdRef.current = null;
+    hydratedRef.current = null;
     setBubbles([{ role: "assistant", content: "Fresh brief. What are we directing?" }]);
     setAttachments([]);
     setInput("");
