@@ -54,6 +54,7 @@ type Props = {
   directorsNote?: string;
   onRefine?: () => void;
   sessionId?: string | null;
+  hasReferenceImage?: boolean;
 };
 
 const EXTERNAL_LINKS: Record<string, { label: string; url: string }> = {
