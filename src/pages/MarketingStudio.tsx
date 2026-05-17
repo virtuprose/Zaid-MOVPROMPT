@@ -905,7 +905,7 @@ export default function MarketingStudio() {
           categories={[
             { id: "ugc", label: "UGC", tooltip: "Casual social-media formats" },
             { id: "commercial", label: "Commercial", tooltip: "Polished brand formats" },
-            { id: "avatar", label: "Avatar", tooltip: "Avatar-led formats" },
+            
             { id: "animated", label: "Animated", tooltip: "Motion-graphic formats" },
           ]}
         />
