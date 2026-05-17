@@ -33,6 +33,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { trackPageVisit } from "@/lib/analytics";
 import { DirectorChat } from "@/components/director/DirectorChat";
 import { DirectorErrorBoundary } from "@/components/director/DirectorErrorBoundary";
+import { SendDebugReportButton } from "@/components/SendDebugReportButton";
 import { TopNav } from "@/components/TopNav";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
