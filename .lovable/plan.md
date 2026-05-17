@@ -1,21 +1,22 @@
-## Tighten Ads Studio (`/marketing`) — alignment & spacing
+## Tighten MovPrompt home page — spacing & example sizing
 
-Looking at the page, the composer is centered at `max-w-4xl` inside a `max-w-7xl` container, but the recent-ads gallery stretches edge-to-edge. The hero also has too much vertical breathing room and is huge.
+Two main issues on `/`:
+- The 3 example tiles are `aspect-square` × full-width 720px column → ~230×230 each, dominating the viewport.
+- Vertical rhythm stacks `space-y-5` (leftPanel) + `space-y-6` (header group) + `space-y-3` (examples) + `pt-2` (upload), leaving a lot of empty whitespace between sections.
 
-### Changes (`src/pages/MarketingStudio.tsx`)
+### Changes
 
-1. **Hero** (line 548–555)
-   - `mb-6` → `mb-5`
-   - Headline `text-[32px] sm:text-[44px]` → `text-[28px] sm:text-[36px]` so it stops dominating the viewport.
+1. **`src/components/OnboardingExamples.tsx`**
+   - Tile aspect `aspect-square` → `aspect-[4/3]` (shorter, more landscape-cinematic).
+   - Outer `space-y-3` → `space-y-2`.
+   - Helper text `text-xs` → `text-[11px]` so it stops competing with the workflow heading.
 
-2. **Composer width** (line 559)
-   - `max-w-4xl mx-auto` → `max-w-5xl mx-auto` (gives the two-column selectors room and aligns with gallery below).
+2. **`src/components/WorkflowPanel.tsx`** (leftPanel, line 1206–1223)
+   - Outer `space-y-5` → `space-y-4`.
+   - Inner header group `space-y-6` → `space-y-4`.
+   - `<div className="pt-2">` wrapping `uploadBlock` → drop the `pt-2` (the outer spacing already handles it).
 
-3. **Gallery alignment** (line 770)
-   - Wrap the `<section ref={galleryRef} …>` content in a `max-w-5xl mx-auto` container so the "Your recent ads" grid and the section header line up with the composer instead of stretching to 7xl.
-   - `mt-10` → `mt-8`.
+3. **`src/pages/Index.tsx`** (line 45)
+   - `py-3 sm:py-4` stays; nothing to change at the page container — it already has the right padding.
 
-4. **Recent ads grid columns** (lines 797, 843)
-   - At `max-w-5xl` (~1024px), `xl:grid-cols-4` still works; leaving columns unchanged. Cards will simply line up under the composer.
-
-No content / behavior changes. Sideways video thumbnails in the screenshot come from the source video metadata, not from layout — out of scope here.
+Result: examples shrink to ~230×173 (much calmer), and total page height drops by ~40-60px so the dropzone and CTA sit closer to the fold.
