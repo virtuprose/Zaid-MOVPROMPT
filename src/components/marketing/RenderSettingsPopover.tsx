@@ -95,11 +95,9 @@ function Pill({
 export function RenderSettingsPopover({
   value,
   onChange,
-  trigger,
 }: {
   value: RenderSettings;
   onChange: (v: RenderSettings) => void;
-  trigger?: React.ReactNode;
 }) {
   const [section, setSection] = useState<Section>("duration");
   const customized =
@@ -112,20 +110,18 @@ export function RenderSettingsPopover({
   return (
     <Popover>
       <PopoverTrigger asChild>
-        {trigger ?? (
-          <button
-            type="button"
-            aria-label="Render settings"
-            className={cn(
-              "w-9 h-9 rounded-full border flex items-center justify-center bg-secondary/40 transition-colors",
-              customized
-                ? "border-[#F5A524]/50 text-[#F5A524] hover:border-[#F5A524]"
-                : "border-border/60 text-muted-foreground hover:text-foreground hover:border-border",
-            )}
-          >
-            <Sliders className="w-4 h-4" />
-          </button>
-        )}
+        <button
+          type="button"
+          aria-label="Render settings"
+          className={cn(
+            "w-9 h-9 rounded-full border flex items-center justify-center bg-secondary/40 transition-colors",
+            customized
+              ? "border-[#F5A524]/50 text-[#F5A524] hover:border-[#F5A524]"
+              : "border-border/60 text-muted-foreground hover:text-foreground hover:border-border",
+          )}
+        >
+          <Sliders className="w-4 h-4" />
+        </button>
       </PopoverTrigger>
       <PopoverContent
         align="start"
