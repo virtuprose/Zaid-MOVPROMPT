@@ -182,6 +182,7 @@ function DirectorChatInner() {
           .single();
         if (error) throw error;
         sessionIdRef.current = data.id;
+        localState.migrate(user.id, "new", data.id);
         navigate(`/director/${data.id}`, { replace: true });
       } else {
         await supabase
