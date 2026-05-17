@@ -9,7 +9,8 @@ export type SuggestionCategory =
   | "time"
   | "color"
   | "pacing"
-  | "audio_style";
+  | "audio_style"
+  | "aspect_ratio";
 
 export type Suggestion = {
   category: SuggestionCategory;
