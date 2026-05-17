@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import { Composer } from "./Composer";
 import { PromptResultCard } from "./PromptResultCard";
 import { ModelChoiceCard } from "./ModelChoiceCard";
+import { SessionHealthPanel } from "./SessionHealthPanel";
 import {
   streamDirectorAgent,
   submitVideoJob,
@@ -700,6 +701,12 @@ function DirectorChatInner() {
         </div>
         <div className="text-[11px] text-muted-foreground/70 hidden sm:block">{subhead}</div>
       </div>
+
+      <SessionHealthPanel
+        bubbles={bubbles as any}
+        currentAttachmentCount={attachments.length}
+        className="mb-2"
+      />
 
       <div
         ref={scrollRef}
