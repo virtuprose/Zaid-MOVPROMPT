@@ -555,7 +555,7 @@ export default function MarketingStudio() {
           {/* Composer with sidebar */}
           <div className="flex flex-col sm:flex-row gap-3 items-stretch">
             {/* Subject sidebar */}
-            <div className="flex sm:flex-col gap-1.5 shrink-0">
+            <div className="flex sm:flex-col gap-1.5 shrink-0 sm:justify-center sm:self-stretch">
               {([
                 { id: "product", label: "Product", icon: Package },
               ] as const).map(({ id, label, icon: Icon }) => {
