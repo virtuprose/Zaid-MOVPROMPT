@@ -84,7 +84,7 @@ export function ModelChoiceCard({
                 {group.label}
               </div>
               <div className="flex flex-wrap gap-1.5">
-                {group.models.map((m) => (
+                {group.models.filter(allowModel).map((m) => (
                   <ModelChip
                     key={m.id}
                     model={m}
