@@ -164,6 +164,7 @@ export default function MarketingStudio() {
           .select("id,video_url,created_at,liked,prompt")
           .eq("user_id", user.id)
           .is("deleted_at", null)
+          .is("session_id", null)
           .not("video_url", "is", null)
           .order("created_at", { ascending: false })
           .limit(100),
@@ -172,6 +173,7 @@ export default function MarketingStudio() {
           .select("id,status,provider,prompt,created_at")
           .eq("user_id", user.id)
           .is("deleted_at", null)
+          .is("session_id", null)
           .in("status", ["queued", "processing"])
           .gte("created_at", since)
           .order("created_at", { ascending: false }),

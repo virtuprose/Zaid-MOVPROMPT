@@ -23,9 +23,11 @@ import { SessionHealthPanel } from "./SessionHealthPanel";
 import {
   streamDirectorAgent,
   submitVideoJob,
+  pollVideoJob,
   type DirectorMsg,
   type AgentResponse,
 } from "@/lib/director/api";
+import { VideoBubble } from "./VideoBubble";
 import type { Attachment } from "@/lib/director/ingest";
 import * as localState from "@/lib/director/localState";
 import { supabase } from "@/integrations/supabase/client";
@@ -47,7 +49,8 @@ type Bubble =
   | { role: "result"; data: Extract<AgentResponse, { kind: "generate_prompt" }>; partial?: boolean }
   | { role: "questions"; questions: string[]; reason: string }
   | { role: "model_choice"; recommended_model_id: string; alternatives?: string[]; reason: string; chosen?: string }
-  | { role: "error"; message: string; detail?: string; retryable: boolean };
+  | { role: "error"; message: string; detail?: string; retryable: boolean }
+  | { role: "video"; data: import("./VideoBubble").VideoBubbleData };
 
 const WELCOME: Bubble = {
   role: "assistant",
@@ -140,8 +143,82 @@ function DirectorChatInner() {
       const loaded = (data.messages as Bubble[]) || [WELCOME];
       const remote = loaded.length ? loaded : [WELCOME];
       setBubbles((prev) => (remote.length >= prev.length ? remote : prev));
+
+      // Also merge any video_jobs for this session that aren't already represented.
+      const { data: jobs } = await supabase
+        .from("video_jobs")
+        .select("id,prompt,provider,status,video_url,error,liked,created_at")
+        .eq("session_id", routeSessionId)
+        .is("deleted_at", null)
+        .order("created_at", { ascending: true });
+      if (jobs && jobs.length) {
+        setBubbles((prev) => {
+          const existingIds = new Set(
+            prev.flatMap((b) => (b.role === "video" ? [b.data.jobId] : [])),
+          );
+          const fresh = jobs
+            .filter((j: any) => !existingIds.has(j.id))
+            .map<Bubble>((j: any) => ({
+              role: "video",
+              data: {
+                jobId: j.id,
+                prompt: j.prompt,
+                provider: j.provider,
+                status: j.status,
+                videoUrl: j.video_url || undefined,
+                error: j.error || undefined,
+                liked: !!j.liked,
+              },
+            }));
+          return fresh.length ? [...prev, ...fresh] : prev;
+        });
+      }
     })();
   }, [routeSessionId, user, navigate]);
+
+  // Poll any in-flight video bubbles until completed/failed.
+  useEffect(() => {
+    const pending = bubbles
+      .map((b, i) => ({ b, i }))
+      .filter(({ b }) => b.role === "video" && (b.data.status === "queued" || b.data.status === "processing"));
+    if (pending.length === 0) return;
+    let cancelled = false;
+    const tick = async () => {
+      for (const { b } of pending) {
+        if (cancelled || b.role !== "video") continue;
+        try {
+          const job = await pollVideoJob(b.data.jobId);
+          if (cancelled) return;
+          setBubbles((prev) => {
+            const copy = [...prev];
+            for (let k = 0; k < copy.length; k++) {
+              const cur = copy[k];
+              if (cur.role === "video" && cur.data.jobId === job.id) {
+                copy[k] = {
+                  role: "video",
+                  data: {
+                    ...cur.data,
+                    status: (job.status as any) || cur.data.status,
+                    videoUrl: job.video_url || cur.data.videoUrl,
+                    error: job.error || cur.data.error,
+                  },
+                };
+              }
+            }
+            return copy;
+          });
+        } catch {
+          /* ignore — retry next tick */
+        }
+      }
+    };
+    const handle = window.setInterval(tick, 4000);
+    void tick();
+    return () => {
+      cancelled = true;
+      window.clearInterval(handle);
+    };
+  }, [bubbles]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
@@ -398,14 +475,29 @@ function DirectorChatInner() {
             .map((_, i) => `@Image${i + 1} = ${slotLabels[referenceImageSlots[i]] || `reference ${i + 1}`}`)
             .join("\n");
           const resolvedPrompt = tagLines ? `${tagLines}\n\n${basePrompt}` : basePrompt;
-          await submitVideoJob(
+          const job = await submitVideoJob(
             resolvedPrompt,
             provider,
             sessionIdRef.current,
             undefined,
             referenceImageUrls.length > 0 ? referenceImageUrls : undefined,
           );
-          toast.success("Render started — check your Library when it finishes.");
+          const videoBubble: Bubble = {
+            role: "video",
+            data: {
+              jobId: job.id,
+              prompt: resolvedPrompt,
+              provider,
+              status: (job.status as any) || "queued",
+              videoUrl: job.video_url || undefined,
+            },
+          };
+          const withVideo: Bubble[] = [...next, added, videoBubble];
+          setBubbles(withVideo);
+          setAttachments([]);
+          void persist(withVideo, finalPrompt, title);
+          toast.success("Rendering — it'll appear here when ready.");
+          return;
         } catch (e: any) {
           toast.error(e?.message || "Could not start render");
         }
@@ -968,6 +1060,22 @@ function DirectorChatInner() {
                       </div>
                     )}
                   </div>
+                </div>
+              );
+            }
+            if (b.role === "video") {
+              return (
+                <div key={i} className="motion-safe:animate-fade-up">
+                  <VideoBubble
+                    data={b.data}
+                    onChange={(next) => {
+                      setBubbles((prev) => {
+                        const copy = [...prev];
+                        copy[i] = { role: "video", data: next };
+                        return copy;
+                      });
+                    }}
+                  />
                 </div>
               );
             }
