@@ -42,7 +42,9 @@ const FAL_MODELS: Record<string, string> = {
   // saved jobs still resolve, but the UI no longer exposes them.
   "seedance-2.0": "fal-ai/bytedance/seedance/v1/pro/text-to-video",
   "seedance-2.0-fast": "fal-ai/bytedance/seedance/v1/pro/text-to-video",
-  "seedance-2.0-ref": "fal-ai/bytedance/seedance-2.0/image-to-video",
+  // Seedance 2.0 has no reference/image-to-video endpoint on fal — route legacy
+  // saved jobs to the working v1 Pro image-to-video endpoint so they don't 404.
+  "seedance-2.0-ref": "fal-ai/bytedance/seedance/v1/pro/image-to-video",
   "seedance-v1-pro": "fal-ai/bytedance/seedance/v1/pro/text-to-video",
   "seedance-v1-pro-ref": "fal-ai/bytedance/seedance/v1/pro/image-to-video",
   "seedance-v1-lite": "fal-ai/bytedance/seedance/v1/lite/text-to-video",
