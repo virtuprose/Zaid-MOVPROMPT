@@ -23,9 +23,11 @@ import { SessionHealthPanel } from "./SessionHealthPanel";
 import {
   streamDirectorAgent,
   submitVideoJob,
+  pollVideoJob,
   type DirectorMsg,
   type AgentResponse,
 } from "@/lib/director/api";
+import { VideoBubble } from "./VideoBubble";
 import type { Attachment } from "@/lib/director/ingest";
 import * as localState from "@/lib/director/localState";
 import { supabase } from "@/integrations/supabase/client";
