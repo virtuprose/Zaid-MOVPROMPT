@@ -1,14 +1,17 @@
-# Pause "Your recent ads" until hover
+# Close the empty gap in the composer row
 
-In `src/pages/MarketingStudio.tsx`, the `UserAdCard` video (around lines 1212–1221) currently `autoPlay`s. Change it so each video sits paused on its first frame and only plays while the mouse is over the card.
+The composer card is full container width, so the chip group on the left and the Generate button pushed to the right (`ml-auto`) leave a large dead zone in the middle on desktop.
 
-## What changes
+## Fix
 
-`UserAdCard` only:
+In `src/pages/MarketingStudio.tsx`:
 
-- Add `const videoRef = useRef<HTMLVideoElement>(null)`.
-- Remove `autoPlay`; keep `muted loop playsInline`; add `preload="metadata"` so the first frame renders as a still poster.
-- On the wrapping `<article>`, add `onMouseEnter` → `videoRef.current?.play().catch(() => {})` and `onMouseLeave` → pause + reset `currentTime = 0`.
-- Also wire `onFocus`/`onBlur` to the same handlers for keyboard users.
+1. Constrain the composer row width. Change the wrapper at line 557 from
+   `flex flex-col sm:flex-row gap-2 sm:gap-3 items-stretch`
+   to add `max-w-4xl mx-auto w-full` so the whole sidebar + composer block centers and never stretches past ~896px on wide screens.
 
-No changes to data, the lightbox, pending cards, or community grid.
+2. Keep Generate as the trailing action (`ml-auto`) — with the narrower card, the gap between the settings icon and Generate becomes a comfortable breathing space instead of a void.
+
+3. Same treatment for the "Renders as" summary line below — it inherits the new width automatically.
+
+No changes to the gallery grid below, no behavior changes.

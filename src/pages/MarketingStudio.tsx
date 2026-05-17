@@ -554,7 +554,7 @@ export default function MarketingStudio() {
           </div>
 
           {/* Composer with sidebar */}
-          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 items-stretch">
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 items-stretch max-w-4xl mx-auto w-full">
             {/* Subject sidebar */}
             <div className="flex sm:flex-col gap-1.5 shrink-0 sm:justify-center sm:self-stretch">
               {([
