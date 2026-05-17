@@ -268,7 +268,6 @@ export default function MarketingStudio() {
   }, [
     formatId,
     customFormat,
-    hookId,
     settingId,
     customSetting,
     brandKit?.id,
