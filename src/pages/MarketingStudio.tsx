@@ -581,8 +581,8 @@ export default function MarketingStudio() {
             </div>
 
           {/* Composer card */}
-          <div ref={composerRef} className="flex-1 min-w-0 rounded-3xl border border-border/60 bg-[hsl(240_5%_8%)]/70 backdrop-blur p-4 sm:p-5 scroll-mt-20">
-            <div className="flex flex-wrap items-center gap-2 mb-3">
+          <div ref={composerRef} className="flex-1 min-w-0 rounded-3xl border border-border/60 bg-[hsl(240_5%_8%)]/70 backdrop-blur p-3 sm:p-4 scroll-mt-20">
+            <div className="flex flex-wrap items-center gap-2 mb-2">
               {brandKit ? (
                 <HoverCard openDelay={150} closeDelay={80}>
                   <HoverCardTrigger asChild>
