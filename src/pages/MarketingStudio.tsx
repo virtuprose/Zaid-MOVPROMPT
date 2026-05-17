@@ -36,6 +36,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { TopNav } from "@/components/TopNav";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -139,6 +140,7 @@ export default function MarketingStudio() {
   const [userAds, setUserAds] = useState<UserAd[]>([]);
   const [pendingJobs, setPendingJobs] = useState<VideoJob[]>([]);
   const [deleteAdId, setDeleteAdId] = useState<string | null>(null);
+  const [previewAd, setPreviewAd] = useState<UserAd | null>(null);
   const [cancelJobId, setCancelJobId] = useState<string | null>(null);
   const [showCommunity, setShowCommunity] = useState(false);
   const [flashChips, setFlashChips] = useState(false);
@@ -777,7 +779,7 @@ export default function MarketingStudio() {
                     <UserAdCard
                       key={ad.id}
                       ad={ad}
-                      onClick={() => navigate("/library")}
+                      onClick={() => setPreviewAd(ad)}
                       onDownload={() => handleDownloadAd(ad)}
                       onToggleLike={() => handleToggleLike(ad)}
                       onDelete={() => setDeleteAdId(ad.id)}
@@ -823,7 +825,7 @@ export default function MarketingStudio() {
                       <UserAdCard
                         key={ad.id}
                         ad={ad}
-                        onClick={() => navigate("/library")}
+                        onClick={() => setPreviewAd(ad)}
                         onDownload={() => handleDownloadAd(ad)}
                         onToggleLike={() => handleToggleLike(ad)}
                         onDelete={() => setDeleteAdId(ad.id)}
@@ -942,6 +944,46 @@ export default function MarketingStudio() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        <Dialog open={previewAd !== null} onOpenChange={(o) => !o && setPreviewAd(null)}>
+          <DialogContent className="max-w-[95vw] w-auto p-0 bg-black border-border/40 overflow-hidden">
+            {previewAd && (
+              <div className="flex flex-col">
+                <video
+                  src={previewAd.video_url}
+                  controls
+                  autoPlay
+                  loop
+                  playsInline
+                  className="max-w-[95vw] max-h-[85vh] w-auto h-auto object-contain bg-black"
+                />
+                <div className="flex items-center justify-between gap-3 px-4 py-2.5 bg-black/80 text-white">
+                  <span className="text-xs opacity-70">
+                    {new Date(previewAd.created_at).toLocaleString()}
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => handleToggleLike(previewAd)}
+                      aria-label={previewAd.liked ? "Unlike" : "Like"}
+                      className="h-8 w-8 rounded-full bg-white/10 hover:bg-white/20 grid place-items-center transition"
+                    >
+                      <Heart className="h-4 w-4" fill={previewAd.liked ? "currentColor" : "none"} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDownloadAd(previewAd)}
+                      aria-label="Download"
+                      className="h-8 w-8 rounded-full bg-white/10 hover:bg-white/20 grid place-items-center transition"
+                    >
+                      <Download className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </TooltipProvider>
   );
