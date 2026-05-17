@@ -1,22 +1,14 @@
-# Hover preview for brand & character chips
+# Pause "Your recent ads" until hover
 
-When hovering the Bose / Maya chips in the composer (MarketingStudio), show a floating preview above the chip with the full reference image at its native aspect ratio.
+In `src/pages/MarketingStudio.tsx`, the `UserAdCard` video (around lines 1212–1221) currently `autoPlay`s. Change it so each video sits paused on its first frame and only plays while the mouse is over the card.
 
 ## What changes
 
-`src/pages/MarketingStudio.tsx` — the two chip blocks at lines 586–605 (brand) and 627–646 (character).
+`UserAdCard` only:
 
-Wrap each chip in a `HoverCard` (shadcn, already used in `PresetCard`):
+- Add `const videoRef = useRef<HTMLVideoElement>(null)`.
+- Remove `autoPlay`; keep `muted loop playsInline`; add `preload="metadata"` so the first frame renders as a still poster.
+- On the wrapping `<article>`, add `onMouseEnter` → `videoRef.current?.play().catch(() => {})` and `onMouseLeave` → pause + reset `currentTime = 0`.
+- Also wire `onFocus`/`onBlur` to the same handlers for keyboard users.
 
-- `HoverCardTrigger` — the existing chip div (unchanged styles).
-- `HoverCardContent` — `side="top"`, `align="start"`, `sideOffset={8}`, width ~`w-64`, padded `p-2`, rounded, with:
-  - The full image (`brandKit.logo_url` or `characterKit.reference_url`) rendered with `object-contain`, `max-h-72`, preserving native aspect ratio on a subtle `bg-black/40` backdrop.
-  - A small caption row underneath with the name (`brandKit.name` / `characterKit.name`).
-  - Fallback when there's no image: render the existing icon (`Building2` / `UserRound`) centered in the same frame.
-- `openDelay={150}`, `closeDelay={80}` for snappy but non-jittery feel.
-
-No popover for the empty-state pickers (those already open a real popover on click) — only the populated chips get the hover preview.
-
-## Out of scope
-
-No backend, schema, or behavior changes. Click-to-detach (X) and existing layout stay identical.
+No changes to data, the lightbox, pending cards, or community grid.
