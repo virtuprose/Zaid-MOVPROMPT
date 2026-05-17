@@ -473,7 +473,7 @@ export function PromptResultCard({ title, prompt, breakdown, directorsNote, onRe
                   <DropdownMenuLabel className="text-[11px] uppercase tracking-wider text-muted-foreground">
                     {group.label}
                   </DropdownMenuLabel>
-                  {group.models.map((m) => (
+                  {group.models.filter(allowModel).map((m) => (
                     <DropdownMenuItem key={m.id} onClick={() => openOptionsFor(m.id)}>
                       <span className="truncate">{m.label}</span>
                       {m.note && (
