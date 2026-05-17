@@ -641,26 +641,42 @@ export default function MarketingStudio() {
                 />
               )}
               {characterKit ? (
-                <div className="inline-flex items-center gap-2 h-9 pl-1 pr-1.5 rounded-xl border border-[#F5A524]/40 bg-[#F5A524]/10 text-xs">
-                  <div className="w-7 h-7 rounded-md bg-white/5 overflow-hidden flex items-center justify-center shrink-0">
-                    {characterKit.reference_url ? (
-                      <img src={characterKit.reference_url} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      <UserRound className="w-3.5 h-3.5 text-muted-foreground" />
-                    )}
-                  </div>
-                  <span className="font-medium text-foreground truncate max-w-[160px]">
-                    {characterKit.name || "Avatar"}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => void setCharacterActive(null)}
-                    className="w-6 h-6 rounded-md text-muted-foreground hover:text-foreground hover:bg-background/60 flex items-center justify-center shrink-0"
-                    aria-label="Detach character"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                </div>
+                <HoverCard openDelay={150} closeDelay={80}>
+                  <HoverCardTrigger asChild>
+                    <div className="inline-flex items-center gap-2 h-9 pl-1 pr-1.5 rounded-xl border border-[#F5A524]/40 bg-[#F5A524]/10 text-xs cursor-default">
+                      <div className="w-7 h-7 rounded-md bg-white/5 overflow-hidden flex items-center justify-center shrink-0">
+                        {characterKit.reference_url ? (
+                          <img src={characterKit.reference_url} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <UserRound className="w-3.5 h-3.5 text-muted-foreground" />
+                        )}
+                      </div>
+                      <span className="font-medium text-foreground truncate max-w-[160px]">
+                        {characterKit.name || "Avatar"}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => void setCharacterActive(null)}
+                        className="w-6 h-6 rounded-md text-muted-foreground hover:text-foreground hover:bg-background/60 flex items-center justify-center shrink-0"
+                        aria-label="Detach character"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </HoverCardTrigger>
+                  <HoverCardContent side="top" align="start" sideOffset={8} className="w-64 p-2">
+                    <div className="flex items-center justify-center rounded-md bg-black/40 overflow-hidden" style={{ maxHeight: "18rem" }}>
+                      {characterKit.reference_url ? (
+                        <img src={characterKit.reference_url} alt={characterKit.name || "Avatar"} className="max-h-72 w-auto object-contain" />
+                      ) : (
+                        <UserRound className="w-10 h-10 text-muted-foreground my-8" />
+                      )}
+                    </div>
+                    <p className="mt-2 text-xs font-medium text-foreground truncate px-1">
+                      {characterKit.name || "Avatar"}
+                    </p>
+                  </HoverCardContent>
+                </HoverCard>
               ) : (
                 <CharacterPickerPopover
                   kits={characterKits}
