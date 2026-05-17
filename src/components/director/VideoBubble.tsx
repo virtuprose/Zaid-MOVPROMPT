@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Loader2, AlertTriangle, Film, ExternalLink, Heart } from "lucide-react";
+import { Loader2, AlertTriangle, Film, ExternalLink, Heart, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -123,6 +123,11 @@ export function VideoBubble({ data, onChange }: Props) {
             className="h-7 px-2 text-xs"
           >
             <Heart className={cn("w-3.5 h-3.5", data.liked && "fill-current text-accent")} />
+          </Button>
+          <Button asChild variant="ghost" size="sm" className="h-7 px-2 text-xs" aria-label="Download video">
+            <a href={data.videoUrl} download target="_blank" rel="noopener noreferrer">
+              <Download className="w-3.5 h-3.5" />
+            </a>
           </Button>
           <Button
             asChild
