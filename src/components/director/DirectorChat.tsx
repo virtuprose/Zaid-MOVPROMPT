@@ -19,7 +19,7 @@ import { toast } from "sonner";
 import { Composer } from "./Composer";
 import { PromptResultCard } from "./PromptResultCard";
 import { ModelChoiceCard } from "./ModelChoiceCard";
-import { SessionHealthPanel } from "./SessionHealthPanel";
+
 import {
   streamDirectorAgent,
   submitVideoJob,
