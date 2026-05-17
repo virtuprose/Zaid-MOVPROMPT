@@ -128,7 +128,7 @@ export default function MarketingStudio() {
   const [location, setLocation] = useState<LocationInput>(EMPTY_LOCATION);
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>("All");
 
-  const [openPicker, setOpenPicker] = useState<"format" | "hook" | "setting" | null>(null);
+  const [openPicker, setOpenPicker] = useState<"format" | "location" | null>(null);
   const [brandOpen, setBrandOpen] = useState(false);
   const [brandEditId, setBrandEditId] = useState<string | null>(null);
   const [characterOpen, setCharacterOpen] = useState(false);
