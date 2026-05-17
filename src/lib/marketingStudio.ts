@@ -522,7 +522,6 @@ export type StudioBrief = {
   subject: Subject;
   master: string;
   formatId?: string;
-  hookId?: string;
   settingId?: string;
   /** Free-text format description used when no preset is picked. */
   customFormat?: string;
@@ -565,7 +564,6 @@ function characterLine(c?: CharacterContext): string | null {
 
 export function composeStudioPrompt(brief: StudioBrief): string {
   const format = find(FORMATS, brief.formatId);
-  const hook = find(HOOKS, brief.hookId);
   const setting = find(SETTINGS, brief.settingId);
   const subjectLine =
     brief.subject === "app"
@@ -577,7 +575,6 @@ export function composeStudioPrompt(brief: StudioBrief): string {
     subjectLine,
     brandLine(brief.brand),
     characterLine(brief.character),
-    hook?.fragment,
     format?.fragment ?? (brief.customFormat?.trim() ? `Format: ${brief.customFormat.trim()}` : null),
     setting?.fragment ?? (brief.customSetting?.trim() ? `Setting: ${brief.customSetting.trim()}` : null),
     locationLine(brief.location),
