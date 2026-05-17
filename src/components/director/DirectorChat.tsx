@@ -294,7 +294,31 @@ function DirectorChatInner() {
       // Reserve the placeholder slot
       setBubbles((prev) => [...prev, { role: "assistant", content: "…" }]);
 
-      const resp = await streamDirectorAgent(history, mergedAttachments, handlePartial);
+      // Retry up to 2 times on transient errors (timeouts, 5xx, network).
+      const MAX_ATTEMPTS = 3;
+      let resp: AgentResponse | null = null;
+      let lastErr: any = null;
+      for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
+        try {
+          resp = await streamDirectorAgent(history, mergedAttachments, handlePartial, undefined, {
+            idleTimeoutMs: 30_000,
+            totalTimeoutMs: 120_000,
+          });
+          lastErr = null;
+          break;
+        } catch (err: any) {
+          lastErr = err;
+          const retryable = err?.retryable === true;
+          if (!retryable || attempt === MAX_ATTEMPTS) break;
+          const backoff = 600 * attempt;
+          toast.message(`Retrying… (${attempt}/${MAX_ATTEMPTS - 1})`, {
+            description: err?.message,
+          });
+          await new Promise((r) => setTimeout(r, backoff));
+        }
+      }
+
+      if (!resp) throw lastErr ?? new Error("Director didn't respond.");
 
       let added: Bubble;
       let finalPrompt: string | null = null;
@@ -314,7 +338,6 @@ function DirectorChatInner() {
           reason: resp.reason,
         };
       } else if (resp.kind === "request_video_generation") {
-        // Trigger render directly
         added = {
           role: "assistant",
           animate: true,
@@ -340,25 +363,47 @@ function DirectorChatInner() {
       setAttachments([]);
       void persist(finalNext, finalPrompt, title);
     } catch (e: any) {
-      toast.error(e?.message || "Director couldn't respond — try again");
+      const retryable = e?.retryable !== false;
+      const message =
+        e?.name === "DirectorTimeoutError"
+          ? "The Director didn't respond in time"
+          : e?.message || "The Director couldn't respond";
+      toast.error(message);
       setBubbles((b) => {
-        // Remove the placeholder if it's still a "…" bubble
         const trimmed =
-          b.length && b[b.length - 1].role === "assistant" && (b[b.length - 1] as any).content === "…"
+          b.length &&
+          b[b.length - 1].role === "assistant" &&
+          (b[b.length - 1] as any).content === "…"
             ? b.slice(0, -1)
             : b;
-        return [
-          ...trimmed,
-          {
-            role: "assistant",
-            animate: true,
-            content: "Lost you for a sec — mind sending that again?",
-          },
-        ];
+        const errorBubble: Bubble = {
+          role: "error",
+          message,
+          detail: retryable
+            ? "Your message is saved — tap Retry to try again."
+            : e?.message && e.message !== message
+              ? e.message
+              : undefined,
+          retryable,
+        };
+        return [...trimmed, errorBubble];
       });
     } finally {
       setBusy(false);
     }
+  };
+
+  const retryLast = async () => {
+    const last = lastSendRef.current;
+    if (!last || busy) return;
+    setBubbles((prev) => {
+      const copy = [...prev];
+      if (copy.length && copy[copy.length - 1].role === "error") copy.pop();
+      if (copy.length && copy[copy.length - 1].role === "user") copy.pop();
+      return copy;
+    });
+    setAttachments(last.attachments);
+    setTimeout(() => void send(last.text), 0);
   };
 
   const startFresh = (save: boolean) => {
