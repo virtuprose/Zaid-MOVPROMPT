@@ -930,7 +930,6 @@ function DirectorChatInner() {
             </div>
           </div>
         </div>
-        <div className="text-[11px] text-muted-foreground/70 hidden sm:block">{subhead}</div>
       </div>
 
 
@@ -943,7 +942,7 @@ function DirectorChatInner() {
             <img src={logoMark} alt="" className="w-32 h-32 opacity-[0.05]" />
           </div>
         )}
-        <div className="flex flex-col gap-6 min-h-full">
+        <div className="flex flex-col gap-6 min-h-full max-w-3xl mx-auto w-full">
           <div className="flex-1" />
           {bubbles.map((b, i) => {
             if (b.role === "result") {
@@ -1178,15 +1177,17 @@ function DirectorChatInner() {
 
       {pendingApproval && <BottomApprovalBar request={pendingApproval} />}
 
-      <Composer
-        value={input}
-        onChange={setInput}
-        attachments={attachments}
-        onAttachmentsChange={setAttachments}
-        onSend={send}
-        busy={busy}
-        showHelper={isEmpty && attachments.length === 0}
-      />
+      <div className="max-w-3xl mx-auto w-full">
+        <Composer
+          value={input}
+          onChange={setInput}
+          attachments={attachments}
+          onAttachmentsChange={setAttachments}
+          onSend={send}
+          busy={busy}
+          showHelper={isEmpty && attachments.length === 0}
+        />
+      </div>
 
       <div className="text-center">
         <button
