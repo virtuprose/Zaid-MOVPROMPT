@@ -124,6 +124,11 @@ export function VideoBubble({ data, onChange }: Props) {
           >
             <Heart className={cn("w-3.5 h-3.5", data.liked && "fill-current text-accent")} />
           </Button>
+          <Button asChild variant="ghost" size="sm" className="h-7 px-2 text-xs" aria-label="Download video">
+            <a href={data.videoUrl} download target="_blank" rel="noopener noreferrer">
+              <Download className="w-3.5 h-3.5" />
+            </a>
+          </Button>
           <Button
             asChild
             variant="ghost"
