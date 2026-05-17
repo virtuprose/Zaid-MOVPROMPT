@@ -17,6 +17,8 @@ const FAL_MODELS: Record<string, string> = {
   "kling-v3-4k": "fal-ai/kling-video/v3/4k/text-to-video",
   // Kling 3.0 Omni (o3 family)
   "kling-omni": "fal-ai/kling-video/o3/pro/text-to-video",
+  // Kling 3.0 Omni reference-to-video: true multi-reference, keeps character/product/location identity locked.
+  "kling-omni-ref": "fal-ai/kling-video/o3/pro/reference-to-video",
   "kling-omni-edit": "fal-ai/kling-video/o3/standard/video-to-video/edit",
   "kling-motion-control": "fal-ai/kling-video/v3/standard/motion-control",
   // Kling (legacy)
@@ -156,6 +158,10 @@ function buildFalPayload(provider: string, prompt: string, opts: VideoOptions = 
         opts.audio !== undefined
       ) {
         set("generate_audio", opts.audio);
+      }
+      // Kling Omni reference-to-video accepts up to 7 ref images for identity lock.
+      if (provider === "kling-omni-ref" && referenceImages.length > 0) {
+        set("reference_images", referenceImages.slice(0, 7).map((url) => ({ image_url: url })));
       }
       break;
     case "seedance":
