@@ -100,13 +100,31 @@ function DirectorChatInner() {
     return "";
   };
 
-  // Load session from route param
+  // Hydrate from localStorage immediately on scope change (instant restore on reload).
+  useEffect(() => {
+    const userId = user?.id ?? null;
+    const hydrationKey = `${userId}:${localScope}`;
+    if (hydratedRef.current === hydrationKey) return;
+    hydratedRef.current = hydrationKey;
+    const cached = localState.load(userId, localScope);
+    if (cached) {
+      if (cached.bubbles?.length) setBubbles(cached.bubbles as Bubble[]);
+      if (typeof cached.input === "string") setInput(cached.input);
+      if (Array.isArray(cached.attachments)) setAttachments(cached.attachments);
+      if (cached.sessionId) sessionIdRef.current = cached.sessionId;
+    } else if (!routeSessionId) {
+      // Fresh "new" scope with no cache — reset transient state
+      sessionIdRef.current = null;
+    }
+  }, [user?.id, localScope, routeSessionId]);
+
+  // Load server-side session from route param. Only override local cache when
+  // the server has a longer (newer) message history, to avoid flicker.
   useEffect(() => {
     if (!user || !routeSessionId) {
-      sessionIdRef.current = null;
+      if (!routeSessionId) sessionIdRef.current = null;
       return;
     }
-    if (sessionIdRef.current === routeSessionId) return;
     (async () => {
       const { data, error } = await supabase
         .from("director_sessions")
@@ -120,13 +138,10 @@ function DirectorChatInner() {
       }
       sessionIdRef.current = data.id;
       const loaded = (data.messages as Bubble[]) || [WELCOME];
-      setBubbles(loaded.length ? loaded : [WELCOME]);
+      const remote = loaded.length ? loaded : [WELCOME];
+      setBubbles((prev) => (remote.length >= prev.length ? remote : prev));
     })();
   }, [routeSessionId, user, navigate]);
-
-  useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
-  }, [bubbles]);
 
   const persist = async (next: Bubble[], finalPrompt: string | null, title: string | null) => {
     if (!user) return;
