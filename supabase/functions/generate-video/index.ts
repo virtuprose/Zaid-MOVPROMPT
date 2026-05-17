@@ -159,6 +159,10 @@ function buildFalPayload(provider: string, prompt: string, opts: VideoOptions = 
       ) {
         set("generate_audio", opts.audio);
       }
+      // Kling Omni reference-to-video accepts up to 7 ref images for identity lock.
+      if (provider === "kling-omni-ref" && referenceImages.length > 0) {
+        set("reference_images", referenceImages.slice(0, 7).map((url) => ({ image_url: url })));
+      }
       break;
     case "seedance":
       set("aspect_ratio", opts.aspect_ratio);
