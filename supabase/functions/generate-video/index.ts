@@ -286,7 +286,25 @@ serve(async (req) => {
           logs: true,
         }) as Record<string, any>;
       } catch (error) {
-        console.warn("fal status response unreadable", error);
+        const falError = extractFalError(error);
+        console.warn("fal status response unreadable", falError.status, falError.message);
+        if (falError.status === 404) {
+          await admin
+            .from("video_jobs")
+            .update({
+              status: "failed",
+              error: "The provider completed the render but did not return the video result. Please retry with the same prompt.",
+              completed_at: new Date().toISOString(),
+            })
+            .eq("id", jobId);
+          return new Response(JSON.stringify({
+            ...job,
+            status: "failed",
+            error: "The provider completed the render but did not return the video result. Please retry with the same prompt.",
+          }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
         return new Response(JSON.stringify({ ...job, status: "processing" }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
