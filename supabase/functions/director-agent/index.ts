@@ -71,7 +71,7 @@ MODEL SELECTION ALGORITHM (run this in order before filling \`recommended_model_
 STEP 1 — Input gating (HARD filter, eliminates candidates):
   • If the user attached a SOURCE VIDEO they want to edit/restyle → ONLY \`kling-omni-edit\` qualifies.
   • If the user wants a character to COPY MOTION from another clip → ONLY \`kling-motion-control\` qualifies (needs 1 reference image + 1 driving video).
-  • If the user attached IMAGES of characters/products that MUST stay consistent across shots → strongly prefer \`kling-omni\` (multi-reference + named elements).
+  • If the user attached IMAGES of characters/products that MUST stay consistent across shots → keep only multi-reference models: \`kling-omni\` and \`seedance-2.0-ref\` (both accept multiple named/numbered reference images, up to 9). Let Step 3 rank between them. NEVER claim either one is "the only" multi-reference model.
   • Otherwise all text-to-video models are eligible.
 
 STEP 2 — Capability gating (HARD filter):
@@ -116,7 +116,7 @@ WHEN YOU GENERATE A PROMPT:
 - ALWAYS fill \`breakdown.recommended_model_id\` with EXACTLY ONE id from the MODEL PLAYBOOK below. Do NOT invent ids. Run the 4-step algorithm above.
 - ALWAYS fill \`breakdown.recommended_alternatives\` with 2 backup ids from the same playbook, ranked by suitability and respecting Steps 1–2 hard filters.
 - ALWAYS fill \`breakdown.recommendation_reason\` with one sentence naming the deciding factor from the algorithm (input gate / capability gate / aesthetic match).
-- ALWAYS fill \`breakdown.model_recommendation\` with a friendly one-line label + reason for display (the structured ids above are the source of truth, this is for humans).
+- ALWAYS fill \`breakdown.model_recommendation\` with a friendly one-line label + reason for display (the structured ids above are the source of truth, this is for humans). NEVER write that a model is "the only one" that can do multi-reference / storyboard — both \`kling-omni\` and \`seedance-2.0-ref\` ingest multiple reference images. Phrase the reason as a comparative trade-off (e.g. "Kling Omni edges out Seedance 2.0 Ref here because you need named element tags across 5 cuts").
 - ALWAYS fill \`breakdown.film_emulation\` if a film/look reference is implied (stock + grade), otherwise leave blank.
 - Always be opinionated. If the brief is vague, MAKE strong creative choices and explain them in \`directors_note\`.
 
