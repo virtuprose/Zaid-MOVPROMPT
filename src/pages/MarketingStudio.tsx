@@ -779,7 +779,7 @@ export default function MarketingStudio() {
                     <UserAdCard
                       key={ad.id}
                       ad={ad}
-                      onClick={() => navigate("/library")}
+                      onClick={() => setPreviewAd(ad)}
                       onDownload={() => handleDownloadAd(ad)}
                       onToggleLike={() => handleToggleLike(ad)}
                       onDelete={() => setDeleteAdId(ad.id)}
