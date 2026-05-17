@@ -22,9 +22,9 @@ interface OnboardingExamplesProps {
 export const OnboardingExamples = ({ onPick }: OnboardingExamplesProps) => {
   const { t } = useLanguage();
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-medium text-foreground/80">
+        <span className="text-[11px] font-medium text-foreground/80">
           {t("onboarding.tryExample" as any)}
         </span>
       </div>
@@ -34,7 +34,7 @@ export const OnboardingExamples = ({ onPick }: OnboardingExamplesProps) => {
             key={i}
             type="button"
             onClick={() => onPick(ex)}
-            className="group relative aspect-square overflow-hidden rounded-lg border border-primary/20 hover:border-primary/60 transition-all hover:scale-[1.03] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            className="group relative aspect-[4/3] overflow-hidden rounded-lg border border-primary/20 hover:border-primary/60 transition-all hover:scale-[1.03] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
             aria-label={`${t("onboarding.useExample" as any)}: ${ex.alt}`}
           >
             <img
