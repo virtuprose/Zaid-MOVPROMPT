@@ -974,6 +974,22 @@ function DirectorChatInner() {
                 </div>
               );
             }
+            if (b.role === "video") {
+              return (
+                <div key={i} className="motion-safe:animate-fade-up">
+                  <VideoBubble
+                    data={b.data}
+                    onChange={(next) => {
+                      setBubbles((prev) => {
+                        const copy = [...prev];
+                        copy[i] = { role: "video", data: next };
+                        return copy;
+                      });
+                    }}
+                  />
+                </div>
+              );
+            }
             const isUser = b.role === "user";
             if (!isUser) {
               // Hide the streaming placeholder bubble; TypingIndicator covers it.
