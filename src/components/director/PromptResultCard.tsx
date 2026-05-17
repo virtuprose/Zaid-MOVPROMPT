@@ -112,7 +112,7 @@ function Section({
   );
 }
 
-export function PromptResultCard({ title, prompt, breakdown, directorsNote, onRefine, sessionId }: Props) {
+export function PromptResultCard({ title, prompt, breakdown, directorsNote, onRefine, sessionId, hasReferenceImage = false }: Props) {
   const { user } = useAuth();
   const { request: requestApproval } = useApproval();
   const [copied, setCopied] = useState(false);
