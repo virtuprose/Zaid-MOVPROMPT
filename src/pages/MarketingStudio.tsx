@@ -19,6 +19,7 @@ import {
   AppWindow,
   Download,
   Trash2,
+  SlidersHorizontal,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -68,6 +69,7 @@ import {
   RENDER_DEFAULTS,
   type RenderSettings,
 } from "@/components/marketing/RenderSettingsPopover";
+import { AdBuilderPanel, AD_BUILDER_ADVANCED_BTN_CLASS } from "@/components/marketing/AdBuilderPanel";
 
 import { submitVideoJob, pollVideoJob, cancelVideoJob, writeAdScene, type VideoJob } from "@/lib/director/api";
 import loopKitchen from "@/assets/loop-kitchen.mp4.asset.json";
@@ -547,189 +549,61 @@ export default function MarketingStudio() {
               Turn any product
               <br /> into a video ad
             </h1>
-            <p className="text-muted-foreground mt-3 max-w-lg mx-auto text-sm leading-snug">
-              Pick a format and a location. We compose the prompt and render your ad.
-            </p>
           </div>
 
-          {/* Composer with sidebar */}
-          <div className="flex flex-col sm:flex-row gap-3 items-stretch">
-            {/* Subject sidebar */}
-            <div className="flex sm:flex-col gap-1.5 shrink-0 sm:justify-center sm:self-stretch">
-              {([
-                { id: "product", label: "Product", icon: Package },
-              ] as const).map(({ id, label, icon: Icon }) => {
-                const active = subject === id;
-                return (
-                  <button
-                    key={id}
-                    type="button"
-                    onClick={() => setSubjectOverride(id)}
-                    className={cn(
-                      "w-16 h-16 rounded-2xl border flex flex-col items-center justify-center gap-1 text-[11px] font-medium transition-all",
-                      active
-                        ? "border-[#F5A524]/50 bg-[#F5A524]/10 text-foreground"
-                        : "border-border/60 bg-secondary/40 text-muted-foreground hover:text-foreground hover:border-border",
-                    )}
-                  >
-                    <Icon className="w-5 h-5" />
-                    {label}
-                  </button>
-                );
-              })}
-            </div>
-
-          {/* Composer card */}
-          <div ref={composerRef} className="flex-1 min-w-0 rounded-3xl border border-border/60 bg-[hsl(240_5%_8%)]/70 backdrop-blur p-4 sm:p-5 scroll-mt-20">
-            <div className="flex flex-wrap items-center gap-2 mb-3">
-              {brandKit ? (
-                <div className="inline-flex items-center gap-2 h-9 pl-1 pr-1.5 rounded-xl border border-[#F5A524]/40 bg-[#F5A524]/10 text-xs">
-                  <div className="w-7 h-7 rounded-md bg-white/5 overflow-hidden flex items-center justify-center shrink-0">
-                    {brandKit.logo_url ? (
-                      <img src={brandKit.logo_url} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      <Building2 className="w-3.5 h-3.5 text-muted-foreground" />
-                    )}
-                  </div>
-                  <span className="font-medium text-foreground truncate max-w-[160px]">
-                    {brandKit.name || (subject === "app" ? "App" : "Product")}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => void setBrandActive(null)}
-                    className="w-6 h-6 rounded-md text-muted-foreground hover:text-foreground hover:bg-background/60 flex items-center justify-center shrink-0"
-                    aria-label="Detach brand"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              ) : (
-                <BrandPickerPopover
-                  kits={kits}
-                  activeId={brandActiveId}
-                  onSelect={(id) => void setBrandActive(id === brandActiveId ? null : id)}
-                  onNew={() => { setBrandEditId(null); setBrandOpen(true); }}
-                  onEdit={(id) => { setBrandEditId(id); setBrandOpen(true); }}
-                  onDelete={(id) => void deleteBrand(id)}
+          <div ref={composerRef} className="scroll-mt-20">
+            <AdBuilderPanel
+              chips={[
+                ...(brandKit
+                  ? [{ id: "brand", label: brandKit.name || "Product", avatar: brandKit.logo_url || undefined }]
+                  : [{ id: "seed-bose", label: "Bose" }]),
+                ...(characterKit
+                  ? [{ id: "character", label: characterKit.name || "Avatar", avatar: characterKit.reference_url || undefined }]
+                  : [{ id: "seed-maya", label: "Maya" }]),
+              ]}
+              onAddChip={() => { setBrandEditId(null); setBrandOpen(true); }}
+              onRemoveChip={(id) => {
+                if (id === "brand") void setBrandActive(null);
+                else if (id === "character") void setCharacterActive(null);
+              }}
+              onPickFormat={() => setOpenPicker("format")}
+              onPickLocation={() => setOpenPicker("location")}
+              formatLabel={
+                format?.label ||
+                (customFormat.trim()
+                  ? `Custom: ${customFormat.trim().slice(0, 24)}${customFormat.trim().length > 24 ? "…" : ""}`
+                  : "Format")
+              }
+              locationLabel={(() => {
+                const sceneLabel =
+                  setting?.label ||
+                  (customSetting.trim()
+                    ? `Custom: ${customSetting.trim().slice(0, 28)}${customSetting.trim().length > 28 ? "…" : ""}`
+                    : undefined);
+                const locSuffix = location.imagePath ? " · Ref" : "";
+                if (sceneLabel) return `${sceneLabel}${locSuffix}`;
+                return location.imagePath ? "Reference image" : "Location";
+              })()}
+              generateDisabled={!hasInputs || submitting || drafting}
+              generating={submitting}
+              generateLabel={btnLabel}
+              onGenerate={startGenerate}
+              advancedSlot={
+                <RenderSettingsPopover
+                  value={renderSettings}
+                  onChange={setRenderSettings}
                   trigger={
                     <button
                       type="button"
-                      className="inline-flex items-center gap-1.5 h-9 px-2.5 rounded-xl border border-dashed border-border/60 bg-secondary/30 text-xs text-muted-foreground hover:border-[#F5A524]/50 hover:text-foreground transition-colors"
+                      aria-label="Advanced settings"
+                      className={AD_BUILDER_ADVANCED_BTN_CLASS}
                     >
-                      <Building2 className="w-3.5 h-3.5" />
-                      <Plus className="w-3 h-3" />
-                      {subject === "app" ? "App" : "Product"}
+                      <SlidersHorizontal className="w-4 h-4" />
                     </button>
                   }
                 />
-              )}
-              {characterKit ? (
-                <div className="inline-flex items-center gap-2 h-9 pl-1 pr-1.5 rounded-xl border border-[#F5A524]/40 bg-[#F5A524]/10 text-xs">
-                  <div className="w-7 h-7 rounded-md bg-white/5 overflow-hidden flex items-center justify-center shrink-0">
-                    {characterKit.reference_url ? (
-                      <img src={characterKit.reference_url} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      <UserRound className="w-3.5 h-3.5 text-muted-foreground" />
-                    )}
-                  </div>
-                  <span className="font-medium text-foreground truncate max-w-[160px]">
-                    {characterKit.name || "Avatar"}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => void setCharacterActive(null)}
-                    className="w-6 h-6 rounded-md text-muted-foreground hover:text-foreground hover:bg-background/60 flex items-center justify-center shrink-0"
-                    aria-label="Detach character"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              ) : (
-                <CharacterPickerPopover
-                  kits={characterKits}
-                  activeId={characterActiveId}
-                  onSelect={(id) => void setCharacterActive(id === characterActiveId ? null : id)}
-                  onNew={() => { setCharacterEditId(null); setCharacterOpen(true); }}
-                  onEdit={(id) => { setCharacterEditId(id); setCharacterOpen(true); }}
-                  onDelete={(id) => void deleteCharacter(id)}
-                  trigger={
-                    <button
-                      type="button"
-                      className="inline-flex items-center gap-1.5 h-9 px-2.5 rounded-xl border border-dashed border-border/60 bg-secondary/30 text-xs text-muted-foreground hover:border-[#F5A524]/50 hover:text-foreground transition-colors"
-                    >
-                      <UserRound className="w-3.5 h-3.5" />
-                      <Plus className="w-3 h-3" />
-                      Avatar
-                    </button>
-                  }
-                />
-              )}
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-border/30">
-
-              <PresetChip
-                icon={<Sparkles className="w-3.5 h-3.5" />}
-                label="Format"
-                value={
-                  format?.label ||
-                  (customFormat.trim()
-                    ? `Custom: ${customFormat.trim().slice(0, 24)}${customFormat.trim().length > 24 ? "…" : ""}`
-                    : undefined)
-                }
-                tooltip="The visual style of your ad"
-                onClick={() => setOpenPicker("format")}
-                flash={flashChips}
-              />
-              <PresetChip
-                icon={<Globe2 className="w-3.5 h-3.5" />}
-                label="Location"
-                value={(() => {
-                  const sceneLabel =
-                    setting?.label ||
-                    (customSetting.trim()
-                      ? `Custom: ${customSetting.trim().slice(0, 28)}${customSetting.trim().length > 28 ? "…" : ""}`
-                      : undefined);
-                  const locSuffix = location.imagePath ? " · Ref image" : "";
-                  if (sceneLabel) return `${sceneLabel}${locSuffix}`;
-                  return location.imagePath ? "Reference image" : undefined;
-                })()}
-                tooltip="Where the ad takes place — pick a scene or attach a reference image"
-                onClick={() => setOpenPicker("location")}
-                flash={flashChips}
-              />
-
-              <RenderSettingsPopover value={renderSettings} onChange={setRenderSettings} />
-
-              <div className="ml-auto flex items-center gap-2">
-                <Button
-                  size="lg"
-                  disabled={!hasInputs || submitting || drafting}
-                  onClick={startGenerate}
-                  className={cn(
-                    "rounded-2xl px-5 h-11 font-semibold text-sm transition-all",
-                    hasInputs
-                      ? "bg-[#F5A524] text-black hover:bg-[#F5A524]/90 shadow-lg shadow-[#F5A524]/25"
-                      : "bg-muted text-muted-foreground hover:bg-muted",
-                  )}
-                >
-                  {submitting ? (
-                    <Loader2 className="w-4 h-4 animate-spin mr-1.5" />
-                  ) : hasInputs ? (
-                    <Wand2 className="w-4 h-4 mr-1.5" />
-                  ) : null}
-                  {btnLabel}
-                </Button>
-              </div>
-            </div>
-
-            {ready && (
-              <div className="mt-4 rounded-xl border border-border/30 bg-muted/10 px-3 py-2 text-[11px] text-muted-foreground">
-                <span className="text-foreground/80 font-medium">Renders as:</span>{" "}
-                {format?.label || "Custom format"} · {setting?.label || customSetting.trim() || location.place || "Reference image"} · {renderSettings.aspect_ratio} · {renderSettings.duration}s · {renderSettings.resolution} · audio on
-              </div>
-            )}
-          </div>
+              }
+            />
           </div>
 
           {/* Ads gallery */}
