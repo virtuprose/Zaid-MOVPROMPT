@@ -55,7 +55,33 @@ type Props = {
   onRefine?: () => void;
   sessionId?: string | null;
   hasReferenceImage?: boolean;
+  /** Ordered reference image URLs from the chat (most recent / current turn first). */
+  referenceImageUrls?: string[];
+  /** Slot label per ref URL ("brand" | "character" | "location"), parallel to referenceImageUrls. */
+  referenceImageSlots?: Array<"brand" | "character" | "location">;
 };
+
+const REF_SLOT_LABEL: Record<"brand" | "character" | "location", string> = {
+  brand: "brand / product",
+  character: "main subject",
+  location: "location / scene",
+};
+
+/** Build `@Image1 = <label>` lines for Seedance 2.0 reference-to-video identity lock. */
+function buildRefTagLines(
+  urls: string[],
+  slots: Array<"brand" | "character" | "location"> = [],
+): string {
+  if (!urls.length) return "";
+  return urls
+    .slice(0, 9)
+    .map((_, i) => {
+      const slot = slots[i];
+      const label = slot ? REF_SLOT_LABEL[slot] : `reference ${i + 1}`;
+      return `@Image${i + 1} = ${label}`;
+    })
+    .join("\n");
+}
 
 const EXTERNAL_LINKS: Record<string, { label: string; url: string }> = {
   kling: { label: "Kling", url: "https://klingai.com" },
@@ -112,7 +138,7 @@ function Section({
   );
 }
 
-export function PromptResultCard({ title, prompt, breakdown, directorsNote, onRefine, sessionId, hasReferenceImage = false }: Props) {
+export function PromptResultCard({ title, prompt, breakdown, directorsNote, onRefine, sessionId, hasReferenceImage = false, referenceImageUrls = [], referenceImageSlots = [] }: Props) {
   const { user } = useAuth();
   const { request: requestApproval } = useApproval();
   const [copied, setCopied] = useState(false);
@@ -248,14 +274,35 @@ export function PromptResultCard({ title, prompt, breakdown, directorsNote, onRe
   ) => {
     setGenerating(true);
     try {
-      const newJob = await submitVideoJob(finalPrompt, model.id, sessionId, options);
+      // Smart routing: force the right Seedance 2.0 endpoint when refs exist.
+      //   0 refs → keep the user's pick (text-only flows like seedance-v1-pro)
+      //   1 ref  → seedance-2.0 image-to-video
+      //   2+ refs → seedance-2.0-ref reference-to-video (identity lock)
+      let effectiveModel = model;
+      if (referenceImageUrls.length >= 2) {
+        effectiveModel = findVideoModel("seedance-2.0-ref") ?? model;
+      } else if (referenceImageUrls.length === 1 && model.family === "seedance") {
+        effectiveModel = findVideoModel("seedance-2.0") ?? model;
+      }
+
+      // Inject @Image1/@Image2/@Image3 tags so Seedance binds each subject.
+      const tagLines = buildRefTagLines(referenceImageUrls, referenceImageSlots);
+      const taggedPrompt = tagLines ? `${tagLines}\n\n${finalPrompt}` : finalPrompt;
+
+      const newJob = await submitVideoJob(
+        taggedPrompt,
+        effectiveModel.id,
+        sessionId,
+        options,
+        referenceImageUrls.length > 0 ? referenceImageUrls : undefined,
+      );
       setJob(newJob);
       if (meta.rewritten) {
         toast.success(
-          `Prompt rewritten to pass ${model.label} content checks. Rendering now — ${meta.summary || "minor edits applied."}`,
+          `Prompt rewritten to pass ${effectiveModel.label} content checks. Rendering now — ${meta.summary || "minor edits applied."}`,
         );
       } else {
-        toast.success(`Rendering with ${model.label} — this can take a few minutes`);
+        toast.success(`Rendering with ${effectiveModel.label} — this can take a few minutes`);
       }
     } catch (e: any) {
       toast.error(e?.message || "Could not start video generation");
