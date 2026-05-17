@@ -143,6 +143,28 @@ function DirectorChatInner() {
     })();
   }, [routeSessionId, user, navigate]);
 
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
+  }, [bubbles]);
+
+  // Debounced localStorage save of in-progress draft.
+  useEffect(() => {
+    if (busy) return; // avoid persisting transient "…" placeholders
+    const onlyWelcome =
+      bubbles.length <= 1 && !input && attachments.length === 0;
+    if (onlyWelcome) return;
+    const userId = user?.id ?? null;
+    const handle = window.setTimeout(() => {
+      localState.save(userId, localScope, {
+        sessionId: sessionIdRef.current,
+        bubbles,
+        input,
+        attachments,
+      });
+    }, 250);
+    return () => window.clearTimeout(handle);
+  }, [bubbles, input, attachments, busy, user?.id, localScope]);
+
   const persist = async (next: Bubble[], finalPrompt: string | null, title: string | null) => {
     if (!user) return;
     try {
