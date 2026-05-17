@@ -37,16 +37,14 @@ const FAL_MODELS: Record<string, string> = {
   "veo-3": "fal-ai/veo3",
   "veo-3-fast": "fal-ai/veo3/fast",
   "veo-2": "fal-ai/veo2",
-  // Seedance
-  // NOTE: Seedance 2.0 only exposes image/reference-to-video on fal — there is
-  // no `seedance-2.0/text-to-video` endpoint. We keep the legacy `seedance-2.0`
-  // / `seedance-2.0-fast` ids mapped to the working v1 Pro endpoint so old
-  // saved jobs still resolve, but the UI no longer exposes them.
-  "seedance-2.0": "fal-ai/bytedance/seedance/v1/pro/text-to-video",
-  "seedance-2.0-fast": "fal-ai/bytedance/seedance/v1/pro/text-to-video",
-  // Seedance 2.0 has no reference/image-to-video endpoint on fal — route legacy
-  // saved jobs to the working v1 Pro image-to-video endpoint so they don't 404.
-  "seedance-2.0-ref": "fal-ai/bytedance/seedance/v1/pro/image-to-video",
+  // Seedance 2.0 — current generation, native audio, multi-reference.
+  // FAL serves these under the bare `bytedance/...` namespace (no `fal-ai/` prefix).
+  "seedance-2.0": "bytedance/seedance-2.0/image-to-video",
+  "seedance-2.0-fast": "bytedance/seedance-2.0/image-to-video",
+  // Multi-reference: up to 9 images + 3 videos + 3 audio (12 total).
+  // Refs are addressed inline in the prompt as @Image1, @Image2, …
+  "seedance-2.0-ref": "bytedance/seedance-2.0/reference-to-video",
+  // Seedance v1 Pro — kept as the text-only fallback (no native audio, but fast/cheap).
   "seedance-v1-pro": "fal-ai/bytedance/seedance/v1/pro/text-to-video",
   "seedance-v1-pro-ref": "fal-ai/bytedance/seedance/v1/pro/image-to-video",
   "seedance-v1-lite": "fal-ai/bytedance/seedance/v1/lite/text-to-video",
@@ -166,12 +164,28 @@ function buildFalPayload(provider: string, prompt: string, opts: VideoOptions = 
       break;
     case "seedance":
       set("aspect_ratio", opts.aspect_ratio);
-      // Seedance accepts the string enum "auto" or a numeric second value (sent as string).
-      if (opts.duration !== undefined) set("duration", String(opts.duration));
+      // Seedance 2.0 wants duration as a string enum: "auto" or "4"–"15".
+      // v1 accepts a numeric string. Clamp into 4–15 when numeric so 2.0 doesn't reject it.
+      if (opts.duration !== undefined) {
+        if (typeof opts.duration === "number") {
+          const clamped = Math.min(15, Math.max(4, Math.round(opts.duration)));
+          set("duration", String(clamped));
+        } else {
+          set("duration", String(opts.duration));
+        }
+      }
       set("resolution", opts.resolution);
       if (opts.audio !== undefined) set("generate_audio", opts.audio);
-      if (provider.endsWith("-ref") && referenceImages.length > 0) {
-        // Seedance image-to-video endpoints take a single starting frame.
+      if (provider === "seedance-2.0-ref" && referenceImages.length > 0) {
+        // Seedance 2.0 reference-to-video: up to 9 ref images, refs are bound by
+        // @Image1, @Image2, … tags in the prompt (composed client-side).
+        set("image_urls", referenceImages.slice(0, 9));
+      } else if (provider === "seedance-2.0" && referenceImages.length > 0) {
+        // Seedance 2.0 image-to-video: single start frame, optional end frame.
+        set("image_url", referenceImages[0]);
+        if (referenceImages[1]) set("end_image_url", referenceImages[1]);
+      } else if (provider.endsWith("-ref") && referenceImages.length > 0) {
+        // Legacy Seedance v1 Pro image-to-video: single starting frame.
         set("image_url", referenceImages[0]);
       }
       break;

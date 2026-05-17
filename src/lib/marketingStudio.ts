@@ -530,35 +530,64 @@ export type StudioBrief = {
   brand?: BrandContext;
   location?: LocationContext;
   character?: CharacterContext;
+  /**
+   * Ordered list of reference-image slots actually present in the render
+   * payload. Must match the order of `reference_image_urls` sent to the
+   * generate-video function. Used to inject @Image1, @Image2, … tags so
+   * Seedance 2.0 reference-to-video binds each subject to the right ref.
+   */
+  imageRefs?: Array<"brand" | "character" | "location">;
 };
 
 const find = (list: StudioPreset[], id?: string) =>
   id ? list.find((p) => p.id === id) : undefined;
 
-function brandLine(b?: BrandContext): string | null {
+function refTag(refs: StudioBrief["imageRefs"], slot: "brand" | "character" | "location"): string | null {
+  if (!refs) return null;
+  const idx = refs.indexOf(slot);
+  return idx >= 0 ? `@Image${idx + 1}` : null;
+}
+
+function brandLine(b?: BrandContext, refs?: StudioBrief["imageRefs"]): string | null {
   if (!b || !b.name) return null;
+  const tag = refTag(refs, "brand");
   const bits = [`Brand: ${b.name}`];
   if (b.description) bits.push(b.description);
   if (b.tagline) bits.push(`Tagline: "${b.tagline}"`);
   if (b.audience) bits.push(`Audience: ${b.audience}`);
   if (b.url) bits.push(`Ref: ${b.url}`);
+  if (tag) bits.push(`Use ${tag} as the exact logo/product reference — match it pixel-faithfully throughout the shot`);
   return bits.join(" — ");
 }
 
-function locationLine(l?: LocationContext): string | null {
+function locationLine(l?: LocationContext, refs?: StudioBrief["imageRefs"]): string | null {
   if (!l || (!l.place && !l.hasImage)) return null;
+  const tag = refTag(refs, "location");
   const parts: string[] = [];
   if (l.place) parts.push(`Location: ${l.place} — match the city's architecture, light and cultural styling`);
-  if (l.hasImage) parts.push("A reference photo of the real location is provided — match its look");
+  if (l.hasImage) {
+    parts.push(
+      tag
+        ? `Use ${tag} as the location reference — match its architecture, light and styling`
+        : "A reference photo of the real location is provided — match its look",
+    );
+  }
   return parts.join(". ");
 }
 
-function characterLine(c?: CharacterContext): string | null {
+function characterLine(c?: CharacterContext, refs?: StudioBrief["imageRefs"]): string | null {
   if (!c || !c.name) return null;
+  const tag = refTag(refs, "character");
   const bits = [`Character: ${c.name}`];
   if (c.role) bits.push(`Role: ${c.role}`);
   if (c.description) bits.push(c.description);
-  if (c.hasImage) bits.push("A reference photo of the character is provided — match their face, hair and styling consistently");
+  if (c.hasImage) {
+    bits.push(
+      tag
+        ? `Use ${tag} as the character reference — match their face, hair and styling consistently across every frame`
+        : "A reference photo of the character is provided — match their face, hair and styling consistently",
+    );
+  }
   return bits.join(" — ");
 }
 
@@ -573,14 +602,15 @@ export function composeStudioPrompt(brief: StudioBrief): string {
   const parts = [
     "Cinematic 9:16 social ad, 5 seconds, native audio.",
     subjectLine,
-    brandLine(brief.brand),
-    characterLine(brief.character),
+    brandLine(brief.brand, brief.imageRefs),
+    characterLine(brief.character, brief.imageRefs),
     format?.fragment ?? (brief.customFormat?.trim() ? `Format: ${brief.customFormat.trim()}` : null),
     setting?.fragment ?? (brief.customSetting?.trim() ? `Setting: ${brief.customSetting.trim()}` : null),
-    locationLine(brief.location),
+    locationLine(brief.location, brief.imageRefs),
     brief.master.trim() ? `Story: ${brief.master.trim()}` : null,
     "End on a confident product hero frame. Keep text-on-screen minimal and legible.",
   ].filter(Boolean);
 
   return parts.join("\n");
 }
+
