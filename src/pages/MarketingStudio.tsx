@@ -847,7 +847,7 @@ export default function MarketingStudio() {
                   title={showCommunity ? "Community ads" : "Your ads"}
                   subtitle={
                     showCommunity
-                      ? "Click any template to load its format, hook and setting."
+                      ? "Click any template to load its format and location."
                       : pendingJobs.length > 0
                         ? "Your ad is rendering — it'll appear here in a moment."
                         : "Tap one to revisit it in your Library."
