@@ -69,6 +69,7 @@ import {
   RENDER_DEFAULTS,
   type RenderSettings,
 } from "@/components/marketing/RenderSettingsPopover";
+import { AdBuilderPanel, AD_BUILDER_ADVANCED_BTN_CLASS } from "@/components/marketing/AdBuilderPanel";
 
 import { submitVideoJob, pollVideoJob, cancelVideoJob, writeAdScene, type VideoJob } from "@/lib/director/api";
 import loopKitchen from "@/assets/loop-kitchen.mp4.asset.json";
