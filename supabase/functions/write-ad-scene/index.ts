@@ -103,10 +103,9 @@ Deno.serve(async (req) => {
       });
     }
     const hasFormat = !!(body.format?.label || body.format?.custom);
-    const hasHook = !!body.hook?.label;
-    const hasSetting = !!(body.setting?.label || body.setting?.custom);
-    if (!hasFormat || !hasHook || !hasSetting) {
-      return new Response(JSON.stringify({ error: "format, hook and setting are required" }), {
+    const hasSetting = !!(body.setting?.label || body.setting?.custom || body.location?.place || body.location?.hasImage);
+    if (!hasFormat || !hasSetting) {
+      return new Response(JSON.stringify({ error: "format and location are required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
