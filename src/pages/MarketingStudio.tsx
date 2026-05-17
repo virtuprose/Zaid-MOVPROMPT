@@ -144,6 +144,7 @@ export default function MarketingStudio() {
   const [flashChips, setFlashChips] = useState(false);
   const composerRef = useRef<HTMLDivElement | null>(null);
   const galleryRef = useRef<HTMLElement | null>(null);
+  const sessionJobIdsRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     if (!loading && !user) navigate("/auth");
@@ -176,7 +177,6 @@ export default function MarketingStudio() {
       if (done) setUserAds(done.filter((d) => d.video_url) as UserAd[]);
       if (active && active.length > 0) {
         setPendingJobs(active as unknown as VideoJob[]);
-        toast.message(`Resuming ${active.length} render${active.length > 1 ? "s" : ""} in progress…`);
       }
     })();
     return () => { cancelled = true; };
@@ -337,6 +337,7 @@ export default function MarketingStudio() {
         },
         referenceImages,
       );
+      sessionJobIdsRef.current.add(job.id);
       setPendingJobs((prev) => [job, ...prev.filter((j) => j.id !== job.id)]);
       toast.success("Generating your ad…");
       window.setTimeout(() => {
@@ -360,6 +361,7 @@ export default function MarketingStudio() {
           const updated = await pollVideoJob(job.id);
           if (cancelled) return;
           if (updated.video_url) {
+            sessionJobIdsRef.current.delete(job.id);
             setPendingJobs((prev) => prev.filter((j) => j.id !== job.id));
             setUserAds((prev) => [
               {
@@ -373,8 +375,12 @@ export default function MarketingStudio() {
             ]);
             toast.success("Your ad is ready");
           } else if (updated.status === "failed" || updated.error) {
+            const startedThisSession = sessionJobIdsRef.current.has(job.id);
+            sessionJobIdsRef.current.delete(job.id);
             setPendingJobs((prev) => prev.filter((j) => j.id !== job.id));
-            toast.error(updated.error || "Render failed");
+            if (startedThisSession) {
+              toast.error(updated.error || "Render failed");
+            }
           }
         } catch {
           // ignore transient errors, keep polling
