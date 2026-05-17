@@ -166,7 +166,7 @@ export default function MarketingStudio() {
           .is("deleted_at", null)
           .not("video_url", "is", null)
           .order("created_at", { ascending: false })
-          .limit(24),
+          .limit(100),
         supabase
           .from("video_jobs")
           .select("id,status,provider,prompt,created_at")
