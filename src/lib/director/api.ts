@@ -212,44 +212,60 @@ export async function streamDirectorAgent(
     }
   };
 
-  while (!done) {
-    const { value, done: streamDone } = await reader.read();
-    if (streamDone) break;
-    buf += decoder.decode(value, { stream: true });
+  try {
+    while (!done) {
+      const { value, done: streamDone } = await reader.read();
+      resetIdle();
+      if (streamDone) break;
+      buf += decoder.decode(value, { stream: true });
 
-    let nl: number;
-    while ((nl = buf.indexOf("\n")) !== -1) {
-      let line = buf.slice(0, nl);
-      buf = buf.slice(nl + 1);
-      if (line.endsWith("\r")) line = line.slice(0, -1);
-      if (!line || line.startsWith(":")) continue;
-      if (!line.startsWith("data: ")) continue;
-      const payload = line.slice(6).trim();
-      if (payload === "[DONE]") {
-        done = true;
-        break;
-      }
-      try {
-        const j = JSON.parse(payload);
-        const delta = j.choices?.[0]?.delta;
-        if (!delta) continue;
-        if (delta.tool_calls?.[0]) {
-          const tc = delta.tool_calls[0];
-          if (tc.function?.name) toolName = tc.function.name;
-          if (tc.function?.arguments) {
-            toolArgs += tc.function.arguments;
-            tryEmitPartial();
-          }
-        } else if (delta.content) {
-          textContent += delta.content;
+      let nl: number;
+      while ((nl = buf.indexOf("\n")) !== -1) {
+        let line = buf.slice(0, nl);
+        buf = buf.slice(nl + 1);
+        if (line.endsWith("\r")) line = line.slice(0, -1);
+        if (!line || line.startsWith(":")) continue;
+        if (!line.startsWith("data: ")) continue;
+        const payload = line.slice(6).trim();
+        if (payload === "[DONE]") {
+          done = true;
+          break;
         }
-      } catch {
-        // partial JSON across chunk boundary — re-buffer
-        buf = line + "\n" + buf;
-        break;
+        try {
+          const j = JSON.parse(payload);
+          const delta = j.choices?.[0]?.delta;
+          if (!delta) continue;
+          if (delta.tool_calls?.[0]) {
+            const tc = delta.tool_calls[0];
+            if (tc.function?.name) toolName = tc.function.name;
+            if (tc.function?.arguments) {
+              toolArgs += tc.function.arguments;
+              tryEmitPartial();
+            }
+          } else if (delta.content) {
+            textContent += delta.content;
+          }
+        } catch {
+          // partial JSON across chunk boundary — re-buffer
+          buf = line + "\n" + buf;
+          break;
+        }
       }
     }
+  } catch (err: any) {
+    cleanup();
+    if (timedOut)
+      throw new DirectorTimeoutError(
+        timedOut === "idle"
+          ? "The Director stopped streaming. Check your connection and try again."
+          : "The Director took too long to respond. Try again.",
+      );
+    const e = new Error(err?.message || "Connection to the Director was interrupted.");
+    (e as any).retryable = true;
+    throw e;
   }
+
+  cleanup();
 
   if (toolName) {
     try {
