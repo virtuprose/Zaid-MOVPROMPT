@@ -1,24 +1,26 @@
-# Hide the description textarea after a preset is chosen
+# Remove the description textarea entirely
 
-Once the user selects a Format preset, the preset already describes what happens in the ad — no need to ask them to type it again. The composer collapses to just the attachments (Product, Avatar, Location) plus the bottom chip row.
+The flow is preset-driven: user picks a Format preset, attaches Product/Avatar/Location, hits Generate. No free-write textarea anywhere.
 
 ## Change in `src/pages/MarketingStudio.tsx`
 
-In the composer card (around lines 648–666), wrap the `<Textarea>` block in a condition:
+1. **Delete** the entire `{!format && (<div className="relative"><Textarea …/>…</div>)}` block in the composer card (currently lines 648–668).
+2. **Delete** the `master` state field's UI surface — keep the state variable itself for now since `composeStudioPrompt` reads it (it just stays empty, which `composeStudioPrompt` already handles by skipping the `Story:` line).
+3. **Update** `hasInputs` / Generate gating so the button enables on **preset OR attachments** instead of requiring `master` text. Specifically, treat the composer as ready when any of: `formatId`, `customFormat`, `settingId`, `customSetting`, `location.place`, `location.imagePath`, `brandKit`, `characterKit` is set.
+4. **Remove** the `drafting` "Drafting…" inline indicator (it lived inside the textarea wrapper). If `drafting` is still used elsewhere (auto-draft into `master`), leave the state but drop the visual since there's no textarea to fill anymore.
 
-- **Show** the textarea only when **no Format preset is selected** (i.e. `!format`). This keeps the free-write path for users who skip presets and want to describe their own scene.
-- **Hide** the textarea entirely as soon as `format` is set (preset picked). The composer now shows:
-  - Top row: Product slot + Avatar slot (unchanged)
-  - Bottom row: Format chip (showing picked preset), Location chip, Render chip, Generate
+## Composer card after change
 
-Detaching the format (clicking the chip and clearing it) brings the textarea back automatically.
-
-## Prompt generation
-
-No change. `composeStudioPrompt` already uses the preset's fragment when `formatId` is set, and `master` (textarea text) is appended as `Story:` only when non-empty — so an empty master with a preset selected is already the intended path.
+```text
+┌─ Composer card ──────────────────────────────────┐
+│  [+ Product]  [+ Avatar]                         │
+│  ──────────────────────────────────────────     │
+│  [Format] [Location] [Render]      [Generate]   │
+└──────────────────────────────────────────────────┘
+```
 
 ## Out of scope
 
-- Product / Avatar / Location pickers and chips — untouched.
-- Bottom chip row, Generate button, render settings — untouched.
-- No DB or edge function changes.
+- `composeStudioPrompt`, edge functions, DB — unchanged.
+- Picker popovers, render settings, gallery — unchanged.
+- `master` state stays defined so any auto-draft logic keeps compiling; we just stop rendering an input for it.
