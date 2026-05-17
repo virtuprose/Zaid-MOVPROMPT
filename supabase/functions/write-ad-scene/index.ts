@@ -36,7 +36,6 @@ Rules:
 type Brief = {
   subject?: "product" | "app";
   format?: { label?: string; fragment?: string; custom?: string };
-  hook?: { label?: string; fragment?: string };
   setting?: { label?: string; fragment?: string; custom?: string };
   brand?: { name?: string; description?: string; tagline?: string; audience?: string } | null;
   character?: { name?: string; role?: string; description?: string } | null;
