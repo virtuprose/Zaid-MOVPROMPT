@@ -883,6 +883,8 @@ function DirectorChatInner() {
                           x.attachments.length > 0,
                       )
                     }
+                    referenceImageUrls={referenceImageUrls}
+                    referenceImageSlots={referenceImageSlots}
                   />
                 </div>
               );
