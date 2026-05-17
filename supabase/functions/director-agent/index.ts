@@ -84,7 +84,7 @@ STEP 3 — Aesthetic ranking (SOFT score) among remaining candidates:
   • photoreal dialogue close-up → veo-3.1 > kling-v3-pro > seedance-v1-pro
   • cinematic film-look wide shot (35mm/anamorphic/Portra) → seedance-v1-pro > kling-v3-pro > veo-3.1 (use seedance-2.0-ref only if a reference image is attached)
   • anime / stylized portrait → hailuo-02-pro > seedance-v1-lite > ltx-video-13b
-  • multi-shot storyboard with recurring characters → kling-omni > kling-v3-pro
+  • multi-shot storyboard with recurring characters → kling-omni > seedance-2.0-ref > kling-v3-pro (prefer seedance-2.0-ref when the look is cinematic film-grade or needs a non-standard aspect ratio like 21:9 / 4:3; prefer kling-omni when shots need named element references and tight identity lock across many cuts).
   • VFX-heavy action / complex motion → kling-v2.5-turbo-pro > kling-v3-pro
   • on-screen readable text / signage → veo-3.1 (strongly preferred)
   • non-standard aspect (4:3 / 3:4 / 21:9) → seedance family only
