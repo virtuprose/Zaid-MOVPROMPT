@@ -1,25 +1,42 @@
-## Problem
+## Goal
 
-In `QuestionCard`, the duration question "How long should the clip be — 5s, 8s, 10s, or other?" renders a video upload slot. The word "clip" is in `VIDEO_RE` and is also in the "strong standalone noun" allowlist inside `detectMediaAsk()`, so the question is misclassified as an upload ask. `QuestionCard` already hides chip suggestions for duration questions, but the upload slot is rendered unconditionally whenever `ask && onAttach` is truthy.
+On the Ads tool (`/marketing`):
+1. **Remove the Hook chip/picker** from the composer (drop the button, drop hook from readiness, drop hook from draft + final prompt).
+2. **Rename the Setting chip/picker to "Location"** so the existing scene-type + reference-image control reads as the location of the ad.
 
-## Fix
+No behavior change to Format, Master prompt, brand, avatar, or render settings.
 
-Single small change in `src/components/director/QuestionCard.tsx`:
+## Behavior changes
 
-- Gate the `QuestionUploadSlot` render with `!isDuration`, mirroring the existing pattern used for `suggestion`. The cleanest form is to also null out `mediaAsks[i]` when `DURATION_RE.test(q)` (same place where `suggestions` is already null-guarded), so downstream code (slot render, submit summary line, placeholder copy) all consistently treat duration questions as non-media.
+- Composer chips become: **Format · Location · Render settings**, then brand/avatar/Generate on the right.
+- Readiness becomes: `(formatId || customFormat.trim()) && (settingId || customSetting.trim() || location.imagePath || location.place)`.
+- `writeAdScene` call stops sending `hook`.
+- `composeStudioPrompt` stops including the hook fragment.
+- Summary line ("Renders as: …") drops the hook segment.
+- Template auto-fills (`applyTemplate`) keep working but ignore `hookId` (still accepted in the type so existing data doesn't break — just not applied).
 
-Concretely, in the `mediaAsks` `useMemo`:
+## Files to touch
 
-```ts
-const mediaAsks = useMemo(
-  () => questions.map((q) => (DURATION_RE.test(q) ? null : detectMediaAsk(q))),
-  [questions],
-);
-```
+- `src/pages/MarketingStudio.tsx`
+  - Remove the `Hook` `PresetChip` (~line 674) and its `PresetPickerDialog` instance.
+  - Rename the `Setting` `PresetChip` label to `"Location"` and its tooltip to something like `"Where the ad takes place — pick a scene or attach a reference image"`.
+  - Update the Format chip's "Custom: …" prefix to "Master: …" if Master-prompt rename is in scope (skip if not — confirm).
+  - Update `ready`, the `writeAdScene` payload, and the "Renders as" summary to drop hook.
+  - Update `applyTemplate` to skip `setHookId`.
+  - Update the `PresetPickerDialog` for the renamed picker: `title="Pick the location"`, `subtitle` rewritten around location, `customLabel="Custom location"`, `searchPlaceholder` updated.
+- `src/lib/marketingStudio.ts` (`composeStudioPrompt`) — remove `hookId` from the signature/usage. Verify shape before editing.
+- `supabase/functions/write-ad-scene/index.ts` — accept payload without `hook`; remove hook from the model brief. Verify shape before editing.
 
-No other files need to change. `detectMediaAsk()` stays generic (other features may still want "clip" to count as a video ask), and the suppression lives next to the existing duration handling.
+## Out of scope
+
+- Hook presets file (`HOOKS`) stays in the codebase untouched in case we re-introduce it later.
+- No DB / kit changes.
+- Master-prompt rename is a separate request — not included here.
 
 ## Verification
 
-- Reload the affected session (`/director/<id>`); the second question should now show only the duration chips (`10s / 15s / 30s / 45s / Other`) and no upload slot.
-- A genuine video ask like "Drop any reference clips you have" still renders the upload slot.
+- `/marketing` composer shows only **Format · Location · Render settings** chips.
+- Picking a Format + a Location (preset or custom or reference image) enables Generate.
+- Auto-drafted scene and final prompt contain no hook phrasing.
+- "Renders as" summary reads `Format · Location · 9:16 · 5s · 1080p · audio on`.
+- Clicking a template card still fills Format + Location without errors.
