@@ -545,8 +545,8 @@ export default function MarketingStudio() {
         <TopNav />
 
         <div className="relative z-10 container max-w-7xl mx-auto px-4 py-6 sm:py-8">
-          <div className="text-center mb-6">
-            <h1 className="font-display text-[32px] sm:text-[44px] tracking-tight uppercase leading-[1]">
+          <div className="text-center mb-5">
+            <h1 className="font-display text-[28px] sm:text-[36px] tracking-tight uppercase leading-[1]">
               Turn any product
               <br /> into a video ad
             </h1>
@@ -556,7 +556,7 @@ export default function MarketingStudio() {
           </div>
 
           {/* Composer with sidebar */}
-          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 items-stretch max-w-4xl mx-auto w-full">
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 items-stretch max-w-5xl mx-auto w-full">
             {/* Subject sidebar */}
             <div className="flex sm:flex-col gap-1.5 shrink-0 sm:justify-center sm:self-stretch">
               {([
@@ -767,7 +767,7 @@ export default function MarketingStudio() {
           </div>
 
           {/* Ads gallery */}
-          <section ref={galleryRef} className="mt-10 scroll-mt-20">
+          <section ref={galleryRef} className="mt-8 scroll-mt-20 max-w-5xl mx-auto">
             {mode === "empty" && (
               <>
                 <SectionHeader
