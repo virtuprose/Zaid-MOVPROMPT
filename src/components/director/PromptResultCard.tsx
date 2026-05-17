@@ -201,7 +201,7 @@ export function PromptResultCard({ title, prompt, breakdown, directorsNote, onRe
     cameraLighting && `\n## Camera & Lighting\n${cameraLighting}`,
     film && `\n## Film emulation\n${film}`,
     negative && `\n## Negative prompt\n${negative}`,
-    recommendation && `\n## Model recommendation\n${recommendation}`,
+    
   ]
     .filter(Boolean)
     .join("\n");
@@ -405,8 +405,6 @@ export function PromptResultCard({ title, prompt, breakdown, directorsNote, onRe
         <Section label="Camera & Lighting" body={cameraLighting} />
         <Section label="Film emulation" body={film} />
         <Section label="Negative prompt" body={negative} />
-        <Section label="Model recommendation" body={recommendation} />
-
         {directorsNote && (
           <div className="text-xs text-muted-foreground italic border-l-2 border-accent/40 pl-3">
             Director's note — {directorsNote}
@@ -545,7 +543,7 @@ export function PromptResultCard({ title, prompt, breakdown, directorsNote, onRe
             <Section label="Camera & Lighting" body={cameraLighting} />
             <Section label="Film emulation" body={film} />
             <Section label="Negative prompt" body={negative} />
-            <Section label="Model recommendation" body={recommendation} />
+            
             {directorsNote && (
               <div className="text-xs text-muted-foreground italic border-l-2 border-accent/40 pl-3">
                 Director's note — {directorsNote}
