@@ -166,7 +166,7 @@ export default function MarketingStudio() {
           .is("deleted_at", null)
           .not("video_url", "is", null)
           .order("created_at", { ascending: false })
-          .limit(24),
+          .limit(100),
         supabase
           .from("video_jobs")
           .select("id,status,provider,prompt,created_at")
@@ -807,7 +807,7 @@ export default function MarketingStudio() {
                   {pendingJobs.map((job) => (
                     <PendingAdCard key={job.id} onCancel={() => handleCancelJob(job.id)} />
                   ))}
-                  {userAds.slice(0, Math.max(0, 4 - pendingJobs.length)).map((ad) => (
+                  {userAds.map((ad) => (
                     <UserAdCard
                       key={ad.id}
                       ad={ad}
@@ -853,7 +853,7 @@ export default function MarketingStudio() {
                     {pendingJobs.map((job) => (
                       <PendingAdCard key={job.id} onCancel={() => handleCancelJob(job.id)} />
                     ))}
-                    {userAds.slice(0, Math.max(0, 8 - pendingJobs.length)).map((ad) => (
+                    {userAds.map((ad) => (
                       <UserAdCard
                         key={ad.id}
                         ad={ad}
