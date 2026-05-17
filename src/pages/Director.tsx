@@ -191,7 +191,7 @@ export default function Director() {
 
       <TopNav />
 
-      <div className="relative z-10 container max-w-7xl mx-auto px-4 py-4">
+      <div className="relative z-10 container max-w-[1600px] mx-auto px-4 py-4">
         <div className="grid grid-cols-1 lg:grid-cols-[240px_1fr] gap-4">
           <aside className="hidden lg:flex flex-col gap-2 max-h-[calc(100vh-160px)]">
             <Button
@@ -305,7 +305,7 @@ export default function Director() {
             )}
           </aside>
 
-          <div className="max-w-3xl w-full mx-auto lg:mx-0">
+          <div className="w-full min-w-0">
             <DirectorErrorBoundary key={sessionId || "new"} sessionId={sessionId}>
               <DirectorChat />
             </DirectorErrorBoundary>
