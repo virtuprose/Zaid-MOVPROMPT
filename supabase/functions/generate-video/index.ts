@@ -37,16 +37,14 @@ const FAL_MODELS: Record<string, string> = {
   "veo-3": "fal-ai/veo3",
   "veo-3-fast": "fal-ai/veo3/fast",
   "veo-2": "fal-ai/veo2",
-  // Seedance
-  // NOTE: Seedance 2.0 only exposes image/reference-to-video on fal — there is
-  // no `seedance-2.0/text-to-video` endpoint. We keep the legacy `seedance-2.0`
-  // / `seedance-2.0-fast` ids mapped to the working v1 Pro endpoint so old
-  // saved jobs still resolve, but the UI no longer exposes them.
-  "seedance-2.0": "fal-ai/bytedance/seedance/v1/pro/text-to-video",
-  "seedance-2.0-fast": "fal-ai/bytedance/seedance/v1/pro/text-to-video",
-  // Seedance 2.0 has no reference/image-to-video endpoint on fal — route legacy
-  // saved jobs to the working v1 Pro image-to-video endpoint so they don't 404.
-  "seedance-2.0-ref": "fal-ai/bytedance/seedance/v1/pro/image-to-video",
+  // Seedance 2.0 — current generation, native audio, multi-reference.
+  // FAL serves these under the bare `bytedance/...` namespace (no `fal-ai/` prefix).
+  "seedance-2.0": "bytedance/seedance-2.0/image-to-video",
+  "seedance-2.0-fast": "bytedance/seedance-2.0/image-to-video",
+  // Multi-reference: up to 9 images + 3 videos + 3 audio (12 total).
+  // Refs are addressed inline in the prompt as @Image1, @Image2, …
+  "seedance-2.0-ref": "bytedance/seedance-2.0/reference-to-video",
+  // Seedance v1 Pro — kept as the text-only fallback (no native audio, but fast/cheap).
   "seedance-v1-pro": "fal-ai/bytedance/seedance/v1/pro/text-to-video",
   "seedance-v1-pro-ref": "fal-ai/bytedance/seedance/v1/pro/image-to-video",
   "seedance-v1-lite": "fal-ai/bytedance/seedance/v1/lite/text-to-video",
