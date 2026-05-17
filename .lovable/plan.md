@@ -1,72 +1,48 @@
-# Wire Seedance 2.0 (multi-reference) into our pipeline
+## Goal
 
-You were right — I missed the right endpoint. Seedance 2.0 ships **two** variants on FAL:
+Make the AI Director route to `bytedance/seedance-2.0/reference-to-video` whenever the user has attached references in the chat, send every image in `image_urls`, and tag each subject as `@Image1` / `@Image2` / `@Image3` in the prompt so identity locks across the shot. Today the Director never forwards the chat attachments to `submitVideoJob`, so even when the user picks Seedance the renderer falls back to text‑to‑video and identity drifts.
 
-| Endpoint | Inputs | Use case |
-|---|---|---|
-| `bytedance/seedance-2.0/image-to-video` | 1 starting image (+ optional end image) | Animate one still |
-| `bytedance/seedance-2.0/reference-to-video` | **up to 9 images + 3 videos + 3 audio (12 total)** | Multi-reference identity lock |
+## Changes
 
-The reference-to-video one is what your "12 reference files" matches. It supports native audio, 4–15s, 480p/720p/1080p, all the aspect ratios we already use (9:16 / 16:9 / 1:1 / etc.), and pricing is the same $0.30 / sec at 720p (drops to $0.18 if video refs are attached). References are addressed inline as `@Image1`, `@Image2`, `@Video1`, etc. in the prompt.
+### 1. `src/lib/director/api.ts` — keep `submitVideoJob` signature, just used by both flows
 
-This means we can drop Kling Omni and standardize on Seedance 2.0 for everything — same provider, lower complexity, native audio across the board, and proper identity lock.
+Already accepts `referenceImages?: string[]` and forwards them as `reference_image_urls`. No edit needed — it just needs callers to actually pass the array.
 
-## What changes
+### 2. `src/components/director/PromptResultCard.tsx`
 
-**1. `supabase/functions/generate-video/index.ts` — endpoint mapping**
+- Accept a new prop `referenceImageUrls?: string[]` (ordered: brand, character, location — same order the Director used when scanning attachments).
+- In `generateVideo(...)`:
+  - If `referenceImageUrls.length >= 2` → force `model.id = "seedance-2.0-ref"`.
+  - Else if `referenceImageUrls.length === 1` → force `"seedance-2.0"`.
+  - Else keep the user's pick (text‑only models).
+  - Prepend `@Image1 …, @Image2 …, @Image3 …` lines to `finalPrompt` (one per ref slot) so Seedance binds each subject. Use a small `buildRefTags(urls, slots)` helper that mirrors `refTag()` in `src/lib/marketingStudio.ts`.
+- Pass `referenceImageUrls` as the 5th arg to `submitVideoJob`.
+- Pass the same array to `<VideoOptionsDialog>` so the dialog can hide unsupported options when a ref-to-video model is forced.
 
-Replace the broken Seedance 2.0 aliases with the real endpoints (no `fal-ai/` prefix — FAL serves these under bare `bytedance/...`):
+### 3. `src/components/director/DirectorChat.tsx`
 
-- `seedance-2.0` → `bytedance/seedance-2.0/image-to-video` (single image, optional end frame)
-- `seedance-2.0-ref` → `bytedance/seedance-2.0/reference-to-video` (multi-ref, up to 12 files)
-- Keep `seedance-v1-pro` as the text-only fallback.
-- Keep `kling-omni-ref` mapping for in-flight jobs (graceful), but stop routing new jobs there.
+- Compute a memoised `referenceImageUrls` from the aggregated `mergedAttachments` logic that already exists (lines 275–294), filtering `kind === "image"` and taking `a.url` (max 9, in chronological turn order — current turn first like today).
+- Tag each URL with a slot guess: first image → `"brand"`, second → `"character"`, third+ → `"location"`. Store as a parallel `referenceImageSlots: Array<"brand"|"character"|"location">` array.
+- Pass both arrays into `<PromptResultCard referenceImageUrls={...} referenceImageSlots={...} />` (the two locations at lines 827 and 882 area).
+- In the `request_video_generation` branch (line 381) replace the bare `"seedance"` provider with the same routing rule (0 → `seedance-v1-pro`, 1 → `seedance-2.0`, 2+ → `seedance-2.0-ref`) and pass `referenceImageUrls` to `submitVideoJob`. Also prepend the `@ImageN` tags to `resolvedPrompt` before sending.
 
-Confirm our queue caller handles a bare `bytedance/...` path the same way it handles `fal-ai/...` paths. Normalize in one place if not.
+### 4. `src/lib/director/videoModels.ts`
 
-**2. `supabase/functions/generate-video/index.ts` — `buildFalPayload`**
+- Add the missing single-image `seedance-2.0` entry (id `seedance-2.0`, label "Seedance 2.0", `requiresReference: true`) right above `seedance-2.0-ref`, so the model picker can surface it when the user has exactly one ref.
 
-Extend the `seedance` branch:
+### 5. No backend changes
 
-- For `seedance-2.0-ref`: send `image_urls: referenceImages.slice(0, 9)` (array, NOT `image_url`). Optionally `video_urls` and `audio_urls` if we ever start collecting those.
-- For `seedance-2.0` (image-to-video): keep `image_url = referenceImages[0]`, optional `end_image_url = referenceImages[1]`.
-- Map our `duration` (number) → Seedance enum string ("4"–"15" or "auto"), clamping into range.
-- Pass `resolution`, `aspect_ratio`, `generate_audio`.
+`supabase/functions/generate-video/index.ts` already maps `seedance-2.0` and `seedance-2.0-ref` to the correct bare FAL paths and already sends `image_url` / `image_urls`. Nothing to redeploy.
 
-**3. `src/pages/MarketingStudio.tsx` — provider routing**
+### 6. Verify
 
-```
-refs = 0   → seedance-v1-pro              (text-only, fast)
-refs = 1   → seedance-2.0  (image-to-video)
-refs ≥ 2   → seedance-2.0-ref (reference-to-video, all refs passed)
-```
-
-Pass all up to 9 brand+character+location refs to the function.
-
-**4. Prompt composition — `src/lib/marketingStudio.ts`**
-
-Reference-to-video relies on `@Image1`, `@Image2`, ... tags inside the prompt to bind each ref to a subject. Update `composeStudioPrompt` so when refs exist:
-- Brand line mentions `@Image1` for the logo/product.
-- Character line mentions `@Image2` for the avatar.
-- Location line mentions `@Image3` for the place.
-- Order must match the order we pass to `image_urls`.
-
-This is what actually makes the identity lock work — without `@ImageN` tags Seedance treats the refs as loose style hints.
-
-**5. Verify**
-
-- Deploy `generate-video`.
-- Curl with prompt + 3 refs (brand + character + location) → confirm FAL request body contains `image_urls: [3 urls]` and resulting clip preserves all three.
-- Curl with prompt + 1 ref → confirm it routes to `image-to-video` with `image_url`.
-- Curl with prompt only → confirm v1 Pro text-to-video still works.
-- Watch a fresh render in the UI end-to-end.
-
-## Trade-offs
-
-- Cheaper than Kling Omni at the same quality tier and with up to 12 inputs vs Kling's 7.
-- Same native audio support, same aspect ratios.
-- Only catch: the `@ImageN` prompt tags must line up with the order of `image_urls` — that's a prompt-composition discipline thing, handled in step 4.
+- With 0 refs: Director picks `seedance-v1-pro`, no `@ImageN` tags, request body has no `image_urls`.
+- With 1 image attached: request goes to `bytedance/seedance-2.0/image-to-video`, `image_url` set, prompt starts with `@Image1 …`.
+- With 3 images attached: request goes to `bytedance/seedance-2.0/reference-to-video`, `image_urls` array has all 3 URLs in turn order, prompt starts with `@Image1`, `@Image2`, `@Image3` lines.
+- Check Director edge function logs to confirm the payload.
 
 ## Out of scope
 
-UI layout, Director chat, DB schema. No new secrets — `FAL_KEY` covers it.
+- Letting the user manually re-order ref slots (always brand/character/location by attachment order for now).
+- Changing how the Director chat collects attachments.
+- DB schema, auth, UI restyle.

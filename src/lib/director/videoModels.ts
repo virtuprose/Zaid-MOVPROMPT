@@ -52,7 +52,8 @@ export const VIDEO_MODEL_GROUPS: VideoModelGroup[] = [
   {
     label: "ByteDance — Seedance",
     models: [
-      { id: "seedance-2.0-ref", label: "Seedance 2.0 Reference", family: "seedance", note: "Cinematic, native audio — needs a reference image", requiresReference: true },
+      { id: "seedance-2.0-ref", label: "Seedance 2.0 Reference", family: "seedance", note: "Multi-reference identity lock (up to 9 images) + native audio", requiresReference: true },
+      { id: "seedance-2.0", label: "Seedance 2.0", family: "seedance", note: "Single image-to-video + native audio", requiresReference: true },
       { id: "seedance-v1-pro", label: "Seedance 1 Pro", family: "seedance" },
       { id: "seedance-v1-lite", label: "Seedance 1 Lite", family: "seedance", note: "Faster, lower cost" },
     ],

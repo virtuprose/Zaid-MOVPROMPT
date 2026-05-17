@@ -379,18 +379,32 @@ function DirectorChatInner() {
           reason: resp.reason,
         };
       } else if (resp.kind === "request_video_generation") {
+        const refCount = referenceImageUrls.length;
+        const provider =
+          refCount >= 2 ? "seedance-2.0-ref" : refCount === 1 ? "seedance-2.0" : "seedance-v1-pro";
         added = {
           role: "assistant",
           animate: true,
-          content: `Sending this to the ${resp.provider_preference || "seedance"} renderer…`,
+          content: `Sending this to the ${provider} renderer…`,
         };
         try {
-          const resolvedPrompt = resp.prompt?.trim() || getLatestGeneratedPrompt();
-          const provider =
-            resp.provider_preference && resp.provider_preference !== "any"
-              ? resp.provider_preference
-              : "seedance";
-          await submitVideoJob(resolvedPrompt, provider, sessionIdRef.current);
+          const basePrompt = resp.prompt?.trim() || getLatestGeneratedPrompt();
+          const slotLabels: Record<"brand" | "character" | "location", string> = {
+            brand: "brand / product",
+            character: "main subject",
+            location: "location / scene",
+          };
+          const tagLines = referenceImageUrls
+            .map((_, i) => `@Image${i + 1} = ${slotLabels[referenceImageSlots[i]] || `reference ${i + 1}`}`)
+            .join("\n");
+          const resolvedPrompt = tagLines ? `${tagLines}\n\n${basePrompt}` : basePrompt;
+          await submitVideoJob(
+            resolvedPrompt,
+            provider,
+            sessionIdRef.current,
+            undefined,
+            referenceImageUrls.length > 0 ? referenceImageUrls : undefined,
+          );
           toast.success("Render started — check your Library when it finishes.");
         } catch (e: any) {
           toast.error(e?.message || "Could not start render");
@@ -567,6 +581,35 @@ function DirectorChatInner() {
   const handleRefine = (currentPrompt: string) => {
     setInput(`Refine this prompt: ${currentPrompt}\n\nMy changes: `);
   };
+
+  // Aggregate every image attachment ever sent in this chat (current turn first,
+  // then newest → oldest), dedupe by URL, cap at 9 (Seedance 2.0 ref limit).
+  // First image is treated as brand/product, second as main character, rest as
+  // location/scene — same convention as MarketingStudio.
+  const { referenceImageUrls, referenceImageSlots } = useMemo(() => {
+    const urls: string[] = [];
+    const seen = new Set<string>();
+    const push = (a: Attachment) => {
+      const url = (a as any).url as string | undefined;
+      if (!url || seen.has(url)) return;
+      if ((a as any).kind && (a as any).kind !== "image") return;
+      seen.add(url);
+      urls.push(url);
+    };
+    for (const a of attachments) push(a);
+    for (let i = bubbles.length - 1; i >= 0; i -= 1) {
+      const b = bubbles[i];
+      if (b.role === "user" && Array.isArray(b.attachments)) {
+        for (const a of b.attachments) push(a);
+      }
+    }
+    const slotOrder: Array<"brand" | "character" | "location"> = ["brand", "character", "location"];
+    const sliced = urls.slice(0, 9);
+    return {
+      referenceImageUrls: sliced,
+      referenceImageSlots: sliced.map((_, i) => slotOrder[Math.min(i, 2)]),
+    };
+  }, [attachments, bubbles]);
 
   const { pending: pendingApproval } = useApproval();
 
@@ -840,6 +883,8 @@ function DirectorChatInner() {
                           x.attachments.length > 0,
                       )
                     }
+                    referenceImageUrls={referenceImageUrls}
+                    referenceImageSlots={referenceImageSlots}
                   />
                 </div>
               );
