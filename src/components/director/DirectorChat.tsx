@@ -143,8 +143,82 @@ function DirectorChatInner() {
       const loaded = (data.messages as Bubble[]) || [WELCOME];
       const remote = loaded.length ? loaded : [WELCOME];
       setBubbles((prev) => (remote.length >= prev.length ? remote : prev));
+
+      // Also merge any video_jobs for this session that aren't already represented.
+      const { data: jobs } = await supabase
+        .from("video_jobs")
+        .select("id,prompt,provider,status,video_url,error,liked,created_at")
+        .eq("session_id", routeSessionId)
+        .is("deleted_at", null)
+        .order("created_at", { ascending: true });
+      if (jobs && jobs.length) {
+        setBubbles((prev) => {
+          const existingIds = new Set(
+            prev.flatMap((b) => (b.role === "video" ? [b.data.jobId] : [])),
+          );
+          const fresh = jobs
+            .filter((j: any) => !existingIds.has(j.id))
+            .map<Bubble>((j: any) => ({
+              role: "video",
+              data: {
+                jobId: j.id,
+                prompt: j.prompt,
+                provider: j.provider,
+                status: j.status,
+                videoUrl: j.video_url || undefined,
+                error: j.error || undefined,
+                liked: !!j.liked,
+              },
+            }));
+          return fresh.length ? [...prev, ...fresh] : prev;
+        });
+      }
     })();
   }, [routeSessionId, user, navigate]);
+
+  // Poll any in-flight video bubbles until completed/failed.
+  useEffect(() => {
+    const pending = bubbles
+      .map((b, i) => ({ b, i }))
+      .filter(({ b }) => b.role === "video" && (b.data.status === "queued" || b.data.status === "processing"));
+    if (pending.length === 0) return;
+    let cancelled = false;
+    const tick = async () => {
+      for (const { b } of pending) {
+        if (cancelled || b.role !== "video") continue;
+        try {
+          const job = await pollVideoJob(b.data.jobId);
+          if (cancelled) return;
+          setBubbles((prev) => {
+            const copy = [...prev];
+            for (let k = 0; k < copy.length; k++) {
+              const cur = copy[k];
+              if (cur.role === "video" && cur.data.jobId === job.id) {
+                copy[k] = {
+                  role: "video",
+                  data: {
+                    ...cur.data,
+                    status: (job.status as any) || cur.data.status,
+                    videoUrl: job.video_url || cur.data.videoUrl,
+                    error: job.error || cur.data.error,
+                  },
+                };
+              }
+            }
+            return copy;
+          });
+        } catch {
+          /* ignore — retry next tick */
+        }
+      }
+    };
+    const handle = window.setInterval(tick, 4000);
+    void tick();
+    return () => {
+      cancelled = true;
+      window.clearInterval(handle);
+    };
+  }, [bubbles]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
