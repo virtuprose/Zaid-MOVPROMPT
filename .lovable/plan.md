@@ -1,50 +1,55 @@
-## Problem
+# Add Style/Realism as 6th Routing Axis
 
-In your session the Director asked only 3 things (subject, aspect ratio, audio), then jumped straight to "pick a model" and emitted the prompt. It never asked about **resolution**, never confirmed the **15s duration** out loud, and didn't recap the full spec before committing. That makes the recommendation feel guessed and leaves the render dialog as the first place the user sees options like 720p vs 1080p vs 4K.
+Style genuinely changes which model wins (Kling = photoreal/cinematic, Hailuo = stylized motion, Wan/animatediff = anime, Veo 3 = cinematic-film). Adding it as a first-class routing axis so the Director asks for it, locks it in the spec, and uses it to pick the right engine.
 
-The behavior is driven by `supabase/functions/director-agent/index.ts` — the SYSTEM_PROMPT only enumerates **4 routing axes** (input mode, duration, audio, aspect ratio). Resolution is not in the list, so the model never asks. It's also allowed to stop at 3 questions even when more are unknown.
+## Scope
 
-## Goal
+**Style values (4):**
+- `photoreal` — realistic humans, products, documentary
+- `cinematic-film` — graded, anamorphic, film-grain look
+- `stylized` — illustrative, painterly, graphic, 3D-render
+- `anime` — 2D anime / manga / cel
 
-Before `ask_model_choice` / `generate_prompt`, the Director must know — and visibly echo back — every axis that materially changes the output, including resolution. No silent assumptions.
+## Changes
 
-## Plan
+### 1. `supabase/functions/director-agent/index.ts`
+- Add **Style** as 6th item under `MODEL-ROUTING QUESTIONS`, after Resolution.
+- Update priority order: input → duration → audio → aspect → resolution → **style**.
+- Add inferred-skip rules: if user uploads a photo reference, infer `photoreal` unless they say otherwise; if they say "anime/cartoon/3D/painterly", infer that and skip.
+- Extend `locked_spec` schema in both `ask_model_choice` and `generate_prompt` tool definitions with `style: "photoreal" | "cinematic-film" | "stylized" | "anime"`.
+- Update locked-spec recap format to include style chip, e.g. `"Locked: 15s · 9:16 · SFX · 1080p · photoreal · fresh — ..."`.
+- Add per-model style-fit hints to the routing rubric the agent reads (one-liner per model: which styles it nails, which it struggles with).
+- Keep per-turn cap at 4.
 
-### 1. Add resolution as a 5th routing axis
-In `supabase/functions/director-agent/index.ts`, extend the `MODEL-ROUTING QUESTIONS` block:
-- Add axis **5. Resolution / fidelity** — 720p, 1080p, native 4K (Kling v3 4K only), or "fastest/cheapest". Drives kling-v3-4k routing and 1080p-capable filters.
-- Update the priority order to: input mode → duration → audio → aspect ratio → resolution.
-- Raise the per-turn cap from 3 to 4 questions when needed (still capped, still one-tap chips). Media-drop coherence rule stays.
-- Add the inferred-skip rule for resolution (e.g. "TikTok draft" → 720p known, "native 4K" → 4K known).
+### 2. `src/lib/director/api.ts`
+- Add `style?: string` to the `locked_spec` TypeScript type so it plumbs through.
 
-### 2. Require a spec recap before model choice
-Add a HARD RULE: before calling `ask_model_choice`, the Director must have explicit or strongly-implied values for **all 5 axes**. If any is still unknown after the brief + answers, ask the remaining ones in the next `ask_clarification` turn instead of jumping to model choice.
+### 3. `src/components/director/ModelChoiceCard.tsx`
+- Add a style chip to `SpecChips` with a small icon (Camera for photoreal, Film for cinematic, Palette for stylized, Sparkles for anime).
 
-When it does call `ask_model_choice`, the `reason` field must restate the locked spec in one line, e.g.:
-> "Locked: 15s · 9:16 · native SFX · 1080p — Kling Omni fits best because…"
+### 4. `src/components/director/PromptResultCard.tsx`
+- Pass `locked_spec.style` through to the render dialog (no UI change here beyond the existing chips row showing style).
 
-So the user sees what was assumed before tapping.
-
-### 3. Surface resolution in the model-choice card
-In `src/components/director/ModelChoiceCard.tsx`, render the spec line (duration / aspect / audio / resolution) as small chips above the recommendation, sourced from the new `reason` recap or from a new optional `locked_spec` object on the tool payload. Lets the user spot a wrong assumption before committing.
-
-### 4. Pre-fill the render dialog from the locked spec
-In `src/components/director/PromptResultCard.tsx` + `VideoOptionsDialog.tsx`, when opening the dialog, seed `options.resolution` / `aspect_ratio` / `duration` from the Director's locked spec (already partially done for aspect/duration). Add resolution so the dialog opens on the value the user already agreed to, not the model default.
-
-### 5. Anti-hallucination guard on the recap
-Add to the prompt: "Never claim a value the user did not state or that is not directly implied by an attached reference. If unsure, ASK — do not assume." Reinforces no silent defaults for resolution/audio/aspect.
-
-## Technical details
-
-Files touched:
-- `supabase/functions/director-agent/index.ts` — SYSTEM_PROMPT routing axes + recap rule; optionally add a `locked_spec` object to `ask_model_choice` / `generate_prompt` tool schemas with `{ duration_seconds, aspect_ratio, audio, resolution, input_mode }`.
-- `src/components/director/ModelChoiceCard.tsx` — render spec chips from `locked_spec` (fallback: parse `reason`).
-- `src/components/director/PromptResultCard.tsx` — pass `locked_spec.resolution` into the options dialog seed.
-- `src/components/director/VideoOptionsDialog.tsx` — accept an `initialOptions` prop override to seed resolution/aspect/duration from the Director instead of `controls.defaults`.
-
-Not touched: the model catalog, the rendering pipeline, the kling-v3-4k routing in `generate-video` — those already work; this plan only changes what the Director asks and confirms.
+### 5. `src/components/director/VideoOptionsDialog.tsx`
+- No new control — style is a routing concern, not a render-time knob. But if the selected model exposes a `style` parameter (e.g. a stylization slider), seed it from locked style.
 
 ## Out of scope
 
-- Restructuring the chat flow (still tool-call driven, still streaming).
-- Adding non-routing knobs (cfg_scale, prompt_optimizer) to the Director questionnaire — those stay in the render dialog as power-user controls. We only promote axes that genuinely change the recommended model or the prompt wording.
+- Model catalog changes (no new models added).
+- New render-time knobs (cfg_scale, motion, fps stay where they are).
+- Rewriting prompt-writing logic — style already influences phrasing inside the prompt; this just makes it explicit.
+
+## Files touched
+
+- `supabase/functions/director-agent/index.ts`
+- `src/lib/director/api.ts`
+- `src/components/director/ModelChoiceCard.tsx`
+- `src/components/director/PromptResultCard.tsx`
+- `src/components/director/VideoOptionsDialog.tsx`
+
+## Acceptance
+
+- Director asks style when it can't be inferred from refs/wording.
+- Locked-spec recap shows the style chip before model pick.
+- Model selected matches the style (photoreal → Kling/Veo, anime → Wan/animatediff, etc.).
+- Render dialog opens pre-filled with the locked spec including style.

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Check, Sparkles, Clock, Ratio, Volume2, Monitor, Film } from "lucide-react";
+import { Check, Sparkles, Clock, Ratio, Volume2, Monitor, Film, Palette } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { findVideoModel, VIDEO_MODEL_GROUPS } from "@/lib/director/videoModels";
@@ -31,12 +31,20 @@ const INPUT_MODE_LABEL: Record<NonNullable<LockedSpec["input_mode"]>, string> = 
   "multi-reference": "multi-reference",
 };
 
+const STYLE_LABEL: Record<NonNullable<LockedSpec["style"]>, string> = {
+  photoreal: "photoreal",
+  "cinematic-film": "cinematic film",
+  stylized: "stylized",
+  anime: "anime",
+};
+
 function SpecChips({ spec }: { spec: LockedSpec }) {
   const chips: Array<{ icon: typeof Clock; label: string }> = [];
   if (spec.duration_seconds) chips.push({ icon: Clock, label: `${spec.duration_seconds}s` });
   if (spec.aspect_ratio) chips.push({ icon: Ratio, label: spec.aspect_ratio });
   if (spec.audio) chips.push({ icon: Volume2, label: AUDIO_LABEL[spec.audio] });
   if (spec.resolution) chips.push({ icon: Monitor, label: spec.resolution.toUpperCase() });
+  if (spec.style) chips.push({ icon: Palette, label: STYLE_LABEL[spec.style] });
   if (spec.input_mode) chips.push({ icon: Film, label: INPUT_MODE_LABEL[spec.input_mode] });
   if (!chips.length) return null;
   return (
