@@ -16,6 +16,8 @@ type Props = {
   open: boolean;
   model: VideoModel | null;
   prompt: string;
+  /** Director-locked spec to seed the dialog (overrides model defaults where provided). */
+  initialOptions?: VideoOptions;
   onCancel: () => void;
   onConfirm: (options: VideoOptions, finalPrompt: string, meta: ConfirmMeta) => void;
 };
