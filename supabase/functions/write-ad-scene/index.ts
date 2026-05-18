@@ -73,6 +73,10 @@ function buildUserContent(b: Brief): string {
   if (b.location?.hasImage) {
     lines.push(`A reference image of the location is attached and will be passed to the video model — describe the scene so it matches the look, framing, lighting and palette of that reference.`);
   }
+  const note = b.userNote?.trim();
+  if (note) {
+    lines.push(`Additional direction (adaptation layer — adjust tone/mood/details, but keep the Format and Setting structure locked): ${note.slice(0, 400)}`);
+  }
   lines.push("\nWrite the scene now.");
   return lines.join("\n");
 }
