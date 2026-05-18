@@ -538,6 +538,7 @@ function DirectorChatInner() {
             count: resp.count,
             aspect_ratio: resp.aspect_ratio,
             per_shot_prompts: resp.per_shot_prompts,
+            shot_index: resp.shot_index,
           });
           const role: "character" | "storyboard" | "reference" =
             resp.mode === "character_sheet"
