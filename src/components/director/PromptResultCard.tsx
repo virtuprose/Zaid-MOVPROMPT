@@ -529,7 +529,10 @@ export function PromptResultCard({ title, prompt, breakdown, directorsNote, onRe
           </button>
         </div>
 
-        <Section label="Main prompt" body={prompt} accent />
+        <RefStrip urls={referenceImageUrls} slots={referenceImageSlots} />
+        <Section label="Main prompt" body={prompt} accent>
+          <PromptWithRefs body={prompt} urls={referenceImageUrls} slots={referenceImageSlots} />
+        </Section>
         <Section label="Camera & Lighting" body={cameraLighting} />
         <Section label="Film emulation" body={film} />
         <Section label="Negative prompt" body={negative} />
