@@ -155,6 +155,28 @@ const TOOLS = [
             type: "string",
             description: "One sentence on why these answers are needed.",
           },
+          suggestions: {
+            type: "array",
+            minItems: 0,
+            maxItems: 3,
+            description:
+              "One entry per question that benefits from chips. Each entry has the question_index (0-based) and 3–5 short tap-to-answer chips. Omit entries for free-form questions.",
+            items: {
+              type: "object",
+              properties: {
+                question_index: { type: "integer", minimum: 0, maximum: 2 },
+                chips: {
+                  type: "array",
+                  minItems: 2,
+                  maxItems: 6,
+                  items: { type: "string" },
+                },
+                allow_other: { type: "boolean", description: "Whether to keep the free-text input visible alongside chips. Default true." },
+              },
+              required: ["question_index", "chips"],
+              additionalProperties: false,
+            },
+          },
         },
         required: ["questions", "reason"],
         additionalProperties: false,
