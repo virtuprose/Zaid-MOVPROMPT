@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Paperclip, Send, Loader2, X, FileText, Image as ImageIcon, Music, ShieldCheck, ShieldAlert, ShieldQuestion } from "lucide-react";
+import { Paperclip, Send, Loader2, X, FileText, Image as ImageIcon, Music, ShieldCheck, ShieldAlert, ShieldQuestion, Mic, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { toast } from "sonner";
@@ -13,6 +13,9 @@ import {
   type Attachment,
 } from "@/lib/director/ingest";
 import { moderateImage } from "@/lib/director/api";
+import { useVoiceCapture } from "@/lib/director/useVoiceCapture";
+import { QuickReplies } from "./QuickReplies";
+import { cn } from "@/lib/utils";
 
 type Props = {
   value: string;
@@ -22,9 +25,21 @@ type Props = {
   onSend: () => void;
   busy: boolean;
   showHelper?: boolean;
+  quickReplies?: string[];
+  onQuickReply?: (chip: string) => void;
 };
 
-export function Composer({ value, onChange, attachments, onAttachmentsChange, onSend, busy, showHelper }: Props) {
+export function Composer({
+  value,
+  onChange,
+  attachments,
+  onAttachmentsChange,
+  onSend,
+  busy,
+  showHelper,
+  quickReplies,
+  onQuickReply,
+}: Props) {
   const { user } = useAuth();
   const inputRef = useRef<HTMLInputElement>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
