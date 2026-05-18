@@ -105,7 +105,21 @@ serve(async (req) => {
             role: "user",
             content: [
               { type: "text", text: "Transcribe this audio brief." },
-              { type: "input_audio", input_audio: { data: b64, format: mime.includes("wav") ? "wav" : "mp3" } },
+              {
+                type: "input_audio",
+                input_audio: {
+                  data: b64,
+                  format: mime.includes("wav")
+                    ? "wav"
+                    : mime.includes("webm")
+                      ? "webm"
+                      : mime.includes("ogg")
+                        ? "ogg"
+                        : mime.includes("mp4") || mime.includes("aac") || mime.includes("m4a")
+                          ? "aac"
+                          : "mp3",
+                },
+              },
             ],
           },
         ],
