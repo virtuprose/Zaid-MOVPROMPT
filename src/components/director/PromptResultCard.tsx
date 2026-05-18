@@ -112,16 +112,141 @@ function CopyBtn({ text, label = "Copy", className = "" }: { text: string; label
   );
 }
 
+function RefThumb({
+  url,
+  index,
+  slot,
+  size = 28,
+}: {
+  url: string;
+  index: number;
+  slot?: "brand" | "character" | "location";
+  size?: number;
+}) {
+  const label = slot ? REF_SLOT_LABEL[slot] : `reference ${index + 1}`;
+  return (
+    <HoverCard openDelay={80} closeDelay={60}>
+      <HoverCardTrigger asChild>
+        <button
+          type="button"
+          aria-label={`@${index + 1} — ${label}`}
+          className="relative inline-flex items-center justify-center rounded-md overflow-hidden border border-border/60 bg-muted/30 hover:border-accent/60 transition-colors shrink-0"
+          style={{ width: size, height: size }}
+        >
+          <img src={url} alt="" className="w-full h-full object-cover" />
+          <span className="absolute -top-1 -left-1 min-w-[14px] h-[14px] px-1 rounded-full bg-accent text-[9px] font-bold text-accent-foreground leading-[14px] text-center shadow">
+            {index + 1}
+          </span>
+        </button>
+      </HoverCardTrigger>
+      <HoverCardContent side="top" className="w-auto p-2 bg-[hsl(240_5%_8%)] border-border/60">
+        <div className="flex flex-col items-center gap-1.5">
+          <img src={url} alt="" className="max-w-[180px] max-h-[180px] rounded object-contain" />
+          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+            <span className="text-accent font-semibold">@{index + 1}</span> · {label}
+          </div>
+        </div>
+      </HoverCardContent>
+    </HoverCard>
+  );
+}
+
+function RefStrip({
+  urls,
+  slots,
+}: {
+  urls: string[];
+  slots: Array<"brand" | "character" | "location">;
+}) {
+  if (!urls.length) return null;
+  return (
+    <div className="flex items-center gap-2 flex-wrap rounded-lg border border-border/40 bg-muted/10 px-2.5 py-1.5">
+      <span className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground/80">
+        Bound refs
+      </span>
+      <div className="flex items-center gap-1.5">
+        {urls.map((url, i) => (
+          <RefThumb key={url} url={url} index={i} slot={slots[i]} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** Renders prompt text with @1/@2/@Image1 tokens replaced by hoverable thumbnails. */
+function PromptWithRefs({
+  body,
+  urls,
+  slots,
+}: {
+  body: string;
+  urls: string[];
+  slots: Array<"brand" | "character" | "location">;
+}) {
+  if (!urls.length) {
+    return <div className="text-sm leading-relaxed whitespace-pre-wrap text-foreground/90">{body}</div>;
+  }
+  // Match @1, @2, ... or @Image1, @Image2, ... (1-9)
+  const regex = /@(?:Image)?([1-9])\b/g;
+  const parts: Array<string | { idx: number; raw: string; key: string }> = [];
+  let last = 0;
+  let m: RegExpExecArray | null;
+  let n = 0;
+  while ((m = regex.exec(body)) !== null) {
+    if (m.index > last) parts.push(body.slice(last, m.index));
+    const idx = parseInt(m[1], 10) - 1;
+    parts.push({ idx, raw: m[0], key: `t-${n++}-${m.index}` });
+    last = m.index + m[0].length;
+  }
+  if (last < body.length) parts.push(body.slice(last));
+
+  return (
+    <div className="text-sm leading-relaxed whitespace-pre-wrap text-foreground/90">
+      {parts.map((p, i) => {
+        if (typeof p === "string") return <span key={`s-${i}`}>{p}</span>;
+        const url = urls[p.idx];
+        if (!url) return <span key={p.key}>{p.raw}</span>;
+        const slot = slots[p.idx];
+        const label = slot ? REF_SLOT_LABEL[slot] : `reference ${p.idx + 1}`;
+        return (
+          <HoverCard key={p.key} openDelay={80} closeDelay={60}>
+            <HoverCardTrigger asChild>
+              <span
+                role="button"
+                tabIndex={0}
+                className="inline-flex items-center gap-1 mx-0.5 px-1.5 py-0.5 rounded-md bg-accent/15 text-accent border border-accent/30 hover:bg-accent/25 cursor-help align-baseline font-medium text-[12px] whitespace-nowrap"
+              >
+                <img src={url} alt="" className="w-3.5 h-3.5 rounded-sm object-cover" />
+                @{p.idx + 1}
+              </span>
+            </HoverCardTrigger>
+            <HoverCardContent side="top" className="w-auto p-2 bg-[hsl(240_5%_8%)] border-border/60">
+              <div className="flex flex-col items-center gap-1.5">
+                <img src={url} alt="" className="max-w-[200px] max-h-[200px] rounded object-contain" />
+                <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                  <span className="text-accent font-semibold">@{p.idx + 1}</span> · {label}
+                </div>
+              </div>
+            </HoverCardContent>
+          </HoverCard>
+        );
+      })}
+    </div>
+  );
+}
+
 function Section({
   label,
   body,
   accent,
+  children,
 }: {
   label: string;
   body?: string;
   accent?: boolean;
+  children?: React.ReactNode;
 }) {
-  if (!body) return null;
+  if (!body && !children) return null;
   return (
     <div className="space-y-1">
       <div className="flex items-center justify-between">
@@ -132,9 +257,11 @@ function Section({
         >
           {label}
         </div>
-        <CopyBtn text={body} />
+        {body && <CopyBtn text={body} />}
       </div>
-      <div className="text-sm leading-relaxed whitespace-pre-wrap text-foreground/90">{body}</div>
+      {children ?? (
+        <div className="text-sm leading-relaxed whitespace-pre-wrap text-foreground/90">{body}</div>
+      )}
     </div>
   );
 }
