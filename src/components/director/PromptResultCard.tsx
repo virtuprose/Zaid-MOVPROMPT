@@ -60,6 +60,8 @@ type Props = {
   referenceImageUrls?: string[];
   /** Slot label per ref URL ("brand" | "character" | "location"), parallel to referenceImageUrls. */
   referenceImageSlots?: Array<"brand" | "character" | "location">;
+  /** Model the user already picked in the ModelChoiceCard for this prompt. Takes priority over recommendation. */
+  preferredModelId?: string;
 };
 
 const REF_SLOT_LABEL: Record<"brand" | "character" | "location", string> = {
