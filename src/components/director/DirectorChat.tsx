@@ -1017,6 +1017,7 @@ function DirectorChatInner() {
                   onAttach={setAttachments}
                   onContinue={(formatted) => void send(formatted)}
                   onSkip={() => void send("Skip")}
+                  agentSuggestions={b.agentSuggestions}
                 />
               );
             }
