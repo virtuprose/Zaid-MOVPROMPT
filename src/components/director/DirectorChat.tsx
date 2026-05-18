@@ -1135,6 +1135,7 @@ function DirectorChatInner() {
                 </div>
               );
             }
+            if (b.role === "video") {
               return (
                 <div key={i} className="motion-safe:animate-fade-up">
                   <VideoBubble
