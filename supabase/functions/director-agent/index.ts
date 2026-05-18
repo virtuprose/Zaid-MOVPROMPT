@@ -413,7 +413,14 @@ const TOOLS = [
             maxItems: 9,
             items: { type: "string" },
             description:
-              "Required for storyboard_panels. One prompt per panel, in shot order, each prefixed 'Shot N of N:' and including the per-shot beat plus the locked style vocabulary.",
+              "Required for storyboard_panels. One prompt per panel, in shot order, each including the per-shot beat plus the locked style vocabulary. The edge function automatically prepends the identity-lock phrase and the 'Shot N of N:' prefix when a character reference is attached.",
+          },
+          shot_index: {
+            type: "integer",
+            minimum: 1,
+            maximum: 9,
+            description:
+              "Only for storyboard_panels regeneration of ONE panel. When set, the single per_shot_prompts entry is treated as the new beat for that panel index (1..9). Other panels are untouched. Always pair with the character image in reference_urls.",
           },
           directors_note: {
             type: "string",
