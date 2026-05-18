@@ -329,6 +329,22 @@ export function PromptResultCard({ title, prompt, breakdown, directorsNote, onRe
     .filter((m): m is VideoModel => !!m && allowModel(m));
   const externalLink = EXTERNAL_LINKS[recommendedModel.family];
 
+  // Build VideoOptions seed from the Director's locked spec (falls back to breakdown).
+  const initialOptions: VideoOptions = {};
+  const aspect = lockedSpec?.aspect_ratio || breakdown.aspect_ratio;
+  if (aspect) initialOptions.aspect_ratio = aspect;
+  const resolution = lockedSpec?.resolution || breakdown.resolution;
+  if (resolution) initialOptions.resolution = resolution;
+  if (typeof lockedSpec?.duration_seconds === "number") {
+    initialOptions.duration = lockedSpec.duration_seconds;
+  } else if (breakdown.duration_hint) {
+    const m = /(\d+)\s*s/i.exec(breakdown.duration_hint);
+    if (m) initialOptions.duration = parseInt(m[1], 10);
+  }
+  if (lockedSpec?.audio) {
+    initialOptions.audio = lockedSpec.audio !== "silent";
+  }
+
   const fullText = [
     `# ${title}`,
     "",
