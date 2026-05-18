@@ -5,7 +5,8 @@ import type { BrandKit } from "@/lib/marketing/brandKit";
 
 export function BrandPickerPopover({
   kits,
-  activeId,
+  activeIds,
+  max,
   onSelect,
   onNew,
   onEdit,
@@ -13,19 +14,26 @@ export function BrandPickerPopover({
   trigger,
 }: {
   kits: BrandKit[];
-  activeId: string | null;
+  activeIds: string[];
+  max: number;
   onSelect: (id: string) => void;
   onNew: () => void;
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
   trigger: React.ReactNode;
 }) {
+  const atCap = activeIds.length >= max;
   return (
     <Popover>
       <PopoverTrigger asChild>{trigger}</PopoverTrigger>
       <PopoverContent align="start" className="w-72 p-2">
-        <div className="px-2 pt-1 pb-2 text-[10px] uppercase tracking-wider text-muted-foreground">
-          Your brands
+        <div className="px-2 pt-1 pb-2 flex items-center justify-between">
+          <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+            Your products
+          </span>
+          <span className="text-[10px] text-muted-foreground/70 tabular-nums">
+            {activeIds.length} / {max}
+          </span>
         </div>
 
         {kits.length === 0 ? (
