@@ -28,6 +28,8 @@ export const EMPTY_BRAND_KIT: BrandKit = {
   logo_url: null,
 };
 
+export const MAX_BRANDS = 2;
+
 async function signLogo(path: string | null): Promise<string | null> {
   if (!path) return null;
   const { data } = await supabase.storage
@@ -39,13 +41,13 @@ async function signLogo(path: string | null): Promise<string | null> {
 export function useBrandKit() {
   const { user } = useAuth();
   const [kits, setKits] = useState<BrandKit[]>([]);
-  const [activeId, setActiveIdState] = useState<string | null>(null);
+  const [activeIds, setActiveIdsState] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
 
   const reload = useCallback(async () => {
     if (!user) {
       setKits([]);
-      setActiveIdState(null);
+      setActiveIdsState([]);
       setLoading(false);
       return;
     }
@@ -57,18 +59,21 @@ export function useBrandKit() {
         .eq("user_id", user.id)
         .order("updated_at", { ascending: false }),
       supabase
-        .from("brand_kit_selection")
-        .select("brand_kit_id")
+        .from("brand_kit_selections")
+        .select("brand_kit_id,position")
         .eq("user_id", user.id)
-        .maybeSingle(),
+        .order("position", { ascending: true }),
     ]);
     const list = (rows ?? []) as BrandKit[];
     const signed = await Promise.all(
       list.map(async (k) => ({ ...k, logo_url: await signLogo(k.logo_path) })),
     );
     setKits(signed);
-    const sid = sel?.brand_kit_id ?? signed[0]?.id ?? null;
-    setActiveIdState(sid);
+    const ids = (sel ?? [])
+      .map((r) => r.brand_kit_id as string | null)
+      .filter((id): id is string => !!id && signed.some((k) => k.id === id))
+      .slice(0, MAX_BRANDS);
+    setActiveIdsState(ids);
     setLoading(false);
   }, [user]);
 
@@ -76,19 +81,56 @@ export function useBrandKit() {
     reload();
   }, [reload]);
 
-  const activeKit = kits.find((k) => k.id === activeId) ?? null;
+  const activeKits = activeIds
+    .map((id) => kits.find((k) => k.id === id))
+    .filter((k): k is BrandKit => !!k);
+  const activeKit = activeKits[0] ?? null;
+  const activeId = activeIds[0] ?? null;
+
+  const persistSelections = useCallback(
+    async (ids: string[]) => {
+      if (!user) return;
+      await supabase.from("brand_kit_selections").delete().eq("user_id", user.id);
+      if (ids.length > 0) {
+        await supabase.from("brand_kit_selections").insert(
+          ids.map((id, i) => ({
+            user_id: user.id,
+            brand_kit_id: id,
+            position: i,
+            updated_at: new Date().toISOString(),
+          })),
+        );
+      }
+    },
+    [user],
+  );
+
+  const setActiveIds = useCallback(
+    async (ids: string[]) => {
+      const capped = ids.slice(0, MAX_BRANDS);
+      setActiveIdsState(capped);
+      await persistSelections(capped);
+    },
+    [persistSelections],
+  );
+
+  const toggleActive = useCallback(
+    async (id: string) => {
+      const next = activeIds.includes(id)
+        ? activeIds.filter((x) => x !== id)
+        : activeIds.length >= MAX_BRANDS
+          ? activeIds
+          : [...activeIds, id];
+      await setActiveIds(next);
+    },
+    [activeIds, setActiveIds],
+  );
 
   const setActive = useCallback(
     async (id: string | null) => {
-      setActiveIdState(id);
-      if (!user) return;
-      await supabase.from("brand_kit_selection").upsert({
-        user_id: user.id,
-        brand_kit_id: id,
-        updated_at: new Date().toISOString(),
-      });
+      await setActiveIds(id ? [id] : []);
     },
-    [user],
+    [setActiveIds],
   );
 
   const saveKit = useCallback(
@@ -125,10 +167,13 @@ export function useBrandKit() {
       }
       saved.logo_url = await signLogo(saved.logo_path);
       await reload();
-      if (saved.id) await setActive(saved.id);
+      if (saved.id && !activeIds.includes(saved.id)) {
+        const nextIds = [...activeIds, saved.id].slice(0, MAX_BRANDS);
+        await setActiveIds(nextIds);
+      }
       return saved;
     },
-    [user, reload, setActive],
+    [user, reload, activeIds, setActiveIds],
   );
 
   const deleteKit = useCallback(
@@ -136,10 +181,12 @@ export function useBrandKit() {
       if (!user) throw new Error("Not signed in");
       const { error } = await supabase.from("brand_kits").delete().eq("id", id);
       if (error) throw error;
-      if (activeId === id) await setActive(null);
+      if (activeIds.includes(id)) {
+        await setActiveIds(activeIds.filter((x) => x !== id));
+      }
       await reload();
     },
-    [user, activeId, reload, setActive],
+    [user, activeIds, reload, setActiveIds],
   );
 
   const uploadLogo = useCallback(
@@ -176,9 +223,13 @@ export function useBrandKit() {
   return {
     kits,
     activeKit,
+    activeKits,
     activeId,
+    activeIds,
     loading,
     setActive,
+    setActiveIds,
+    toggleActive,
     saveKit,
     deleteKit,
     uploadLogo,
