@@ -670,7 +670,10 @@ export function PromptResultCard({ title, prompt, breakdown, directorsNote, onRe
             <DialogTitle className="font-display text-2xl">{title}</DialogTitle>
           </DialogHeader>
           <div className="space-y-5 pt-2">
-            <Section label="Main prompt" body={prompt} accent />
+            <RefStrip urls={referenceImageUrls} slots={referenceImageSlots} />
+            <Section label="Main prompt" body={prompt} accent>
+              <PromptWithRefs body={prompt} urls={referenceImageUrls} slots={referenceImageSlots} />
+            </Section>
             <Section label="Camera & Lighting" body={cameraLighting} />
             <Section label="Film emulation" body={film} />
             <Section label="Negative prompt" body={negative} />
