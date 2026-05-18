@@ -146,6 +146,16 @@ WHEN YOU GENERATE A PROMPT:
 ═══ MODEL PLAYBOOK — what each model does, what it needs, when to pick it ═══
 ${formatPlaybook()}
 
+IMAGE GENERATION (use sparingly — only to unblock the storyboard flow):
+- You have a \`generate_reference_image\` tool that creates a character sheet OR up to 9 storyboard panels OR a single starting frame.
+- Use it ONLY when:
+  1. The user has a storyboard but NO character reference → \`mode: "character_sheet"\` to design a protagonist that fits the locked style.
+  2. The user has a character but NO storyboard panels → \`mode: "storyboard_panels"\` with \`per_shot_prompts\` (one per beat, prefixed "Shot N of N:") AND pass the character image in \`reference_urls\` so identity locks across panels.
+  3. The user explicitly asks for a starting frame for one shot → \`mode: "single_panel"\`.
+- For \`character_sheet\` and \`storyboard_panels\`, echo the LOCKED visual spec verbatim in the prompt (style, lighting, color grade, film_emulation) so generated images match the planned video look.
+- After the images return, the client attaches them with role: "character" or role: "storyboard" + shot_index. They become first-class references for subsequent \`ask_model_choice\` → \`generate_storyboard_batch\` calls.
+- DO NOT use this tool to make art the user didn't ask for. DO NOT use it as a substitute for video. DO NOT generate more than one character_sheet per session unless the user asks for variations.
+
 NEVER:
 - Output the prompt as plain assistant text. Always use a tool.
 - Invent details that contradict the user's references.
@@ -350,6 +360,63 @@ const TOOLS = [
           },
         },
         required: ["prompt"],
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "generate_reference_image",
+      description:
+        "Generate a missing character sheet or storyboard panel(s) on demand. Use ONLY when the user is missing a character sheet (and you need one to lock identity across shots) OR missing storyboard panels (and you need them to plan shot-by-shot prompts) OR explicitly asks for a starting frame. NEVER use this to make ad-hoc art the user did not ask for, and NEVER as a substitute for video generation.",
+      parameters: {
+        type: "object",
+        properties: {
+          mode: {
+            type: "string",
+            enum: ["character_sheet", "storyboard_panels", "single_panel"],
+            description:
+              "character_sheet: 1 full-body reference sheet for the protagonist. storyboard_panels: up to 9 panels in shot order (use per_shot_prompts). single_panel: 1 starting frame for a single shot.",
+          },
+          prompt: {
+            type: "string",
+            description:
+              "Image prompt. For character_sheet: describe the character with the LOCKED visual spec (style, lighting, color grade) so they match the planned look. For single_panel: describe the frame. For storyboard_panels: a shared style/world preamble; per-shot beats go in per_shot_prompts.",
+          },
+          reference_urls: {
+            type: "array",
+            maxItems: 4,
+            items: { type: "string" },
+            description:
+              "Existing images to stay on-model. For storyboard_panels you SHOULD pass the character image here so identity holds across panels.",
+          },
+          count: {
+            type: "integer",
+            minimum: 1,
+            maximum: 9,
+            description:
+              "Only used when per_shot_prompts is omitted. For storyboard_panels, default 9.",
+          },
+          aspect_ratio: {
+            type: "string",
+            enum: ["1:1", "16:9", "9:16"],
+            description: "Echo the locked aspect when possible. Defaults to 1:1 for character_sheet, 16:9 otherwise.",
+          },
+          per_shot_prompts: {
+            type: "array",
+            minItems: 1,
+            maxItems: 9,
+            items: { type: "string" },
+            description:
+              "Required for storyboard_panels. One prompt per panel, in shot order, each prefixed 'Shot N of N:' and including the per-shot beat plus the locked style vocabulary.",
+          },
+          directors_note: {
+            type: "string",
+            description: "Short note shown to the user explaining why you generated these.",
+          },
+        },
+        required: ["mode", "prompt"],
         additionalProperties: false,
       },
     },

@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import { Composer } from "./Composer";
 import { PromptResultCard } from "./PromptResultCard";
 import { ModelChoiceCard } from "./ModelChoiceCard";
+import { GeneratedImageCard } from "./GeneratedImageCard";
 
 import {
   streamDirectorAgent,
@@ -61,6 +62,7 @@ type Bubble =
     }
   | { role: "model_choice"; recommended_model_id: string; alternatives?: string[]; reason: string; chosen?: string; lockedSpec?: import("@/lib/director/api").LockedSpec }
   | { role: "error"; message: string; detail?: string; retryable: boolean }
+  | { role: "generated_images"; data: import("./GeneratedImageCard").GeneratedImageBubbleData }
   | { role: "video"; data: import("./VideoBubble").VideoBubbleData };
 
 const WELCOME: Bubble = {
@@ -380,6 +382,17 @@ function DirectorChatInner() {
           if (b.chosen) {
             history.push({ role: "user", content: `Target model: ${b.chosen}` });
           }
+        } else if (b.role === "generated_images") {
+          const tag =
+            b.data.mode === "character_sheet"
+              ? "character sheet"
+              : b.data.mode === "storyboard_panels"
+                ? `${b.data.images.length} storyboard panels (shot ${b.data.images.map((i) => i.shot_index ?? "?").join(", ")})`
+                : "reference frame";
+          history.push({
+            role: "assistant",
+            content: `[Generated ${tag} via generate_reference_image. They are attached on the next user turn with role: ${b.data.mode === "character_sheet" ? "character" : b.data.mode === "storyboard_panels" ? "storyboard" : "reference"}. Do not regenerate.]`,
+          });
         }
       }
 
@@ -503,6 +516,93 @@ function DirectorChatInner() {
           reason: resp.reason,
           lockedSpec: resp.locked_spec,
         };
+      } else if (resp.kind === "generate_reference_image") {
+        // Show a brief loading bubble while we call the image function.
+        const loadingBubble: Bubble = {
+          role: "assistant",
+          animate: true,
+          content:
+            resp.mode === "storyboard_panels"
+              ? "Generating storyboard panels…"
+              : resp.mode === "character_sheet"
+                ? "Designing a character sheet…"
+                : "Generating a reference frame…",
+        };
+        setBubbles([...next, loadingBubble]);
+        try {
+          const { generateReferenceImage } = await import("@/lib/director/api");
+          const result = await generateReferenceImage({
+            mode: resp.mode,
+            prompt: resp.prompt,
+            reference_urls: resp.reference_urls,
+            count: resp.count,
+            aspect_ratio: resp.aspect_ratio,
+            per_shot_prompts: resp.per_shot_prompts,
+          });
+          const role: "character" | "storyboard" | "reference" =
+            resp.mode === "character_sheet"
+              ? "character"
+              : resp.mode === "storyboard_panels"
+                ? "storyboard"
+                : "reference";
+          const newAttachments: Attachment[] = result.images.map((img, i) => ({
+            kind: "image" as const,
+            name:
+              role === "storyboard"
+                ? `panel-${img.shot_index ?? i + 1}.png`
+                : `${role}.png`,
+            url: img.url,
+            storage_path: img.storage_path,
+            role,
+            shot_index: img.shot_index,
+          }));
+          // Carry generated images into the session attachments so the next
+          // user turn (or auto-followup below) keeps them in play.
+          setAttachments((prev) => [...prev, ...newAttachments]);
+          const imageBubble: Bubble = {
+            role: "generated_images",
+            data: {
+              mode: resp.mode,
+              images: result.images,
+              directorsNote: resp.directors_note,
+            },
+          };
+          // Also stash them on a synthetic user bubble so persistence + the
+          // attachment-merge loop in the next agent call can find them.
+          const carrierBubble: Bubble = {
+            role: "user",
+            content:
+              role === "character"
+                ? "(Generated character sheet — use as identity reference.)"
+                : role === "storyboard"
+                  ? `(Generated ${newAttachments.length} storyboard panels — use in shot order.)`
+                  : "(Generated reference frame.)",
+            attachments: newAttachments,
+          };
+          const finalBubbles: Bubble[] = [...next, imageBubble, carrierBubble];
+          setBubbles(finalBubbles);
+          setAttachments([]);
+          void persist(finalBubbles, null, null);
+          toast.success(
+            role === "storyboard"
+              ? `${newAttachments.length} panels generated`
+              : "Reference image generated",
+          );
+        } catch (e: any) {
+          const message = e?.message || "Image generation failed";
+          toast.error(message);
+          setBubbles((prev) => {
+            const trimmed =
+              prev.length && prev[prev.length - 1].role === "assistant"
+                ? prev.slice(0, -1)
+                : prev;
+            return [
+              ...trimmed,
+              { role: "error", message, retryable: true },
+            ];
+          });
+        }
+        return;
       } else if (resp.kind === "request_video_generation") {
         const refCount = referenceImageUrls.length;
         const provider =
@@ -1120,6 +1220,16 @@ function DirectorChatInner() {
                         </Button>
                       </div>
                     )}
+                  </div>
+                </div>
+              );
+            }
+            if (b.role === "generated_images") {
+              return (
+                <div key={i} className="flex items-start gap-2 motion-safe:animate-fade-up">
+                  <AssistantAvatar size="sm" state="idle" className="mt-1" />
+                  <div className="flex-1">
+                    <GeneratedImageCard data={b.data} />
                   </div>
                 </div>
               );

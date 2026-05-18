@@ -65,7 +65,38 @@ export type AgentResponse =
       prompt: string;
       provider_preference?: "seedance" | "veo" | "kling" | "any";
     }
+  | {
+      kind: "generate_reference_image";
+      mode: "character_sheet" | "storyboard_panels" | "single_panel";
+      prompt: string;
+      reference_urls?: string[];
+      count?: number;
+      aspect_ratio?: "1:1" | "16:9" | "9:16";
+      per_shot_prompts?: string[];
+      directors_note?: string;
+    }
   | { kind: "message"; content: string };
+
+export type GeneratedImage = {
+  url: string;
+  storage_path: string;
+  shot_index?: number;
+};
+
+export async function generateReferenceImage(input: {
+  mode: "character_sheet" | "storyboard_panels" | "single_panel";
+  prompt: string;
+  reference_urls?: string[];
+  count?: number;
+  aspect_ratio?: "1:1" | "16:9" | "9:16";
+  per_shot_prompts?: string[];
+}): Promise<{ mode: string; images: GeneratedImage[] }> {
+  const { data, error } = await supabase.functions.invoke("generate-reference-image", {
+    body: input,
+  });
+  if (error) throw error;
+  return data as { mode: string; images: GeneratedImage[] };
+}
 
 export type DirectorPhase =
   | "thinking"
