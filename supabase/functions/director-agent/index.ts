@@ -220,13 +220,14 @@ const TOOLS = [
           },
           locked_spec: {
             type: "object",
-            description: "The 5 routing axes you've committed to. NEVER guess — only include values explicitly stated or strongly implied.",
+            description: "The 6 routing axes you've committed to. NEVER guess — only include values explicitly stated or strongly implied.",
             properties: {
               input_mode: { type: "string", enum: ["text-to-video", "image-to-video", "video-edit", "motion-control", "multi-reference"] },
               duration_seconds: { type: "number", description: "Target clip length in seconds." },
               aspect_ratio: { type: "string", description: "e.g. '16:9', '9:16', '1:1', '4:3', '3:4', '21:9'." },
               audio: { type: "string", enum: ["silent", "sfx", "music", "dialogue", "full"], description: "'silent' | 'sfx' (ambient/SFX only) | 'music' | 'dialogue' (lip-sync) | 'full' (dialogue + music + SFX)." },
               resolution: { type: "string", enum: ["720p", "1080p", "4k"] },
+              style: { type: "string", enum: ["photoreal", "cinematic-film", "stylized", "anime"], description: "Visual style — heavy driver of model pick." },
             },
             additionalProperties: false,
           },
