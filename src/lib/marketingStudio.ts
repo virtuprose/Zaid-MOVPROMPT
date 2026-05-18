@@ -537,6 +537,8 @@ export type StudioBrief = {
    * Seedance 2.0 reference-to-video binds each subject to the right ref.
    */
   imageRefs?: Array<"brand" | "character" | "location">;
+  /** Free-text adaptation layer — preset stays the locked structure, this tweaks tone/details. */
+  userNote?: string;
 };
 
 const find = (list: StudioPreset[], id?: string) =>
@@ -608,6 +610,9 @@ export function composeStudioPrompt(brief: StudioBrief): string {
     setting?.fragment ?? (brief.customSetting?.trim() ? `Setting: ${brief.customSetting.trim()}` : null),
     locationLine(brief.location, brief.imageRefs),
     brief.master.trim() ? `Story: ${brief.master.trim()}` : null,
+    brief.userNote?.trim()
+      ? `Additional direction (adapt tone and details on top of the locked preset, do not override structure): ${brief.userNote.trim()}`
+      : null,
     "End on a confident product hero frame. Keep text-on-screen minimal and legible.",
   ].filter(Boolean);
 

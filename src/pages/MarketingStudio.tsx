@@ -19,7 +19,9 @@ import {
   AppWindow,
   Download,
   Trash2,
+  Pencil,
 } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -123,6 +125,7 @@ export default function MarketingStudio() {
   const [master, setMaster] = useState("");
   const [formatId, setFormatId] = useState<string | undefined>();
   const [customFormat, setCustomFormat] = useState<string>("");
+  const [userNote, setUserNote] = useState<string>("");
   const [settingId, setSettingId] = useState<string | undefined>();
   const [customSetting, setCustomSetting] = useState<string>("");
   const [location, setLocation] = useState<LocationInput>(EMPTY_LOCATION);
@@ -246,6 +249,7 @@ export default function MarketingStudio() {
             location.place || location.imagePath
               ? { place: location.place || undefined, hasImage: !!location.imagePath }
               : null,
+          userNote: userNote.trim() || undefined,
         },
         controller.signal,
       )
@@ -278,6 +282,7 @@ export default function MarketingStudio() {
     location.place,
     location.imagePath,
     subject,
+    userNote,
   ]);
 
   const startGenerate = () => {
@@ -333,6 +338,7 @@ export default function MarketingStudio() {
             }
           : undefined,
         imageRefs,
+        userNote: userNote.trim() || undefined,
       });
       // Provider routing:
       //   0 refs → seedance-v1-pro (text-only, fast/cheap)
@@ -699,6 +705,63 @@ export default function MarketingStudio() {
                   }
                 />
               )}
+
+              <Popover>
+                <PopoverTrigger asChild>
+                  {userNote.trim() ? (
+                    <button
+                      type="button"
+                      title={userNote}
+                      className="inline-flex items-center gap-1.5 h-9 pl-2.5 pr-1 rounded-full border border-[#F5A524]/40 bg-[#F5A524]/10 text-xs text-foreground max-w-[240px]"
+                    >
+                      <Pencil className="w-3.5 h-3.5 shrink-0" />
+                      <span className="truncate">{userNote}</span>
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); setUserNote(""); }}
+                        className="w-6 h-6 rounded-full text-muted-foreground hover:text-foreground hover:bg-background/60 flex items-center justify-center shrink-0"
+                        aria-label="Clear description"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className="inline-flex items-center gap-1.5 h-9 px-3 rounded-full border border-dashed border-border/60 bg-secondary/30 text-xs text-muted-foreground hover:border-[#F5A524]/50 hover:text-foreground transition-colors"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                      <Plus className="w-3 h-3" />
+                      Describe
+                    </button>
+                  )}
+                </PopoverTrigger>
+                <PopoverContent side="top" align="start" sideOffset={8} className="w-80 p-3 space-y-2">
+                  <div className="text-xs font-medium text-foreground">Add your touch</div>
+                  <p className="text-[11px] text-muted-foreground leading-relaxed">
+                    Adapts tone and details on top of the preset. The format preset stays in charge.
+                  </p>
+                  <Textarea
+                    value={userNote}
+                    onChange={(e) => setUserNote(e.target.value.slice(0, 280))}
+                    placeholder="e.g. make it feel late-night and intimate, with a warm amber glow"
+                    rows={4}
+                    className="text-sm resize-none bg-secondary/40 border-border/50"
+                  />
+                  <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+                    <span>{userNote.length}/280</span>
+                    {userNote.trim() && (
+                      <button
+                        type="button"
+                        onClick={() => setUserNote("")}
+                        className="hover:text-foreground"
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
+                </PopoverContent>
+              </Popover>
             </div>
 
             <div className="flex flex-wrap items-center gap-2 mt-2">
