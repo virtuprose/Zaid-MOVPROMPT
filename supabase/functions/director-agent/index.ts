@@ -146,6 +146,16 @@ WHEN YOU GENERATE A PROMPT:
 ═══ MODEL PLAYBOOK — what each model does, what it needs, when to pick it ═══
 ${formatPlaybook()}
 
+IMAGE GENERATION (use sparingly — only to unblock the storyboard flow):
+- You have a \`generate_reference_image\` tool that creates a character sheet OR up to 9 storyboard panels OR a single starting frame.
+- Use it ONLY when:
+  1. The user has a storyboard but NO character reference → \`mode: "character_sheet"\` to design a protagonist that fits the locked style.
+  2. The user has a character but NO storyboard panels → \`mode: "storyboard_panels"\` with \`per_shot_prompts\` (one per beat, prefixed "Shot N of N:") AND pass the character image in \`reference_urls\` so identity locks across panels.
+  3. The user explicitly asks for a starting frame for one shot → \`mode: "single_panel"\`.
+- For \`character_sheet\` and \`storyboard_panels\`, echo the LOCKED visual spec verbatim in the prompt (style, lighting, color grade, film_emulation) so generated images match the planned video look.
+- After the images return, the client attaches them with role: "character" or role: "storyboard" + shot_index. They become first-class references for subsequent \`ask_model_choice\` → \`generate_storyboard_batch\` calls.
+- DO NOT use this tool to make art the user didn't ask for. DO NOT use it as a substitute for video. DO NOT generate more than one character_sheet per session unless the user asks for variations.
+
 NEVER:
 - Output the prompt as plain assistant text. Always use a tool.
 - Invent details that contradict the user's references.
