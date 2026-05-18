@@ -354,6 +354,63 @@ const TOOLS = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "generate_reference_image",
+      description:
+        "Generate a missing character sheet or storyboard panel(s) on demand. Use ONLY when the user is missing a character sheet (and you need one to lock identity across shots) OR missing storyboard panels (and you need them to plan shot-by-shot prompts) OR explicitly asks for a starting frame. NEVER use this to make ad-hoc art the user did not ask for, and NEVER as a substitute for video generation.",
+      parameters: {
+        type: "object",
+        properties: {
+          mode: {
+            type: "string",
+            enum: ["character_sheet", "storyboard_panels", "single_panel"],
+            description:
+              "character_sheet: 1 full-body reference sheet for the protagonist. storyboard_panels: up to 9 panels in shot order (use per_shot_prompts). single_panel: 1 starting frame for a single shot.",
+          },
+          prompt: {
+            type: "string",
+            description:
+              "Image prompt. For character_sheet: describe the character with the LOCKED visual spec (style, lighting, color grade) so they match the planned look. For single_panel: describe the frame. For storyboard_panels: a shared style/world preamble; per-shot beats go in per_shot_prompts.",
+          },
+          reference_urls: {
+            type: "array",
+            maxItems: 4,
+            items: { type: "string" },
+            description:
+              "Existing images to stay on-model. For storyboard_panels you SHOULD pass the character image here so identity holds across panels.",
+          },
+          count: {
+            type: "integer",
+            minimum: 1,
+            maximum: 9,
+            description:
+              "Only used when per_shot_prompts is omitted. For storyboard_panels, default 9.",
+          },
+          aspect_ratio: {
+            type: "string",
+            enum: ["1:1", "16:9", "9:16"],
+            description: "Echo the locked aspect when possible. Defaults to 1:1 for character_sheet, 16:9 otherwise.",
+          },
+          per_shot_prompts: {
+            type: "array",
+            minItems: 1,
+            maxItems: 9,
+            items: { type: "string" },
+            description:
+              "Required for storyboard_panels. One prompt per panel, in shot order, each prefixed 'Shot N of N:' and including the per-shot beat plus the locked style vocabulary.",
+          },
+          directors_note: {
+            type: "string",
+            description: "Short note shown to the user explaining why you generated these.",
+          },
+        },
+        required: ["mode", "prompt"],
+        additionalProperties: false,
+      },
+    },
+  },
 ];
 
 async function callGatewayWithRetry(body: unknown, apiKey: string): Promise<Response> {
