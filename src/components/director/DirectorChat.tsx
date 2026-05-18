@@ -388,12 +388,19 @@ function DirectorChatInner() {
               ? "character sheet"
               : b.data.mode === "storyboard_panels"
                 ? `${b.data.images.length} storyboard panels (shot ${b.data.images.map((i) => i.shot_index ?? "?").join(", ")})`
-                : "reference frame";
+                : "key frame (hero / establishing shot)";
+          const roleTag =
+            b.data.mode === "character_sheet"
+              ? "character"
+              : b.data.mode === "storyboard_panels"
+                ? "storyboard"
+                : "key_frame";
           history.push({
             role: "assistant",
-            content: `[Generated ${tag} via generate_reference_image. They are attached on the next user turn with role: ${b.data.mode === "character_sheet" ? "character" : b.data.mode === "storyboard_panels" ? "storyboard" : "reference"}. Do not regenerate.]`,
+            content: `[Generated ${tag} via generate_reference_image. They are attached on the next user turn with role: ${roleTag}. If the user asks to extend a key_frame frame-by-frame, call generate_reference_image again with mode: "storyboard_panels", lock_mode: "scene", and the key_frame URL in reference_urls. Do not regenerate the existing image.]`,
           });
         }
+
       }
 
       // Aggregate attachments from EVERY prior user bubble + current ones, deduped,
