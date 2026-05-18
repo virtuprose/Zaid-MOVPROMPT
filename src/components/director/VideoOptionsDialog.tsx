@@ -153,9 +153,11 @@ export function VideoOptionsDialog({ open, model, prompt, initialOptions, onCanc
     [model],
   );
   const [options, setOptions] = useState<VideoOptions>({});
+  const [advancedOpen, setAdvancedOpen] = useState(false);
 
   useEffect(() => {
     if (!controls) return;
+    setAdvancedOpen(false);
     // Merge: model defaults → Director-locked spec (only fields the model supports).
     const merged: VideoOptions = { ...controls.defaults };
     if (initialOptions) {
