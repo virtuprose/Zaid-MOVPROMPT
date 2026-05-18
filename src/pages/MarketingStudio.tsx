@@ -108,14 +108,16 @@ export default function MarketingStudio() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
 
-  const { kits, activeKit: brandKit, activeId: brandActiveId, setActive: setBrandActive, deleteKit: deleteBrand } = useBrandKit();
+  const { kits, activeKits: brandKits, activeIds: brandActiveIds, toggleActive: toggleBrandActive, deleteKit: deleteBrand } = useBrandKit();
+  const brandKit = brandKits[0] ?? null;
   const {
     kits: characterKits,
-    activeKit: characterKit,
-    activeId: characterActiveId,
-    setActive: setCharacterActive,
+    activeKits: characterActiveKits,
+    activeIds: characterActiveIds,
+    toggleActive: toggleCharacterActive,
     deleteKit: deleteCharacter,
   } = useCharacterKit();
+  const characterKit = characterActiveKits[0] ?? null;
   const [subjectOverride, setSubjectOverride] = useState<Subject | null>(null);
   const subject: Subject = subjectOverride ?? brandKit?.subject ?? "product";
   useEffect(() => {
