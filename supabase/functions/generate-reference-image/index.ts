@@ -12,6 +12,7 @@ const corsHeaders = {
 const SIGNED_URL_TTL = 60 * 60;
 
 type Mode = "character_sheet" | "storyboard_panels" | "single_panel";
+type LockMode = "character" | "scene" | "auto";
 
 type Body = {
   mode?: Mode;
@@ -21,10 +22,18 @@ type Body = {
   aspect_ratio?: "1:1" | "16:9" | "9:16";
   per_shot_prompts?: string[]; // when mode === "storyboard_panels", one per shot
   shot_index?: number; // when regenerating a single panel inside an existing 3x3 grid
+  lock_mode?: LockMode; // "character" | "scene" (key-frame extension) | "auto" (default)
 };
 
 const IDENTITY_LOCK =
   "Same character as the attached reference image. Maintain exact face, hair, skin tone, age, body proportions, and outfit. Do not redesign the character.";
+
+const SCENE_LOCK =
+  "Same scene as the attached key frame. Maintain the exact location, lighting setup, color grade, lens, depth of field, camera height, and composition language. Keep subject, props, wardrobe, time of day, and background continuous. Only the action and framing change between frames.";
+
+const HERO_FRAME_SUFFIX =
+  " Single polished hero frame: cinematic composition, intentional depth of field, controlled lighting, clean negative space. No text, no captions, no watermark, no UI overlays.";
+
 
 function dataUrlToBlob(dataUrl: string): { blob: Blob; mime: string } {
   const m = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
