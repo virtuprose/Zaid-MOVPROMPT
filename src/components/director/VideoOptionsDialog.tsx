@@ -141,7 +141,7 @@ function DurationControl({
   );
 }
 
-export function VideoOptionsDialog({ open, model, prompt, onCancel, onConfirm }: Props) {
+export function VideoOptionsDialog({ open, model, prompt, initialOptions, onCancel, onConfirm }: Props) {
   const controls = useMemo(
     () => (model ? getModelControls(model.id) : null),
     [model],
@@ -149,8 +149,32 @@ export function VideoOptionsDialog({ open, model, prompt, onCancel, onConfirm }:
   const [options, setOptions] = useState<VideoOptions>({});
 
   useEffect(() => {
-    if (controls) setOptions({ ...controls.defaults });
-  }, [controls, open]);
+    if (!controls) return;
+    // Merge: model defaults → Director-locked spec (only fields the model supports).
+    const merged: VideoOptions = { ...controls.defaults };
+    if (initialOptions) {
+      if (initialOptions.aspect_ratio && controls.aspectRatios?.includes(initialOptions.aspect_ratio)) {
+        merged.aspect_ratio = initialOptions.aspect_ratio;
+      }
+      if (initialOptions.resolution && controls.resolutions?.includes(initialOptions.resolution)) {
+        merged.resolution = initialOptions.resolution;
+      }
+      if (typeof initialOptions.duration === "number") {
+        const d = initialOptions.duration;
+        const discreteOk = controls.durations?.includes(d);
+        const rangeOk =
+          typeof controls.durationMin === "number" &&
+          typeof controls.durationMax === "number" &&
+          d >= controls.durationMin &&
+          d <= controls.durationMax;
+        if (discreteOk || rangeOk) merged.duration = d;
+      }
+      if (typeof initialOptions.audio === "boolean" && controls.audio) {
+        merged.audio = initialOptions.audio;
+      }
+    }
+    setOptions(merged);
+  }, [controls, open, initialOptions]);
 
   if (!open || !model || !controls) return null;
 
