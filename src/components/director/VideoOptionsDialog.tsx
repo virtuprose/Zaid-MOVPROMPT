@@ -1,7 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
-import { Film, X } from "lucide-react";
+import { ChevronRight, Film, HelpCircle, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import type { VideoModel } from "@/lib/director/videoModels";
@@ -147,9 +153,11 @@ export function VideoOptionsDialog({ open, model, prompt, initialOptions, onCanc
     [model],
   );
   const [options, setOptions] = useState<VideoOptions>({});
+  const [advancedOpen, setAdvancedOpen] = useState(false);
 
   useEffect(() => {
     if (!controls) return;
+    setAdvancedOpen(false);
     // Merge: model defaults → Director-locked spec (only fields the model supports).
     const merged: VideoOptions = { ...controls.defaults };
     if (initialOptions) {
@@ -256,40 +264,85 @@ export function VideoOptionsDialog({ open, model, prompt, initialOptions, onCanc
           </div>
         )}
 
-        {controls.cfgScale && (
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label className="text-xs uppercase tracking-wider text-muted-foreground">
-                Prompt adherence (cfg_scale)
-              </Label>
-              <span className="text-xs text-foreground/80">
-                {(options.cfg_scale ?? 0.5).toFixed(2)}
-              </span>
-            </div>
-            <Slider
-              min={0.1}
-              max={1}
-              step={0.05}
-              value={[options.cfg_scale ?? 0.5]}
-              onValueChange={([v]) => set({ cfg_scale: v })}
-            />
-          </div>
-        )}
+        {(controls.cfgScale || controls.promptOptimizer) && (
+          <div className="pt-1 border-t border-border/60">
+            <button
+              type="button"
+              onClick={() => setAdvancedOpen((v) => !v)}
+              aria-expanded={advancedOpen}
+              aria-controls="render-advanced-panel"
+              className="flex items-center gap-1.5 text-xs uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors py-2"
+            >
+              <ChevronRight
+                className={`w-3.5 h-3.5 transition-transform ${advancedOpen ? "rotate-90" : ""}`}
+              />
+              Advanced
+            </button>
 
-        {controls.promptOptimizer && (
-          <div className="flex items-center justify-between">
-            <div>
-              <Label className="text-xs uppercase tracking-wider text-muted-foreground">
-                Prompt optimizer
-              </Label>
-              <div className="text-[11px] text-muted-foreground">
-                Let the model refine your prompt for better results
+            {advancedOpen && (
+              <div id="render-advanced-panel" className="space-y-4 pt-2">
+                {controls.cfgScale && (() => {
+                  const v = options.cfg_scale ?? 0.5;
+                  const tag = v <= 0.3 ? "Let model improvise" : v >= 0.7 ? "Follow prompt strictly" : "Balanced";
+                  return (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5">
+                          <Label className="text-xs uppercase tracking-wider text-muted-foreground">
+                            Creative freedom
+                          </Label>
+                          <TooltipProvider delayDuration={150}>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <button
+                                  type="button"
+                                  className="text-muted-foreground/70 hover:text-foreground transition-colors"
+                                  aria-label="What is creative freedom?"
+                                >
+                                  <HelpCircle className="w-3.5 h-3.5" />
+                                </button>
+                              </TooltipTrigger>
+                              <TooltipContent side="top" className="max-w-[240px] text-xs">
+                                How strictly the model follows your written prompt vs. taking creative liberties.
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </div>
+                        <span className="text-xs text-foreground/80">{tag}</span>
+                      </div>
+                      <Slider
+                        min={0.1}
+                        max={1}
+                        step={0.05}
+                        value={[v]}
+                        onValueChange={([nv]) => set({ cfg_scale: nv })}
+                      />
+                      <div className="flex justify-between text-[10px] text-muted-foreground/70">
+                        <span>Improvise</span>
+                        <span>Strict</span>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {controls.promptOptimizer && (
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label className="text-xs uppercase tracking-wider text-muted-foreground">
+                        Auto-refine prompt
+                      </Label>
+                      <div className="text-[11px] text-muted-foreground">
+                        Let the model polish your prompt before rendering.
+                      </div>
+                    </div>
+                    <Switch
+                      checked={!!options.prompt_optimizer}
+                      onCheckedChange={(v) => set({ prompt_optimizer: v })}
+                    />
+                  </div>
+                )}
               </div>
-            </div>
-            <Switch
-              checked={!!options.prompt_optimizer}
-              onCheckedChange={(v) => set({ prompt_optimizer: v })}
-            />
+            )}
           </div>
         )}
       </div>
