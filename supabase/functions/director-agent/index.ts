@@ -368,7 +368,7 @@ Rules:
 
       const rewriteResp = await callGatewayWithRetry(
         {
-          model: "google/gemini-2.5-flash",
+          model: "google/gemini-3.1-pro-preview",
           messages: [
             { role: "system", content: sys },
             { role: "user", content: `Original prompt:\n\n${orig}` },
