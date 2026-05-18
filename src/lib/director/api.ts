@@ -369,6 +369,7 @@ export async function submitVideoJob(
   sessionId?: string | null,
   options?: VideoOptions,
   referenceImages?: string[],
+  extras?: { storyboard_session_id?: string; storyboard_shot_index?: number },
 ): Promise<VideoJob> {
   const normalizedPrompt = prompt.trim();
   if (!normalizedPrompt) {
@@ -382,10 +383,45 @@ export async function submitVideoJob(
       session_id: sessionId,
       options,
       reference_image_urls: referenceImages && referenceImages.length > 0 ? referenceImages : undefined,
+      storyboard_session_id: extras?.storyboard_session_id,
+      storyboard_shot_index: extras?.storyboard_shot_index,
     },
   });
   if (error) throw error;
   return data as VideoJob;
+}
+
+export type StoryboardShotPlan = {
+  index: number;
+  panel_url: string;
+  hint?: string;
+};
+
+export type StoryboardShotResult = {
+  index: number;
+  prompt: string;
+  breakdown: Breakdown;
+};
+
+export type StoryboardBatch = {
+  shots: StoryboardShotResult[];
+  locked_spec: LockedSpec;
+  model_id: string;
+  title: string;
+};
+
+export async function generateStoryboardBatch(input: {
+  locked_spec: LockedSpec;
+  model_id: string;
+  character_ref_urls: string[];
+  panels: StoryboardShotPlan[];
+  brief?: string;
+}): Promise<StoryboardBatch> {
+  const { data, error } = await supabase.functions.invoke("director-agent", {
+    body: { action: "generate_storyboard_batch", ...input },
+  });
+  if (error) throw error;
+  return data as StoryboardBatch;
 }
 
 export async function pollVideoJob(jobId: string): Promise<VideoJob> {
