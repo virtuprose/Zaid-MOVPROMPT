@@ -46,8 +46,18 @@ import { TypewriterText } from "./TypewriterText";
 type Bubble =
   | { role: "user"; content: string; attachments?: Attachment[] }
   | { role: "assistant"; content: string; animate?: boolean }
-  | { role: "result"; data: Extract<AgentResponse, { kind: "generate_prompt" }>; partial?: boolean }
-  | { role: "questions"; questions: string[]; reason: string }
+  | {
+      role: "result";
+      data: Extract<AgentResponse, { kind: "generate_prompt" }>;
+      partial?: boolean;
+      nextSuggestions?: string[];
+    }
+  | {
+      role: "questions";
+      questions: string[];
+      reason: string;
+      agentSuggestions?: import("@/lib/director/api").AgentSuggestion[];
+    }
   | { role: "model_choice"; recommended_model_id: string; alternatives?: string[]; reason: string; chosen?: string }
   | { role: "error"; message: string; detail?: string; retryable: boolean }
   | { role: "video"; data: import("./VideoBubble").VideoBubbleData };
