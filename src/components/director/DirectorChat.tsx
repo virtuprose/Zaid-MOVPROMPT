@@ -425,6 +425,7 @@ function DirectorChatInner() {
                 recommended_model_id: rec,
                 alternatives: (partial as any).alternatives || [],
                 reason: (partial as any).reason || "",
+                lockedSpec: (partial as any).locked_spec,
               };
             }
           }
