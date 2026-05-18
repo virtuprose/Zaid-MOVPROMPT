@@ -975,6 +975,17 @@ function DirectorChatInner() {
           <div className="flex-1" />
           {bubbles.map((b, i) => {
             if (b.role === "result") {
+              // Find the most recent model the user explicitly picked in a
+              // ModelChoiceCard before this result bubble — that's what the
+              // primary "Generate" button should target.
+              let pickedModelId: string | undefined;
+              for (let k = i - 1; k >= 0; k -= 1) {
+                const prev = bubbles[k];
+                if (prev.role === "model_choice" && (prev as any).chosen) {
+                  pickedModelId = (prev as any).chosen as string;
+                  break;
+                }
+              }
               return (
                 <div key={i} className="relative">
                   {b.partial && (
@@ -1000,6 +1011,7 @@ function DirectorChatInner() {
                     }
                     referenceImageUrls={referenceImageUrls}
                     referenceImageSlots={referenceImageSlots}
+                    preferredModelId={pickedModelId}
                   />
                 </div>
               );
