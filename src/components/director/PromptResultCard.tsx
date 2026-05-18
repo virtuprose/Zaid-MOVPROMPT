@@ -318,6 +318,10 @@ export function PromptResultCard({ title, prompt, breakdown, directorsNote, onRe
   const recommendedModel =
     findVideoModel(resolved.primary.id) ?? findVideoModel("seedance-v1-pro")!;
   const allowModel = (m: VideoModel) => hasReferenceImage || !m.requiresReference;
+  // The model the primary "Generate" button targets: explicit user pick wins,
+  // otherwise the Director's recommendation.
+  const preferredModel =
+    (preferredModelId ? findVideoModel(preferredModelId) : undefined) ?? recommendedModel;
   const topPicks = [resolved.primary, ...resolved.alternatives]
     .map((c) => findVideoModel(c.id))
     .filter((m): m is VideoModel => !!m && allowModel(m));
