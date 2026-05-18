@@ -462,11 +462,16 @@ function DirectorChatInner() {
       let title: string | null = null;
 
       if (resp.kind === "generate_prompt") {
-        added = { role: "result", data: resp };
+        added = { role: "result", data: resp, nextSuggestions: resp.next_suggestions };
         finalPrompt = resp.prompt;
         title = resp.title;
       } else if (resp.kind === "ask_clarification") {
-        added = { role: "questions", questions: resp.questions, reason: resp.reason };
+        added = {
+          role: "questions",
+          questions: resp.questions,
+          reason: resp.reason,
+          agentSuggestions: resp.suggestions,
+        };
       } else if (resp.kind === "ask_model_choice") {
         added = {
           role: "model_choice",
