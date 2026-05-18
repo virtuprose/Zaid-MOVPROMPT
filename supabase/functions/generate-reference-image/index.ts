@@ -20,7 +20,11 @@ type Body = {
   count?: number;
   aspect_ratio?: "1:1" | "16:9" | "9:16";
   per_shot_prompts?: string[]; // when mode === "storyboard_panels", one per shot
+  shot_index?: number; // when regenerating a single panel inside an existing 3x3 grid
 };
+
+const IDENTITY_LOCK =
+  "Same character as the attached reference image. Maintain exact face, hair, skin tone, age, body proportions, and outfit. Do not redesign the character.";
 
 function dataUrlToBlob(dataUrl: string): { blob: Blob; mime: string } {
   const m = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
