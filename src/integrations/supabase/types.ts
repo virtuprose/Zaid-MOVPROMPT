@@ -165,6 +165,35 @@ export type Database = {
           },
         ]
       }
+      brand_kit_selections: {
+        Row: {
+          brand_kit_id: string
+          position: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          brand_kit_id: string
+          position?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          brand_kit_id?: string
+          position?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brand_kit_selections_brand_kit_id_fkey"
+            columns: ["brand_kit_id"]
+            isOneToOne: false
+            referencedRelation: "brand_kits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       brand_kits: {
         Row: {
           audience: string | null
@@ -224,6 +253,35 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      character_kit_selections: {
+        Row: {
+          character_kit_id: string
+          position: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          character_kit_id: string
+          position?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          character_kit_id?: string
+          position?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "character_kit_selections_character_kit_id_fkey"
+            columns: ["character_kit_id"]
+            isOneToOne: false
+            referencedRelation: "character_kits"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       character_kits: {
         Row: {

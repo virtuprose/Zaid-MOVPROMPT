@@ -5,7 +5,8 @@ import type { BrandKit } from "@/lib/marketing/brandKit";
 
 export function BrandPickerPopover({
   kits,
-  activeId,
+  activeIds,
+  max,
   onSelect,
   onNew,
   onEdit,
@@ -13,19 +14,26 @@ export function BrandPickerPopover({
   trigger,
 }: {
   kits: BrandKit[];
-  activeId: string | null;
+  activeIds: string[];
+  max: number;
   onSelect: (id: string) => void;
   onNew: () => void;
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
   trigger: React.ReactNode;
 }) {
+  const atCap = activeIds.length >= max;
   return (
     <Popover>
       <PopoverTrigger asChild>{trigger}</PopoverTrigger>
       <PopoverContent align="start" className="w-72 p-2">
-        <div className="px-2 pt-1 pb-2 text-[10px] uppercase tracking-wider text-muted-foreground">
-          Your brands
+        <div className="px-2 pt-1 pb-2 flex items-center justify-between">
+          <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+            Your products
+          </span>
+          <span className="text-[10px] text-muted-foreground/70 tabular-nums">
+            {activeIds.length} / {max}
+          </span>
         </div>
 
         {kits.length === 0 ? (
@@ -35,17 +43,22 @@ export function BrandPickerPopover({
         ) : (
           <ul className="max-h-64 overflow-y-auto">
             {kits.map((k) => {
-              const active = k.id === activeId;
+              const pos = k.id ? activeIds.indexOf(k.id) : -1;
+              const active = pos >= 0;
+              const disabled = !active && atCap;
               return (
                 <li key={k.id} className="group flex items-stretch">
                   <button
                     type="button"
-                    onClick={() => k.id && onSelect(k.id)}
+                    onClick={() => k.id && !disabled && onSelect(k.id)}
+                    disabled={disabled}
+                    title={disabled ? `Up to ${max} products per ad` : undefined}
                     className={cn(
                       "flex-1 flex items-center gap-2.5 px-2 py-2 rounded-l-lg text-left text-sm transition-colors",
                       active
-                        ? "bg-[hsl(0_72%_55%)]/10 border border-[hsl(0_72%_55%)]/40"
+                        ? "bg-[#F5A524]/10 border border-[#F5A524]/40"
                         : "hover:bg-muted/40 border border-transparent",
+                      disabled && "opacity-40 cursor-not-allowed",
                     )}
                   >
                     <div className="w-8 h-8 rounded-md border border-border/50 bg-muted/30 overflow-hidden flex items-center justify-center shrink-0">
@@ -56,7 +69,12 @@ export function BrandPickerPopover({
                       )}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <div className="truncate text-foreground">{k.name || "Untitled"}</div>
+                      <div className="truncate text-foreground flex items-center gap-1.5">
+                        <span className="truncate">{k.name || "Untitled"}</span>
+                        {pos === 0 && (
+                          <span className="text-[9px] uppercase tracking-wider text-[#F5A524] font-semibold">Hero</span>
+                        )}
+                      </div>
                       <div className="text-[10px] uppercase tracking-wide text-muted-foreground">
                         {k.subject}
                       </div>

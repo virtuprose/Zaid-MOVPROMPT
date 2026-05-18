@@ -30,16 +30,22 @@ Rules:
 - 2 to 4 sentences, present tense, plain prose. No lists, no headings, no emojis.
 - Beat-by-beat: open with a strong attention grabber, deliver the Format style in the Location, end on a confident product hero frame.
 - If a product is given, name it explicitly. If an avatar/character is given, refer to them by their name and treat them as the on-camera person.
+- If multiple products or characters are provided, the first is the hero/lead; others are supporting and must share the frame without stealing focus from the hero/lead.
 - Treat Format and Setting as LOCKED structure — never override their framing, category or core beat. If an "Additional direction" note is provided, treat it as an adaptation layer that adjusts tone, mood, palette or small details on top of the preset.
 - Don't write marketing taglines. Write what the camera sees and what the person does.
 - Stay under 90 words. Output only the scene text — no preamble, no quotes.`;
+
+type BrandLite = { name?: string; description?: string; tagline?: string; audience?: string };
+type CharLite = { name?: string; role?: string; description?: string };
 
 type Brief = {
   subject?: "product" | "app";
   format?: { label?: string; fragment?: string; custom?: string };
   setting?: { label?: string; fragment?: string; custom?: string };
-  brand?: { name?: string; description?: string; tagline?: string; audience?: string } | null;
-  character?: { name?: string; role?: string; description?: string } | null;
+  brand?: BrandLite | null;
+  brands?: BrandLite[];
+  character?: CharLite | null;
+  characters?: CharLite[];
   location?: { place?: string; hasImage?: boolean } | null;
   userNote?: string;
 };
@@ -50,23 +56,28 @@ function buildUserContent(b: Brief): string {
   if (b.format?.label || b.format?.custom) {
     lines.push(`Format: ${b.format.label || "Custom"} — ${b.format.fragment || b.format.custom || ""}`);
   }
-  
   if (b.setting?.label || b.setting?.custom) {
     lines.push(`Setting: ${b.setting.label || "Custom"} — ${b.setting.fragment || b.setting.custom || ""}`);
   }
-  if (b.brand?.name) {
-    const bits = [b.brand.name];
-    if (b.brand.description) bits.push(b.brand.description);
-    if (b.brand.tagline) bits.push(`tagline: "${b.brand.tagline}"`);
-    if (b.brand.audience) bits.push(`audience: ${b.brand.audience}`);
-    lines.push(`Product/Brand: ${bits.join(" — ")}`);
-  }
-  if (b.character?.name) {
-    const bits = [b.character.name];
-    if (b.character.role) bits.push(`role: ${b.character.role}`);
-    if (b.character.description) bits.push(b.character.description);
-    lines.push(`On-camera person: ${bits.join(" — ")}`);
-  }
+  const brands: BrandLite[] = b.brands && b.brands.length > 0 ? b.brands : b.brand ? [b.brand] : [];
+  brands.forEach((br, i) => {
+    if (!br?.name) return;
+    const role = brands.length === 1 ? "Product/Brand" : i === 0 ? "Hero product" : "Supporting product (shares the frame)";
+    const bits = [br.name];
+    if (br.description) bits.push(br.description);
+    if (br.tagline) bits.push(`tagline: "${br.tagline}"`);
+    if (br.audience) bits.push(`audience: ${br.audience}`);
+    lines.push(`${role}: ${bits.join(" — ")}`);
+  });
+  const chars: CharLite[] = b.characters && b.characters.length > 0 ? b.characters : b.character ? [b.character] : [];
+  chars.forEach((ch, i) => {
+    if (!ch?.name) return;
+    const role = chars.length === 1 ? "On-camera person" : i === 0 ? "Lead on-camera" : "Also on-camera (shares the frame, does not lead)";
+    const bits = [ch.name];
+    if (ch.role) bits.push(`role: ${ch.role}`);
+    if (ch.description) bits.push(ch.description);
+    lines.push(`${role}: ${bits.join(" — ")}`);
+  });
   if (b.location?.place) {
     lines.push(`Real-world location: ${b.location.place} (match its architecture, light, culture).`);
   }

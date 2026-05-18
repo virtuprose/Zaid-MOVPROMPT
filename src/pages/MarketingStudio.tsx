@@ -108,14 +108,16 @@ export default function MarketingStudio() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
 
-  const { kits, activeKit: brandKit, activeId: brandActiveId, setActive: setBrandActive, deleteKit: deleteBrand } = useBrandKit();
+  const { kits, activeKits: brandKits, activeIds: brandActiveIds, toggleActive: toggleBrandActive, deleteKit: deleteBrand } = useBrandKit();
+  const brandKit = brandKits[0] ?? null;
   const {
     kits: characterKits,
-    activeKit: characterKit,
-    activeId: characterActiveId,
-    setActive: setCharacterActive,
+    activeKits: characterActiveKits,
+    activeIds: characterActiveIds,
+    toggleActive: toggleCharacterActive,
     deleteKit: deleteCharacter,
   } = useCharacterKit();
+  const characterKit = characterActiveKits[0] ?? null;
   const [subjectOverride, setSubjectOverride] = useState<Subject | null>(null);
   const subject: Subject = subjectOverride ?? brandKit?.subject ?? "product";
   useEffect(() => {
@@ -229,21 +231,17 @@ export default function MarketingStudio() {
             : customSetting.trim()
               ? { custom: customSetting.trim() }
               : undefined,
-          brand: brandKit
-            ? {
-                name: brandKit.name,
-                description: brandKit.description,
-                tagline: brandKit.tagline,
-                audience: brandKit.audience,
-              }
-            : null,
-          character: characterKit
-            ? {
-                name: characterKit.name,
-                role: characterKit.role,
-                description: characterKit.description,
-              }
-            : null,
+          brands: brandKits.map((b) => ({
+            name: b.name,
+            description: b.description,
+            tagline: b.tagline,
+            audience: b.audience,
+          })),
+          characters: characterActiveKits.map((c) => ({
+            name: c.name,
+            role: c.role,
+            description: c.description,
+          })),
           location:
             location.place || location.imagePath
               ? { place: location.place || undefined, hasImage: !!location.imagePath }
@@ -276,8 +274,8 @@ export default function MarketingStudio() {
     customFormat,
     settingId,
     customSetting,
-    brandKit?.id,
-    characterKit?.id,
+    brandActiveIds.join(","),
+    characterActiveIds.join(","),
     location.place,
     location.imagePath,
     subject,
@@ -302,8 +300,12 @@ export default function MarketingStudio() {
       // Build the ordered ref list first so we can tag @ImageN in the prompt
       // in the exact order the URLs are sent to Seedance reference-to-video.
       const refSlots: Array<{ slot: "brand" | "character" | "location"; url: string }> = [];
-      if (brandKit?.logo_url) refSlots.push({ slot: "brand", url: brandKit.logo_url });
-      if (characterKit?.reference_url) refSlots.push({ slot: "character", url: characterKit.reference_url });
+      for (const b of brandKits) {
+        if (b.logo_url) refSlots.push({ slot: "brand", url: b.logo_url });
+      }
+      for (const c of characterActiveKits) {
+        if (c.reference_url) refSlots.push({ slot: "character", url: c.reference_url });
+      }
       if (location.imageUrl) refSlots.push({ slot: "location", url: location.imageUrl });
       const referenceImages = refSlots.map((r) => r.url);
       const imageRefs = refSlots.map((r) => r.slot);
@@ -315,27 +317,23 @@ export default function MarketingStudio() {
         settingId,
         customFormat: customFormat || undefined,
         customSetting: customSetting || undefined,
-        brand: brandKit
-          ? {
-              name: brandKit.name,
-              description: brandKit.description,
-              url: brandKit.url,
-              tagline: brandKit.tagline,
-              audience: brandKit.audience,
-            }
-          : undefined,
+        brands: brandKits.map((b) => ({
+          name: b.name,
+          description: b.description,
+          url: b.url,
+          tagline: b.tagline,
+          audience: b.audience,
+        })),
         location: {
           place: location.place || undefined,
           hasImage: !!location.imagePath,
         },
-        character: characterKit
-          ? {
-              name: characterKit.name,
-              description: characterKit.description,
-              role: characterKit.role,
-              hasImage: !!characterKit.reference_path,
-            }
-          : undefined,
+        characters: characterActiveKits.map((c) => ({
+          name: c.name,
+          description: c.description,
+          role: c.role,
+          hasImage: !!c.reference_path,
+        })),
         imageRefs,
         userNote: userNote.trim() || undefined,
       });
@@ -590,25 +588,28 @@ export default function MarketingStudio() {
           {/* Composer card */}
           <div ref={composerRef} className="flex-1 min-w-0 rounded-3xl border border-border/60 bg-[hsl(240_5%_8%)]/70 backdrop-blur p-3 sm:p-4 scroll-mt-20">
             <div className="flex flex-wrap items-center gap-2 mb-2">
-              {brandKit ? (
-                <HoverCard openDelay={150} closeDelay={80}>
+              {brandKits.map((bk, i) => (
+                <HoverCard key={bk.id} openDelay={150} closeDelay={80}>
                   <HoverCardTrigger asChild>
                     <div className="inline-flex items-center gap-1.5 h-9 pl-1 pr-1 rounded-full border border-[#F5A524]/40 bg-[#F5A524]/10 text-xs cursor-default">
                       <div className="w-7 h-7 rounded-full bg-white/5 overflow-hidden flex items-center justify-center shrink-0">
-                        {brandKit.logo_url ? (
-                          <img src={brandKit.logo_url} alt="" className="w-full h-full object-cover" />
+                        {bk.logo_url ? (
+                          <img src={bk.logo_url} alt="" className="w-full h-full object-cover" />
                         ) : (
                           <Building2 className="w-3.5 h-3.5 text-muted-foreground" />
                         )}
                       </div>
                       <span className="font-medium text-foreground truncate max-w-[140px] px-1">
-                        {brandKit.name || (subject === "app" ? "App" : "Product")}
+                        {bk.name || (subject === "app" ? "App" : "Product")}
                       </span>
+                      {brandKits.length > 1 && i === 0 && (
+                        <span className="text-[9px] uppercase tracking-wider text-[#F5A524] font-semibold pr-0.5">Hero</span>
+                      )}
                       <button
                         type="button"
-                        onClick={() => void setBrandActive(null)}
+                        onClick={() => bk.id && void toggleBrandActive(bk.id)}
                         className="w-6 h-6 rounded-full text-muted-foreground hover:text-foreground hover:bg-background/60 flex items-center justify-center shrink-0"
-                        aria-label="Detach brand"
+                        aria-label="Detach product"
                       >
                         <X className="w-3.5 h-3.5" />
                       </button>
@@ -616,22 +617,24 @@ export default function MarketingStudio() {
                   </HoverCardTrigger>
                   <HoverCardContent side="top" align="start" sideOffset={8} className="w-64 p-2">
                     <div className="flex items-center justify-center rounded-md bg-black/40 overflow-hidden" style={{ maxHeight: "18rem" }}>
-                      {brandKit.logo_url ? (
-                        <img src={brandKit.logo_url} alt={brandKit.name || "Brand"} className="max-h-72 w-auto object-contain" />
+                      {bk.logo_url ? (
+                        <img src={bk.logo_url} alt={bk.name || "Brand"} className="max-h-72 w-auto object-contain" />
                       ) : (
                         <Building2 className="w-10 h-10 text-muted-foreground my-8" />
                       )}
                     </div>
                     <p className="mt-2 text-xs font-medium text-foreground truncate px-1">
-                      {brandKit.name || (subject === "app" ? "App" : "Product")}
+                      {bk.name || (subject === "app" ? "App" : "Product")}
                     </p>
                   </HoverCardContent>
                 </HoverCard>
-              ) : (
+              ))}
+              {brandActiveIds.length < 2 && (
                 <BrandPickerPopover
                   kits={kits}
-                  activeId={brandActiveId}
-                  onSelect={(id) => void setBrandActive(id === brandActiveId ? null : id)}
+                  activeIds={brandActiveIds}
+                  max={2}
+                  onSelect={(id) => void toggleBrandActive(id)}
                   onNew={() => { setBrandEditId(null); setBrandOpen(true); }}
                   onEdit={(id) => { setBrandEditId(id); setBrandOpen(true); }}
                   onDelete={(id) => void deleteBrand(id)}
@@ -642,28 +645,31 @@ export default function MarketingStudio() {
                     >
                       <Building2 className="w-3.5 h-3.5" />
                       <Plus className="w-3 h-3" />
-                      {subject === "app" ? "App" : "Product"}
+                      {brandActiveIds.length === 0 ? (subject === "app" ? "App" : "Product") : "Add"}
                     </button>
                   }
                 />
               )}
-              {characterKit ? (
-                <HoverCard openDelay={150} closeDelay={80}>
+              {characterActiveKits.map((ck, i) => (
+                <HoverCard key={ck.id} openDelay={150} closeDelay={80}>
                   <HoverCardTrigger asChild>
                     <div className="inline-flex items-center gap-1.5 h-9 pl-1 pr-1 rounded-full border border-[#F5A524]/40 bg-[#F5A524]/10 text-xs cursor-default">
                       <div className="w-7 h-7 rounded-full bg-white/5 overflow-hidden flex items-center justify-center shrink-0">
-                        {characterKit.reference_url ? (
-                          <img src={characterKit.reference_url} alt="" className="w-full h-full object-cover" />
+                        {ck.reference_url ? (
+                          <img src={ck.reference_url} alt="" className="w-full h-full object-cover" />
                         ) : (
                           <UserRound className="w-3.5 h-3.5 text-muted-foreground" />
                         )}
                       </div>
                       <span className="font-medium text-foreground truncate max-w-[140px] px-1">
-                        {characterKit.name || "Avatar"}
+                        {ck.name || "Avatar"}
                       </span>
+                      {characterActiveKits.length > 1 && i === 0 && (
+                        <span className="text-[9px] uppercase tracking-wider text-[#F5A524] font-semibold pr-0.5">Lead</span>
+                      )}
                       <button
                         type="button"
-                        onClick={() => void setCharacterActive(null)}
+                        onClick={() => ck.id && void toggleCharacterActive(ck.id)}
                         className="w-6 h-6 rounded-full text-muted-foreground hover:text-foreground hover:bg-background/60 flex items-center justify-center shrink-0"
                         aria-label="Detach character"
                       >
@@ -673,22 +679,24 @@ export default function MarketingStudio() {
                   </HoverCardTrigger>
                   <HoverCardContent side="top" align="start" sideOffset={8} className="w-64 p-2">
                     <div className="flex items-center justify-center rounded-md bg-black/40 overflow-hidden" style={{ maxHeight: "18rem" }}>
-                      {characterKit.reference_url ? (
-                        <img src={characterKit.reference_url} alt={characterKit.name || "Avatar"} className="max-h-72 w-auto object-contain" />
+                      {ck.reference_url ? (
+                        <img src={ck.reference_url} alt={ck.name || "Avatar"} className="max-h-72 w-auto object-contain" />
                       ) : (
                         <UserRound className="w-10 h-10 text-muted-foreground my-8" />
                       )}
                     </div>
                     <p className="mt-2 text-xs font-medium text-foreground truncate px-1">
-                      {characterKit.name || "Avatar"}
+                      {ck.name || "Avatar"}
                     </p>
                   </HoverCardContent>
                 </HoverCard>
-              ) : (
+              ))}
+              {characterActiveIds.length < 3 && (
                 <CharacterPickerPopover
                   kits={characterKits}
-                  activeId={characterActiveId}
-                  onSelect={(id) => void setCharacterActive(id === characterActiveId ? null : id)}
+                  activeIds={characterActiveIds}
+                  max={3}
+                  onSelect={(id) => void toggleCharacterActive(id)}
                   onNew={() => { setCharacterEditId(null); setCharacterOpen(true); }}
                   onEdit={(id) => { setCharacterEditId(id); setCharacterOpen(true); }}
                   onDelete={(id) => void deleteCharacter(id)}
@@ -699,7 +707,7 @@ export default function MarketingStudio() {
                     >
                       <UserRound className="w-3.5 h-3.5" />
                       <Plus className="w-3 h-3" />
-                      Avatar
+                      {characterActiveIds.length === 0 ? "Avatar" : "Add"}
                     </button>
                   }
                 />
