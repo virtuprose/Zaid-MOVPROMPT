@@ -484,6 +484,7 @@ function DirectorChatInner() {
           recommended_model_id: resp.recommended_model_id,
           alternatives: resp.alternatives,
           reason: resp.reason,
+          lockedSpec: resp.locked_spec,
         };
       } else if (resp.kind === "request_video_generation") {
         const refCount = referenceImageUrls.length;
