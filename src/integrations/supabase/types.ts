@@ -776,6 +776,8 @@ export type Database = {
           reference_image_urls: Json | null
           session_id: string | null
           status: string
+          storyboard_session_id: string | null
+          storyboard_shot_index: number | null
           user_id: string
           video_url: string | null
         }
@@ -794,6 +796,8 @@ export type Database = {
           reference_image_urls?: Json | null
           session_id?: string | null
           status?: string
+          storyboard_session_id?: string | null
+          storyboard_shot_index?: number | null
           user_id: string
           video_url?: string | null
         }
@@ -812,6 +816,8 @@ export type Database = {
           reference_image_urls?: Json | null
           session_id?: string | null
           status?: string
+          storyboard_session_id?: string | null
+          storyboard_shot_index?: number | null
           user_id?: string
           video_url?: string | null
         }

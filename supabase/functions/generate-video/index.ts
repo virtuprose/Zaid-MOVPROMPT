@@ -480,12 +480,14 @@ serve(async (req) => {
     }
 
     // Submit new job
-    let { prompt, provider = "seedance-v1-pro", session_id, options, reference_image_urls } = body as {
+    let { prompt, provider = "seedance-v1-pro", session_id, options, reference_image_urls, storyboard_session_id, storyboard_shot_index } = body as {
       prompt?: string;
       provider?: string;
       session_id?: string;
       options?: VideoOptions;
       reference_image_urls?: string[];
+      storyboard_session_id?: string;
+      storyboard_shot_index?: number;
     };
     const refImages = Array.isArray(reference_image_urls)
       ? reference_image_urls.filter((u): u is string => typeof u === "string" && u.length > 0)
@@ -553,6 +555,8 @@ serve(async (req) => {
         prompt: normalizedPrompt,
         status: "queued",
         reference_image_urls: refImages.length > 0 ? refImages : null,
+        storyboard_session_id: typeof storyboard_session_id === "string" && storyboard_session_id.length > 0 ? storyboard_session_id : null,
+        storyboard_shot_index: typeof storyboard_shot_index === "number" && Number.isFinite(storyboard_shot_index) ? storyboard_shot_index : null,
       })
       .select("*")
       .single();

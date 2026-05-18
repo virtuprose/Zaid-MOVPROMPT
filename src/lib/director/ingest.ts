@@ -11,9 +11,11 @@ export type ModerationResult = {
   categories?: string[];
 };
 
+export type AttachmentRole = "character" | "storyboard" | "reference";
+
 export type Attachment =
-  | { kind: "image"; name: string; url: string; storage_path?: string; moderation?: ModerationResult }
-  | { kind: "video_keyframes"; name: string; url: string; storage_path?: string; moderation?: ModerationResult }
+  | { kind: "image"; name: string; url: string; storage_path?: string; moderation?: ModerationResult; role?: AttachmentRole; shot_index?: number; parent_storage_path?: string }
+  | { kind: "video_keyframes"; name: string; url: string; storage_path?: string; moderation?: ModerationResult; role?: AttachmentRole; shot_index?: number; parent_storage_path?: string }
   | { kind: "audio_transcript"; name: string; text: string; storage_path?: string }
   | { kind: "document"; name: string; text: string };
 
@@ -23,7 +25,7 @@ const MAX_DOC_BYTES = 10 * 1024 * 1024;
 const MAX_AUDIO_BYTES = 25 * 1024 * 1024;
 const SIGNED_URL_TTL = 60 * 60; // 1 hour
 
-async function uploadAndSign(
+export async function uploadAndSign(
   blob: Blob,
   userId: string,
   fileName: string,
@@ -42,7 +44,7 @@ async function uploadAndSign(
   return { storage_path: path, url: data.signedUrl };
 }
 
-async function requireUserId(): Promise<string> {
+export async function requireUserId(): Promise<string> {
   const { data } = await supabase.auth.getUser();
   if (!data.user) throw new Error("Sign in to attach references");
   return data.user.id;
