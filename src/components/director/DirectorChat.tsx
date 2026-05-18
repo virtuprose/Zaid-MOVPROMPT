@@ -1125,7 +1125,16 @@ function DirectorChatInner() {
                 </div>
               );
             }
-            if (b.role === "video") {
+            if (b.role === "generated_images") {
+              return (
+                <div key={i} className="flex items-start gap-2 motion-safe:animate-fade-up">
+                  <AssistantAvatar size="sm" state="idle" className="mt-1" />
+                  <div className="flex-1">
+                    <GeneratedImageCard data={b.data} />
+                  </div>
+                </div>
+              );
+            }
               return (
                 <div key={i} className="motion-safe:animate-fade-up">
                   <VideoBubble
