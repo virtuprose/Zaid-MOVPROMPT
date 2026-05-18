@@ -382,6 +382,17 @@ function DirectorChatInner() {
           if (b.chosen) {
             history.push({ role: "user", content: `Target model: ${b.chosen}` });
           }
+        } else if (b.role === "generated_images") {
+          const tag =
+            b.data.mode === "character_sheet"
+              ? "character sheet"
+              : b.data.mode === "storyboard_panels"
+                ? `${b.data.images.length} storyboard panels (shot ${b.data.images.map((i) => i.shot_index ?? "?").join(", ")})`
+                : "reference frame";
+          history.push({
+            role: "assistant",
+            content: `[Generated ${tag} via generate_reference_image. They are attached on the next user turn with role: ${b.data.mode === "character_sheet" ? "character" : b.data.mode === "storyboard_panels" ? "storyboard" : "reference"}. Do not regenerate.]`,
+          });
         }
       }
 
