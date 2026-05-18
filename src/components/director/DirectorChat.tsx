@@ -1064,6 +1064,7 @@ function DirectorChatInner() {
                     recommendedId={b.recommended_model_id}
                     alternatives={b.alternatives}
                     reason={b.reason}
+                    lockedSpec={b.lockedSpec}
                     disabled={!isLatest || busy || !!b.chosen}
                     hasReferenceImage={hasReferenceImage}
                     onConfirm={(modelId) => {
