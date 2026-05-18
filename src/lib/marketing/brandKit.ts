@@ -146,6 +146,11 @@ export function useBrandKit() {
         audience: next.audience,
         logo_path: next.logo_path,
       };
+      if (!next.id && !payload.logo_path && next.logo_url) {
+        console.warn(
+          "[brandKit] saving a new brand with no logo_path but a local logo_url — the uploaded image was lost before save",
+        );
+      }
       let saved: BrandKit;
       if (next.id) {
         const { data, error } = await supabase
@@ -167,13 +172,23 @@ export function useBrandKit() {
       }
       saved.logo_url = await signLogo(saved.logo_path);
       await reload();
-      if (saved.id && !activeIds.includes(saved.id)) {
-        const nextIds = [...activeIds, saved.id].slice(0, MAX_BRANDS);
-        await setActiveIds(nextIds);
+      if (saved.id) {
+        // Use functional updater so we don't depend on a stale activeIds
+        // closure (reload() just queued its own setActiveIdsState).
+        let nextIds: string[] = [];
+        setActiveIdsState((prev) => {
+          if (prev.includes(saved.id!)) {
+            nextIds = prev;
+            return prev;
+          }
+          nextIds = [...prev, saved.id!].slice(0, MAX_BRANDS);
+          return nextIds;
+        });
+        await persistSelections(nextIds);
       }
       return saved;
     },
-    [user, reload, activeIds, setActiveIds],
+    [user, reload, persistSelections],
   );
 
   const deleteKit = useCallback(
