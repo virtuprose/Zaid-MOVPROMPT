@@ -244,7 +244,7 @@ function Section({
   label: string;
   body?: string;
   accent?: boolean;
-  children?: React.ReactNode;
+  children?: ReactNode;
 }) {
   if (!body && !children) return null;
   return (
