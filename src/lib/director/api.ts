@@ -280,9 +280,22 @@ export async function streamDirectorAgent(
           if (!delta) continue;
           if (delta.tool_calls?.[0]) {
             const tc = delta.tool_calls[0];
-            if (tc.function?.name) toolName = tc.function.name;
+            if (tc.function?.name) {
+              toolName = tc.function.name;
+              // Map tool name → phase
+              if (toolName === "ask_model_choice") emitPhase("choosing_model");
+              else if (toolName === "generate_prompt") emitPhase("writing_prompt");
+              else if (toolName === "ask_clarification") emitPhase("thinking");
+            }
             if (tc.function?.arguments) {
               toolArgs += tc.function.arguments;
+              // Heuristic: scene decomposition keywords inside streamed args.
+              if (
+                toolName === "generate_prompt" &&
+                /foreground|midground|background|key light|lighting/i.test(toolArgs)
+              ) {
+                emitPhase("decomposing_scene");
+              }
               tryEmitPartial();
             }
           } else if (delta.content) {
