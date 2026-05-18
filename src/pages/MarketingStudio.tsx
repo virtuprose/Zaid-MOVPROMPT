@@ -701,7 +701,7 @@ export default function MarketingStudio() {
               )}
             </div>
 
-            <div className="flex flex-wrap items-center gap-2 pt-2 mt-1 border-t border-border/30">
+            <div className="flex flex-wrap items-center gap-2 mt-2">
               <PresetChip
                 icon={<Sparkles className="w-3.5 h-3.5" />}
                 label="Format"
