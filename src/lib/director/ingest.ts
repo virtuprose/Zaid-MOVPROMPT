@@ -44,7 +44,7 @@ export async function uploadAndSign(
   return { storage_path: path, url: data.signedUrl };
 }
 
-async function requireUserId(): Promise<string> {
+export async function requireUserId(): Promise<string> {
   const { data } = await supabase.auth.getUser();
   if (!data.user) throw new Error("Sign in to attach references");
   return data.user.id;
