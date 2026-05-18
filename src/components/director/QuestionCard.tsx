@@ -47,9 +47,17 @@ export function QuestionCard({ reason, questions, disabled, attachments = [], on
       questions.map((q, i) => {
         if (mediaAsks[i]) return null;
         if (DURATION_RE.test(q)) return null;
+        const fromAgent = agentSuggestions?.find((s) => s.question_index === i);
+        if (fromAgent && fromAgent.chips?.length) {
+          return {
+            category: "agent" as const,
+            example: "Pick one or more, or type your own",
+            chips: fromAgent.chips,
+          };
+        }
         return detectSuggestion(q);
       }),
-    [questions, mediaAsks],
+    [questions, mediaAsks, agentSuggestions],
   );
 
   useEffect(() => {
