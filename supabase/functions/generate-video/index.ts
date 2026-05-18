@@ -310,19 +310,31 @@ serve(async (req) => {
       } catch (error) {
         const falError = extractFalError(error);
         console.warn("fal status response unreadable", falError.status, falError.message);
-        if (falError.status === 404) {
+        // Any 4xx from fal (except 408 timeout / 429 rate-limit) is a terminal
+        // input/validation failure — surface it instead of polling forever.
+        const isTerminal4xx =
+          typeof falError.status === "number" &&
+          falError.status >= 400 &&
+          falError.status < 500 &&
+          falError.status !== 408 &&
+          falError.status !== 429;
+        if (isTerminal4xx) {
+          const friendly =
+            falError.status === 404
+              ? "The provider completed the render but did not return the video result. Please retry with the same prompt."
+              : `Provider rejected the job (${falError.status}): ${falError.message || "validation error"}`;
           await admin
             .from("video_jobs")
             .update({
               status: "failed",
-              error: "The provider completed the render but did not return the video result. Please retry with the same prompt.",
+              error: friendly,
               completed_at: new Date().toISOString(),
             })
             .eq("id", jobId);
           return new Response(JSON.stringify({
             ...job,
             status: "failed",
-            error: "The provider completed the render but did not return the video result. Please retry with the same prompt.",
+            error: friendly,
           }), {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
           });
@@ -341,12 +353,22 @@ serve(async (req) => {
         } catch (error) {
           const falError = extractFalError(error);
           console.warn("fal result response unreadable", falError.status, falError.message);
-          if (falError.status === 404) {
+          const isTerminal4xx =
+            typeof falError.status === "number" &&
+            falError.status >= 400 &&
+            falError.status < 500 &&
+            falError.status !== 408 &&
+            falError.status !== 429;
+          if (isTerminal4xx) {
+            const friendly =
+              falError.status === 404
+                ? "The provider completed the render but did not return the video result. Please retry with the same prompt."
+                : `Provider rejected the job (${falError.status}): ${falError.message || "validation error"}`;
             await admin
               .from("video_jobs")
               .update({
                 status: "failed",
-                error: "The provider completed the render but did not return the video result. Please retry with the same prompt.",
+                error: friendly,
                 completed_at: new Date().toISOString(),
               })
               .eq("id", jobId);
@@ -354,7 +376,7 @@ serve(async (req) => {
               JSON.stringify({
                 ...job,
                 status: "failed",
-                error: "The provider completed the render but did not return the video result. Please retry with the same prompt.",
+                error: friendly,
               }),
               { headers: { ...corsHeaders, "Content-Type": "application/json" } },
             );
@@ -479,7 +501,7 @@ serve(async (req) => {
       prompt = typeof session?.final_prompt === "string" ? session.final_prompt : prompt;
     }
 
-    const normalizedPrompt = typeof prompt === "string" ? prompt.trim() : "";
+    let normalizedPrompt = typeof prompt === "string" ? prompt.trim() : "";
 
     if (!normalizedPrompt || normalizedPrompt.length > 8000) {
       return new Response(JSON.stringify({ error: "Valid prompt required" }), {
@@ -487,6 +509,21 @@ serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    // Strip image-reference tokens (e.g. "@Image1", "[Image 2]", "[image_3]",
+    // "image_1") from the prompt when fewer reference images are attached than
+    // the tokens reference. Otherwise fal returns
+    // 422 "Invalid reference index N for image. Only M images provided."
+    // and the job hangs in 'processing' forever.
+    const refCount = refImages.length;
+    normalizedPrompt = normalizedPrompt.replace(
+      /(?:@|\[)?\s*image[\s_-]*#?(\d+)\s*\]?/gi,
+      (match, idxStr: string) => {
+        const idx = parseInt(idxStr, 10);
+        return idx > refCount ? "" : match;
+      },
+    ).replace(/\s{2,}/g, " ").trim();
+
     // Kling 3.0 exposes 4K via a dedicated endpoint. If the user picked "4k"
     // resolution on Pro/Standard/Omni, transparently route to the 4K variant.
     if (
