@@ -215,6 +215,9 @@ const TOOLS = [
     },
   },
   {
+    type: "function",
+    function: {
+      name: "generate_prompt",
       description: "Produce the final cinematic prompt and structured breakdown.",
       parameters: {
         type: "object",
