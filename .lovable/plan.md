@@ -1,42 +1,23 @@
-# Add "Describe" chip near Brand (Bose) and Avatar (Maya)
-
 ## Goal
 
-In the composer card on `/marketing`, place a third chip on the same row as the brand chip ("Bose") and avatar chip ("Maya") labeled **Describe**. Clicking it opens an inline mini-textarea (popover) where the user can add a short free-text description.
-
-The Format preset stays the **main, locked** driver of the scene. The user's description is treated as an **adaptation layer** — it tweaks tone/details on top of the preset but never overrides its structure or framing.
-
-## UX
-
-Row 1 of the composer card (line 587 in `src/pages/MarketingStudio.tsx`) becomes:
-
-```text
-[ 🏢 Bose  × ]   [ 👤 Maya  × ]   [ ✎ Describe … ]
-```
-
-- Empty state: dashed pill `✎ + Describe`, same visual language as the empty brand/avatar pills.
-- Filled state: solid pill `✎ "Make it feel late-night and intimate…" ×` (truncated to ~28 chars, full text in tooltip).
-- Click opens a small popover with a `Textarea` (3–4 rows), 280 char limit, helper copy: *"Adapts the scene on top of the preset. Preset stays in charge."*
-- Auto-saves on blur; `×` clears it.
+Replace the current **Describe** chip + Popover with an **inline text input** that sits on the same row as the Brand (Bose/MovPrompt) and Avatar (Liam/Maya) chips. The user clicks once and types directly — no popover, no separate textarea modal — exactly like the attached screenshot where "create ad video" is typed inline after the chips.
 
 ## Behavior
 
-The new value lives in component state as `userNote: string`.
+- The input is borderless, transparent, and lives flush next to the chips in the same flex row.
+- Placeholder: `Describe your ad…` (muted, italic optional).
+- Auto-grows in width to fill remaining row space (`flex-1 min-w-[160px]`).
+- Stores its value in the existing `userNote` state — no new state, no new prop.
+- Same 280-char cap, same downstream behavior (passed to `writeAdScene` and `composeStudioPrompt` as the adaptation layer).
+- A small `×` clear affordance appears only when the field has content, aligned to the right edge of the input.
+- No popover, no Pencil icon, no dashed pill — the input itself communicates "type here".
 
-1. **Auto-draft (write-ad-scene)** — added to the dependency array and passed to `writeAdScene` as a new `userNote` field. The edge function's system prompt is updated to: *"Treat `format` and `setting` as locked structure. Treat `userNote` as an adaptation layer — adjust tone, mood, small details, but never override the preset's framing or category."*
-2. **Final prompt (composeStudioPrompt)** — `userNote` is appended as an `Additional direction:` line at the end of the composed prompt so the generator sees it even if the auto-draft didn't fully fold it in.
-3. **Persistence** — kept ephemeral (component state only), matching how `master` and `customFormat` behave today.
+## File touched
 
-## Files
-
-- `src/pages/MarketingStudio.tsx`
-  - Add `userNote` state + a small `DescribeChip` component (inline or co-located) using `Popover` + `Textarea`.
-  - Insert it in the row at line 587, after the avatar chip.
-  - Wire `userNote` into the `writeAdScene` effect (lines 212–281) and into `composeStudioPrompt` (line 307).
-- `src/lib/marketingStudio.ts` — extend `composeStudioPrompt` signature to accept `userNote?: string` and append it as `Additional direction: …` when present.
-- `supabase/functions/write-ad-scene/index.ts` — accept optional `userNote` in the request body, include it in the user message, and add the "preset is locked, note adapts" rule to the system prompt.
+- `src/pages/MarketingStudio.tsx` — replace lines ~709–764 (the `<Popover>…</Popover>` block) with an inline `<input>` (or single-line `Textarea` styled as input) bound to `userNote`. Remove now-unused `Popover` / `PopoverTrigger` / `PopoverContent` / `Pencil` imports if no longer referenced elsewhere on the page (verify first).
 
 ## Out of scope
 
-- No new database columns, no brand/avatar kit changes, no preset picker changes.
-- No changes to how Format / Location / Generate ad row renders.
+- No change to the brand/avatar chips, Format/Location row, Generate button, or any backend logic.
+- No persistence change — still ephemeral component state.
+- Edge function (`write-ad-scene`) and `composeStudioPrompt` already handle `userNote` correctly; untouched.
