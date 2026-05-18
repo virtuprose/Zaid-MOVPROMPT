@@ -439,6 +439,7 @@ function DirectorChatInner() {
           resp = await streamDirectorAgent(history, mergedAttachments, handlePartial, undefined, {
             idleTimeoutMs: 30_000,
             totalTimeoutMs: 120_000,
+            onPhase: (p) => setPhase(p),
           });
           lastErr = null;
           break;
