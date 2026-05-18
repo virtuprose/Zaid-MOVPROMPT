@@ -61,6 +61,7 @@ type Bubble =
     }
   | { role: "model_choice"; recommended_model_id: string; alternatives?: string[]; reason: string; chosen?: string; lockedSpec?: import("@/lib/director/api").LockedSpec }
   | { role: "error"; message: string; detail?: string; retryable: boolean }
+  | { role: "generated_images"; data: import("./GeneratedImageCard").GeneratedImageBubbleData }
   | { role: "video"; data: import("./VideoBubble").VideoBubbleData };
 
 const WELCOME: Bubble = {
