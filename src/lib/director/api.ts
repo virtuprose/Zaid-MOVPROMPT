@@ -530,6 +530,8 @@ export type AdSceneBrief = {
   brand?: { name?: string; description?: string; tagline?: string | null; audience?: string | null } | null;
   character?: { name?: string; role?: string | null; description?: string | null } | null;
   location?: { place?: string; hasImage?: boolean } | null;
+  /** Free-text adaptation layer — preset stays locked, this tweaks tone/details. */
+  userNote?: string;
 };
 
 export async function writeAdScene(
