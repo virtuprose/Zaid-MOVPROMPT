@@ -9,6 +9,7 @@ export type LockedSpec = {
   aspect_ratio?: string;
   audio?: "silent" | "sfx" | "music" | "dialogue" | "full";
   resolution?: "720p" | "1080p" | "4k";
+  style?: "photoreal" | "cinematic-film" | "stylized" | "anime";
 };
 
 export type Breakdown = {
