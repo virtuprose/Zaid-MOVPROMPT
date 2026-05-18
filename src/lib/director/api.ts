@@ -20,8 +20,19 @@ export type Breakdown = {
   recommendation_reason?: string;
 };
 
+export type AgentSuggestion = {
+  question_index: number;
+  chips: string[];
+  allow_other?: boolean;
+};
+
 export type AgentResponse =
-  | { kind: "ask_clarification"; questions: string[]; reason: string }
+  | {
+      kind: "ask_clarification";
+      questions: string[];
+      reason: string;
+      suggestions?: AgentSuggestion[];
+    }
   | {
       kind: "ask_model_choice";
       recommended_model_id: string;
@@ -34,6 +45,7 @@ export type AgentResponse =
       prompt: string;
       breakdown: Breakdown;
       directors_note?: string;
+      next_suggestions?: string[];
     }
   | {
       kind: "request_video_generation";
@@ -41,6 +53,13 @@ export type AgentResponse =
       provider_preference?: "seedance" | "veo" | "kling" | "any";
     }
   | { kind: "message"; content: string };
+
+export type DirectorPhase =
+  | "thinking"
+  | "analyzing_image"
+  | "decomposing_scene"
+  | "choosing_model"
+  | "writing_prompt";
 
 const ENDPOINT = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/director-agent`;
 
