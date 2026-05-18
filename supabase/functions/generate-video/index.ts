@@ -501,7 +501,7 @@ serve(async (req) => {
       prompt = typeof session?.final_prompt === "string" ? session.final_prompt : prompt;
     }
 
-    const normalizedPrompt = typeof prompt === "string" ? prompt.trim() : "";
+    let normalizedPrompt = typeof prompt === "string" ? prompt.trim() : "";
 
     if (!normalizedPrompt || normalizedPrompt.length > 8000) {
       return new Response(JSON.stringify({ error: "Valid prompt required" }), {
@@ -509,6 +509,21 @@ serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    // Strip image-reference tokens (e.g. "@Image1", "[Image 2]", "[image_3]",
+    // "image_1") from the prompt when fewer reference images are attached than
+    // the tokens reference. Otherwise fal returns
+    // 422 "Invalid reference index N for image. Only M images provided."
+    // and the job hangs in 'processing' forever.
+    const refCount = refImages.length;
+    normalizedPrompt = normalizedPrompt.replace(
+      /(?:@|\[)?\s*image[\s_-]*#?(\d+)\s*\]?/gi,
+      (match, idxStr: string) => {
+        const idx = parseInt(idxStr, 10);
+        return idx > refCount ? "" : match;
+      },
+    ).replace(/\s{2,}/g, " ").trim();
+
     // Kling 3.0 exposes 4K via a dedicated endpoint. If the user picked "4k"
     // resolution on Pro/Standard/Omni, transparently route to the 4K variant.
     if (
