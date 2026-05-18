@@ -552,9 +552,32 @@ export function Composer({
             />
           </div>
         </div>
+        {quickReplies && quickReplies.length > 0 && !busy && (
+          <div className="px-1 pt-1">
+            <QuickReplies
+              chips={quickReplies}
+              disabled={busy}
+              onPick={(chip) => {
+                if (onQuickReply) {
+                  onQuickReply(chip);
+                  return;
+                }
+                const next = value ? `${value.replace(/\s+$/, "")} ${chip}` : chip;
+                onChange(next);
+                requestAnimationFrame(() => {
+                  const ta = taRef.current;
+                  if (!ta) return;
+                  ta.focus();
+                  const pos = next.length;
+                  ta.setSelectionRange(pos, pos);
+                });
+              }}
+            />
+          </div>
+        )}
         {showHelper && (
           <div className="text-[11px] text-muted-foreground text-center">
-            Tip: drop files anywhere in this input
+            Tip: drop files anywhere in this input · press the mic to speak
           </div>
         )}
       </div>
