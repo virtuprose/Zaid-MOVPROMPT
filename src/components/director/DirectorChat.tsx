@@ -539,19 +539,22 @@ function DirectorChatInner() {
             aspect_ratio: resp.aspect_ratio,
             per_shot_prompts: resp.per_shot_prompts,
             shot_index: resp.shot_index,
+            lock_mode: resp.lock_mode,
           });
-          const role: "character" | "storyboard" | "reference" =
+          const role: "character" | "storyboard" | "reference" | "key_frame" =
             resp.mode === "character_sheet"
               ? "character"
               : resp.mode === "storyboard_panels"
                 ? "storyboard"
-                : "reference";
+                : "key_frame";
           const newAttachments: Attachment[] = result.images.map((img, i) => ({
             kind: "image" as const,
             name:
               role === "storyboard"
                 ? `panel-${img.shot_index ?? i + 1}.png`
-                : `${role}.png`,
+                : role === "key_frame"
+                  ? `key-frame.png`
+                  : `${role}.png`,
             url: img.url,
             storage_path: img.storage_path,
             role,
@@ -577,7 +580,7 @@ function DirectorChatInner() {
                 ? "(Generated character sheet — use as identity reference.)"
                 : role === "storyboard"
                   ? `(Generated ${newAttachments.length} storyboard panels — use in shot order.)`
-                  : "(Generated reference frame.)",
+                  : "(Generated key frame — use as scene anchor for any frame-by-frame extension.)",
             attachments: newAttachments,
           };
           const finalBubbles: Bubble[] = [...next, imageBubble, carrierBubble];
@@ -587,8 +590,11 @@ function DirectorChatInner() {
           toast.success(
             role === "storyboard"
               ? `${newAttachments.length} panels generated`
-              : "Reference image generated",
+              : role === "key_frame"
+                ? "Key frame generated"
+                : "Reference image generated",
           );
+
         } catch (e: any) {
           const message = e?.message || "Image generation failed";
           toast.error(message);
