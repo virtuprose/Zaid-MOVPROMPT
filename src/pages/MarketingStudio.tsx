@@ -585,9 +585,8 @@ export default function MarketingStudio() {
               })}
             </div>
 
-          {/* Composer card */}
-          <div ref={composerRef} className="flex-1 min-w-0 rounded-3xl border border-border/60 bg-[hsl(240_5%_8%)]/70 backdrop-blur p-3 sm:p-4 scroll-mt-20">
-            <div className="flex flex-wrap items-center gap-2 mb-2">
+          <div ref={composerRef} className="flex-1 min-w-0 rounded-3xl border border-border/60 bg-[hsl(240_5%_8%)]/70 backdrop-blur p-3 sm:p-4 scroll-mt-20 flex flex-col gap-3">
+            <div className="flex flex-wrap items-center gap-2">
               {brandKits.map((bk, i) => (
                 <HoverCard key={bk.id} openDelay={150} closeDelay={80}>
                   <HoverCardTrigger asChild>
@@ -712,31 +711,32 @@ export default function MarketingStudio() {
                   }
                 />
               )}
-
-              <div className="flex-1 min-w-[180px] flex items-center h-9 gap-1">
-                <input
-                  type="text"
-                  value={userNote}
-                  onChange={(e) => setUserNote(e.target.value.slice(0, 280))}
-                  placeholder="Describe your ad…"
-                  maxLength={280}
-                  aria-label="Describe your ad"
-                  className="flex-1 h-9 bg-transparent border-0 outline-none text-sm text-foreground placeholder:text-muted-foreground/70 px-1"
-                />
-                {userNote.trim() && (
-                  <button
-                    type="button"
-                    onClick={() => setUserNote("")}
-                    className="w-6 h-6 rounded-full text-muted-foreground hover:text-foreground hover:bg-background/60 flex items-center justify-center shrink-0"
-                    aria-label="Clear description"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                )}
-              </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2 mt-2">
+            <div className="flex items-center gap-1 h-11 w-full rounded-2xl border border-border/50 bg-background/40 px-3">
+              <input
+                type="text"
+                value={userNote}
+                onChange={(e) => setUserNote(e.target.value.slice(0, 280))}
+                placeholder="Describe your ad…"
+                maxLength={280}
+                aria-label="Describe your ad"
+                className="flex-1 h-full bg-transparent border-0 outline-none text-sm text-foreground placeholder:text-muted-foreground/70"
+              />
+              {userNote.trim() && (
+                <button
+                  type="button"
+                  onClick={() => setUserNote("")}
+                  className="w-6 h-6 rounded-full text-muted-foreground hover:text-foreground hover:bg-background/60 flex items-center justify-center shrink-0"
+                  aria-label="Clear description"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+
               <PresetChip
                 icon={<Sparkles className="w-3.5 h-3.5" />}
                 label="Format"
