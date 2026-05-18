@@ -255,6 +255,8 @@ const TOOLS = [
               color_palette: { type: "string" },
               environment: { type: "string" },
               duration_hint: { type: "string", description: "e.g. '5s' or '10s'." },
+              resolution: { type: "string", enum: ["720p", "1080p", "4k"], description: "Render resolution echoed from locked_spec." },
+              aspect_ratio: { type: "string", description: "Render aspect ratio echoed from locked_spec." },
               film_emulation: {
                 type: "string",
                 description:
