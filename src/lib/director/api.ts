@@ -107,6 +107,8 @@ export type StreamOptions = {
   idleTimeoutMs?: number;
   /** Abort the whole request after this many ms. Default 120s. */
   totalTimeoutMs?: number;
+  /** Called when the director enters a new phase (drives the typing indicator). */
+  onPhase?: (phase: DirectorPhase) => void;
 };
 
 export async function streamDirectorAgent(
@@ -118,6 +120,28 @@ export async function streamDirectorAgent(
 ): Promise<AgentResponse> {
   const idleTimeoutMs = options.idleTimeoutMs ?? 30_000;
   const totalTimeoutMs = options.totalTimeoutMs ?? 120_000;
+  const onPhase = options.onPhase;
+
+  // Initial phase — analyzing image if any visual attachment is present.
+  const hasVisual = attachments.some(
+    (a) => a.kind === "image" || a.kind === "video_keyframes",
+  );
+  let currentPhase: DirectorPhase = hasVisual ? "analyzing_image" : "thinking";
+  const emitPhase = (next: DirectorPhase) => {
+    if (next === currentPhase) return;
+    currentPhase = next;
+    try {
+      onPhase?.(next);
+    } catch {
+      /* ignore */
+    }
+  };
+  // Emit the initial phase so the UI doesn't stay on the default.
+  try {
+    onPhase?.(currentPhase);
+  } catch {
+    /* ignore */
+  }
 
   const controller = new AbortController();
   let timedOut: "idle" | "total" | null = null;
