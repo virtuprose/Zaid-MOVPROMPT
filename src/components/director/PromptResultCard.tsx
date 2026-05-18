@@ -30,7 +30,7 @@ import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/h
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import type { Breakdown } from "@/lib/director/api";
+import type { Breakdown, LockedSpec } from "@/lib/director/api";
 import { submitVideoJob, pollVideoJob, type VideoJob } from "@/lib/director/api";
 import { VIDEO_MODEL_GROUPS, findVideoModel, type VideoModel } from "@/lib/director/videoModels";
 import { resolveRecommendation } from "@/lib/director/modelRanking";
@@ -62,6 +62,8 @@ type Props = {
   referenceImageSlots?: Array<"brand" | "character" | "location">;
   /** Model the user already picked in the ModelChoiceCard for this prompt. Takes priority over recommendation. */
   preferredModelId?: string;
+  /** Render spec the Director locked in (duration / aspect / audio / resolution / input_mode). Seeds the render dialog. */
+  lockedSpec?: LockedSpec;
 };
 
 const REF_SLOT_LABEL: Record<"brand" | "character" | "location", string> = {
