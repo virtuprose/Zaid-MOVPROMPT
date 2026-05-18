@@ -11,7 +11,7 @@ export type ModerationResult = {
   categories?: string[];
 };
 
-export type AttachmentRole = "character" | "storyboard" | "reference";
+export type AttachmentRole = "character" | "storyboard" | "reference" | "key_frame";
 
 export type Attachment =
   | { kind: "image"; name: string; url: string; storage_path?: string; moderation?: ModerationResult; role?: AttachmentRole; shot_index?: number; parent_storage_path?: string }

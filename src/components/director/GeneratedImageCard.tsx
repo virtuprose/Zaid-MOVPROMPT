@@ -1,4 +1,4 @@
-import { RotateCcw } from "lucide-react";
+import { RotateCcw, Film } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
@@ -15,12 +15,13 @@ type Props = {
 
 export function GeneratedImageCard({ data, onRegenerate }: Props) {
   const isGrid = data.mode === "storyboard_panels" && data.images.length > 1;
+  const isKeyFrame = data.mode === "single_panel";
   const label =
     data.mode === "character_sheet"
       ? "Character sheet · 3 views"
       : data.mode === "storyboard_panels"
         ? `Storyboard · ${data.images.length} panels`
-        : "Generated frame";
+        : "Key frame · hero shot";
 
   const regen = (intent: string) => {
     if (!onRegenerate) return;
@@ -34,7 +35,9 @@ export function GeneratedImageCard({ data, onRegenerate }: Props) {
           {label}
         </div>
         <div className="text-[10px] text-muted-foreground/60">
-          Locked as references — continue the chat to use them.
+          {isKeyFrame
+            ? "Locked as scene anchor — extend it into a sequence below."
+            : "Locked as references — continue the chat to use them."}
         </div>
       </div>
 
@@ -55,10 +58,10 @@ export function GeneratedImageCard({ data, onRegenerate }: Props) {
           const shotNum = img.shot_index ?? i + 1;
           const regenIntent =
             data.mode === "storyboard_panels"
-              ? `Regenerate panel ${shotNum} — keep the same character and locked style, just re-roll this one shot.`
+              ? `Regenerate panel ${shotNum} — keep the same anchor reference and locked style, just re-roll this one shot.`
               : data.mode === "character_sheet"
                 ? "Regenerate the character sheet — same brief, give me another take on the design."
-                : "Regenerate this reference frame — same brief, another take.";
+                : "Regenerate this key frame — same brief, another take on the composition.";
           return (
             <div
               key={img.storage_path}
@@ -104,12 +107,31 @@ export function GeneratedImageCard({ data, onRegenerate }: Props) {
             className="h-7 text-xs"
             onClick={() =>
               regen(
-                "Regenerate all storyboard panels — keep the same character, locked style, and beat sheet; just re-roll the renders.",
+                "Regenerate all storyboard panels — keep the same anchor reference, locked style, and beat sheet; just re-roll the renders.",
               )
             }
           >
             <RotateCcw className="h-3 w-3 mr-1" />
             Regenerate all panels
+          </Button>
+        </div>
+      )}
+
+      {onRegenerate && isKeyFrame && (
+        <div className="pt-1 flex flex-wrap gap-2">
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            className="h-8 text-xs"
+            onClick={() =>
+              regen(
+                "Extend this key frame into a sequence — propose 8 continuation beats that keep the same scene, lighting, lens, color grade, and composition (only action and framing change), then generate them as a scene-locked storyboard.",
+              )
+            }
+          >
+            <Film className="h-3 w-3 mr-1" />
+            Extend frame-by-frame
           </Button>
         </div>
       )}
