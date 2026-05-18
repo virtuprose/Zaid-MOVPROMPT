@@ -537,6 +537,8 @@ export type StudioBrief = {
    * Seedance 2.0 reference-to-video binds each subject to the right ref.
    */
   imageRefs?: Array<"brand" | "character" | "location">;
+  /** Free-text adaptation layer — preset stays the locked structure, this tweaks tone/details. */
+  userNote?: string;
 };
 
 const find = (list: StudioPreset[], id?: string) =>
