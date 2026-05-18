@@ -73,6 +73,7 @@ export type AgentResponse =
       count?: number;
       aspect_ratio?: "1:1" | "16:9" | "9:16";
       per_shot_prompts?: string[];
+      shot_index?: number;
       directors_note?: string;
     }
   | { kind: "message"; content: string };
@@ -90,6 +91,7 @@ export async function generateReferenceImage(input: {
   count?: number;
   aspect_ratio?: "1:1" | "16:9" | "9:16";
   per_shot_prompts?: string[];
+  shot_index?: number;
 }): Promise<{ mode: string; images: GeneratedImage[] }> {
   const { data, error } = await supabase.functions.invoke("generate-reference-image", {
     body: input,

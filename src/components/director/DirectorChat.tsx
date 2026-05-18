@@ -538,6 +538,7 @@ function DirectorChatInner() {
             count: resp.count,
             aspect_ratio: resp.aspect_ratio,
             per_shot_prompts: resp.per_shot_prompts,
+            shot_index: resp.shot_index,
           });
           const role: "character" | "storyboard" | "reference" =
             resp.mode === "character_sheet"
@@ -1229,7 +1230,13 @@ function DirectorChatInner() {
                 <div key={i} className="flex items-start gap-2 motion-safe:animate-fade-up">
                   <AssistantAvatar size="sm" state="idle" className="mt-1" />
                   <div className="flex-1">
-                    <GeneratedImageCard data={b.data} />
+                    <GeneratedImageCard
+                      data={b.data}
+                      onRegenerate={(intent) => {
+                        if (busy) return;
+                        void send(intent);
+                      }}
+                    />
                   </div>
                 </div>
               );

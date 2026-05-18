@@ -20,7 +20,11 @@ type Body = {
   count?: number;
   aspect_ratio?: "1:1" | "16:9" | "9:16";
   per_shot_prompts?: string[]; // when mode === "storyboard_panels", one per shot
+  shot_index?: number; // when regenerating a single panel inside an existing 3x3 grid
 };
+
+const IDENTITY_LOCK =
+  "Same character as the attached reference image. Maintain exact face, hair, skin tone, age, body proportions, and outfit. Do not redesign the character.";
 
 function dataUrlToBlob(dataUrl: string): { blob: Blob; mime: string } {
   const m = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
@@ -122,27 +126,52 @@ serve(async (req) => {
       : [];
     const aspect = body.aspect_ratio || (mode === "character_sheet" ? "1:1" : "16:9");
 
+    const hasCharacterRef = referenceUrls.length > 0;
+    const lockPrefix = hasCharacterRef ? `${IDENTITY_LOCK} ` : "";
+
+    // shot_index lets the caller regenerate a single panel inside an existing
+    // 3x3 grid without touching the other 8 cells. We still keep mode="storyboard_panels"
+    // so the output rides the same role/shot_index pipeline downstream.
+    const regenIndex =
+      mode === "storyboard_panels" &&
+      typeof body.shot_index === "number" &&
+      body.shot_index >= 1 &&
+      body.shot_index <= 9
+        ? body.shot_index
+        : null;
+
     let prompts: string[];
+    let shotIndices: number[]; // per-prompt shot_index for storyboard_panels
     if (mode === "storyboard_panels") {
-      if (Array.isArray(body.per_shot_prompts) && body.per_shot_prompts.length > 0) {
-        prompts = body.per_shot_prompts.slice(0, 9);
-      } else {
-        const count = Math.min(Math.max(body.count || 9, 1), 9);
-        prompts = Array.from({ length: count }, (_, i) =>
-          `Shot ${i + 1} of ${count}: ${basePrompt}`,
-        );
-      }
+      const raw =
+        Array.isArray(body.per_shot_prompts) && body.per_shot_prompts.length > 0
+          ? body.per_shot_prompts.slice(0, 9)
+          : Array.from(
+              { length: Math.min(Math.max(body.count || 9, 1), 9) },
+              () => basePrompt,
+            );
+      const total = regenIndex ? 9 : raw.length;
+      prompts = raw.map((beat, i) => {
+        const shotNum = regenIndex ?? i + 1;
+        return `${lockPrefix}Shot ${shotNum} of ${total}: ${beat}`;
+      });
+      shotIndices = regenIndex
+        ? prompts.map(() => regenIndex)
+        : prompts.map((_, i) => i + 1);
     } else if (mode === "character_sheet") {
       prompts = [
-        `Character sheet, full body reference. Multiple angles (front, 3/4, profile), neutral expression, clean studio background. ${basePrompt}`,
+        `Character sheet, full body reference. Three views in one image side by side: front view, three-quarter view, and side profile. Neutral expression, T-pose or relaxed stance, flat clean studio background, even soft lighting, no harsh shadows, no props. ${basePrompt}`,
       ];
+      shotIndices = [];
     } else {
       const count = Math.min(Math.max(body.count || 1, 1), 9);
-      prompts = Array.from({ length: count }, () => basePrompt);
+      prompts = Array.from({ length: count }, () => `${lockPrefix}${basePrompt}`);
+      shotIndices = [];
     }
 
     const out: Array<{ url: string; storage_path: string; shot_index?: number }> = [];
-    // Sequential to stay polite with gateway rate limits.
+    // Sequential to stay polite with gateway rate limits — and because per-image
+    // calls preserve identity better than batched ones with this model.
     for (let i = 0; i < prompts.length; i++) {
       const dataUrl = await generateOne(LOVABLE_API_KEY, prompts[i], referenceUrls, aspect);
       const { blob, mime } = dataUrlToBlob(dataUrl);
@@ -160,9 +189,10 @@ serve(async (req) => {
       out.push({
         url: signed.signedUrl,
         storage_path: path,
-        shot_index: mode === "storyboard_panels" ? i + 1 : undefined,
+        shot_index: mode === "storyboard_panels" ? shotIndices[i] : undefined,
       });
     }
+
 
     return new Response(
       JSON.stringify({ mode, images: out }),
