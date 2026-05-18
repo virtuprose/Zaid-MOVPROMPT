@@ -1,46 +1,59 @@
-## Goal
+# Fix blank chip after saving a second product / character
 
-Allow attaching **multiple brands/products** and **multiple characters** to a single ad in Marketing Studio (today: exactly one of each). Caps: **up to 2 products** and **up to 3 characters** per ad — enough for real scenarios (duo, family, hero + supporting product) without breaking 5s ad coherence or identity fidelity.
+## Symptom
 
-## UX
+When the user creates a second product (or character) and saves, a chip *does* appear in the composer, but with no thumbnail — just the placeholder icon.
 
-**Brands/Products row** and **Characters row**:
-- Card click toggles selection (add/remove from the active set), not single-replace.
-- Selected cards show the existing check badge; ordering reflects selection order (first picked = primary/hero).
-- When a cap is reached, unselected cards become disabled with a subtle tooltip ("Up to 2 products" / "Up to 3 characters"). Clicking a selected card always deselects.
-- Tiny "Primary" pill on the first selected card so the user understands which one is the hero.
-- Header counter updates: `2 / 2 selected`, `1 / 3 selected`.
+## What the network shows
 
-No new sheets, no reordering UI in this pass — selection order = primary. Drag-to-reorder can come later if asked.
+For the new "Fizz Cola" save, the POST to `brand_kits` was sent with `"logo_path": null` — even though the user had successfully uploaded an image to storage 26 seconds earlier (`logo-1779126906699.png`, HTTP 200). Because `logo_path` is null in the DB, `signLogo()` returns null on reload, and the chip falls back to the `<Building2>` icon.
 
-## Behavior in the prompt
+So the chip is "there but blank" because the **uploaded image path never made it into the saved row**.
 
-- `composeStudioPrompt` and `writeAdScene` switch from a single `brand`/`character` to arrays. First item is hero, the rest are supporting.
-- Prompt phrasing:
-  - 1 product → unchanged ("feature it cleanly in-hand…").
-  - 2 products → "Hero product: {A}. Supporting product also visible in the same frame: {B}. Keep {A} as the clear focal point in the final hero frame."
-  - 1 character → unchanged.
-  - 2–3 characters → "On-camera: {A} (primary), with {B}[, {C}]. They share the frame naturally; {A} leads the action."
-- Image refs (`brand`, `character`, `location`) become indexed (`brand_1`, `brand_2`, `character_1`…) so the video model can match each face/logo. Same refTag pattern, just numbered.
-- Edge function `write-ad-scene` system prompt gets one extra rule: "If multiple products or characters are provided, the first is the hero; others are supporting and must share the frame without stealing focus."
+## Root cause
 
-## Persistence
+`BrandKitSheet` (and `CharacterKitSheet`) has this effect:
 
-- Replace the single-row tables `brand_kit_selection` / `character_kit_selection` (one row per user, one id) with multi-row selections: `(user_id, kit_id, position)` with a unique `(user_id, kit_id)` and `position` for ordering. RLS: user can CRUD only their own rows.
-- `useBrandKit` / `useCharacterKit` expose `activeIds: string[]`, `activeKits: Kit[]`, `toggleActive(id)`, plus `MAX` constants (`2` / `3`). `activeKit` / `activeId` stay as derived `activeKits[0]` / `activeIds[0]` so nothing else breaks during the transition.
+```ts
+useEffect(() => {
+  if (!open) return;
+  if (kitId) setDraft(found ?? EMPTY_BRAND_KIT);
+  else setDraft(EMPTY_BRAND_KIT);
+}, [open, kitId, kits]);   // <-- `kits` is the problem
+```
+
+`kits` is the array returned by `useBrandKit()` in the parent. Any time the parent reloads brands (which happens inside `saveKit`, on auth changes, after any toggle, etc.), `kits` becomes a new reference. The effect fires while the dialog is still open with `kitId = null` and **resets the draft back to `EMPTY_BRAND_KIT`**, wiping the `logo_path` the user just uploaded — but typically *after* the user has already typed a name/description (so those text fields look fine, and only the freshly-set image fields get blown away).
+
+The same pattern exists in `CharacterKitSheet` for the avatar `reference_path`.
+
+## Fix
+
+### 1. Stop resetting the draft when `kits` changes
+
+`src/components/marketing/BrandKitSheet.tsx` and `src/components/marketing/CharacterKitSheet.tsx`:
+
+- Drop `kits` from the effect's dependency array. Only `[open, kitId]` should reset the draft.
+- For edit mode, look up the kit from `kits` once when the dialog opens (or read it lazily). Subsequent `kits` updates should not clobber in-progress edits.
+
+### 2. Make the new chip's thumbnail appear immediately
+
+In `src/lib/marketing/brandKit.ts` (and the equivalent in `characterKit.ts`):
+
+- After `saveKit` inserts/updates the row, await `signLogo(saved.logo_path)` and merge the returned `logo_url` into the local `kits` state *before* the parent re-renders — currently we rely on `reload()` re-signing, which is correct, but if persisting the new selection happens via stale `activeIds` closure the second chip can briefly render before its signed URL lands.
+- Compute the next `activeIds` from the value `reload()` just produced, not from the stale closure, by using the functional form of `setActiveIdsState` or by capturing the freshly-fetched selection list returned from `reload()`.
+
+### 3. Guard against future regressions
+
+Add a tiny console warn in `saveKit` when `payload.logo_path` is null *but* the draft had a blob `logo_url` — surfaces the "uploaded but lost" case during dev.
 
 ## Files touched
 
-- `src/lib/marketing/brandKit.ts`, `src/lib/marketing/characterKit.ts` — multi-select state, toggle, cap, persistence.
-- `src/components/marketing/BrandsRow.tsx`, `src/components/marketing/CharactersRow.tsx` — accept `activeIds: string[]`, `max`, render primary pill + disabled state.
-- `src/pages/MarketingStudio.tsx` — pass arrays into composer; toggle-based onSelect.
-- `src/lib/marketingStudio.ts` — `StudioBrief.brand`/`character` become arrays; `brandLine` / `characterLine` handle hero + supporting; indexed `imageRefs`.
-- `src/lib/director/api.ts` (`writeAdScene`) — send arrays.
-- `supabase/functions/write-ad-scene/index.ts` — accept arrays, add hero/supporting rule.
-- Migration: new `brand_kit_selections` / `character_kit_selections` tables + RLS; one-time copy from old single-row tables; drop old tables after.
+- `src/components/marketing/BrandKitSheet.tsx` — effect deps
+- `src/components/marketing/CharacterKitSheet.tsx` — effect deps
+- `src/lib/marketing/brandKit.ts` — selection sync after save
+- `src/lib/marketing/characterKit.ts` — same
 
 ## Out of scope
 
-- Drag-to-reorder selected items (selection order = primary for now).
-- Per-character role overrides at attach-time.
-- Smart "two products don't make sense for this Format" warnings — we'll see if it's needed once shipped.
+- No DB migration. Existing "blank" rows (like the just-saved Fizz Cola) will still have `logo_path = null`; the user can open that brand and re-upload, and after this fix it will stick.
+- No changes to the picker popover or chip strip rendering — those are correct.

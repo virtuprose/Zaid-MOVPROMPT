@@ -48,7 +48,11 @@ export function CharacterKitSheet({
     } else {
       setDraft(EMPTY_CHARACTER_KIT);
     }
-  }, [open, kitId, kits]);
+    // Intentionally omit `kits` — re-running on kits changes wipes
+    // in-progress edits (notably an uploaded reference_path) when the
+    // parent reloads characters mid-edit.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, kitId]);
 
   const update = <K extends keyof CharacterKit>(k: K, v: CharacterKit[K]) =>
     setDraft((d) => ({ ...d, [k]: v }));

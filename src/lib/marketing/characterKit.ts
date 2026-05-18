@@ -136,6 +136,11 @@ export function useCharacterKit() {
         role: next.role,
         reference_path: next.reference_path,
       };
+      if (!next.id && !payload.reference_path && next.reference_url) {
+        console.warn(
+          "[characterKit] saving a new character with no reference_path but a local reference_url — the uploaded image was lost before save",
+        );
+      }
       let saved: CharacterKit;
       if (next.id) {
         const { data, error } = await supabase
@@ -157,13 +162,21 @@ export function useCharacterKit() {
       }
       saved.reference_url = await signRef(saved.reference_path);
       await reload();
-      if (saved.id && !activeIds.includes(saved.id)) {
-        const nextIds = [...activeIds, saved.id].slice(0, MAX_CHARACTERS);
-        await setActiveIds(nextIds);
+      if (saved.id) {
+        let nextIds: string[] = [];
+        setActiveIdsState((prev) => {
+          if (prev.includes(saved.id!)) {
+            nextIds = prev;
+            return prev;
+          }
+          nextIds = [...prev, saved.id!].slice(0, MAX_CHARACTERS);
+          return nextIds;
+        });
+        await persistSelections(nextIds);
       }
       return saved;
     },
-    [user, reload, activeIds, setActiveIds],
+    [user, reload, persistSelections],
   );
 
   const deleteKit = useCallback(

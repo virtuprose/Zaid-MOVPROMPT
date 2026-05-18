@@ -46,7 +46,11 @@ export function BrandKitSheet({
     } else {
       setDraft(EMPTY_BRAND_KIT);
     }
-  }, [open, kitId, kits]);
+    // Intentionally omit `kits` — re-running on kits changes wipes
+    // in-progress edits (notably an uploaded logo_path) when the parent
+    // reloads brands mid-edit.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, kitId]);
 
   const update = <K extends keyof BrandKit>(k: K, v: BrandKit[K]) =>
     setDraft((d) => ({ ...d, [k]: v }));
