@@ -1,7 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
-import { Film, X } from "lucide-react";
+import { ChevronRight, Film, HelpCircle, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import type { VideoModel } from "@/lib/director/videoModels";

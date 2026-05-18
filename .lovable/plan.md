@@ -1,55 +1,58 @@
-# Add Style/Realism as 6th Routing Axis
 
-Style genuinely changes which model wins (Kling = photoreal/cinematic, Hailuo = stylized motion, Wan/animatediff = anime, Veo 3 = cinematic-film). Adding it as a first-class routing axis so the Director asks for it, locks it in the spec, and uses it to pick the right engine.
+# Tame the Render Dialog Jargon
 
-## Scope
+Move power-user knobs out of the main flow so the dialog reads like creative decisions, not ML parameters.
 
-**Style values (4):**
-- `photoreal` — realistic humans, products, documentary
-- `cinematic-film` — graded, anamorphic, film-grain look
-- `stylized` — illustrative, painterly, graphic, 3D-render
-- `anime` — 2D anime / manga / cel
+## Changes — all in `src/components/director/VideoOptionsDialog.tsx`
 
-## Changes
+### 1. Rename `cfg_scale` → "Creative freedom"
 
-### 1. `supabase/functions/director-agent/index.ts`
-- Add **Style** as 6th item under `MODEL-ROUTING QUESTIONS`, after Resolution.
-- Update priority order: input → duration → audio → aspect → resolution → **style**.
-- Add inferred-skip rules: if user uploads a photo reference, infer `photoreal` unless they say otherwise; if they say "anime/cartoon/3D/painterly", infer that and skip.
-- Extend `locked_spec` schema in both `ask_model_choice` and `generate_prompt` tool definitions with `style: "photoreal" | "cinematic-film" | "stylized" | "anime"`.
-- Update locked-spec recap format to include style chip, e.g. `"Locked: 15s · 9:16 · SFX · 1080p · photoreal · fresh — ..."`.
-- Add per-model style-fit hints to the routing rubric the agent reads (one-liner per model: which styles it nails, which it struggles with).
-- Keep per-turn cap at 4.
+- Label: **Creative freedom**
+- Replace the numeric readout (`0.50`) with a plain-language tag derived from the slider value:
+  - `≤ 0.3` → "Let model improvise"
+  - `0.3 – 0.7` → "Balanced"
+  - `≥ 0.7` → "Follow prompt strictly"
+- Slider stays 0.1–1.0, step 0.05 (no schema change — still sends `cfg_scale` to the edge function).
+- End-labels under the slider: `Improvise` ←→ `Strict`
+- Small `(?)` tooltip with one sentence: "How strictly the model follows your written prompt vs. taking creative liberties."
 
-### 2. `src/lib/director/api.ts`
-- Add `style?: string` to the `locked_spec` TypeScript type so it plumbs through.
+### 2. Rename "Prompt optimizer" → "Auto-refine prompt"
 
-### 3. `src/components/director/ModelChoiceCard.tsx`
-- Add a style chip to `SpecChips` with a small icon (Camera for photoreal, Film for cinematic, Palette for stylized, Sparkles for anime).
+- Helper text: "Let the model polish your prompt before rendering."
 
-### 4. `src/components/director/PromptResultCard.tsx`
-- Pass `locked_spec.style` through to the render dialog (no UI change here beyond the existing chips row showing style).
+### 3. Add collapsible **Advanced** section
 
-### 5. `src/components/director/VideoOptionsDialog.tsx`
-- No new control — style is a routing concern, not a render-time knob. But if the selected model exposes a `style` parameter (e.g. a stylization slider), seed it from locked style.
+- Place a `<button>` row near the bottom of the controls block: `▸ Advanced` (chevron rotates when open).
+- Collapsed by default.
+- Moves these controls inside:
+  - **Creative freedom** (cfg_scale)
+  - **Auto-refine prompt** (prompt_optimizer)
+- Keeps in the main (always-visible) section:
+  - Aspect ratio
+  - Duration
+  - Resolution
+  - Audio
+
+### 4. State + a11y
+
+- Local `const [advancedOpen, setAdvancedOpen] = useState(false)`.
+- Button gets `aria-expanded` + `aria-controls`; the panel gets a matching `id`.
+- Reset `advancedOpen` to `false` whenever the dialog reopens (mirror the existing `useEffect` keyed on `open`).
 
 ## Out of scope
 
-- Model catalog changes (no new models added).
-- New render-time knobs (cfg_scale, motion, fps stay where they are).
-- Rewriting prompt-writing logic — style already influences phrasing inside the prompt; this just makes it explicit.
-
-## Files touched
-
-- `supabase/functions/director-agent/index.ts`
-- `src/lib/director/api.ts`
-- `src/components/director/ModelChoiceCard.tsx`
-- `src/components/director/PromptResultCard.tsx`
-- `src/components/director/VideoOptionsDialog.tsx`
+- No changes to `videoModelControls.ts` (controls map stays as-is).
+- No changes to edge function payload — same keys (`cfg_scale`, `prompt_optimizer`) still go out.
+- No changes to Director routing or `locked_spec`.
+- Other models' dialogs unaffected (they don't expose these fields).
 
 ## Acceptance
 
-- Director asks style when it can't be inferred from refs/wording.
-- Locked-spec recap shows the style chip before model pick.
-- Model selected matches the style (photoreal → Kling/Veo, anime → Wan/animatediff, etc.).
-- Render dialog opens pre-filled with the locked spec including style.
+- Opening render settings for a Kling v3 model shows only aspect/duration/resolution/audio by default.
+- An "Advanced" toggle reveals Creative freedom + Auto-refine prompt.
+- Moving the slider updates the plain-language tag in real time; backend payload still contains `cfg_scale: <number>`.
+- Hailuo-02-pro dialog shows Advanced (with just Auto-refine prompt inside) — no orphan section if both Advanced fields are unsupported (hide the toggle entirely in that case).
+
+## Files touched
+
+- `src/components/director/VideoOptionsDialog.tsx`
