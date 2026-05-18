@@ -1,65 +1,50 @@
-# Make the AI Director Interactive
+## Problem
 
-Three additions to the `/director` chat: smart quick-reply chips, mic-to-text in the composer, and a typing indicator that reacts to what the Director is actually doing — all in a concise, on-set cinematographer voice.
+In your session the Director asked only 3 things (subject, aspect ratio, audio), then jumped straight to "pick a model" and emitted the prompt. It never asked about **resolution**, never confirmed the **15s duration** out loud, and didn't recap the full spec before committing. That makes the recommendation feel guessed and leaves the render dialog as the first place the user sees options like 720p vs 1080p vs 4K.
 
-## 1. Quick-reply chips & suggested answers
+The behavior is driven by `supabase/functions/director-agent/index.ts` — the SYSTEM_PROMPT only enumerates **4 routing axes** (input mode, duration, audio, aspect ratio). Resolution is not in the list, so the model never asks. It's also allowed to stop at 3 questions even when more are unknown.
 
-Today `QuestionCard` already shows heuristic chips via `detectSuggestion()` (client-side regex). We'll upgrade this so chips are context-aware and also available in the main composer.
+## Goal
 
-**Agent-side (`supabase/functions/director-agent/index.ts`)**
-- Extend the `ask_clarification` tool schema with an optional `suggestions: { question_index: number; chips: string[]; allow_other?: boolean }[]` field.
-- Update the system prompt (cinematographer voice — "lens choice", "shot size", "movement", "lighting key") to always return 3–5 short chips per question when the answer space is enumerable (lens, time-of-day, mood, aspect, movement, palette).
-- After a `generate_prompt` turn, also emit `next_suggestions: string[]` (e.g. "Tighter on the eyes", "Push in slower", "Swap to anamorphic 2.39", "Render this") that the UI can show as one-tap follow-ups under the composer.
+Before `ask_model_choice` / `generate_prompt`, the Director must know — and visibly echo back — every axis that materially changes the output, including resolution. No silent assumptions.
 
-**Client-side**
-- `QuestionCard.tsx`: prefer agent-supplied `suggestions[i].chips` over the heuristic `detectSuggestion()`; fall back to the heuristic when missing. Keep multi-select + "Other" behavior.
-- New `src/components/director/QuickReplies.tsx`: pill row rendered below the composer when `lastBubble.role === "prompt" | "model_choice" | "assistant"` and chips exist. Tapping fills the textarea and auto-focuses (does not auto-send).
-- Wire `next_suggestions` through the stream handler in `DirectorChat.tsx` into local state `quickReplies: string[]`, cleared on send.
+## Plan
 
-## 2. Voice input in the composer
+### 1. Add resolution as a 5th routing axis
+In `supabase/functions/director-agent/index.ts`, extend the `MODEL-ROUTING QUESTIONS` block:
+- Add axis **5. Resolution / fidelity** — 720p, 1080p, native 4K (Kling v3 4K only), or "fastest/cheapest". Drives kling-v3-4k routing and 1080p-capable filters.
+- Update the priority order to: input mode → duration → audio → aspect ratio → resolution.
+- Raise the per-turn cap from 3 to 4 questions when needed (still capped, still one-tap chips). Media-drop coherence rule stays.
+- Add the inferred-skip rule for resolution (e.g. "TikTok draft" → 720p known, "native 4K" → 4K known).
 
-Add a hold-to-talk mic button to `Composer.tsx` using the existing `transcribe-audio` edge function.
+### 2. Require a spec recap before model choice
+Add a HARD RULE: before calling `ask_model_choice`, the Director must have explicit or strongly-implied values for **all 5 axes**. If any is still unknown after the brief + answers, ask the remaining ones in the next `ask_clarification` turn instead of jumping to model choice.
 
-- New hook `src/lib/director/useVoiceCapture.ts`: wraps `navigator.mediaDevices.getUserMedia` + `MediaRecorder` (audio/webm), records while button held (or toggled on mobile), returns a `Blob`.
-- On stop: upload blob to the `director-uploads` storage bucket under `${uid}/voice/${uuid}.webm`, then `supabase.functions.invoke("transcribe-audio", { body: { storage_path } })`, append the returned text to the composer value, focus the textarea (do not auto-send — user reviews first).
-- Mic button states: idle (mic icon), recording (pulsing red dot + waveform meter), transcribing (spinner), error (toast). Respect `prefers-reduced-motion`.
-- Permission denial: show inline hint + link to browser settings. Hide button entirely if `MediaRecorder` is unavailable.
-- The `transcribe-audio` function already enforces path-prefix auth — no backend change needed beyond confirming Whisper model & language passthrough.
+When it does call `ask_model_choice`, the `reason` field must restate the locked spec in one line, e.g.:
+> "Locked: 15s · 9:16 · native SFX · 1080p — Kling Omni fits best because…"
 
-## 3. Live streaming reactions (reactive typing indicator)
+So the user sees what was assumed before tapping.
 
-`TypingIndicator` already rotates static captions. Make captions reflect the Director's actual phase as the stream arrives.
+### 3. Surface resolution in the model-choice card
+In `src/components/director/ModelChoiceCard.tsx`, render the spec line (duration / aspect / audio / resolution) as small chips above the recommendation, sourced from the new `reason` recap or from a new optional `locked_spec` object on the tool payload. Lets the user spot a wrong assumption before committing.
 
-- In `streamDirectorAgent` (api.ts) expose a new `onPhase(phase: "analyzing_image" | "decomposing_scene" | "choosing_model" | "writing_prompt" | "thinking")` callback. Derive the phase from:
-  - presence of image attachments at request start → `analyzing_image`
-  - first tool-call name on the partial stream (`ask_clarification` → `thinking`, `ask_model_choice` → `choosing_model`, `generate_prompt` → `writing_prompt`)
-  - scene-decomposition keywords inside streamed text (`foreground`, `midground`, `lighting key`) → `decomposing_scene`
-- `DirectorChat.tsx` keeps the current `phase` in state and feeds phase-specific captions to `TypingIndicator`:
-  - analyzing_image: "Reading the frame…", "Catching the light…", "Logging the mise-en-scène…"
-  - decomposing_scene: "Blocking foreground…", "Placing midground…", "Setting the key…"
-  - choosing_model: "Matching the right engine…"
-  - writing_prompt: "Calling the shot…", "Locking the lens…", "Final polish…"
-- `AssistantAvatar` already accepts `state="scanning" | "thinking"`; add a third `state="writing"` (subtle aperture-spin variant) and pass it through.
+### 4. Pre-fill the render dialog from the locked spec
+In `src/components/director/PromptResultCard.tsx` + `VideoOptionsDialog.tsx`, when opening the dialog, seed `options.resolution` / `aspect_ratio` / `duration` from the Director's locked spec (already partially done for aspect/duration). Add resolution so the dialog opens on the value the user already agreed to, not the model default.
 
-## Tone pass
+### 5. Anti-hallucination guard on the recap
+Add to the prompt: "Never claim a value the user did not state or that is not directly implied by an attached reference. If unsure, ASK — do not assume." Reinforces no silent defaults for resolution/audio/aspect.
 
-Sweep `director-agent` system prompt + all new captions/chips to a concise on-set voice: "Call the shot.", "Pick your lens.", "Hold for the move.". Replace warmer phrasings (e.g. "Almost there…") with cinematographer equivalents ("Final polish…"). No emoji.
+## Technical details
 
-## Files touched
+Files touched:
+- `supabase/functions/director-agent/index.ts` — SYSTEM_PROMPT routing axes + recap rule; optionally add a `locked_spec` object to `ask_model_choice` / `generate_prompt` tool schemas with `{ duration_seconds, aspect_ratio, audio, resolution, input_mode }`.
+- `src/components/director/ModelChoiceCard.tsx` — render spec chips from `locked_spec` (fallback: parse `reason`).
+- `src/components/director/PromptResultCard.tsx` — pass `locked_spec.resolution` into the options dialog seed.
+- `src/components/director/VideoOptionsDialog.tsx` — accept an `initialOptions` prop override to seed resolution/aspect/duration from the Director instead of `controls.defaults`.
 
-- `supabase/functions/director-agent/index.ts` — schema + system prompt
-- `src/lib/director/api.ts` — `onPhase` callback, parse `suggestions` / `next_suggestions`
-- `src/components/director/QuestionCard.tsx` — prefer agent chips
-- `src/components/director/QuickReplies.tsx` (new)
-- `src/components/director/Composer.tsx` — mic button + quick replies slot
-- `src/lib/director/useVoiceCapture.ts` (new)
-- `src/components/director/TypingIndicator.tsx` — phase-driven captions
-- `src/components/director/AssistantAvatar.tsx` — `writing` state
-- `src/components/director/DirectorChat.tsx` — phase state, quick replies state, voice integration
+Not touched: the model catalog, the rendering pipeline, the kling-v3-4k routing in `generate-video` — those already work; this plan only changes what the Director asks and confirms.
 
 ## Out of scope
 
-- No realtime WebSocket STT (uses existing batch `transcribe-audio` for cost/simplicity)
-- No image annotation (deferred — separate task if you want it later)
-- No backend schema/db changes
-
+- Restructuring the chat flow (still tool-call driven, still streaming).
+- Adding non-routing knobs (cfg_scale, prompt_optimizer) to the Director questionnaire — those stay in the render dialog as power-user controls. We only promote axes that genuinely change the recommended model or the prompt wording.
