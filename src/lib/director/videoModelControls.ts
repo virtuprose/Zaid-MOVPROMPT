@@ -81,8 +81,9 @@ const CONTROLS: Record<string, ModelControls> = {
   "kling-omni": {
     aspectRatios: STD_ASPECTS,
     durations: [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+    resolutions: ["720p", "1080p", "4k"],
     audio: true,
-    defaults: { aspect_ratio: "16:9", duration: 5, audio: false },
+    defaults: { aspect_ratio: "16:9", duration: 5, resolution: "1080p", audio: false },
   },
   "kling-omni-edit": {
     aspectRatios: STD_ASPECTS,
@@ -97,26 +98,30 @@ const CONTROLS: Record<string, ModelControls> = {
   },
 
   // Kling v3 — native audio + extended duration enum (Pro accepts 3–15)
+  // Selecting "4k" routes server-side to the dedicated /v3/4k/text-to-video endpoint.
   "kling-v3-pro": {
     aspectRatios: STD_ASPECTS,
     durations: [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+    resolutions: ["720p", "1080p", "4k"],
     audio: true,
     cfgScale: true,
-    defaults: { aspect_ratio: "16:9", duration: 5, audio: true, cfg_scale: 0.5 },
+    defaults: { aspect_ratio: "16:9", duration: 5, resolution: "1080p", audio: true, cfg_scale: 0.5 },
   },
   "kling-v3-standard": {
     aspectRatios: STD_ASPECTS,
     durations: [5, 10],
+    resolutions: ["720p", "1080p", "4k"],
     audio: true,
     cfgScale: true,
-    defaults: { aspect_ratio: "16:9", duration: 5, audio: true, cfg_scale: 0.5 },
+    defaults: { aspect_ratio: "16:9", duration: 5, resolution: "1080p", audio: true, cfg_scale: 0.5 },
   },
   "kling-v3-4k": {
     aspectRatios: STD_ASPECTS,
     durations: [5, 10],
+    resolutions: ["4k"],
     audio: true,
     cfgScale: true,
-    defaults: { aspect_ratio: "16:9", duration: 5, audio: true, cfg_scale: 0.5 },
+    defaults: { aspect_ratio: "16:9", duration: 5, resolution: "4k", audio: true, cfg_scale: 0.5 },
   },
 
   // Kling (legacy v1–v2.5) — share aspect/duration/cfg_scale, no audio

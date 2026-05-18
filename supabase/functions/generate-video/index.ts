@@ -487,6 +487,16 @@ serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+    // Kling 3.0 exposes 4K via a dedicated endpoint. If the user picked "4k"
+    // resolution on Pro/Standard/Omni, transparently route to the 4K variant.
+    if (
+      options?.resolution === "4k" &&
+      (provider === "kling-v3-pro" ||
+        provider === "kling-v3-standard" ||
+        provider === "kling-omni")
+    ) {
+      provider = "kling-v3-4k";
+    }
     const model = FAL_MODELS[provider];
     if (!model) {
       return new Response(JSON.stringify({ error: `Unknown provider: ${provider}` }), {
