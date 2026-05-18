@@ -231,21 +231,17 @@ export default function MarketingStudio() {
             : customSetting.trim()
               ? { custom: customSetting.trim() }
               : undefined,
-          brand: brandKit
-            ? {
-                name: brandKit.name,
-                description: brandKit.description,
-                tagline: brandKit.tagline,
-                audience: brandKit.audience,
-              }
-            : null,
-          character: characterKit
-            ? {
-                name: characterKit.name,
-                role: characterKit.role,
-                description: characterKit.description,
-              }
-            : null,
+          brands: brandKits.map((b) => ({
+            name: b.name,
+            description: b.description,
+            tagline: b.tagline,
+            audience: b.audience,
+          })),
+          characters: characterActiveKits.map((c) => ({
+            name: c.name,
+            role: c.role,
+            description: c.description,
+          })),
           location:
             location.place || location.imagePath
               ? { place: location.place || undefined, hasImage: !!location.imagePath }
