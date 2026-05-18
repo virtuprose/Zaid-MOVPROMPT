@@ -353,12 +353,22 @@ serve(async (req) => {
         } catch (error) {
           const falError = extractFalError(error);
           console.warn("fal result response unreadable", falError.status, falError.message);
-          if (falError.status === 404) {
+          const isTerminal4xx =
+            typeof falError.status === "number" &&
+            falError.status >= 400 &&
+            falError.status < 500 &&
+            falError.status !== 408 &&
+            falError.status !== 429;
+          if (isTerminal4xx) {
+            const friendly =
+              falError.status === 404
+                ? "The provider completed the render but did not return the video result. Please retry with the same prompt."
+                : `Provider rejected the job (${falError.status}): ${falError.message || "validation error"}`;
             await admin
               .from("video_jobs")
               .update({
                 status: "failed",
-                error: "The provider completed the render but did not return the video result. Please retry with the same prompt.",
+                error: friendly,
                 completed_at: new Date().toISOString(),
               })
               .eq("id", jobId);
@@ -366,7 +376,7 @@ serve(async (req) => {
               JSON.stringify({
                 ...job,
                 status: "failed",
-                error: "The provider completed the render but did not return the video result. Please retry with the same prompt.",
+                error: friendly,
               }),
               { headers: { ...corsHeaders, "Content-Type": "application/json" } },
             );
