@@ -43,17 +43,22 @@ export function BrandPickerPopover({
         ) : (
           <ul className="max-h-64 overflow-y-auto">
             {kits.map((k) => {
-              const active = k.id === activeId;
+              const pos = k.id ? activeIds.indexOf(k.id) : -1;
+              const active = pos >= 0;
+              const disabled = !active && atCap;
               return (
                 <li key={k.id} className="group flex items-stretch">
                   <button
                     type="button"
-                    onClick={() => k.id && onSelect(k.id)}
+                    onClick={() => k.id && !disabled && onSelect(k.id)}
+                    disabled={disabled}
+                    title={disabled ? `Up to ${max} products per ad` : undefined}
                     className={cn(
                       "flex-1 flex items-center gap-2.5 px-2 py-2 rounded-l-lg text-left text-sm transition-colors",
                       active
-                        ? "bg-[hsl(0_72%_55%)]/10 border border-[hsl(0_72%_55%)]/40"
+                        ? "bg-[#F5A524]/10 border border-[#F5A524]/40"
                         : "hover:bg-muted/40 border border-transparent",
+                      disabled && "opacity-40 cursor-not-allowed",
                     )}
                   >
                     <div className="w-8 h-8 rounded-md border border-border/50 bg-muted/30 overflow-hidden flex items-center justify-center shrink-0">
@@ -64,7 +69,12 @@ export function BrandPickerPopover({
                       )}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <div className="truncate text-foreground">{k.name || "Untitled"}</div>
+                      <div className="truncate text-foreground flex items-center gap-1.5">
+                        <span className="truncate">{k.name || "Untitled"}</span>
+                        {pos === 0 && (
+                          <span className="text-[9px] uppercase tracking-wider text-[#F5A524] font-semibold">Hero</span>
+                        )}
+                      </div>
                       <div className="text-[10px] uppercase tracking-wide text-muted-foreground">
                         {k.subject}
                       </div>
