@@ -399,12 +399,18 @@ function DirectorChatInner() {
               breakdown: (partial as any).breakdown || {},
               directors_note: (partial as any).directors_note,
             };
-            copy[placeholderIndex] = { role: "result", data, partial: true };
+            copy[placeholderIndex] = {
+              role: "result",
+              data,
+              partial: true,
+              nextSuggestions: (partial as any).next_suggestions,
+            };
           } else if (partial.kind === "ask_clarification") {
             copy[placeholderIndex] = {
               role: "questions",
               questions: (partial as any).questions || [],
               reason: (partial as any).reason || "",
+              agentSuggestions: (partial as any).suggestions,
             };
           } else if (partial.kind === "ask_model_choice") {
             const rec = (partial as any).recommended_model_id;
