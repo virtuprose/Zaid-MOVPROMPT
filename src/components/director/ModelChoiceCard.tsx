@@ -82,6 +82,7 @@ export function ModelChoiceCard({
 
   return (
     <div className="rounded-2xl border border-primary/25 bg-gradient-to-br from-[hsl(240_10%_7%)] to-[hsl(240_8%_5%)] p-4 sm:p-5 space-y-4">
+      {lockedSpec && <SpecChips spec={lockedSpec} />}
       <div className="flex items-start gap-2">
         <Sparkles className="w-4 h-4 text-primary mt-0.5 shrink-0" />
         <div className="text-sm text-foreground/90">
