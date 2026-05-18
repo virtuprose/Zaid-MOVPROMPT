@@ -76,6 +76,27 @@ export function Composer({
 
   const [pendingCount, setPendingCount] = useState(0);
 
+  // Voice capture wiring
+  const voice = useVoiceCapture({
+    userId: user?.id ?? null,
+    onTranscript: (text) => {
+      const trimmed = text.trim();
+      if (!trimmed) return;
+      const next = value ? `${value.replace(/\s+$/, "")} ${trimmed}` : trimmed;
+      onChange(next);
+      requestAnimationFrame(() => {
+        const ta = taRef.current;
+        if (!ta) return;
+        ta.focus();
+        const pos = next.length;
+        ta.setSelectionRange(pos, pos);
+      });
+    },
+    onError: (msg) => toast.error(msg),
+  });
+  const recording = voice.state === "recording";
+  const transcribing = voice.state === "transcribing";
+
   // Use a ref to the latest attachments so async moderation patches don't
   // race with concurrent uploads/removals.
   const attachmentsRef = useRef<Attachment[]>(attachments);
