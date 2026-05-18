@@ -59,7 +59,7 @@ type Bubble =
       reason: string;
       agentSuggestions?: import("@/lib/director/api").AgentSuggestion[];
     }
-  | { role: "model_choice"; recommended_model_id: string; alternatives?: string[]; reason: string; chosen?: string }
+  | { role: "model_choice"; recommended_model_id: string; alternatives?: string[]; reason: string; chosen?: string; lockedSpec?: import("@/lib/director/api").LockedSpec }
   | { role: "error"; message: string; detail?: string; retryable: boolean }
   | { role: "video"; data: import("./VideoBubble").VideoBubbleData };
 
