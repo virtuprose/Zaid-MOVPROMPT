@@ -1181,8 +1181,12 @@ function DirectorChatInner() {
           })}
           {busy && (
             <TypingIndicator
-              captions={typingCaptions}
-              state={attachments.length > 0 ? "scanning" : "thinking"}
+              phase={phase}
+              state={
+                phase === "analyzing_image" || phase === "decomposing_scene"
+                  ? "scanning"
+                  : "thinking"
+              }
             />
           )}
           {!busy && lastBubble?.role === "questions" && (
@@ -1211,6 +1215,15 @@ function DirectorChatInner() {
           onSend={send}
           busy={busy}
           showHelper={isEmpty && attachments.length === 0}
+          quickReplies={(() => {
+            if (busy) return undefined;
+            const last = bubbles[bubbles.length - 1];
+            if (last?.role === "result" && last.nextSuggestions?.length) {
+              return last.nextSuggestions;
+            }
+            return undefined;
+          })()}
+          onQuickReply={(chip) => void send(chip)}
         />
       </div>
 
