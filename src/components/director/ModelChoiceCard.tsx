@@ -1,22 +1,70 @@
 import { useState } from "react";
-import { Check, Sparkles } from "lucide-react";
+import { Check, Sparkles, Clock, Ratio, Volume2, Monitor, Film } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { findVideoModel, VIDEO_MODEL_GROUPS } from "@/lib/director/videoModels";
+import type { LockedSpec } from "@/lib/director/api";
 
 type Props = {
   recommendedId: string;
   alternatives?: string[];
   reason: string;
+  lockedSpec?: LockedSpec;
   disabled?: boolean;
   hasReferenceImage?: boolean;
   onConfirm: (modelId: string) => void;
 };
 
+const AUDIO_LABEL: Record<NonNullable<LockedSpec["audio"]>, string> = {
+  silent: "silent",
+  sfx: "SFX",
+  music: "music",
+  dialogue: "dialogue",
+  full: "full audio",
+};
+
+const INPUT_MODE_LABEL: Record<NonNullable<LockedSpec["input_mode"]>, string> = {
+  "text-to-video": "fresh generation",
+  "image-to-video": "image-to-video",
+  "video-edit": "video edit",
+  "motion-control": "motion control",
+  "multi-reference": "multi-reference",
+};
+
+function SpecChips({ spec }: { spec: LockedSpec }) {
+  const chips: Array<{ icon: typeof Clock; label: string }> = [];
+  if (spec.duration_seconds) chips.push({ icon: Clock, label: `${spec.duration_seconds}s` });
+  if (spec.aspect_ratio) chips.push({ icon: Ratio, label: spec.aspect_ratio });
+  if (spec.audio) chips.push({ icon: Volume2, label: AUDIO_LABEL[spec.audio] });
+  if (spec.resolution) chips.push({ icon: Monitor, label: spec.resolution.toUpperCase() });
+  if (spec.input_mode) chips.push({ icon: Film, label: INPUT_MODE_LABEL[spec.input_mode] });
+  if (!chips.length) return null;
+  return (
+    <div className="flex flex-wrap items-center gap-1.5">
+      <span className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground/80">
+        Locked
+      </span>
+      {chips.map((c, i) => {
+        const Icon = c.icon;
+        return (
+          <span
+            key={i}
+            className="inline-flex items-center gap-1 rounded-md border border-accent/30 bg-accent/10 px-1.5 py-0.5 text-[10px] font-medium text-accent"
+          >
+            <Icon className="w-2.5 h-2.5" />
+            {c.label}
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
 export function ModelChoiceCard({
   recommendedId,
   alternatives = [],
   reason,
+  lockedSpec,
   disabled,
   hasReferenceImage = false,
   onConfirm,
@@ -34,6 +82,7 @@ export function ModelChoiceCard({
 
   return (
     <div className="rounded-2xl border border-primary/25 bg-gradient-to-br from-[hsl(240_10%_7%)] to-[hsl(240_8%_5%)] p-4 sm:p-5 space-y-4">
+      {lockedSpec && <SpecChips spec={lockedSpec} />}
       <div className="flex items-start gap-2">
         <Sparkles className="w-4 h-4 text-primary mt-0.5 shrink-0" />
         <div className="text-sm text-foreground/90">

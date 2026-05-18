@@ -30,7 +30,7 @@ import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/h
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import type { Breakdown } from "@/lib/director/api";
+import type { Breakdown, LockedSpec } from "@/lib/director/api";
 import { submitVideoJob, pollVideoJob, type VideoJob } from "@/lib/director/api";
 import { VIDEO_MODEL_GROUPS, findVideoModel, type VideoModel } from "@/lib/director/videoModels";
 import { resolveRecommendation } from "@/lib/director/modelRanking";
@@ -62,6 +62,8 @@ type Props = {
   referenceImageSlots?: Array<"brand" | "character" | "location">;
   /** Model the user already picked in the ModelChoiceCard for this prompt. Takes priority over recommendation. */
   preferredModelId?: string;
+  /** Render spec the Director locked in (duration / aspect / audio / resolution / input_mode). Seeds the render dialog. */
+  lockedSpec?: LockedSpec;
 };
 
 const REF_SLOT_LABEL: Record<"brand" | "character" | "location", string> = {
@@ -268,7 +270,7 @@ function Section({
   );
 }
 
-export function PromptResultCard({ title, prompt, breakdown, directorsNote, onRefine, sessionId, hasReferenceImage = false, referenceImageUrls = [], referenceImageSlots = [], preferredModelId }: Props) {
+export function PromptResultCard({ title, prompt, breakdown, directorsNote, onRefine, sessionId, hasReferenceImage = false, referenceImageUrls = [], referenceImageSlots = [], preferredModelId, lockedSpec }: Props) {
   const { user } = useAuth();
   const { request: requestApproval } = useApproval();
   const [copied, setCopied] = useState(false);
@@ -326,6 +328,22 @@ export function PromptResultCard({ title, prompt, breakdown, directorsNote, onRe
     .map((c) => findVideoModel(c.id))
     .filter((m): m is VideoModel => !!m && allowModel(m));
   const externalLink = EXTERNAL_LINKS[recommendedModel.family];
+
+  // Build VideoOptions seed from the Director's locked spec (falls back to breakdown).
+  const initialOptions: VideoOptions = {};
+  const aspect = lockedSpec?.aspect_ratio || breakdown.aspect_ratio;
+  if (aspect) initialOptions.aspect_ratio = aspect;
+  const resolution = lockedSpec?.resolution || breakdown.resolution;
+  if (resolution) initialOptions.resolution = resolution;
+  if (typeof lockedSpec?.duration_seconds === "number") {
+    initialOptions.duration = lockedSpec.duration_seconds;
+  } else if (breakdown.duration_hint) {
+    const m = /(\d+)\s*s/i.exec(breakdown.duration_hint);
+    if (m) initialOptions.duration = parseInt(m[1], 10);
+  }
+  if (lockedSpec?.audio) {
+    initialOptions.audio = lockedSpec.audio !== "silent";
+  }
 
   const fullText = [
     `# ${title}`,
@@ -551,6 +569,7 @@ export function PromptResultCard({ title, prompt, breakdown, directorsNote, onRe
         {renderVideoPanel()}
 
         <VideoOptionsDialog
+          initialOptions={initialOptions}
           open={!!pendingModel}
           model={pendingModel}
           prompt={prompt}

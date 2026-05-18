@@ -3,6 +3,14 @@ import type { Attachment } from "./ingest";
 
 export type DirectorMsg = { role: "user" | "assistant"; content: string };
 
+export type LockedSpec = {
+  input_mode?: "text-to-video" | "image-to-video" | "video-edit" | "motion-control" | "multi-reference";
+  duration_seconds?: number;
+  aspect_ratio?: string;
+  audio?: "silent" | "sfx" | "music" | "dialogue" | "full";
+  resolution?: "720p" | "1080p" | "4k";
+};
+
 export type Breakdown = {
   subject?: string;
   action?: string;
@@ -12,6 +20,8 @@ export type Breakdown = {
   color_palette?: string;
   environment?: string;
   duration_hint?: string;
+  resolution?: "720p" | "1080p" | "4k";
+  aspect_ratio?: string;
   film_emulation?: string;
   negative_prompt?: string;
   model_recommendation?: string;
@@ -38,6 +48,7 @@ export type AgentResponse =
       recommended_model_id: string;
       alternatives?: string[];
       reason: string;
+      locked_spec?: LockedSpec;
     }
   | {
       kind: "generate_prompt";
@@ -46,6 +57,7 @@ export type AgentResponse =
       breakdown: Breakdown;
       directors_note?: string;
       next_suggestions?: string[];
+      locked_spec?: LockedSpec;
     }
   | {
       kind: "request_video_generation";

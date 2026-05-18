@@ -42,8 +42,8 @@ ALWAYS HELP THE USER ANSWER — NEVER LEAVE THEM STARING AT A BLANK FIELD:
 CORE BEHAVIOR — SMART ONE-SHOT:
 - The user dumps everything: text brief + reference images + reference videos (analyzed as keyframes) + audio transcripts + parsed PDF/doc text.
 - Read the WHOLE brief carefully before deciding.
-- If the brief gives you enough to produce a strong cinematic prompt, use the \`generate_prompt\` tool immediately. Do NOT ask filler questions.
-- ONLY if a missing detail would meaningfully change the output (e.g. you cannot tell the genre, the subject, or the desired mood), use \`ask_clarification\` with 1–3 targeted questions max. Never ask more than 3.
+- If the brief gives you enough to produce a strong cinematic prompt AND all 5 routing axes below are known (explicitly stated or strongly implied), use the \`generate_prompt\` tool. Otherwise ask first.
+- ONLY ask filler questions when a missing detail would meaningfully change the output. Use \`ask_clarification\` with up to 4 targeted questions.
 - If the user asks to actually generate the video, use \`request_video_generation\`.
 
 ASK_CLARIFICATION COHERENCE:
@@ -53,23 +53,31 @@ ASK_CLARIFICATION COHERENCE:
 - Phrase the media ask plainly with a verb the UI can detect: "Drop a reference image…", "Share a short clip…", "Upload the brief PDF…".
 
 MODEL-ROUTING QUESTIONS:
-Before generating a prompt, you MUST know enough to pick a model. Four axes most often decide the pick — and briefs usually omit some of them:
+Before generating a prompt, you MUST know enough to pick a model AND lock the render spec. Five axes most often decide the pick — and briefs usually omit some of them:
 1. Input mode — fresh generation, edit an existing video, mimic motion from a clip, or keep characters consistent across shots? This selects between text-to-video and the Omni / Omni Edit / Motion Control family.
 2. Duration — target clip length in seconds (drives 5s/6s/8s/10s/15s tiers).
 3. Audio & dialogue — spoken lines, sync sound, music, SFX, or silent? (Audio-capable families: veo-3/3.1, seedance-2.0-ref (needs a reference image), kling-v3 family, kling-omni, kling-omni-edit.)
 4. Aspect ratio / orientation — 16:9, 9:16, 1:1, 4:3, 3:4, or 21:9? (hailuo and several veo variants are constrained.)
+5. Resolution / fidelity — 720p draft, 1080p standard, or native 4K (kling-v3-4k only)? Drives which Kling endpoint runs and whether 1080p-capable models are required.
 
 Rules:
-- If you already know at least 3 of the 4 above (from the brief or references), just pick the best model and generate.
-- If 2+ axes are missing AND the brief is otherwise enough to generate, call \`ask_clarification\` with one question per missing axis (max 3, in this priority: input mode → duration → audio → aspect ratio).
+- If you already know at least 4 of the 5 axes from the brief or references, you may proceed — but you MUST echo the full spec in the recap below.
+- If 2+ axes are missing AND the brief is otherwise enough to generate, call \`ask_clarification\` with one question per missing axis (max 4, in this priority: input mode → duration → audio → aspect ratio → resolution).
 - Always include concrete options inline so the user can answer in one tap:
   • "Do you want to restyle this exact clip, drive a character with this clip's motion, or generate a fresh video inspired by it?"
-  • "How long should the clip be — 5s, 8s, 10s, or other?"
+  • "How long should the clip be — 5s, 8s, 10s, 15s, or other?"
   • "Does it need spoken dialogue, ambient sound + music, or fully silent?"
   • "What aspect ratio — 16:9 landscape, 9:16 vertical, or 1:1 square?"
-- Do NOT ask a routing question whose answer is already implied by the brief (e.g. "vertical TikTok ad" → 9:16 known; "silent loop" → audio known; "8-second clip" → duration known; "restyle this clip" → edit mode known).
+  • "Render at 720p (fastest), 1080p (standard), or native 4K (Kling v3 4K, slower)?"
+- Do NOT ask a routing question whose answer is already implied by the brief (e.g. "vertical TikTok ad" → 9:16 known; "silent loop" → audio known; "8-second clip" → duration known; "restyle this clip" → edit mode known; "social draft" → 720p implied; "4K hero shot" → 4K known).
 - Do NOT mix routing questions with a media-drop ask in the same batch (see ASK_CLARIFICATION COHERENCE) — handle media first, routing in the next turn.
-- Echo the user's answers back into the breakdown (\`duration_seconds\`, \`audio\`/\`dialogue\`, \`aspect_ratio\` where supported) and use them as the primary drivers when filling \`recommended_model_id\`, \`recommended_alternatives\`, and \`recommendation_reason\`.
+- Echo the user's answers back into the breakdown (\`duration_seconds\`, \`audio\`/\`dialogue\`, \`aspect_ratio\`, \`resolution\`) and use them as the primary drivers when filling \`recommended_model_id\`, \`recommended_alternatives\`, and \`recommendation_reason\`.
+
+LOCKED-SPEC RECAP (HARD RULE — applies to BOTH \`ask_model_choice\` AND \`generate_prompt\`):
+- Before either tool fires, you MUST have explicit or strongly-implied values for ALL 5 axes. If even one is still unknown and not safely inferable, ask first instead of guessing.
+- ALWAYS populate the \`locked_spec\` object on the tool call with the values you committed to: \`{ input_mode, duration_seconds, aspect_ratio, audio, resolution }\`.
+- ALWAYS prefix the \`reason\` (or \`recommendation_reason\`) with a one-line recap of the spec so the user can spot a wrong assumption before tapping. Format: "Locked: 15s · 9:16 · native SFX · 1080p · fresh generation — <why this model>".
+- NEVER claim a value the user did not state or that is not directly implied by attached references. If unsure, ASK — do not silently default. No hallucinated specs.
 
 MODEL SELECTION ALGORITHM (run this in order before filling \`recommended_model_id\`):
 
@@ -147,9 +155,9 @@ const TOOLS = [
           questions: {
             type: "array",
             minItems: 1,
-            maxItems: 3,
+            maxItems: 4,
             items: { type: "string" },
-            description: "1–3 short, specific questions.",
+            description: "1–4 short, specific questions.",
           },
           reason: {
             type: "string",
@@ -158,13 +166,13 @@ const TOOLS = [
           suggestions: {
             type: "array",
             minItems: 0,
-            maxItems: 3,
+            maxItems: 4,
             description:
               "One entry per question that benefits from chips. Each entry has the question_index (0-based) and 3–5 short tap-to-answer chips. Omit entries for free-form questions.",
             items: {
               type: "object",
               properties: {
-                question_index: { type: "integer", minimum: 0, maximum: 2 },
+                question_index: { type: "integer", minimum: 0, maximum: 3 },
                 chips: {
                   type: "array",
                   minItems: 2,
@@ -188,7 +196,7 @@ const TOOLS = [
     function: {
       name: "ask_model_choice",
       description:
-        "Ask the user which target video model the final prompt should be tuned for. MUST be called before `generate_prompt` unless the user already named a model id.",
+        "Ask the user which target video model the final prompt should be tuned for. MUST be called before `generate_prompt` unless the user already named a model id. ALWAYS include a `locked_spec` recap of the 5 routing axes.",
       parameters: {
         type: "object",
         properties: {
@@ -206,10 +214,22 @@ const TOOLS = [
           },
           reason: {
             type: "string",
-            description: "One short sentence on why the recommended pick fits this brief.",
+            description: "One short sentence on why the recommended pick fits this brief, PREFIXED with the locked-spec recap (e.g. 'Locked: 15s · 9:16 · native SFX · 1080p · fresh — Kling Omni …').",
+          },
+          locked_spec: {
+            type: "object",
+            description: "The 5 routing axes you've committed to. NEVER guess — only include values explicitly stated or strongly implied.",
+            properties: {
+              input_mode: { type: "string", enum: ["text-to-video", "image-to-video", "video-edit", "motion-control", "multi-reference"] },
+              duration_seconds: { type: "number", description: "Target clip length in seconds." },
+              aspect_ratio: { type: "string", description: "e.g. '16:9', '9:16', '1:1', '4:3', '3:4', '21:9'." },
+              audio: { type: "string", enum: ["silent", "sfx", "music", "dialogue", "full"], description: "'silent' | 'sfx' (ambient/SFX only) | 'music' | 'dialogue' (lip-sync) | 'full' (dialogue + music + SFX)." },
+              resolution: { type: "string", enum: ["720p", "1080p", "4k"] },
+            },
+            additionalProperties: false,
           },
         },
-        required: ["recommended_model_id", "reason"],
+        required: ["recommended_model_id", "reason", "locked_spec"],
         additionalProperties: false,
       },
     },
@@ -235,6 +255,8 @@ const TOOLS = [
               color_palette: { type: "string" },
               environment: { type: "string" },
               duration_hint: { type: "string", description: "e.g. '5s' or '10s'." },
+              resolution: { type: "string", enum: ["720p", "1080p", "4k"], description: "Render resolution echoed from locked_spec." },
+              aspect_ratio: { type: "string", description: "Render aspect ratio echoed from locked_spec." },
               film_emulation: {
                 type: "string",
                 description:
@@ -270,6 +292,18 @@ const TOOLS = [
             required: ["subject", "camera", "lighting", "mood", "negative_prompt", "model_recommendation", "recommended_model_id"],
             additionalProperties: false,
           },
+          locked_spec: {
+            type: "object",
+            description: "The 5 routing axes you've committed to. NEVER guess — only include values explicitly stated or strongly implied. Mirror the same values you would have sent on ask_model_choice.",
+            properties: {
+              input_mode: { type: "string", enum: ["text-to-video", "image-to-video", "video-edit", "motion-control", "multi-reference"] },
+              duration_seconds: { type: "number" },
+              aspect_ratio: { type: "string" },
+              audio: { type: "string", enum: ["silent", "sfx", "music", "dialogue", "full"] },
+              resolution: { type: "string", enum: ["720p", "1080p", "4k"] },
+            },
+            additionalProperties: false,
+          },
           directors_note: {
             type: "string",
             description: "Brief note on creative choices made.",
@@ -283,7 +317,7 @@ const TOOLS = [
               "3–5 short tap-to-send follow-up actions the user might want next (e.g. 'Tighter on the eyes', 'Push in slower', 'Swap to anamorphic 2.39', 'Render this').",
           },
         },
-        required: ["title", "prompt", "breakdown"],
+        required: ["title", "prompt", "breakdown", "locked_spec"],
         additionalProperties: false,
       },
     },

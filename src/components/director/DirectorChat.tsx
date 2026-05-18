@@ -59,7 +59,7 @@ type Bubble =
       reason: string;
       agentSuggestions?: import("@/lib/director/api").AgentSuggestion[];
     }
-  | { role: "model_choice"; recommended_model_id: string; alternatives?: string[]; reason: string; chosen?: string }
+  | { role: "model_choice"; recommended_model_id: string; alternatives?: string[]; reason: string; chosen?: string; lockedSpec?: import("@/lib/director/api").LockedSpec }
   | { role: "error"; message: string; detail?: string; retryable: boolean }
   | { role: "video"; data: import("./VideoBubble").VideoBubbleData };
 
@@ -425,6 +425,7 @@ function DirectorChatInner() {
                 recommended_model_id: rec,
                 alternatives: (partial as any).alternatives || [],
                 reason: (partial as any).reason || "",
+                lockedSpec: (partial as any).locked_spec,
               };
             }
           }
@@ -483,6 +484,7 @@ function DirectorChatInner() {
           recommended_model_id: resp.recommended_model_id,
           alternatives: resp.alternatives,
           reason: resp.reason,
+          lockedSpec: resp.locked_spec,
         };
       } else if (resp.kind === "request_video_generation") {
         const refCount = referenceImageUrls.length;
@@ -979,13 +981,17 @@ function DirectorChatInner() {
               // ModelChoiceCard before this result bubble — that's what the
               // primary "Generate" button should target.
               let pickedModelId: string | undefined;
+              let pickedSpec: import("@/lib/director/api").LockedSpec | undefined;
               for (let k = i - 1; k >= 0; k -= 1) {
                 const prev = bubbles[k];
-                if (prev.role === "model_choice" && (prev as any).chosen) {
-                  pickedModelId = (prev as any).chosen as string;
-                  break;
+                if (prev.role === "model_choice") {
+                  if ((prev as any).chosen) pickedModelId = (prev as any).chosen as string;
+                  if (!pickedSpec) pickedSpec = (prev as any).lockedSpec;
+                  if (pickedModelId) break;
                 }
               }
+              const resolvedSpec =
+                (b.data as any).locked_spec ?? pickedSpec ?? undefined;
               return (
                 <div key={i} className="relative">
                   {b.partial && (
@@ -1012,6 +1018,7 @@ function DirectorChatInner() {
                     referenceImageUrls={referenceImageUrls}
                     referenceImageSlots={referenceImageSlots}
                     preferredModelId={pickedModelId}
+                    lockedSpec={resolvedSpec}
                   />
                 </div>
               );
@@ -1057,6 +1064,7 @@ function DirectorChatInner() {
                     recommendedId={b.recommended_model_id}
                     alternatives={b.alternatives}
                     reason={b.reason}
+                    lockedSpec={b.lockedSpec}
                     disabled={!isLatest || busy || !!b.chosen}
                     hasReferenceImage={hasReferenceImage}
                     onConfirm={(modelId) => {
