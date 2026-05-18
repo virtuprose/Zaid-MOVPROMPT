@@ -155,9 +155,9 @@ const TOOLS = [
           questions: {
             type: "array",
             minItems: 1,
-            maxItems: 3,
+            maxItems: 4,
             items: { type: "string" },
-            description: "1–3 short, specific questions.",
+            description: "1–4 short, specific questions.",
           },
           reason: {
             type: "string",
@@ -166,13 +166,13 @@ const TOOLS = [
           suggestions: {
             type: "array",
             minItems: 0,
-            maxItems: 3,
+            maxItems: 4,
             description:
               "One entry per question that benefits from chips. Each entry has the question_index (0-based) and 3–5 short tap-to-answer chips. Omit entries for free-form questions.",
             items: {
               type: "object",
               properties: {
-                question_index: { type: "integer", minimum: 0, maximum: 2 },
+                question_index: { type: "integer", minimum: 0, maximum: 3 },
                 chips: {
                   type: "array",
                   minItems: 2,
@@ -196,7 +196,7 @@ const TOOLS = [
     function: {
       name: "ask_model_choice",
       description:
-        "Ask the user which target video model the final prompt should be tuned for. MUST be called before `generate_prompt` unless the user already named a model id.",
+        "Ask the user which target video model the final prompt should be tuned for. MUST be called before `generate_prompt` unless the user already named a model id. ALWAYS include a `locked_spec` recap of the 5 routing axes.",
       parameters: {
         type: "object",
         properties: {
@@ -214,10 +214,22 @@ const TOOLS = [
           },
           reason: {
             type: "string",
-            description: "One short sentence on why the recommended pick fits this brief.",
+            description: "One short sentence on why the recommended pick fits this brief, PREFIXED with the locked-spec recap (e.g. 'Locked: 15s · 9:16 · native SFX · 1080p · fresh — Kling Omni …').",
+          },
+          locked_spec: {
+            type: "object",
+            description: "The 5 routing axes you've committed to. NEVER guess — only include values explicitly stated or strongly implied.",
+            properties: {
+              input_mode: { type: "string", enum: ["text-to-video", "image-to-video", "video-edit", "motion-control", "multi-reference"] },
+              duration_seconds: { type: "number", description: "Target clip length in seconds." },
+              aspect_ratio: { type: "string", description: "e.g. '16:9', '9:16', '1:1', '4:3', '3:4', '21:9'." },
+              audio: { type: "string", enum: ["silent", "sfx", "music", "dialogue", "full"], description: "'silent' | 'sfx' (ambient/SFX only) | 'music' | 'dialogue' (lip-sync) | 'full' (dialogue + music + SFX)." },
+              resolution: { type: "string", enum: ["720p", "1080p", "4k"] },
+            },
+            additionalProperties: false,
           },
         },
-        required: ["recommended_model_id", "reason"],
+        required: ["recommended_model_id", "reason", "locked_spec"],
         additionalProperties: false,
       },
     },
