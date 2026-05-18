@@ -26,6 +26,7 @@ import {
   pollVideoJob,
   type DirectorMsg,
   type AgentResponse,
+  type DirectorPhase,
 } from "@/lib/director/api";
 import { VideoBubble } from "./VideoBubble";
 import type { Attachment } from "@/lib/director/ingest";
