@@ -300,8 +300,12 @@ export default function MarketingStudio() {
       // Build the ordered ref list first so we can tag @ImageN in the prompt
       // in the exact order the URLs are sent to Seedance reference-to-video.
       const refSlots: Array<{ slot: "brand" | "character" | "location"; url: string }> = [];
-      if (brandKit?.logo_url) refSlots.push({ slot: "brand", url: brandKit.logo_url });
-      if (characterKit?.reference_url) refSlots.push({ slot: "character", url: characterKit.reference_url });
+      for (const b of brandKits) {
+        if (b.logo_url) refSlots.push({ slot: "brand", url: b.logo_url });
+      }
+      for (const c of characterActiveKits) {
+        if (c.reference_url) refSlots.push({ slot: "character", url: c.reference_url });
+      }
       if (location.imageUrl) refSlots.push({ slot: "location", url: location.imageUrl });
       const referenceImages = refSlots.map((r) => r.url);
       const imageRefs = refSlots.map((r) => r.slot);
@@ -313,27 +317,23 @@ export default function MarketingStudio() {
         settingId,
         customFormat: customFormat || undefined,
         customSetting: customSetting || undefined,
-        brand: brandKit
-          ? {
-              name: brandKit.name,
-              description: brandKit.description,
-              url: brandKit.url,
-              tagline: brandKit.tagline,
-              audience: brandKit.audience,
-            }
-          : undefined,
+        brands: brandKits.map((b) => ({
+          name: b.name,
+          description: b.description,
+          url: b.url,
+          tagline: b.tagline,
+          audience: b.audience,
+        })),
         location: {
           place: location.place || undefined,
           hasImage: !!location.imagePath,
         },
-        character: characterKit
-          ? {
-              name: characterKit.name,
-              description: characterKit.description,
-              role: characterKit.role,
-              hasImage: !!characterKit.reference_path,
-            }
-          : undefined,
+        characters: characterActiveKits.map((c) => ({
+          name: c.name,
+          description: c.description,
+          role: c.role,
+          hasImage: !!c.reference_path,
+        })),
         imageRefs,
         userNote: userNote.trim() || undefined,
       });
