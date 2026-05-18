@@ -25,7 +25,7 @@ const MAX_DOC_BYTES = 10 * 1024 * 1024;
 const MAX_AUDIO_BYTES = 25 * 1024 * 1024;
 const SIGNED_URL_TTL = 60 * 60; // 1 hour
 
-async function uploadAndSign(
+export async function uploadAndSign(
   blob: Blob,
   userId: string,
   fileName: string,
