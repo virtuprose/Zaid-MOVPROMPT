@@ -11,9 +11,11 @@ export type ModerationResult = {
   categories?: string[];
 };
 
+export type AttachmentRole = "character" | "storyboard" | "reference";
+
 export type Attachment =
-  | { kind: "image"; name: string; url: string; storage_path?: string; moderation?: ModerationResult }
-  | { kind: "video_keyframes"; name: string; url: string; storage_path?: string; moderation?: ModerationResult }
+  | { kind: "image"; name: string; url: string; storage_path?: string; moderation?: ModerationResult; role?: AttachmentRole; shot_index?: number; parent_storage_path?: string }
+  | { kind: "video_keyframes"; name: string; url: string; storage_path?: string; moderation?: ModerationResult; role?: AttachmentRole; shot_index?: number; parent_storage_path?: string }
   | { kind: "audio_transcript"; name: string; text: string; storage_path?: string }
   | { kind: "document"; name: string; text: string };
 
