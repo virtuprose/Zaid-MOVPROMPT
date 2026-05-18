@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Paperclip, Send, Loader2, X, FileText, Image as ImageIcon, Music, ShieldCheck, ShieldAlert, ShieldQuestion } from "lucide-react";
+import { Paperclip, Send, Loader2, X, FileText, Image as ImageIcon, Music, ShieldCheck, ShieldAlert, ShieldQuestion, Mic, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { toast } from "sonner";
@@ -13,6 +13,9 @@ import {
   type Attachment,
 } from "@/lib/director/ingest";
 import { moderateImage } from "@/lib/director/api";
+import { useVoiceCapture } from "@/lib/director/useVoiceCapture";
+import { QuickReplies } from "./QuickReplies";
+import { cn } from "@/lib/utils";
 
 type Props = {
   value: string;
@@ -22,9 +25,21 @@ type Props = {
   onSend: () => void;
   busy: boolean;
   showHelper?: boolean;
+  quickReplies?: string[];
+  onQuickReply?: (chip: string) => void;
 };
 
-export function Composer({ value, onChange, attachments, onAttachmentsChange, onSend, busy, showHelper }: Props) {
+export function Composer({
+  value,
+  onChange,
+  attachments,
+  onAttachmentsChange,
+  onSend,
+  busy,
+  showHelper,
+  quickReplies,
+  onQuickReply,
+}: Props) {
   const { user } = useAuth();
   const inputRef = useRef<HTMLInputElement>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
@@ -60,6 +75,27 @@ export function Composer({ value, onChange, attachments, onAttachmentsChange, on
   }, []);
 
   const [pendingCount, setPendingCount] = useState(0);
+
+  // Voice capture wiring
+  const voice = useVoiceCapture({
+    userId: user?.id ?? null,
+    onTranscript: (text) => {
+      const trimmed = text.trim();
+      if (!trimmed) return;
+      const next = value ? `${value.replace(/\s+$/, "")} ${trimmed}` : trimmed;
+      onChange(next);
+      requestAnimationFrame(() => {
+        const ta = taRef.current;
+        if (!ta) return;
+        ta.focus();
+        const pos = next.length;
+        ta.setSelectionRange(pos, pos);
+      });
+    },
+    onError: (msg) => toast.error(msg),
+  });
+  const recording = voice.state === "recording";
+  const transcribing = voice.state === "transcribing";
 
   // Use a ref to the latest attachments so async moderation patches don't
   // race with concurrent uploads/removals.
@@ -392,18 +428,74 @@ export function Composer({ value, onChange, attachments, onAttachmentsChange, on
           )}
 
           <div className="flex items-center justify-between px-2 pb-2">
-            <Button
-              type="button"
-              size="icon"
-              variant="ghost"
-              onClick={() => inputRef.current?.click()}
-              disabled={busy || ingesting}
-              aria-label="Attach files"
-              className="h-9 w-9 rounded-full text-muted-foreground hover:text-foreground"
-            >
-              {ingesting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Paperclip className="w-4 h-4" />}
-            </Button>
+            <div className="flex items-center gap-1">
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                onClick={() => inputRef.current?.click()}
+                disabled={busy || ingesting || recording || transcribing}
+                aria-label="Attach files"
+                className="h-9 w-9 rounded-full text-muted-foreground hover:text-foreground"
+              >
+                {ingesting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Paperclip className="w-4 h-4" />}
+              </Button>
 
+              {voice.supported && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => {
+                        if (transcribing) return;
+                        if (recording) void voice.stop();
+                        else void voice.start();
+                      }}
+                      disabled={busy || ingesting}
+                      aria-label={recording ? "Stop recording" : "Record voice brief"}
+                      aria-pressed={recording}
+                      className={cn(
+                        "relative h-9 w-9 rounded-full text-muted-foreground hover:text-foreground transition-colors",
+                        recording && "text-destructive hover:text-destructive",
+                      )}
+                    >
+                      {transcribing ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : recording ? (
+                        <Square className="w-3.5 h-3.5 fill-current" />
+                      ) : (
+                        <Mic className="w-4 h-4" />
+                      )}
+                      {recording && (
+                        <span
+                          className="pointer-events-none absolute inset-0 rounded-full ring-2 ring-destructive/60 motion-safe:animate-ping"
+                          style={{ opacity: 0.3 + Math.min(0.7, voice.level) }}
+                          aria-hidden
+                        />
+                      )}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top">
+                    {transcribing
+                      ? "Transcribing…"
+                      : recording
+                        ? "Stop & transcribe"
+                        : "Record a voice brief"}
+                  </TooltipContent>
+                </Tooltip>
+              )}
+
+              {recording && (
+                <span className="ml-1 text-[11px] text-destructive font-medium tabular-nums">
+                  ● Recording
+                </span>
+              )}
+              {transcribing && (
+                <span className="ml-1 text-[11px] text-muted-foreground">Transcribing…</span>
+              )}
+            </div>
             {(() => {
               const scanning = attachments.some(
                 (a) => (a as any).moderation?.state === "scanning",
@@ -460,9 +552,32 @@ export function Composer({ value, onChange, attachments, onAttachmentsChange, on
             />
           </div>
         </div>
+        {quickReplies && quickReplies.length > 0 && !busy && (
+          <div className="px-1 pt-1">
+            <QuickReplies
+              chips={quickReplies}
+              disabled={busy}
+              onPick={(chip) => {
+                if (onQuickReply) {
+                  onQuickReply(chip);
+                  return;
+                }
+                const next = value ? `${value.replace(/\s+$/, "")} ${chip}` : chip;
+                onChange(next);
+                requestAnimationFrame(() => {
+                  const ta = taRef.current;
+                  if (!ta) return;
+                  ta.focus();
+                  const pos = next.length;
+                  ta.setSelectionRange(pos, pos);
+                });
+              }}
+            />
+          </div>
+        )}
         {showHelper && (
           <div className="text-[11px] text-muted-foreground text-center">
-            Tip: drop files anywhere in this input
+            Tip: drop files anywhere in this input · press the mic to speak
           </div>
         )}
       </div>

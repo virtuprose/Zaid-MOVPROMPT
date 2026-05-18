@@ -26,6 +26,7 @@ import {
   pollVideoJob,
   type DirectorMsg,
   type AgentResponse,
+  type DirectorPhase,
 } from "@/lib/director/api";
 import { VideoBubble } from "./VideoBubble";
 import type { Attachment } from "@/lib/director/ingest";
@@ -46,8 +47,18 @@ import { TypewriterText } from "./TypewriterText";
 type Bubble =
   | { role: "user"; content: string; attachments?: Attachment[] }
   | { role: "assistant"; content: string; animate?: boolean }
-  | { role: "result"; data: Extract<AgentResponse, { kind: "generate_prompt" }>; partial?: boolean }
-  | { role: "questions"; questions: string[]; reason: string }
+  | {
+      role: "result";
+      data: Extract<AgentResponse, { kind: "generate_prompt" }>;
+      partial?: boolean;
+      nextSuggestions?: string[];
+    }
+  | {
+      role: "questions";
+      questions: string[];
+      reason: string;
+      agentSuggestions?: import("@/lib/director/api").AgentSuggestion[];
+    }
   | { role: "model_choice"; recommended_model_id: string; alternatives?: string[]; reason: string; chosen?: string }
   | { role: "error"; message: string; detail?: string; retryable: boolean }
   | { role: "video"; data: import("./VideoBubble").VideoBubbleData };
@@ -85,6 +96,7 @@ function DirectorChatInner() {
   const [input, setInput] = useState("");
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [busy, setBusy] = useState(false);
+  const [phase, setPhase] = useState<DirectorPhase>("thinking");
   const [resetOpen, setResetOpen] = useState(false);
   const sessionIdRef = useRef<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -299,6 +311,11 @@ function DirectorChatInner() {
     setBubbles(next);
     setInput("");
     setBusy(true);
+    setPhase(
+      attachments.some((a) => a.kind === "image" || a.kind === "video_keyframes")
+        ? "analyzing_image"
+        : "thinking",
+    );
     setAvatarPulse("nod");
     window.setTimeout(() => setAvatarPulse("idle"), 650);
     idleNudgedRef.current = true;
@@ -387,12 +404,18 @@ function DirectorChatInner() {
               breakdown: (partial as any).breakdown || {},
               directors_note: (partial as any).directors_note,
             };
-            copy[placeholderIndex] = { role: "result", data, partial: true };
+            copy[placeholderIndex] = {
+              role: "result",
+              data,
+              partial: true,
+              nextSuggestions: (partial as any).next_suggestions,
+            };
           } else if (partial.kind === "ask_clarification") {
             copy[placeholderIndex] = {
               role: "questions",
               questions: (partial as any).questions || [],
               reason: (partial as any).reason || "",
+              agentSuggestions: (partial as any).suggestions,
             };
           } else if (partial.kind === "ask_model_choice") {
             const rec = (partial as any).recommended_model_id;
@@ -421,6 +444,7 @@ function DirectorChatInner() {
           resp = await streamDirectorAgent(history, mergedAttachments, handlePartial, undefined, {
             idleTimeoutMs: 30_000,
             totalTimeoutMs: 120_000,
+            onPhase: (p) => setPhase(p),
           });
           lastErr = null;
           break;
@@ -443,11 +467,16 @@ function DirectorChatInner() {
       let title: string | null = null;
 
       if (resp.kind === "generate_prompt") {
-        added = { role: "result", data: resp };
+        added = { role: "result", data: resp, nextSuggestions: resp.next_suggestions };
         finalPrompt = resp.prompt;
         title = resp.title;
       } else if (resp.kind === "ask_clarification") {
-        added = { role: "questions", questions: resp.questions, reason: resp.reason };
+        added = {
+          role: "questions",
+          questions: resp.questions,
+          reason: resp.reason,
+          agentSuggestions: resp.suggestions,
+        };
       } else if (resp.kind === "ask_model_choice") {
         added = {
           role: "model_choice",
@@ -993,6 +1022,7 @@ function DirectorChatInner() {
                   onAttach={setAttachments}
                   onContinue={(formatted) => void send(formatted)}
                   onSkip={() => void send("Skip")}
+                  agentSuggestions={b.agentSuggestions}
                 />
               );
             }
@@ -1156,8 +1186,12 @@ function DirectorChatInner() {
           })}
           {busy && (
             <TypingIndicator
-              captions={typingCaptions}
-              state={attachments.length > 0 ? "scanning" : "thinking"}
+              phase={phase}
+              state={
+                phase === "analyzing_image" || phase === "decomposing_scene"
+                  ? "scanning"
+                  : "thinking"
+              }
             />
           )}
           {!busy && lastBubble?.role === "questions" && (
@@ -1186,6 +1220,15 @@ function DirectorChatInner() {
           onSend={send}
           busy={busy}
           showHelper={isEmpty && attachments.length === 0}
+          quickReplies={(() => {
+            if (busy) return undefined;
+            const last = bubbles[bubbles.length - 1];
+            if (last?.role === "result" && last.nextSuggestions?.length) {
+              return last.nextSuggestions;
+            }
+            return undefined;
+          })()}
+          onQuickReply={(chip) => void send(chip)}
         />
       </div>
 

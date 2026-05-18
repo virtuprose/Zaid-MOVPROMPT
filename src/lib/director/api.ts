@@ -20,8 +20,19 @@ export type Breakdown = {
   recommendation_reason?: string;
 };
 
+export type AgentSuggestion = {
+  question_index: number;
+  chips: string[];
+  allow_other?: boolean;
+};
+
 export type AgentResponse =
-  | { kind: "ask_clarification"; questions: string[]; reason: string }
+  | {
+      kind: "ask_clarification";
+      questions: string[];
+      reason: string;
+      suggestions?: AgentSuggestion[];
+    }
   | {
       kind: "ask_model_choice";
       recommended_model_id: string;
@@ -34,6 +45,7 @@ export type AgentResponse =
       prompt: string;
       breakdown: Breakdown;
       directors_note?: string;
+      next_suggestions?: string[];
     }
   | {
       kind: "request_video_generation";
@@ -41,6 +53,13 @@ export type AgentResponse =
       provider_preference?: "seedance" | "veo" | "kling" | "any";
     }
   | { kind: "message"; content: string };
+
+export type DirectorPhase =
+  | "thinking"
+  | "analyzing_image"
+  | "decomposing_scene"
+  | "choosing_model"
+  | "writing_prompt";
 
 const ENDPOINT = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/director-agent`;
 
@@ -88,6 +107,8 @@ export type StreamOptions = {
   idleTimeoutMs?: number;
   /** Abort the whole request after this many ms. Default 120s. */
   totalTimeoutMs?: number;
+  /** Called when the director enters a new phase (drives the typing indicator). */
+  onPhase?: (phase: DirectorPhase) => void;
 };
 
 export async function streamDirectorAgent(
@@ -99,6 +120,28 @@ export async function streamDirectorAgent(
 ): Promise<AgentResponse> {
   const idleTimeoutMs = options.idleTimeoutMs ?? 30_000;
   const totalTimeoutMs = options.totalTimeoutMs ?? 120_000;
+  const onPhase = options.onPhase;
+
+  // Initial phase — analyzing image if any visual attachment is present.
+  const hasVisual = attachments.some(
+    (a) => a.kind === "image" || a.kind === "video_keyframes",
+  );
+  let currentPhase: DirectorPhase = hasVisual ? "analyzing_image" : "thinking";
+  const emitPhase = (next: DirectorPhase) => {
+    if (next === currentPhase) return;
+    currentPhase = next;
+    try {
+      onPhase?.(next);
+    } catch {
+      /* ignore */
+    }
+  };
+  // Emit the initial phase so the UI doesn't stay on the default.
+  try {
+    onPhase?.(currentPhase);
+  } catch {
+    /* ignore */
+  }
 
   const controller = new AbortController();
   let timedOut: "idle" | "total" | null = null;
@@ -237,9 +280,22 @@ export async function streamDirectorAgent(
           if (!delta) continue;
           if (delta.tool_calls?.[0]) {
             const tc = delta.tool_calls[0];
-            if (tc.function?.name) toolName = tc.function.name;
+            if (tc.function?.name) {
+              toolName = tc.function.name;
+              // Map tool name → phase
+              if (toolName === "ask_model_choice") emitPhase("choosing_model");
+              else if (toolName === "generate_prompt") emitPhase("writing_prompt");
+              else if (toolName === "ask_clarification") emitPhase("thinking");
+            }
             if (tc.function?.arguments) {
               toolArgs += tc.function.arguments;
+              // Heuristic: scene decomposition keywords inside streamed args.
+              if (
+                toolName === "generate_prompt" &&
+                /foreground|midground|background|key light|lighting/i.test(toolArgs)
+              ) {
+                emitPhase("decomposing_scene");
+              }
               tryEmitPartial();
             }
           } else if (delta.content) {

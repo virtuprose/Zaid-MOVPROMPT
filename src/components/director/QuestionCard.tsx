@@ -13,6 +13,12 @@ import type { Attachment } from "@/lib/director/ingest";
 const DURATION_RE = /(duration|length|how long|seconds|how many seconds|how long should)/i;
 const DURATION_PRESETS = ["10s", "15s", "30s", "45s", "Other"];
 
+type AgentSuggestion = {
+  question_index: number;
+  chips: string[];
+  allow_other?: boolean;
+};
+
 type Props = {
   reason: string;
   questions: string[];
@@ -21,9 +27,11 @@ type Props = {
   onAttach?: (next: Attachment[]) => void;
   onContinue: (formatted: string) => void;
   onSkip: () => void;
+  /** Optional chips supplied by the Director (preferred over heuristic). */
+  agentSuggestions?: AgentSuggestion[];
 };
 
-export function QuestionCard({ reason, questions, disabled, attachments = [], onAttach, onContinue, onSkip }: Props) {
+export function QuestionCard({ reason, questions, disabled, attachments = [], onAttach, onContinue, onSkip, agentSuggestions }: Props) {
   const [answers, setAnswers] = useState<string[]>(() => questions.map(() => ""));
   const [otherOpen, setOtherOpen] = useState<Record<number, boolean>>({});
   const [slotCounts, setSlotCounts] = useState<Record<number, number>>({});
@@ -39,9 +47,17 @@ export function QuestionCard({ reason, questions, disabled, attachments = [], on
       questions.map((q, i) => {
         if (mediaAsks[i]) return null;
         if (DURATION_RE.test(q)) return null;
+        const fromAgent = agentSuggestions?.find((s) => s.question_index === i);
+        if (fromAgent && fromAgent.chips?.length) {
+          return {
+            category: "agent" as const,
+            example: "Pick one or more, or type your own",
+            chips: fromAgent.chips,
+          };
+        }
         return detectSuggestion(q);
       }),
-    [questions, mediaAsks],
+    [questions, mediaAsks, agentSuggestions],
   );
 
   useEffect(() => {

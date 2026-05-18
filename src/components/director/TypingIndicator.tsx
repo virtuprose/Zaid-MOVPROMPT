@@ -1,21 +1,66 @@
-import { useEffect, useState } from "react";
-import { AssistantAvatar } from "./AssistantAvatar";
+import { useEffect, useMemo, useState } from "react";
+import { AssistantAvatar, type AvatarState } from "./AssistantAvatar";
+
+export type IndicatorPhase =
+  | "thinking"
+  | "analyzing_image"
+  | "decomposing_scene"
+  | "choosing_model"
+  | "writing_prompt";
 
 type Props = {
   captions?: string[];
   state?: "thinking" | "scanning";
+  phase?: IndicatorPhase;
 };
 
-const DEFAULTS = [
-  "Thinking about the shot…",
-  "Sketching the prompt…",
-  "Framing it up…",
-  "Almost there…",
-];
+const PHASE_CAPTIONS: Record<IndicatorPhase, string[]> = {
+  thinking: ["Working the brief…", "Calling the shot…", "Sketching the angle…"],
+  analyzing_image: [
+    "Reading the frame…",
+    "Catching the light…",
+    "Logging the mise-en-scène…",
+    "Pulling the palette…",
+  ],
+  decomposing_scene: [
+    "Blocking foreground…",
+    "Placing midground…",
+    "Setting the key light…",
+    "Marking the move…",
+  ],
+  choosing_model: ["Matching the right engine…", "Weighing the lenses on offer…"],
+  writing_prompt: [
+    "Locking the lens…",
+    "Calling the shot…",
+    "Dialing the grade…",
+    "Final polish…",
+  ],
+};
 
-export function TypingIndicator({ captions, state = "thinking" }: Props) {
-  const list = captions && captions.length ? captions : DEFAULTS;
+const PHASE_AVATAR: Record<IndicatorPhase, AvatarState> = {
+  thinking: "thinking",
+  analyzing_image: "scanning",
+  decomposing_scene: "scanning",
+  choosing_model: "thinking",
+  writing_prompt: "thinking",
+};
+
+export function TypingIndicator({ captions, state, phase }: Props) {
+  const list = useMemo(() => {
+    if (captions && captions.length) return captions;
+    if (phase) return PHASE_CAPTIONS[phase];
+    return PHASE_CAPTIONS.thinking;
+  }, [captions, phase]);
+
+  const avatarState: AvatarState =
+    state ?? (phase ? PHASE_AVATAR[phase] : "thinking");
+
   const [i, setI] = useState(0);
+  // Reset rotation when the phase changes so the first phase-specific caption shows immediately.
+  useEffect(() => {
+    setI(0);
+  }, [phase, list]);
+
   const prefersReduced =
     typeof window !== "undefined" &&
     window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
@@ -28,11 +73,11 @@ export function TypingIndicator({ captions, state = "thinking" }: Props) {
 
   return (
     <div className="flex items-end gap-2 motion-safe:animate-fade-up" aria-live="polite">
-      <AssistantAvatar size="sm" state={state} />
+      <AssistantAvatar size="sm" state={avatarState} />
       <div className="flex flex-col gap-1">
         <div className="inline-flex items-center gap-1.5 rounded-2xl border border-border/40 bg-muted/30 px-3 py-2">
           {prefersReduced ? (
-            <span className="text-xs text-muted-foreground">Director is typing…</span>
+            <span className="text-xs text-muted-foreground">Director is working…</span>
           ) : (
             <>
               <Dot delay="0ms" />
