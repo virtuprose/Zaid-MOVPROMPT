@@ -156,12 +156,6 @@ export function BrandKitSheet({
                 active={draft.subject === "product"}
                 onClick={() => update("subject", "product" as Subject)}
               />
-              <SegBtn
-                icon={<Smartphone className="w-4 h-4" />}
-                label="App"
-                active={draft.subject === "app"}
-                onClick={() => update("subject", "app" as Subject)}
-              />
             </Segmented>
           </div>
 
