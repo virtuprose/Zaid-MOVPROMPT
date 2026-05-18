@@ -422,12 +422,19 @@ const TOOLS = [
             minimum: 1,
             maximum: 9,
             description:
-              "Only for storyboard_panels regeneration of ONE panel. When set, the single per_shot_prompts entry is treated as the new beat for that panel index (1..9). Other panels are untouched. Always pair with the character image in reference_urls.",
+              "Only for storyboard_panels regeneration of ONE panel. When set, the single per_shot_prompts entry is treated as the new beat for that panel index (1..9). Other panels are untouched. Always pair with the anchor image in reference_urls.",
+          },
+          lock_mode: {
+            type: "string",
+            enum: ["character", "scene", "auto"],
+            description:
+              "How to lock generations to the attached reference. 'character' (default when ref is a character sheet) preserves face/hair/outfit. 'scene' (use for key-frame extensions: product shots, landscapes, establishing frames) preserves location, lighting, lens, and composition. 'auto' defers to the default (character lock when ref present).",
           },
           directors_note: {
             type: "string",
             description: "Short note shown to the user explaining why you generated these.",
           },
+
         },
         required: ["mode", "prompt"],
         additionalProperties: false,
