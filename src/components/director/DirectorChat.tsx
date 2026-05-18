@@ -981,13 +981,17 @@ function DirectorChatInner() {
               // ModelChoiceCard before this result bubble — that's what the
               // primary "Generate" button should target.
               let pickedModelId: string | undefined;
+              let pickedSpec: import("@/lib/director/api").LockedSpec | undefined;
               for (let k = i - 1; k >= 0; k -= 1) {
                 const prev = bubbles[k];
-                if (prev.role === "model_choice" && (prev as any).chosen) {
-                  pickedModelId = (prev as any).chosen as string;
-                  break;
+                if (prev.role === "model_choice") {
+                  if ((prev as any).chosen) pickedModelId = (prev as any).chosen as string;
+                  if (!pickedSpec) pickedSpec = (prev as any).lockedSpec;
+                  if (pickedModelId) break;
                 }
               }
+              const resolvedSpec =
+                (b.data as any).locked_spec ?? pickedSpec ?? undefined;
               return (
                 <div key={i} className="relative">
                   {b.partial && (
@@ -1014,6 +1018,7 @@ function DirectorChatInner() {
                     referenceImageUrls={referenceImageUrls}
                     referenceImageSlots={referenceImageSlots}
                     preferredModelId={pickedModelId}
+                    lockedSpec={resolvedSpec}
                   />
                 </div>
               );
