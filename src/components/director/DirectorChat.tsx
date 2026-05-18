@@ -96,6 +96,7 @@ function DirectorChatInner() {
   const [input, setInput] = useState("");
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [busy, setBusy] = useState(false);
+  const [phase, setPhase] = useState<DirectorPhase>("thinking");
   const [resetOpen, setResetOpen] = useState(false);
   const sessionIdRef = useRef<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
