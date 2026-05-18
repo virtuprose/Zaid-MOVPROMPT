@@ -30,6 +30,7 @@ Rules:
 - 2 to 4 sentences, present tense, plain prose. No lists, no headings, no emojis.
 - Beat-by-beat: open with a strong attention grabber, deliver the Format style in the Location, end on a confident product hero frame.
 - If a product is given, name it explicitly. If an avatar/character is given, refer to them by their name and treat them as the on-camera person.
+- Treat Format and Setting as LOCKED structure — never override their framing, category or core beat. If an "Additional direction" note is provided, treat it as an adaptation layer that adjusts tone, mood, palette or small details on top of the preset.
 - Don't write marketing taglines. Write what the camera sees and what the person does.
 - Stay under 90 words. Output only the scene text — no preamble, no quotes.`;
 
@@ -40,6 +41,7 @@ type Brief = {
   brand?: { name?: string; description?: string; tagline?: string; audience?: string } | null;
   character?: { name?: string; role?: string; description?: string } | null;
   location?: { place?: string; hasImage?: boolean } | null;
+  userNote?: string;
 };
 
 function buildUserContent(b: Brief): string {
