@@ -337,14 +337,31 @@ function DirectorChatInner() {
           }
         } else if (b.role === "result") {
           const br: any = b.data.breakdown || {};
+          const ls: any = (b.data as any).locked_spec || {};
+          const lockedLine =
+            ls && Object.keys(ls).length
+              ? `Locked spec: ${[
+                  ls.duration_seconds ? `${ls.duration_seconds}s` : null,
+                  ls.aspect_ratio,
+                  ls.resolution,
+                  ls.audio,
+                  ls.style,
+                  ls.input_mode,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}\n`
+              : "";
           const summary =
             `[Previously generated prompt — "${b.data.title || "Untitled"}"]\n` +
             `Prompt: ${b.data.prompt}\n` +
+            lockedLine +
             (br.recommended_model_id ? `Target model: ${br.recommended_model_id}\n` : "") +
             (br.subject ? `Subject: ${br.subject}\n` : "") +
             (br.camera ? `Camera: ${br.camera}\n` : "") +
             (br.lighting ? `Lighting: ${br.lighting}\n` : "") +
             (br.mood ? `Mood: ${br.mood}\n` : "") +
+            (br.film_emulation ? `Film emulation: ${br.film_emulation}\n` : "") +
+            (br.color_palette ? `Color palette: ${br.color_palette}\n` : "") +
             (br.negative_prompt ? `Negative: ${br.negative_prompt}` : "");
           history.push({ role: "assistant", content: summary.trim() });
         } else if (b.role === "questions") {
