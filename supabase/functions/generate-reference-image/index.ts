@@ -135,8 +135,18 @@ serve(async (req) => {
       : [];
     const aspect = body.aspect_ratio || (mode === "character_sheet" ? "1:1" : "16:9");
 
-    const hasCharacterRef = referenceUrls.length > 0;
-    const lockPrefix = hasCharacterRef ? `${IDENTITY_LOCK} ` : "";
+    const hasReference = referenceUrls.length > 0;
+    const lockMode: LockMode = body.lock_mode || "auto";
+    const effectiveLock: "character" | "scene" | "none" = !hasReference
+      ? "none"
+      : lockMode === "scene"
+        ? "scene"
+        : lockMode === "character"
+          ? "character"
+          : "character"; // auto with ref defaults to character (backwards compatible)
+    const lockPhrase =
+      effectiveLock === "character" ? IDENTITY_LOCK : effectiveLock === "scene" ? SCENE_LOCK : "";
+    const lockPrefix = lockPhrase ? `${lockPhrase} ` : "";
 
     // shot_index lets the caller regenerate a single panel inside an existing
     // 3x3 grid without touching the other 8 cells. We still keep mode="storyboard_panels"
@@ -174,9 +184,14 @@ serve(async (req) => {
       shotIndices = [];
     } else {
       const count = Math.min(Math.max(body.count || 1, 1), 9);
-      prompts = Array.from({ length: count }, () => `${lockPrefix}${basePrompt}`);
+      // Without a reference image, treat single_panel as a hero/key frame and
+      // append a polish suffix so the model treats it as a finished still
+      // rather than a draft.
+      const suffix = !hasReference ? HERO_FRAME_SUFFIX : "";
+      prompts = Array.from({ length: count }, () => `${lockPrefix}${basePrompt}${suffix}`);
       shotIndices = [];
     }
+
 
     const out: Array<{ url: string; storage_path: string; shot_index?: number }> = [];
     // Sequential to stay polite with gateway rate limits — and because per-image
