@@ -311,6 +311,7 @@ function DirectorChatInner() {
     setBubbles(next);
     setInput("");
     setBusy(true);
+    setPhase(mergedAttachmentsHasVisualEarly() ? "analyzing_image" : "thinking");
     setAvatarPulse("nod");
     window.setTimeout(() => setAvatarPulse("idle"), 650);
     idleNudgedRef.current = true;
