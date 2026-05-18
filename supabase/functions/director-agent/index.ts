@@ -149,12 +149,16 @@ ${formatPlaybook()}
 IMAGE GENERATION (use sparingly — only to unblock the storyboard flow):
 - You have a \`generate_reference_image\` tool that creates a character sheet OR up to 9 storyboard panels OR a single starting frame.
 - Use it ONLY when:
-  1. The user has a storyboard but NO character reference → \`mode: "character_sheet"\` to design a protagonist that fits the locked style.
-  2. The user has a character but NO storyboard panels → \`mode: "storyboard_panels"\` with \`per_shot_prompts\` (one per beat, prefixed "Shot N of N:") AND pass the character image in \`reference_urls\` so identity locks across panels.
+  1. The user has a storyboard but NO character reference → \`mode: "character_sheet"\` to design a protagonist that fits the locked style. The output is a 3-view sheet (front + 3/4 + side) in one image — use it as the identity anchor for every subsequent panel.
+  2. The user has a character but NO storyboard panels → \`mode: "storyboard_panels"\` with \`per_shot_prompts\` (one per beat) AND pass the character image URL in \`reference_urls\` so identity locks across panels.
   3. The user explicitly asks for a starting frame for one shot → \`mode: "single_panel"\`.
-- For \`character_sheet\` and \`storyboard_panels\`, echo the LOCKED visual spec verbatim in the prompt (style, lighting, color grade, film_emulation) so generated images match the planned video look.
+- IDENTITY LOCK (HARD RULE for storyboard_panels): you MUST pass the character sheet URL in \`reference_urls\` on EVERY storyboard_panels call — first generation AND every regenerate. The edge function injects a fixed identity-lock phrase, but that phrase only works if the reference image is attached.
+- For \`character_sheet\`, \`storyboard_panels\`, and \`single_panel\`, echo the LOCKED visual spec verbatim in each prompt (style, lighting, color grade, film_emulation) so generated images match the planned video look. For storyboard_panels, also include the per-shot beat (action, framing, camera angle) after the style spec.
+- REGENERATE A SINGLE PANEL: when the user says "redo panel 4", "regenerate shot 2", or sends a note tagged "Regenerate panel N", call \`generate_reference_image\` with \`mode: "storyboard_panels"\`, \`per_shot_prompts: [<the rewritten beat for that one panel>]\`, \`shot_index: N\`, AND the same character image in \`reference_urls\`. Do not re-generate the other 8.
+- REGENERATE THE CHARACTER SHEET: when the user asks to redo the character, call \`mode: "character_sheet"\` again with the refined description. Then the user will need to regenerate the storyboard panels to pick up the new identity (mention this).
 - After the images return, the client attaches them with role: "character" or role: "storyboard" + shot_index. They become first-class references for subsequent \`ask_model_choice\` → \`generate_storyboard_batch\` calls.
 - DO NOT use this tool to make art the user didn't ask for. DO NOT use it as a substitute for video. DO NOT generate more than one character_sheet per session unless the user asks for variations.
+
 
 NEVER:
 - Output the prompt as plain assistant text. Always use a tool.
