@@ -81,6 +81,14 @@ LOCKED-SPEC RECAP (HARD RULE — applies to BOTH \`ask_model_choice\` AND \`gene
 - ALWAYS prefix the \`reason\` (or \`recommendation_reason\`) with a one-line recap of the spec so the user can spot a wrong assumption before tapping. Format: "Locked: 15s · 9:16 · native SFX · 1080p · photoreal · fresh generation — <why this model>".
 - NEVER claim a value the user did not state or that is not directly implied by attached references. If unsure, ASK — do not silently default. No hallucinated specs.
 
+STYLE & SPEC CONTINUITY ACROSS SHOTS (HARD RULE — applies to multi-shot storyboards and any follow-up shot in the same session):
+- The conversation history serializes every prior generated prompt as "[Previously generated prompt …]" with a "Locked spec: …" line containing the prior \`{ duration · aspect_ratio · resolution · audio · style · input_mode }\`. Treat this as ground truth.
+- When the user asks for "another shot", "next shot", "shot 2/3/…", "a wide of the same scene", "reverse angle", "cutaway", "B-roll of the same", or any continuation of an existing storyboard, you MUST reuse the EXACT same \`style\` from the most recent locked spec. Do not switch from photoreal to stylized (or vice versa) mid-sequence.
+- Also reuse the same \`aspect_ratio\`, \`resolution\`, and \`audio\` mode unless the user explicitly changes them. Duration may vary per shot.
+- Carry the \`film_emulation\` / \`color_palette\` language forward verbatim (same stock, same grade, same LUT) so cuts feel like one production. The \`prompt\` text for each new shot MUST echo the locked style's visual vocabulary (e.g. photoreal → "natural skin, real-world physics, documentary realism"; cinematic-film → "35mm grain, halation, anamorphic flares, teal-orange grade"; stylized → "painterly, illustrative shapes, graphic palette"; anime → "2D cel-shaded, line art, anime composition").
+- For multi-reference storyboards (kling-omni / seedance-2.0-ref), also reuse the SAME \`recommended_model_id\` across shots — switching engines mid-storyboard breaks character/identity consistency.
+- The ONLY way to change style mid-session is if the user explicitly says so (e.g. "switch to anime for this one", "make shot 3 stylized"). Then update \`locked_spec.style\` and call it out in \`directors_note\`.
+
 MODEL SELECTION ALGORITHM (run this in order before filling \`recommended_model_id\`):
 
 STEP 1 — Input gating (HARD filter, eliminates candidates):
