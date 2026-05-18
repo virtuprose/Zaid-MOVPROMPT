@@ -527,14 +527,21 @@ export type StudioBrief = {
   customFormat?: string;
   /** Free-text scene description used when no preset is picked. */
   customSetting?: string;
+  /** Single brand (legacy). Prefer `brands`. */
   brand?: BrandContext;
+  /** Ordered list of attached brands/products (first = hero). */
+  brands?: BrandContext[];
   location?: LocationContext;
+  /** Single character (legacy). Prefer `characters`. */
   character?: CharacterContext;
+  /** Ordered list of on-camera people (first = lead). */
+  characters?: CharacterContext[];
   /**
    * Ordered list of reference-image slots actually present in the render
    * payload. Must match the order of `reference_image_urls` sent to the
-   * generate-video function. Used to inject @Image1, @Image2, … tags so
-   * Seedance 2.0 reference-to-video binds each subject to the right ref.
+   * generate-video function. Used to inject @ImageN tags so Seedance 2.0
+   * binds each subject to the right ref. Multiple `brand`/`character`
+   * entries are supported and matched by occurrence index.
    */
   imageRefs?: Array<"brand" | "character" | "location">;
   /** Free-text adaptation layer — preset stays the locked structure, this tweaks tone/details. */
@@ -544,16 +551,28 @@ export type StudioBrief = {
 const find = (list: StudioPreset[], id?: string) =>
   id ? list.find((p) => p.id === id) : undefined;
 
-function refTag(refs: StudioBrief["imageRefs"], slot: "brand" | "character" | "location"): string | null {
+function refTagAt(
+  refs: StudioBrief["imageRefs"],
+  slot: "brand" | "character" | "location",
+  occurrence = 0,
+): string | null {
   if (!refs) return null;
-  const idx = refs.indexOf(slot);
-  return idx >= 0 ? `@Image${idx + 1}` : null;
+  let seen = -1;
+  for (let i = 0; i < refs.length; i++) {
+    if (refs[i] === slot) {
+      seen++;
+      if (seen === occurrence) return `@Image${i + 1}`;
+    }
+  }
+  return null;
 }
 
-function brandLine(b?: BrandContext, refs?: StudioBrief["imageRefs"]): string | null {
+function brandLineAt(b: BrandContext, refs: StudioBrief["imageRefs"], occurrence: number, role: "hero" | "supporting" | "only"): string | null {
   if (!b || !b.name) return null;
-  const tag = refTag(refs, "brand");
-  const bits = [`Brand: ${b.name}`];
+  const tag = refTagAt(refs, "brand", occurrence);
+  const labelPrefix =
+    role === "hero" ? "Hero product" : role === "supporting" ? "Supporting product (share the frame, do not steal focus)" : "Product";
+  const bits = [`${labelPrefix}: ${b.name}`];
   if (b.description) bits.push(b.description);
   if (b.tagline) bits.push(`Tagline: "${b.tagline}"`);
   if (b.audience) bits.push(`Audience: ${b.audience}`);
@@ -564,7 +583,7 @@ function brandLine(b?: BrandContext, refs?: StudioBrief["imageRefs"]): string | 
 
 function locationLine(l?: LocationContext, refs?: StudioBrief["imageRefs"]): string | null {
   if (!l || (!l.place && !l.hasImage)) return null;
-  const tag = refTag(refs, "location");
+  const tag = refTagAt(refs, "location", 0);
   const parts: string[] = [];
   if (l.place) parts.push(`Location: ${l.place} — match the city's architecture, light and cultural styling`);
   if (l.hasImage) {
@@ -577,10 +596,11 @@ function locationLine(l?: LocationContext, refs?: StudioBrief["imageRefs"]): str
   return parts.join(". ");
 }
 
-function characterLine(c?: CharacterContext, refs?: StudioBrief["imageRefs"]): string | null {
+function characterLineAt(c: CharacterContext, refs: StudioBrief["imageRefs"], occurrence: number, role: "lead" | "supporting" | "only"): string | null {
   if (!c || !c.name) return null;
-  const tag = refTag(refs, "character");
-  const bits = [`Character: ${c.name}`];
+  const tag = refTagAt(refs, "character", occurrence);
+  const labelPrefix = role === "lead" ? "Lead on-camera" : role === "supporting" ? "Also on-camera (shares the frame, lead leads the action)" : "On-camera";
+  const bits = [`${labelPrefix}: ${c.name}`];
   if (c.role) bits.push(`Role: ${c.role}`);
   if (c.description) bits.push(c.description);
   if (c.hasImage) {
@@ -601,11 +621,35 @@ export function composeStudioPrompt(brief: StudioBrief): string {
       ? "Subject: a mobile app — feature its UI prominently on a phone screen held by the presenter."
       : "Subject: a physical product — feature it cleanly in-hand or on a hero surface.";
 
+  const brands = brief.brands && brief.brands.length > 0
+    ? brief.brands
+    : brief.brand ? [brief.brand] : [];
+  const characters = brief.characters && brief.characters.length > 0
+    ? brief.characters
+    : brief.character ? [brief.character] : [];
+
+  const brandLines = brands.map((b, i) =>
+    brandLineAt(
+      b,
+      brief.imageRefs,
+      i,
+      brands.length === 1 ? "only" : i === 0 ? "hero" : "supporting",
+    ),
+  );
+  const characterLines = characters.map((c, i) =>
+    characterLineAt(
+      c,
+      brief.imageRefs,
+      i,
+      characters.length === 1 ? "only" : i === 0 ? "lead" : "supporting",
+    ),
+  );
+
   const parts = [
     "Cinematic 9:16 social ad, 5 seconds, native audio.",
     subjectLine,
-    brandLine(brief.brand, brief.imageRefs),
-    characterLine(brief.character, brief.imageRefs),
+    ...brandLines,
+    ...characterLines,
     format?.fragment ?? (brief.customFormat?.trim() ? `Format: ${brief.customFormat.trim()}` : null),
     setting?.fragment ?? (brief.customSetting?.trim() ? `Setting: ${brief.customSetting.trim()}` : null),
     locationLine(brief.location, brief.imageRefs),
@@ -618,4 +662,5 @@ export function composeStudioPrompt(brief: StudioBrief): string {
 
   return parts.join("\n");
 }
+
 
