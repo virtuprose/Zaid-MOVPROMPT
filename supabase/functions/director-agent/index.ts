@@ -297,13 +297,14 @@ const TOOLS = [
           },
           locked_spec: {
             type: "object",
-            description: "The 5 routing axes you've committed to. NEVER guess — only include values explicitly stated or strongly implied. Mirror the same values you would have sent on ask_model_choice.",
+            description: "The 6 routing axes you've committed to. NEVER guess — only include values explicitly stated or strongly implied. Mirror the same values you would have sent on ask_model_choice.",
             properties: {
               input_mode: { type: "string", enum: ["text-to-video", "image-to-video", "video-edit", "motion-control", "multi-reference"] },
               duration_seconds: { type: "number" },
               aspect_ratio: { type: "string" },
               audio: { type: "string", enum: ["silent", "sfx", "music", "dialogue", "full"] },
               resolution: { type: "string", enum: ["720p", "1080p", "4k"] },
+              style: { type: "string", enum: ["photoreal", "cinematic-film", "stylized", "anime"] },
             },
             additionalProperties: false,
           },
