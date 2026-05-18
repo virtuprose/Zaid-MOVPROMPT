@@ -617,56 +617,67 @@ export function PromptResultCard({ title, prompt, breakdown, directorsNote, onRe
           >
             <BookmarkPlus className="w-4 h-4" /> {saved ? "Saved" : "Save to library"}
           </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                size="sm"
-                disabled={generating || (!!job && job.status !== "completed" && job.status !== "failed")}
-                className="gap-1.5 bg-primary/15 text-primary border border-primary/30 hover:bg-primary/25"
-              >
-                {generating ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Film className="w-4 h-4" />
-                )}
-                Generate video
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="max-h-[420px] overflow-y-auto w-72">
-              <DropdownMenuLabel className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                Top picks
-              </DropdownMenuLabel>
-              {topPicks.map((m, idx) => (
-                <DropdownMenuItem key={`top-${m.id}`} onClick={() => openOptionsFor(m.id)}>
-                  <span className="truncate">{m.label}</span>
-                  <span className="ml-auto text-[10px] text-muted-foreground shrink-0">
-                    {idx === 0 ? "Best fit" : `Alt #${idx}`}
-                  </span>
-                </DropdownMenuItem>
-              ))}
-              {resolved.reasons.length > 0 && (
-                <div className="px-2 py-1 text-[10px] text-muted-foreground/80 leading-relaxed">
-                  {resolved.reasons.slice(0, 3).join(" · ")}
-                </div>
+          <div className="inline-flex items-stretch rounded-md border border-primary/30 bg-primary/15 overflow-hidden">
+            <Button
+              size="sm"
+              onClick={() => openOptionsFor(preferredModel.id)}
+              disabled={generating || (!!job && job.status !== "completed" && job.status !== "failed")}
+              className="gap-1.5 rounded-none bg-transparent text-primary hover:bg-primary/25 border-0 shadow-none"
+            >
+              {generating ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Film className="w-4 h-4" />
               )}
-              {VIDEO_MODEL_GROUPS.map((group) => (
-                <div key={group.label}>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuLabel className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                    {group.label}
-                  </DropdownMenuLabel>
-                  {group.models.filter(allowModel).map((m) => (
-                    <DropdownMenuItem key={m.id} onClick={() => openOptionsFor(m.id)}>
-                      <span className="truncate">{m.label}</span>
-                      {m.note && (
-                        <span className="ml-auto text-[10px] text-muted-foreground shrink-0">{m.note}</span>
-                      )}
-                    </DropdownMenuItem>
-                  ))}
-                </div>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+              Generate with {preferredModel.label}
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  size="sm"
+                  aria-label="Change model"
+                  disabled={generating || (!!job && job.status !== "completed" && job.status !== "failed")}
+                  className="rounded-none bg-transparent text-primary hover:bg-primary/25 border-0 border-l border-primary/30 px-2 shadow-none"
+                >
+                  <ChevronDown className="w-4 h-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="max-h-[420px] overflow-y-auto w-72">
+                <DropdownMenuLabel className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                  Top picks
+                </DropdownMenuLabel>
+                {topPicks.map((m, idx) => (
+                  <DropdownMenuItem key={`top-${m.id}`} onClick={() => openOptionsFor(m.id)}>
+                    <span className="truncate">{m.label}</span>
+                    <span className="ml-auto text-[10px] text-muted-foreground shrink-0">
+                      {idx === 0 ? "Best fit" : `Alt #${idx}`}
+                    </span>
+                  </DropdownMenuItem>
+                ))}
+                {resolved.reasons.length > 0 && (
+                  <div className="px-2 py-1 text-[10px] text-muted-foreground/80 leading-relaxed">
+                    {resolved.reasons.slice(0, 3).join(" · ")}
+                  </div>
+                )}
+                {VIDEO_MODEL_GROUPS.map((group) => (
+                  <div key={group.label}>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuLabel className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                      {group.label}
+                    </DropdownMenuLabel>
+                    {group.models.filter(allowModel).map((m) => (
+                      <DropdownMenuItem key={m.id} onClick={() => openOptionsFor(m.id)}>
+                        <span className="truncate">{m.label}</span>
+                        {m.note && (
+                          <span className="ml-auto text-[10px] text-muted-foreground shrink-0">{m.note}</span>
+                        )}
+                      </DropdownMenuItem>
+                    ))}
+                  </div>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       </div>
 
