@@ -428,18 +428,74 @@ export function Composer({
           )}
 
           <div className="flex items-center justify-between px-2 pb-2">
-            <Button
-              type="button"
-              size="icon"
-              variant="ghost"
-              onClick={() => inputRef.current?.click()}
-              disabled={busy || ingesting}
-              aria-label="Attach files"
-              className="h-9 w-9 rounded-full text-muted-foreground hover:text-foreground"
-            >
-              {ingesting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Paperclip className="w-4 h-4" />}
-            </Button>
+            <div className="flex items-center gap-1">
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                onClick={() => inputRef.current?.click()}
+                disabled={busy || ingesting || recording || transcribing}
+                aria-label="Attach files"
+                className="h-9 w-9 rounded-full text-muted-foreground hover:text-foreground"
+              >
+                {ingesting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Paperclip className="w-4 h-4" />}
+              </Button>
 
+              {voice.supported && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => {
+                        if (transcribing) return;
+                        if (recording) void voice.stop();
+                        else void voice.start();
+                      }}
+                      disabled={busy || ingesting}
+                      aria-label={recording ? "Stop recording" : "Record voice brief"}
+                      aria-pressed={recording}
+                      className={cn(
+                        "relative h-9 w-9 rounded-full text-muted-foreground hover:text-foreground transition-colors",
+                        recording && "text-destructive hover:text-destructive",
+                      )}
+                    >
+                      {transcribing ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : recording ? (
+                        <Square className="w-3.5 h-3.5 fill-current" />
+                      ) : (
+                        <Mic className="w-4 h-4" />
+                      )}
+                      {recording && (
+                        <span
+                          className="pointer-events-none absolute inset-0 rounded-full ring-2 ring-destructive/60 motion-safe:animate-ping"
+                          style={{ opacity: 0.3 + Math.min(0.7, voice.level) }}
+                          aria-hidden
+                        />
+                      )}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top">
+                    {transcribing
+                      ? "Transcribing…"
+                      : recording
+                        ? "Stop & transcribe"
+                        : "Record a voice brief"}
+                  </TooltipContent>
+                </Tooltip>
+              )}
+
+              {recording && (
+                <span className="ml-1 text-[11px] text-destructive font-medium tabular-nums">
+                  ● Recording
+                </span>
+              )}
+              {transcribing && (
+                <span className="ml-1 text-[11px] text-muted-foreground">Transcribing…</span>
+              )}
+            </div>
             {(() => {
               const scanning = attachments.some(
                 (a) => (a as any).moderation?.state === "scanning",
