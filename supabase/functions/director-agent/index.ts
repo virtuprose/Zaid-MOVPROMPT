@@ -511,6 +511,151 @@ Rules:
       );
     }
 
+    if (action === "generate_storyboard_batch") {
+      const { locked_spec, model_id, character_ref_urls, panels, brief } = body as {
+        locked_spec?: Record<string, unknown>;
+        model_id?: string;
+        character_ref_urls?: string[];
+        panels?: Array<{ index: number; panel_url: string; hint?: string }>;
+        brief?: string;
+      };
+      if (!locked_spec || !model_id || !Array.isArray(panels) || panels.length === 0) {
+        return new Response(JSON.stringify({ error: "locked_spec, model_id, and panels are required" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (panels.length > 9) {
+        return new Response(JSON.stringify({ error: "Max 9 panels per storyboard batch" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const charRefs = Array.isArray(character_ref_urls) ? character_ref_urls.filter((u) => typeof u === "string" && u.length > 0) : [];
+      const lockedRecap = [
+        (locked_spec as any).duration_seconds ? `${(locked_spec as any).duration_seconds}s` : null,
+        (locked_spec as any).aspect_ratio,
+        (locked_spec as any).resolution,
+        (locked_spec as any).audio,
+        (locked_spec as any).style,
+        (locked_spec as any).input_mode,
+      ].filter(Boolean).join(" · ");
+
+      const sortedPanels = [...panels].sort((a, b) => a.index - b.index);
+      const sys = `You are an AI Director generating a multi-shot storyboard batch.
+
+LOCKED SPEC (apply identically to EVERY shot): ${lockedRecap}
+TARGET MODEL: ${model_id}
+${brief ? `USER BRIEF: ${brief}\n` : ""}
+${charRefs.length > 0 ? `CHARACTER REFERENCE(S): ${charRefs.length} image(s) attached first. Treat as the canonical identity for every shot. Describe the same wardrobe, face, hair, build in EVERY shot's "subject" field — never invent a new look.` : "No persistent character reference — keep visual continuity from the locked style alone."}
+
+You will receive ${sortedPanels.length} storyboard panel image(s) after the character refs, in order (shot 1 → shot ${sortedPanels.length}).
+
+For EACH panel produce one cinematic shot prompt that:
+- Reuses the locked spec verbatim (style, aspect, resolution, audio mode).
+- Names the same character (when applicable) so identity is locked across cuts.
+- Carries forward the same film_emulation / color_palette / look across every shot — same stock, same grade, same lens family, same lighting key.
+- Stays specific to what the panel shows (composition, action, camera angle).
+- Is 50–120 words.
+
+Output via the \`storyboard_shots\` tool ONLY.`;
+
+      const userParts: any[] = [{ type: "text", text: `Generate ${sortedPanels.length} on-model shot prompts. Panels are in reading order. Hints (if any) are creative direction per shot.\n\n${sortedPanels.map((p) => `Shot ${p.index}${p.hint ? ` — hint: ${p.hint}` : ""}`).join("\n")}` }];
+      for (const u of charRefs.slice(0, 4)) userParts.push({ type: "image_url", image_url: { url: u } });
+      for (const p of sortedPanels) userParts.push({ type: "image_url", image_url: { url: p.panel_url } });
+
+      const batchResp = await callGatewayWithRetry(
+        {
+          model: "google/gemini-3.1-pro-preview",
+          messages: [
+            { role: "system", content: sys },
+            { role: "user", content: userParts },
+          ],
+          tools: [
+            {
+              type: "function",
+              function: {
+                name: "storyboard_shots",
+                description: "Return one prompt + breakdown per panel, in order.",
+                parameters: {
+                  type: "object",
+                  properties: {
+                    title: { type: "string", description: "Short title for the whole storyboard." },
+                    shots: {
+                      type: "array",
+                      minItems: 1,
+                      maxItems: 9,
+                      items: {
+                        type: "object",
+                        properties: {
+                          index: { type: "integer", minimum: 1, maximum: 9 },
+                          prompt: { type: "string" },
+                          breakdown: {
+                            type: "object",
+                            properties: {
+                              subject: { type: "string" },
+                              action: { type: "string" },
+                              camera: { type: "string" },
+                              lighting: { type: "string" },
+                              mood: { type: "string" },
+                              color_palette: { type: "string" },
+                              film_emulation: { type: "string" },
+                              negative_prompt: { type: "string" },
+                            },
+                            required: ["subject", "camera", "lighting", "negative_prompt"],
+                            additionalProperties: false,
+                          },
+                        },
+                        required: ["index", "prompt", "breakdown"],
+                        additionalProperties: false,
+                      },
+                    },
+                  },
+                  required: ["title", "shots"],
+                  additionalProperties: false,
+                },
+              },
+            },
+          ],
+          tool_choice: { type: "function", function: { name: "storyboard_shots" } },
+        },
+        LOVABLE_API_KEY,
+      );
+
+      if (!batchResp.ok) {
+        const t = await batchResp.text();
+        console.error("storyboard_batch gateway error", batchResp.status, t);
+        return new Response(JSON.stringify({ error: "Storyboard generation failed" }), {
+          status: 502,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const bData = await batchResp.json();
+      const tc = bData.choices?.[0]?.message?.tool_calls?.[0];
+      let parsed: { title?: string; shots?: any[] } = {};
+      try {
+        parsed = JSON.parse(tc?.function?.arguments || "{}");
+      } catch {
+        parsed = {};
+      }
+      if (!Array.isArray(parsed.shots) || parsed.shots.length === 0) {
+        return new Response(JSON.stringify({ error: "Storyboard produced no shots" }), {
+          status: 502,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      return new Response(
+        JSON.stringify({
+          title: parsed.title || "Storyboard",
+          shots: parsed.shots,
+          locked_spec,
+          model_id,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
     const { messages, attachments, stream } = body as {
       messages: Array<{ role: "user" | "assistant"; content: string }>;
       attachments?: Array<{
