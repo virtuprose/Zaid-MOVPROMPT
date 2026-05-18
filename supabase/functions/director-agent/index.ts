@@ -271,6 +271,14 @@ const TOOLS = [
             type: "string",
             description: "Brief note on creative choices made.",
           },
+          next_suggestions: {
+            type: "array",
+            minItems: 0,
+            maxItems: 5,
+            items: { type: "string" },
+            description:
+              "3–5 short tap-to-send follow-up actions the user might want next (e.g. 'Tighter on the eyes', 'Push in slower', 'Swap to anamorphic 2.39', 'Render this').",
+          },
         },
         required: ["title", "prompt", "breakdown"],
         additionalProperties: false,
