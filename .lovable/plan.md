@@ -1,22 +1,24 @@
-## Tighten MovPrompt home page — spacing & example sizing
+# Upgrade Director Agent model to Gemini 3.1 Pro
 
-Two main issues on `/`:
-- The 3 example tiles are `aspect-square` × full-width 720px column → ~230×230 each, dominating the viewport.
-- Vertical rhythm stacks `space-y-5` (leftPanel) + `space-y-6` (header group) + `space-y-3` (examples) + `pt-2` (upload), leaving a lot of empty whitespace between sections.
+## Change
+In `supabase/functions/director-agent/index.ts` (line 371), replace:
 
-### Changes
+```
+model: "google/gemini-2.5-flash",
+```
 
-1. **`src/components/OnboardingExamples.tsx`**
-   - Tile aspect `aspect-square` → `aspect-[4/3]` (shorter, more landscape-cinematic).
-   - Outer `space-y-3` → `space-y-2`.
-   - Helper text `text-xs` → `text-[11px]` so it stops competing with the workflow heading.
+with:
 
-2. **`src/components/WorkflowPanel.tsx`** (leftPanel, line 1206–1223)
-   - Outer `space-y-5` → `space-y-4`.
-   - Inner header group `space-y-6` → `space-y-4`.
-   - `<div className="pt-2">` wrapping `uploadBlock` → drop the `pt-2` (the outer spacing already handles it).
+```
+model: "google/gemini-3.1-pro-preview",
+```
 
-3. **`src/pages/Index.tsx`** (line 45)
-   - `py-3 sm:py-4` stays; nothing to change at the page container — it already has the right padding.
+This is the only call powering the Director's vision + reasoning loop (scene decomposition, clarifications, prompt generation, model recommendation). All other edge functions (moderation, scene analysis, ad scene writer, etc.) keep `gemini-2.5-flash` since they're auxiliary and cost-sensitive.
 
-Result: examples shrink to ~230×173 (much calmer), and total page height drops by ~40-60px so the dropzone and CTA sit closer to the fold.
+## Memory update
+Update `mem://index.md` Core line from "Lovable AI (gemini-2.5-flash for vision)" to "Lovable AI (gemini-3.1-pro-preview for Director vision + reasoning)".
+
+## Notes
+- `gemini-3.1-pro-preview` is a supported Lovable AI Gateway model — no API key changes needed.
+- Expect higher latency and cost per Director turn; the existing 30s idle / 120s total stream timeouts in `src/lib/director/api.ts` remain adequate.
+- No client, schema, or tool-call contract changes required — same OpenAI-compatible tool-calling interface.
