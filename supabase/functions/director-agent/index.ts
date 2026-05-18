@@ -292,6 +292,18 @@ const TOOLS = [
             required: ["subject", "camera", "lighting", "mood", "negative_prompt", "model_recommendation", "recommended_model_id"],
             additionalProperties: false,
           },
+          locked_spec: {
+            type: "object",
+            description: "The 5 routing axes you've committed to. NEVER guess — only include values explicitly stated or strongly implied. Mirror the same values you would have sent on ask_model_choice.",
+            properties: {
+              input_mode: { type: "string", enum: ["text-to-video", "image-to-video", "video-edit", "motion-control", "multi-reference"] },
+              duration_seconds: { type: "number" },
+              aspect_ratio: { type: "string" },
+              audio: { type: "string", enum: ["silent", "sfx", "music", "dialogue", "full"] },
+              resolution: { type: "string", enum: ["720p", "1080p", "4k"] },
+            },
+            additionalProperties: false,
+          },
           directors_note: {
             type: "string",
             description: "Brief note on creative choices made.",
@@ -305,7 +317,7 @@ const TOOLS = [
               "3–5 short tap-to-send follow-up actions the user might want next (e.g. 'Tighter on the eyes', 'Push in slower', 'Swap to anamorphic 2.39', 'Render this').",
           },
         },
-        required: ["title", "prompt", "breakdown"],
+        required: ["title", "prompt", "breakdown", "locked_spec"],
         additionalProperties: false,
       },
     },
