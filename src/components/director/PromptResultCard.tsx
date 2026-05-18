@@ -569,6 +569,7 @@ export function PromptResultCard({ title, prompt, breakdown, directorsNote, onRe
         {renderVideoPanel()}
 
         <VideoOptionsDialog
+          initialOptions={initialOptions}
           open={!!pendingModel}
           model={pendingModel}
           prompt={prompt}
