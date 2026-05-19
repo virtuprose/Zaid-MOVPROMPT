@@ -203,11 +203,9 @@ serve(async (req) => {
       throw e;
     }
 
-    const out: Array<{ url: string; storage_path: string; shot_index?: number }> = [];
-    let produced = 0;
-    try {
-      for (let i = 0; i < prompts.length; i++) {
-        const dataUrl = await generateOne(LOVABLE_API_KEY, prompts[i], referenceUrls, aspect);
+    const results = await Promise.allSettled(
+      prompts.map(async (p, i) => {
+        const dataUrl = await generateOne(LOVABLE_API_KEY, p, referenceUrls, aspect);
         const { blob, mime } = dataUrlToBlob(dataUrl);
         const ext = mime.split("/")[1] || "png";
         const safeName = `${mode}-${Date.now()}-${i + 1}.${ext}`;
@@ -220,20 +218,27 @@ serve(async (req) => {
           .from("director-uploads")
           .createSignedUrl(path, SIGNED_URL_TTL);
         if (signErr || !signed?.signedUrl) throw signErr || new Error("sign_failed");
-        out.push({
+        return {
           url: signed.signedUrl,
           storage_path: path,
           shot_index: mode === "storyboard_panels" ? shotIndices[i] : undefined,
-        });
-        produced++;
-      }
-    } catch (e) {
-      const missing = prompts.length - produced;
-      if (missing > 0) {
-        await refundCredits({ userId, amount: perImage * missing, reason: "image_generation_refund", metadata: { missing } });
-      }
-      throw e;
+        };
+      }),
+    );
+
+    const out: Array<{ url: string; storage_path: string; shot_index?: number }> = [];
+    let firstError: unknown = null;
+    for (const r of results) {
+      if (r.status === "fulfilled") out.push(r.value);
+      else if (!firstError) firstError = r.reason;
     }
+    const missing = prompts.length - out.length;
+    if (missing > 0) {
+      await refundCredits({ userId, amount: perImage * missing, reason: "image_generation_refund", metadata: { missing } });
+    }
+    // Only fail the whole request if nothing came back.
+    if (out.length === 0 && firstError) throw firstError;
+
 
 
     return new Response(
