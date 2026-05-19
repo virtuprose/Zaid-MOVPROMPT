@@ -511,6 +511,74 @@ function DirectorChatInner() {
     }
   };
 
+  // Find the most recent pinned subject sheet in the chat (latest wins, unless unpinned).
+  const pinnedSubject = useMemo(() => {
+    for (let i = bubbles.length - 1; i >= 0; i -= 1) {
+      const b = bubbles[i];
+      if (b.role === "generated_images" && b.data.subjectSheet && b.data.images[0]) {
+        return {
+          url: b.data.images[0].url,
+          storage_path: b.data.images[0].storage_path,
+          kind: b.data.subjectKind ?? "character",
+        };
+      }
+    }
+    return null;
+  }, [bubbles]);
+
+  const handleSubjectLockChoice = async (bubbleIndex: number, kind: SubjectKind) => {
+    if (busy) return;
+    const target = bubbles[bubbleIndex];
+    if (!target || target.role !== "subject_lock_choice" || target.chosen) return;
+    const stamped: Bubble[] = bubbles.map((b, i) =>
+      i === bubbleIndex && b.role === "subject_lock_choice" ? { ...b, chosen: kind } : b,
+    );
+    setBubbles(stamped);
+
+    // After choosing, surface the existing aspect-ratio chip for the original key frame.
+    const aspectBubble: Bubble = {
+      role: "aspect_choice",
+      payload: target.payload,
+    };
+
+    if (kind === "none") {
+      const withAspect: Bubble[] = [...stamped, aspectBubble];
+      setBubbles(withAspect);
+      void persist(withAspect, null, null);
+      return;
+    }
+
+    // Build a multi-angle subject sheet first, then queue the aspect chip.
+    const sheetPrompt =
+      kind === "product"
+        ? `Product sheet, three views in one image side by side: front view, three-quarter view, side view. Seamless pure white background. Even soft studio lighting. No people, no hands, no props, no text, no shadows below subject. The product is described by the user as: ${target.payload.prompt}`
+        : `The character described by the user as: ${target.payload.prompt}`;
+
+    setBusy(true);
+    try {
+      await runImageGeneration(stamped, {
+        mode: "character_sheet",
+        prompt: sheetPrompt,
+        reference_urls: target.payload.reference_urls,
+        directors_note:
+          kind === "product"
+            ? "Pinned product sheet — I'll attach this to every frame so the product stays consistent."
+            : "Pinned character sheet — I'll attach this to every frame so the character stays consistent.",
+        lock_mode: "auto",
+      }, { subjectSheet: true, subjectKind: kind === "product" ? "product" : "character" });
+
+      // After the sheet returns, append the aspect chip for the original key frame.
+      setBubbles((prev) => {
+        const withAspect = [...prev, aspectBubble];
+        void persist(withAspect, null, null);
+        return withAspect;
+      });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+
 
   const send = async (textOverride?: string) => {
     const text = (textOverride ?? input).trim();
