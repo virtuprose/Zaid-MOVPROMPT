@@ -1368,6 +1368,20 @@ function DirectorChatInner() {
                 </div>
               );
             }
+            if (b.role === "aspect_choice") {
+              return (
+                <div key={i} className="flex items-start gap-2 motion-safe:animate-fade-up">
+                  <AssistantAvatar size="sm" state="idle" className="mt-1" />
+                  <div className="flex-1">
+                    <AspectChoiceCard
+                      chosen={b.chosen}
+                      disabled={busy}
+                      onChoose={(aspect) => void handleAspectChoice(i, aspect)}
+                    />
+                  </div>
+                </div>
+              );
+            }
             const isUser = b.role === "user";
             if (!isUser) {
               // Hide the streaming placeholder bubble; TypingIndicator covers it.
