@@ -1,6 +1,8 @@
-import { RotateCcw, Film } from "lucide-react";
+import { RotateCcw, Film, Maximize2, X } from "lucide-react";
+import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogClose } from "@/components/ui/dialog";
 
 export type GeneratedImageBubbleData = {
   mode: "character_sheet" | "storyboard_panels" | "single_panel";
@@ -14,6 +16,7 @@ type Props = {
 };
 
 export function GeneratedImageCard({ data, onRegenerate }: Props) {
+  const [zoomUrl, setZoomUrl] = useState<string | null>(null);
   const isGrid = data.mode === "storyboard_panels" && data.images.length > 1;
   const isKeyFrame = data.mode === "single_panel";
   const label =
@@ -29,6 +32,7 @@ export function GeneratedImageCard({ data, onRegenerate }: Props) {
   };
 
   return (
+    <>
     <div className="rounded-2xl bg-muted/15 p-4 sm:p-5 space-y-3 max-w-2xl">
       <div className="flex items-center justify-between gap-3">
         <div className="text-xs uppercase tracking-wide text-muted-foreground/80">
@@ -78,6 +82,15 @@ export function GeneratedImageCard({ data, onRegenerate }: Props) {
                   {shotNum}
                 </div>
               )}
+              <button
+                type="button"
+                onClick={() => setZoomUrl(img.url)}
+                className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity bg-background/85 hover:bg-background text-foreground p-1 rounded"
+                title="Expand"
+                aria-label="Expand image"
+              >
+                <Maximize2 className="h-3 w-3" />
+              </button>
               {onRegenerate && (
                 <button
                   type="button"
@@ -136,5 +149,21 @@ export function GeneratedImageCard({ data, onRegenerate }: Props) {
         </div>
       )}
     </div>
+
+    <Dialog open={!!zoomUrl} onOpenChange={(o) => !o && setZoomUrl(null)}>
+      <DialogContent className="max-w-[95vw] w-fit p-0 bg-background/95 border-border/40">
+        {zoomUrl && (
+          <img
+            src={zoomUrl}
+            alt="Expanded view"
+            className="max-h-[90vh] max-w-[95vw] w-auto h-auto object-contain rounded-lg"
+          />
+        )}
+        <DialogClose className="absolute top-2 right-2 bg-background/80 hover:bg-background p-1.5 rounded-md">
+          <X className="h-4 w-4" />
+        </DialogClose>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }
