@@ -176,9 +176,12 @@ serve(async (req) => {
       const continuityClause = isChain
         ? " Same character, wardrobe, hair, face, and props as the attached previous panel — only the action and framing change."
         : "";
+      const subjectClause = referenceUrls.length >= 2
+        ? " Match the subject (character or product) shown in the first attached reference sheet — keep face, wardrobe, hair, branding, and proportions exact."
+        : "";
       prompts = raw.map((beat, i) => {
         const shotNum = regenIndex ?? i + 1;
-        return `${lockPrefix}Shot ${shotNum} of ${total}: ${beat}${continuityClause}`;
+        return `${lockPrefix}Shot ${shotNum} of ${total}: ${beat}${continuityClause}${subjectClause}`;
       });
       shotIndices = regenIndex
         ? prompts.map(() => regenIndex)
@@ -234,8 +237,11 @@ serve(async (req) => {
 
     if (isChain && prompts.length > 1) {
       // Stream NDJSON so the client can show panels as they finish.
-      const anchor = referenceUrls[0];
-      const extras = referenceUrls.slice(1, 3);
+      // referenceUrls convention: [subjectSheet?, sceneAnchor, ...extras].
+      // If the caller only sent one ref it acts as both sticky + anchor.
+      const sticky = referenceUrls[0];
+      const sceneAnchor = referenceUrls[1] ?? sticky;
+      const extras = referenceUrls.slice(2, 3);
       const encoder = new TextEncoder();
       const stream = new ReadableStream({
         async start(controller) {
@@ -245,11 +251,13 @@ serve(async (req) => {
           let prevPanelUrl: string | null = null;
           let okCount = 0;
           for (let i = 0; i < prompts.length; i++) {
-            const refs = [
-              ...(anchor ? [anchor] : []),
+            const raw = [
+              ...(sticky ? [sticky] : []),
+              ...(sceneAnchor && sceneAnchor !== sticky ? [sceneAnchor] : []),
               ...(prevPanelUrl ? [prevPanelUrl] : []),
               ...extras,
-            ].slice(0, 4);
+            ];
+            const refs = Array.from(new Set(raw)).slice(0, 4);
             try {
               const value = await runOne(prompts[i], i, refs);
               okCount++;

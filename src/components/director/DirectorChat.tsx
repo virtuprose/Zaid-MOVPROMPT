@@ -22,6 +22,7 @@ import { PromptResultCard } from "./PromptResultCard";
 import { ModelChoiceCard } from "./ModelChoiceCard";
 import { GeneratedImageCard } from "./GeneratedImageCard";
 import { AspectChoiceCard, type AspectRatio } from "./AspectChoiceCard";
+import { SubjectLockChoiceCard, type SubjectKind } from "./SubjectLockChoiceCard";
 
 import {
   streamDirectorAgent,
@@ -78,6 +79,20 @@ type Bubble =
         directors_note?: string;
       };
       chosen?: AspectRatio;
+    }
+  | {
+      role: "subject_lock_choice";
+      payload: {
+        mode: "single_panel";
+        prompt: string;
+        reference_urls?: string[];
+        count?: number;
+        per_shot_prompts?: string[];
+        shot_index?: number;
+        lock_mode?: "character" | "scene" | "auto";
+        directors_note?: string;
+      };
+      chosen?: "character" | "product" | "none";
     }
   | { role: "video"; data: import("./VideoBubble").VideoBubbleData };
 
@@ -320,13 +335,25 @@ function DirectorChatInner() {
       lock_mode?: "character" | "scene" | "auto";
       directors_note?: string;
     },
+    options?: { subjectSheet?: boolean; subjectKind?: "character" | "product" },
   ) => {
+    // Auto-attach the pinned subject sheet to every reference call EXCEPT when
+    // we're generating the sheet itself.
+    if (!options?.subjectSheet && pinnedSubject) {
+      const refs = payload.reference_urls ?? [];
+      if (!refs.includes(pinnedSubject.url)) {
+        payload = { ...payload, reference_urls: [pinnedSubject.url, ...refs] };
+      }
+    }
+
     const isStreamingStoryboard =
       payload.mode === "storyboard_panels" &&
       !payload.shot_index &&
       ((payload.per_shot_prompts?.length ?? payload.count ?? 9) > 1);
     const streamTotal =
       payload.per_shot_prompts?.length ?? Math.min(Math.max(payload.count ?? 9, 1), 9);
+
+
 
     const loadingBubble: Bubble = {
       role: "assistant",
@@ -435,6 +462,8 @@ function DirectorChatInner() {
           images: result.images,
           directorsNote: payload.directors_note,
           ...(payload.aspect_ratio ? { aspectRatio: payload.aspect_ratio } : {}),
+          ...(options?.subjectSheet ? { subjectSheet: true as const } : {}),
+          ...(options?.subjectKind ? { subjectKind: options.subjectKind } : {}),
         },
       };
       const carrierBubble: Bubble = {
@@ -495,6 +524,74 @@ function DirectorChatInner() {
       setBusy(false);
     }
   };
+
+  // Find the most recent pinned subject sheet in the chat (latest wins, unless unpinned).
+  const pinnedSubject = useMemo(() => {
+    for (let i = bubbles.length - 1; i >= 0; i -= 1) {
+      const b = bubbles[i];
+      if (b.role === "generated_images" && b.data.subjectSheet && b.data.images[0]) {
+        return {
+          url: b.data.images[0].url,
+          storage_path: b.data.images[0].storage_path,
+          kind: b.data.subjectKind ?? "character",
+        };
+      }
+    }
+    return null;
+  }, [bubbles]);
+
+  const handleSubjectLockChoice = async (bubbleIndex: number, kind: SubjectKind) => {
+    if (busy) return;
+    const target = bubbles[bubbleIndex];
+    if (!target || target.role !== "subject_lock_choice" || target.chosen) return;
+    const stamped: Bubble[] = bubbles.map((b, i) =>
+      i === bubbleIndex && b.role === "subject_lock_choice" ? { ...b, chosen: kind } : b,
+    );
+    setBubbles(stamped);
+
+    // After choosing, surface the existing aspect-ratio chip for the original key frame.
+    const aspectBubble: Bubble = {
+      role: "aspect_choice",
+      payload: target.payload,
+    };
+
+    if (kind === "none") {
+      const withAspect: Bubble[] = [...stamped, aspectBubble];
+      setBubbles(withAspect);
+      void persist(withAspect, null, null);
+      return;
+    }
+
+    // Build a multi-angle subject sheet first, then queue the aspect chip.
+    const sheetPrompt =
+      kind === "product"
+        ? `Product sheet, three views in one image side by side: front view, three-quarter view, side view. Seamless pure white background. Even soft studio lighting. No people, no hands, no props, no text, no shadows below subject. The product is described by the user as: ${target.payload.prompt}`
+        : `The character described by the user as: ${target.payload.prompt}`;
+
+    setBusy(true);
+    try {
+      await runImageGeneration(stamped, {
+        mode: "character_sheet",
+        prompt: sheetPrompt,
+        reference_urls: target.payload.reference_urls,
+        directors_note:
+          kind === "product"
+            ? "Pinned product sheet — I'll attach this to every frame so the product stays consistent."
+            : "Pinned character sheet — I'll attach this to every frame so the character stays consistent.",
+        lock_mode: "auto",
+      }, { subjectSheet: true, subjectKind: kind === "product" ? "product" : "character" });
+
+      // After the sheet returns, append the aspect chip for the original key frame.
+      setBubbles((prev) => {
+        const withAspect = [...prev, aspectBubble];
+        void persist(withAspect, null, null);
+        return withAspect;
+      });
+    } finally {
+      setBusy(false);
+    }
+  };
+
 
 
   const send = async (textOverride?: string) => {
@@ -745,19 +842,30 @@ function DirectorChatInner() {
       } else if (resp.kind === "generate_reference_image") {
         // Key frame (single_panel) → ask the user for aspect ratio first.
         if (resp.mode === "single_panel") {
-          const aspectBubble: Bubble = {
-            role: "aspect_choice",
-            payload: {
-              mode: "single_panel",
-              prompt: resp.prompt,
-              reference_urls: resp.reference_urls,
-              count: resp.count,
-              per_shot_prompts: resp.per_shot_prompts,
-              shot_index: resp.shot_index,
-              lock_mode: resp.lock_mode,
-              directors_note: resp.directors_note,
-            },
+          const payload = {
+            mode: "single_panel" as const,
+            prompt: resp.prompt,
+            reference_urls: resp.reference_urls,
+            count: resp.count,
+            per_shot_prompts: resp.per_shot_prompts,
+            shot_index: resp.shot_index,
+            lock_mode: resp.lock_mode,
+            directors_note: resp.directors_note,
           };
+
+          // If no subject sheet is pinned and we haven't asked yet this session,
+          // surface the subject-lock chip BEFORE the aspect chip.
+          const alreadyAsked = next.some((b) => b.role === "subject_lock_choice");
+          if (!pinnedSubject && !alreadyAsked) {
+            const subjectBubble: Bubble = { role: "subject_lock_choice", payload };
+            const withSubject: Bubble[] = [...next, subjectBubble];
+            setBubbles(withSubject);
+            setAttachments([]);
+            void persist(withSubject, null, null);
+            return;
+          }
+
+          const aspectBubble: Bubble = { role: "aspect_choice", payload };
           const withAspect: Bubble[] = [...next, aspectBubble];
           setBubbles(withAspect);
           setAttachments([]);
@@ -1421,6 +1529,25 @@ function DirectorChatInner() {
                         if (busy) return;
                         void send(intent);
                       }}
+                      onUnpinSubject={
+                        b.data.subjectSheet
+                          ? () => {
+                              setBubbles((prev) => {
+                                const copy = prev.slice();
+                                const cur = copy[i];
+                                if (cur.role === "generated_images") {
+                                  copy[i] = {
+                                    ...cur,
+                                    data: { ...cur.data, subjectSheet: false },
+                                  };
+                                }
+                                void persist(copy, null, null);
+                                return copy;
+                              });
+                              toast.success("Subject sheet unpinned");
+                            }
+                          : undefined
+                      }
                     />
                   </div>
                 </div>
@@ -1451,6 +1578,20 @@ function DirectorChatInner() {
                       chosen={b.chosen}
                       disabled={busy}
                       onChoose={(aspect) => void handleAspectChoice(i, aspect)}
+                    />
+                  </div>
+                </div>
+              );
+            }
+            if (b.role === "subject_lock_choice") {
+              return (
+                <div key={i} className="flex items-start gap-2 motion-safe:animate-fade-up">
+                  <AssistantAvatar size="sm" state="idle" className="mt-1" />
+                  <div className="flex-1">
+                    <SubjectLockChoiceCard
+                      chosen={b.chosen}
+                      disabled={busy}
+                      onChoose={(kind) => void handleSubjectLockChoice(i, kind)}
                     />
                   </div>
                 </div>

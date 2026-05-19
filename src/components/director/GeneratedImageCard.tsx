@@ -10,22 +10,27 @@ export type GeneratedImageBubbleData = {
   directorsNote?: string;
   aspectRatio?: "1:1" | "16:9" | "9:16";
   progress?: { done: number; total: number };
+  subjectSheet?: boolean;
+  subjectKind?: "character" | "product";
 };
 
 type Props = {
   data: GeneratedImageBubbleData;
   onRegenerate?: (intent: string) => void;
+  onUnpinSubject?: () => void;
 };
 
-export function GeneratedImageCard({ data, onRegenerate }: Props) {
+export function GeneratedImageCard({ data, onRegenerate, onUnpinSubject }: Props) {
   const [zoomIndex, setZoomIndex] = useState<number | null>(null);
   const progress = data.progress;
   const inProgress = !!progress && progress.done < progress.total;
   const isGrid =
     data.mode === "storyboard_panels" && (data.images.length > 1 || (progress?.total ?? 0) > 1);
   const isKeyFrame = data.mode === "single_panel";
-  const label =
-    data.mode === "character_sheet"
+  const subjectLabel = data.subjectKind === "product" ? "Product" : "Character";
+  const label = data.subjectSheet
+    ? `${subjectLabel} sheet · pinned`
+    : data.mode === "character_sheet"
       ? "Character sheet · 3 views"
       : data.mode === "storyboard_panels"
         ? `Storyboard · ${data.images.length} panels`
@@ -84,15 +89,29 @@ export function GeneratedImageCard({ data, onRegenerate }: Props) {
     <>
     <div className="rounded-2xl bg-muted/15 p-4 sm:p-5 space-y-3 max-w-2xl">
       <div className="flex items-center justify-between gap-3">
-        <div className="text-xs uppercase tracking-wide text-muted-foreground/80">
+        <div className="text-xs uppercase tracking-wide text-muted-foreground/80 inline-flex items-center gap-1.5">
+          {data.subjectSheet && (
+            <span className="h-1.5 w-1.5 rounded-full bg-primary inline-block" aria-hidden />
+          )}
           {label}
         </div>
-        <div className="text-[10px] text-muted-foreground/60">
+        <div className="text-[10px] text-muted-foreground/60 inline-flex items-center gap-2">
           {inProgress
             ? `Rendering · ${progress!.done} / ${progress!.total}`
-            : isKeyFrame
-              ? "Locked as scene anchor — extend it into a sequence below."
-              : "Locked as references — continue the chat to use them."}
+            : data.subjectSheet
+              ? "Auto-attached to every frame in this session."
+              : isKeyFrame
+                ? "Locked as scene anchor — extend it into a sequence below."
+                : "Locked as references — continue the chat to use them."}
+          {data.subjectSheet && onUnpinSubject && !inProgress && (
+            <button
+              type="button"
+              onClick={onUnpinSubject}
+              className="text-[10px] uppercase tracking-wide text-muted-foreground/70 hover:text-foreground transition-colors underline-offset-2 hover:underline"
+            >
+              Unpin
+            </button>
+          )}
         </div>
       </div>
 
