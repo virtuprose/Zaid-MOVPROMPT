@@ -15,7 +15,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { Seo } from "@/components/Seo";
-import { AperturalLogo } from "@/components/AperturalLogo";
+import logoWordmark from "@/assets/logo-wordmark.png";
 import exampleDesert from "@/assets/example-desert.jpg";
 import examplePortrait from "@/assets/example-portrait.jpg";
 import exampleTokyo from "@/assets/example-tokyo.jpg";
@@ -109,12 +109,16 @@ function CodeSnippet({ children, text }: { children: React.ReactNode; text: stri
 }
 
 function Logo({ size = 28 }: { size?: number }) {
+  // Wordmark PNG is 1774x887 (~2:1). Height drives layout; width follows.
+  const height = Math.round(size * 1.4);
   return (
-    <Link to="/" className="flex items-center gap-2">
-      <AperturalLogo size={size} />
-      <span className="font-display font-bold text-lg tracking-tight">
-        <span className="text-primary">Mov</span>Prompt
-      </span>
+    <Link to="/" className="flex items-center" aria-label="MovPrompt home">
+      <img
+        src={logoWordmark}
+        alt="MovPrompt"
+        style={{ height }}
+        className="w-auto select-none"
+      />
     </Link>
   );
 }

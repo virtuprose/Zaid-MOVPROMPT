@@ -34,7 +34,7 @@ import type { Attachment } from "@/lib/director/ingest";
 import * as localState from "@/lib/director/localState";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import logoMark from "@/assets/logo-mark.svg";
+import logoMark from "@/assets/logo-mark-white.svg";
 import { ApprovalProvider, useApproval } from "./ApprovalContext";
 import {
   AwaitingApprovalPill,

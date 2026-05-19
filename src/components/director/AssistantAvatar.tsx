@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import logoMark from "@/assets/logo-mark.svg";
+import logoMark from "@/assets/logo-mark-white.svg";
 
 export type AvatarState = "idle" | "thinking" | "listening" | "success" | "scanning" | "nod";
 
