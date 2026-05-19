@@ -21,6 +21,7 @@ import { Composer } from "./Composer";
 import { PromptResultCard } from "./PromptResultCard";
 import { ModelChoiceCard } from "./ModelChoiceCard";
 import { GeneratedImageCard } from "./GeneratedImageCard";
+import { AspectChoiceCard, type AspectRatio } from "./AspectChoiceCard";
 
 import {
   streamDirectorAgent,
