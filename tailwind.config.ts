@@ -119,6 +119,7 @@ export default {
         "caret-blink": "caret-blink 1s steps(1) infinite",
         nod: "nod 0.6s ease-out",
         "fade-up": "fade-up 0.35s ease-out",
+        "god-rays-drift": "god-rays-drift 20s ease-in-out infinite",
       },
     },
   },
