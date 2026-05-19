@@ -16,6 +16,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
+import { notifyInsufficientCredits } from "@/lib/credits/insufficient";
 import { Composer } from "./Composer";
 import { PromptResultCard } from "./PromptResultCard";
 import { ModelChoiceCard } from "./ModelChoiceCard";
@@ -604,7 +605,7 @@ function DirectorChatInner() {
 
         } catch (e: any) {
           const message = e?.message || "Image generation failed";
-          toast.error(message);
+          if (!(await notifyInsufficientCredits(e))) toast.error(message);
           setBubbles((prev) => {
             const trimmed =
               prev.length && prev[prev.length - 1].role === "assistant"
@@ -661,7 +662,7 @@ function DirectorChatInner() {
           toast.success("Rendering — it'll appear here when ready.");
           return;
         } catch (e: any) {
-          toast.error(e?.message || "Could not start render");
+          if (!(await notifyInsufficientCredits(e))) toast.error(e?.message || "Could not start render");
         }
       } else {
         added = { role: "assistant", animate: true, content: (resp as any).content || "..." };
@@ -677,7 +678,7 @@ function DirectorChatInner() {
         e?.name === "DirectorTimeoutError"
           ? "The Director didn't respond in time"
           : e?.message || "The Director couldn't respond";
-      toast.error(message);
+      if (!(await notifyInsufficientCredits(e))) toast.error(message);
       setBubbles((b) => {
         const trimmed =
           b.length &&
