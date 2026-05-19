@@ -1,19 +1,37 @@
-## Changes to `src/components/director/GeneratedImageCard.tsx`
+## Problem
 
-**1. Center the expand button**
-- Move the `Maximize2` button from `top-1 right-1` to centered: `absolute inset-0 flex items-center justify-center`.
-- Increase tap target (e.g. `p-2`, `h-5 w-5` icon) and keep the `opacity-0 group-hover:opacity-100` reveal.
-- Wrap the icon in a circular `bg-background/85` chip so it reads as a clear affordance over any image.
-- The Redo button (bottom-right) and panel number badge (top-left) stay where they are.
+Storyboard panels are generated in parallel — each call sends only the original anchor image to `gemini-3.1-flash-image-preview`. With independent runs, the model drifts on face/wardrobe/proportions between panels, so the character looks like a different person from shot to shot. The IDENTITY_LOCK text alone is not enough; visual reference chaining is what keeps nano-banana-style models on-model.
 
-**2. Lightbox navigation between images**
-- Change `zoomUrl` state to `zoomIndex: number | null`.
-- Clicking expand on image `i` opens the dialog at that index.
-- Inside `<DialogContent>`, render the current image (`data.images[zoomIndex]`) plus two arrow buttons (`ChevronLeft` / `ChevronRight` from lucide):
-  - Positioned `absolute left-2 / right-2 top-1/2 -translate-y-1/2`.
-  - Only rendered when `data.images.length > 1` (so single key-frame stays clean).
-  - Wrap-around: `prev = (i - 1 + n) % n`, `next = (i + 1) % n`.
-- Add keyboard support: a `useEffect` listens for `ArrowLeft` / `ArrowRight` while the dialog is open and advances `zoomIndex`.
-- Show a small counter chip (e.g. `2 / 8`) at the bottom center when there are multiple images.
+## Fix: sequential chain in `supabase/functions/generate-reference-image/index.ts`
 
-**Out of scope:** swipe gestures, thumbnail strip, changes to other bubbles or the agent flow.
+When `mode === "storyboard_panels"` and `prompts.length > 1`, replace the current `Promise.allSettled(prompts.map(...))` with a sequential loop:
+
+```text
+panel 1 → refs = [anchor]
+panel 2 → refs = [anchor, panel 1]
+panel 3 → refs = [anchor, panel 2]
+panel N → refs = [anchor, panel N-1]
+```
+
+Details:
+- Keep `anchor` = the first user-supplied reference URL (character sheet or key frame). Other user refs (≤3 more) are appended after it, leaving room for the prior-panel image.
+- After each successful generation, upload + sign as today, then push the **signed URL** into the next iteration's `referenceUrls` as the "previous panel" anchor.
+- Cap total refs at 4 (gateway limit) — anchor + previous panel + up to 2 user-supplied extras.
+- On failure of one panel: continue with the chain using the last successful panel (or fall back to anchor only). Refund credits for the missing panels exactly like today.
+- Regenerate-single-panel path (`shot_index` set, `prompts.length === 1`) stays as-is — no chain needed.
+- `character_sheet` and `single_panel` modes: unchanged (still parallel / single).
+
+## Prompt strengthening (small)
+
+In the storyboard branch (lines 166-181), when chaining is active append a short continuity clause to every prompt: `"Same character, wardrobe, hair, face, and props as the attached previous panel — only the action and framing change."` This pairs with the new visual anchor.
+
+## Trade-offs to flag to the user
+
+- Generation goes from parallel to sequential → ~N× slower (≈8-9× for a full 9-panel storyboard). A 9-panel render that takes ~15s today will take ~60–90s. Still well within the 150s edge timeout, but the user will feel it.
+- If we want to keep some parallelism we can chain in **pairs** (panels 1+2 parallel from anchor, then 3+4 use panel 2, etc.) — happy to do that instead if speed matters more than maximum continuity.
+
+## Out of scope
+
+- Changing the image model.
+- Adding a second pass / face-restore step.
+- Client-side changes — the existing `GeneratedImageCard` and agent prompt already do the right thing once the edge function chains.

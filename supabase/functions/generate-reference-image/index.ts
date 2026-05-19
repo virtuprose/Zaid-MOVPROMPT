@@ -163,6 +163,7 @@ serve(async (req) => {
 
     let prompts: string[];
     let shotIndices: number[]; // per-prompt shot_index for storyboard_panels
+    const isChain = mode === "storyboard_panels" && !regenIndex;
     if (mode === "storyboard_panels") {
       const raw =
         Array.isArray(body.per_shot_prompts) && body.per_shot_prompts.length > 0
@@ -172,9 +173,12 @@ serve(async (req) => {
               () => basePrompt,
             );
       const total = regenIndex ? 9 : raw.length;
+      const continuityClause = isChain
+        ? " Same character, wardrobe, hair, face, and props as the attached previous panel — only the action and framing change."
+        : "";
       prompts = raw.map((beat, i) => {
         const shotNum = regenIndex ?? i + 1;
-        return `${lockPrefix}Shot ${shotNum} of ${total}: ${beat}`;
+        return `${lockPrefix}Shot ${shotNum} of ${total}: ${beat}${continuityClause}`;
       });
       shotIndices = regenIndex
         ? prompts.map(() => regenIndex)
