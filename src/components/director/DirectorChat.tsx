@@ -398,6 +398,7 @@ function DirectorChatInner() {
               aspect_ratio: payload.aspect_ratio,
               per_shot_prompts: payload.per_shot_prompts,
               lock_mode: payload.lock_mode,
+              subject_kind: payload.subject_kind,
             },
             (ev) => {
               if (ev.type === "panel") {
