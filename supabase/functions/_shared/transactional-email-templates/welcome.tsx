@@ -1,6 +1,6 @@
 import * as React from 'npm:react@18.3.1'
 import {
-  Body, Container, Head, Heading, Html, Preview, Text, Button, Hr, Section,
+  Body, Container, Head, Heading, Html, Img, Preview, Text, Button, Hr, Section,
 } from 'npm:@react-email/components@0.0.22'
 import type { TemplateEntry } from './registry.ts'
 
@@ -18,7 +18,7 @@ const WelcomeEmail = ({ name }: WelcomeProps) => (
     <Body style={main}>
       <Container style={container}>
         <Section style={header}>
-          <Text style={logo}>Mov<span style={logoCyan}>Prompt</span></Text>
+          <Img src={`${SITE_URL}/logo-wordmark-white.png`} alt={SITE_NAME} width="200" height="100" style={logoImg} />
         </Section>
 
         <Heading style={h1}>
@@ -67,8 +67,7 @@ export const template = {
 const main = { backgroundColor: '#ffffff', fontFamily: "'Inter', Arial, sans-serif" }
 const container = { padding: '32px 24px', maxWidth: '520px', margin: '0 auto' }
 const header = { textAlign: 'center' as const, marginBottom: '24px' }
-const logo = { fontSize: '28px', fontWeight: 'bold' as const, fontFamily: "'Space Grotesk', monospace, Arial", color: '#0a0a0f', margin: '0' }
-const logoCyan = { color: '#0cbfe0' }
+const logoImg = { display: 'block', margin: '0 auto', maxWidth: '200px', height: 'auto' as const }
 const h1 = { fontSize: '22px', fontWeight: 'bold' as const, color: '#0a0a0f', margin: '0 0 16px' }
 const text = { fontSize: '15px', color: '#444444', lineHeight: '1.6', margin: '0 0 16px' }
 const ctaSection = { textAlign: 'center' as const, margin: '24px 0' }
