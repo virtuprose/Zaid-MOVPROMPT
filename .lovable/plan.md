@@ -1,51 +1,44 @@
-## Goal
+## Got it — two cases
 
-After a character/product/object sheet is generated, prompt the user to describe the opening key frame scene BEFORE showing the aspect-ratio chip. That scene description becomes the seed for the whole story (subsequent storyboard panels).
+**Case A — User asks for a sheet directly** ("make a character sheet of…", "I need a product sheet for X"):
+The Director builds the sheet. The existing `SubjectLockChoiceCard` chip already acts as confirmation, then the sheet is generated. ✅ Already works.
 
-Today the flow is:
-1. User submits brief → Director queues a key frame
-2. Subject-lock chip → user picks character / product / none
-3. Sheet generates (auto-pinned)
-4. Aspect-ratio chip appears immediately ← **insert new step here**
-5. User picks aspect → key frame renders
+**Case B — User describes the WHOLE scene** (environment + character/product + shot + lighting + mood) in their brief, intending a key frame:
+The Director should:
+1. Recognize the brief is already complete.
+2. Still offer the subject-lock confirmation (character / product / none) so we can pin a sheet for later consistency.
+3. After the sheet returns, **skip the "describe the opening key frame" step** (we already have it).
+4. Go straight to aspect-ratio chip → render the key frame using the **user's original full description verbatim**, not a re-asked re-described version.
 
-New flow inserts a "describe the key frame" step between 3 and 4 — only when a sheet was actually built (character/product). The "none" branch stays as-is (skip describe, go straight to aspect).
+Today, step 3 doesn't skip — the client always shows `scene_describe` after a sheet is built. That's the bug.
 
-## Changes
-
-### `src/components/director/DirectorChat.tsx`
-
-1. **New bubble type** `scene_describe`:
-   ```ts
-   { role: "scene_describe"; payload: ImagePayload; submitted?: boolean }
-   ```
-   Add to the `Bubble` union, persistence serialization, and the rehydration switch (treat like other choice bubbles).
-
-2. **`handleSubjectLockChoice`** (lines 601–654): when `kind !== "none"`, after the sheet returns, append a `scene_describe` bubble instead of the `aspect_choice` bubble. Keep the `none` branch unchanged (still goes straight to aspect).
-
-3. **New handler** `handleSceneDescribeSubmit(bubbleIndex, sceneText)`:
-   - Mark the `scene_describe` bubble `submitted: true`.
-   - Append a user bubble showing what they wrote (so it's visible in the transcript).
-   - Build the aspect chip payload by merging the scene description into the original key-frame prompt:
-     ```ts
-     const mergedPrompt = sceneText.trim()
-       ? `${target.payload.prompt}\n\nOpening key frame scene: ${sceneText.trim()}`
-       : target.payload.prompt;
-     const aspectBubble = { role: "aspect_choice", payload: { ...target.payload, prompt: mergedPrompt } };
-     ```
-   - Append and persist.
-   - Allow skipping (empty submit) → just append the aspect chip with the original payload.
-
-4. **Renderer** (around line 1638 where `aspect_choice` is rendered): add a branch that renders the new `scene_describe` bubble. Reuse the existing `QuestionCard` component with a single question ("Describe the opening key frame — setting, action, mood, lighting. This anchors the whole story.") and Skip/Continue actions. QuestionCard already supports skip + free-form text and chip suggestions, which fits perfectly. Disable once `submitted`.
-
-5. **Director-agent context** (`buildHistory` around line 772): when a `scene_describe` bubble is pending, push a system note like `[Asked the user to describe the opening key frame scene before choosing aspect ratio. Waiting for their description.]` so the model doesn't try to push the conversation forward.
+## Fix
 
 ### `supabase/functions/director-agent/index.ts`
 
-Tiny system-prompt note in the workflow section: after a subject sheet is generated, the client will ask the user to describe the opening key frame, then ask aspect ratio, then generate. The model should not pre-empt either step.
+Add an optional flag to the `generate_reference_image` tool:
+```ts
+scene_already_described: {
+  type: "boolean",
+  description:
+    "Set TRUE for mode=single_panel when the user's brief already includes the full key-frame scene (environment + subject + camera + lighting + mood). The client will skip the 'describe the opening key frame' step after the subject sheet and render the key frame from your prompt verbatim. Set FALSE (or omit) when the brief only names a subject and a scene description is still needed.",
+}
+```
+
+Update the workflow note (line ~187) so the model knows when to set it:
+> POST-SHEET FLOW: after a character/product/object sheet is generated, the client will ask the user to describe the opening key frame UNLESS you set `scene_already_described: true` on the original `generate_reference_image` call. Set it true when the user's brief already paints the full scene; set it false (or omit) when only the subject was given.
+
+### `src/components/director/DirectorChat.tsx`
+
+1. Extend the `subject_lock_choice` and `scene_describe` bubble payload types with an optional `scene_already_described?: boolean` flag.
+2. In the `resp.kind === "generate_reference_image"` handler (line ~957), forward `resp.scene_already_described` into the `payload` used for `subject_lock_choice` / `aspect_choice`.
+3. In `handleSubjectLockChoice` (kind !== "none" branch), after the sheet returns:
+   - If `target.payload.scene_already_described === true` → append `aspect_choice` directly with the original payload (no `scene_describe`).
+   - Otherwise → append `scene_describe` as today.
+4. `DirectorMsg` / `AgentResponse` type in `src/lib/director/api.ts`: add the new optional field on the `generate_reference_image` response so TS stays clean.
 
 ## Out of scope
 
-- Changing the "none" subject-lock branch (still goes straight to aspect).
-- Changing what happens for non-sheet key frames (direct first-turn key frame without subject lock — already uses aspect chip directly; user only asked about the post-sheet path).
-- Storyboard / multi-shot panels — they already inherit the key frame as anchor.
+- Heuristic auto-detection of "rich brief" on the client. We let the Director model decide via the flag — it already reads the brief.
+- Changing case A (direct sheet request).
+- Storyboard / multi-shot flow.

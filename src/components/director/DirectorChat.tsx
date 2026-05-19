@@ -76,6 +76,7 @@ type Bubble =
         shot_index?: number;
         lock_mode?: "character" | "scene" | "auto";
         directors_note?: string;
+        scene_already_described?: boolean;
       };
       chosen?: AspectRatio;
     }
@@ -90,6 +91,7 @@ type Bubble =
         shot_index?: number;
         lock_mode?: "character" | "scene" | "auto";
         directors_note?: string;
+        scene_already_described?: boolean;
       };
       chosen?: "character" | "product" | "none";
     }
@@ -104,6 +106,7 @@ type Bubble =
         shot_index?: number;
         lock_mode?: "character" | "scene" | "auto";
         directors_note?: string;
+        scene_already_described?: boolean;
       };
       submitted?: boolean;
     }
@@ -655,13 +658,17 @@ function DirectorChatInner() {
         subject_kind: kind === "product" ? "product" : "character",
       }, { subjectSheet: true, subjectKind: kind === "product" ? "product" : "character" });
 
-      // After the sheet returns, append a scene_describe bubble. The aspect chip
-      // is queued after the user describes (or skips) the opening key frame scene.
+      // After the sheet returns, EITHER skip straight to the aspect chip (when the
+      // Director marked the brief as already fully describing the scene) OR queue a
+      // scene_describe bubble so the user can paint the opening key frame.
+      const skipDescribe = target.payload.scene_already_described === true;
       setBubbles((prev) => {
-        const sceneBubble: Bubble = { role: "scene_describe", payload: target.payload };
-        const withScene = [...prev, sceneBubble];
-        void persist(withScene, null, null);
-        return withScene;
+        const nextBubble: Bubble = skipDescribe
+          ? { role: "aspect_choice", payload: target.payload }
+          : { role: "scene_describe", payload: target.payload };
+        const withNext = [...prev, nextBubble];
+        void persist(withNext, null, null);
+        return withNext;
       });
     } finally {
       setBusy(false);
@@ -964,6 +971,7 @@ function DirectorChatInner() {
             shot_index: resp.shot_index,
             lock_mode: resp.lock_mode,
             directors_note: resp.directors_note,
+            scene_already_described: resp.scene_already_described,
           };
 
           // If no subject sheet is pinned and we haven't asked yet this session,
