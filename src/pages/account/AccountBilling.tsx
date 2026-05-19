@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Coins, CreditCard, Gift, ArrowDownRight, ArrowUpRight } from "lucide-react";
+import { ArrowLeft, Coins, CreditCard, Gift, ArrowDownRight, ArrowUpRight, Film, Image as ImageIcon, MessageSquare, Megaphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Seo } from "@/components/Seo";
 import { TopNav } from "@/components/TopNav";
 import { useAuth } from "@/hooks/useAuth";
 import { useCredits, fetchLedger, type LedgerEntry } from "@/hooks/useCredits";
+import { usePricing } from "@/lib/credits/pricing";
+import { ALL_VIDEO_MODELS } from "@/lib/director/videoModels";
 
 const REASON_LABEL: Record<string, string> = {
   signup_bonus: "Welcome bonus",
@@ -27,10 +29,25 @@ const AccountBilling = () => {
   const { user } = useAuth();
   const { balance } = useCredits();
   const [entries, setEntries] = useState<LedgerEntry[]>([]);
+  const prices = usePricing();
 
   useEffect(() => {
     if (user) void fetchLedger(user.id, 100).then(setEntries);
   }, [user]);
+
+  const flatActions = [
+    { key: "director_chat_text", label: "Director chat reply", icon: MessageSquare },
+    { key: "director_chat_multimodal", label: "Director chat with media", icon: MessageSquare },
+    { key: "image_generation", label: "Reference image / ad still", icon: ImageIcon },
+    { key: "write_ad_scene", label: "Ad scene writer", icon: Megaphone },
+  ];
+  const videoRows = ALL_VIDEO_MODELS
+    .map((m) => {
+      const row = prices.get(`video.${m.id}`);
+      return row ? { id: m.id, label: m.label, family: m.family, rate: row.amount } : null;
+    })
+    .filter((x): x is { id: string; label: string; family: string; rate: number } => !!x)
+    .sort((a, b) => a.rate - b.rate);
 
   return (
     <div className="min-h-screen bg-background">
