@@ -184,6 +184,7 @@ IMAGE GENERATION (use sparingly — only to unblock the storyboard / key-frame f
 - REGENERATE A SINGLE PANEL: when the user says "redo panel 4", "regenerate shot 2", or sends a note tagged "Regenerate panel N", call \`generate_reference_image\` with \`mode: "storyboard_panels"\`, \`per_shot_prompts: [<the rewritten beat for that one panel>]\`, \`shot_index: N\`, the same \`lock_mode\` used originally, AND the same anchor image in \`reference_urls\`. Do not re-generate the other 8.
 - REGENERATE THE CHARACTER SHEET: when the user asks to redo the character, call \`mode: "character_sheet"\` again with the refined description. Then the user will need to regenerate the storyboard panels to pick up the new identity (mention this).
 - After the images return, the client attaches them with role: "character", "storyboard" (+ shot_index), "key_frame", or "reference". They become first-class references for subsequent \`ask_model_choice\` → \`generate_storyboard_batch\` calls.
+- POST-SHEET FLOW (client-driven): after a character/product/object sheet is generated, the client asks the user to describe the opening key frame scene, THEN asks for aspect ratio, THEN renders the key frame. Do not pre-empt either step — wait for the user's scene description and aspect choice to come back as normal user turns before continuing.
 - DO NOT use this tool to make art the user didn't ask for. DO NOT use it as a substitute for video. DO NOT generate more than one character_sheet per session unless the user asks for variations.
 
 
