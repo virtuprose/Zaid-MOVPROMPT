@@ -54,7 +54,8 @@ async function generateOne(
 ): Promise<string> {
   const aspectLine = aspectRatio ? `\n\nAspect ratio: ${aspectRatio}.` : "";
   const userParts: any[] = [{ type: "text", text: prompt + aspectLine }];
-  for (const u of referenceUrls.slice(0, 4)) {
+  const validRefs = referenceUrls.filter((u) => /^(https?:|data:)/i.test(u));
+  for (const u of validRefs.slice(0, 4)) {
     userParts.push({ type: "image_url", image_url: { url: u } });
   }
   const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
