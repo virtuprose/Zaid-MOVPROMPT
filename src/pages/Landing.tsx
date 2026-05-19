@@ -265,15 +265,11 @@ function Hero({ scrollY }: { scrollY: MotionValue<number> }) {
   // Scroll parallax for each depth layer
   const layer1Y = useTransform(scrollY, [0, 800], [0, -240]);
   const layer2Y = useTransform(scrollY, [0, 800], [0, -160]);
-  const layer3Y = useTransform(scrollY, [0, 800], [0, -80]);
 
   // Mouse parallax (in px) — different ranges per layer
   const orbX = useTransform(sx, [-1, 1], [-12, 12]);
-  const orbY = useTransform(sy, [-1, 1], [-12, 12]);
   const gridX = useTransform(sx, [-1, 1], [-6, 6]);
   const gridY = useTransform(sy, [-1, 1], [-6, 6]);
-  const dotsX = useTransform(sx, [-1, 1], [-3, 3]);
-  const dotsY = useTransform(sy, [-1, 1], [-3, 3]);
 
   return (
     <section
