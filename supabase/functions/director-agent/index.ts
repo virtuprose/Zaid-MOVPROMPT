@@ -26,6 +26,12 @@ import {
   MODEL_CATALOG,
   formatPlaybook,
 } from "../_shared/videoModelCatalog.ts";
+import {
+  chargeCredits,
+  InsufficientCreditsError,
+  insufficientResponse,
+  priceFor,
+} from "../_shared/credits.ts";
 
 const MODEL_IDS = MODEL_CATALOG.map((m) => m.id);
 
