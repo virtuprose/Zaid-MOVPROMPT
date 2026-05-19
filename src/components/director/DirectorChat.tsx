@@ -604,8 +604,11 @@ function DirectorChatInner() {
           );
 
         } catch (e: any) {
-          const message = e?.message || "Image generation failed";
-          if (!(await notifyInsufficientCredits(e))) toast.error(message);
+          const handled = await notifyInsufficientCredits(e);
+          const message = handled
+            ? "You're out of credits — top up to keep generating."
+            : e?.message || "Image generation failed";
+          if (!handled) toast.error(message);
           setBubbles((prev) => {
             const trimmed =
               prev.length && prev[prev.length - 1].role === "assistant"
@@ -613,7 +616,7 @@ function DirectorChatInner() {
                 : prev;
             return [
               ...trimmed,
-              { role: "error", message, retryable: true },
+              { role: "error", message, retryable: !handled },
             ];
           });
         }
