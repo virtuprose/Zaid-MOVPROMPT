@@ -20,6 +20,23 @@ export class InsufficientCreditsError extends Error {
   }
 }
 
+const _adminCache = new Map<string, { at: number; isAdmin: boolean }>();
+const ADMIN_TTL = 5 * 60_000;
+
+async function isAdminUser(userId: string): Promise<boolean> {
+  const cached = _adminCache.get(userId);
+  if (cached && Date.now() - cached.at < ADMIN_TTL) return cached.isAdmin;
+  const { data } = await admin()
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", userId)
+    .eq("role", "admin")
+    .maybeSingle();
+  const isAdmin = !!data;
+  _adminCache.set(userId, { at: Date.now(), isAdmin });
+  return isAdmin;
+}
+
 export async function chargeCredits(opts: {
   userId: string;
   amount: number;
@@ -28,6 +45,8 @@ export async function chargeCredits(opts: {
   metadata?: Record<string, unknown>;
 }): Promise<number> {
   if (!opts.amount || opts.amount <= 0) return 0;
+  // Admins are exempt from credit charges.
+  if (await isAdminUser(opts.userId)) return 0;
   const { data, error } = await admin().rpc("charge_credits", {
     _user_id: opts.userId,
     _amount: opts.amount,
