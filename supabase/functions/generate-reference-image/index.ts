@@ -230,7 +230,7 @@ serve(async (req) => {
     };
 
     type Settled<T> = { status: "fulfilled"; value: T } | { status: "rejected"; reason: unknown };
-    let results: Settled<{ url: string; storage_path: string; shot_index?: number }>[];
+
 
     if (isChain && prompts.length > 1) {
       // Stream NDJSON so the client can show panels as they finish.
