@@ -22,6 +22,7 @@ import { PromptResultCard } from "./PromptResultCard";
 import { ModelChoiceCard } from "./ModelChoiceCard";
 import { GeneratedImageCard } from "./GeneratedImageCard";
 import { AspectChoiceCard, type AspectRatio } from "./AspectChoiceCard";
+import { SubjectLockChoiceCard, type SubjectKind } from "./SubjectLockChoiceCard";
 
 import {
   streamDirectorAgent,
