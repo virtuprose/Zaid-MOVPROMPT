@@ -65,6 +65,20 @@ type Bubble =
   | { role: "model_choice"; recommended_model_id: string; alternatives?: string[]; reason: string; chosen?: string; lockedSpec?: import("@/lib/director/api").LockedSpec }
   | { role: "error"; message: string; detail?: string; retryable: boolean }
   | { role: "generated_images"; data: import("./GeneratedImageCard").GeneratedImageBubbleData }
+  | {
+      role: "aspect_choice";
+      payload: {
+        mode: "single_panel";
+        prompt: string;
+        reference_urls?: string[];
+        count?: number;
+        per_shot_prompts?: string[];
+        shot_index?: number;
+        lock_mode?: "character" | "scene" | "auto";
+        directors_note?: string;
+      };
+      chosen?: AspectRatio;
+    }
   | { role: "video"; data: import("./VideoBubble").VideoBubbleData };
 
 const WELCOME: Bubble = {
