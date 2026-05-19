@@ -176,9 +176,12 @@ serve(async (req) => {
       const continuityClause = isChain
         ? " Same character, wardrobe, hair, face, and props as the attached previous panel — only the action and framing change."
         : "";
+      const subjectClause = referenceUrls.length >= 2
+        ? " Match the subject (character or product) shown in the first attached reference sheet — keep face, wardrobe, hair, branding, and proportions exact."
+        : "";
       prompts = raw.map((beat, i) => {
         const shotNum = regenIndex ?? i + 1;
-        return `${lockPrefix}Shot ${shotNum} of ${total}: ${beat}${continuityClause}`;
+        return `${lockPrefix}Shot ${shotNum} of ${total}: ${beat}${continuityClause}${subjectClause}`;
       });
       shotIndices = regenIndex
         ? prompts.map(() => regenIndex)
