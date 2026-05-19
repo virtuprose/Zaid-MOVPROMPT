@@ -821,6 +821,13 @@ function DirectorChatInner() {
               content: `[Asked the user to pick an aspect ratio for the key frame. Waiting for their choice.]`,
             });
           }
+        } else if (b.role === "scene_describe") {
+          if (!b.submitted) {
+            history.push({
+              role: "assistant",
+              content: `[Asked the user to describe the opening key frame scene before choosing aspect ratio. Waiting for their description.]`,
+            });
+          }
         }
 
       }
