@@ -1710,6 +1710,28 @@ function DirectorChatInner() {
                 </div>
               );
             }
+            if (b.role === "scene_describe") {
+              return (
+                <div key={i} className="flex items-start gap-2 motion-safe:animate-fade-up">
+                  <AssistantAvatar size="sm" state="idle" className="mt-1" />
+                  <div className="flex-1">
+                    <QuestionCard
+                      reason="Before we render the key frame, set the scene — this anchors the whole story."
+                      questions={[
+                        "Describe the opening key frame: setting, action, mood, lighting, time of day.",
+                      ]}
+                      disabled={busy || b.submitted}
+                      onContinue={(formatted) => {
+                        // QuestionCard returns "1. <answer>"; strip the numbering.
+                        const answer = formatted.replace(/^\s*1\.\s*/, "").trim();
+                        handleSceneDescribeSubmit(i, answer);
+                      }}
+                      onSkip={() => handleSceneDescribeSubmit(i, "")}
+                    />
+                  </div>
+                </div>
+              );
+            }
             const isUser = b.role === "user";
             if (!isUser) {
               // Hide the streaming placeholder bubble; TypingIndicator covers it.
