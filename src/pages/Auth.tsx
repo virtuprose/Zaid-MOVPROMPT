@@ -203,15 +203,6 @@ const Auth = () => {
           className="flex items-center justify-center px-4 py-8 md:py-0"
         >
           <div className="w-full max-w-sm">
-            {/* Mobile brand header */}
-            <div className="text-center mb-6">
-              <h2 className="text-2xl font-mono font-bold mb-1">
-                <span className="text-primary">Mov</span>Prompt
-              </h2>
-              <p className="text-sm text-muted-foreground">
-                {t("auth.mobileBrand")}
-              </p>
-            </div>
 
             <Card className="bg-card border border-[#27272A] shadow-[inset_0_0_40px_0_hsl(38_91%_55%/0.08)]">
               <CardContent className="p-5 sm:p-6 space-y-5">
