@@ -462,6 +462,8 @@ function DirectorChatInner() {
           images: result.images,
           directorsNote: payload.directors_note,
           ...(payload.aspect_ratio ? { aspectRatio: payload.aspect_ratio } : {}),
+          ...(options?.subjectSheet ? { subjectSheet: true as const } : {}),
+          ...(options?.subjectKind ? { subjectKind: options.subjectKind } : {}),
         },
       };
       const carrierBubble: Bubble = {
