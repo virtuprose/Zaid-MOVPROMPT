@@ -777,7 +777,22 @@ export default function MarketingStudio() {
 
               <RenderSettingsPopover value={renderSettings} onChange={setRenderSettings} />
 
-              <div className="ml-auto flex items-center">
+              <div className="ml-auto flex items-center gap-2">
+                {(() => {
+                  const prices = usePricing();
+                  // Same provider routing as doGenerate(): defaults assume
+                  // text-only seedance-v1-pro; if a location image is set we
+                  // upgrade to seedance-2.0 (single ref).
+                  const provider = location.imagePath ? "seedance-2.0" : "seedance-v1-pro";
+                  const cost = estimateVideoCost(prices, provider, renderSettings.duration);
+                  return (
+                    <CostChip
+                      amount={cost}
+                      prefix="≈"
+                      title={`Estimated ${cost} credits for ${renderSettings.duration}s render`}
+                    />
+                  );
+                })()}
                 <Button
                   size="sm"
                   disabled={!hasInputs || submitting || drafting}
