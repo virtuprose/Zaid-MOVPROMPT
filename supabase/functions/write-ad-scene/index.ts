@@ -191,13 +191,19 @@ Deno.serve(async (req) => {
       resp = await callAi(FALLBACK);
     }
 
+    const refundForFailure = async (reason: string) => {
+      await refundCredits({ userId: uid, amount: charge, reason: "write_ad_scene_refund", metadata: { reason } });
+    };
+
     if (resp.status === 429) {
+      await refundForFailure("rate_limited");
       return new Response(JSON.stringify({ error: "Rate limit exceeded" }), {
         status: 429,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
     if (resp.status === 402) {
+      await refundForFailure("ai_credits_exhausted");
       return new Response(JSON.stringify({ error: "AI credits exhausted" }), {
         status: 402,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -206,6 +212,7 @@ Deno.serve(async (req) => {
     if (!resp.ok) {
       const text = await resp.text();
       console.error("AI gateway error:", resp.status, text);
+      await refundForFailure(`gateway_${resp.status}`);
       return new Response(JSON.stringify({ error: `AI gateway error (${resp.status})` }), {
         status: 502,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -215,6 +222,7 @@ Deno.serve(async (req) => {
     const data = await resp.json();
     const scene: string = (data?.choices?.[0]?.message?.content ?? "").trim();
     if (!scene) {
+      await refundForFailure("empty_response");
       return new Response(JSON.stringify({ error: "Empty AI response" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
