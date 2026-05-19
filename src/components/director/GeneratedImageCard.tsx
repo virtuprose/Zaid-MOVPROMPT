@@ -1,5 +1,5 @@
-import { RotateCcw, Film, Maximize2, X } from "lucide-react";
-import { useState } from "react";
+import { RotateCcw, Film, Maximize2, X, ChevronLeft, ChevronRight } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogClose } from "@/components/ui/dialog";
@@ -17,7 +17,7 @@ type Props = {
 };
 
 export function GeneratedImageCard({ data, onRegenerate }: Props) {
-  const [zoomUrl, setZoomUrl] = useState<string | null>(null);
+  const [zoomIndex, setZoomIndex] = useState<number | null>(null);
   const isGrid = data.mode === "storyboard_panels" && data.images.length > 1;
   const isKeyFrame = data.mode === "single_panel";
   const label =
@@ -31,6 +31,32 @@ export function GeneratedImageCard({ data, onRegenerate }: Props) {
     if (!onRegenerate) return;
     onRegenerate(intent);
   };
+
+  const n = data.images.length;
+  const hasMultiple = n > 1;
+  const goPrev = useCallback(
+    () => setZoomIndex((i) => (i === null ? i : (i - 1 + n) % n)),
+    [n],
+  );
+  const goNext = useCallback(
+    () => setZoomIndex((i) => (i === null ? i : (i + 1) % n)),
+    [n],
+  );
+
+  useEffect(() => {
+    if (zoomIndex === null || !hasMultiple) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        goPrev();
+      } else if (e.key === "ArrowRight") {
+        e.preventDefault();
+        goNext();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [zoomIndex, hasMultiple, goPrev, goNext]);
 
   return (
     <>
@@ -85,12 +111,14 @@ export function GeneratedImageCard({ data, onRegenerate }: Props) {
               )}
               <button
                 type="button"
-                onClick={() => setZoomUrl(img.url)}
-                className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity bg-background/85 hover:bg-background text-foreground p-1 rounded"
+                onClick={() => setZoomIndex(i)}
+                className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity"
                 title="Expand"
                 aria-label="Expand image"
               >
-                <Maximize2 className="h-3 w-3" />
+                <span className="bg-background/85 hover:bg-background text-foreground p-2 rounded-full shadow-md">
+                  <Maximize2 className="h-5 w-5" />
+                </span>
               </button>
               {onRegenerate && (
                 <button
@@ -151,14 +179,39 @@ export function GeneratedImageCard({ data, onRegenerate }: Props) {
       )}
     </div>
 
-    <Dialog open={!!zoomUrl} onOpenChange={(o) => !o && setZoomUrl(null)}>
+    <Dialog open={zoomIndex !== null} onOpenChange={(o) => !o && setZoomIndex(null)}>
       <DialogContent className="max-w-[95vw] w-fit p-0 bg-background/95 border-border/40">
-        {zoomUrl && (
-          <img
-            src={zoomUrl}
-            alt="Expanded view"
-            className="max-h-[90vh] max-w-[95vw] w-auto h-auto object-contain rounded-lg"
-          />
+        {zoomIndex !== null && (
+          <div className="relative">
+            <img
+              src={data.images[zoomIndex].url}
+              alt="Expanded view"
+              className="max-h-[90vh] max-w-[95vw] w-auto h-auto object-contain rounded-lg"
+            />
+            {hasMultiple && (
+              <>
+                <button
+                  type="button"
+                  onClick={goPrev}
+                  className="absolute left-2 top-1/2 -translate-y-1/2 bg-background/80 hover:bg-background text-foreground p-2 rounded-full shadow-md"
+                  aria-label="Previous image"
+                >
+                  <ChevronLeft className="h-5 w-5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={goNext}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 bg-background/80 hover:bg-background text-foreground p-2 rounded-full shadow-md"
+                  aria-label="Next image"
+                >
+                  <ChevronRight className="h-5 w-5" />
+                </button>
+                <div className="absolute bottom-2 left-1/2 -translate-x-1/2 text-xs font-medium bg-background/85 text-foreground px-2 py-1 rounded-full">
+                  {zoomIndex + 1} / {n}
+                </div>
+              </>
+            )}
+          </div>
         )}
         <DialogClose className="absolute top-2 right-2 bg-background/80 hover:bg-background p-1.5 rounded-md">
           <X className="h-4 w-4" />
