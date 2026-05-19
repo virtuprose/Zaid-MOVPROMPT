@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Coins, CreditCard, Gift, ArrowDownRight, ArrowUpRight } from "lucide-react";
+import { ArrowLeft, Coins, CreditCard, Gift, ArrowDownRight, ArrowUpRight, Film, Image as ImageIcon, MessageSquare, Megaphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Seo } from "@/components/Seo";
 import { TopNav } from "@/components/TopNav";
 import { useAuth } from "@/hooks/useAuth";
 import { useCredits, fetchLedger, type LedgerEntry } from "@/hooks/useCredits";
+import { usePricing } from "@/lib/credits/pricing";
+import { ALL_VIDEO_MODELS } from "@/lib/director/videoModels";
 
 const REASON_LABEL: Record<string, string> = {
   signup_bonus: "Welcome bonus",
@@ -27,10 +29,25 @@ const AccountBilling = () => {
   const { user } = useAuth();
   const { balance } = useCredits();
   const [entries, setEntries] = useState<LedgerEntry[]>([]);
+  const prices = usePricing();
 
   useEffect(() => {
     if (user) void fetchLedger(user.id, 100).then(setEntries);
   }, [user]);
+
+  const flatActions = [
+    { key: "director_chat_text", label: "Director chat reply", icon: MessageSquare },
+    { key: "director_chat_multimodal", label: "Director chat with media", icon: MessageSquare },
+    { key: "image_generation", label: "Reference image / ad still", icon: ImageIcon },
+    { key: "write_ad_scene", label: "Ad scene writer", icon: Megaphone },
+  ];
+  const videoRows = ALL_VIDEO_MODELS
+    .map((m) => {
+      const row = prices.get(`video.${m.id}`);
+      return row ? { id: m.id, label: m.label, family: String(m.family), rate: row.amount } : null;
+    })
+    .filter((x): x is { id: string; label: string; family: string; rate: number } => !!x)
+    .sort((a, b) => a.rate - b.rate);
 
   return (
     <div className="min-h-screen bg-background">
@@ -90,6 +107,55 @@ const AccountBilling = () => {
               );
             })}
           </ul>
+        </Card>
+
+        <Card className="p-6 mt-6">
+          <div className="text-sm font-medium mb-1 flex items-center gap-2">
+            <Coins className="w-4 h-4 text-accent" /> Price list
+          </div>
+          <div className="text-xs text-muted-foreground mb-4">
+            Each action below deducts credits from your balance.
+          </div>
+
+          <div className="text-[11px] uppercase tracking-wider text-muted-foreground mb-2">
+            Per action
+          </div>
+          <ul className="divide-y divide-border/40 mb-6">
+            {flatActions.map(({ key, label, icon: Icon }) => {
+              const row = prices.get(key);
+              const amount = row ? Math.ceil(row.amount) : null;
+              return (
+                <li key={key} className="py-2.5 flex items-center gap-3">
+                  <Icon className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-sm flex-1">{label}</span>
+                  <span className="text-sm tabular-nums text-foreground/80">
+                    {amount ?? "—"} <span className="text-muted-foreground">credits</span>
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+
+          <div className="text-[11px] uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-1.5">
+            <Film className="w-3 h-3" /> Video rendering · per second
+          </div>
+          <ul className="divide-y divide-border/40 max-h-[360px] overflow-y-auto pr-1">
+            {videoRows.map((r) => (
+              <li key={r.id} className="py-2 flex items-center gap-3 text-sm">
+                <span className="text-[10px] uppercase tracking-wider text-muted-foreground/80 w-16 shrink-0">
+                  {r.family}
+                </span>
+                <span className="flex-1 truncate">{r.label}</span>
+                <span className="tabular-nums text-foreground/80 shrink-0">
+                  {Math.ceil(r.rate)} <span className="text-muted-foreground">/s</span>
+                </span>
+              </li>
+            ))}
+          </ul>
+          <div className="mt-4 text-[11px] text-muted-foreground">
+            Example: a 5s render with a model priced at 15/s costs ≈ 75 credits.
+            Failed renders are automatically refunded.
+          </div>
         </Card>
       </div>
     </div>
