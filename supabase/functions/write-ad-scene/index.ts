@@ -2,6 +2,9 @@
 // product/avatar/location context) into a ready-to-shoot, 2–4 sentence
 // scene description for the Marketing Studio describe box.
 
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
+import { chargeCredits, refundCredits, priceFor, InsufficientCreditsError, insufficientResponse } from "../_shared/credits.ts";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
@@ -136,9 +139,33 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Extract user from JWT
+    const sb = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!,
+      { global: { headers: { Authorization: authHeader } } },
+    );
+    const { data: ud } = await sb.auth.getUser(authHeader.replace("Bearer ", ""));
+    const uid = ud?.user?.id;
+    if (!uid) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const charge = await priceFor("write_ad_scene", 2);
+    try {
+      await chargeCredits({ userId: uid, amount: charge, reason: "write_ad_scene" });
+    } catch (e) {
+      if (e instanceof InsufficientCreditsError) return insufficientResponse(corsHeaders);
+      throw e;
+    }
+
     const userContent = buildUserContent(body);
 
     const callAi = (model: string) =>
+
       fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
         headers: {
@@ -164,13 +191,19 @@ Deno.serve(async (req) => {
       resp = await callAi(FALLBACK);
     }
 
+    const refundForFailure = async (reason: string) => {
+      await refundCredits({ userId: uid, amount: charge, reason: "write_ad_scene_refund", metadata: { reason } });
+    };
+
     if (resp.status === 429) {
+      await refundForFailure("rate_limited");
       return new Response(JSON.stringify({ error: "Rate limit exceeded" }), {
         status: 429,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
     if (resp.status === 402) {
+      await refundForFailure("ai_credits_exhausted");
       return new Response(JSON.stringify({ error: "AI credits exhausted" }), {
         status: 402,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -179,6 +212,7 @@ Deno.serve(async (req) => {
     if (!resp.ok) {
       const text = await resp.text();
       console.error("AI gateway error:", resp.status, text);
+      await refundForFailure(`gateway_${resp.status}`);
       return new Response(JSON.stringify({ error: `AI gateway error (${resp.status})` }), {
         status: 502,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -188,6 +222,7 @@ Deno.serve(async (req) => {
     const data = await resp.json();
     const scene: string = (data?.choices?.[0]?.message?.content ?? "").trim();
     if (!scene) {
+      await refundForFailure("empty_response");
       return new Response(JSON.stringify({ error: "Empty AI response" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },

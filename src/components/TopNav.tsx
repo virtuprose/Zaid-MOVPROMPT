@@ -34,6 +34,7 @@ import { useLanguage } from "@/i18n/LanguageContext";
 import { useTour } from "@/components/tour/TourProvider";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import NotificationBell from "@/components/NotificationBell";
+import { CreditBadge } from "@/components/credits/CreditBadge";
 import logoMark from "@/assets/logo-mark.svg";
 import { cn } from "@/lib/utils";
 
@@ -160,6 +161,9 @@ export function TopNav() {
                 Library
               </Button>
 
+              <div className="hidden sm:block">
+                <CreditBadge />
+              </div>
               <div className="hidden sm:block">
                 <NotificationBell />
               </div>

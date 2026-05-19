@@ -1,6 +1,13 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { fal } from "npm:@fal-ai/client";
+import {
+  chargeCredits,
+  refundCredits,
+  videoCost,
+  InsufficientCreditsError,
+  insufficientResponse,
+} from "../_shared/credits.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -372,6 +379,8 @@ serve(async (req) => {
                 completed_at: new Date().toISOString(),
               })
               .eq("id", jobId);
+            const refundAmt = await videoCost(job.provider, 5);
+            await refundCredits({ userId: uid, amount: refundAmt, reason: "video_render_refund", refId: jobId, metadata: { stage: "terminal_4xx" } });
             return new Response(
               JSON.stringify({
                 ...job,
@@ -413,6 +422,8 @@ serve(async (req) => {
             completed_at: new Date().toISOString(),
           })
           .eq("id", jobId);
+        const refundAmt = await videoCost(job.provider, 5);
+        await refundCredits({ userId: uid, amount: refundAmt, reason: "video_render_refund", refId: jobId, metadata: { stage: "provider_failed" } });
         return new Response(
           JSON.stringify({ ...job, status: "failed", error: statusData.error }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } },
@@ -544,6 +555,27 @@ serve(async (req) => {
       });
     }
 
+    // Charge credits up-front based on provider + duration.
+    const durationSec =
+      typeof options?.duration === "number"
+        ? options.duration
+        : 5;
+    const creditCost = await videoCost(provider, durationSec);
+    try {
+      await chargeCredits({
+        userId: uid,
+        amount: creditCost,
+        reason: "video_render",
+        metadata: { provider, duration: durationSec },
+      });
+    } catch (e) {
+      if (e instanceof InsufficientCreditsError) return insufficientResponse(corsHeaders);
+      console.error("charge_credits failed", e);
+      return new Response(JSON.stringify({ error: "Credit charge failed" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     // Create job row
     const { data: job, error: insErr } = await admin
@@ -562,6 +594,7 @@ serve(async (req) => {
       .single();
     if (insErr || !job) {
       console.error("insert video_job failed", insErr);
+      await refundCredits({ userId: uid, amount: creditCost, reason: "video_render_refund", metadata: { stage: "insert_failed" } });
       return new Response(JSON.stringify({ error: "Could not create job" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -580,6 +613,7 @@ serve(async (req) => {
         .from("video_jobs")
         .update({ status: "failed", error: "Provider error" })
         .eq("id", job.id);
+      await refundCredits({ userId: uid, amount: creditCost, reason: "video_render_refund", refId: job.id, metadata: { stage: "submit_error" } });
       return new Response(JSON.stringify({ error: "Provider rejected request" }), {
         status: 502,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -591,6 +625,7 @@ serve(async (req) => {
         .from("video_jobs")
         .update({ status: "failed", error: "Provider returned an invalid submission response" })
         .eq("id", job.id);
+      await refundCredits({ userId: uid, amount: creditCost, reason: "video_render_refund", refId: job.id, metadata: { stage: "submit_invalid" } });
       return new Response(JSON.stringify({ error: "Provider rejected request" }), {
         status: 502,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
