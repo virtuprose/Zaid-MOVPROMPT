@@ -30,7 +30,7 @@ import { cn } from "@/lib/utils";
 const NAV_LINKS = [
   { href: "#features", label: "Features" },
   { href: "#how", label: "How It Works" },
-  { href: "#testimonials", label: "Testimonials" },
+  
 ];
 
 const MODELS = ["Kling", "Veo", "Runway", "Seedance", "Pika", "Luma", "Hailuo", "Wan"];
