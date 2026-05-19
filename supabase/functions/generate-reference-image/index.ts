@@ -136,7 +136,7 @@ serve(async (req) => {
     const referenceUrls = Array.isArray(body.reference_urls)
       ? body.reference_urls.filter((u) => typeof u === "string" && u.length > 0)
       : [];
-    const aspect = body.aspect_ratio || (mode === "character_sheet" ? "1:1" : "16:9");
+    const aspect = body.aspect_ratio || "16:9";
 
     const hasReference = referenceUrls.length > 0;
     const lockMode: LockMode = body.lock_mode || "auto";

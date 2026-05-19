@@ -433,7 +433,7 @@ const TOOLS = [
           aspect_ratio: {
             type: "string",
             enum: ["1:1", "16:9", "9:16"],
-            description: "Echo the locked aspect when possible. Defaults to 1:1 for character_sheet, 16:9 otherwise.",
+            description: "Echo the locked aspect when possible. Defaults to 16:9 for all modes (character/product/object sheets, storyboard panels, single panel).",
           },
           per_shot_prompts: {
             type: "array",
