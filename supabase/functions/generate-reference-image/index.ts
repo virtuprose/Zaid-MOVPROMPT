@@ -24,6 +24,7 @@ type Body = {
   per_shot_prompts?: string[]; // when mode === "storyboard_panels", one per shot
   shot_index?: number; // when regenerating a single panel inside an existing 3x3 grid
   lock_mode?: LockMode; // "character" | "scene" (key-frame extension) | "auto" (default)
+  subject_kind?: "character" | "product"; // shapes the character_sheet layout copy
 };
 
 const IDENTITY_LOCK =
