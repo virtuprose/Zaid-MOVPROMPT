@@ -139,9 +139,33 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Extract user from JWT
+    const sb = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!,
+      { global: { headers: { Authorization: authHeader } } },
+    );
+    const { data: ud } = await sb.auth.getUser(authHeader.replace("Bearer ", ""));
+    const uid = ud?.user?.id;
+    if (!uid) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const charge = await priceFor("write_ad_scene", 2);
+    try {
+      await chargeCredits({ userId: uid, amount: charge, reason: "write_ad_scene" });
+    } catch (e) {
+      if (e instanceof InsufficientCreditsError) return insufficientResponse(corsHeaders);
+      throw e;
+    }
+
     const userContent = buildUserContent(body);
 
     const callAi = (model: string) =>
+
       fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
         headers: {
