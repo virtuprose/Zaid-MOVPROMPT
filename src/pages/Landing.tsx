@@ -1,563 +1,789 @@
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
+import { useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import {
-  ArrowRight,
-  Film,
-  Layers,
-  Clapperboard,
+  motion,
+  useScroll,
+  useTransform,
+  useMotionValue,
+  useSpring,
+  useInView,
+  useReducedMotion,
+  type MotionValue,
+} from "framer-motion";
+import {
+  Camera,
+  ArrowLeftRight,
+  LayoutGrid,
+  Menu,
+  X,
   Lock,
-  Wand2,
-  Sparkles,
-  Copy,
-  Check,
+  Unlock,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { LanguageToggle } from "@/components/LanguageToggle";
 import { Seo } from "@/components/Seo";
-import logoMark from "@/assets/logo-mark.png";
-import exampleDesert from "@/assets/example-desert.jpg";
-import examplePortrait from "@/assets/example-portrait.jpg";
-import exampleTokyo from "@/assets/example-tokyo.jpg";
+import { cn } from "@/lib/utils";
 
-const MODELS = ["Kling", "Veo", "Runway", "Seedance", "Wan"];
+/* ============================================================
+   MovPrompt — Cinematic 3D Parallax Landing
+   Dark theme · Space Grotesk display · Signal Amber accent
+   ============================================================ */
 
-// Cinematography keywords highlighted in amber inside prompt snippets.
-const CINE_KEYWORDS = [
-  "dolly-in", "dolly-out", "tracking shot", "handheld", "anamorphic",
-  "35mm", "50mm", "85mm", "rim light", "key light", "golden hour",
-  "shallow", "film grain", "neon", "catchlights", "push", "rack focus",
+const NAV_LINKS = [
+  { href: "#features", label: "Features" },
+  { href: "#how", label: "How It Works" },
+  { href: "#testimonials", label: "Testimonials" },
 ];
 
-const PROOFS = [
+const MODELS = ["Kling", "Veo", "Runway", "Seedance", "Pika", "Luma", "Hailuo", "Wan"];
+
+const FEATURES = [
   {
-    img: exampleDesert,
-    model: "Kling 2.1",
-    snippet:
-      "Wide desert dolly-in at golden hour, warm rim light on dunes, slow camera push toward lone figure on the ridge…",
+    icon: Camera,
+    title: "Single Frame",
+    body:
+      "One image. One cinematic shot. Upload a still and get a complete video prompt with camera direction, motion cues, and negative prompts.",
   },
   {
-    img: examplePortrait,
-    model: "Veo 3",
-    snippet:
-      "Soft window key light, shallow 50mm, subject turns toward camera as catchlights bloom, subtle film grain…",
+    icon: ArrowLeftRight,
+    title: "Start + End",
+    body:
+      "Two frames. A seamless transition. Define your opening and closing shots — MovPrompt writes the motion between them.",
   },
   {
-    img: exampleTokyo,
-    model: "Seedance Pro",
-    snippet:
-      "Neon-soaked Tokyo alley, anamorphic flares, handheld tracking shot weaving through pedestrians, rain mist…",
+    icon: LayoutGrid,
+    title: "Multi-Shot",
+    body:
+      "One image. A full storyboard. Generate an entire sequence of shots from a single frame — ready for batch generation.",
   },
 ];
 
 const TESTIMONIALS = [
   {
+    quote: "MovPrompt cut my prep time in half. I drop a still and ship a Kling shot in minutes.",
     name: "Lina Ortega",
     handle: "@linafilms",
-    quote: "MovPrompt cut my prep time in half. I drop a still and ship a Kling shot in minutes.",
-    avatar: "from-amber-500 to-orange-600",
   },
   {
+    quote: "It actually understands cinematography. The negative prompt alone is worth it.",
     name: "Daichi Mori",
     handle: "@dmori.cinema",
-    quote: "It actually understands cinematography. The negative prompt alone is worth it.",
-    avatar: "from-cyan-500 to-blue-600",
   },
   {
+    quote: "Storyboards in one click. My whole team uses it now for AI ad concepts.",
     name: "Aria Patel",
     handle: "@ariadirects",
-    quote: "Storyboards in one click. My whole team uses it now for AI ad concepts.",
-    avatar: "from-rose-500 to-pink-600",
   },
 ];
 
-function highlight(text: string) {
-  // Split on word boundaries while preserving delimiters.
-  const parts = text.split(/(\s+|[.,…])/);
-  return parts.map((part, i) => {
-    const lower = part.toLowerCase();
-    const hit = CINE_KEYWORDS.some((kw) => lower === kw || lower.includes(kw));
-    if (hit) return <span key={i} className="text-primary">{part}</span>;
-    return <span key={i}>{part}</span>;
-  });
+/* ---------------- Wordmark ---------------- */
+
+function Wordmark({ className }: { className?: string }) {
+  return (
+    <span
+      className={cn(
+        "font-display font-bold tracking-tight text-foreground select-none",
+        className,
+      )}
+    >
+      <span className="text-accent">Mov</span>Prompt
+    </span>
+  );
 }
 
-function CodeSnippet({ children, text }: { children: React.ReactNode; text: string }) {
-  const [copied, setCopied] = useState(false);
-  const onCopy = async () => {
-    await navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
-  };
+/* ---------------- Count-up hook ---------------- */
+
+function useCountUp(target: number, durationMs = 2000, start = false) {
+  const [value, setValue] = useState(0);
+  const reduce = useReducedMotion();
+  useEffect(() => {
+    if (!start) return;
+    if (reduce) {
+      setValue(target);
+      return;
+    }
+    let raf = 0;
+    const t0 = performance.now();
+    const tick = (now: number) => {
+      const p = Math.min(1, (now - t0) / durationMs);
+      const eased = 1 - Math.pow(1 - p, 3); // ease-out cubic
+      setValue(Math.round(target * eased));
+      if (p < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [target, durationMs, start, reduce]);
+  return value;
+}
+
+/* ---------------- Section primitives ---------------- */
+
+function SectionEyebrow({ children }: { children: React.ReactNode }) {
   return (
-    <div className="relative rounded-lg border border-border bg-card/60 p-4 pe-9">
-      <button
-        onClick={onCopy}
-        aria-label="Copy prompt"
-        className="absolute top-2 end-2 p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+    <span className="inline-flex items-center gap-2 rounded-full border border-accent/20 bg-accent/10 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.08em] text-accent">
+      {children}
+    </span>
+  );
+}
+
+function FadeUp({
+  children,
+  delay = 0,
+  className,
+}: {
+  children: React.ReactNode;
+  delay?: number;
+  className?: string;
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 40 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.3 }}
+      transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1], delay }}
+      className={className}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+/* ============================================================
+   Navbar
+   ============================================================ */
+
+function Navbar() {
+  const [scrolled, setScrolled] = useState(false);
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 24);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  return (
+    <header
+      className={cn(
+        "fixed inset-x-0 top-0 z-50 backdrop-blur-xl transition-all duration-300",
+        scrolled
+          ? "bg-card/80 border-b border-border"
+          : "bg-transparent border-b border-transparent",
+      )}
+    >
+      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
+        <a href="#top" className="flex items-center">
+          <Wordmark className="text-xl" />
+        </a>
+
+        <nav className="hidden items-center gap-8 md:flex">
+          {NAV_LINKS.map((l) => (
+            <a
+              key={l.href}
+              href={l.href}
+              className="text-[13px] font-medium text-muted-foreground transition-colors hover:text-foreground"
+            >
+              {l.label}
+            </a>
+          ))}
+        </nav>
+
+        <div className="hidden md:block">
+          <Link
+            to="/auth"
+            className="inline-flex h-10 items-center rounded-full bg-accent px-5 text-[14px] font-semibold text-accent-foreground shadow-[0_0_0_rgba(240,168,42,0)] transition-all hover:shadow-[0_0_24px_hsl(var(--accent)/0.35)]"
+          >
+            Try It Free
+          </Link>
+        </div>
+
+        <button
+          aria-label="Toggle menu"
+          className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-border text-foreground md:hidden"
+          onClick={() => setOpen((v) => !v)}
+        >
+          {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+        </button>
+      </div>
+
+      {/* Mobile panel */}
+      <motion.div
+        initial={false}
+        animate={open ? { height: "auto", opacity: 1 } : { height: 0, opacity: 0 }}
+        transition={{ duration: 0.25 }}
+        className="overflow-hidden border-t border-border bg-card/95 backdrop-blur-xl md:hidden"
       >
-        {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-      </button>
-      <pre
-        className="whitespace-pre-wrap text-[12px] leading-[1.6] m-0"
-        style={{ fontFamily: "'JetBrains Mono', 'Geist Mono', ui-monospace, monospace", color: "#A1A1AA" }}
+        <div className="flex flex-col gap-4 px-6 py-6">
+          {NAV_LINKS.map((l) => (
+            <a
+              key={l.href}
+              href={l.href}
+              onClick={() => setOpen(false)}
+              className="text-[15px] font-medium text-muted-foreground hover:text-foreground"
+            >
+              {l.label}
+            </a>
+          ))}
+          <Link
+            to="/auth"
+            onClick={() => setOpen(false)}
+            className="mt-2 inline-flex h-11 items-center justify-center rounded-full bg-accent px-5 text-[14px] font-semibold text-accent-foreground"
+          >
+            Try It Free
+          </Link>
+        </div>
+      </motion.div>
+    </header>
+  );
+}
+
+/* ============================================================
+   Hero with mouse parallax + layered depth
+   ============================================================ */
+
+function Hero({ scrollY }: { scrollY: MotionValue<number> }) {
+  const reduce = useReducedMotion();
+  const ref = useRef<HTMLDivElement>(null);
+
+  // Mouse-driven motion values
+  const mx = useMotionValue(0);
+  const my = useMotionValue(0);
+  const sx = useSpring(mx, { stiffness: 80, damping: 18, mass: 0.4 });
+  const sy = useSpring(my, { stiffness: 80, damping: 18, mass: 0.4 });
+
+  useEffect(() => {
+    if (reduce) return;
+    const onMove = (e: MouseEvent) => {
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      mx.set((e.clientX / w - 0.5) * 2); // -1..1
+      my.set((e.clientY / h - 0.5) * 2);
+    };
+    window.addEventListener("mousemove", onMove);
+    return () => window.removeEventListener("mousemove", onMove);
+  }, [mx, my, reduce]);
+
+  // Scroll parallax for each depth layer
+  const layer1Y = useTransform(scrollY, [0, 800], [0, -240]);
+  const layer2Y = useTransform(scrollY, [0, 800], [0, -160]);
+  const layer3Y = useTransform(scrollY, [0, 800], [0, -80]);
+
+  // Mouse parallax (in px) — different ranges per layer
+  const orbX = useTransform(sx, [-1, 1], [-12, 12]);
+  const orbY = useTransform(sy, [-1, 1], [-12, 12]);
+  const gridX = useTransform(sx, [-1, 1], [-6, 6]);
+  const gridY = useTransform(sy, [-1, 1], [-6, 6]);
+  const dotsX = useTransform(sx, [-1, 1], [-3, 3]);
+  const dotsY = useTransform(sy, [-1, 1], [-3, 3]);
+
+  return (
+    <section
+      id="top"
+      ref={ref}
+      className="relative flex min-h-screen items-center justify-center overflow-hidden pt-24"
+    >
+      {/* Layer 1: orbs */}
+      <motion.div
+        style={{ y: reduce ? 0 : layer1Y, x: reduce ? 0 : orbX, translateY: reduce ? 0 : orbY }}
+        className="pointer-events-none absolute inset-0"
+        aria-hidden
       >
-        {children}
-      </pre>
+        <div
+          className="absolute -top-32 right-[-10%] h-[520px] w-[520px] rounded-full opacity-[0.18]"
+          style={{
+            background: "hsl(var(--accent))",
+            filter: "blur(150px)",
+          }}
+        />
+        <div
+          className="absolute bottom-[-15%] left-[-10%] h-[480px] w-[480px] rounded-full opacity-[0.15] md:block hidden"
+          style={{
+            background: "hsl(var(--accent))",
+            filter: "blur(150px)",
+          }}
+        />
+      </motion.div>
+
+      {/* Layer 2: perspective grid */}
+      <motion.div
+        style={{ y: reduce ? 0 : layer2Y, x: reduce ? 0 : gridX, translateY: reduce ? 0 : gridY }}
+        className="pointer-events-none absolute inset-0 [perspective:800px]"
+        aria-hidden
+      >
+        <div
+          className="absolute inset-x-[-20%] bottom-[-10%] h-[80%] opacity-[0.06] [transform:rotateX(60deg)]"
+          style={{
+            backgroundImage:
+              "linear-gradient(hsl(var(--border)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--border)) 1px, transparent 1px)",
+            backgroundSize: "64px 64px",
+          }}
+        />
+      </motion.div>
+
+      {/* Layer 3: drifting particles */}
+      <motion.div
+        style={{ y: reduce ? 0 : layer3Y, x: reduce ? 0 : dotsX, translateY: reduce ? 0 : dotsY }}
+        className="pointer-events-none absolute inset-0"
+        aria-hidden
+      >
+        {Array.from({ length: 22 }).map((_, i) => {
+          const left = (i * 53) % 100;
+          const top = (i * 37) % 100;
+          const delay = (i % 7) * 0.5;
+          return (
+            <motion.span
+              key={i}
+              className="absolute h-[3px] w-[3px] rounded-full"
+              style={{
+                left: `${left}%`,
+                top: `${top}%`,
+                background: "hsl(var(--accent) / 0.4)",
+                boxShadow: "0 0 8px hsl(var(--accent) / 0.5)",
+              }}
+              animate={
+                reduce
+                  ? undefined
+                  : { y: [0, -40, 0], opacity: [0.2, 0.7, 0.2] }
+              }
+              transition={{ duration: 6 + (i % 5), repeat: Infinity, delay, ease: "easeInOut" }}
+            />
+          );
+        })}
+      </motion.div>
+
+      {/* Layer 4: content */}
+      <div className="relative z-10 mx-auto flex max-w-3xl flex-col items-center px-6 text-center">
+        <FadeUp>
+          <SectionEyebrow>AI Director of Photography</SectionEyebrow>
+        </FadeUp>
+        <FadeUp delay={0.1}>
+          <h1 className="mt-6 font-display text-[36px] font-bold leading-[1.05] tracking-[-0.03em] text-foreground md:text-[56px]">
+            Turn Stills Into Cinema
+          </h1>
+        </FadeUp>
+        <FadeUp delay={0.2}>
+          <p className="mx-auto mt-5 max-w-2xl text-[15px] leading-relaxed text-muted-foreground md:text-[17px]">
+            Drop a frame. Pick a model. Get a director-grade video prompt ready to paste into
+            Kling, Veo, Runway, Seedance, or any AI video tool.
+          </p>
+        </FadeUp>
+        <FadeUp delay={0.3}>
+          <div className="mt-9 flex flex-col items-center gap-3 sm:flex-row sm:gap-4">
+            <Link
+              to="/auth"
+              className="inline-flex h-12 items-center justify-center rounded-full bg-accent px-8 text-[15px] font-semibold text-accent-foreground transition-all hover:shadow-[0_0_28px_hsl(var(--accent)/0.4)]"
+            >
+              Get Started
+            </Link>
+            <a
+              href="#features"
+              className="inline-flex h-12 items-center justify-center rounded-full border border-border bg-transparent px-8 text-[15px] font-semibold text-foreground transition-all hover:bg-card"
+            >
+              See Examples
+            </a>
+          </div>
+        </FadeUp>
+        <FadeUp delay={0.4}>
+          <p className="mt-5 text-[13px] text-muted-foreground">No credit card required</p>
+        </FadeUp>
+      </div>
+    </section>
+  );
+}
+
+/* ============================================================
+   Stats Bar
+   ============================================================ */
+
+function StatItem({
+  value,
+  suffix,
+  label,
+  inView,
+}: {
+  value: number;
+  suffix?: string;
+  label: string;
+  inView: boolean;
+}) {
+  const n = useCountUp(value, 2000, inView);
+  return (
+    <div className="flex flex-1 flex-col items-center px-4 py-4 text-center">
+      <div
+        className="font-display text-[36px] font-bold tracking-tight text-foreground md:text-[40px]"
+        style={{ textShadow: "0 0 40px hsl(var(--accent) / 0.15)" }}
+      >
+        {n.toLocaleString()}
+        {suffix}
+      </div>
+      <div className="mt-2 text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+        {label}
+      </div>
     </div>
   );
 }
 
-function Logo({ size = 56 }: { size?: number }) {
-  const dim = size;
+function Stats() {
+  const ref = useRef<HTMLDivElement>(null);
+  const inView = useInView(ref, { once: true, amount: 0.4 });
   return (
-    <Link to="/" className="flex items-center" aria-label="MovPrompt home">
-      <img
-        src={logoMark}
-        alt="MovPrompt"
-        style={{ height: dim, width: dim }}
-        className="select-none"
-      />
-    </Link>
+    <section className="relative px-6 py-16 md:py-24">
+      <FadeUp className="mx-auto max-w-4xl">
+        <div
+          ref={ref}
+          className="rounded-2xl border border-border bg-card p-2 md:p-4"
+        >
+          <div className="flex flex-col divide-y divide-border md:flex-row md:divide-x md:divide-y-0">
+            <StatItem value={2400} suffix="+" label="Creators" inView={inView} />
+            <StatItem value={47000} suffix="+" label="Prompts Generated" inView={inView} />
+            <StatItem value={8} label="AI Video Models" inView={inView} />
+          </div>
+        </div>
+      </FadeUp>
+    </section>
   );
 }
 
-export default function Landing() {
-  const navigate = useNavigate();
+/* ============================================================
+   Features ("How It Works")
+   ============================================================ */
+
+function Features() {
+  return (
+    <section id="features" className="relative px-6 py-24 md:py-32">
+      <div className="mx-auto max-w-6xl">
+        <FadeUp className="mx-auto max-w-2xl text-center">
+          <SectionEyebrow>Workflow</SectionEyebrow>
+          <h2 className="mt-5 font-display text-[32px] font-bold leading-tight tracking-[-0.02em] text-foreground md:text-[40px]">
+            From Frame to Film in Seconds
+          </h2>
+          <p className="mt-4 text-[16px] text-muted-foreground">
+            Three modes. One goal. Cinematic prompts that actually work.
+          </p>
+        </FadeUp>
+
+        <div id="how" className="mt-16 grid grid-cols-1 gap-6 md:grid-cols-3">
+          {FEATURES.map((f, i) => {
+            const Icon = f.icon;
+            return (
+              <motion.div
+                key={f.title}
+                initial={{ opacity: 0, y: 60 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, amount: 0.3 }}
+                transition={{
+                  duration: 0.7,
+                  delay: i * 0.15,
+                  ease: [0.22, 1, 0.36, 1],
+                }}
+                className="group relative rounded-2xl border border-border bg-card p-8 transition-all duration-300 hover:-translate-y-1 hover:border-accent/20 hover:shadow-[0_4px_32px_hsl(var(--accent)/0.08)]"
+              >
+                <div className="mb-6 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-accent/10 to-accent/5">
+                  <Icon className="h-6 w-6 text-accent" strokeWidth={2} />
+                </div>
+                <h3 className="font-display text-[20px] font-semibold tracking-tight text-foreground">
+                  {f.title}
+                </h3>
+                <p className="mt-3 text-[15px] leading-relaxed text-muted-foreground">{f.body}</p>
+              </motion.div>
+            );
+          })}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ============================================================
+   Scene Control (split layout with 3D mock)
+   ============================================================ */
+
+function SceneControl({ scrollY }: { scrollY: MotionValue<number> }) {
+  const reduce = useReducedMotion();
+  const ref = useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll({ target: ref, offset: ["start end", "end start"] });
+  const tilt = useTransform(scrollYProgress, [0, 1], [-3, 6]);
+  const leftY = useTransform(scrollY, [600, 1800], [40, -40]);
+  const rightY = useTransform(scrollY, [600, 1800], [0, -80]);
+
+  const chips = ["Subject", "Background", "Lighting", "Atmosphere"];
+  const rows = [
+    { label: "Subject", locked: true, fill: 0.7 },
+    { label: "Background", locked: false, fill: 0.45 },
+    { label: "Lighting", locked: true, fill: 0.85 },
+    { label: "Atmosphere", locked: false, fill: 0.3 },
+  ];
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <Seo
-        title="MovPrompt — Turn stills into cinematic AI video prompts"
-        description="Drop a frame, pick a model, get a director-grade video prompt for Kling, Veo, Runway, and Seedance."
-        path="/"
-        jsonLd={[
-          {
-            "@context": "https://schema.org",
-            "@type": "Organization",
-            name: "MovPrompt",
-            url: "https://movprompt.com",
-            logo: "https://movprompt.com/logo.png",
-            sameAs: [
-              "https://twitter.com/movprompt",
-              "https://instagram.com/movprompt",
-              "https://youtube.com/@movprompt",
-            ],
-          },
-          {
-            "@context": "https://schema.org",
-            "@type": "WebSite",
-            name: "MovPrompt",
-            url: "https://movprompt.com",
-            potentialAction: {
-              "@type": "SearchAction",
-              target: "https://movprompt.com/gallery?model={search_term_string}",
-              "query-input": "required name=search_term_string",
-            },
-          },
-        ]}
-      />
-      {/* Ambient glow */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-primary/5 rounded-full blur-[120px] animate-pulse-glow" />
-        <div className="absolute bottom-0 right-0 w-[600px] h-[300px] bg-brand/5 rounded-full blur-[100px]" />
+    <section ref={ref} className="relative px-6 py-24 md:py-32">
+      <div className="mx-auto grid max-w-6xl items-center gap-12 md:grid-cols-2 md:gap-16">
+        {/* Left */}
+        <motion.div style={{ y: reduce ? 0 : leftY }}>
+          <SectionEyebrow>Full Control</SectionEyebrow>
+          <h2 className="mt-5 font-display text-[32px] font-bold leading-tight tracking-[-0.02em] text-foreground md:text-[40px]">
+            Direct Every Element
+          </h2>
+          <p className="mt-5 text-[16px] leading-relaxed text-muted-foreground">
+            MovPrompt breaks your scene into subject, background, lighting, and atmosphere. Lock
+            what stays. Move what animates. Full directorial control.
+          </p>
+          <div className="mt-6 flex flex-wrap gap-2">
+            {chips.map((c) => (
+              <span
+                key={c}
+                className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5 text-[13px] font-medium text-foreground"
+              >
+                <span className="h-1.5 w-1.5 rounded-full bg-accent" />
+                {c}
+              </span>
+            ))}
+          </div>
+        </motion.div>
+
+        {/* Right — mock card */}
+        <motion.div
+          style={{ y: reduce ? 0 : rightY, rotateX: reduce ? 0 : tilt }}
+          className="relative [perspective:1200px]"
+        >
+          <div
+            className="relative rounded-2xl border border-border bg-card p-6 shadow-[0_0_60px_hsl(var(--accent)/0.06)]"
+            style={{ transform: reduce ? undefined : "rotateY(-5deg) rotateX(3deg)" }}
+          >
+            <div className="mb-5 flex items-center justify-between">
+              <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+                Scene Breakdown
+              </span>
+              <span className="text-[11px] text-muted-foreground">v1</span>
+            </div>
+            <div className="space-y-4">
+              {rows.map((r) => {
+                const LockIcon = r.locked ? Lock : Unlock;
+                return (
+                  <div key={r.label} className="flex items-center gap-3">
+                    <span className="w-24 text-[13px] font-medium text-foreground">{r.label}</span>
+                    <LockIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <div className="relative h-2 flex-1 overflow-hidden rounded-full bg-border">
+                      <div
+                        className="h-full rounded-full bg-accent"
+                        style={{ width: `${r.fill * 100}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </motion.div>
       </div>
-      {/* Hero radial wash — subtle amber from top-center */}
+    </section>
+  );
+}
+
+/* ============================================================
+   Models
+   ============================================================ */
+
+function Models() {
+  return (
+    <section className="relative px-6 py-24 md:py-32">
+      <div className="mx-auto max-w-4xl text-center">
+        <FadeUp>
+          <SectionEyebrow>Compatibility</SectionEyebrow>
+          <h2 className="mt-5 font-display text-[32px] font-bold leading-tight tracking-[-0.02em] text-foreground md:text-[40px]">
+            Works With Every Major AI Video Model
+          </h2>
+          <p className="mx-auto mt-4 max-w-2xl text-[16px] text-muted-foreground">
+            Every prompt comes with a recommended model, a negative prompt, and camera direction.
+            One click to copy. Ready to paste.
+          </p>
+        </FadeUp>
+
+        <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
+          {MODELS.map((m, i) => (
+            <motion.span
+              key={m}
+              initial={{ opacity: 0, y: 12 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.5 }}
+              transition={{ duration: 0.5, delay: i * 0.1, ease: [0.22, 1, 0.36, 1] }}
+              className="rounded-full border border-border bg-card px-4 py-2 text-[13px] font-medium text-foreground transition-all hover:border-accent/20 hover:shadow-[0_0_18px_hsl(var(--accent)/0.12)]"
+            >
+              {m}
+            </motion.span>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ============================================================
+   Testimonials
+   ============================================================ */
+
+function Testimonials() {
+  return (
+    <section id="testimonials" className="relative px-6 py-24 md:py-32">
+      <div className="mx-auto max-w-6xl">
+        <FadeUp className="mx-auto max-w-2xl text-center">
+          <SectionEyebrow>Creators</SectionEyebrow>
+          <h2 className="mt-5 font-display text-[32px] font-bold leading-tight tracking-[-0.02em] text-foreground md:text-[40px]">
+            Trusted by Filmmakers and AI Creators
+          </h2>
+        </FadeUp>
+
+        <div className="mt-16 grid grid-cols-1 gap-6 md:grid-cols-3">
+          {TESTIMONIALS.map((t, i) => {
+            // middle card slightly ahead
+            const delay = i === 1 ? 0 : 0.15;
+            const offset = i === 1 ? 40 : 70;
+            return (
+              <motion.figure
+                key={t.name}
+                initial={{ opacity: 0, y: offset }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, amount: 0.3 }}
+                transition={{ duration: 0.7, delay, ease: [0.22, 1, 0.36, 1] }}
+                className="relative rounded-2xl border border-border bg-card p-8"
+              >
+                <div
+                  aria-hidden
+                  className="absolute left-6 top-3 font-display text-[64px] leading-none text-accent/30"
+                >
+                  “
+                </div>
+                <blockquote className="relative mt-6 text-[16px] italic leading-relaxed text-foreground">
+                  {t.quote}
+                </blockquote>
+                <figcaption className="mt-6">
+                  <div className="text-[13px] font-semibold text-foreground">{t.name}</div>
+                  <div className="text-[13px] text-muted-foreground">{t.handle}</div>
+                </figcaption>
+              </motion.figure>
+            );
+          })}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ============================================================
+   Final CTA
+   ============================================================ */
+
+function FinalCTA() {
+  return (
+    <section className="relative overflow-hidden px-6 py-32">
       <div
-        className="absolute top-0 left-0 right-0 h-[900px] pointer-events-none -z-0"
+        aria-hidden
+        className="pointer-events-none absolute inset-0"
         style={{
           background:
-            "radial-gradient(ellipse 1100px 600px at 50% 0%, hsl(var(--accent) / 0.03), transparent 70%)",
+            "radial-gradient(ellipse at center, hsl(var(--accent) / 0.08) 0%, hsl(var(--background)) 70%)",
         }}
-        aria-hidden="true"
+      />
+      <FadeUp className="relative mx-auto max-w-3xl text-center">
+        <h2 className="font-display text-[36px] font-bold leading-[1.05] tracking-[-0.03em] text-foreground md:text-[56px]">
+          Stop Writing Prompts. Start Directing.
+        </h2>
+        <p className="mx-auto mt-5 max-w-xl text-[16px] text-muted-foreground">
+          Join 2,400+ creators using MovPrompt to generate cinematic AI video prompts.
+        </p>
+        <div className="mt-9 flex flex-col items-center gap-3">
+          <Link
+            to="/auth"
+            className="relative inline-flex h-14 items-center justify-center rounded-full bg-accent px-10 text-[16px] font-semibold text-accent-foreground"
+            style={{ animation: "cta-pulse 3s ease-in-out infinite" }}
+          >
+            Get Started Free
+          </Link>
+          <p className="text-[13px] text-muted-foreground">No credit card required</p>
+        </div>
+      </FadeUp>
+
+      <style>{`
+        @keyframes cta-pulse {
+          0%, 100% { box-shadow: 0 0 24px hsl(var(--accent) / 0.15); }
+          50% { box-shadow: 0 0 48px hsl(var(--accent) / 0.4); }
+        }
+      `}</style>
+    </section>
+  );
+}
+
+/* ============================================================
+   Footer
+   ============================================================ */
+
+function Footer() {
+  return (
+    <footer className="border-t border-border bg-background px-6 py-10">
+      <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-6 md:flex-row">
+        <Wordmark className="text-lg" />
+        <nav className="flex flex-wrap items-center justify-center gap-6">
+          {["Privacy", "Terms", "About", "Examples"].map((l) => (
+            <a
+              key={l}
+              href="#"
+              className="text-[13px] font-medium text-muted-foreground transition-colors hover:text-foreground"
+            >
+              {l}
+            </a>
+          ))}
+        </nav>
+        <a
+          href="mailto:hello@movprompt.com"
+          className="text-[13px] text-muted-foreground transition-colors hover:text-foreground"
+        >
+          hello@movprompt.com
+        </a>
+      </div>
+      <div className="mx-auto mt-8 max-w-6xl border-t border-border pt-6 text-center">
+        <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground/60">
+          © 2026 MovPrompt. All rights reserved.
+        </p>
+      </div>
+    </footer>
+  );
+}
+
+/* ============================================================
+   Page
+   ============================================================ */
+
+export default function Landing() {
+  const { scrollY } = useScroll();
+
+  return (
+    <div className="relative min-h-screen bg-background text-foreground">
+      <Seo
+        title="MovPrompt — AI Director of Photography for Generative Video"
+        description="Drop a frame. Pick a model. Get director-grade AI video prompts for Kling, Veo, Runway, Seedance and more."
       />
 
-      {/* NAV */}
-      <header className="relative z-20 border-b border-border/40">
-        <div className="container max-w-[1200px] mx-auto px-4 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-8">
-            <Logo />
-            <nav className="hidden md:flex items-center gap-6 text-sm text-muted-foreground">
-              <Link to="/gallery" className="hover:text-foreground transition-colors">Examples</Link>
-              <a href="#pricing" className="hover:text-foreground transition-colors">Pricing</a>
-            </nav>
-          </div>
-          <div className="flex items-center gap-2 sm:gap-3">
-            <Button variant="ghost" size="sm" onClick={() => navigate("/auth")}>
-              Sign In
-            </Button>
-            <Button size="sm" onClick={() => navigate("/auth")}>
-              Get Started
-            </Button>
-            <LanguageToggle />
-          </div>
-        </div>
-      </header>
+      {/* Grain overlay */}
+      <div
+        aria-hidden
+        className="pointer-events-none fixed inset-0 z-0 opacity-[0.035] mix-blend-overlay"
+        style={{
+          backgroundImage:
+            "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.6 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>\")",
+        }}
+      />
+
+      <Navbar />
 
       <main className="relative z-10">
-        {/* HERO */}
-        <section className="container max-w-[1200px] mx-auto px-4 pt-20 pb-16 sm:pb-24 text-center" style={{ paddingTop: "80px" }}>
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-          >
-            <h1
-              className="font-display font-bold tracking-tight text-foreground leading-[1.05]"
-              style={{ fontSize: "clamp(40px, 8vw, 84px)" }}
-            >
-              Turn Stills Into Cinema
-            </h1>
-            <p className="mt-6 max-w-2xl mx-auto text-base sm:text-lg text-muted-foreground">
-              Drop a frame. Pick a model. Get a director-grade video prompt ready to paste into Kling, Veo, Runway, Seedance, or any AI video tool.
-            </p>
-            {/* 32px gap to CTA row */}
-            <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-6 sm:gap-8">
-              <Button size="lg" onClick={() => navigate("/auth")} className="min-w-[180px]">
-                Try It Free
-              </Button>
-              <button
-                type="button"
-                onClick={() => navigate("/gallery")}
-                className="group inline-flex items-center gap-1.5 text-[16px] text-foreground/80 hover:text-foreground transition-colors"
-              >
-                See Examples
-                <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
-              </button>
-            </div>
-            {/* 16px gap to microcopy */}
-            <p className="mt-4 text-xs text-muted-foreground/70">No credit card required</p>
-          </motion.div>
-        </section>
-
-        {/* MODEL LOGOS STRIP */}
-        <section className="border-y border-border/40 bg-card/30">
-          <div className="container max-w-[1200px] mx-auto px-4 py-8">
-            <p className="text-center text-xs uppercase tracking-[0.2em] text-muted-foreground mb-5">
-              Works with every major AI video model
-            </p>
-            <div className="flex flex-wrap justify-center items-center gap-x-8 sm:gap-x-12 gap-y-3 opacity-60">
-              {MODELS.map((m) => (
-                <span
-                  key={m}
-                  className="font-display font-semibold text-foreground text-base sm:text-lg tracking-wide"
-                >
-                  {m}
-                </span>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* BEFORE/AFTER PROOF */}
-        <section className="container max-w-[1200px] mx-auto px-4 py-16 sm:py-24">
-          <h2 className="text-center font-display font-bold text-3xl sm:text-4xl mb-12 tracking-tight">
-            From one image to a full cinematic prompt
-          </h2>
-          <div className="grid sm:grid-cols-3 gap-6">
-            {PROOFS.map((p, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: i * 0.1 }}
-                className="flex flex-col gap-3"
-              >
-                <div className="aspect-video w-full overflow-hidden rounded-lg bg-muted transition-shadow duration-300 hover:shadow-[0_0_24px_hsl(var(--accent)/0.2)]" style={{ border: "1px solid #27272A", borderRadius: "8px" }}>
-                  <img src={p.img} alt="" className="w-full h-full object-cover" />
-                </div>
-                <CodeSnippet text={p.snippet}>{highlight(p.snippet)}</CodeSnippet>
-                <div className="flex justify-center">
-                  <span className="text-[11px] uppercase tracking-wider px-2.5 py-1 rounded-full border border-border bg-muted/40 text-muted-foreground">
-                    Generated for {p.model}
-                  </span>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </section>
-
-        {/* THREE WORKFLOWS */}
-        <section className="container max-w-[1200px] mx-auto px-4 py-16 sm:py-24">
-          <div className="grid sm:grid-cols-3 gap-6">
-            {/* Single Frame */}
-            <div className="rounded-xl border border-border bg-card/40 p-6 flex flex-col gap-4 hover:border-border/80 transition-colors">
-              <div className="aspect-video w-full rounded-md overflow-hidden border border-border bg-muted">
-                <img src={exampleDesert} alt="" className="w-full h-full object-cover" />
-              </div>
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-md bg-muted/60 flex items-center justify-center">
-                  <Film className="w-4 h-4 text-foreground" />
-                </div>
-                <h3 className="font-display font-semibold text-lg">Single Frame</h3>
-              </div>
-              <p className="text-sm text-muted-foreground -mt-1">One image. One cinematic shot.</p>
-            </div>
-
-            {/* Start + End */}
-            <div className="rounded-xl border border-border bg-card/40 p-6 flex flex-col gap-4 hover:border-border/80 transition-colors">
-              <div className="aspect-video w-full rounded-md overflow-hidden border border-border bg-muted/40 flex items-center gap-2 p-2">
-                <div className="flex-1 h-full rounded overflow-hidden">
-                  <img src={examplePortrait} alt="" className="w-full h-full object-cover" />
-                </div>
-                <ArrowRight className="w-4 h-4 text-primary shrink-0" />
-                <div className="flex-1 h-full rounded overflow-hidden">
-                  <img src={exampleTokyo} alt="" className="w-full h-full object-cover" />
-                </div>
-              </div>
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-md bg-muted/60 flex items-center justify-center">
-                  <Layers className="w-4 h-4 text-foreground" />
-                </div>
-                <h3 className="font-display font-semibold text-lg">Start + End</h3>
-              </div>
-              <p className="text-sm text-muted-foreground -mt-1">Two frames. A seamless transition.</p>
-            </div>
-
-            {/* Multi-Shot */}
-            <div className="rounded-xl border border-border bg-card/40 p-6 flex flex-col gap-4 hover:border-border/80 transition-colors">
-              <div className="aspect-video w-full rounded-md overflow-hidden border border-border bg-muted/40 p-2 flex items-center gap-1">
-                {Array.from({ length: 8 }).map((_, idx) => (
-                  <div key={idx} className="flex-1 h-full rounded-sm overflow-hidden">
-                    <img
-                      src={[exampleDesert, examplePortrait, exampleTokyo][idx % 3]}
-                      alt=""
-                      className="w-full h-full object-cover"
-                      style={{ filter: `hue-rotate(${idx * 12}deg) brightness(${0.85 + (idx % 3) * 0.05})` }}
-                    />
-                  </div>
-                ))}
-              </div>
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-md bg-muted/60 flex items-center justify-center">
-                  <Clapperboard className="w-4 h-4 text-foreground" />
-                </div>
-                <h3 className="font-display font-semibold text-lg">Multi-Shot</h3>
-              </div>
-              <p className="text-sm text-muted-foreground -mt-1">One image. A full storyboard.</p>
-            </div>
-          </div>
-        </section>
-
-        {/* SCENE ELEMENTS BLOCK */}
-        <section className="container max-w-[1200px] mx-auto px-4 py-16 sm:py-24">
-          <div className="grid md:[grid-template-columns:50%_45%] md:gap-[5%] gap-10 items-stretch">
-            <div className="rounded-xl border border-border bg-card/60 p-5 order-2 md:order-1">
-              {/* Source thumbnail */}
-              <div className="aspect-video w-full rounded-md overflow-hidden border border-border bg-muted mb-4">
-                <img src={exampleDesert} alt="" className="w-full h-full object-cover" />
-              </div>
-              <div className="text-[11px] uppercase tracking-wider text-muted-foreground mb-3">
-                Scene Elements
-              </div>
-              <div className="space-y-2">
-                {["Subject", "Background", "Lighting", "Atmosphere"].map((label, idx) => (
-                  <div
-                    key={label}
-                    className="flex items-center justify-between rounded-md border border-border/70 bg-background/60 px-3 py-2.5"
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="text-xs text-muted-foreground w-5">{idx + 1}</span>
-                      <span className="text-sm text-foreground">{label}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                        {idx % 2 === 0 ? "Lock" : "Move"}
-                      </span>
-                      <Lock className="w-3.5 h-3.5 text-primary" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div className="order-1 md:order-2 flex flex-col justify-center">
-              <h2 className="font-display font-bold text-3xl sm:text-4xl tracking-tight">
-                Direct every element in your shot
-              </h2>
-              <p className="mt-4 text-muted-foreground text-base sm:text-lg leading-relaxed">
-                MovPrompt breaks your scene into subject, background, lighting, and atmosphere.
-                Lock what stays. Move what animates. Full directorial control.
-              </p>
-              <button
-                type="button"
-                onClick={() => navigate("/auth")}
-                className="group mt-6 inline-flex items-center gap-1.5 text-sm text-accent hover:text-accent/80 transition-colors self-start"
-              >
-                See it in action
-                <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
-              </button>
-            </div>
-          </div>
-        </section>
-
-        {/* DIRECTOR'S PICK BLOCK */}
-        <section className="container max-w-[1200px] mx-auto px-4 py-16 sm:py-24">
-          <div className="grid md:grid-cols-2 gap-10 items-stretch">
-            <div className="flex flex-col justify-center">
-              <h2 className="font-display font-bold text-3xl sm:text-4xl tracking-tight">
-                Your AI Director picks the right model
-              </h2>
-              <p className="mt-4 text-muted-foreground text-base sm:text-lg leading-relaxed">
-                Every prompt comes with a recommended model, a negative prompt, and camera direction.
-                One click to copy. Ready to paste.
-              </p>
-            </div>
-            <div className="rounded-xl border border-border bg-card/60 p-8 flex flex-col justify-center min-h-[340px]">
-              <div className="flex items-center gap-2 mb-3">
-                <Wand2 className="w-4 h-4 text-primary" />
-                <span className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                  Director's Pick
-                </span>
-              </div>
-              <div className="rounded-lg border border-border bg-background/60 p-4">
-                <div className="flex items-center justify-between">
-                  <span className="font-display font-semibold text-foreground">Kling 2.1 Master</span>
-                  <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/30">
-                    Recommended
-                  </span>
-                </div>
-                <p className="text-xs text-muted-foreground mt-2">
-                  Best for cinematic camera moves, soft lighting, and rich atmospheric depth.
-                </p>
-                <div className="mt-4 flex gap-2">
-                  <Button size="sm" className="flex-1">Copy prompt</Button>
-                  <Button size="sm" variant="outline" className="flex-1">Use this model</Button>
-                </div>
-              </div>
-              <div className="mt-3 grid grid-cols-2 gap-2 text-[11px]">
-                <div className="rounded-md border border-border bg-background/40 px-2.5 py-2 text-muted-foreground">
-                  <span className="text-foreground">Camera:</span> slow dolly-in, 35mm
-                </div>
-                <div className="rounded-md border border-border bg-background/40 px-2.5 py-2 text-muted-foreground">
-                  <span className="text-foreground">Negative:</span> static, flat, washed-out
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* STATS STRIP */}
-        <section className="container max-w-[1200px] mx-auto px-4 py-12">
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 text-center" style={{ color: "#A1A1AA", fontSize: "14px", letterSpacing: "0.05em" }}>
-            <span className="uppercase">2,400+ creators using MovPrompt</span>
-            <span className="hidden sm:inline opacity-50">·</span>
-            <span className="uppercase">47,000+ prompts generated</span>
-            <span className="hidden sm:inline opacity-50">·</span>
-            <span className="uppercase">8 supported AI video models</span>
-          </div>
-        </section>
-
-        {/* SOCIAL PROOF */}
-        <section className="container max-w-[1200px] mx-auto px-4 py-16 sm:py-24">
-          <h2 className="text-center font-display font-bold text-3xl sm:text-4xl mb-12 tracking-tight">
-            Loved by directors and AI creators
-          </h2>
-          <div className="grid sm:grid-cols-3 gap-6">
-            {TESTIMONIALS.map((t) => (
-              <div
-                key={t.handle}
-                className="rounded-xl border border-border bg-card/40 p-6 flex flex-col gap-4"
-              >
-                <p className="text-foreground text-sm leading-relaxed">"{t.quote}"</p>
-                <div className="flex items-center gap-3 mt-auto">
-                  <div
-                    className={`w-10 h-10 rounded-full bg-gradient-to-br ${t.avatar} shrink-0`}
-                    aria-hidden="true"
-                  />
-                  <div className="min-w-0">
-                    <div className="text-sm font-semibold text-foreground truncate">{t.name}</div>
-                    <div className="text-xs text-muted-foreground truncate">{t.handle}</div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* FINAL CTA */}
-        <section id="pricing" className="container max-w-[1000px] mx-auto px-4 py-20 sm:py-32 text-center">
-          <Sparkles className="w-6 h-6 text-primary mx-auto mb-5" />
-          <h2 className="font-display font-bold text-3xl sm:text-5xl tracking-tight">
-            Stop writing prompts. Start directing.
-          </h2>
-          <p className="mt-4 text-muted-foreground text-base sm:text-lg">
-            Join filmmakers and AI creators using MovPrompt every day.
-          </p>
-          <ul className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-6 text-sm" style={{ color: "#A1A1AA" }}>
-            {["No credit card required", "Free forever tier", "Cancel anytime"].map((item) => (
-              <li key={item} className="flex items-center gap-2">
-                <Check className="w-4 h-4 text-accent" />
-                <span>{item}</span>
-              </li>
-            ))}
-          </ul>
-          <div className="mt-8">
-            <Button size="lg" onClick={() => navigate("/auth")} className="min-w-[200px]">
-              Get Started Free
-            </Button>
-          </div>
-        </section>
+        <Hero scrollY={scrollY} />
+        <Stats />
+        <Features />
+        <SceneControl scrollY={scrollY} />
+        <Models />
+        <Testimonials />
+        <FinalCTA />
       </main>
 
-      {/* FOOTER */}
-      <footer className="relative z-10 border-t border-border/40">
-        <div className="container max-w-[1200px] mx-auto px-4 py-12">
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-8 text-center sm:text-left">
-            <div className="md:col-span-2 flex flex-col items-center sm:items-start">
-              <Logo size={24} />
-              <p className="text-xs text-muted-foreground mt-3 max-w-xs">
-                The AI Director of Photography for generative video prompts.
-              </p>
-            </div>
-            <div>
-              <div className="text-[11px] uppercase tracking-wider text-muted-foreground mb-3 font-semibold">Product</div>
-              <ul className="space-y-2 text-sm">
-                <li><a href="#" className="text-muted-foreground hover:text-foreground transition-colors">Features</a></li>
-                <li><a href="#pricing" className="text-muted-foreground hover:text-foreground transition-colors">Pricing</a></li>
-                <li><Link to="/gallery" className="text-muted-foreground hover:text-foreground transition-colors">Examples</Link></li>
-              </ul>
-            </div>
-            <div>
-              <div className="text-[11px] uppercase tracking-wider text-muted-foreground mb-3 font-semibold">Company</div>
-              <ul className="space-y-2 text-sm">
-                <li><Link to="/learn" className="text-muted-foreground hover:text-foreground transition-colors">About</Link></li>
-                <li><a href="mailto:hello@movprompt.com" className="text-muted-foreground hover:text-foreground transition-colors">Contact</a></li>
-              </ul>
-            </div>
-            <div>
-              <div className="text-[11px] uppercase tracking-wider text-muted-foreground mb-3 font-semibold">Legal</div>
-              <ul className="space-y-2 text-sm">
-                <li><Link to="/privacy" className="text-muted-foreground hover:text-foreground transition-colors">Privacy</Link></li>
-                <li><Link to="/terms" className="text-muted-foreground hover:text-foreground transition-colors">Terms</Link></li>
-              </ul>
-            </div>
-          </div>
-
-          <div className="mt-10 pt-6 border-t border-border/40 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <p className="text-xs text-muted-foreground">© {new Date().getFullYear()} MovPrompt. All rights reserved.</p>
-            <div className="flex items-center gap-3">
-              <a href="https://twitter.com/movprompt" target="_blank" rel="noreferrer" aria-label="X / Twitter" className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors">
-                <svg viewBox="0 0 24 24" className="w-4 h-4" fill="currentColor" aria-hidden="true">
-                  <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231 5.451-6.231Zm-1.161 17.52h1.833L7.084 4.126H5.117L17.083 19.77Z" />
-                </svg>
-              </a>
-              <a href="https://instagram.com/movprompt" target="_blank" rel="noreferrer" aria-label="Instagram" className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors">
-                <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <rect x="2" y="2" width="20" height="20" rx="5" />
-                  <circle cx="12" cy="12" r="4" />
-                  <circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none" />
-                </svg>
-              </a>
-              <a href="https://youtube.com/@movprompt" target="_blank" rel="noreferrer" aria-label="YouTube" className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors">
-                <svg viewBox="0 0 24 24" className="w-4 h-4" fill="currentColor" aria-hidden="true">
-                  <path d="M23.5 6.2a3 3 0 0 0-2.1-2.12C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.4.58A3 3 0 0 0 .5 6.2 31.4 31.4 0 0 0 0 12a31.4 31.4 0 0 0 .5 5.8 3 3 0 0 0 2.1 2.12c1.9.58 9.4.58 9.4.58s7.5 0 9.4-.58a3 3 0 0 0 2.1-2.12 31.4 31.4 0 0 0 .5-5.8 31.4 31.4 0 0 0-.5-5.8ZM9.6 15.6V8.4l6.3 3.6-6.3 3.6Z" />
-                </svg>
-              </a>
-            </div>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }
