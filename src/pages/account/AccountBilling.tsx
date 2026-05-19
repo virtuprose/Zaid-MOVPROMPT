@@ -44,7 +44,7 @@ const AccountBilling = () => {
   const videoRows = ALL_VIDEO_MODELS
     .map((m) => {
       const row = prices.get(`video.${m.id}`);
-      return row ? { id: m.id, label: m.label, family: m.family, rate: row.amount } : null;
+      return row ? { id: m.id, label: m.label, family: String(m.family), rate: row.amount } : null;
     })
     .filter((x): x is { id: string; label: string; family: string; rate: number } => !!x)
     .sort((a, b) => a.rate - b.rate);
