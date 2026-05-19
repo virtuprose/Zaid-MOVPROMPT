@@ -79,6 +79,20 @@ type Bubble =
       };
       chosen?: AspectRatio;
     }
+  | {
+      role: "subject_lock_choice";
+      payload: {
+        mode: "single_panel";
+        prompt: string;
+        reference_urls?: string[];
+        count?: number;
+        per_shot_prompts?: string[];
+        shot_index?: number;
+        lock_mode?: "character" | "scene" | "auto";
+        directors_note?: string;
+      };
+      chosen?: "character" | "product" | "none";
+    }
   | { role: "video"; data: import("./VideoBubble").VideoBubbleData };
 
 const WELCOME: Bubble = {
