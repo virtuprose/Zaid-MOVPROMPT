@@ -817,20 +817,8 @@ Output via the \`storyboard_shots\` tool ONLY.`;
       stream: !!stream,
     };
 
-    // Charge credits before the AI call. Multimodal turns cost more.
-    const uid = (claims.claims as { sub?: string }).sub;
-    if (uid) {
-      try {
-        const key = imageUrls.length > 0 || (Array.isArray(attachments) && attachments.length > 0)
-          ? "director_chat_multimodal"
-          : "director_chat_text";
-        const amount = await priceFor(key, key === "director_chat_multimodal" ? 3 : 1);
-        await chargeCredits({ userId: uid, amount, reason: key });
-      } catch (e) {
-        if (e instanceof InsufficientCreditsError) return insufficientResponse(corsHeaders);
-        console.error("charge_credits failed", e);
-      }
-    }
+    // Director chat replies are free — credits are only charged on real
+    // generations (generate-reference-image, generate-video).
 
     const aiResp = await callGatewayWithRetry(requestBody, LOVABLE_API_KEY);
 

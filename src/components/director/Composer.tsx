@@ -565,23 +565,14 @@ export function Composer({
                 }
                 onSend();
               };
-              const hasMedia = attachments.length > 0;
-              const cost = hasMedia ? 3 : 1;
               const tip = blocked
                 ? "Remove flagged images to continue"
                 : scanning
                   ? "Scanning attachments…"
-                  : `Costs ${cost} credit${cost === 1 ? "" : "s"} · ⌘/Ctrl + Enter to send`;
+                  : "⌘/Ctrl + Enter to send";
               return (
                 <div className="flex items-center gap-2">
-                  <CostChip
-                    amount={cost}
-                    title={
-                      hasMedia
-                        ? "Director reply with media — 3 credits"
-                        : "Director reply — 1 credit"
-                    }
-                  />
+
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button
