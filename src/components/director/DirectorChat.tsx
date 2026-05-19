@@ -404,7 +404,7 @@ function DirectorChatInner() {
             shot_index: payload.shot_index,
             lock_mode: payload.lock_mode,
           });
-      });
+
       const role: "character" | "storyboard" | "reference" | "key_frame" =
         payload.mode === "character_sheet"
           ? "character"
