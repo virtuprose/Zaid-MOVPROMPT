@@ -1529,6 +1529,25 @@ function DirectorChatInner() {
                         if (busy) return;
                         void send(intent);
                       }}
+                      onUnpinSubject={
+                        b.data.subjectSheet
+                          ? () => {
+                              setBubbles((prev) => {
+                                const copy = prev.slice();
+                                const cur = copy[i];
+                                if (cur.role === "generated_images") {
+                                  copy[i] = {
+                                    ...cur,
+                                    data: { ...cur.data, subjectSheet: false },
+                                  };
+                                }
+                                void persist(copy, null, null);
+                                return copy;
+                              });
+                              toast.success("Subject sheet unpinned");
+                            }
+                          : undefined
+                      }
                     />
                   </div>
                 </div>
