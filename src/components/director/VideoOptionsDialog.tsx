@@ -15,6 +15,8 @@ import {
   getModelControls,
   type VideoOptions,
 } from "@/lib/director/videoModelControls";
+import { estimateVideoCost, usePricing } from "@/lib/credits/pricing";
+import { CostChip } from "@/components/credits/CostChip";
 
 type ConfirmMeta = { rewritten: boolean; summary?: string; original?: string };
 
@@ -347,7 +349,24 @@ export function VideoOptionsDialog({ open, model, prompt, initialOptions, onCanc
         )}
       </div>
 
-      <div className="flex justify-end gap-2 pt-2 border-t border-border/60">
+      <div className="flex justify-end items-center gap-2 pt-2 border-t border-border/60">
+        {(() => {
+          const prices = usePricing();
+          const dur =
+            typeof options.duration === "number"
+              ? options.duration
+              : controls.durations?.[0] ?? controls.durationMin ?? 5;
+          const cost = estimateVideoCost(prices, model.id, dur);
+          return (
+            <CostChip
+              amount={cost}
+              prefix="≈"
+              size="sm"
+              title={`Estimated ${cost} credits for ${dur}s with ${model.label}`}
+              className="mr-auto"
+            />
+          );
+        })()}
         <Button variant="ghost" size="sm" onClick={onCancel}>
           Cancel
         </Button>
