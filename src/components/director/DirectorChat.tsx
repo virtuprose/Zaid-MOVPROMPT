@@ -1720,9 +1720,9 @@ function DirectorChatInner() {
                   <AssistantAvatar size="sm" state="idle" className="mt-1" />
                   <div className="flex-1">
                     <QuestionCard
-                      reason="Before we render the key frame, set the scene — this anchors the whole story."
+                      reason="Optional — add more detail for the key frame, or skip to pick an aspect ratio."
                       questions={[
-                        "Describe the opening key frame: setting, action, mood, lighting, time of day.",
+                        "Anything to add about the scene? (setting, action, lighting, mood, time of day)",
                       ]}
                       disabled={busy || b.submitted}
                       onContinue={(formatted) => {
