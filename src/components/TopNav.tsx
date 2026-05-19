@@ -162,6 +162,9 @@ export function TopNav() {
               </Button>
 
               <div className="hidden sm:block">
+                <CreditBadge />
+              </div>
+              <div className="hidden sm:block">
                 <NotificationBell />
               </div>
             </>
