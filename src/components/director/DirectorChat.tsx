@@ -334,6 +334,7 @@ function DirectorChatInner() {
       shot_index?: number;
       lock_mode?: "character" | "scene" | "auto";
       directors_note?: string;
+      subject_kind?: "character" | "product";
     },
     options?: { subjectSheet?: boolean; subjectKind?: "character" | "product" },
   ) => {
