@@ -208,28 +208,56 @@ serve(async (req) => {
       throw e;
     }
 
-    const results = await Promise.allSettled(
-      prompts.map(async (p, i) => {
-        const dataUrl = await generateOne(LOVABLE_API_KEY, p, referenceUrls, aspect);
-        const { blob, mime } = dataUrlToBlob(dataUrl);
-        const ext = mime.split("/")[1] || "png";
-        const safeName = `${mode}-${Date.now()}-${i + 1}.${ext}`;
-        const path = `${userId}/gen-${crypto.randomUUID().slice(0, 8)}-${safeName}`;
-        const { error: upErr } = await supabase.storage
-          .from("director-uploads")
-          .upload(path, blob, { contentType: mime, upsert: false });
-        if (upErr) throw upErr;
-        const { data: signed, error: signErr } = await supabase.storage
-          .from("director-uploads")
-          .createSignedUrl(path, SIGNED_URL_TTL);
-        if (signErr || !signed?.signedUrl) throw signErr || new Error("sign_failed");
-        return {
-          url: signed.signedUrl,
-          storage_path: path,
-          shot_index: mode === "storyboard_panels" ? shotIndices[i] : undefined,
-        };
-      }),
-    );
+    const runOne = async (p: string, i: number, refs: string[]) => {
+      const dataUrl = await generateOne(LOVABLE_API_KEY, p, refs, aspect);
+      const { blob, mime } = dataUrlToBlob(dataUrl);
+      const ext = mime.split("/")[1] || "png";
+      const safeName = `${mode}-${Date.now()}-${i + 1}.${ext}`;
+      const path = `${userId}/gen-${crypto.randomUUID().slice(0, 8)}-${safeName}`;
+      const { error: upErr } = await supabase.storage
+        .from("director-uploads")
+        .upload(path, blob, { contentType: mime, upsert: false });
+      if (upErr) throw upErr;
+      const { data: signed, error: signErr } = await supabase.storage
+        .from("director-uploads")
+        .createSignedUrl(path, SIGNED_URL_TTL);
+      if (signErr || !signed?.signedUrl) throw signErr || new Error("sign_failed");
+      return {
+        url: signed.signedUrl,
+        storage_path: path,
+        shot_index: mode === "storyboard_panels" ? shotIndices[i] : undefined,
+      };
+    };
+
+    type Settled<T> = { status: "fulfilled"; value: T } | { status: "rejected"; reason: unknown };
+    let results: Settled<{ url: string; storage_path: string; shot_index?: number }>[];
+
+    if (isChain && prompts.length > 1) {
+      // Sequential chain: each panel sees [anchor, previous_panel, ...extras] (cap 4).
+      results = [];
+      const anchor = referenceUrls[0];
+      const extras = referenceUrls.slice(1, 3); // leave room for prior panel
+      let prevPanelUrl: string | null = null;
+      for (let i = 0; i < prompts.length; i++) {
+        const refs = [
+          ...(anchor ? [anchor] : []),
+          ...(prevPanelUrl ? [prevPanelUrl] : []),
+          ...extras,
+        ].slice(0, 4);
+        try {
+          const value = await runOne(prompts[i], i, refs);
+          results.push({ status: "fulfilled", value });
+          prevPanelUrl = value.url; // anchor next panel to this one
+        } catch (reason) {
+          results.push({ status: "rejected", reason });
+          // keep prevPanelUrl as last successful panel (or anchor) so chain continues
+        }
+      }
+    } else {
+      results = await Promise.allSettled(
+        prompts.map((p, i) => runOne(p, i, referenceUrls)),
+      );
+    }
 
     const out: Array<{ url: string; storage_path: string; shot_index?: number }> = [];
     let firstError: unknown = null;
