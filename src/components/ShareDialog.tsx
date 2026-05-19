@@ -86,7 +86,7 @@ export const ShareDialog = ({ open, onOpenChange, payload }: ShareDialogProps) =
               />
               <div className="text-xs leading-relaxed">
                 <div className="font-display font-semibold text-foreground">Submit to public gallery</div>
-                <div className="text-muted-foreground">Feature this prompt set on the VidoPrompt gallery and the matching model landing page.</div>
+                <div className="text-muted-foreground">Feature this prompt set on the MovPrompt gallery and the matching model landing page.</div>
               </div>
             </label>
             <Button onClick={handleCreate} disabled={creating} className="w-full">
