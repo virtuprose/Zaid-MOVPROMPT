@@ -432,6 +432,7 @@ function DirectorChatInner() {
             per_shot_prompts: payload.per_shot_prompts,
             shot_index: payload.shot_index,
             lock_mode: payload.lock_mode,
+            subject_kind: payload.subject_kind,
           });
 
       const role: "character" | "storyboard" | "reference" | "key_frame" =
