@@ -54,22 +54,22 @@ const Referrals = () => {
 
   const tweetHref = url
     ? `https://twitter.com/intent/tweet?text=${encodeURIComponent(
-        "I'm using VidoPrompt to direct AI video like a real DP 🎬 — try it with my link:",
+        "I'm using MovPrompt to direct AI video like a real DP 🎬 — try it with my link:",
       )}&url=${encodeURIComponent(url)}`
     : "#";
 
   return (
     <div className="min-h-screen" style={{ background: "hsl(220 25% 4%)" }}>
       <Helmet>
-        <title>Refer friends · VidoPrompt</title>
-        <meta name="description" content="Invite friends to VidoPrompt and unlock perks for both of you." />
+        <title>Refer friends · MovPrompt</title>
+        <meta name="description" content="Invite friends to MovPrompt and unlock perks for both of you." />
       </Helmet>
 
       <header className="border-b border-border/40 sticky top-0 z-10 backdrop-blur" style={{ backgroundColor: "hsl(220 25% 4% / 0.85)" }}>
         <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
           <Link to="/" className="flex items-center gap-2 group">
             <Clapperboard className="w-5 h-5 text-brand group-hover:scale-110 transition-transform" />
-            <span className="font-display font-semibold text-sm">VidoPrompt</span>
+            <span className="font-display font-semibold text-sm">MovPrompt</span>
           </Link>
           <Button asChild size="sm" variant="ghost">
             <Link to="/"><ArrowLeft className="w-3.5 h-3.5 me-1.5" />Back</Link>

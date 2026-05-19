@@ -18,7 +18,7 @@ export const MODEL_FAMILIES: ModelFamily[] = [
     vendor: "Google DeepMind",
     tagline: "Cinematic prompts for Veo 3 and Veo 3.1",
     intro:
-      "Google Veo rewards precise cinematography language: lens, movement, lighting and physically grounded action. VidoPrompt's Director of Photography crafts prompts tuned for Veo 3 and Veo 3.1 — including audio cues — so your shots feel directed, not generated.",
+      "Google Veo rewards precise cinematography language: lens, movement, lighting and physically grounded action. MovPrompt's Director of Photography crafts prompts tuned for Veo 3 and Veo 3.1 — including audio cues — so your shots feel directed, not generated.",
     bestFor: [
       "Photoreal scenes with believable physics",
       "Native synchronized dialogue and ambience",
@@ -37,7 +37,7 @@ export const MODEL_FAMILIES: ModelFamily[] = [
     vendor: "Kuaishou",
     tagline: "Director-grade prompts for Kling 2.5 → 3.0 Omni",
     intro:
-      "Kling responds beautifully to motion arcs, costume and material detail, and clean negative prompts. VidoPrompt builds Kling-tuned prompts that respect its strengths — graceful character motion, fabric, hair and rim-lit faces — while suppressing common artifacts.",
+      "Kling responds beautifully to motion arcs, costume and material detail, and clean negative prompts. MovPrompt builds Kling-tuned prompts that respect its strengths — graceful character motion, fabric, hair and rim-lit faces — while suppressing common artifacts.",
     bestFor: [
       "Character-led shots with elegant motion",
       "Editorial fashion, music videos, dance",
@@ -56,7 +56,7 @@ export const MODEL_FAMILIES: ModelFamily[] = [
     vendor: "ByteDance",
     tagline: "Fast, punchy prompts for Seedance Pro and 2.0",
     intro:
-      "Seedance is fast, expressive and loves bold visual direction. VidoPrompt writes Seedance prompts that give the model exactly the structure it wants — shot type, motion, mood — without drowning it in adjectives.",
+      "Seedance is fast, expressive and loves bold visual direction. MovPrompt writes Seedance prompts that give the model exactly the structure it wants — shot type, motion, mood — without drowning it in adjectives.",
     bestFor: [
       "High-energy social cuts and ad shots",
       "Stylized, graphic looks and color-forward grades",

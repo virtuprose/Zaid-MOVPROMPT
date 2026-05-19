@@ -986,7 +986,7 @@ function DirectorChatInner() {
           >
             <img
               src={logoMark}
-              alt="VidoPrompt"
+              alt="MovPrompt"
               className="w-20 h-20 sm:w-24 sm:h-24 hero-logo-float"
             />
           </div>
