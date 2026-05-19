@@ -1,44 +1,37 @@
-## Got it — two cases
+## Make the post-sheet "describe key frame" step explicitly optional
 
-**Case A — User asks for a sheet directly** ("make a character sheet of…", "I need a product sheet for X"):
-The Director builds the sheet. The existing `SubjectLockChoiceCard` chip already acts as confirmation, then the sheet is generated. ✅ Already works.
+### Current behavior
+After a character/product/object sheet is generated, the client shows a `scene_describe` QuestionCard. It already has a "Skip" button, but:
+- The copy frames it as a required step ("Describe the opening key frame…").
+- Skipping currently jumps to aspect choice with **no scene description merged in**, which is fine when the original brief already covered the scene, but the user-facing intent ("this is optional, you can add detail OR go straight to aspect ratio") isn't clear.
+- The `scene_already_described` flag from the Director can also auto-skip the card entirely, which hides the optional refinement opportunity the user now wants to always offer.
 
-**Case B — User describes the WHOLE scene** (environment + character/product + shot + lighting + mood) in their brief, intending a key frame:
-The Director should:
-1. Recognize the brief is already complete.
-2. Still offer the subject-lock confirmation (character / product / none) so we can pin a sheet for later consistency.
-3. After the sheet returns, **skip the "describe the opening key frame" step** (we already have it).
-4. Go straight to aspect-ratio chip → render the key frame using the **user's original full description verbatim**, not a re-asked re-described version.
+### Goal
+Always surface the "describe the key frame (optional)" affordance after a sheet is built, regardless of how rich the original brief was. The user can either:
+1. Add more scene detail → merged into the key-frame prompt → aspect choice → render.
+2. Skip → straight to aspect choice → render from the original prompt verbatim.
 
-Today, step 3 doesn't skip — the client always shows `scene_describe` after a sheet is built. That's the bug.
+### Changes
 
-## Fix
+**`src/components/director/DirectorChat.tsx`**
+- In `handleSubjectLockChoice` (kind !== "none" branch), remove the `scene_already_described === true` shortcut. Always append the `scene_describe` bubble after the sheet returns.
+- Update the `scene_describe` render branch to reflect optional intent:
+  - Reason copy: "Optional — add more detail for the key frame, or skip to pick an aspect ratio."
+  - Question copy: "Anything to add about the scene? (setting, action, lighting, mood, time of day)"
+  - Keep `QuestionCard`'s existing Skip/Continue buttons.
+- `handleSceneDescribeSubmit` stays as-is for Continue. For Skip, ensure the existing `onSkip` path appends the `aspect_choice` bubble with the original prompt unchanged (it already does; verify and keep).
 
-### `supabase/functions/director-agent/index.ts`
+**`supabase/functions/director-agent/index.ts`**
+- Update the POST-SHEET FLOW workflow note: the client now ALWAYS shows the optional scene-detail step after a sheet. The `scene_already_described` flag is no longer used to skip the step; leave the flag in the schema as a no-op hint (or remove it — see Technical notes) so existing model behavior doesn't break.
 
-Add an optional flag to the `generate_reference_image` tool:
-```ts
-scene_already_described: {
-  type: "boolean",
-  description:
-    "Set TRUE for mode=single_panel when the user's brief already includes the full key-frame scene (environment + subject + camera + lighting + mood). The client will skip the 'describe the opening key frame' step after the subject sheet and render the key frame from your prompt verbatim. Set FALSE (or omit) when the brief only names a subject and a scene description is still needed.",
-}
-```
+**`src/lib/director/api.ts`**
+- Leave `scene_already_described` typed as optional. No behavioral coupling on the client anymore.
 
-Update the workflow note (line ~187) so the model knows when to set it:
-> POST-SHEET FLOW: after a character/product/object sheet is generated, the client will ask the user to describe the opening key frame UNLESS you set `scene_already_described: true` on the original `generate_reference_image` call. Set it true when the user's brief already paints the full scene; set it false (or omit) when only the subject was given.
+### Out of scope
+- Case A (direct sheet request) flow unchanged.
+- Storyboard / multi-shot flow unchanged.
+- No new tool calls or backend changes beyond the prompt note.
 
-### `src/components/director/DirectorChat.tsx`
-
-1. Extend the `subject_lock_choice` and `scene_describe` bubble payload types with an optional `scene_already_described?: boolean` flag.
-2. In the `resp.kind === "generate_reference_image"` handler (line ~957), forward `resp.scene_already_described` into the `payload` used for `subject_lock_choice` / `aspect_choice`.
-3. In `handleSubjectLockChoice` (kind !== "none" branch), after the sheet returns:
-   - If `target.payload.scene_already_described === true` → append `aspect_choice` directly with the original payload (no `scene_describe`).
-   - Otherwise → append `scene_describe` as today.
-4. `DirectorMsg` / `AgentResponse` type in `src/lib/director/api.ts`: add the new optional field on the `generate_reference_image` response so TS stays clean.
-
-## Out of scope
-
-- Heuristic auto-detection of "rich brief" on the client. We let the Director model decide via the flag — it already reads the brief.
-- Changing case A (direct sheet request).
-- Storyboard / multi-shot flow.
+### Technical notes
+- Files touched: `src/components/director/DirectorChat.tsx`, `supabase/functions/director-agent/index.ts` (prompt copy only), optionally `src/lib/director/api.ts` (no-op).
+- Decision needed: keep `scene_already_described` as a now-ignored hint (safer, no edge-function redeploy churn) vs. remove it entirely. Recommendation: keep as ignored to avoid breaking in-flight sessions; the prompt note will tell the model it no longer affects the client.

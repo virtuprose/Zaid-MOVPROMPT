@@ -658,14 +658,10 @@ function DirectorChatInner() {
         subject_kind: kind === "product" ? "product" : "character",
       }, { subjectSheet: true, subjectKind: kind === "product" ? "product" : "character" });
 
-      // After the sheet returns, EITHER skip straight to the aspect chip (when the
-      // Director marked the brief as already fully describing the scene) OR queue a
-      // scene_describe bubble so the user can paint the opening key frame.
-      const skipDescribe = target.payload.scene_already_described === true;
+      // After the sheet returns, always offer an OPTIONAL scene-detail step. The
+      // user can add more detail for the key frame or skip straight to aspect ratio.
       setBubbles((prev) => {
-        const nextBubble: Bubble = skipDescribe
-          ? { role: "aspect_choice", payload: target.payload }
-          : { role: "scene_describe", payload: target.payload };
+        const nextBubble: Bubble = { role: "scene_describe", payload: target.payload };
         const withNext = [...prev, nextBubble];
         void persist(withNext, null, null);
         return withNext;
@@ -1724,9 +1720,9 @@ function DirectorChatInner() {
                   <AssistantAvatar size="sm" state="idle" className="mt-1" />
                   <div className="flex-1">
                     <QuestionCard
-                      reason="Before we render the key frame, set the scene — this anchors the whole story."
+                      reason="Optional — add more detail for the key frame, or skip to pick an aspect ratio."
                       questions={[
-                        "Describe the opening key frame: setting, action, mood, lighting, time of day.",
+                        "Anything to add about the scene? (setting, action, lighting, mood, time of day)",
                       ]}
                       disabled={busy || b.submitted}
                       onContinue={(formatted) => {
