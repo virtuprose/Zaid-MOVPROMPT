@@ -265,15 +265,11 @@ function Hero({ scrollY }: { scrollY: MotionValue<number> }) {
   // Scroll parallax for each depth layer
   const layer1Y = useTransform(scrollY, [0, 800], [0, -240]);
   const layer2Y = useTransform(scrollY, [0, 800], [0, -160]);
-  const layer3Y = useTransform(scrollY, [0, 800], [0, -80]);
 
   // Mouse parallax (in px) — different ranges per layer
   const orbX = useTransform(sx, [-1, 1], [-12, 12]);
-  const orbY = useTransform(sy, [-1, 1], [-12, 12]);
   const gridX = useTransform(sx, [-1, 1], [-6, 6]);
   const gridY = useTransform(sy, [-1, 1], [-6, 6]);
-  const dotsX = useTransform(sx, [-1, 1], [-3, 3]);
-  const dotsY = useTransform(sy, [-1, 1], [-3, 3]);
 
   return (
     <section
@@ -281,36 +277,51 @@ function Hero({ scrollY }: { scrollY: MotionValue<number> }) {
       ref={ref}
       className="relative flex min-h-screen items-center justify-center overflow-hidden pt-24"
     >
-      {/* Layer 1: orbs */}
-      <motion.div
-        style={{ y: reduce ? 0 : layer1Y, x: reduce ? 0 : orbX, translateY: reduce ? 0 : orbY }}
+      {/* Layer 1: base amber wash anchoring the light source (top-right) */}
+      <div
         className="pointer-events-none absolute inset-0"
+        aria-hidden
+        style={{
+          background:
+            "radial-gradient(ellipse 90% 70% at 88% -10%, hsl(var(--accent) / 0.18), transparent 60%)",
+        }}
+      />
+
+      {/* Layer 2: volumetric god-rays shafts from top-right */}
+      <motion.div
+        style={{ y: reduce ? 0 : layer1Y, x: reduce ? 0 : orbX }}
+        className="pointer-events-none absolute inset-0 overflow-hidden"
         aria-hidden
       >
         <div
-          className="absolute -top-32 right-[-10%] h-[520px] w-[520px] rounded-full opacity-[0.18]"
+          className={`absolute -top-[40%] -right-[20%] h-[180%] w-[140%] origin-top-right ${
+            reduce ? "" : "animate-god-rays-drift"
+          }`}
           style={{
-            background: "hsl(var(--accent))",
-            filter: "blur(150px)",
-          }}
-        />
-        <div
-          className="absolute bottom-[-15%] left-[-10%] h-[480px] w-[480px] rounded-full opacity-[0.15] md:block hidden"
-          style={{
-            background: "hsl(var(--accent))",
-            filter: "blur(150px)",
+            transform: "rotate(22deg)",
+            mixBlendMode: "screen",
+            backgroundImage: [
+              "linear-gradient(90deg, transparent 0%, transparent 8%, hsl(var(--accent) / 0.10) 9%, hsl(var(--accent) / 0.10) 11%, transparent 12%)",
+              "linear-gradient(90deg, transparent 0%, transparent 18%, hsl(var(--accent) / 0.06) 19%, hsl(var(--accent) / 0.06) 23%, transparent 24%)",
+              "linear-gradient(90deg, transparent 0%, transparent 30%, hsl(var(--accent) / 0.09) 31%, hsl(var(--accent) / 0.09) 33%, transparent 34%)",
+              "linear-gradient(90deg, transparent 0%, transparent 42%, hsl(var(--accent) / 0.05) 43%, hsl(var(--accent) / 0.05) 47%, transparent 48%)",
+              "linear-gradient(90deg, transparent 0%, transparent 56%, hsl(var(--accent) / 0.08) 57%, hsl(var(--accent) / 0.08) 59%, transparent 60%)",
+              "linear-gradient(90deg, transparent 0%, transparent 68%, hsl(var(--accent) / 0.04) 69%, hsl(var(--accent) / 0.04) 72%, transparent 73%)",
+              "linear-gradient(90deg, transparent 0%, transparent 80%, hsl(var(--accent) / 0.07) 81%, hsl(var(--accent) / 0.07) 83%, transparent 84%)",
+            ].join(","),
+            filter: "blur(24px)",
           }}
         />
       </motion.div>
 
-      {/* Layer 2: perspective grid */}
+      {/* Layer 3: perspective grid */}
       <motion.div
         style={{ y: reduce ? 0 : layer2Y, x: reduce ? 0 : gridX, translateY: reduce ? 0 : gridY }}
         className="pointer-events-none absolute inset-0 [perspective:800px]"
         aria-hidden
       >
         <div
-          className="absolute inset-x-[-20%] bottom-[-10%] h-[80%] opacity-[0.06] [transform:rotateX(60deg)]"
+          className="absolute inset-x-[-20%] bottom-[-10%] h-[80%] opacity-[0.05] [transform:rotateX(60deg)]"
           style={{
             backgroundImage:
               "linear-gradient(hsl(var(--border)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--border)) 1px, transparent 1px)",
@@ -319,36 +330,36 @@ function Hero({ scrollY }: { scrollY: MotionValue<number> }) {
         />
       </motion.div>
 
-      {/* Layer 3: drifting particles */}
-      <motion.div
-        style={{ y: reduce ? 0 : layer3Y, x: reduce ? 0 : dotsX, translateY: reduce ? 0 : dotsY }}
+      {/* Layer 4: atmospheric haze + dust grain */}
+      <div
         className="pointer-events-none absolute inset-0"
         aria-hidden
+        style={{
+          background:
+            "radial-gradient(ellipse 100% 60% at 50% 110%, hsl(var(--background)) 0%, transparent 70%)",
+        }}
+      />
+      <svg
+        className="pointer-events-none absolute inset-0 h-full w-full opacity-[0.04] mix-blend-overlay"
+        aria-hidden
       >
-        {Array.from({ length: 22 }).map((_, i) => {
-          const left = (i * 53) % 100;
-          const top = (i * 37) % 100;
-          const delay = (i % 7) * 0.5;
-          return (
-            <motion.span
-              key={i}
-              className="absolute h-[3px] w-[3px] rounded-full"
-              style={{
-                left: `${left}%`,
-                top: `${top}%`,
-                background: "hsl(var(--accent) / 0.4)",
-                boxShadow: "0 0 8px hsl(var(--accent) / 0.5)",
-              }}
-              animate={
-                reduce
-                  ? undefined
-                  : { y: [0, -40, 0], opacity: [0.2, 0.7, 0.2] }
-              }
-              transition={{ duration: 6 + (i % 5), repeat: Infinity, delay, ease: "easeInOut" }}
-            />
-          );
-        })}
-      </motion.div>
+        <filter id="hero-grain">
+          <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" stitchTiles="stitch" />
+          <feColorMatrix type="saturate" values="0" />
+        </filter>
+        <rect width="100%" height="100%" filter="url(#hero-grain)" />
+      </svg>
+
+      {/* Layer 5: vignette darkening bottom-left for headline contrast */}
+      <div
+        className="pointer-events-none absolute inset-0"
+        aria-hidden
+        style={{
+          background:
+            "radial-gradient(ellipse 70% 60% at 15% 95%, hsl(var(--background) / 0.85), transparent 60%)",
+        }}
+      />
+
 
       {/* Layer 4: content */}
       <div className="relative z-10 mx-auto flex max-w-3xl flex-col items-center px-6 text-center">

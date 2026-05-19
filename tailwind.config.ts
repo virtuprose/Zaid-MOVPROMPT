@@ -105,6 +105,10 @@ export default {
           "0%": { opacity: "0", transform: "translateY(6px)" },
           "100%": { opacity: "1", transform: "translateY(0)" },
         },
+        "god-rays-drift": {
+          "0%, 100%": { transform: "translateX(-8px)", opacity: "0.85" },
+          "50%": { transform: "translateX(8px)", opacity: "1" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -115,6 +119,7 @@ export default {
         "caret-blink": "caret-blink 1s steps(1) infinite",
         nod: "nod 0.6s ease-out",
         "fade-up": "fade-up 0.35s ease-out",
+        "god-rays-drift": "god-rays-drift 20s ease-in-out infinite",
       },
     },
   },
