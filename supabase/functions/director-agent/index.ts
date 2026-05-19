@@ -461,6 +461,11 @@ const TOOLS = [
             type: "string",
             description: "Short note shown to the user explaining why you generated these.",
           },
+          scene_already_described: {
+            type: "boolean",
+            description:
+              "Set TRUE for mode=single_panel when the user's brief already includes the full key-frame scene (environment + subject + camera + lighting + mood). The client will skip the 'describe the opening key frame' step after the subject sheet and render the key frame from your prompt verbatim. Set FALSE (or omit) when the brief only names a subject and a scene description is still needed.",
+          },
 
         },
         required: ["mode", "prompt"],
