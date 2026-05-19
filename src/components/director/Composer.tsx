@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Paperclip, Send, Loader2, X, FileText, Image as ImageIcon, Music, ShieldCheck, ShieldAlert, ShieldQuestion, Mic, Square } from "lucide-react";
+import { Paperclip, Send, Loader2, X, FileText, Image as ImageIcon, Music, ShieldCheck, ShieldAlert, ShieldQuestion, Mic, Square, Sparkles } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { toast } from "sonner";
@@ -47,6 +48,34 @@ export function Composer({
   const [drag, setDrag] = useState(false);
   const [pageDrag, setPageDrag] = useState(false);
   const [ingesting, setIngesting] = useState(false);
+  const [enhancing, setEnhancing] = useState(false);
+
+  const handleEnhance = useCallback(async () => {
+    const draft = value.trim();
+    if (draft.length < 3 || enhancing) return;
+    setEnhancing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("enhance-description", {
+        body: { description: draft },
+      });
+      if (error) throw error;
+      const enhanced = typeof data?.enhanced === "string" ? data.enhanced.trim() : "";
+      if (!enhanced) throw new Error("No enhanced text returned");
+      onChange(enhanced);
+      requestAnimationFrame(() => {
+        const ta = taRef.current;
+        if (!ta) return;
+        ta.focus();
+        const pos = enhanced.length;
+        ta.setSelectionRange(pos, pos);
+      });
+      toast.success("Description enhanced");
+    } catch (e: any) {
+      toast.error(e?.message || "Could not enhance description");
+    } finally {
+      setEnhancing(false);
+    }
+  }, [value, enhancing, onChange]);
 
   // Global drag detection so the composer signals "drop here" from anywhere on the page
   useEffect(() => {
@@ -441,6 +470,26 @@ export function Composer({
               >
                 {ingesting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Paperclip className="w-4 h-4" />}
               </Button>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    onClick={handleEnhance}
+                    disabled={busy || ingesting || enhancing || recording || transcribing || value.trim().length < 3}
+                    aria-label="Enhance description"
+                    className="h-9 w-9 rounded-full text-muted-foreground hover:text-foreground"
+                  >
+                    {enhancing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top">
+                  {enhancing ? "Enhancing…" : "Enhance description"}
+                </TooltipContent>
+              </Tooltip>
+
 
               {voice.supported && (
                 <Tooltip>
