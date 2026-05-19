@@ -1,4 +1,4 @@
-import { RotateCcw, Film, Maximize2, X, ChevronLeft, ChevronRight } from "lucide-react";
+import { RotateCcw, Film, Maximize2, X, ChevronLeft, ChevronRight, Download } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -34,6 +34,24 @@ export function GeneratedImageCard({ data, onRegenerate }: Props) {
 
   const n = data.images.length;
   const hasMultiple = n > 1;
+
+  const downloadImage = useCallback(async (url: string, shotNum: number) => {
+    try {
+      const res = await fetch(url, { mode: "cors" });
+      const blob = await res.blob();
+      const ext = (blob.type.split("/")[1] || "png").split("+")[0];
+      const objUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = objUrl;
+      a.download = `${data.mode}-${shotNum}.${ext}`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(objUrl);
+    } catch {
+      window.open(url, "_blank", "noopener");
+    }
+  }, [data.mode]);
   const goPrev = useCallback(
     () => setZoomIndex((i) => (i === null ? i : (i - 1 + n) % n)),
     [n],
@@ -119,6 +137,15 @@ export function GeneratedImageCard({ data, onRegenerate }: Props) {
                 <span className="bg-background/85 hover:bg-background text-foreground p-2 rounded-full shadow-md">
                   <Maximize2 className="h-5 w-5" />
                 </span>
+              </button>
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); downloadImage(img.url, shotNum); }}
+                className="absolute bottom-1 left-1 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity bg-background/85 hover:bg-background text-foreground p-1.5 rounded"
+                title="Download"
+                aria-label="Download image"
+              >
+                <Download className="h-3 w-3" />
               </button>
               {onRegenerate && (
                 <button
@@ -212,6 +239,17 @@ export function GeneratedImageCard({ data, onRegenerate }: Props) {
               </>
             )}
           </div>
+        )}
+        {zoomIndex !== null && (
+          <button
+            type="button"
+            onClick={() => downloadImage(data.images[zoomIndex].url, data.images[zoomIndex].shot_index ?? zoomIndex + 1)}
+            className="absolute top-2 right-12 bg-background/80 hover:bg-background text-foreground p-1.5 rounded-md"
+            title="Download"
+            aria-label="Download image"
+          >
+            <Download className="h-4 w-4" />
+          </button>
         )}
         <DialogClose className="absolute top-2 right-2 bg-background/80 hover:bg-background p-1.5 rounded-md">
           <X className="h-4 w-4" />
