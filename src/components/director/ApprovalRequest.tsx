@@ -17,6 +17,9 @@ export type ApprovalRequest = {
   onCancel: () => void;
 };
 
+const fmtCredits = (n: number) => Number((n ?? 0).toFixed(2)).toString();
+
+
 const ACTION_LABEL: Record<ApprovalAction, string> = {
   image: "Image generation",
   video: "Video render",
