@@ -21,6 +21,7 @@ import { Composer } from "./Composer";
 import { PromptResultCard } from "./PromptResultCard";
 import { ModelChoiceCard } from "./ModelChoiceCard";
 import { GeneratedImageCard } from "./GeneratedImageCard";
+import { AspectChoiceCard, type AspectRatio } from "./AspectChoiceCard";
 
 import {
   streamDirectorAgent,
@@ -64,6 +65,20 @@ type Bubble =
   | { role: "model_choice"; recommended_model_id: string; alternatives?: string[]; reason: string; chosen?: string; lockedSpec?: import("@/lib/director/api").LockedSpec }
   | { role: "error"; message: string; detail?: string; retryable: boolean }
   | { role: "generated_images"; data: import("./GeneratedImageCard").GeneratedImageBubbleData }
+  | {
+      role: "aspect_choice";
+      payload: {
+        mode: "single_panel";
+        prompt: string;
+        reference_urls?: string[];
+        count?: number;
+        per_shot_prompts?: string[];
+        shot_index?: number;
+        lock_mode?: "character" | "scene" | "auto";
+        directors_note?: string;
+      };
+      chosen?: AspectRatio;
+    }
   | { role: "video"; data: import("./VideoBubble").VideoBubbleData };
 
 const WELCOME: Bubble = {
@@ -292,6 +307,135 @@ function DirectorChatInner() {
     }
   };
 
+  const runImageGeneration = async (
+    baseBubbles: Bubble[],
+    payload: {
+      mode: "character_sheet" | "storyboard_panels" | "single_panel";
+      prompt: string;
+      reference_urls?: string[];
+      count?: number;
+      aspect_ratio?: "1:1" | "16:9" | "9:16";
+      per_shot_prompts?: string[];
+      shot_index?: number;
+      lock_mode?: "character" | "scene" | "auto";
+      directors_note?: string;
+    },
+  ) => {
+    const loadingBubble: Bubble = {
+      role: "assistant",
+      animate: true,
+      content:
+        payload.mode === "storyboard_panels"
+          ? "Generating storyboard panels…"
+          : payload.mode === "character_sheet"
+            ? "Designing a character sheet…"
+            : "Generating a reference frame…",
+    };
+    setBubbles([...baseBubbles, loadingBubble]);
+    try {
+      const { generateReferenceImage } = await import("@/lib/director/api");
+      const result = await generateReferenceImage({
+        mode: payload.mode,
+        prompt: payload.prompt,
+        reference_urls: payload.reference_urls,
+        count: payload.count,
+        aspect_ratio: payload.aspect_ratio,
+        per_shot_prompts: payload.per_shot_prompts,
+        shot_index: payload.shot_index,
+        lock_mode: payload.lock_mode,
+      });
+      const role: "character" | "storyboard" | "reference" | "key_frame" =
+        payload.mode === "character_sheet"
+          ? "character"
+          : payload.mode === "storyboard_panels"
+            ? "storyboard"
+            : "key_frame";
+      const newAttachments: Attachment[] = result.images.map((img, i) => ({
+        kind: "image" as const,
+        name:
+          role === "storyboard"
+            ? `panel-${img.shot_index ?? i + 1}.png`
+            : role === "key_frame"
+              ? `key-frame.png`
+              : `${role}.png`,
+        url: img.url,
+        storage_path: img.storage_path,
+        role,
+        shot_index: img.shot_index,
+        ...(role === "key_frame" && payload.aspect_ratio
+          ? { aspect_ratio: payload.aspect_ratio }
+          : {}),
+      }));
+      setAttachments((prev) => [...prev, ...newAttachments]);
+      const imageBubble: Bubble = {
+        role: "generated_images",
+        data: {
+          mode: payload.mode,
+          images: result.images,
+          directorsNote: payload.directors_note,
+          ...(payload.aspect_ratio ? { aspectRatio: payload.aspect_ratio } : {}),
+        },
+      };
+      const carrierBubble: Bubble = {
+        role: "user",
+        content:
+          role === "character"
+            ? "(Generated character sheet — use as identity reference.)"
+            : role === "storyboard"
+              ? `(Generated ${newAttachments.length} storyboard panels — use in shot order.)`
+              : `(Generated key frame at ${payload.aspect_ratio ?? "16:9"} — use as scene anchor for any frame-by-frame extension.)`,
+        attachments: newAttachments,
+      };
+      const finalBubbles: Bubble[] = [...baseBubbles, imageBubble, carrierBubble];
+      setBubbles(finalBubbles);
+      setAttachments([]);
+      void persist(finalBubbles, null, null);
+      toast.success(
+        role === "storyboard"
+          ? `${newAttachments.length} panels generated`
+          : role === "key_frame"
+            ? "Key frame generated"
+            : "Reference image generated",
+      );
+    } catch (e: any) {
+      const handled = await notifyInsufficientCredits(e);
+      const message = handled
+        ? "You're out of credits — top up to keep generating."
+        : e?.message || "Image generation failed";
+      if (!handled) toast.error(message);
+      setBubbles((prev) => {
+        const trimmed =
+          prev.length && prev[prev.length - 1].role === "assistant"
+            ? prev.slice(0, -1)
+            : prev;
+        return [
+          ...trimmed,
+          { role: "error", message, retryable: !handled },
+        ];
+      });
+    }
+  };
+
+  const handleAspectChoice = async (bubbleIndex: number, aspect: AspectRatio) => {
+    if (busy) return;
+    const target = bubbles[bubbleIndex];
+    if (!target || target.role !== "aspect_choice" || target.chosen) return;
+    const stamped: Bubble[] = bubbles.map((b, i) =>
+      i === bubbleIndex && b.role === "aspect_choice" ? { ...b, chosen: aspect } : b,
+    );
+    setBubbles(stamped);
+    setBusy(true);
+    try {
+      await runImageGeneration(stamped, {
+        ...target.payload,
+        aspect_ratio: aspect,
+      });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+
   const send = async (textOverride?: string) => {
     const text = (textOverride ?? input).trim();
     if (!text && attachments.length === 0) {
@@ -396,10 +540,23 @@ function DirectorChatInner() {
               : b.data.mode === "storyboard_panels"
                 ? "storyboard"
                 : "key_frame";
+          const aspectLine = b.data.aspectRatio ? ` Aspect ratio: ${b.data.aspectRatio}.` : "";
           history.push({
             role: "assistant",
-            content: `[Generated ${tag} via generate_reference_image. They are attached on the next user turn with role: ${roleTag}. If the user asks to extend a key_frame frame-by-frame, call generate_reference_image again with mode: "storyboard_panels", lock_mode: "scene", and the key_frame URL in reference_urls. Do not regenerate the existing image.]`,
+            content: `[Generated ${tag} via generate_reference_image.${aspectLine} They are attached on the next user turn with role: ${roleTag}. If the user asks to extend a key_frame frame-by-frame, call generate_reference_image again with mode: "storyboard_panels", lock_mode: "scene", and the key_frame URL in reference_urls. Do not regenerate the existing image. The client will inherit the key frame's aspect ratio automatically — you can omit aspect_ratio.]`,
           });
+        } else if (b.role === "aspect_choice") {
+          if (b.chosen) {
+            history.push({
+              role: "user",
+              content: `Aspect ratio chosen for the key frame: ${b.chosen}.`,
+            });
+          } else {
+            history.push({
+              role: "assistant",
+              content: `[Asked the user to pick an aspect ratio for the key frame. Waiting for their choice.]`,
+            });
+          }
         }
 
       }
@@ -525,101 +682,51 @@ function DirectorChatInner() {
           lockedSpec: resp.locked_spec,
         };
       } else if (resp.kind === "generate_reference_image") {
-        // Show a brief loading bubble while we call the image function.
-        const loadingBubble: Bubble = {
-          role: "assistant",
-          animate: true,
-          content:
-            resp.mode === "storyboard_panels"
-              ? "Generating storyboard panels…"
-              : resp.mode === "character_sheet"
-                ? "Designing a character sheet…"
-                : "Generating a reference frame…",
-        };
-        setBubbles([...next, loadingBubble]);
-        try {
-          const { generateReferenceImage } = await import("@/lib/director/api");
-          const result = await generateReferenceImage({
-            mode: resp.mode,
-            prompt: resp.prompt,
-            reference_urls: resp.reference_urls,
-            count: resp.count,
-            aspect_ratio: resp.aspect_ratio,
-            per_shot_prompts: resp.per_shot_prompts,
-            shot_index: resp.shot_index,
-            lock_mode: resp.lock_mode,
-          });
-          const role: "character" | "storyboard" | "reference" | "key_frame" =
-            resp.mode === "character_sheet"
-              ? "character"
-              : resp.mode === "storyboard_panels"
-                ? "storyboard"
-                : "key_frame";
-          const newAttachments: Attachment[] = result.images.map((img, i) => ({
-            kind: "image" as const,
-            name:
-              role === "storyboard"
-                ? `panel-${img.shot_index ?? i + 1}.png`
-                : role === "key_frame"
-                  ? `key-frame.png`
-                  : `${role}.png`,
-            url: img.url,
-            storage_path: img.storage_path,
-            role,
-            shot_index: img.shot_index,
-          }));
-          // Carry generated images into the session attachments so the next
-          // user turn (or auto-followup below) keeps them in play.
-          setAttachments((prev) => [...prev, ...newAttachments]);
-          const imageBubble: Bubble = {
-            role: "generated_images",
-            data: {
-              mode: resp.mode,
-              images: result.images,
-              directorsNote: resp.directors_note,
+        // Key frame (single_panel) → ask the user for aspect ratio first.
+        if (resp.mode === "single_panel") {
+          const aspectBubble: Bubble = {
+            role: "aspect_choice",
+            payload: {
+              mode: "single_panel",
+              prompt: resp.prompt,
+              reference_urls: resp.reference_urls,
+              count: resp.count,
+              per_shot_prompts: resp.per_shot_prompts,
+              shot_index: resp.shot_index,
+              lock_mode: resp.lock_mode,
+              directors_note: resp.directors_note,
             },
           };
-          // Also stash them on a synthetic user bubble so persistence + the
-          // attachment-merge loop in the next agent call can find them.
-          const carrierBubble: Bubble = {
-            role: "user",
-            content:
-              role === "character"
-                ? "(Generated character sheet — use as identity reference.)"
-                : role === "storyboard"
-                  ? `(Generated ${newAttachments.length} storyboard panels — use in shot order.)`
-                  : "(Generated key frame — use as scene anchor for any frame-by-frame extension.)",
-            attachments: newAttachments,
-          };
-          const finalBubbles: Bubble[] = [...next, imageBubble, carrierBubble];
-          setBubbles(finalBubbles);
+          const withAspect: Bubble[] = [...next, aspectBubble];
+          setBubbles(withAspect);
           setAttachments([]);
-          void persist(finalBubbles, null, null);
-          toast.success(
-            role === "storyboard"
-              ? `${newAttachments.length} panels generated`
-              : role === "key_frame"
-                ? "Key frame generated"
-                : "Reference image generated",
-          );
-
-        } catch (e: any) {
-          const handled = await notifyInsufficientCredits(e);
-          const message = handled
-            ? "You're out of credits — top up to keep generating."
-            : e?.message || "Image generation failed";
-          if (!handled) toast.error(message);
-          setBubbles((prev) => {
-            const trimmed =
-              prev.length && prev[prev.length - 1].role === "assistant"
-                ? prev.slice(0, -1)
-                : prev;
-            return [
-              ...trimmed,
-              { role: "error", message, retryable: !handled },
-            ];
-          });
+          void persist(withAspect, null, null);
+          return;
         }
+
+        // Storyboard scene-extension → inherit aspect from the most recent key frame.
+        let effectiveAspect = resp.aspect_ratio;
+        if (resp.mode === "storyboard_panels" && resp.lock_mode === "scene") {
+          for (let i = next.length - 1; i >= 0; i -= 1) {
+            const b = next[i];
+            if (b.role === "generated_images" && b.data.mode === "single_panel" && b.data.aspectRatio) {
+              effectiveAspect = b.data.aspectRatio;
+              break;
+            }
+          }
+        }
+
+        await runImageGeneration(next, {
+          mode: resp.mode,
+          prompt: resp.prompt,
+          reference_urls: resp.reference_urls,
+          count: resp.count,
+          aspect_ratio: effectiveAspect,
+          per_shot_prompts: resp.per_shot_prompts,
+          shot_index: resp.shot_index,
+          lock_mode: resp.lock_mode,
+          directors_note: resp.directors_note,
+        });
         return;
       } else if (resp.kind === "request_video_generation") {
         const refCount = referenceImageUrls.length;
@@ -1271,6 +1378,20 @@ function DirectorChatInner() {
                       });
                     }}
                   />
+                </div>
+              );
+            }
+            if (b.role === "aspect_choice") {
+              return (
+                <div key={i} className="flex items-start gap-2 motion-safe:animate-fade-up">
+                  <AssistantAvatar size="sm" state="idle" className="mt-1" />
+                  <div className="flex-1">
+                    <AspectChoiceCard
+                      chosen={b.chosen}
+                      disabled={busy}
+                      onChoose={(aspect) => void handleAspectChoice(i, aspect)}
+                    />
+                  </div>
                 </div>
               );
             }
