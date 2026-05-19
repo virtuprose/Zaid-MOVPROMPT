@@ -24,6 +24,7 @@ type Body = {
   per_shot_prompts?: string[]; // when mode === "storyboard_panels", one per shot
   shot_index?: number; // when regenerating a single panel inside an existing 3x3 grid
   lock_mode?: LockMode; // "character" | "scene" (key-frame extension) | "auto" (default)
+  subject_kind?: "character" | "product"; // shapes the character_sheet layout copy
 };
 
 const IDENTITY_LOCK =
@@ -187,9 +188,12 @@ serve(async (req) => {
         ? prompts.map(() => regenIndex)
         : prompts.map((_, i) => i + 1);
     } else if (mode === "character_sheet") {
-      prompts = [
-        `Character sheet, full body reference. Three views in one image side by side: front view, three-quarter view, and side profile. Neutral expression, T-pose or relaxed stance, flat clean studio background, even soft lighting, no harsh shadows, no props. ${basePrompt}`,
-      ];
+      const subjectKind = body.subject_kind === "product" ? "product" : "character";
+      const sheetTemplate =
+        subjectKind === "product"
+          ? `Product / object reference sheet, single image, split composition. Left half: a large, left-aligned detailed closeup of the item showing material, texture, and craftsmanship. Right half: a multi-angle view of the same item showing four angles in this order — front, right side, left side, and back (or top if the item is rotationally symmetrical). All views on a seamless pure white background, even soft studio lighting, no hands, no people, no props, no shadows beneath the item. Absolutely no text, no labels, no captions, no annotations, no measurements, no watermarks, no logos overlay, no borders, no soft gradients, no color swatches. Photorealistic. ${basePrompt}`
+          : `Character reference sheet, single image, split composition. Left half: a large, left-aligned closeup portrait of the character (head and shoulders, outfit visible at the top, neutral expression, looking at camera). Right half: a full-body multi-angle view of the same character showing four poses in this order — front view, right side profile, left side profile, and back view. Consistent identity, wardrobe, hair, and proportions across every view. All views on a seamless pure white background, even soft studio lighting, no harsh shadows under the feet, no extra props beyond what the character wears. Absolutely no text, no labels, no captions, no annotations, no watermarks, no borders, no soft gradients, no color swatches. Photorealistic. ${basePrompt}`;
+      prompts = [sheetTemplate];
       shotIndices = [];
     } else {
       const count = Math.min(Math.max(body.count || 1, 1), 9);
