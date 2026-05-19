@@ -108,8 +108,8 @@ function CodeSnippet({ children, text }: { children: React.ReactNode; text: stri
   );
 }
 
-function Logo({ size = 28 }: { size?: number }) {
-  const dim = Math.round(size * 1.4);
+function Logo({ size = 56 }: { size?: number }) {
+  const dim = size;
   return (
     <Link to="/" className="flex items-center" aria-label="MovPrompt home">
       <img
