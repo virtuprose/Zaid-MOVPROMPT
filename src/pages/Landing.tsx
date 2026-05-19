@@ -775,7 +775,6 @@ export default function Landing() {
 
       <main className="relative z-10">
         <Hero scrollY={scrollY} />
-        <Stats />
         <Features />
         <SceneControl scrollY={scrollY} />
         <Models />
