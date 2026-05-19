@@ -348,6 +348,59 @@ function DirectorChatInner() {
       }
     }
 
+    // Confirm credit cost before kicking off the generation.
+    const imageCount =
+      payload.mode === "storyboard_panels"
+        ? payload.shot_index
+          ? 1
+          : (payload.per_shot_prompts?.length ?? Math.min(Math.max(payload.count ?? 9, 1), 9))
+        : Math.min(Math.max(payload.count ?? 1, 1), 9);
+    const PER_IMAGE_CREDITS = 5;
+    const approvalCost = imageCount * PER_IMAGE_CREDITS;
+    const approvalLabel =
+      payload.mode === "storyboard_panels"
+        ? payload.shot_index
+          ? `Regenerate panel ${payload.shot_index}`
+          : `Storyboard panels (${imageCount})`
+        : payload.mode === "character_sheet"
+          ? options?.subjectKind === "product"
+            ? "Product sheet"
+            : "Character sheet"
+          : "Key frame";
+    const approvalKey =
+      payload.mode === "storyboard_panels"
+        ? payload.shot_index
+          ? "approval:image:single_panel_regen"
+          : "approval:image:storyboard_panels"
+        : payload.mode === "character_sheet"
+          ? "approval:image:character_sheet"
+          : "approval:image:single_panel";
+    const truncate = (s: string, n = 90) =>
+      s.length > n ? `${s.slice(0, n - 1)}…` : s;
+    const approvalItems: string[] =
+      payload.mode === "storyboard_panels" && payload.per_shot_prompts?.length
+        ? (() => {
+            const first = payload.per_shot_prompts!.slice(0, 3).map((p, i) => `Shot ${i + 1}: ${truncate(p)}`);
+            const extra = payload.per_shot_prompts!.length - 3;
+            return extra > 0 ? [...first, `+${extra} more shot${extra === 1 ? "" : "s"}`] : first;
+          })()
+        : [truncate(payload.prompt || "Generate image")];
+
+    const confirmed = await new Promise<boolean>((resolve) => {
+      requestApproval({
+        action: "image",
+        label: approvalLabel,
+        question: `Use ${approvalCost} credit${approvalCost === 1 ? "" : "s"}?`,
+        items: approvalItems,
+        cost: approvalCost,
+        alwaysAllowKey: approvalKey,
+        onConfirm: () => resolve(true),
+        onCancel: () => resolve(false),
+      });
+    });
+    if (!confirmed) return;
+
+
     const isStreamingStoryboard =
       payload.mode === "storyboard_panels" &&
       !payload.shot_index &&
