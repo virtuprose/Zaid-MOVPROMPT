@@ -48,6 +48,34 @@ export function Composer({
   const [drag, setDrag] = useState(false);
   const [pageDrag, setPageDrag] = useState(false);
   const [ingesting, setIngesting] = useState(false);
+  const [enhancing, setEnhancing] = useState(false);
+
+  const handleEnhance = useCallback(async () => {
+    const draft = value.trim();
+    if (draft.length < 3 || enhancing) return;
+    setEnhancing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("enhance-description", {
+        body: { description: draft },
+      });
+      if (error) throw error;
+      const enhanced = typeof data?.enhanced === "string" ? data.enhanced.trim() : "";
+      if (!enhanced) throw new Error("No enhanced text returned");
+      onChange(enhanced);
+      requestAnimationFrame(() => {
+        const ta = taRef.current;
+        if (!ta) return;
+        ta.focus();
+        const pos = enhanced.length;
+        ta.setSelectionRange(pos, pos);
+      });
+      toast.success("Description enhanced");
+    } catch (e: any) {
+      toast.error(e?.message || "Could not enhance description");
+    } finally {
+      setEnhancing(false);
+    }
+  }, [value, enhancing, onChange]);
 
   // Global drag detection so the composer signals "drop here" from anywhere on the page
   useEffect(() => {
