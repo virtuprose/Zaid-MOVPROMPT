@@ -19,7 +19,10 @@ type Props = {
 
 export function GeneratedImageCard({ data, onRegenerate }: Props) {
   const [zoomIndex, setZoomIndex] = useState<number | null>(null);
-  const isGrid = data.mode === "storyboard_panels" && data.images.length > 1;
+  const progress = data.progress;
+  const inProgress = !!progress && progress.done < progress.total;
+  const isGrid =
+    data.mode === "storyboard_panels" && (data.images.length > 1 || (progress?.total ?? 0) > 1);
   const isKeyFrame = data.mode === "single_panel";
   const label =
     data.mode === "character_sheet"
