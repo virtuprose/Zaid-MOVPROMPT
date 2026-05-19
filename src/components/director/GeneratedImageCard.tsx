@@ -32,6 +32,7 @@ export function GeneratedImageCard({ data, onRegenerate }: Props) {
   };
 
   return (
+    <>
     <div className="rounded-2xl bg-muted/15 p-4 sm:p-5 space-y-3 max-w-2xl">
       <div className="flex items-center justify-between gap-3">
         <div className="text-xs uppercase tracking-wide text-muted-foreground/80">
