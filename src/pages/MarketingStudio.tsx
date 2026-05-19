@@ -441,7 +441,7 @@ export default function MarketingStudio() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `vidoprompt-${ad.id.slice(0, 8)}.mp4`;
+      a.download = `movprompt-${ad.id.slice(0, 8)}.mp4`;
       document.body.appendChild(a);
       a.click();
       a.remove();
