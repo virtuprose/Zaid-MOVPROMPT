@@ -15,6 +15,7 @@ import {
 import { moderateImage } from "@/lib/director/api";
 import { useVoiceCapture } from "@/lib/director/useVoiceCapture";
 import { QuickReplies } from "./QuickReplies";
+import { CostChip } from "@/components/credits/CostChip";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -515,30 +516,42 @@ export function Composer({
                 }
                 onSend();
               };
+              const hasMedia = attachments.length > 0;
+              const cost = hasMedia ? 3 : 1;
               const tip = blocked
                 ? "Remove flagged images to continue"
                 : scanning
                   ? "Scanning attachments…"
-                  : "⌘/Ctrl + Enter to send · Max 12 attachments";
+                  : `Costs ${cost} credit${cost === 1 ? "" : "s"} · ⌘/Ctrl + Enter to send`;
               return (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      onClick={handleSend}
-                      disabled={sendDisabled}
-                      size="icon"
-                      aria-label="Send"
-                      className="h-9 w-9 rounded-full bg-primary text-primary-foreground hover:bg-primary/90"
-                    >
-                      {busy || scanning ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <Send className="w-4 h-4" />
-                      )}
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="top">{tip}</TooltipContent>
-                </Tooltip>
+                <div className="flex items-center gap-2">
+                  <CostChip
+                    amount={cost}
+                    title={
+                      hasMedia
+                        ? "Director reply with media — 3 credits"
+                        : "Director reply — 1 credit"
+                    }
+                  />
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        onClick={handleSend}
+                        disabled={sendDisabled}
+                        size="icon"
+                        aria-label="Send"
+                        className="h-9 w-9 rounded-full bg-primary text-primary-foreground hover:bg-primary/90"
+                      >
+                        {busy || scanning ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Send className="w-4 h-4" />
+                        )}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top">{tip}</TooltipContent>
+                  </Tooltip>
+                </div>
               );
             })()}
 
