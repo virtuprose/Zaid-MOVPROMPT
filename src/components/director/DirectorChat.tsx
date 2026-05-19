@@ -42,7 +42,6 @@ import { ApprovalProvider, useApproval } from "./ApprovalContext";
 import {
   AwaitingApprovalPill,
   BottomApprovalBar,
-  InlineApprovalCard,
 } from "./ApprovalRequest";
 import { AssistantAvatar, type AvatarState } from "./AssistantAvatar";
 import { TypingIndicator } from "./TypingIndicator";
@@ -1759,12 +1758,7 @@ function DirectorChatInner() {
               <span>Awaiting your input</span>
             </div>
           )}
-          {pendingApproval && (
-            <>
-              <InlineApprovalCard request={pendingApproval} />
-              <AwaitingApprovalPill />
-            </>
-          )}
+          {pendingApproval && <AwaitingApprovalPill />}
         </div>
       </div>
 
