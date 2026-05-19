@@ -1,37 +1,56 @@
-## Problem
+## Goal
 
-Storyboard panels are generated in parallel — each call sends only the original anchor image to `gemini-3.1-flash-image-preview`. With independent runs, the model drifts on face/wardrobe/proportions between panels, so the character looks like a different person from shot to shot. The IDENTITY_LOCK text alone is not enough; visual reference chaining is what keeps nano-banana-style models on-model.
+Stream storyboard panels from the edge function as they finish, and render each one in the chat the moment it lands — with a minimal "N / total" + thin progress bar.
 
-## Fix: sequential chain in `supabase/functions/generate-reference-image/index.ts`
+## 1. Edge function — `supabase/functions/generate-reference-image/index.ts`
 
-When `mode === "storyboard_panels"` and `prompts.length > 1`, replace the current `Promise.allSettled(prompts.map(...))` with a sequential loop:
+Add a streaming branch for the chained-storyboard case (`isChain && prompts.length > 1`). Other modes keep the current single-shot JSON response — no behavior change.
 
-```text
-panel 1 → refs = [anchor]
-panel 2 → refs = [anchor, panel 1]
-panel 3 → refs = [anchor, panel 2]
-panel N → refs = [anchor, panel N-1]
+- Return `Response(stream, { headers: { ...corsHeaders, "Content-Type": "application/x-ndjson" } })` built from a `ReadableStream`.
+- Emit NDJSON, one JSON object per line:
+  - `{"type":"start","mode":"storyboard_panels","total":N}`
+  - per panel result: `{"type":"panel","index":i+1,"value":{url,storage_path,shot_index}}` on success, or `{"type":"panel_error","index":i+1,"error":"..."}` on failure
+  - `{"type":"done","missing":k}` at the end
+- Charge credits up front exactly as today; refund missing panels before the final `done` line.
+- Run the chain loop inside the stream (`start(controller)` → async IIFE → `controller.close()`), so each successful panel is flushed immediately.
+
+## 2. Client API — `src/lib/director/api.ts`
+
+Add a sibling helper that does a raw `fetch` against `${VITE_SUPABASE_URL}/functions/v1/generate-reference-image` so we can read the body stream (`supabase.functions.invoke` buffers, can't stream).
+
+```ts
+generateReferenceImageStream(input, onProgress): Promise<{mode, images}>
 ```
 
-Details:
-- Keep `anchor` = the first user-supplied reference URL (character sheet or key frame). Other user refs (≤3 more) are appended after it, leaving room for the prior-panel image.
-- After each successful generation, upload + sign as today, then push the **signed URL** into the next iteration's `referenceUrls` as the "previous panel" anchor.
-- Cap total refs at 4 (gateway limit) — anchor + previous panel + up to 2 user-supplied extras.
-- On failure of one panel: continue with the chain using the last successful panel (or fall back to anchor only). Refund credits for the missing panels exactly like today.
-- Regenerate-single-panel path (`shot_index` set, `prompts.length === 1`) stays as-is — no chain needed.
-- `character_sheet` and `single_panel` modes: unchanged (still parallel / single).
+- Auth: pull `(await supabase.auth.getSession()).data.session?.access_token` and send as `Authorization: Bearer …` (same as the existing invoke flow).
+- If response `Content-Type` is JSON (server fell back to non-stream path), behave like the existing helper.
+- Otherwise read with `TextDecoderStream` + line buffering, dispatch each parsed event through `onProgress`, accumulate `images`, resolve with the final aggregate.
+- Keep the existing `generateReferenceImage` for non-storyboard callers.
 
-## Prompt strengthening (small)
+## 3. DirectorChat — `src/components/director/DirectorChat.tsx`
 
-In the storyboard branch (lines 166-181), when chaining is active append a short continuity clause to every prompt: `"Same character, wardrobe, hair, face, and props as the attached previous panel — only the action and framing change."` This pairs with the new visual anchor.
+In `runImageGeneration` (around lines 334–399), when `payload.mode === "storyboard_panels"`:
 
-## Trade-offs to flag to the user
+- Insert the `generated_images` bubble immediately with `images: []` and `progress: { done: 0, total: N }` (N derived from `per_shot_prompts?.length ?? payload.count ?? 9`).
+- Replace the loading text bubble with a quieter "Rendering panels…" or remove it (the progress bar replaces it).
+- Call `generateReferenceImageStream` with an `onProgress` that, on every `panel` event, updates that bubble's `images` array (push by shot_index order) and bumps `progress.done`.
+- On `done`, swap `progress` for the final state (clear it once `done === total`), then run the existing attachment + carrierBubble + persist block using the accumulated images.
+- Errors / partial failures keep the panels that did arrive; refund is handled server-side.
 
-- Generation goes from parallel to sequential → ~N× slower (≈8-9× for a full 9-panel storyboard). A 9-panel render that takes ~15s today will take ~60–90s. Still well within the 150s edge timeout, but the user will feel it.
-- If we want to keep some parallelism we can chain in **pairs** (panels 1+2 parallel from anchor, then 3+4 use panel 2, etc.) — happy to do that instead if speed matters more than maximum continuity.
+Other modes (`character_sheet`, `single_panel`, single-panel regen) keep the current path — no streaming, no UI change.
+
+## 4. GeneratedImageCard — `src/components/director/GeneratedImageCard.tsx`
+
+Extend the bubble data type with an optional `progress?: { done: number; total: number }`.
+
+Minimal progress UI (only when `progress && progress.done < progress.total`):
+
+- A 1px-thin bar pinned under the header row: `<div class="h-px bg-muted overflow-hidden rounded-full"><div class="h-full bg-primary transition-all" style={{width: ${done/total*100}%}} /></div>`
+- Replace the right-side status chip with `Rendering · {done} / {total}` while in progress; revert to "Locked as references…" when complete.
+- Render placeholder tiles for the missing slots in the grid: same `aspect-square` card with a subtle pulse (`bg-muted/30 animate-pulse`) and a tiny shot number in the corner, so the grid keeps its shape and panels pop in place.
 
 ## Out of scope
 
-- Changing the image model.
-- Adding a second pass / face-restore step.
-- Client-side changes — the existing `GeneratedImageCard` and agent prompt already do the right thing once the edge function chains.
+- Streaming character sheets or single-panel generations.
+- Server-Sent Events framing (NDJSON is simpler and works with `fetch` body reader).
+- Cancellation / abort UI.

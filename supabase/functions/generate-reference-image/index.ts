@@ -230,34 +230,55 @@ serve(async (req) => {
     };
 
     type Settled<T> = { status: "fulfilled"; value: T } | { status: "rejected"; reason: unknown };
-    let results: Settled<{ url: string; storage_path: string; shot_index?: number }>[];
+
 
     if (isChain && prompts.length > 1) {
-      // Sequential chain: each panel sees [anchor, previous_panel, ...extras] (cap 4).
-      results = [];
+      // Stream NDJSON so the client can show panels as they finish.
       const anchor = referenceUrls[0];
-      const extras = referenceUrls.slice(1, 3); // leave room for prior panel
-      let prevPanelUrl: string | null = null;
-      for (let i = 0; i < prompts.length; i++) {
-        const refs = [
-          ...(anchor ? [anchor] : []),
-          ...(prevPanelUrl ? [prevPanelUrl] : []),
-          ...extras,
-        ].slice(0, 4);
-        try {
-          const value = await runOne(prompts[i], i, refs);
-          results.push({ status: "fulfilled", value });
-          prevPanelUrl = value.url; // anchor next panel to this one
-        } catch (reason) {
-          results.push({ status: "rejected", reason });
-          // keep prevPanelUrl as last successful panel (or anchor) so chain continues
-        }
-      }
-    } else {
-      results = await Promise.allSettled(
-        prompts.map((p, i) => runOne(p, i, referenceUrls)),
-      );
+      const extras = referenceUrls.slice(1, 3);
+      const encoder = new TextEncoder();
+      const stream = new ReadableStream({
+        async start(controller) {
+          const send = (obj: unknown) =>
+            controller.enqueue(encoder.encode(JSON.stringify(obj) + "\n"));
+          send({ type: "start", mode, total: prompts.length });
+          let prevPanelUrl: string | null = null;
+          let okCount = 0;
+          for (let i = 0; i < prompts.length; i++) {
+            const refs = [
+              ...(anchor ? [anchor] : []),
+              ...(prevPanelUrl ? [prevPanelUrl] : []),
+              ...extras,
+            ].slice(0, 4);
+            try {
+              const value = await runOne(prompts[i], i, refs);
+              okCount++;
+              prevPanelUrl = value.url;
+              send({ type: "panel", index: i + 1, value });
+            } catch (reason: any) {
+              console.error("panel error", i + 1, reason);
+              send({ type: "panel_error", index: i + 1, error: String(reason?.message || reason) });
+            }
+          }
+          const missing = prompts.length - okCount;
+          if (missing > 0) {
+            try {
+              await refundCredits({ userId, amount: perImage * missing, reason: "image_generation_refund", metadata: { missing } });
+            } catch (e) {
+              console.error("refund failed", e);
+            }
+          }
+          send({ type: "done", mode, missing });
+          controller.close();
+        },
+      });
+      return new Response(stream, {
+        headers: { ...corsHeaders, "Content-Type": "application/x-ndjson" },
+      });
     }
+
+    const results: Settled<{ url: string; storage_path: string; shot_index?: number }>[] =
+      await Promise.allSettled(prompts.map((p, i) => runOne(p, i, referenceUrls)));
 
     const out: Array<{ url: string; storage_path: string; shot_index?: number }> = [];
     let firstError: unknown = null;
@@ -269,10 +290,7 @@ serve(async (req) => {
     if (missing > 0) {
       await refundCredits({ userId, amount: perImage * missing, reason: "image_generation_refund", metadata: { missing } });
     }
-    // Only fail the whole request if nothing came back.
     if (out.length === 0 && firstError) throw firstError;
-
-
 
     return new Response(
       JSON.stringify({ mode, images: out }),

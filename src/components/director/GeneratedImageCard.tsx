@@ -9,6 +9,7 @@ export type GeneratedImageBubbleData = {
   images: Array<{ url: string; storage_path: string; shot_index?: number }>;
   directorsNote?: string;
   aspectRatio?: "1:1" | "16:9" | "9:16";
+  progress?: { done: number; total: number };
 };
 
 type Props = {
@@ -18,7 +19,10 @@ type Props = {
 
 export function GeneratedImageCard({ data, onRegenerate }: Props) {
   const [zoomIndex, setZoomIndex] = useState<number | null>(null);
-  const isGrid = data.mode === "storyboard_panels" && data.images.length > 1;
+  const progress = data.progress;
+  const inProgress = !!progress && progress.done < progress.total;
+  const isGrid =
+    data.mode === "storyboard_panels" && (data.images.length > 1 || (progress?.total ?? 0) > 1);
   const isKeyFrame = data.mode === "single_panel";
   const label =
     data.mode === "character_sheet"
@@ -84,11 +88,22 @@ export function GeneratedImageCard({ data, onRegenerate }: Props) {
           {label}
         </div>
         <div className="text-[10px] text-muted-foreground/60">
-          {isKeyFrame
-            ? "Locked as scene anchor — extend it into a sequence below."
-            : "Locked as references — continue the chat to use them."}
+          {inProgress
+            ? `Rendering · ${progress!.done} / ${progress!.total}`
+            : isKeyFrame
+              ? "Locked as scene anchor — extend it into a sequence below."
+              : "Locked as references — continue the chat to use them."}
         </div>
       </div>
+
+      {inProgress && (
+        <div className="h-px bg-muted/40 overflow-hidden rounded-full">
+          <div
+            className="h-full bg-primary transition-all duration-300"
+            style={{ width: `${(progress!.done / progress!.total) * 100}%` }}
+          />
+        </div>
+      )}
 
       {data.directorsNote && (
         <div className="text-sm text-foreground/85 italic leading-snug">
@@ -165,6 +180,24 @@ export function GeneratedImageCard({ data, onRegenerate }: Props) {
             </div>
           );
         })}
+        {inProgress && data.mode === "storyboard_panels" &&
+          Array.from({ length: Math.max(0, progress!.total - data.images.length) }).map((_, k) => {
+            const shotNum = data.images.length + k + 1;
+            const isNext = k === 0;
+            return (
+              <div
+                key={`ph-${shotNum}`}
+                className={cn(
+                  "relative rounded-lg overflow-hidden border border-border/30 bg-muted/20 aspect-square",
+                  isNext && "animate-pulse",
+                )}
+              >
+                <div className="absolute top-1 left-1 text-[10px] font-medium bg-background/60 text-muted-foreground px-1.5 py-0.5 rounded">
+                  {shotNum}
+                </div>
+              </div>
+            );
+          })}
       </div>
 
       {onRegenerate && isGrid && (

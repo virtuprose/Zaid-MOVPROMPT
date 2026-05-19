@@ -102,6 +102,74 @@ export async function generateReferenceImage(input: {
   return data as { mode: string; images: GeneratedImage[] };
 }
 
+export type ImageStreamEvent =
+  | { type: "start"; mode: string; total: number }
+  | { type: "panel"; index: number; value: GeneratedImage }
+  | { type: "panel_error"; index: number; error: string }
+  | { type: "done"; mode: string; missing: number };
+
+export async function generateReferenceImageStream(
+  input: Parameters<typeof generateReferenceImage>[0],
+  onProgress: (e: ImageStreamEvent) => void,
+): Promise<{ mode: string; images: GeneratedImage[] }> {
+  const { data: sess } = await supabase.auth.getSession();
+  const token = sess.session?.access_token;
+  if (!token) throw new Error("Not authenticated");
+  const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-reference-image`;
+  const resp = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+      apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string,
+    },
+    body: JSON.stringify(input),
+  });
+  const ct = resp.headers.get("content-type") || "";
+  if (!resp.ok && !ct.includes("ndjson")) {
+    let msg = `HTTP ${resp.status}`;
+    try {
+      const j = await resp.json();
+      msg = j.error || msg;
+    } catch { /* ignore */ }
+    const err: any = new Error(msg);
+    err.status = resp.status;
+    throw err;
+  }
+  if (!ct.includes("ndjson")) {
+    // Server fell back to single JSON response (non-chain modes).
+    const data = (await resp.json()) as { mode: string; images: GeneratedImage[] };
+    return data;
+  }
+  if (!resp.body) throw new Error("No response body");
+  const reader = resp.body.getReader();
+  const decoder = new TextDecoder();
+  const images: GeneratedImage[] = [];
+  let mode = input.mode as string;
+  let buf = "";
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, { stream: true });
+    let nl: number;
+    while ((nl = buf.indexOf("\n")) >= 0) {
+      const line = buf.slice(0, nl).trim();
+      buf = buf.slice(nl + 1);
+      if (!line) continue;
+      try {
+        const ev = JSON.parse(line) as ImageStreamEvent;
+        onProgress(ev);
+        if (ev.type === "panel") images.push(ev.value);
+        if (ev.type === "done" || ev.type === "start") mode = (ev as any).mode || mode;
+      } catch {
+        /* ignore malformed line */
+      }
+    }
+  }
+  return { mode, images };
+}
+
 
 export type DirectorPhase =
   | "thinking"

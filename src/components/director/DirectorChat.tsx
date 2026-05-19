@@ -321,6 +321,13 @@ function DirectorChatInner() {
       directors_note?: string;
     },
   ) => {
+    const isStreamingStoryboard =
+      payload.mode === "storyboard_panels" &&
+      !payload.shot_index &&
+      ((payload.per_shot_prompts?.length ?? payload.count ?? 9) > 1);
+    const streamTotal =
+      payload.per_shot_prompts?.length ?? Math.min(Math.max(payload.count ?? 9, 1), 9);
+
     const loadingBubble: Bubble = {
       role: "assistant",
       animate: true,
@@ -331,19 +338,73 @@ function DirectorChatInner() {
             ? "Designing a character sheet…"
             : "Generating a reference frame…",
     };
-    setBubbles([...baseBubbles, loadingBubble]);
+
+    // For streaming storyboard, mount the live image bubble immediately and
+    // skip the text loading bubble (the progress bar replaces it).
+    const liveImageBubble: Bubble | null = isStreamingStoryboard
+      ? {
+          role: "generated_images",
+          data: {
+            mode: payload.mode,
+            images: [],
+            directorsNote: payload.directors_note,
+            progress: { done: 0, total: streamTotal },
+          },
+        }
+      : null;
+    const liveBubbleIndex = isStreamingStoryboard ? baseBubbles.length : -1;
+    setBubbles(
+      liveImageBubble ? [...baseBubbles, liveImageBubble] : [...baseBubbles, loadingBubble],
+    );
+
     try {
-      const { generateReferenceImage } = await import("@/lib/director/api");
-      const result = await generateReferenceImage({
-        mode: payload.mode,
-        prompt: payload.prompt,
-        reference_urls: payload.reference_urls,
-        count: payload.count,
-        aspect_ratio: payload.aspect_ratio,
-        per_shot_prompts: payload.per_shot_prompts,
-        shot_index: payload.shot_index,
-        lock_mode: payload.lock_mode,
-      });
+      const api = await import("@/lib/director/api");
+      const streamedImages: Array<{ url: string; storage_path: string; shot_index?: number }> = [];
+      const result = isStreamingStoryboard
+        ? await api.generateReferenceImageStream(
+            {
+              mode: payload.mode,
+              prompt: payload.prompt,
+              reference_urls: payload.reference_urls,
+              count: payload.count,
+              aspect_ratio: payload.aspect_ratio,
+              per_shot_prompts: payload.per_shot_prompts,
+              lock_mode: payload.lock_mode,
+            },
+            (ev) => {
+              if (ev.type === "panel") {
+                streamedImages.push(ev.value);
+                setBubbles((prev) => {
+                  const next = prev.slice();
+                  const b = next[liveBubbleIndex];
+                  if (b && b.role === "generated_images") {
+                    next[liveBubbleIndex] = {
+                      ...b,
+                      data: {
+                        ...b.data,
+                        images: [...streamedImages].sort(
+                          (a, z) => (a.shot_index ?? 0) - (z.shot_index ?? 0),
+                        ),
+                        progress: { done: streamedImages.length, total: streamTotal },
+                      },
+                    };
+                  }
+                  return next;
+                });
+              }
+            },
+          )
+        : await api.generateReferenceImage({
+            mode: payload.mode,
+            prompt: payload.prompt,
+            reference_urls: payload.reference_urls,
+            count: payload.count,
+            aspect_ratio: payload.aspect_ratio,
+            per_shot_prompts: payload.per_shot_prompts,
+            shot_index: payload.shot_index,
+            lock_mode: payload.lock_mode,
+          });
+
       const role: "character" | "storyboard" | "reference" | "key_frame" =
         payload.mode === "character_sheet"
           ? "character"
