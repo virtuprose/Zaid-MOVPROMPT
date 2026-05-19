@@ -316,6 +316,96 @@ export type Database = {
         }
         Relationships: []
       }
+      credit_ledger: {
+        Row: {
+          balance_after: number
+          created_at: string
+          delta: number
+          id: string
+          metadata: Json | null
+          reason: string
+          ref_id: string | null
+          user_id: string
+        }
+        Insert: {
+          balance_after: number
+          created_at?: string
+          delta: number
+          id?: string
+          metadata?: Json | null
+          reason: string
+          ref_id?: string | null
+          user_id: string
+        }
+        Update: {
+          balance_after?: number
+          created_at?: string
+          delta?: number
+          id?: string
+          metadata?: Json | null
+          reason?: string
+          ref_id?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      credit_prices: {
+        Row: {
+          amount: number
+          description: string | null
+          key: string
+          kind: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          description?: string | null
+          key: string
+          kind: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          description?: string | null
+          key?: string
+          kind?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      credit_topups: {
+        Row: {
+          cents: number | null
+          created_at: string
+          credits: number
+          id: string
+          provider: string | null
+          provider_ref: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          cents?: number | null
+          created_at?: string
+          credits: number
+          id?: string
+          provider?: string | null
+          provider_ref?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          cents?: number | null
+          created_at?: string
+          credits?: number
+          id?: string
+          provider?: string | null
+          provider_ref?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       custom_presets: {
         Row: {
           anim_class: string | null
@@ -800,6 +890,33 @@ export type Database = {
         }
         Relationships: []
       }
+      user_credits: {
+        Row: {
+          balance: number
+          last_daily_grant_at: string | null
+          lifetime_granted: number
+          lifetime_spent: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          balance?: number
+          last_daily_grant_at?: string | null
+          lifetime_granted?: number
+          lifetime_spent?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          balance?: number
+          last_daily_grant_at?: string | null
+          lifetime_granted?: number
+          lifetime_spent?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           id: string
@@ -948,6 +1065,16 @@ export type Database = {
     }
     Functions: {
       attribute_referral: { Args: { _code: string }; Returns: boolean }
+      charge_credits: {
+        Args: {
+          _amount: number
+          _metadata?: Json
+          _reason: string
+          _ref_id?: string
+          _user_id: string
+        }
+        Returns: number
+      }
       delete_email: {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
@@ -958,6 +1085,19 @@ export type Database = {
       }
       gen_referral_code: { Args: never; Returns: string }
       get_or_create_my_referral_code: { Args: never; Returns: string }
+      grant_credits: {
+        Args: {
+          _amount: number
+          _metadata?: Json
+          _reason: string
+          _user_id: string
+        }
+        Returns: number
+      }
+      grant_daily_credits_if_due: {
+        Args: { _user_id: string }
+        Returns: number
+      }
       has_role:
         | {
             Args: { _role: Database["public"]["Enums"]["app_role"] }
@@ -990,6 +1130,16 @@ export type Database = {
           msg_id: number
           read_ct: number
         }[]
+      }
+      refund_credits: {
+        Args: {
+          _amount: number
+          _metadata?: Json
+          _reason: string
+          _ref_id?: string
+          _user_id: string
+        }
+        Returns: number
       }
     }
     Enums: {
