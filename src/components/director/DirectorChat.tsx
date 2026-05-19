@@ -566,10 +566,12 @@ function DirectorChatInner() {
     }
 
     // Build a multi-angle subject sheet first, then queue the aspect chip.
+    // The edge function builds the layout instruction based on subject_kind;
+    // we just pass the user's subject description here.
     const sheetPrompt =
       kind === "product"
-        ? `Product sheet, three views in one image side by side: front view, three-quarter view, side view. Seamless pure white background. Even soft studio lighting. No people, no hands, no props, no text, no shadows below subject. The product is described by the user as: ${target.payload.prompt}`
-        : `The character described by the user as: ${target.payload.prompt}`;
+        ? `The product/object described by the user: ${target.payload.prompt}`
+        : `The character described by the user: ${target.payload.prompt}`;
 
     setBusy(true);
     try {
@@ -582,6 +584,7 @@ function DirectorChatInner() {
             ? "Pinned product sheet — I'll attach this to every frame so the product stays consistent."
             : "Pinned character sheet — I'll attach this to every frame so the character stays consistent.",
         lock_mode: "auto",
+        subject_kind: kind === "product" ? "product" : "character",
       }, { subjectSheet: true, subjectKind: kind === "product" ? "product" : "character" });
 
       // After the sheet returns, append the aspect chip for the original key frame.
