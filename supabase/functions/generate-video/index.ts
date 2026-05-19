@@ -422,6 +422,8 @@ serve(async (req) => {
             completed_at: new Date().toISOString(),
           })
           .eq("id", jobId);
+        const refundAmt = await videoCost(job.provider, 5);
+        await refundCredits({ userId: uid, amount: refundAmt, reason: "video_render_refund", refId: jobId, metadata: { stage: "provider_failed" } });
         return new Response(
           JSON.stringify({ ...job, status: "failed", error: statusData.error }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } },
