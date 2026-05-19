@@ -511,6 +511,9 @@ function DirectorChatInner() {
           : {}),
       }));
       setAttachments((prev) => [...prev, ...newAttachments]);
+      const isSheet = options?.subjectSheet || payload.mode === "character_sheet";
+      const sheetKind: "character" | "product" =
+        options?.subjectKind ?? (payload.subject_kind === "product" ? "product" : "character");
       const imageBubble: Bubble = {
         role: "generated_images",
         data: {
@@ -518,8 +521,7 @@ function DirectorChatInner() {
           images: result.images,
           directorsNote: payload.directors_note,
           ...(payload.aspect_ratio ? { aspectRatio: payload.aspect_ratio } : {}),
-          ...(options?.subjectSheet ? { subjectSheet: true as const } : {}),
-          ...(options?.subjectKind ? { subjectKind: options.subjectKind } : {}),
+          ...(isSheet ? { subjectSheet: true as const, subjectKind: sheetKind } : {}),
         },
       };
       const carrierBubble: Bubble = {
