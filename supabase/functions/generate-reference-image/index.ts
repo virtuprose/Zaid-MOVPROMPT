@@ -194,28 +194,45 @@ serve(async (req) => {
     }
 
 
+    const perImage = await priceFor("image_generation", 5);
+    const totalCharge = perImage * prompts.length;
+    try {
+      await chargeCredits({ userId, amount: totalCharge, reason: "image_generation", metadata: { count: prompts.length, mode } });
+    } catch (e) {
+      if (e instanceof InsufficientCreditsError) return insufficientResponse(corsHeaders);
+      throw e;
+    }
+
     const out: Array<{ url: string; storage_path: string; shot_index?: number }> = [];
-    // Sequential to stay polite with gateway rate limits — and because per-image
-    // calls preserve identity better than batched ones with this model.
-    for (let i = 0; i < prompts.length; i++) {
-      const dataUrl = await generateOne(LOVABLE_API_KEY, prompts[i], referenceUrls, aspect);
-      const { blob, mime } = dataUrlToBlob(dataUrl);
-      const ext = mime.split("/")[1] || "png";
-      const safeName = `${mode}-${Date.now()}-${i + 1}.${ext}`;
-      const path = `${userId}/gen-${crypto.randomUUID().slice(0, 8)}-${safeName}`;
-      const { error: upErr } = await supabase.storage
-        .from("director-uploads")
-        .upload(path, blob, { contentType: mime, upsert: false });
-      if (upErr) throw upErr;
-      const { data: signed, error: signErr } = await supabase.storage
-        .from("director-uploads")
-        .createSignedUrl(path, SIGNED_URL_TTL);
-      if (signErr || !signed?.signedUrl) throw signErr || new Error("sign_failed");
-      out.push({
-        url: signed.signedUrl,
-        storage_path: path,
-        shot_index: mode === "storyboard_panels" ? shotIndices[i] : undefined,
-      });
+    let produced = 0;
+    try {
+      for (let i = 0; i < prompts.length; i++) {
+        const dataUrl = await generateOne(LOVABLE_API_KEY, prompts[i], referenceUrls, aspect);
+        const { blob, mime } = dataUrlToBlob(dataUrl);
+        const ext = mime.split("/")[1] || "png";
+        const safeName = `${mode}-${Date.now()}-${i + 1}.${ext}`;
+        const path = `${userId}/gen-${crypto.randomUUID().slice(0, 8)}-${safeName}`;
+        const { error: upErr } = await supabase.storage
+          .from("director-uploads")
+          .upload(path, blob, { contentType: mime, upsert: false });
+        if (upErr) throw upErr;
+        const { data: signed, error: signErr } = await supabase.storage
+          .from("director-uploads")
+          .createSignedUrl(path, SIGNED_URL_TTL);
+        if (signErr || !signed?.signedUrl) throw signErr || new Error("sign_failed");
+        out.push({
+          url: signed.signedUrl,
+          storage_path: path,
+          shot_index: mode === "storyboard_panels" ? shotIndices[i] : undefined,
+        });
+        produced++;
+      }
+    } catch (e) {
+      const missing = prompts.length - produced;
+      if (missing > 0) {
+        await refundCredits({ userId, amount: perImage * missing, reason: "image_generation_refund", metadata: { missing } });
+      }
+      throw e;
     }
 
 
