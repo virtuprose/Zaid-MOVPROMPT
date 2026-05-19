@@ -17,17 +17,20 @@ export type GeneratedImageBubbleData = {
 type Props = {
   data: GeneratedImageBubbleData;
   onRegenerate?: (intent: string) => void;
+  onUnpinSubject?: () => void;
 };
 
-export function GeneratedImageCard({ data, onRegenerate }: Props) {
+export function GeneratedImageCard({ data, onRegenerate, onUnpinSubject }: Props) {
   const [zoomIndex, setZoomIndex] = useState<number | null>(null);
   const progress = data.progress;
   const inProgress = !!progress && progress.done < progress.total;
   const isGrid =
     data.mode === "storyboard_panels" && (data.images.length > 1 || (progress?.total ?? 0) > 1);
   const isKeyFrame = data.mode === "single_panel";
-  const label =
-    data.mode === "character_sheet"
+  const subjectLabel = data.subjectKind === "product" ? "Product" : "Character";
+  const label = data.subjectSheet
+    ? `${subjectLabel} sheet · pinned`
+    : data.mode === "character_sheet"
       ? "Character sheet · 3 views"
       : data.mode === "storyboard_panels"
         ? `Storyboard · ${data.images.length} panels`
