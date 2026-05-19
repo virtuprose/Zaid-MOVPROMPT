@@ -180,6 +180,24 @@ export function GeneratedImageCard({ data, onRegenerate }: Props) {
             </div>
           );
         })}
+        {inProgress && data.mode === "storyboard_panels" &&
+          Array.from({ length: Math.max(0, progress!.total - data.images.length) }).map((_, k) => {
+            const shotNum = data.images.length + k + 1;
+            const isNext = k === 0;
+            return (
+              <div
+                key={`ph-${shotNum}`}
+                className={cn(
+                  "relative rounded-lg overflow-hidden border border-border/30 bg-muted/20 aspect-square",
+                  isNext && "animate-pulse",
+                )}
+              >
+                <div className="absolute top-1 left-1 text-[10px] font-medium bg-background/60 text-muted-foreground px-1.5 py-0.5 rounded">
+                  {shotNum}
+                </div>
+              </div>
+            );
+          })}
       </div>
 
       {onRegenerate && isGrid && (
