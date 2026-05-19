@@ -148,5 +148,21 @@ export function GeneratedImageCard({ data, onRegenerate }: Props) {
         </div>
       )}
     </div>
+
+    <Dialog open={!!zoomUrl} onOpenChange={(o) => !o && setZoomUrl(null)}>
+      <DialogContent className="max-w-[95vw] w-fit p-0 bg-background/95 border-border/40">
+        {zoomUrl && (
+          <img
+            src={zoomUrl}
+            alt="Expanded view"
+            className="max-h-[90vh] max-w-[95vw] w-auto h-auto object-contain rounded-lg"
+          />
+        )}
+        <DialogClose className="absolute top-2 right-2 bg-background/80 hover:bg-background p-1.5 rounded-md">
+          <X className="h-4 w-4" />
+        </DialogClose>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }
