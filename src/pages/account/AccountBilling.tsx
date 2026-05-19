@@ -108,6 +108,55 @@ const AccountBilling = () => {
             })}
           </ul>
         </Card>
+
+        <Card className="p-6 mt-6">
+          <div className="text-sm font-medium mb-1 flex items-center gap-2">
+            <Coins className="w-4 h-4 text-accent" /> Price list
+          </div>
+          <div className="text-xs text-muted-foreground mb-4">
+            Each action below deducts credits from your balance.
+          </div>
+
+          <div className="text-[11px] uppercase tracking-wider text-muted-foreground mb-2">
+            Per action
+          </div>
+          <ul className="divide-y divide-border/40 mb-6">
+            {flatActions.map(({ key, label, icon: Icon }) => {
+              const row = prices.get(key);
+              const amount = row ? Math.ceil(row.amount) : null;
+              return (
+                <li key={key} className="py-2.5 flex items-center gap-3">
+                  <Icon className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-sm flex-1">{label}</span>
+                  <span className="text-sm tabular-nums text-foreground/80">
+                    {amount ?? "—"} <span className="text-muted-foreground">credits</span>
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+
+          <div className="text-[11px] uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-1.5">
+            <Film className="w-3 h-3" /> Video rendering · per second
+          </div>
+          <ul className="divide-y divide-border/40 max-h-[360px] overflow-y-auto pr-1">
+            {videoRows.map((r) => (
+              <li key={r.id} className="py-2 flex items-center gap-3 text-sm">
+                <span className="text-[10px] uppercase tracking-wider text-muted-foreground/80 w-16 shrink-0">
+                  {r.family}
+                </span>
+                <span className="flex-1 truncate">{r.label}</span>
+                <span className="tabular-nums text-foreground/80 shrink-0">
+                  {Math.ceil(r.rate)} <span className="text-muted-foreground">/s</span>
+                </span>
+              </li>
+            ))}
+          </ul>
+          <div className="mt-4 text-[11px] text-muted-foreground">
+            Example: a 5s render with a model priced at 15/s costs ≈ 75 credits.
+            Failed renders are automatically refunded.
+          </div>
+        </Card>
       </div>
     </div>
   );
