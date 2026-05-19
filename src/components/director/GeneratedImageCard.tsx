@@ -8,6 +8,7 @@ export type GeneratedImageBubbleData = {
   mode: "character_sheet" | "storyboard_panels" | "single_panel";
   images: Array<{ url: string; storage_path: string; shot_index?: number }>;
   directorsNote?: string;
+  aspectRatio?: "1:1" | "16:9" | "9:16";
 };
 
 type Props = {
