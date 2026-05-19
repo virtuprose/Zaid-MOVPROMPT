@@ -16,6 +16,7 @@ type Props = {
 };
 
 export function GeneratedImageCard({ data, onRegenerate }: Props) {
+  const [zoomUrl, setZoomUrl] = useState<string | null>(null);
   const isGrid = data.mode === "storyboard_panels" && data.images.length > 1;
   const isKeyFrame = data.mode === "single_panel";
   const label =
