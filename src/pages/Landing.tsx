@@ -778,7 +778,7 @@ export default function Landing() {
         <Features />
         <SceneControl scrollY={scrollY} />
         <Models />
-        <Testimonials />
+        
         <FinalCTA />
       </main>
 
