@@ -1759,12 +1759,7 @@ function DirectorChatInner() {
               <span>Awaiting your input</span>
             </div>
           )}
-          {pendingApproval && (
-            <>
-              <InlineApprovalCard request={pendingApproval} />
-              <AwaitingApprovalPill />
-            </>
-          )}
+          {pendingApproval && <AwaitingApprovalPill />}
         </div>
       </div>
 
