@@ -105,6 +105,10 @@ export default {
           "0%": { opacity: "0", transform: "translateY(6px)" },
           "100%": { opacity: "1", transform: "translateY(0)" },
         },
+        "god-rays-drift": {
+          "0%, 100%": { transform: "translateX(-8px)", opacity: "0.85" },
+          "50%": { transform: "translateX(8px)", opacity: "1" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
