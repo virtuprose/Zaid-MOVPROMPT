@@ -9,6 +9,7 @@ export type GeneratedImageBubbleData = {
   images: Array<{ url: string; storage_path: string; shot_index?: number }>;
   directorsNote?: string;
   aspectRatio?: "1:1" | "16:9" | "9:16";
+  progress?: { done: number; total: number };
 };
 
 type Props = {
