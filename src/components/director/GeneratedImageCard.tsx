@@ -138,6 +138,15 @@ export function GeneratedImageCard({ data, onRegenerate }: Props) {
                   <Maximize2 className="h-5 w-5" />
                 </span>
               </button>
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); downloadImage(img.url, shotNum); }}
+                className="absolute bottom-1 left-1 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity bg-background/85 hover:bg-background text-foreground p-1.5 rounded"
+                title="Download"
+                aria-label="Download image"
+              >
+                <Download className="h-3 w-3" />
+              </button>
               {onRegenerate && (
                 <button
                   type="button"
