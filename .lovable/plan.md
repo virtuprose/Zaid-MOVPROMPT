@@ -1,18 +1,21 @@
 ## Goal
 
-The "Still there? Tell me the vibe…" idle nudge currently stays in the chat after the user finally types and hits Enter. It should disappear the moment they send, so only their first real message and the Director's reply remain.
+Credit numbers shown to the user (especially in the approval bar above the composer and inside the inline approval card) should display as clean integers — `5`, `10`, `150`, `200` — never `5.000` or `150.00`.
 
 ## Change
 
-In `src/components/director/DirectorChat.tsx`:
+In `src/components/director/ApprovalRequest.tsx`:
 
-1. In the send handler (the function that fires on Enter / send button before appending the user bubble), filter the existing `bubbles` state to drop any assistant bubble whose `content === IDLE_NUDGE`. Apply the filter in the same `setBubbles` call that appends the new user bubble, so it's a single atomic update with no flicker.
-2. Cancel any pending idle nudge: clear `idleTimer.current` and set `idleNudgedRef.current = true` at the top of the send handler so a queued nudge can't fire mid-send.
-3. Leave the existing 45s idle-nudge effect untouched — it already self-suppresses once `idleNudgedRef.current` is true or `input`/`attachments` are non-empty.
+- Replace both occurrences of `{request.cost.toFixed(3)}` (lines 73 and 158) with a small inline formatter that:
+  - rounds to at most 2 decimals,
+  - strips trailing zeros (and the trailing dot),
+  - so `5 → "5"`, `150 → "150"`, `2.5 → "2.5"`, `0.75 → "0.75"`.
 
-No backend, no styling, no credit/approval changes. Pure frontend bubble cleanup.
+Implementation: `Number(request.cost.toFixed(2)).toString()` — or a tiny local helper `fmtCredits(n)` defined once at the top of the file and reused at both spots.
+
+Everywhere else credit numbers already render as integers (CostChip, CreditBadge, WalletDrawer balance and delta), so no other files need changes.
 
 ## Out of scope
 
-- The opening "Hey — I'm your Director…" welcome bubble stays.
-- No change to how/when the nudge first appears.
+- Backend pricing values, credit ledger entries, currency formatting.
+- Cost calculation logic.

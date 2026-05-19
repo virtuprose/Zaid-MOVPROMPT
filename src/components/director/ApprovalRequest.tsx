@@ -17,6 +17,9 @@ export type ApprovalRequest = {
   onCancel: () => void;
 };
 
+const fmtCredits = (n: number) => Number((n ?? 0).toFixed(2)).toString();
+
+
 const ACTION_LABEL: Record<ApprovalAction, string> = {
   image: "Image generation",
   video: "Video render",
@@ -70,7 +73,7 @@ export function InlineApprovalCard({ request }: { request: ApprovalRequest }) {
           {request.action === "image" ? "Generate" : "Approve"}
           <span className="inline-flex items-center gap-0.5 text-[11px] opacity-90">
             <Sparkles className="w-3 h-3" />
-            {request.cost.toFixed(3)}
+            {fmtCredits(request.cost)}
           </span>
         </Button>
       </div>
@@ -155,7 +158,7 @@ export function BottomApprovalBar({ request }: { request: ApprovalRequest }) {
         {request.action === "image" ? "Generate" : "Approve"}
         <span className="inline-flex items-center gap-0.5 text-[11px] opacity-90">
           <Sparkles className="w-3 h-3" />
-          {request.cost.toFixed(3)}
+          {fmtCredits(request.cost)}
         </span>
       </Button>
 
