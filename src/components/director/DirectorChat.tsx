@@ -307,6 +307,135 @@ function DirectorChatInner() {
     }
   };
 
+  const runImageGeneration = async (
+    baseBubbles: Bubble[],
+    payload: {
+      mode: "character_sheet" | "storyboard_panels" | "single_panel";
+      prompt: string;
+      reference_urls?: string[];
+      count?: number;
+      aspect_ratio?: "1:1" | "16:9" | "9:16";
+      per_shot_prompts?: string[];
+      shot_index?: number;
+      lock_mode?: "character" | "scene" | "auto";
+      directors_note?: string;
+    },
+  ) => {
+    const loadingBubble: Bubble = {
+      role: "assistant",
+      animate: true,
+      content:
+        payload.mode === "storyboard_panels"
+          ? "Generating storyboard panels…"
+          : payload.mode === "character_sheet"
+            ? "Designing a character sheet…"
+            : "Generating a reference frame…",
+    };
+    setBubbles([...baseBubbles, loadingBubble]);
+    try {
+      const { generateReferenceImage } = await import("@/lib/director/api");
+      const result = await generateReferenceImage({
+        mode: payload.mode,
+        prompt: payload.prompt,
+        reference_urls: payload.reference_urls,
+        count: payload.count,
+        aspect_ratio: payload.aspect_ratio,
+        per_shot_prompts: payload.per_shot_prompts,
+        shot_index: payload.shot_index,
+        lock_mode: payload.lock_mode,
+      });
+      const role: "character" | "storyboard" | "reference" | "key_frame" =
+        payload.mode === "character_sheet"
+          ? "character"
+          : payload.mode === "storyboard_panels"
+            ? "storyboard"
+            : "key_frame";
+      const newAttachments: Attachment[] = result.images.map((img, i) => ({
+        kind: "image" as const,
+        name:
+          role === "storyboard"
+            ? `panel-${img.shot_index ?? i + 1}.png`
+            : role === "key_frame"
+              ? `key-frame.png`
+              : `${role}.png`,
+        url: img.url,
+        storage_path: img.storage_path,
+        role,
+        shot_index: img.shot_index,
+        ...(role === "key_frame" && payload.aspect_ratio
+          ? { aspect_ratio: payload.aspect_ratio }
+          : {}),
+      }));
+      setAttachments((prev) => [...prev, ...newAttachments]);
+      const imageBubble: Bubble = {
+        role: "generated_images",
+        data: {
+          mode: payload.mode,
+          images: result.images,
+          directorsNote: payload.directors_note,
+          ...(payload.aspect_ratio ? { aspectRatio: payload.aspect_ratio } : {}),
+        },
+      };
+      const carrierBubble: Bubble = {
+        role: "user",
+        content:
+          role === "character"
+            ? "(Generated character sheet — use as identity reference.)"
+            : role === "storyboard"
+              ? `(Generated ${newAttachments.length} storyboard panels — use in shot order.)`
+              : `(Generated key frame at ${payload.aspect_ratio ?? "16:9"} — use as scene anchor for any frame-by-frame extension.)`,
+        attachments: newAttachments,
+      };
+      const finalBubbles: Bubble[] = [...baseBubbles, imageBubble, carrierBubble];
+      setBubbles(finalBubbles);
+      setAttachments([]);
+      void persist(finalBubbles, null, null);
+      toast.success(
+        role === "storyboard"
+          ? `${newAttachments.length} panels generated`
+          : role === "key_frame"
+            ? "Key frame generated"
+            : "Reference image generated",
+      );
+    } catch (e: any) {
+      const handled = await notifyInsufficientCredits(e);
+      const message = handled
+        ? "You're out of credits — top up to keep generating."
+        : e?.message || "Image generation failed";
+      if (!handled) toast.error(message);
+      setBubbles((prev) => {
+        const trimmed =
+          prev.length && prev[prev.length - 1].role === "assistant"
+            ? prev.slice(0, -1)
+            : prev;
+        return [
+          ...trimmed,
+          { role: "error", message, retryable: !handled },
+        ];
+      });
+    }
+  };
+
+  const handleAspectChoice = async (bubbleIndex: number, aspect: AspectRatio) => {
+    if (busy) return;
+    const target = bubbles[bubbleIndex];
+    if (!target || target.role !== "aspect_choice" || target.chosen) return;
+    const stamped: Bubble[] = bubbles.map((b, i) =>
+      i === bubbleIndex && b.role === "aspect_choice" ? { ...b, chosen: aspect } : b,
+    );
+    setBubbles(stamped);
+    setBusy(true);
+    try {
+      await runImageGeneration(stamped, {
+        ...target.payload,
+        aspect_ratio: aspect,
+      });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+
   const send = async (textOverride?: string) => {
     const text = (textOverride ?? input).trim();
     if (!text && attachments.length === 0) {
