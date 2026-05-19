@@ -540,10 +540,23 @@ function DirectorChatInner() {
               : b.data.mode === "storyboard_panels"
                 ? "storyboard"
                 : "key_frame";
+          const aspectLine = b.data.aspectRatio ? ` Aspect ratio: ${b.data.aspectRatio}.` : "";
           history.push({
             role: "assistant",
-            content: `[Generated ${tag} via generate_reference_image. They are attached on the next user turn with role: ${roleTag}. If the user asks to extend a key_frame frame-by-frame, call generate_reference_image again with mode: "storyboard_panels", lock_mode: "scene", and the key_frame URL in reference_urls. Do not regenerate the existing image.]`,
+            content: `[Generated ${tag} via generate_reference_image.${aspectLine} They are attached on the next user turn with role: ${roleTag}. If the user asks to extend a key_frame frame-by-frame, call generate_reference_image again with mode: "storyboard_panels", lock_mode: "scene", and the key_frame URL in reference_urls. Do not regenerate the existing image. The client will inherit the key frame's aspect ratio automatically — you can omit aspect_ratio.]`,
           });
+        } else if (b.role === "aspect_choice") {
+          if (b.chosen) {
+            history.push({
+              role: "user",
+              content: `Aspect ratio chosen for the key frame: ${b.chosen}.`,
+            });
+          } else {
+            history.push({
+              role: "assistant",
+              content: `[Asked the user to pick an aspect ratio for the key frame. Waiting for their choice.]`,
+            });
+          }
         }
 
       }
