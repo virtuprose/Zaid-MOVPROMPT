@@ -669,12 +669,17 @@ function DirectorChatInner() {
       content: text || fallback,
       attachments: turnAttachments.length ? turnAttachments : undefined,
     };
-    // Drop any prior error bubble so retry replaces it cleanly
-    const cleaned = bubbles.filter((b) => b.role !== "error");
+    // Drop any prior error bubble so retry replaces it cleanly,
+    // and drop the idle nudge so it disappears the moment the user sends.
+    const cleaned = bubbles.filter(
+      (b) => b.role !== "error" && !(b.role === "assistant" && b.content === IDLE_NUDGE),
+    );
     const next: Bubble[] = [...cleaned, userBubble];
     lastSendRef.current = { text: text || fallback, attachments: turnAttachments };
     setBubbles(next);
     setInput("");
+    if (idleTimer.current) window.clearTimeout(idleTimer.current);
+
     setBusy(true);
     setPhase(
       attachments.some((a) => a.kind === "image" || a.kind === "video_keyframes")
