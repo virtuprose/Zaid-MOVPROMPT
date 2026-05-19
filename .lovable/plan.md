@@ -1,110 +1,81 @@
-## In-app credits for MovPrompt
+# Add Paddle payments → credit packs + subscriptions
 
-A wallet + ledger that charges users credits when they use **AI Director** (chat + final video) and **Ads / Marketing Studio** (ad scene + image + video). Costs scale with the real upstream price (Lovable AI tokens + FAL video model + duration).
+## Why Paddle (not Stripe)
+Stripe does **not** onboard sellers in Kuwait. Paddle is a Merchant of Record that supports Kuwait-based sellers, handles VAT/sales tax worldwide, pays out to a Kuwaiti bank account, and is well-suited to digital credits with a microtransaction-friendly fee structure (5% + $0.50 baseline).
 
-### 1. Credit unit & pricing formula
+## Proposed pricing (anchored on current per-credit cost)
+Reference: a 6-second Veo 3 render = 240 credits, Kling v2 master 6s = 210 credits, Hailuo standard 6s = 48 credits. Director text reply = 1, multimodal = 3, reference image = 5.
 
-1 credit = $0.01 of upstream cost (×1.5 margin). All conversions live in one server-side table so we can tune without redeploys.
+### One-time credit packs
+| Pack | Credits | Price (USD) | $/credit | Roughly buys |
+|------|---------|-------------|----------|--------------|
+| Mini | 500 | $9.99 | $0.020 | 2 Veo 3 shots or ~10 Hailuo shots |
+| Starter | 1,500 | $24.99 | $0.017 | 6 Veo 3 shots + 100 chats + 30 images |
+| Creator | 5,000 | $69.99 | $0.014 | A full storyboard (~20 Veo 3 shots) |
+| Studio | 15,000 | $179.99 | $0.012 | Pro production run |
 
-**Cost categories**
+### Monthly subscriptions (auto-refill)
+| Plan | Credits/mo | Price | Perks |
+|------|------------|-------|-------|
+| Indie | 1,000 | $14.99 | — |
+| Pro | 3,000 | $39.99 | Priority queue |
+| Studio | 8,000 | $99.99 | Priority queue + early model access |
 
-| Action | Charged when | Base cost |
-|---|---|---|
-| Director chat turn (text only) | Each assistant reply | 1 credit |
-| Director chat turn (with image/PDF/video analysis) | Each multimodal reply | 3 credits |
-| Image generation (reference frame, ad still) | On success | 5 credits |
-| Video generation | On submit, refund on fail | `ceil(model_rate_per_sec × duration × 150)` |
-| Ad scene write (text) | On success | 2 credits |
+Unused subscription credits roll over up to **2× monthly allotment**. Pack credits never expire. All prices editable in Paddle dashboard post-launch.
 
-**Per-model video rates** (credits per second, derived from FAL public pricing × 1.5):
+## What gets built
 
-```text
-veo-3.1            45   veo-3.1-fast        20   veo-3.1-lite       10
-veo-3 / veo-3-fast 40/18  veo-2             12
-kling-v3-pro       30   kling-v3-standard   12   kling-v3-4k        60
-kling-omni*        50   kling-v2.5-turbo-pro 25  kling-v2.1-master  35
-seedance-v1-pro    15   seedance-v1-lite     6
-hailuo-02-pro      18   hailuo-02-standard   8
-runway-gen3-turbo  20   wan-pro              22   ltx-video         5
-```
+### 1. Enable Paddle
+- Run `recommend_payment_provider` to validate VidoPrompt against Paddle's acceptable use policy
+- Run `enable_paddle_payments` → sandbox is live immediately; you complete Kuwait business verification later to flip to production
+- Create the 7 SKUs above via `batch_create_product`
 
-Final number = `ceil(rate × duration_seconds)`. Stored in `credit_prices` table — admin editable.
+### 2. Database (migration)
+- New `subscriptions` table: `user_id, paddle_subscription_id, plan_key, status, current_period_end, monthly_credits, rollover_cap`
+- New `paddle_events` idempotency table: `event_id PK, processed_at` — prevents double-crediting on webhook retries
+- Extend `credit_topups`: add `paddle_transaction_id`, `paddle_subscription_id`, `sku_key`
+- New ledger reasons: `pack_purchase`, `subscription_grant`, `subscription_renewal`, `refund_reversal`
 
-### 2. Wallet model
-
-```text
-┌─ user_credits ─────────┐   ┌─ credit_ledger ─────────────────┐
-│ user_id PK             │   │ id, user_id, delta (+/-),       │
-│ balance int            │←──│ reason (signup_bonus, topup,    │
-│ lifetime_granted int   │   │ director_chat, video_render…), │
-│ lifetime_spent int     │   │ ref_id (session/job),           │
-│ updated_at             │   │ metadata jsonb, created_at      │
-└────────────────────────┘   └─────────────────────────────────┘
-```
-
-- Balance is the source of truth; ledger is append-only audit trail.
-- `user_credits` row auto-created via the existing `handle_new_user` trigger with a **signup bonus = 50 credits**.
-- RLS: users can `SELECT` their own row + ledger; only `service_role` can write (charges happen in edge functions).
-
-### 3. Charging flow
-
-All charges go through one Postgres RPC `public.charge_credits(_user_id, _amount, _reason, _ref_id, _metadata)`:
-
-1. `SELECT ... FOR UPDATE` on `user_credits`.
-2. If `balance < amount` → raise `insufficient_credits` (edge function returns 402).
-3. Decrement balance, insert ledger row, return new balance.
-
-Refund RPC `public.refund_credits(...)` for failed video jobs (called from the `generate-video` poller when FAL returns error).
-
-**Where it's called**
-
-- `director-agent` → before each Lovable AI call, charge 1 or 3 credits depending on whether attachments are present.
-- `generate-video` (submit branch) → look up `credit_prices[provider]`, compute `rate × duration`, charge before calling `fal.queue.submit`.
-- `generate-video` (poll branch) on terminal failure → refund.
-- `generate-reference-image`, `generate-preset-preview` (when triggered by Ads flow) → charge 5.
-- `write-ad-scene` → charge 2.
+### 3. Edge functions
+- **`paddle-checkout`** (auth required) — body `{ sku_key }`, returns Paddle checkout URL with `custom_data: { user_id, sku_key }`
+- **`paddle-webhook`** (`verify_jwt = false`, validates Paddle signature) handles:
+  - `transaction.completed` → credit one-time pack via `grant_credits`
+  - `subscription.activated` / `subscription.renewed` → grant monthly credits, apply rollover cap
+  - `subscription.canceled` / `subscription.past_due` → flip status, keep existing balance
+  - `transaction.refunded` → `refund_reversal` (clamped at 0)
+  - Idempotent via `paddle_events` table
 
 ### 4. UI
+On `/account/billing`:
+- New **"Get more credits"** section above the existing Price List
+- Two tabs: **Packs** (4 cards) and **Subscriptions** (3 cards), each with a **Buy** / **Subscribe** button opening Paddle Checkout overlay (`@paddle/paddle-js`)
+- **Active subscription card** showing plan, renewal date, "Manage" (Paddle customer portal), "Cancel"
+- Purchase history rendered alongside the existing ledger
+- Update `insufficient.ts` so the toast's **View billing** action deep-links to `?tab=packs`
 
-- **Top nav**: small pill showing `◆ 142` (balance) → click opens wallet drawer with ledger history.
-- **Director composer**: subtle "≈ 18 credits" hint next to Send when a video model is selected, recalculated on model/duration change.
-- **Marketing Studio render button**: same hint.
-- **Insufficient balance**: edge function returns 402 → frontend shows toast "Out of credits" with CTA to `/account/billing`.
-- **Account → Billing page**: balance card, ledger table (last 50), "Get more credits" button (stub for now — opens a "Top-ups coming soon" sheet, or links to existing Stripe/Paddle if enabled).
+### 5. Secrets
+After `enable_paddle_payments` completes, these are auto-injected:
+- `PADDLE_API_KEY` (server)
+- `PADDLE_NOTIFICATION_SECRET` (server, for webhook signature verification)
+- `PADDLE_ENVIRONMENT` (`sandbox` / `live`)
+- `VITE_PADDLE_CLIENT_TOKEN` (browser, non-secret)
 
-### 5. Free tier & top-ups (scope of this plan)
+## Files to create / edit
+```text
+NEW  supabase/migrations/<ts>_paddle_subscriptions.sql
+NEW  supabase/functions/paddle-checkout/index.ts
+NEW  supabase/functions/paddle-webhook/index.ts
+NEW  src/lib/paddle/client.ts            (Paddle.js initializer)
+NEW  src/lib/paddle/catalog.ts           (packs + plans, single source of truth)
+NEW  src/components/billing/PacksTab.tsx
+NEW  src/components/billing/SubscriptionsTab.tsx
+NEW  src/components/billing/ActiveSubscriptionCard.tsx
+NEW  src/hooks/useSubscription.ts
+EDIT src/pages/account/AccountBilling.tsx
+EDIT src/lib/credits/insufficient.ts     (deep-link to /account/billing?tab=packs)
+```
 
-- Signup bonus: 50 credits (one-time, via trigger).
-- Daily free refill: +10 credits/day capped at 30 (cron via Postgres function called from a scheduled edge function, or lazily on balance read — lazy is simpler, included here).
-- Paid top-ups: **out of scope** for this plan — leaves a clean `credit_topups` table + stub UI so Stripe/Paddle can be wired later.
-
-### 6. Files to touch
-
-**New / migration**
-- `supabase/migrations/*` — `user_credits`, `credit_ledger`, `credit_prices`, `credit_topups` tables; RPCs `charge_credits`, `refund_credits`, `grant_daily_credits`; seed `credit_prices`; extend `handle_new_user` to seed wallet + signup bonus.
-
-**Edge functions (modify)**
-- `supabase/functions/director-agent/index.ts` — charge per turn.
-- `supabase/functions/generate-video/index.ts` — charge on submit, refund on fail.
-- `supabase/functions/generate-reference-image/index.ts` — charge 5.
-- `supabase/functions/write-ad-scene/index.ts` — charge 2.
-
-**Frontend (new)**
-- `src/hooks/useCredits.ts` — balance + realtime subscription.
-- `src/lib/credits/pricing.ts` — mirrors `credit_prices` for UI estimates.
-- `src/components/credits/CreditBadge.tsx` — nav pill.
-- `src/components/credits/WalletDrawer.tsx` — balance + ledger.
-- `src/components/credits/InsufficientCreditsDialog.tsx`.
-
-**Frontend (modify)**
-- `src/components/TopNav.tsx` — mount `CreditBadge`.
-- `src/components/director/Composer.tsx` — cost hint + 402 handling.
-- `src/pages/MarketingStudio.tsx` — cost hint + 402 handling.
-- `src/pages/account/AccountBilling.tsx` — wallet + ledger UI.
-
-### 7. Out of scope
-
-- Real top-up checkout (Stripe/Paddle) — leaves clean seams.
-- Per-org / team-shared wallets.
-- Credit gifting / referral bonuses (already partially modeled in `referrals` — can be added later by inserting ledger rows).
-- Retroactive charging for usage before this ships.
+## Items I'll confirm with you after approval
+1. **Pricing sign-off** — keep the 4 packs / 3 plans above as proposed, or adjust
+2. **Trial?** — should Indie / Pro offer a 7-day free trial, or charge immediately
+3. **Kuwait verification** — Paddle will need your commercial registration + bank details to switch from sandbox to live; you can keep building in sandbox while that's pending
