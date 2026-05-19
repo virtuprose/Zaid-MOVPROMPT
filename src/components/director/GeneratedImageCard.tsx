@@ -10,6 +10,8 @@ export type GeneratedImageBubbleData = {
   directorsNote?: string;
   aspectRatio?: "1:1" | "16:9" | "9:16";
   progress?: { done: number; total: number };
+  subjectSheet?: boolean;
+  subjectKind?: "character" | "product";
 };
 
 type Props = {
