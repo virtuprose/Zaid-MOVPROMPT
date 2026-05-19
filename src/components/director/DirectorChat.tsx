@@ -42,7 +42,6 @@ import { ApprovalProvider, useApproval } from "./ApprovalContext";
 import {
   AwaitingApprovalPill,
   BottomApprovalBar,
-  InlineApprovalCard,
 } from "./ApprovalRequest";
 import { AssistantAvatar, type AvatarState } from "./AssistantAvatar";
 import { TypingIndicator } from "./TypingIndicator";
