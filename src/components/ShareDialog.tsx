@@ -53,7 +53,7 @@ export const ShareDialog = ({ open, onOpenChange, payload }: ShareDialogProps) =
 
   const tweetHref = shareUrl
     ? `https://twitter.com/intent/tweet?text=${encodeURIComponent(
-        "I just generated cinematic video prompts with VidoPrompt 🎬",
+        "I just generated cinematic video prompts with MovPrompt 🎬",
       )}&url=${encodeURIComponent(shareUrl)}`
     : "#";
 
