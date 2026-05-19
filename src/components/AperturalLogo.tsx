@@ -1,13 +1,14 @@
 interface Props {
   size?: number;
   className?: string;
+  tone?: "amber" | "white";
 }
 
 /**
- * MovPrompt mark: amber asymmetric triangular wedge.
- * Top edge horizontal, sharp point at lower-left.
+ * MovPrompt mark: asymmetric triangular wedge.
+ * Top-right edge horizontal (half-width), sharp point at lower-left.
  */
-export const AperturalLogo = ({ size = 28, className }: Props) => (
+export const AperturalLogo = ({ size = 28, className, tone = "amber" }: Props) => (
   <svg
     width={size}
     height={size}
@@ -18,8 +19,8 @@ export const AperturalLogo = ({ size = 28, className }: Props) => (
     aria-hidden="true"
   >
     <path
-      d="M14 7 L23 7 L9 27 Z"
-      fill="hsl(var(--accent))"
+      d="M16 2 L30 2 L2 30 Z"
+      fill={tone === "white" ? "hsl(var(--foreground))" : "hsl(var(--accent))"}
     />
   </svg>
 );
