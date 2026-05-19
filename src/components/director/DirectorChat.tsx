@@ -842,19 +842,30 @@ function DirectorChatInner() {
       } else if (resp.kind === "generate_reference_image") {
         // Key frame (single_panel) → ask the user for aspect ratio first.
         if (resp.mode === "single_panel") {
-          const aspectBubble: Bubble = {
-            role: "aspect_choice",
-            payload: {
-              mode: "single_panel",
-              prompt: resp.prompt,
-              reference_urls: resp.reference_urls,
-              count: resp.count,
-              per_shot_prompts: resp.per_shot_prompts,
-              shot_index: resp.shot_index,
-              lock_mode: resp.lock_mode,
-              directors_note: resp.directors_note,
-            },
+          const payload = {
+            mode: "single_panel" as const,
+            prompt: resp.prompt,
+            reference_urls: resp.reference_urls,
+            count: resp.count,
+            per_shot_prompts: resp.per_shot_prompts,
+            shot_index: resp.shot_index,
+            lock_mode: resp.lock_mode,
+            directors_note: resp.directors_note,
           };
+
+          // If no subject sheet is pinned and we haven't asked yet this session,
+          // surface the subject-lock chip BEFORE the aspect chip.
+          const alreadyAsked = next.some((b) => b.role === "subject_lock_choice");
+          if (!pinnedSubject && !alreadyAsked) {
+            const subjectBubble: Bubble = { role: "subject_lock_choice", payload };
+            const withSubject: Bubble[] = [...next, subjectBubble];
+            setBubbles(withSubject);
+            setAttachments([]);
+            void persist(withSubject, null, null);
+            return;
+          }
+
+          const aspectBubble: Bubble = { role: "aspect_choice", payload };
           const withAspect: Bubble[] = [...next, aspectBubble];
           setBubbles(withAspect);
           setAttachments([]);
