@@ -72,6 +72,9 @@ import {
 } from "@/components/marketing/RenderSettingsPopover";
 
 import { submitVideoJob, pollVideoJob, cancelVideoJob, writeAdScene, type VideoJob } from "@/lib/director/api";
+import { estimateVideoCost, usePricing } from "@/lib/credits/pricing";
+import { CostChip } from "@/components/credits/CostChip";
+import { notifyInsufficientCredits } from "@/lib/credits/insufficient";
 import loopKitchen from "@/assets/loop-kitchen.mp4.asset.json";
 import loopCyberpunk from "@/assets/loop-cyberpunk.mp4.asset.json";
 import loopDesert from "@/assets/loop-desert.mp4.asset.json";
@@ -257,7 +260,9 @@ export default function MarketingStudio() {
         .catch((err) => {
           if (controller.signal.aborted || err?.name === "AbortError") return;
           console.warn("write-ad-scene failed", err);
-          toast.message("Couldn't draft the scene — type your own.");
+          void notifyInsufficientCredits(err).then((handled) => {
+            if (!handled) toast.message("Couldn't draft the scene — type your own.");
+          });
         })
         .finally(() => {
           if (!controller.signal.aborted) setDrafting(false);
@@ -366,7 +371,9 @@ export default function MarketingStudio() {
         galleryRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
       }, 50);
     } catch (e: any) {
-      toast.error(e?.message || "Could not start render");
+      if (!(await notifyInsufficientCredits(e))) {
+        toast.error(e?.message || "Could not start render");
+      }
     } finally {
       setSubmitting(false);
     }
