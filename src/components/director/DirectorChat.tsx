@@ -967,6 +967,7 @@ function DirectorChatInner() {
             shot_index: resp.shot_index,
             lock_mode: resp.lock_mode,
             directors_note: resp.directors_note,
+            scene_already_described: resp.scene_already_described,
           };
 
           // If no subject sheet is pinned and we haven't asked yet this session,
