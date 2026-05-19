@@ -93,6 +93,20 @@ type Bubble =
       };
       chosen?: "character" | "product" | "none";
     }
+  | {
+      role: "scene_describe";
+      payload: {
+        mode: "single_panel";
+        prompt: string;
+        reference_urls?: string[];
+        count?: number;
+        per_shot_prompts?: string[];
+        shot_index?: number;
+        lock_mode?: "character" | "scene" | "auto";
+        directors_note?: string;
+      };
+      submitted?: boolean;
+    }
   | { role: "video"; data: import("./VideoBubble").VideoBubbleData };
 
 const WELCOME: Bubble = {
@@ -620,9 +634,8 @@ function DirectorChatInner() {
       return;
     }
 
-    // Build a multi-angle subject sheet first, then queue the aspect chip.
-    // The edge function builds the layout instruction based on subject_kind;
-    // we just pass the user's subject description here.
+    // Build a multi-angle subject sheet first, then ask the user to describe the
+    // opening key frame scene BEFORE asking for aspect ratio.
     const sheetPrompt =
       kind === "product"
         ? `The product/object described by the user: ${target.payload.prompt}`
@@ -642,15 +655,42 @@ function DirectorChatInner() {
         subject_kind: kind === "product" ? "product" : "character",
       }, { subjectSheet: true, subjectKind: kind === "product" ? "product" : "character" });
 
-      // After the sheet returns, append the aspect chip for the original key frame.
+      // After the sheet returns, append a scene_describe bubble. The aspect chip
+      // is queued after the user describes (or skips) the opening key frame scene.
       setBubbles((prev) => {
-        const withAspect = [...prev, aspectBubble];
-        void persist(withAspect, null, null);
-        return withAspect;
+        const sceneBubble: Bubble = { role: "scene_describe", payload: target.payload };
+        const withScene = [...prev, sceneBubble];
+        void persist(withScene, null, null);
+        return withScene;
       });
     } finally {
       setBusy(false);
     }
+  };
+
+  const handleSceneDescribeSubmit = (bubbleIndex: number, sceneText: string) => {
+    if (busy) return;
+    const target = bubbles[bubbleIndex];
+    if (!target || target.role !== "scene_describe" || target.submitted) return;
+    const trimmed = sceneText.trim();
+    const stamped: Bubble[] = bubbles.map((b, i) =>
+      i === bubbleIndex && b.role === "scene_describe" ? { ...b, submitted: true } : b,
+    );
+    const mergedPrompt = trimmed
+      ? `${target.payload.prompt}\n\nOpening key frame scene: ${trimmed}`
+      : target.payload.prompt;
+    const userEcho: Bubble | null = trimmed
+      ? { role: "user", content: `Opening key frame scene: ${trimmed}` }
+      : null;
+    const aspectBubble: Bubble = {
+      role: "aspect_choice",
+      payload: { ...target.payload, prompt: mergedPrompt },
+    };
+    const next: Bubble[] = userEcho
+      ? [...stamped, userEcho, aspectBubble]
+      : [...stamped, aspectBubble];
+    setBubbles(next);
+    void persist(next, null, null);
   };
 
 
@@ -779,6 +819,13 @@ function DirectorChatInner() {
             history.push({
               role: "assistant",
               content: `[Asked the user to pick an aspect ratio for the key frame. Waiting for their choice.]`,
+            });
+          }
+        } else if (b.role === "scene_describe") {
+          if (!b.submitted) {
+            history.push({
+              role: "assistant",
+              content: `[Asked the user to describe the opening key frame scene before choosing aspect ratio. Waiting for their description.]`,
             });
           }
         }
@@ -1658,6 +1705,28 @@ function DirectorChatInner() {
                       chosen={b.chosen}
                       disabled={busy}
                       onChoose={(kind) => void handleSubjectLockChoice(i, kind)}
+                    />
+                  </div>
+                </div>
+              );
+            }
+            if (b.role === "scene_describe") {
+              return (
+                <div key={i} className="flex items-start gap-2 motion-safe:animate-fade-up">
+                  <AssistantAvatar size="sm" state="idle" className="mt-1" />
+                  <div className="flex-1">
+                    <QuestionCard
+                      reason="Before we render the key frame, set the scene — this anchors the whole story."
+                      questions={[
+                        "Describe the opening key frame: setting, action, mood, lighting, time of day.",
+                      ]}
+                      disabled={busy || b.submitted}
+                      onContinue={(formatted) => {
+                        // QuestionCard returns "1. <answer>"; strip the numbering.
+                        const answer = formatted.replace(/^\s*1\.\s*/, "").trim();
+                        handleSceneDescribeSubmit(i, answer);
+                      }}
+                      onSkip={() => handleSceneDescribeSubmit(i, "")}
                     />
                   </div>
                 </div>
