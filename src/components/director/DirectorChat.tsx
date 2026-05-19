@@ -634,9 +634,8 @@ function DirectorChatInner() {
       return;
     }
 
-    // Build a multi-angle subject sheet first, then queue the aspect chip.
-    // The edge function builds the layout instruction based on subject_kind;
-    // we just pass the user's subject description here.
+    // Build a multi-angle subject sheet first, then ask the user to describe the
+    // opening key frame scene BEFORE asking for aspect ratio.
     const sheetPrompt =
       kind === "product"
         ? `The product/object described by the user: ${target.payload.prompt}`
@@ -656,15 +655,42 @@ function DirectorChatInner() {
         subject_kind: kind === "product" ? "product" : "character",
       }, { subjectSheet: true, subjectKind: kind === "product" ? "product" : "character" });
 
-      // After the sheet returns, append the aspect chip for the original key frame.
+      // After the sheet returns, append a scene_describe bubble. The aspect chip
+      // is queued after the user describes (or skips) the opening key frame scene.
       setBubbles((prev) => {
-        const withAspect = [...prev, aspectBubble];
-        void persist(withAspect, null, null);
-        return withAspect;
+        const sceneBubble: Bubble = { role: "scene_describe", payload: target.payload };
+        const withScene = [...prev, sceneBubble];
+        void persist(withScene, null, null);
+        return withScene;
       });
     } finally {
       setBusy(false);
     }
+  };
+
+  const handleSceneDescribeSubmit = (bubbleIndex: number, sceneText: string) => {
+    if (busy) return;
+    const target = bubbles[bubbleIndex];
+    if (!target || target.role !== "scene_describe" || target.submitted) return;
+    const trimmed = sceneText.trim();
+    const stamped: Bubble[] = bubbles.map((b, i) =>
+      i === bubbleIndex && b.role === "scene_describe" ? { ...b, submitted: true } : b,
+    );
+    const mergedPrompt = trimmed
+      ? `${target.payload.prompt}\n\nOpening key frame scene: ${trimmed}`
+      : target.payload.prompt;
+    const userEcho: Bubble | null = trimmed
+      ? { role: "user", content: `Opening key frame scene: ${trimmed}` }
+      : null;
+    const aspectBubble: Bubble = {
+      role: "aspect_choice",
+      payload: { ...target.payload, prompt: mergedPrompt },
+    };
+    const next: Bubble[] = userEcho
+      ? [...stamped, userEcho, aspectBubble]
+      : [...stamped, aspectBubble];
+    setBubbles(next);
+    void persist(next, null, null);
   };
 
 
