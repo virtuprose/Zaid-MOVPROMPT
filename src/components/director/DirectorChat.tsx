@@ -136,6 +136,7 @@ function DirectorChatInner() {
   const lastSendRef = useRef<{ text: string; attachments: Attachment[] } | null>(null);
   const hydratedRef = useRef<string | null>(null);
   const localScope = routeSessionId ?? "new";
+  const { request: requestApproval } = useApproval();
 
   const getLatestGeneratedPrompt = () => {
     for (let i = bubbles.length - 1; i >= 0; i -= 1) {
