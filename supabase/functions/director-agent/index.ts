@@ -421,7 +421,7 @@ const TOOLS = [
             maxItems: 4,
             items: { type: "string" },
             description:
-              "Existing images to stay on-model. For storyboard_panels you SHOULD pass the character image here so identity holds across panels.",
+              "Existing images to stay on-model. The client auto-attaches the most recent character/product/object sheet to EVERY image generation (single_panel key frames, storyboard panels, regenerations) — duplicates are de-duped. For storyboard_panels you SHOULD still pass the sheet URL here explicitly to be safe.",
           },
           count: {
             type: "integer",
