@@ -471,6 +471,26 @@ export function Composer({
                 {ingesting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Paperclip className="w-4 h-4" />}
               </Button>
 
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    onClick={handleEnhance}
+                    disabled={busy || ingesting || enhancing || recording || transcribing || value.trim().length < 3}
+                    aria-label="Enhance description"
+                    className="h-9 w-9 rounded-full text-muted-foreground hover:text-foreground"
+                  >
+                    {enhancing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top">
+                  {enhancing ? "Enhancing…" : "Enhance description"}
+                </TooltipContent>
+              </Tooltip>
+
+
               {voice.supported && (
                 <Tooltip>
                   <TooltipTrigger asChild>
