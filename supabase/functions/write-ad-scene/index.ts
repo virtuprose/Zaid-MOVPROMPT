@@ -2,6 +2,9 @@
 // product/avatar/location context) into a ready-to-shoot, 2–4 sentence
 // scene description for the Marketing Studio describe box.
 
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
+import { chargeCredits, refundCredits, priceFor, InsufficientCreditsError, insufficientResponse } from "../_shared/credits.ts";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
