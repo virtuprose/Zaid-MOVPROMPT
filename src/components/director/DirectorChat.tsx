@@ -335,13 +335,25 @@ function DirectorChatInner() {
       lock_mode?: "character" | "scene" | "auto";
       directors_note?: string;
     },
+    options?: { subjectSheet?: boolean; subjectKind?: "character" | "product" },
   ) => {
+    // Auto-attach the pinned subject sheet to every reference call EXCEPT when
+    // we're generating the sheet itself.
+    if (!options?.subjectSheet && pinnedSubject) {
+      const refs = payload.reference_urls ?? [];
+      if (!refs.includes(pinnedSubject.url)) {
+        payload = { ...payload, reference_urls: [pinnedSubject.url, ...refs] };
+      }
+    }
+
     const isStreamingStoryboard =
       payload.mode === "storyboard_panels" &&
       !payload.shot_index &&
       ((payload.per_shot_prompts?.length ?? payload.count ?? 9) > 1);
     const streamTotal =
       payload.per_shot_prompts?.length ?? Math.min(Math.max(payload.count ?? 9, 1), 9);
+
+
 
     const loadingBubble: Bubble = {
       role: "assistant",
