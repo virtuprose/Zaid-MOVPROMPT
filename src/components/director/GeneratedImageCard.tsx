@@ -34,6 +34,24 @@ export function GeneratedImageCard({ data, onRegenerate }: Props) {
 
   const n = data.images.length;
   const hasMultiple = n > 1;
+
+  const downloadImage = useCallback(async (url: string, shotNum: number) => {
+    try {
+      const res = await fetch(url, { mode: "cors" });
+      const blob = await res.blob();
+      const ext = (blob.type.split("/")[1] || "png").split("+")[0];
+      const objUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = objUrl;
+      a.download = `${data.mode}-${shotNum}.${ext}`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(objUrl);
+    } catch {
+      window.open(url, "_blank", "noopener");
+    }
+  }, [data.mode]);
   const goPrev = useCallback(
     () => setZoomIndex((i) => (i === null ? i : (i - 1 + n) % n)),
     [n],
