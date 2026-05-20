@@ -737,6 +737,76 @@ function DirectorChatInner() {
     void persist(next, null, null);
   };
 
+  const handleLocationChoice = (bubbleIndex: number, index: number) => {
+    if (busy) return;
+    const target = bubbles[bubbleIndex];
+    if (!target || target.role !== "location_picker" || target.chosenIndex) return;
+    setBubbles((prev) =>
+      prev.map((b, i) =>
+        i === bubbleIndex && b.role === "location_picker" ? { ...b, chosenIndex: index } : b,
+      ),
+    );
+    void send(`Location chosen: ${index}`);
+  };
+
+  const handleActsUpdate = (bubbleIndex: number, nextActs: ActTile[]) => {
+    setBubbles((prev) => {
+      const copy = [...prev];
+      const cur = copy[bubbleIndex];
+      if (cur?.role !== "story_render") return prev;
+      copy[bubbleIndex] = { ...cur, data: { ...cur.data, acts: nextActs } };
+      void persist(copy, null, null);
+      return copy;
+    });
+  };
+
+  const handleStitch = async (bubbleIndex: number) => {
+    const target = bubbles[bubbleIndex];
+    if (!target || target.role !== "story_render") return;
+    if (target.data.stitchStatus === "running") return;
+    setBubbles((prev) => {
+      const copy = [...prev];
+      const cur = copy[bubbleIndex];
+      if (cur?.role !== "story_render") return prev;
+      copy[bubbleIndex] = { ...cur, data: { ...cur.data, stitchStatus: "running" } };
+      return copy;
+    });
+    try {
+      const out = await submitStoryStitch({
+        story_render_id: target.data.storyRenderId,
+        session_id: sessionIdRef.current,
+        title: target.data.title,
+      });
+      setBubbles((prev) => {
+        const copy = [...prev];
+        const cur = copy[bubbleIndex];
+        if (cur?.role !== "story_render") return prev;
+        copy[bubbleIndex] = {
+          ...cur,
+          data: {
+            ...cur.data,
+            stitchStatus: "done",
+            stitchedVideoUrl: out.video_url,
+          },
+        };
+        void persist(copy, null, null);
+        return copy;
+      });
+      toast.success("Stitched into one video.");
+    } catch (e: any) {
+      setBubbles((prev) => {
+        const copy = [...prev];
+        const cur = copy[bubbleIndex];
+        if (cur?.role !== "story_render") return prev;
+        copy[bubbleIndex] = { ...cur, data: { ...cur.data, stitchStatus: "failed" } };
+        return copy;
+      });
+      if (!(await notifyInsufficientCredits(e))) toast.error(e?.message || "Stitch failed");
+    }
+  };
+
+
+
 
 
   const send = async (textOverride?: string) => {
