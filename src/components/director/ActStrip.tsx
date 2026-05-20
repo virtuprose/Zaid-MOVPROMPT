@@ -147,7 +147,7 @@ export function ActStrip({ storyRenderId, title, acts, stitchStatus, stitchedVid
   const showFirstReadyBanner = !!firstCompleted && !allDone && !stitchedVideoUrl;
 
   return (
-    <div className="rounded-2xl bg-muted/15 p-4 sm:p-5 space-y-4 max-w-2xl">
+    <div className="rounded-2xl bg-muted/15 p-4 sm:p-5 space-y-4 max-w-2xl" data-stitch-anchor={storyRenderId}>
       <div className="flex items-center justify-between gap-3">
         <div>
           <div className="text-xs uppercase tracking-wide text-muted-foreground/80">
