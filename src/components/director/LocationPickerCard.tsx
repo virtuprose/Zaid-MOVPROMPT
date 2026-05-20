@@ -1,7 +1,13 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { Maximize2, MousePointerClick } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  LONG_PRESS_MS,
+  MOVE_CANCEL_PX,
+  findDropTargetFromPoint,
+  triggerHaptic,
+} from "@/lib/touchDrag";
 
 export type StoryLocation = {
   url: string;
@@ -22,6 +28,68 @@ type Props = {
 export function LocationPickerCard({ locations, characterUrl, propUrl, aspect, chosenIndex, disabled, onChoose }: Props) {
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [over, setOver] = useState(false);
+  const [touchSnapped, setTouchSnapped] = useState(false);
+  const touchTimerRef = useRef<number | null>(null);
+  const touchStartPosRef = useRef<{ x: number; y: number } | null>(null);
+  const touchActiveRef = useRef(false);
+  const lastSnappedRef = useRef(false);
+
+  const cancelHold = () => {
+    if (touchTimerRef.current !== null) {
+      window.clearTimeout(touchTimerRef.current);
+      touchTimerRef.current = null;
+    }
+  };
+
+  const onTouchStart = (e: React.TouchEvent, idx: number) => {
+    if (disabled) return;
+    const t = e.touches[0];
+    touchStartPosRef.current = { x: t.clientX, y: t.clientY };
+    touchActiveRef.current = false;
+    cancelHold();
+    touchTimerRef.current = window.setTimeout(() => {
+      touchActiveRef.current = true;
+      setDragIndex(idx);
+      triggerHaptic();
+    }, LONG_PRESS_MS);
+  };
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    const t = e.touches[0];
+    const start = touchStartPosRef.current;
+    if (!touchActiveRef.current) {
+      if (start) {
+        const dx = Math.abs(t.clientX - start.x);
+        const dy = Math.abs(t.clientY - start.y);
+        if (dx > MOVE_CANCEL_PX || dy > MOVE_CANCEL_PX) cancelHold();
+      }
+      return;
+    }
+    e.preventDefault();
+    const hit = findDropTargetFromPoint(t.clientX, t.clientY, "[data-location-slot]");
+    const isOver = !!hit;
+    setOver(isOver);
+    const snapped = !!hit?.snapped;
+    setTouchSnapped(snapped);
+    if (snapped && !lastSnappedRef.current) triggerHaptic();
+    lastSnappedRef.current = snapped;
+  };
+
+  const onTouchEnd = (e: React.TouchEvent) => {
+    cancelHold();
+    if (touchActiveRef.current && dragIndex !== null) {
+      const t = e.changedTouches[0];
+      const hit = findDropTargetFromPoint(t.clientX, t.clientY, "[data-location-slot]");
+      if (hit) onChoose(dragIndex);
+    }
+    touchActiveRef.current = false;
+    touchStartPosRef.current = null;
+    lastSnappedRef.current = false;
+    setDragIndex(null);
+    setOver(false);
+    setTouchSnapped(false);
+  };
+
   const aspectClass =
     aspect === "9:16" ? "aspect-[9/16]" : aspect === "1:1" ? "aspect-square" : "aspect-video";
 
