@@ -9,7 +9,7 @@ import {
   CreditCard,
   Globe,
   ChevronRight,
-  PlayCircle,
+  
   GraduationCap,
   Gift,
   LogOut,
@@ -31,7 +31,7 @@ import {
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/i18n/LanguageContext";
-import { useTour } from "@/components/tour/TourProvider";
+
 import { LanguageToggle } from "@/components/LanguageToggle";
 import NotificationBell from "@/components/NotificationBell";
 import { CreditBadge } from "@/components/credits/CreditBadge";
@@ -52,7 +52,7 @@ export function TopNav() {
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useLanguage();
-  const { start: startTour, isDone: tourDone } = useTour();
+  
   const [mobileOpen, setMobileOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
 
@@ -234,25 +234,6 @@ export function TopNav() {
                         <span className="text-sm">Language & preferences</span>
                       </DropdownMenuItem>
                       <DropdownMenuSeparator className="my-1.5 bg-[hsl(240_5%_12%)]" />
-                      <DropdownMenuItem
-                        onClick={startTour}
-                        className={cn(
-                          "gap-3 px-4 py-3 rounded-lg cursor-pointer group",
-                          !tourDone
-                            ? "bg-accent/10 text-accent focus:bg-accent/20 focus:text-accent"
-                            : "focus:bg-[hsl(240_5%_11%)] focus:text-foreground",
-                        )}
-                      >
-                        <PlayCircle
-                          className={cn(
-                            "w-4 h-4 transition-colors",
-                            !tourDone
-                              ? "text-accent"
-                              : "text-muted-foreground group-hover:text-accent group-focus:text-accent",
-                          )}
-                        />
-                        <span className="text-sm">Take the tour</span>
-                      </DropdownMenuItem>
                       <DropdownMenuItem
                         onClick={() => navigate("/learn")}
                         className="gap-3 px-4 py-3 rounded-lg cursor-pointer focus:bg-[hsl(240_5%_11%)] focus:text-foreground group"

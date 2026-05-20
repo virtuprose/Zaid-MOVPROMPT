@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, BookOpen, PlayCircle, Sparkles, Lock, Move, AtSign, Image as ImageIcon, Lightbulb, HelpCircle, Compass } from "lucide-react";
+import { ArrowLeft, BookOpen, Sparkles, Lock, Move, AtSign, Image as ImageIcon, Lightbulb, HelpCircle, Compass } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -74,11 +74,6 @@ const Learn = () => {
     [t],
   );
 
-  const startTour = () => {
-    // Navigate home and trigger tour via storage flag
-    sessionStorage.setItem("movprompt.tour.requestStart", "1");
-    navigate("/");
-  };
 
   return (
     <div className="min-h-screen bg-background" dir={isAr ? "rtl" : "ltr"}>
@@ -108,11 +103,7 @@ const Learn = () => {
             {t("learn.heroSubtitle" as any)}
           </p>
           <div className="flex flex-wrap items-center justify-center gap-3 mt-6">
-            <Button onClick={startTour} className="gap-1.5">
-              <PlayCircle className="w-4 h-4" />
-              {t("learn.takeTour" as any)}
-            </Button>
-            <Button variant="outline" onClick={() => navigate("/")} className="gap-1.5">
+            <Button onClick={() => navigate("/")} className="gap-1.5">
               <Sparkles className="w-4 h-4" />
               {t("learn.openApp" as any)}
             </Button>
@@ -183,12 +174,6 @@ const Learn = () => {
                   </li>
                 ))}
               </ol>
-              <div className="pt-2">
-                <Button size="sm" variant="outline" onClick={startTour} className="gap-1.5">
-                  <PlayCircle className="w-3.5 h-3.5" />
-                  {t("learn.takeTour" as any)}
-                </Button>
-              </div>
             </LearnSection>
 
             <LearnSection id="workflows" eyebrow={t("learn.toc.workflows" as any)} title={t("learn.wf.title" as any)}>

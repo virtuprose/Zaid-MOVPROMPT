@@ -7,7 +7,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthGuard } from "@/components/AuthGuard";
 import { OfflineFallback } from "@/components/OfflineFallback";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
-import { TourProvider } from "@/components/tour/TourProvider";
+
 import Index from "./pages/Index.tsx";
 import Landing from "./pages/Landing.tsx";
 import { useAuth } from "@/hooks/useAuth";
@@ -67,34 +67,32 @@ const AppRoutes = () => {
 
   return (
     <BrowserRouter>
-      <TourProvider>
-        <Routes>
-          <Route path="/" element={<RootRoute />} />
-          <Route path="/auth" element={<Auth />} />
-          <Route path="/reset-password" element={<ResetPassword />} />
-          <Route path="/admin/login" element={<AdminLogin />} />
-          <Route path="/admin" element={<AuthGuard requireAdmin><Analytics /></AuthGuard>} />
-          <Route path="/library" element={<AuthGuard><Library /></AuthGuard>} />
-          <Route path="/learn" element={<Learn />} />
-          <Route path="/unsubscribe" element={<Unsubscribe />} />
-          <Route path="/terms" element={<Terms />} />
-          <Route path="/privacy" element={<PrivacyPolicy />} />
-          <Route path="/qa/mobile" element={<QaMobile />} />
-          <Route path="/p/:slug" element={<SharedPrompt />} />
-          <Route path="/gallery" element={<Gallery />} />
-          <Route path="/models/:slug" element={<ModelLanding />} />
-          <Route path="/referrals" element={<AuthGuard><Referrals /></AuthGuard>} />
-          <Route path="/onboarding" element={<AuthGuard><Onboarding /></AuthGuard>} />
-          <Route path="/director" element={<AuthGuard><Director /></AuthGuard>} />
-          <Route path="/director/:sessionId" element={<AuthGuard><Director /></AuthGuard>} />
-          <Route path="/marketing" element={<AuthGuard><MarketingStudio /></AuthGuard>} />
-          <Route path="/account/settings" element={<AuthGuard><AccountSettings /></AuthGuard>} />
-          <Route path="/account/billing" element={<AuthGuard><AccountBilling /></AuthGuard>} />
-          <Route path="/account/preferences" element={<AuthGuard><AccountPreferences /></AuthGuard>} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </TourProvider>
+      <Routes>
+        <Route path="/" element={<RootRoute />} />
+        <Route path="/auth" element={<Auth />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/admin/login" element={<AdminLogin />} />
+        <Route path="/admin" element={<AuthGuard requireAdmin><Analytics /></AuthGuard>} />
+        <Route path="/library" element={<AuthGuard><Library /></AuthGuard>} />
+        <Route path="/learn" element={<Learn />} />
+        <Route path="/unsubscribe" element={<Unsubscribe />} />
+        <Route path="/terms" element={<Terms />} />
+        <Route path="/privacy" element={<PrivacyPolicy />} />
+        <Route path="/qa/mobile" element={<QaMobile />} />
+        <Route path="/p/:slug" element={<SharedPrompt />} />
+        <Route path="/gallery" element={<Gallery />} />
+        <Route path="/models/:slug" element={<ModelLanding />} />
+        <Route path="/referrals" element={<AuthGuard><Referrals /></AuthGuard>} />
+        <Route path="/onboarding" element={<AuthGuard><Onboarding /></AuthGuard>} />
+        <Route path="/director" element={<AuthGuard><Director /></AuthGuard>} />
+        <Route path="/director/:sessionId" element={<AuthGuard><Director /></AuthGuard>} />
+        <Route path="/marketing" element={<AuthGuard><MarketingStudio /></AuthGuard>} />
+        <Route path="/account/settings" element={<AuthGuard><AccountSettings /></AuthGuard>} />
+        <Route path="/account/billing" element={<AuthGuard><AccountBilling /></AuthGuard>} />
+        <Route path="/account/preferences" element={<AuthGuard><AccountPreferences /></AuthGuard>} />
+        {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+        <Route path="*" element={<NotFound />} />
+      </Routes>
     </BrowserRouter>
   );
 };
