@@ -46,6 +46,14 @@ import {
 import { AssistantAvatar, type AvatarState } from "./AssistantAvatar";
 import { TypingIndicator } from "./TypingIndicator";
 import { TypewriterText } from "./TypewriterText";
+import { QuickReplies } from "./QuickReplies";
+
+const INTENT_CHIPS = [
+  "Use as a character reference",
+  "Use as a key frame",
+  "Recreate / remix this shot",
+  "Inspire a new scene",
+];
 
 type Bubble =
   | { role: "user"; content: string; attachments?: Attachment[] }
@@ -110,7 +118,8 @@ type Bubble =
       };
       submitted?: boolean;
     }
-  | { role: "video"; data: import("./VideoBubble").VideoBubbleData };
+  | { role: "video"; data: import("./VideoBubble").VideoBubbleData }
+  | { role: "intent_prompt"; content: string; chips: string[] };
 
 const WELCOME: Bubble = {
   role: "assistant",
@@ -151,6 +160,7 @@ function DirectorChatInner() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const lastSendRef = useRef<{ text: string; attachments: Attachment[] } | null>(null);
   const hydratedRef = useRef<string | null>(null);
+  const askedIntentRef = useRef(false);
   const localScope = routeSessionId ?? "new";
   const { request: requestApproval } = useApproval();
 
@@ -722,6 +732,21 @@ function DirectorChatInner() {
       toast.error("Add a brief or some references");
       return;
     }
+    // If user sent only attachments with no text, ask what they want first.
+    if (!text && attachments.length > 0 && !askedIntentRef.current) {
+      askedIntentRef.current = true;
+      setBubbles((prev) => [
+        ...prev,
+        {
+          role: "intent_prompt",
+          content:
+            "What are you looking for? Tell me what you'd like to do with this so I can help.",
+          chips: INTENT_CHIPS,
+        },
+      ]);
+      return;
+    }
+    askedIntentRef.current = false;
     const fallback = attachments.length
       ? `References attached: ${attachments.length} file${attachments.length === 1 ? "" : "s"}`
       : "(See attached references.)";
@@ -1749,6 +1774,34 @@ function DirectorChatInner() {
                         handleSceneDescribeSubmit(i, answer);
                       }}
                       onSkip={() => handleSceneDescribeSubmit(i, "")}
+                    />
+                  </div>
+                </div>
+              );
+            }
+            if (b.role === "intent_prompt") {
+              const isLatest = (() => {
+                for (let k = bubbles.length - 1; k >= 0; k -= 1) {
+                  if (bubbles[k].role === "intent_prompt") return k === i;
+                }
+                return false;
+              })();
+              return (
+                <div key={i} className="flex items-start gap-2 motion-safe:animate-fade-up">
+                  <AssistantAvatar size="sm" state="idle" className="mt-1" />
+                  <div className="flex-1 space-y-2">
+                    <Message from="assistant">
+                      <MessageContent className="whitespace-pre-wrap leading-relaxed text-foreground/90">
+                        {b.content}
+                      </MessageContent>
+                    </Message>
+                    <QuickReplies
+                      chips={b.chips}
+                      disabled={!isLatest || busy}
+                      label="Pick one or type your own"
+                      onPick={(chip) => {
+                        setInput(chip);
+                      }}
                     />
                   </div>
                 </div>
