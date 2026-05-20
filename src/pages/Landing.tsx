@@ -679,7 +679,7 @@ function DeckCard({
           x: exitDir * 480,
           opacity: 0,
           rotateZ: exitDir * 14,
-          transition: { duration: 0.28, ease: [0.4, 0, 1, 1] },
+          transition: { duration: 0.28, ease: [0.4, 0, 1, 1] as [number, number, number, number] },
         }
       : {
           x: 0,
