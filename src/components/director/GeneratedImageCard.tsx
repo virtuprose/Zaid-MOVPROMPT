@@ -251,8 +251,6 @@ export function GeneratedImageCard({ data, onRegenerate, onUnpinSubject }: Props
               );
             });
           })()}
-            );
-          })}
       </div>
 
       {onRegenerate && isGrid && (
