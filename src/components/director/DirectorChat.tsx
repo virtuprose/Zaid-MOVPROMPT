@@ -1511,31 +1511,6 @@ function DirectorChatInner() {
 
   return (
     <div className="flex flex-col gap-2 h-[calc(100dvh-120px)] pb-[env(safe-area-inset-bottom)]">
-      {/* Presence header */}
-      <div className="flex items-center justify-between gap-3 max-w-3xl mx-auto w-full">
-        <div className="flex items-center gap-2.5 min-w-0">
-          <AssistantAvatar size="sm" state={avatarState} />
-          <div className="min-w-0">
-            <div className="flex items-center gap-1.5 text-sm font-medium text-foreground">
-              <span>Director</span>
-              <span className={cn("h-1.5 w-1.5 rounded-full", statusDotClass)} aria-hidden />
-              <span
-                className="text-[11px] font-normal text-muted-foreground"
-                aria-live="polite"
-              >
-                {statusText}
-              </span>
-            </div>
-            <div className="text-[11px] text-muted-foreground/70 transition-opacity truncate">
-              {sessionTitle
-                ? `Working on: ${sessionTitle}`
-                : lastBubble?.role === "result"
-                  ? "Prompt ready. Refine, render, or open in your video model."
-                  : MOOD_LINES[moodIndex]}
-            </div>
-          </div>
-        </div>
-      </div>
 
 
       <div
