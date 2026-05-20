@@ -1524,10 +1524,8 @@ function DirectorChatInner() {
         )}
         <div className="flex flex-col gap-6 min-h-full max-w-3xl mx-auto w-full">
           <div className="flex-1" />
-          {(() => {
-            const firstUserIdx = bubbles.findIndex((b) => b.role === "user");
-            return null;
-          })()}
+
+
           {bubbles.map((b, i) => {
             const firstUserIdx = bubbles.findIndex((bb) => bb.role === "user");
             if (firstUserIdx !== -1 && i < firstUserIdx && b.role === "assistant") {
