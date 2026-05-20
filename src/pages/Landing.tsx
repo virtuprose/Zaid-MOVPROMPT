@@ -38,6 +38,13 @@ const MODELS = ["Kling", "Veo", "Seedance", "Pika", "Luma", "Hailuo", "Wan"];
 
 const FEATURES = [
   {
+    icon: Clapperboard,
+    title: "AI Director",
+    body:
+      "An agentic director for your scenes. Chat through your vision and it generates images, video, and full storyboards — directing camera, light, and motion end-to-end.",
+    flagship: true,
+  },
+  {
     icon: Camera,
     title: "Single Frame",
     body:
