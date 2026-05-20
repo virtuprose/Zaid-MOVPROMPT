@@ -249,11 +249,25 @@ export default function Director() {
                     >
                       {/* Thumbnail */}
                       <div className="shrink-0 w-6 h-6 rounded overflow-hidden bg-muted/40 border border-border/40 flex items-center justify-center">
-                        {s.thumbnail ? (
-                          <img src={s.thumbnail} alt="" className="w-full h-full object-cover" />
-                        ) : (
+                        {s.thumbnail && !s.thumbnail.startsWith("blob:") ? (
+                          <img
+                            src={s.thumbnail}
+                            alt=""
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              const img = e.currentTarget;
+                              img.style.display = "none";
+                              const fallback = img.nextElementSibling as HTMLElement | null;
+                              if (fallback) fallback.style.display = "flex";
+                            }}
+                          />
+                        ) : null}
+                        <span
+                          className="w-full h-full items-center justify-center"
+                          style={{ display: s.thumbnail && !s.thumbnail.startsWith("blob:") ? "none" : "flex" }}
+                        >
                           <MessageSquare className="w-3 h-3 text-muted-foreground/60" />
-                        )}
+                        </span>
                       </div>
                       {/* Status dot */}
                       <span
