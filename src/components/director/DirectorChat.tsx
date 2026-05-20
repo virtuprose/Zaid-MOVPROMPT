@@ -2093,6 +2093,7 @@ function DirectorChatInner() {
                       stitchStatus={b.data.stitchStatus}
                       stitchedVideoUrl={b.data.stitchedVideoUrl}
                       disabled={busy}
+                      refreshSignal={refreshSignal}
                       onActsUpdate={(next) => handleActsUpdate(i, next)}
                       onStitch={() => void handleStitch(i)}
                     />
