@@ -242,7 +242,17 @@ const FALLBACK: ModelControls = {
   defaults: { aspect_ratio: "16:9" },
 };
 
+// Universal Prompt ("Any model") — exposes a generic duration range for prompt pacing.
+const UNIVERSAL: ModelControls = {
+  aspectRatios: STD_ASPECTS,
+  durationMin: 5,
+  durationMax: 15,
+  durationStep: 1,
+  defaults: { aspect_ratio: "16:9", duration: 10 },
+};
+
 export function getModelControls(modelId: string): ModelControls {
+  if (modelId === "any") return UNIVERSAL;
   return CONTROLS[modelId] ?? FALLBACK;
 }
 
