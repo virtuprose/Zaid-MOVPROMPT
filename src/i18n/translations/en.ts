@@ -575,7 +575,7 @@ export const en = {
   "onboarding.step2.title": "Let AI direct",
   "onboarding.step2.desc": "We break down the scene and craft a director-grade prompt.",
   "onboarding.step3.title": "Copy & create",
-  "onboarding.step3.desc": "Paste into Kling, Runway, Wan, or any AI video tool.",
+  "onboarding.step3.desc": "Paste into Kling, Wan, or any AI video tool.",
   "onboarding.cta": "Let's go",
 
   // Reference media
