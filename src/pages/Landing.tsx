@@ -21,6 +21,10 @@ import {
   Unlock,
   ChevronLeft,
   ChevronRight,
+  Upload,
+  Sparkles,
+  FileText,
+  Film,
 } from "lucide-react";
 import { Seo } from "@/components/Seo";
 import { cn } from "@/lib/utils";
