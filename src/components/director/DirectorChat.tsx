@@ -1416,6 +1416,13 @@ function DirectorChatInner() {
     ];
   }, [attachments.length]);
 
+  const firstUserIdx = useMemo(
+    () => bubbles.findIndex((b) => b.role === "user"),
+    [bubbles],
+  );
+
+
+
   if (isEmpty) {
     return (
       <div className="flex flex-col gap-8 min-h-[calc(100dvh-120px)] justify-center max-w-3xl mx-auto w-full px-2 sm:px-0 pb-[env(safe-area-inset-bottom)]">
@@ -1527,7 +1534,6 @@ function DirectorChatInner() {
 
 
           {bubbles.map((b, i) => {
-            const firstUserIdx = bubbles.findIndex((bb) => bb.role === "user");
             if (firstUserIdx !== -1 && i < firstUserIdx && b.role === "assistant") {
               return null;
             }
