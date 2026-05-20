@@ -1,30 +1,21 @@
-## Goal
-Hide the opening assistant greeting (and any follow-up nudge bubbles that appear before the user has typed anything) once the user sends their first message.
+## Problem
+The hero section (`src/pages/Landing.tsx`, lines 286–391) shows:
+1. A blurry vertical yellow streak on the background — caused by the "god-rays" layer (lines 320–345). It's a stack of 7 vertical amber gradient bands rotated 22°, drifting with an animation, blurred 24px and screen-blended. With the dim 70% background overlay on top of the video, the brightest band reads as one ugly fat yellow vertical smear instead of cinematic light shafts.
+2. The hero background video looks unclear — caused by stacking on top of it: a `bg-background/70` dimmer (70% opacity), the amber wash, the god-rays, the perspective grid, the bottom radial fade-to-bg, an SVG grain, and a bottom-left vignette. Together they mute and muddy the footage.
 
-## Where
-`src/components/director/DirectorChat.tsx`
+## Fix
 
-- `WELCOME` constant (line 140) and initial state `useState<Bubble[]>([WELCOME])` (line 167).
-- Restore path also seeds `[WELCOME]` when a session has no messages (lines 228–229).
-- The "Still there? Tell me the vibe…" line in the screenshot is not in source — it comes back from the `director-agent` LLM as an idle nudge bubble, so it lives in `bubbles` just like the welcome bubble. Treating *all leading assistant bubbles before the first user message* as intro chatter handles both in one place.
+In `src/pages/Landing.tsx` hero section:
 
-## Change
-In the render loop that maps `bubbles` to UI, compute the index of the first `role === "user"` bubble. When the user has sent at least one message, skip rendering any assistant bubble whose index is **before** that first user bubble.
+1. **Remove the god-rays layer entirely** (lines 320–345). It's the source of the vertical yellow line and adds little value once toned down.
+2. **Soften the amber wash** (line 316): drop opacity from `0.18` → `0.10` and pull it more to the corner so it reads as a light source, not a glow blob.
+3. **Lighten the video dimmer** (line 306): change `bg-background/70` → `bg-background/40` so the footage stays legible.
+4. **Add a subtle top-to-bottom gradient** instead of the heavy overlay, to preserve text contrast at the bottom without flattening the video:
+   `bg-gradient-to-b from-background/30 via-background/20 to-background/70`
+5. **Keep** the perspective grid, grain, and bottom vignette — they're subtle and on-brand.
 
-Pseudocode at the top of the bubbles render block:
-
-```ts
-const firstUserIdx = bubbles.findIndex((b) => b.role === "user");
-const hasUserMessage = firstUserIdx !== -1;
-// inside the .map((b, i) => ...)
-if (hasUserMessage && i < firstUserIdx && b.role === "assistant") return null;
-```
-
-This keeps the welcome visible on a fresh/empty session (the existing behavior the user liked) and makes it (plus any pre-conversation nudges) vanish the moment the first user message is in the list.
-
-We do **not** mutate `bubbles` state, so persistence/history sent to the agent stays unchanged — purely a render filter.
+Net effect: no yellow vertical streak, video reads sharp and cinematic, headline still has contrast.
 
 ## Out of scope
-- No styling changes.
-- No edits to the avatar or backend.
-- No change to the idle-nudge logic itself (it just won't appear once the conversation has started, which is the desired behavior).
+- No changes to headline copy, CTAs, layout, or other sections.
+- No changes to the video asset itself.
