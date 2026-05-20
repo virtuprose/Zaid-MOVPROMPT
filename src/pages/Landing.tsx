@@ -393,7 +393,7 @@ function Hero({ scrollY }: { scrollY: MotionValue<number> }) {
         <FadeUp delay={0.2}>
           <p className="mx-auto mt-5 max-w-2xl text-[15px] leading-relaxed text-muted-foreground md:text-[17px]">
             Drop a frame. Pick a model. Get a director-grade video prompt ready to paste into
-            Kling, Veo, Runway, Seedance, or any AI video tool.
+            Kling, Veo, Seedance, or any AI video tool.
           </p>
         </FadeUp>
         <FadeUp delay={0.3}>
