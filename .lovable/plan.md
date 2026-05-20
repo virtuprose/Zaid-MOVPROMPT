@@ -1,40 +1,23 @@
-# Better progress UX for story rendering
+## Add "Jump to Stitch" button when all 4 acts are ready
 
-Quality and pipeline stay the same (Seedance 2.0 ref, 1080p, 15s, audio, 4 acts in parallel). The wait isn't going away — but right now the UI gives you nothing while it happens. Three small client-only changes make it feel much faster.
+When all 4 acts finish rendering, the Stitch button can be far down the chat scroll. Add a floating quick-action that appears in the chat and scrolls/focuses the Stitch button inside the ActStrip.
 
-## 1. Tighter, adaptive polling
+### Changes
 
-In `src/components/director/ActStrip.tsx`:
+**`src/components/director/ActStrip.tsx`**
+- Add a `ref` to the Stitch button (`stitchBtnRef`).
+- Expose a stable `id` on the ActStrip root (e.g. `data-stitch-anchor={storyRenderId}`) and on the Stitch button (`data-stitch-button={storyRenderId}`).
+- When `allDone` flips true, fire a one-shot custom event `vidoprompt:acts-ready` with `{ storyRenderId }` so the chat can react.
+- Keep the existing first-ready banner; no behavior change there.
 
-- Currently polls every 4s. Switch to **2s for the first 60s**, then **4s after** (renders that finish fast feel near-instant; long renders don't hammer the function).
-- Reset back to 2s if a new act flips from `queued` → `processing`.
-- Keep the existing immediate poll on tab focus / visibility (already wired via `refreshSignal`).
+**`src/components/director/DirectorChat.tsx`** (or wherever ActStrip is rendered in chat)
+- Listen for `vidoprompt:acts-ready`. When received, set local state `readyToStitch = storyRenderId`.
+- Render a sticky pill at the bottom of the chat viewport (above the composer):
+  - Label: "All 4 acts ready — Stitch story ↓"
+  - Cyan→amber gradient, `Film` icon, `motion-safe:animate-fade-up`.
+  - On click: `document.querySelector([data-stitch-button="${id}"])?.scrollIntoView({ behavior: "smooth", block: "center" })` then briefly add a `ring-2 ring-primary` highlight class to draw the eye.
+- Auto-dismiss the pill once the user scrolls the Stitch button into view (IntersectionObserver) or after they click Stitch (listen for `stitchStatus === "running"`).
 
-## 2. Per-act progress on each tile
-
-Still in `ActStrip.tsx`, replace the static spinner with a richer state:
-
-- **Elapsed timer** per tile (`0:42`) that ticks every second from the moment the act flips to `processing`.
-- **Thin shimmer progress bar** under each tile using a soft cyan→amber gradient (project tokens), looping every ~3s — purely cosmetic but it removes the "frozen" feeling.
-- **Status word** under the bar: "Queued" → "Rendering" → "Finalizing" (we flip to Finalizing after 90s, since that's typically when fal is muxing audio).
-- **Footer line** on the strip: "Typically 3–6 min on Cinematic · 1080p · 15s · audio" plus a live "X / 4 done · longest elapsed Y:ZZ".
-
-## 3. Preview the first act as soon as it lands
-
-Today the ActStrip waits for all 4 acts before the user sees anything playable.
-
-- The moment any tile flips to `completed`, expand it inline with a small autoplay-muted `<video>` (using the existing `VideoBubble`-style chrome, no new component needed if it stays simple).
-- A subtle "Act 1 ready · 3 more rendering…" banner above the strip.
-- When all 4 finish, the "Stitch into one video" button lights up (existing behavior).
-
-## Files touched
-
-- `src/components/director/ActStrip.tsx` — adaptive polling, per-tile timer + shimmer + status word, inline preview of completed acts, footer telemetry.
-
-No backend, no schema, no API surface changes.
-
-## Out of scope
-
-- Changing model, resolution, duration, or audio (you chose to keep quality).
-- Background browser notification when the render completes in another tab.
-- Switching from polling to Realtime/SSE.
+### Out of scope
+- No changes to polling, rendering, stitching backend, or the Stitch button's own behavior.
+- No changes to act tiles, banners, or layout.
