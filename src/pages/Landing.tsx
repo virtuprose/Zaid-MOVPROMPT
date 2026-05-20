@@ -788,7 +788,7 @@ export default function Landing() {
     <div className="relative min-h-screen bg-background text-foreground">
       <Seo
         title="MovPrompt — AI Director for Generative Video"
-        description="Drop a frame. Pick a model. Get director-grade AI video prompts for Kling, Veo, Runway, Seedance and more."
+        description="Drop a frame. Pick a model. Get director-grade AI video prompts for Kling, Veo, Seedance and more."
       />
 
       {/* Grain overlay */}
