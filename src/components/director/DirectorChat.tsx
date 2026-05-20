@@ -1951,6 +1951,43 @@ function DirectorChatInner() {
                 </div>
               );
             }
+            if (b.role === "location_picker") {
+              return (
+                <div key={i} className="flex items-start gap-2 motion-safe:animate-fade-up">
+                  <AssistantAvatar size="sm" state="idle" className="mt-1" />
+                  <div className="flex-1">
+                    <LocationPickerCard
+                      locations={b.payload.locations}
+                      characterUrl={b.payload.characterUrl}
+                      propUrl={b.payload.propUrl}
+                      aspect={b.payload.aspect}
+                      chosenIndex={b.chosenIndex}
+                      disabled={busy || !!b.chosenIndex}
+                      onChoose={(index) => handleLocationChoice(i, index)}
+                    />
+                  </div>
+                </div>
+              );
+            }
+            if (b.role === "story_render") {
+              return (
+                <div key={i} className="flex items-start gap-2 motion-safe:animate-fade-up">
+                  <AssistantAvatar size="sm" state="idle" className="mt-1" />
+                  <div className="flex-1">
+                    <ActStrip
+                      storyRenderId={b.data.storyRenderId}
+                      title={b.data.title}
+                      acts={b.data.acts}
+                      stitchStatus={b.data.stitchStatus}
+                      stitchedVideoUrl={b.data.stitchedVideoUrl}
+                      disabled={busy}
+                      onActsUpdate={(next) => handleActsUpdate(i, next)}
+                      onStitch={() => void handleStitch(i)}
+                    />
+                  </div>
+                </div>
+              );
+            }
             const isUser = b.role === "user";
             if (b.role === "assistant") {
               // Hide the streaming placeholder bubble; TypingIndicator covers it.
