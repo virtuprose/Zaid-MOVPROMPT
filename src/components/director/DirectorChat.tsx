@@ -1812,9 +1812,11 @@ function DirectorChatInner() {
     <div className="flex flex-col gap-2 h-[calc(100dvh-120px)] pb-[env(safe-area-inset-bottom)]">
 
 
+      <div className="relative flex-1 min-h-0">
       <div
         ref={scrollRef}
-        className="relative flex-1 overflow-y-auto border-[hsl(240_5%_13%)] p-3 sm:p-4 border-0 rounded-none"
+        onScroll={handleScroll}
+        className="absolute inset-0 overflow-y-auto border-[hsl(240_5%_13%)] p-3 sm:p-4 border-0 rounded-none"
       >
         {isEmpty && (
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
