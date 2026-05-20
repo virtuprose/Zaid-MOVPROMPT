@@ -797,42 +797,151 @@ function SceneControl({ scrollY }: { scrollY: MotionValue<number> }) {
           </div>
         </motion.div>
 
-        {/* Right — mock card */}
-        <motion.div
-          style={{ y: reduce ? 0 : rightY, rotateX: reduce ? 0 : tilt }}
-          className="relative [perspective:1200px]"
-        >
-          <div
-            className="relative rounded-2xl border border-border bg-card p-6 shadow-[0_0_60px_hsl(var(--accent)/0.06)]"
-            style={{ transform: reduce ? undefined : "rotateY(-5deg) rotateX(3deg)" }}
-          >
-            <div className="mb-5 flex items-center justify-between">
-              <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-                Scene Breakdown
-              </span>
-              <span className="text-[11px] text-muted-foreground">v1</span>
-            </div>
-            <div className="space-y-4">
-              {rows.map((r) => {
-                const LockIcon = r.locked ? Lock : Unlock;
-                return (
-                  <div key={r.label} className="flex items-center gap-3">
-                    <span className="w-24 text-[13px] font-medium text-foreground">{r.label}</span>
-                    <LockIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
-                    <div className="relative h-2 flex-1 overflow-hidden rounded-full bg-border">
-                      <div
-                        className="h-full rounded-full bg-accent"
-                        style={{ width: `${r.fill * 100}%` }}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </motion.div>
+        {/* Right — interactive 3D mock card */}
+        <SceneBreakdownCard rows={rows} reduce={reduce} rightY={rightY} />
       </div>
     </section>
+  );
+}
+
+function SceneBreakdownCard({
+  rows,
+  reduce,
+  rightY,
+}: {
+  rows: { label: string; locked: boolean; fill: number }[];
+  reduce: boolean;
+  rightY: any;
+}) {
+  const cardRef = useRef<HTMLDivElement | null>(null);
+  const inView = useInView(cardRef, { once: true, margin: "-20%" });
+
+  const rx = useMotionValue(0);
+  const ry = useMotionValue(0);
+  const srx = useSpring(rx, { stiffness: 140, damping: 14, mass: 0.5 });
+  const sry = useSpring(ry, { stiffness: 140, damping: 14, mass: 0.5 });
+
+  const handleMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (reduce) return;
+    const el = cardRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    const px = (e.clientX - r.left) / r.width - 0.5;
+    const py = (e.clientY - r.top) / r.height - 0.5;
+    ry.set(px * 18);
+    rx.set(-py * 14);
+  };
+  const handleLeave = () => {
+    rx.set(reduce ? 0 : -2);
+    ry.set(reduce ? 0 : -4);
+  };
+  useEffect(() => {
+    handleLeave();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reduce]);
+
+  return (
+    <motion.div
+      style={{ y: reduce ? 0 : rightY }}
+      className="relative [perspective:1400px]"
+      onPointerMove={handleMove}
+      onPointerLeave={handleLeave}
+    >
+      {/* glow */}
+      <motion.div
+        aria-hidden
+        className="pointer-events-none absolute -inset-8 rounded-[2rem] blur-3xl"
+        style={{
+          background:
+            "radial-gradient(60% 60% at 50% 50%, hsl(var(--accent) / 0.18), transparent 70%)",
+        }}
+        animate={reduce ? undefined : { opacity: [0.5, 0.9, 0.5] }}
+        transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+      />
+
+      <motion.div
+        ref={cardRef}
+        className="relative rounded-2xl border border-border bg-card p-6 shadow-[0_20px_60px_-20px_hsl(var(--accent)/0.25)] [transform-style:preserve-3d]"
+        style={{ rotateX: srx, rotateY: sry }}
+      >
+        {/* floating sheen */}
+        <motion.div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 rounded-2xl opacity-60"
+          style={{
+            background:
+              "linear-gradient(120deg, transparent 30%, hsl(var(--accent) / 0.12) 50%, transparent 70%)",
+            transform: "translateZ(1px)",
+          }}
+          animate={reduce ? undefined : { backgroundPositionX: ["0%", "200%"] }}
+          transition={{ duration: 6, repeat: Infinity, ease: "linear" }}
+        />
+
+        <div
+          className="mb-5 flex items-center justify-between"
+          style={{ transform: "translateZ(40px)" }}
+        >
+          <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+            Scene Breakdown
+          </span>
+          <span className="text-[11px] text-muted-foreground">v1</span>
+        </div>
+        <div className="space-y-4" style={{ transform: "translateZ(30px)" }}>
+          {rows.map((r, i) => {
+            const LockIcon = r.locked ? Lock : Unlock;
+            return (
+              <motion.div
+                key={r.label}
+                className="flex items-center gap-3"
+                initial={reduce ? false : { opacity: 0, x: -16 }}
+                animate={inView ? { opacity: 1, x: 0 } : undefined}
+                transition={{ duration: 0.5, delay: 0.1 + i * 0.1, ease: "easeOut" }}
+                style={{ transform: `translateZ(${20 + i * 8}px)` }}
+              >
+                <span className="w-24 text-[13px] font-medium text-foreground">{r.label}</span>
+                <motion.span
+                  animate={
+                    reduce
+                      ? undefined
+                      : r.locked
+                        ? { rotate: [0, -8, 0] }
+                        : { y: [0, -2, 0] }
+                  }
+                  transition={{
+                    duration: 2.4,
+                    repeat: Infinity,
+                    ease: "easeInOut",
+                    delay: i * 0.2,
+                  }}
+                >
+                  <LockIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
+                </motion.span>
+                <div className="relative h-2 flex-1 overflow-hidden rounded-full bg-border">
+                  <motion.div
+                    className="h-full rounded-full bg-accent"
+                    initial={{ width: 0 }}
+                    animate={inView ? { width: `${r.fill * 100}%` } : { width: 0 }}
+                    transition={{ duration: 1.1, delay: 0.3 + i * 0.12, ease: [0.22, 1, 0.36, 1] }}
+                  />
+                  <motion.div
+                    aria-hidden
+                    className="absolute inset-y-0 w-12 -skew-x-12 bg-gradient-to-r from-transparent via-white/30 to-transparent"
+                    initial={{ x: "-100%" }}
+                    animate={inView && !reduce ? { x: ["-100%", "400%"] } : undefined}
+                    transition={{
+                      duration: 2.4,
+                      repeat: Infinity,
+                      delay: 1 + i * 0.2,
+                      ease: "easeInOut",
+                    }}
+                  />
+                </div>
+              </motion.div>
+            );
+          })}
+        </div>
+      </motion.div>
+    </motion.div>
   );
 }
 
