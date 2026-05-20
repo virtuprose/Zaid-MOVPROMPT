@@ -33,7 +33,7 @@ const NAV_LINKS = [
   
 ];
 
-const MODELS = ["Kling", "Veo", "Runway", "Seedance", "Pika", "Luma", "Hailuo", "Wan"];
+const MODELS = ["Kling", "Veo", "Seedance", "Pika", "Luma", "Hailuo", "Wan"];
 
 const FEATURES = [
   {
