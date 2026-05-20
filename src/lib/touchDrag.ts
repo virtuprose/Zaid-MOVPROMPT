@@ -16,16 +16,20 @@ export const triggerHaptic = (ms = HAPTIC_MS) => {
 };
 
 /**
- * Find the nearest drop target at the given client point. Walks elementsFromPoint
- * for any ancestor matching `selector` (a data-attribute selector). If the nearest
- * candidate's center is within SNAP_DISTANCE_PX, returns it as snapped.
+ * Find the nearest drop target at the given client point matching `selector`
+ * (typically a data-attribute selector like `[data-element-tile-id]`).
+ * Returns the element, the value of `idAttr` (defaults to the selector's attribute
+ * name), and whether the touch point is within SNAP_DISTANCE_PX of the element's
+ * center.
  */
 export function findDropTargetFromPoint(
   x: number,
   y: number,
   selector: string,
+  idAttr?: string,
 ): { element: HTMLElement; id: string | null; snapped: boolean } | null {
   if (typeof document === "undefined") return null;
+  const attrName = idAttr ?? selector.replace(/^\[|\]$/g, "");
   const stack = document.elementsFromPoint(x, y);
   for (const node of stack) {
     const el = (node as HTMLElement).closest?.(selector) as HTMLElement | null;
@@ -33,11 +37,12 @@ export function findDropTargetFromPoint(
     const rect = el.getBoundingClientRect();
     const cx = rect.left + rect.width / 2;
     const cy = rect.top + rect.height / 2;
-    const dx = x - cx;
-    const dy = y - cy;
-    const dist = Math.hypot(dx, dy);
-    const id = el.getAttribute("data-drop-id");
-    return { element: el, id, snapped: dist <= SNAP_DISTANCE_PX };
+    const dist = Math.hypot(x - cx, y - cy);
+    return {
+      element: el,
+      id: el.getAttribute(attrName),
+      snapped: dist <= SNAP_DISTANCE_PX,
+    };
   }
   return null;
 }
