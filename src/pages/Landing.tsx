@@ -19,6 +19,8 @@ import {
   X,
   Lock,
   Unlock,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { Seo } from "@/components/Seo";
 import { cn } from "@/lib/utils";
