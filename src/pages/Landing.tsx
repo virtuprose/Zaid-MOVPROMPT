@@ -34,11 +34,8 @@ import { cn } from "@/lib/utils";
    Dark theme · Space Grotesk display · Signal Amber accent
    ============================================================ */
 
-const NAV_LINKS = [
-  { href: "#features", label: "Features" },
-  { href: "#how", label: "How It Works" },
-  
-];
+const NAV_LINKS: { href: string; label: string }[] = [];
+
 
 const MODELS = ["Kling", "Veo", "Seedance", "Pika", "Luma", "Hailuo", "Wan"];
 
