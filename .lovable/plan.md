@@ -1,30 +1,20 @@
-## Switch story renders from 8 acts to 4 acts (~1 min total)
+# Fix story-mode no-response after aspect selection
 
-### Backend
-1. **`supabase/functions/story-render/index.ts`**
-   - Replace `act_prompts.length !== 8` validation with `!== 4`.
-   - Update error message to "exactly 4 act_prompts".
-   - Change `totalCost = perActCost * 8` → `* 4`.
-   - Update insert/submit loop comment + metadata `acts: 8` → `acts: 4`.
-   - Update `inserted.length !== 8` guard → `!== 4`.
+## What I’ll change
+1. Add the missing `generate_story_bundle` response handling in `src/components/director/DirectorChat.tsx` so the app immediately starts the story asset bundle after the user picks `16:9` / `9:16` / `1:1`.
+2. Convert the bundle result into the existing `location_picker` UI bubble, wiring in the returned character sheet, prop sheet, and 7 generated locations.
+3. Hook up location selection so choosing or dragging a location sends the expected follow-up (`Location chosen: <index>`) back to the director.
+4. Handle the `request_story_render` response kind so the app launches the 4 parallel act renders, then shows the existing `ActStrip` and stitch flow.
+5. Update any stale story copy that still says `8 acts` inside the location-picker step.
 
-2. **`supabase/functions/director-agent/index.ts`**
-   - Rewrite step 5 system prompt: "LAUNCH 4 ACTS" — Act 1 opens, Acts 2–3 escalate, Act 4 resolves. EXACTLY 4 `act_prompts`. Director's note updated to "4 parallel renders".
-   - Update `request_story_render` tool schema: `minItems: 4`, `maxItems: 4`, description "Exactly 4 Seedance 2.0 prompts…".
-   - Tool description: "Kick off 4 parallel Seedance 2.0 15-second renders" and frontend mention "4-tile strip".
+## Expected result
+- User picks a story concept.
+- User answers the aspect ratio once.
+- Director automatically builds the story asset bundle.
+- UI shows the 7-location picker instead of `(no response)`.
+- After the user picks one location, the 4 acts start rendering in parallel and the 1-minute stitch flow continues.
 
-### Frontend
-3. **`src/components/director/ActStrip.tsx`**
-   - Header label "Story render · 8 acts in parallel" → "Story render · 4 acts in parallel".
-   - Grid `grid-cols-4` stays (now a single row of 4).
-   - Helper text "unlocks when all 8 finish" → "all 4 finish".
-
-### Stitch (no changes needed)
-4. **`supabase/functions/story-stitch/index.ts`** — already iterates over whatever act rows exist; no hard-coded 8. Total length naturally becomes 4 × 15s = 60s.
-
-### Out of scope
-- No DB schema changes (act_index is just an integer).
-- Translations and other UI labels mentioning "acts" generically remain untouched.
-- Pricing per act unchanged; total story cost halves automatically.
-
-Result: a new story render produces 4 Seedance acts in parallel, stitched into a ~1-minute final video.
+## Technical details
+- The backend is already returning `generate_story_bundle`; the frontend currently falls through because `send()` only handles `generate_prompt`, `ask_clarification`, `ask_model_choice`, `generate_reference_image`, and `request_video_generation`.
+- I’ll keep this entirely in the frontend chat orchestration layer unless I find a small payload mismatch while wiring the existing components.
+- Validation target: confirm the preview advances from aspect selection into the location picker, then into the 4-act strip.
