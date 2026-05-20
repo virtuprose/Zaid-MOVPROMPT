@@ -310,15 +310,10 @@ export const ModelPicker = ({ model, onModelChange }: ModelPickerProps) => {
                 const meta = GROUP_META[group.label];
                 return (
                   <SelectGroup key={group.label}>
-                    <SelectLabel className="sticky top-0 z-10 px-3 py-2 bg-popover/95 backdrop-blur shadow-[0_1px_0_hsl(var(--border))]">
-                      <div className="text-xs font-bold text-foreground uppercase tracking-wider">
+                    <SelectLabel className="px-4 pt-5 pb-2 border-t border-border/40">
+                      <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.14em]">
                         {meta?.short ?? group.label}
                       </div>
-                      {meta && (
-                        <div className="text-[11px] text-muted-foreground lowercase font-normal mt-0.5">
-                          {meta.company}
-                        </div>
-                      )}
                     </SelectLabel>
                     {group.models.map((m) => (
                       <ModelRow
