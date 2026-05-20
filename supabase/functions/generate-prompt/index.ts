@@ -369,6 +369,13 @@ serve(async (req) => {
       userText += `Timeline Prompting: ENABLED — every mainPrompt MUST follow the TIMELINE / EFFECTS INVENTORY / DENSITY MAP / ENERGY ARC structure defined in the system prompt. Clock-pinned beats are required.\n\n`;
     }
 
+    if (typeof targetDuration === "number" && targetDuration > 0) {
+      userText += `Target video duration: ${targetDuration}s — set suggestedDuration to "${targetDuration}s" and pace beats/action to fit exactly this length.\n\n`;
+    } else if (targetDuration === "auto") {
+      userText += `Target video duration: AUTO — pick the most cinematic duration for this scene.\n\n`;
+    }
+
+
     // Refinement guidance: from auto-fix chips, AI critique suggestions, or thumbs-down feedback.
     // These are USER-DIRECTED corrections to the previous attempt. Honor them precisely without rewriting other parts.
     if (refinementAddendum || feedbackLiked === false || feedbackReasons.length > 0 || feedbackNote) {
