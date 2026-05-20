@@ -122,8 +122,8 @@ const ModelRow = ({ value, label, description, isAny, providerLabel }: ModelRowP
     <SelectItem
       value={value}
       className={cn(
-        "items-start py-2.5 ps-5 pe-4 min-h-[3rem] cursor-pointer relative",
-        "border-l-2 border-l-transparent transition-[background-color,border-color] duration-150 ease-out",
+        "items-start py-2.5 ps-4 pe-4 min-h-[3rem] cursor-pointer relative",
+        "border-l border-l-transparent transition-[background-color,border-color] duration-150 ease-out",
         "hover:border-l-primary hover:bg-[#161618]",
         "data-[state=checked]:border-l-primary data-[state=checked]:bg-primary/[0.06]",
         "data-[highlighted]:bg-[#161618] data-[highlighted]:[&_*]:text-inherit",
@@ -136,7 +136,7 @@ const ModelRow = ({ value, label, description, isAny, providerLabel }: ModelRowP
             {base}
           </span>
           {showFlagshipPill && (
-            <span className="inline-flex items-center px-1.5 py-[1px] rounded bg-primary text-primary-foreground border border-primary text-[10px] font-semibold uppercase tracking-wider leading-none">
+            <span className="inline-flex items-center px-1.5 py-[1px] rounded border border-primary/60 text-primary text-[10px] font-semibold uppercase tracking-wider leading-none">
               Flagship
             </span>
           )}
@@ -152,33 +152,10 @@ const ModelRow = ({ value, label, description, isAny, providerLabel }: ModelRowP
             </span>
           )}
           {isAny && (
-            <span className="inline-flex items-center px-1.5 py-[1px] rounded bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-wider leading-none">
+            <span className="inline-flex items-center px-1.5 py-[1px] rounded border border-primary/40 text-primary text-[10px] font-semibold uppercase tracking-wider leading-none">
               Recommended
             </span>
           )}
-          <TooltipProvider delayDuration={150}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  type="button"
-                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
-                  onPointerDown={(e) => e.stopPropagation()}
-                  className="ms-auto text-muted-foreground/60 hover:text-primary transition-colors"
-                  aria-label="Model info"
-                >
-                  <HelpCircle size={13} />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="right" align="start" className="max-w-xs text-xs">
-                <p className="mb-1.5">{description}</p>
-                <ul className="list-disc ps-4 space-y-0.5 text-muted-foreground">
-                  <li>Best for cinematic image-to-video</li>
-                  <li>Supports 16:9 / 9:16 / 1:1</li>
-                  <li>Up to ~10s clips</li>
-                </ul>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
         </div>
         {providerLabel && (
           <span className="text-[10px] uppercase tracking-wider text-muted-foreground/70 font-medium">
