@@ -316,9 +316,10 @@ serve(async (req) => {
     const variantBlock = variantHints ? `\n\n═══ VARIANT-SPECIFIC RULES ═══\n${variantHints}` : "";
 
     // Timeline Prompting addendum — appended when the user enables the toggle.
-    // Default beat duration of 10s; for multishot, beats are scoped per shot.
+    // Duration sourced from user-selected targetDuration; defaults to 10s.
+    const resolvedDuration = typeof targetDuration === "number" && targetDuration > 0 ? targetDuration : 10;
     const timelineBlock = timelineEnabled === true
-      ? timelineAddendum({ defaultDuration: 10, perShot: workflowType === "multishot" })
+      ? timelineAddendum({ defaultDuration: resolvedDuration, perShot: workflowType === "multishot" })
       : "";
 
     const composedSystemPrompt = `${BASE_SYSTEM_PROMPT}\n\n${docSummary}\n\n${systemAddendum}${variantBlock}${timelineBlock}\n\n═══ FEW-SHOT EXAMPLE ═══\n${examples}`;
