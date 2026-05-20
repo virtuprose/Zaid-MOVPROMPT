@@ -16,7 +16,7 @@ import { MentionTextarea } from "./MentionTextarea";
 import { SceneMentionTextarea, type SceneMentionTextareaHandle } from "./SceneMentionTextarea";
 import { extractVideoKeyframes, compressImageFile } from "@/lib/videoFrames";
 import { hashBase64, getCachedAnalysis, setCachedAnalysis } from "@/lib/imageCache";
-import { Sparkles, Loader2, ScanSearch, RotateCcw, RefreshCw, Info, Volume2, VolumeX, Zap, Clapperboard, ArrowRight, ArrowDown, ArrowLeft, HelpCircle, Pencil } from "lucide-react";
+import { Sparkles, Loader2, ScanSearch, RotateCcw, RefreshCw, Info, Volume2, VolumeX, Zap, Clapperboard, ArrowRight, ArrowDown, ArrowLeft, HelpCircle, Pencil, Clock } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { PresetPickerPanel } from "./PresetPickerPanel";
 import {
@@ -35,7 +35,7 @@ import { useToast } from "@/hooks/use-toast";
 import { trackGeneration } from "@/lib/analytics";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/i18n/LanguageContext";
-import { getContract, deriveWorkflowType } from "@/lib/modelContracts";
+import { getContract, deriveWorkflowType, supportsTimelinePrompting } from "@/lib/modelContracts";
 import { MODEL_GROUPS, getModelLabel } from "@/lib/models";
 import { parseEdgeFnError, pickErrorKey } from "@/lib/edgeFnError";
 import { detectAllIntents } from "@/lib/sceneIntent";
@@ -357,6 +357,13 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
   const [twoFrameMode, setTwoFrameMode] = useState(false);
   const [multiShotMode, setMultiShotMode] = useState(false);
   const [audioEnabled, setAudioEnabled] = useState(true);
+  const [timelineEnabled, setTimelineEnabled] = useState<boolean>(() => {
+    try { return localStorage.getItem("movprompt.timelinePrompting") === "1"; } catch { return false; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem("movprompt.timelinePrompting", timelineEnabled ? "1" : "0"); } catch { /* ignore */ }
+  }, [timelineEnabled]);
+  const supportsTimeline = useMemo(() => supportsTimelinePrompting(selectedModel), [selectedModel]);
   const activeSlots = contract.supportsTwoFrameToggle && twoFrameMode ? 2 : contract.slots;
   const workflowType = deriveWorkflowType(selectedModel, activeSlots, contract.supportsMultiShotToggle && multiShotMode);
 
@@ -570,6 +577,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
           multiShotCount: workflowType === "multishot" && contract.supportsMultiShotToggle
             ? Math.min(10, Math.max(contract.multiShotCount ?? 0, elementsPayload.length))
             : undefined,
+          timelineEnabled: supportsTimeline ? timelineEnabled : undefined,
           compactMode: opts?.compact === true ? true : undefined,
           addendum,
           feedback: feedbackPayload,
@@ -1139,6 +1147,41 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
       </div>
     ) : (
       <div className="pt-6 mt-6 border-t border-white/[0.06] flex flex-col items-center gap-3">
+        {supportsTimeline && (
+          <TooltipProvider delayDuration={200}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={() => setTimelineEnabled((v) => !v)}
+                  aria-pressed={timelineEnabled}
+                  className={`group inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+                    timelineEnabled
+                      ? "border-accent/50 bg-accent/10 text-accent"
+                      : "border-white/[0.08] bg-white/[0.02] text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <Clock className="w-3.5 h-3.5" />
+                  <span>Timeline prompting</span>
+                  <span
+                    className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${
+                      timelineEnabled ? "bg-accent" : "bg-muted"
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-3 w-3 transform rounded-full bg-background transition-transform ${
+                        timelineEnabled ? "translate-x-[14px]" : "translate-x-0.5"
+                      }`}
+                    />
+                  </span>
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="max-w-[280px] text-xs leading-relaxed">
+                Break the scene into clock-pinned beats with camera, light, and audio per timestamp. Best for Seedance, Kling, and Veo.
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
         <Button
           data-tour="generate-button"
           size="lg"

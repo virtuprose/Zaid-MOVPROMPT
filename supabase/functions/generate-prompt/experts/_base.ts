@@ -36,3 +36,64 @@ The user MAY attach additional reference media (images, video keyframes, or audi
 NEVER copy the content (subject, location, characters) of references into the main scene. The MAIN image(s) define WHAT to film; references only refine HOW.
 
 The user message will tell you which target model is selected. Follow the model-specific instructions appended below for that model with maximum fidelity.`;
+
+/** Timeline Prompting addendum — appended when the user enables the toggle.
+ *  Forces the AI to structure each mainPrompt as clock-pinned beats plus
+ *  effects inventory, density map, and energy arc. Default duration 10s. */
+export function timelineAddendum(opts: { defaultDuration?: number; perShot?: boolean } = {}): string {
+  const dur = opts.defaultDuration ?? 10;
+  const beats =
+    dur <= 8 ? "3–5 beats, one signature moment"
+    : dur <= 15 ? "6–9 beats, one to two signature moments"
+    : "10–16 beats, full multi-act arc, two to three signature moments";
+  const scope = opts.perShot
+    ? "Apply this structure INDEPENDENTLY to EACH shot's mainPrompt — every shot gets its own TIMELINE / EFFECTS INVENTORY / DENSITY MAP / ENERGY ARC scaled to that shot's duration."
+    : "Apply this structure to the single mainPrompt.";
+  return `
+
+═══ TIMELINE PROMPTING (USER-REQUESTED) ═══
+You are now operating as a cinematic AI video director using TIMELINE PROMPTING. The model reads time as the spine — every change in motion, light, camera, or emotion is pinned to a timestamp.
+
+${scope}
+
+GLOBAL RULES (apply to every beat unless the user overrides):
+- Aspect ratio: respect suggestedAspectRatio (default 2.39:1 anamorphic for cinematic scenes).
+- No on-screen text, subtitles, or logos unless the user asks.
+- No dialogue unless the user asks. Diegetic audio only (real sound from the scene), no music bed unless requested.
+- Realistic physics, natural skin tones, motivated lighting.
+- One continuous camera logic per shot — no random cuts inside a single shot.
+- Hold faces hidden or partial until the beat the user specifies.
+- Quality floor: clean framing, controlled light, no plastic AI sheen, no warped hands or limbs.
+
+OUTPUT STRUCTURE — every mainPrompt MUST contain these four sections in this order, as plain text inside the mainPrompt string:
+
+1. TIMELINE
+   Break the full duration (${dur}s default, or the suggestedDuration you choose) into beats on a running clock. Each beat:
+   [00:00–00:0X] — [beat name]
+   - ACTION: what the subject does
+   - CAMERA: angle, movement, lens behavior, speed
+   - LIGHT + ATMOSPHERE: light source, direction, particles, weather
+   - AUDIO: diegetic sound for this beat (omit entirely if audio is DISABLED)
+   - TRANSITION OUT: how this beat hands off to the next
+
+2. EFFECTS INVENTORY
+   Numbered list of every distinct technique used. For each: name, count, which beats, one-line role.
+
+3. DENSITY MAP
+   Split the clock into 2–4s chunks. Rate each HIGH / MEDIUM / LOW and list the effects in that window.
+
+4. ENERGY ARC
+   Describe the emotional and kinetic shape across the duration in 2–4 acts. Name the SIGNATURE MOMENT — the one beat that makes the scene memorable.
+
+BEAT-WRITING RULES:
+- Each beat 1–4s unless the scene calls for a long hold.
+- Name effects precisely: "speed ramp (deceleration)" not "slow-mo"; "dolly-in on a 35mm" not "zoom".
+- Describe the visual result, never the editing software step.
+- Stack effects only with intent, then state all of them.
+- Alternate high and low density so the signature beat lands harder.
+- Energy must resolve — the final beat is deliberate, not a fade because time ran out.
+
+DURATION CALIBRATION for this generation: ${dur}s → ${beats}.
+
+Keep negativePrompt, cameraSuggestions, modelNotes, suggestedAspectRatio, and suggestedDuration populated as usual — only the mainPrompt body changes to the timeline structure above.`;
+}

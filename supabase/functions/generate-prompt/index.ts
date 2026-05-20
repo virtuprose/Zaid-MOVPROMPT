@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
-import { BASE_SYSTEM_PROMPT } from "./experts/_base.ts";
+import { BASE_SYSTEM_PROMPT, timelineAddendum } from "./experts/_base.ts";
 import { getAgent } from "./experts/registry.ts";
 import { getAgentProfile } from "./experts/profile-loader.ts";
 import { getKlingVariantHints } from "./experts/kling.ts";
@@ -91,7 +91,7 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { images, workflowType, description, targetModel, sceneBreakdown, audioEnabled, references, elements, autoInjectElements, multiShotCount, elementMentions, compactMode, addendum, feedback } = body;
+    const { images, workflowType, description, targetModel, sceneBreakdown, audioEnabled, references, elements, autoInjectElements, multiShotCount, elementMentions, compactMode, addendum, feedback, timelineEnabled } = body;
     const isCompact = compactMode === true;
     const refinementAddendum: string =
       typeof addendum === "string" ? addendum.trim().slice(0, 600) : "";
@@ -315,7 +315,13 @@ serve(async (req) => {
     }
     const variantBlock = variantHints ? `\n\n═══ VARIANT-SPECIFIC RULES ═══\n${variantHints}` : "";
 
-    const composedSystemPrompt = `${BASE_SYSTEM_PROMPT}\n\n${docSummary}\n\n${systemAddendum}${variantBlock}\n\n═══ FEW-SHOT EXAMPLE ═══\n${examples}`;
+    // Timeline Prompting addendum — appended when the user enables the toggle.
+    // Default beat duration of 10s; for multishot, beats are scoped per shot.
+    const timelineBlock = timelineEnabled === true
+      ? timelineAddendum({ defaultDuration: 10, perShot: workflowType === "multishot" })
+      : "";
+
+    const composedSystemPrompt = `${BASE_SYSTEM_PROMPT}\n\n${docSummary}\n\n${systemAddendum}${variantBlock}${timelineBlock}\n\n═══ FEW-SHOT EXAMPLE ═══\n${examples}`;
 
     let userText = `Workflow: ${workflowType}\nTarget Model: ${modelLabels[targetModel] || targetModel}\nActive Agent: ${displayName}\n\n`;
     if (description?.trim()) {
@@ -356,6 +362,10 @@ serve(async (req) => {
       userText += audioEnabled
         ? `Audio: ENABLED — generate a synced audio direction (ambient sound, music cues, dialogue/SFX as appropriate). Populate the audioBlock field.\n\n`
         : `Audio: DISABLED — produce a SILENT video. Do not include any audio direction. Set audioBlock to "Silent — no audio".\n\n`;
+    }
+
+    if (timelineEnabled === true) {
+      userText += `Timeline Prompting: ENABLED — every mainPrompt MUST follow the TIMELINE / EFFECTS INVENTORY / DENSITY MAP / ENERGY ARC structure defined in the system prompt. Clock-pinned beats are required.\n\n`;
     }
 
     // Refinement guidance: from auto-fix chips, AI critique suggestions, or thumbs-down feedback.
