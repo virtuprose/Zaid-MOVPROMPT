@@ -98,12 +98,14 @@ export function GeneratedImageCard({ data, onRegenerate, onUnpinSubject }: Props
         </div>
         <div className="text-[10px] text-muted-foreground/60 inline-flex items-center gap-2">
           {inProgress
-            ? `Rendering · ${progress!.done} / ${progress!.total}`
-            : data.subjectSheet
-              ? "Auto-attached to every frame in this session."
-              : isKeyFrame
-                ? "Locked as scene anchor — extend it into a sequence below."
-                : "Locked as references — continue the chat to use them."}
+            ? `Rendering · ${progress!.done} / ${progress!.total}${(data.failedIndices?.length ?? 0) > 0 ? ` · ${data.failedIndices!.length} failed` : ""}`
+            : (data.failedIndices?.length ?? 0) > 0
+              ? `${data.failedIndices!.length} panel${data.failedIndices!.length === 1 ? "" : "s"} failed — credits refunded.`
+              : data.subjectSheet
+                ? "Auto-attached to every frame in this session."
+                : isKeyFrame
+                  ? "Locked as scene anchor — extend it into a sequence below."
+                  : "Locked as references — continue the chat to use them."}
           {data.subjectSheet && onUnpinSubject && !inProgress && (
             <button
               type="button"
