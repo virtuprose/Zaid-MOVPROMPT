@@ -447,6 +447,7 @@ function DirectorChatInner() {
             images: [],
             directorsNote: payload.directors_note,
             progress: { done: 0, total: streamTotal },
+            failedIndices: [],
           },
         }
       : null;
@@ -458,6 +459,7 @@ function DirectorChatInner() {
     try {
       const api = await import("@/lib/director/api");
       const streamedImages: Array<{ url: string; storage_path: string; shot_index?: number }> = [];
+      const failedIndices: number[] = [];
       const result = isStreamingStoryboard
         ? await api.generateReferenceImageStream(
             {
@@ -471,8 +473,9 @@ function DirectorChatInner() {
               subject_kind: payload.subject_kind,
             },
             (ev) => {
-              if (ev.type === "panel") {
-                streamedImages.push(ev.value);
+              if (ev.type === "panel" || ev.type === "panel_error") {
+                if (ev.type === "panel") streamedImages.push(ev.value);
+                else if (!failedIndices.includes(ev.index)) failedIndices.push(ev.index);
                 setBubbles((prev) => {
                   const next = prev.slice();
                   const b = next[liveBubbleIndex];
@@ -484,7 +487,11 @@ function DirectorChatInner() {
                         images: [...streamedImages].sort(
                           (a, z) => (a.shot_index ?? 0) - (z.shot_index ?? 0),
                         ),
-                        progress: { done: streamedImages.length, total: streamTotal },
+                        progress: {
+                          done: streamedImages.length + failedIndices.length,
+                          total: streamTotal,
+                        },
+                        failedIndices: [...failedIndices],
                       },
                     };
                   }
@@ -539,6 +546,7 @@ function DirectorChatInner() {
           directorsNote: payload.directors_note,
           ...(payload.aspect_ratio ? { aspectRatio: payload.aspect_ratio } : {}),
           ...(isSheet ? { subjectSheet: true as const, subjectKind: sheetKind } : {}),
+          ...(failedIndices.length > 0 ? { failedIndices: [...failedIndices] } : {}),
         },
       };
       const carrierBubble: Bubble = {
@@ -555,13 +563,23 @@ function DirectorChatInner() {
       setBubbles(finalBubbles);
       setAttachments([]);
       void persist(finalBubbles, null, null);
-      toast.success(
-        role === "storyboard"
-          ? `${newAttachments.length} panels generated`
-          : role === "key_frame"
-            ? "Key frame generated"
-            : "Reference image generated",
-      );
+      if (role === "storyboard" && failedIndices.length > 0) {
+        if (newAttachments.length === 0) {
+          toast.error("All panels failed — credits refunded. Try again.");
+        } else {
+          toast.warning(
+            `${newAttachments.length} of ${streamTotal} panels generated — ${failedIndices.length} failed and were refunded.`,
+          );
+        }
+      } else {
+        toast.success(
+          role === "storyboard"
+            ? `${newAttachments.length} panels generated`
+            : role === "key_frame"
+              ? "Key frame generated"
+              : "Reference image generated",
+        );
+      }
     } catch (e: any) {
       const handled = await notifyInsufficientCredits(e);
       const message = handled
