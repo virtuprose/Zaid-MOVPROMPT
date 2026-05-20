@@ -569,7 +569,7 @@ export function Composer({
                 ? "Remove flagged images to continue"
                 : scanning
                   ? "Scanning attachments…"
-                  : "⌘/Ctrl + Enter to send";
+                  : "Enter to send · Shift+Enter for newline";
               return (
                 <div className="flex items-center gap-2">
 
