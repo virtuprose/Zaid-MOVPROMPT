@@ -577,6 +577,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
           multiShotCount: workflowType === "multishot" && contract.supportsMultiShotToggle
             ? Math.min(10, Math.max(contract.multiShotCount ?? 0, elementsPayload.length))
             : undefined,
+          timelineEnabled: supportsTimeline ? timelineEnabled : undefined,
           compactMode: opts?.compact === true ? true : undefined,
           addendum,
           feedback: feedbackPayload,
