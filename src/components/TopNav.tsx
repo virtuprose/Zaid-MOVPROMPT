@@ -285,7 +285,7 @@ export function TopNav() {
                 {/* Mobile menu */}
                 <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
                   <SheetTrigger asChild>
-                    <Button variant="ghost" size="sm" className="lg:hidden h-9 w-9 px-0" aria-label="Menu">
+                    <Button variant="ghost" size="sm" className="lg:hidden h-11 w-11 px-0" aria-label="Open navigation menu">
                       <Menu className="w-5 h-5" />
                     </Button>
                   </SheetTrigger>
@@ -369,7 +369,8 @@ export function TopNav() {
                 variant="outline"
                 size="sm"
                 onClick={() => navigate("/auth")}
-                className="h-9 rounded-full px-3"
+                className="h-11 sm:h-9 rounded-full px-3 min-w-11"
+                aria-label={t("auth.signIn")}
               >
                 <User className="w-4 h-4 sm:me-1.5" />
                 <span className="hidden sm:inline">{t("auth.signIn")}</span>
