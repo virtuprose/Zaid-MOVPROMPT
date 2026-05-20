@@ -151,8 +151,6 @@ const MOOD_LINES = [
   "Let's make something cinematic.",
 ];
 
-const IDLE_NUDGE =
-  "Still there? Tell me the vibe — a couple words is plenty and I'll take it from there.";
 
 export function DirectorChat() {
   return (
@@ -756,11 +754,8 @@ function DirectorChatInner() {
       content: text || fallback,
       attachments: turnAttachments.length ? turnAttachments : undefined,
     };
-    // Drop any prior error bubble so retry replaces it cleanly,
-    // and drop the idle nudge so it disappears the moment the user sends.
-    const cleaned = bubbles.filter(
-      (b) => b.role !== "error" && !(b.role === "assistant" && b.content === IDLE_NUDGE),
-    );
+    // Drop any prior error bubble so retry replaces it cleanly.
+    const cleaned = bubbles.filter((b) => b.role !== "error");
     const next: Bubble[] = [...cleaned, userBubble];
     lastSendRef.current = { text: text || fallback, attachments: turnAttachments };
     setBubbles(next);
@@ -1377,19 +1372,8 @@ function DirectorChatInner() {
     }
   }, [bubbles]);
 
-  // Idle nudge: send a soft prompt if the user has been silent on a fresh chat
-  useEffect(() => {
-    if (idleTimer.current) window.clearTimeout(idleTimer.current);
-    const onlyWelcome = bubbles.length === 1 && bubbles[0].role === "assistant";
-    if (!onlyWelcome || idleNudgedRef.current || busy || input || attachments.length) return;
-    idleTimer.current = window.setTimeout(() => {
-      idleNudgedRef.current = true;
-      setBubbles((prev) => [...prev, { role: "assistant", content: IDLE_NUDGE, animate: true }]);
-    }, 45000);
-    return () => {
-      if (idleTimer.current) window.clearTimeout(idleTimer.current);
-    };
-  }, [bubbles, busy, input, attachments.length]);
+  // Idle nudge removed.
+
 
   const avatarState: AvatarState = busy
     ? (attachments.length > 0 ? "scanning" : "thinking")
