@@ -60,11 +60,11 @@ function classifyTier(value: string, variant: string | null): Tier {
 }
 
 const TIER_PILL: Record<Tier, string> = {
-  lite: "border border-[#71717A] text-[#A1A1AA] bg-transparent",
-  fast: "border border-primary/60 text-primary bg-transparent",
-  flagship: "bg-primary text-primary-foreground border border-primary",
-  turbo: "border border-[#EF4444] text-[#EF4444] bg-transparent",
-  default: "border border-primary/60 text-primary bg-transparent",
+  lite: "border border-muted-foreground/30 text-muted-foreground bg-transparent",
+  fast: "border border-primary/40 text-primary bg-transparent",
+  flagship: "border border-primary/60 text-primary bg-transparent",
+  turbo: "border border-muted-foreground/30 text-muted-foreground bg-transparent",
+  default: "border border-muted-foreground/30 text-muted-foreground bg-transparent",
 };
 
 // Lower rank = better. Defaults to mid (5) if missing.
