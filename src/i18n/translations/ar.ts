@@ -83,6 +83,7 @@ export const ar: Record<TranslationKey, string> = {
   "wp.confirmReset.cancel": "الاحتفاظ بها",
   "wp.reAnalyze": "إعادة التحليل",
   "wp.generatePrompt": "توليد أمر سينمائي",
+  "wp.videoDuration": "مدة الفيديو",
   "wp.regeneratePrompt": "إعادة توليد التوجيه",
   "wp.generatingPrompt": "جاري توليد التوجيه...",
   "wp.signInRequired": "تسجيل الدخول مطلوب",
