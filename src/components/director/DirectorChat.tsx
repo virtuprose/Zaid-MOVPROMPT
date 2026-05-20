@@ -546,6 +546,12 @@ function DirectorChatInner() {
           directorsNote: payload.directors_note,
           ...(payload.aspect_ratio ? { aspectRatio: payload.aspect_ratio } : {}),
           ...(isSheet ? { subjectSheet: true as const, subjectKind: sheetKind } : {}),
+          ...(failedIndices.length > 0
+            ? {
+                failedIndices: [...failedIndices],
+                progress: { done: streamTotal - failedIndices.length, total: streamTotal },
+              }
+            : {}),
         },
       };
       const carrierBubble: Bubble = {
@@ -562,13 +568,23 @@ function DirectorChatInner() {
       setBubbles(finalBubbles);
       setAttachments([]);
       void persist(finalBubbles, null, null);
-      toast.success(
-        role === "storyboard"
-          ? `${newAttachments.length} panels generated`
-          : role === "key_frame"
-            ? "Key frame generated"
-            : "Reference image generated",
-      );
+      if (role === "storyboard" && failedIndices.length > 0) {
+        if (newAttachments.length === 0) {
+          toast.error("All panels failed — credits refunded. Try again.");
+        } else {
+          toast.warning(
+            `${newAttachments.length} of ${streamTotal} panels generated — ${failedIndices.length} failed and were refunded.`,
+          );
+        }
+      } else {
+        toast.success(
+          role === "storyboard"
+            ? `${newAttachments.length} panels generated`
+            : role === "key_frame"
+              ? "Key frame generated"
+              : "Reference image generated",
+        );
+      }
     } catch (e: any) {
       const handled = await notifyInsufficientCredits(e);
       const message = handled
