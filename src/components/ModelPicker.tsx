@@ -238,7 +238,7 @@ export const ModelPicker = ({ model, onModelChange }: ModelPickerProps) => {
           collisionPadding={12}
           position="popper"
           sideOffset={6}
-          className="model-picker-content w-[var(--radix-select-trigger-width)] min-w-[var(--radix-select-trigger-width)] max-w-[calc(100vw-1.5rem)] overscroll-contain p-0 relative"
+          className="model-picker-content w-[var(--radix-select-trigger-width)] min-w-[var(--radix-select-trigger-width)] max-w-[calc(100vw-1.5rem)] overscroll-contain p-0 relative [&_[role=option]>span:first-child]:hidden [&_[role=option]]:ps-3"
           style={{
             zIndex: 1000,
             maxHeight: 480,
