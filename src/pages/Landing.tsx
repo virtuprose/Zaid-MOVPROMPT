@@ -14,6 +14,7 @@ import {
   Camera,
   ArrowLeftRight,
   LayoutGrid,
+  Clapperboard,
   Menu,
   X,
   Lock,
@@ -36,6 +37,13 @@ const NAV_LINKS = [
 const MODELS = ["Kling", "Veo", "Seedance", "Pika", "Luma", "Hailuo", "Wan"];
 
 const FEATURES = [
+  {
+    icon: Clapperboard,
+    title: "AI Director",
+    body:
+      "An agentic director for your scenes. Chat through your vision and it generates images, video, and full storyboards — directing camera, light, and motion end-to-end.",
+    flagship: true,
+  },
   {
     icon: Camera,
     title: "Single Frame",
@@ -487,13 +495,14 @@ function Features() {
             From Frame to Film in Seconds
           </h2>
           <p className="mt-4 text-[16px] text-muted-foreground">
-            Three modes. One goal. Cinematic prompts that actually work.
+            One AI director. Four ways in. From a single frame to a full storyboard — directed end-to-end.
           </p>
         </FadeUp>
 
-        <div id="how" className="mt-16 grid grid-cols-1 gap-6 md:grid-cols-3">
+        <div id="how" className="mt-16 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
           {FEATURES.map((f, i) => {
             const Icon = f.icon;
+            const isFlagship = "flagship" in f && f.flagship;
             return (
               <motion.div
                 key={f.title}
@@ -502,11 +511,21 @@ function Features() {
                 viewport={{ once: true, amount: 0.3 }}
                 transition={{
                   duration: 0.7,
-                  delay: i * 0.15,
+                  delay: i * 0.12,
                   ease: [0.22, 1, 0.36, 1],
                 }}
-                className="group relative rounded-2xl border border-border bg-card p-8 transition-all duration-300 hover:-translate-y-1 hover:border-accent/20 hover:shadow-[0_4px_32px_hsl(var(--accent)/0.08)]"
+                className={cn(
+                  "group relative rounded-2xl border bg-card p-8 transition-all duration-300 hover:-translate-y-1",
+                  isFlagship
+                    ? "border-accent/30 shadow-[0_4px_40px_hsl(var(--accent)/0.12)] hover:border-accent/50 hover:shadow-[0_8px_56px_hsl(var(--accent)/0.18)]"
+                    : "border-border hover:border-accent/20 hover:shadow-[0_4px_32px_hsl(var(--accent)/0.08)]"
+                )}
               >
+                {isFlagship && (
+                  <span className="absolute right-4 top-4 inline-flex items-center rounded-full border border-accent/30 bg-accent/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-accent">
+                    Flagship
+                  </span>
+                )}
                 <div className="mb-6 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-accent/10 to-accent/5">
                   <Icon className="h-6 w-6 text-accent" strokeWidth={2} />
                 </div>

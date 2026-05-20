@@ -1,27 +1,30 @@
 ## Goal
-Use the uploaded `0520.mp4` as an ambient background video behind the hero section of the public landing page (`/`), keeping headline and CTAs readable.
+Add **AI Director** as the lead card in the landing page Features grid — positioned as an agentic AI director, not just a prompt writer.
 
-## Steps
+## Changes — `src/pages/Landing.tsx`
 
-1. **Add the video asset**
-   - Copy `user-uploads://0520.mp4` to `public/hero-bg.mp4` (kept in `public/` so it streams directly instead of being bundled).
+1. **Icon import**: add `Clapperboard` to the existing `lucide-react` import (signals direction/filmmaking better than a chat bubble).
 
-2. **Wire it into the Hero on `src/pages/Landing.tsx`**
-   - Inside the existing `<Hero>` section (just above the current ambient layers), add a `<video>` element:
-     - `src="/hero-bg.mp4"`, `autoPlay`, `muted`, `loop`, `playsInline`, `preload="metadata"`, `poster` omitted.
-     - Absolutely positioned, `inset-0`, `w-full h-full object-cover`, `pointer-events-none`, `aria-hidden`.
-   - Add a dimming overlay on top of the video:
-     - A dark gradient layer (`bg-background/70` plus a radial vignette) so the existing amber god-rays, grid, and headline stay legible.
-   - Respect `useReducedMotion()` — when reduced motion is on, skip autoplay (omit the video, keep current static layers).
+2. **`FEATURES` array**: prepend a new entry so the Director leads the grid:
+   ```
+   {
+     icon: Clapperboard,
+     title: "AI Director",
+     body: "An agentic director for your scenes. Chat through your vision and it generates images, video, and full storyboards — directing camera, light, and motion end-to-end.",
+   }
+   ```
+   Order becomes: AI Director → Single Frame → Start+End → Multi-Shot.
 
-3. **Preserve existing parallax layers**
-   - Keep the amber wash, god-rays, perspective grid, haze, grain, and vignette so the hero still feels cinematic; the video sits as the deepest layer (z-index below all of them, content stays on `z-10`).
+3. **Card emphasis**: give the AI Director card a subtle "Flagship" treatment so it reads as the hero capability:
+   - Add a small amber pill in the top-right of that card: `Flagship`.
+   - Slightly stronger border (`border-accent/30`) and a soft amber glow shadow at rest.
+   - Other 3 cards keep their current styling.
 
-4. **Performance hygiene**
-   - `playsInline` for iOS, `muted` so autoplay is allowed, `preload="metadata"` to avoid blocking initial paint.
-   - Only mount the video on the landing route (no impact on other pages).
+4. **Grid layout**: change `md:grid-cols-3` to `md:grid-cols-2 lg:grid-cols-4` so 4 cards fit cleanly (2-up tablet, 4-up desktop).
+
+5. **Section subhead**: update "Three modes. One goal. Cinematic prompts that actually work." → "One AI director. Four ways in. From a single frame to a full storyboard — directed end-to-end."
 
 ## Out of scope
-- No changes to Auth, Director, or any other page.
-- No audio, no controls, no analytics on the video.
-- Video file is not optimized/transcoded — we ship the upload as-is. If it's large, we can compress in a follow-up.
+- No changes to How It Works, SceneControl, Models, Hero, navbar, or footer.
+- No new dependencies; reuses existing card styling, framer-motion reveals, and amber accent tokens.
+- i18n files not touched (Landing copy is English-only today).
