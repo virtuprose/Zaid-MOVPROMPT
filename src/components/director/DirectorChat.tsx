@@ -23,6 +23,9 @@ import { ModelChoiceCard } from "./ModelChoiceCard";
 import { GeneratedImageCard } from "./GeneratedImageCard";
 import { AspectChoiceCard, type AspectRatio } from "./AspectChoiceCard";
 import { SubjectLockChoiceCard, type SubjectKind } from "./SubjectLockChoiceCard";
+import { LocationPickerCard, type StoryLocation } from "./LocationPickerCard";
+import { ActStrip, type ActTile } from "./ActStrip";
+import { submitStoryBundle, submitStoryRender, submitStoryStitch } from "@/lib/director/api";
 
 import {
   streamDirectorAgent,
@@ -109,6 +112,28 @@ type Bubble =
         scene_already_described?: boolean;
       };
       submitted?: boolean;
+    }
+  | {
+      role: "location_picker";
+      payload: {
+        aspect: "16:9" | "9:16" | "1:1";
+        characterUrl?: string;
+        propUrl?: string;
+        locations: StoryLocation[];
+        actPromptsHint?: string;
+      };
+      chosenIndex?: number;
+    }
+  | {
+      role: "story_render";
+      data: {
+        storyRenderId: string;
+        title: string;
+        aspect: "16:9" | "9:16" | "1:1";
+        acts: ActTile[];
+        stitchStatus?: "idle" | "running" | "done" | "failed";
+        stitchedVideoUrl?: string;
+      };
     }
   | { role: "video"; data: import("./VideoBubble").VideoBubbleData };
 

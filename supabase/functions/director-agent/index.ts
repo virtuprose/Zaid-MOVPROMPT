@@ -54,9 +54,32 @@ ONE QUESTION PER TURN (HARD RULE — overrides any older "up to 4 questions" gui
 CORE BEHAVIOR — SMART ONE-SHOT:
 - The user dumps everything: text brief + reference images + reference videos (analyzed as keyframes) + audio transcripts + parsed PDF/doc text.
 - Read the WHOLE brief carefully before deciding.
-- If the brief gives you enough to move forward, run the FIRST-TURN PATH CHOICE below before anything else. Otherwise ask first.
+- If the brief gives you enough to move forward, run the STORY MODE check FIRST, then the FIRST-TURN PATH CHOICE below. Otherwise ask first.
 - ONLY ask filler questions when a missing detail would meaningfully change the output. Use \`ask_clarification\` — ONE QUESTION ONLY (see ONE QUESTION PER TURN).
-- If the user asks to actually generate the video, use \`request_video_generation\`.
+- If the user asks to actually generate the video, use \`request_video_generation\` (single-shot mode) or \`request_story_render\` (story mode).
+
+STORY MODE (HARD RULE — runs BEFORE FIRST-TURN PATH CHOICE):
+
+When to enter story mode (any of):
+- Brief mentions duration ≥ 45 seconds, or words like "story / film / movie / short / episode / chapters / acts / scenes / multi-shot narrative / 2 minute / 1 minute / 90 second".
+- Brief describes a narrative arc with multiple beats (e.g. "hero fighting monsters from different planets", "5 acts", "season trailer", "music video with verses").
+- User explicitly asks for "story mode".
+
+Story mode is a fixed 5-step script. In every step's \`reason\` field, prefix with the step label ("Story step 2 of 5 — pick a concept."). In every \`ask_clarification\` call, append the chip "Switch to single shot" so the user can bail. Skip \`ask_model_choice\` entirely — Seedance 2.0 is locked.
+
+- Story step 1 of 5 — OPENING KEY FRAME + 3 CONCEPTS: your FIRST response MUST call \`generate_reference_image\` with \`mode: "single_panel"\`, \`aspect_ratio: "16:9"\` (default), the locked visual spec echoed in \`prompt\`, and \`directors_note\` containing both the step label AND the 3 story concept pitches formatted as:
+  "Story step 1 of 5 — locking the opener.\n\n3 concepts:\n  A) <Logline> — <tone, visual hook>\n  B) <Logline> — <tone, visual hook>\n  C) <Logline> — <tone, visual hook>"
+  No question yet.
+
+- Story step 2 of 5 — PICK A CONCEPT: after the key frame returns, call \`ask_clarification\` with ONE question "Which concept should we build?". Suggestions chips = ["A) <short logline>", "B) <short logline>", "C) <short logline>", "Switch to single shot"]. \`allow_other: false\`.
+
+- Story step 3 of 5 — ASPECT RATIO: after the concept is picked, call \`ask_clarification\` with ONE question "Aspect ratio for the whole story?". Chips = ["16:9", "9:16", "1:1", "Switch to single shot"]. \`allow_other: false\`.
+
+- Story step 4 of 5 — ASSET BUNDLE: after aspect is picked, call \`generate_story_bundle\` with the chosen concept's character brief, prop/object brief, and exactly 7 location briefs (visually distinct planets / settings / acts), \`aspect\` set to the user's pick, and \`character_subject_kind\` = "character" (or "product" if the brief is product-led). Put "Story step 4 of 5 — building the asset bundle (1 character + 1 prop + 7 locations)." in \`directors_note\`.
+
+- Story step 5 of 5 — LAUNCH 8 ACTS: after the user drops one location into the slot (their next user turn will start with "Location chosen: <location_index>"), call \`request_story_render\` with EXACTLY 8 \`act_prompts\` (Act 1 opens, Acts 2-7 escalate / monster-of-the-week beats, Act 8 resolves), the chosen aspect, duration 15, audio true. Each act_prompt MUST echo the locked Seedance 2.0 vocabulary, name the character / prop using @Image1 / @Image2 / @Image3 tags, and stay self-contained as a 15-second beat. Put "Story step 5 of 5 — kicking off 8 parallel renders. I'll stitch them into one video when they finish." in \`directors_note\`.
+
+If the user taps "Switch to single shot" at any step, exit story mode immediately and re-run FIRST-TURN PATH CHOICE on their next turn.
 
 FIRST-TURN PATH CHOICE (HARD RULE — runs before any model routing):
 
@@ -485,6 +508,63 @@ const TOOLS = [
 
         },
         required: ["mode", "prompt"],
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "generate_story_bundle",
+      description: "Story mode step 4. Generate the asset bundle for a multi-act story render in parallel: 1 character/subject sheet + 1 prop sheet + 7 distinct location key frames. The client renders a location-picker card after this returns so the user can drag one location into the slot. Use ONLY in story mode.",
+      parameters: {
+        type: "object",
+        properties: {
+          aspect: { type: "string", enum: ["16:9", "9:16", "1:1"] },
+          character_brief: { type: "string", description: "Full prompt for the protagonist sheet — describe identity, look, wardrobe, vibe." },
+          character_subject_kind: { type: "string", enum: ["character", "product"], description: "Default 'character'. Switch to 'product' if the brief is product-led." },
+          prop_brief: { type: "string", description: "Full prompt for the prop/object sheet — describe the hero item the character uses across the story." },
+          location_briefs: {
+            type: "array",
+            minItems: 7,
+            maxItems: 7,
+            items: { type: "string" },
+            description: "Exactly 7 visually distinct location prompts (e.g. one per planet / act). Each is a full single-panel key-frame prompt.",
+          },
+          character_reference_urls: {
+            type: "array",
+            maxItems: 4,
+            items: { type: "string" },
+            description: "Optional — uploaded face/product images to lock identity for the character sheet.",
+          },
+          directors_note: { type: "string" },
+        },
+        required: ["aspect", "character_brief", "prop_brief", "location_briefs"],
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "request_story_render",
+      description: "Story mode step 5. Kick off 8 parallel Seedance 2.0 15-second renders (one per act), all sharing the locked character + prop + chosen location refs. The frontend creates an 8-tile strip + a Stitch button once all acts finish. Use ONLY in story mode after the user picks a location.",
+      parameters: {
+        type: "object",
+        properties: {
+          aspect: { type: "string", enum: ["16:9", "9:16", "1:1"] },
+          duration: { type: "integer", minimum: 4, maximum: 15, description: "Per-act duration in seconds (default 15)." },
+          title: { type: "string", description: "Short title for the stitched story (max 60 chars)." },
+          act_prompts: {
+            type: "array",
+            minItems: 8,
+            maxItems: 8,
+            items: { type: "string" },
+            description: "Exactly 8 Seedance 2.0 prompts in order. Each must reference @Image1 (character), @Image2 (prop), @Image3 (location) where applicable.",
+          },
+          directors_note: { type: "string" },
+        },
+        required: ["aspect", "act_prompts"],
         additionalProperties: false,
       },
     },

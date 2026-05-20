@@ -937,6 +937,7 @@ export type Database = {
       }
       video_jobs: {
         Row: {
+          act_index: number | null
           completed_at: string | null
           created_at: string
           deleted_at: string | null
@@ -951,12 +952,14 @@ export type Database = {
           reference_image_urls: Json | null
           session_id: string | null
           status: string
+          story_render_id: string | null
           storyboard_session_id: string | null
           storyboard_shot_index: number | null
           user_id: string
           video_url: string | null
         }
         Insert: {
+          act_index?: number | null
           completed_at?: string | null
           created_at?: string
           deleted_at?: string | null
@@ -971,12 +974,14 @@ export type Database = {
           reference_image_urls?: Json | null
           session_id?: string | null
           status?: string
+          story_render_id?: string | null
           storyboard_session_id?: string | null
           storyboard_shot_index?: number | null
           user_id: string
           video_url?: string | null
         }
         Update: {
+          act_index?: number | null
           completed_at?: string | null
           created_at?: string
           deleted_at?: string | null
@@ -991,6 +996,7 @@ export type Database = {
           reference_image_urls?: Json | null
           session_id?: string | null
           status?: string
+          story_render_id?: string | null
           storyboard_session_id?: string | null
           storyboard_shot_index?: number | null
           user_id?: string
