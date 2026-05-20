@@ -151,8 +151,6 @@ const MOOD_LINES = [
   "Let's make something cinematic.",
 ];
 
-const IDLE_NUDGE =
-  "Still there? Tell me the vibe — a couple words is plenty and I'll take it from there.";
 
 export function DirectorChat() {
   return (
