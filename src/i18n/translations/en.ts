@@ -1,7 +1,7 @@
 export const en = {
   // Index page
   "hero.title": "MovPrompt",
-  "hero.subtitle": "Your AI Director of Photography. Turn any still image into a director-grade cinematic video prompt.",
+  "hero.subtitle": "Your AI Director. Turn any still image into a director-grade cinematic video prompt.",
   "footer": "MovPrompt — AI-powered cinematic prompts",
   "nav.goHome": "Go to home",
 
