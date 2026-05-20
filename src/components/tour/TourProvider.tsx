@@ -83,7 +83,7 @@ export const TourProvider = ({ children }: { children: React.ReactNode }) => {
     setStepIndex((i) => Math.max(0, i - 1));
   }, []);
 
-  // Auto-start once after WelcomePopup is dismissed (or immediately if no popup)
+  // Auto-start once the WelcomePopup has finished its check AND no dialog is currently open.
   useEffect(() => {
     if (loading || !user || autoStartedRef.current) return;
     if (isDone) return;
@@ -92,15 +92,18 @@ export const TourProvider = ({ children }: { children: React.ReactNode }) => {
     const tryStart = () => {
       if (cancelled || autoStartedRef.current) return;
       const dismissed = sessionStorage.getItem(WELCOME_DISMISSED_FLAG) === "1";
-      const popupOpen = !!document.querySelector('[role="dialog"]');
-      if (dismissed || !popupOpen) {
-        autoStartedRef.current = true;
-        // Tiny delay to ensure DOM is settled
-        setTimeout(() => !cancelled && start(), 400);
-      }
+      const checked = sessionStorage.getItem("movprompt.welcomeChecked") === "1";
+      // Only proceed after WelcomePopup has signalled its check completed
+      if (!dismissed && !checked) return;
+      // Never start while any dialog is open (welcome popup, modals, command palette, etc.)
+      const popupOpen = !!document.querySelector('[role="dialog"][data-state="open"]');
+      if (popupOpen) return;
+      autoStartedRef.current = true;
+      // Tiny delay to ensure DOM is settled
+      setTimeout(() => !cancelled && start(), 400);
     };
 
-    // Wait briefly for WelcomePopup to mount, then poll
+    // Wait briefly for WelcomePopup to mount + query, then poll
     const initial = setTimeout(tryStart, 1500);
     const poll = setInterval(tryStart, 800);
     const cap = setTimeout(() => clearInterval(poll), 30000);

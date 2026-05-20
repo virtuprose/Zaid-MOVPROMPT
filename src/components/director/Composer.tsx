@@ -457,7 +457,7 @@ export function Composer({
             </div>
           )}
 
-          <div className="flex items-center justify-between px-2 pb-2">
+          <div className="flex items-center justify-between gap-2 px-2 pb-2">
             <div className="flex items-center gap-1">
               <Button
                 type="button"
@@ -466,7 +466,7 @@ export function Composer({
                 onClick={() => inputRef.current?.click()}
                 disabled={busy || ingesting || recording || transcribing}
                 aria-label="Attach files"
-                className="h-9 w-9 rounded-full text-muted-foreground hover:text-foreground"
+                className="h-11 w-11 sm:h-9 sm:w-9 rounded-full text-muted-foreground hover:text-foreground"
               >
                 {ingesting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Paperclip className="w-4 h-4" />}
               </Button>
@@ -480,7 +480,7 @@ export function Composer({
                     onClick={handleEnhance}
                     disabled={busy || ingesting || enhancing || recording || transcribing || value.trim().length < 3}
                     aria-label="Enhance description"
-                    className="h-9 w-9 rounded-full text-muted-foreground hover:text-foreground"
+                    className="h-11 w-11 sm:h-9 sm:w-9 rounded-full text-muted-foreground hover:text-foreground"
                   >
                     {enhancing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
                   </Button>
@@ -507,7 +507,7 @@ export function Composer({
                       aria-label={recording ? "Stop recording" : "Record voice brief"}
                       aria-pressed={recording}
                       className={cn(
-                        "relative h-9 w-9 rounded-full text-muted-foreground hover:text-foreground transition-colors",
+                        "relative h-11 w-11 sm:h-9 sm:w-9 rounded-full text-muted-foreground hover:text-foreground transition-colors",
                         recording && "text-destructive hover:text-destructive",
                       )}
                     >
@@ -580,7 +580,7 @@ export function Composer({
                         disabled={sendDisabled}
                         size="icon"
                         aria-label="Send"
-                        className="h-9 w-9 rounded-full bg-primary text-primary-foreground hover:bg-primary/90"
+                        className="h-11 w-11 sm:h-9 sm:w-9 rounded-full bg-primary text-primary-foreground hover:bg-primary/90"
                       >
                         {busy || scanning ? (
                           <Loader2 className="w-4 h-4 animate-spin" />

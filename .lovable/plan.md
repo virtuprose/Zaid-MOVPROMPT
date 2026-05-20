@@ -1,58 +1,100 @@
-# Better Touch Support for Drag Interactions
+# Mobile Polish — Full Sweep
 
-Improve mobile drag-and-drop feel across the two main draggable surfaces — `ElementGrid` (character/reference tiles) and `LocationPickerCard` (story locations) — by tuning long-press + movement thresholds and adding visual snap feedback so swipes register predictably on touch devices.
+A pragmatic, scoped audit + fix pass of the mobile experience across all main routes. No new features, no rewrites — only fixes to layout, spacing, tap targets, overflow, safe-area, and overlay stacking.
+
+## Audit findings (from screenshots at 390×844)
+
+1. **Root `/` shows two overlays stacked at once** — the WelcomePopup *and* the TourOverlay both render on first visit. On a 390px viewport they sit on top of each other and the tour callout is partially hidden behind the popup.
+2. **No iOS safe-area handling** — `rg` for `safe-area`, `env(safe-area-inset…)`, `pb-safe` returns zero hits in `src/`. Anything fixed/sticky at the bottom (Composer, ResultsPanel actions, dialogs, bottom CTAs) will sit under the home indicator on iPhone.
+3. **TopNav** has the right `hidden sm:*` pattern but the icon-only auth Button on small screens drops the label entirely with no `aria-label` fallback — fails `button-name`.
+4. **Tap targets** — many icon-only ghost Buttons use shadcn's `size="icon"` default (36×36) on primary mobile actions; spec is 44×44.
+5. **Gallery `/gallery`** rendered as a blank page in the screenshot — needs a console-log check; likely a loader/auth race or missing empty state on mobile.
+
+Beyond these I'll do a route-by-route pass to catch horizontal-scroll, text clipping, and dialog-width issues.
 
 ## Scope
 
-Touch interaction only. No business logic, no layout/visual redesign beyond drag affordances.
-
-Files touched:
-- `src/components/ElementGrid.tsx` — already has touch long-press logic; tune it and add snap.
-- `src/components/director/LocationPickerCard.tsx` — currently desktop-only HTML5 drag; add equivalent touch support with the same tuned thresholds.
-- `src/lib/touchDrag.ts` *(new)* — small shared helper exporting tuned constants and a `findDropTargetFromPoint` utility so both components stay in sync.
+Routes audited and fixed at 360 / 390 / 414 px:
+- `/` (RootRoute, plus WelcomePopup + Tour)
+- `/auth`
+- `/director` and `/director/:sessionId` — the main product surface
+- `/library`, `/gallery`, `/learn`
+- `/landing`, `/models/:slug`
+- `/account/*` settings pages
+- Shared chrome: `TopNav`, `AnnouncementBanner`, `CommandPalette`, `WalletDrawer`, primary dialogs
 
 ## What changes
 
-### 1. Tuned thresholds (shared)
+### 1. Overlay coordination (first visit on `/`)
 
-Centralize in `src/lib/touchDrag.ts`:
+- In `OnboardingContext` (or wherever WelcomePopup + TourProvider gate visibility), suppress the tour while WelcomePopup is open. Tour starts only after the popup is dismissed/skipped.
+- WelcomePopup gets a mobile-first sizing pass: `max-w-[calc(100vw-2rem)]`, vertical scroll inside the dialog if content exceeds viewport, primary CTA fixed at the bottom with safe-area padding.
 
-- `LONG_PRESS_MS = 180` (down from 250) — quicker to enter drag mode.
-- `MOVE_CANCEL_PX = 10` (was 8) — slightly more tolerant of finger jitter before treating the gesture as scroll.
-- `SNAP_DISTANCE_PX = 24` — within this distance of a tile center, snap the drag indicator to that tile.
-- `HAPTIC_MS = 12` — short tap on enter-drag and on snap.
+### 2. Global safe-area support
 
-### 2. Snap behavior
+- Add Tailwind helpers in `tailwind.config.ts`:
+  - spacing tokens: `safe-top`, `safe-bottom`, `safe-x` mapped to `env(safe-area-inset-*)`.
+- Apply `pb-[env(safe-area-inset-bottom)]` (or the new helper) to:
+  - `Composer` sticky footer in `DirectorChat`
+  - `ResultsPanel` floating action bar
+  - Any `Sheet`/`Dialog` with sticky footer
+  - The simulated safe area in `QaMobile` is already there — leave as is, it's the reference.
+- Add `viewport-fit=cover` to `index.html` viewport meta so iOS reports real insets.
 
-While dragging on touch:
+### 3. Tap targets
 
-- On every `touchmove`, compute the nearest drop target via `document.elementsFromPoint`, then check distance from the touch point to that tile's bounding-box center.
-- If within `SNAP_DISTANCE_PX`, mark it as the "snapped" target (sets `dragOverId`) and fire a one-shot haptic when the snapped target changes.
-- If outside snap distance, fall back to the element directly under the touch (current behavior).
-- Add a subtle scale/ring style on the snapped tile (reuse existing `ring-2 ring-primary/50`) so the user sees the snap commit before lifting.
+- Sweep icon-only Buttons used in primary mobile flows (TopNav menu, composer attach/send, model picker trigger affordances, dialog close, message bubble actions). Apply `min-h-11 min-w-11` per the a11y note.
+- Add missing `aria-label` to icon-only Buttons found during the sweep (TopNav sign-in icon variant is the known one).
 
-### 3. ElementGrid changes
+### 4. Horizontal-scroll & overflow pass
 
-- Replace inline `250`/`8` literals with the shared constants.
-- Wire snap logic into `onTouchMove`.
-- Keep existing `touch-action: none` only while a drag is active (already correct) so vertical scroll is preserved before long-press fires.
+- Add `overflow-x-hidden` to the page-level wrappers that don't already have it.
+- For known offenders (long model names, prompt chips, attachment rows): switch from no-wrap rows to `flex flex-wrap gap-2` at `< sm`, or wrap in a horizontally-scrollable strip with `snap-x` + edge fades.
+- `SceneBreakdown` element category labels, `ResultsPanel` shot header — verify `min-w-0` + `truncate` is applied to grid/flex children so long text wraps cleanly instead of forcing scroll.
 
-### 4. LocationPickerCard changes
+### 5. Dialogs, sheets, popovers on mobile
 
-- Add `onTouchStart`/`Move`/`End` handlers to the location grid buttons mirroring ElementGrid's pattern.
-- Long-press picks up the location; drag indicator snaps to the drop slot at the top of the card.
-- On release inside the slot (or snapped to it) → call `onChoose(loc.index)`.
-- Disable touch drag when `disabled` prop is true.
+- Audit all `Dialog`/`Sheet` usages and ensure:
+  - `max-w-[calc(100vw-1rem)]` and `max-h-[90dvh]` with internal scroll
+  - Footer buttons stack vertically below `sm` (`flex-col sm:flex-row`)
+  - `Popover` content uses `collisionPadding` so it doesn't clip at viewport edges
+- Convert the heaviest dialogs (`ShareDialog`, `WalletDrawer`, `VideoOptionsDialog`, `ConfirmRightsDialog`) where the desktop dialog feels cramped on mobile → use shadcn `Sheet` (bottom) at `< md`.
+
+### 6. Director page (the main product) specifics
+
+- Composer: stick to bottom with safe-area padding, attachment dropzone full-width and tappable, model picker chip stays visible (don't push it off-screen by the textarea growing).
+- Message bubbles: cap `max-w-[85%]` at `< sm` so wide assistant cards don't force horizontal scroll.
+- QuickReplies row: horizontal scroll with `snap-x` and edge fade instead of overflowing or wrapping into 4 lines.
+- Approval/question cards: full-width on mobile with internal vertical scroll if they contain image grids.
+
+### 7. Landing & marketing
+
+- Hero stack: single column under `md`, headline drops to `text-4xl`, CTAs stack with `w-full`.
+- Section paddings collapse from `py-24` to `py-12` under `sm`.
+- Brand/character rows scroll horizontally with `snap-x` instead of wrapping.
+
+### 8. Gallery blank-render bug
+
+- Investigate `/gallery` rendering blank at mobile width — check console + the `Gallery.tsx` mount path. If it's a loader state with no spinner, add a `ResultsSkeleton`-style placeholder.
+
+## Verification
+
+After each section's edits, re-screenshot at 360 / 390 / 414 px using `browser--screenshot` and confirm:
+
+- No horizontal scroll on any route.
+- WelcomePopup and Tour never overlap.
+- Bottom-fixed elements respect a simulated safe-area (use the existing `/qa/mobile` toggle).
+- All primary icon-only Buttons clear 44×44.
+- `/gallery` renders content (or a skeleton).
 
 ## Technical notes
 
-- No new dependencies.
-- Shared helper is plain TS, no React, easy to unit test later.
-- Desktop HTML5 drag-and-drop paths are untouched; only the touch branch is modified.
-- Haptics guarded by `'vibrate' in navigator` (already the pattern in ElementGrid).
+- Files touched (estimated): `tailwind.config.ts`, `index.html`, `src/components/WelcomePopup.tsx`, `src/components/tour/TourProvider.tsx`, `src/components/TopNav.tsx`, `src/components/director/Composer.tsx`, `src/components/director/DirectorChat.tsx`, `src/components/director/QuickReplies.tsx`, `src/components/ResultsPanel.tsx`, `src/components/ShareDialog.tsx`, `src/components/credits/WalletDrawer.tsx`, `src/pages/Landing.tsx`, `src/pages/Gallery.tsx`, plus small sweeps of message/card components.
+- Existing test files (`RtlOverflow.test.tsx`, `ResultsAboveBreakdown.test.tsx`, `ModelPicker.test.tsx`) keep guarding regressions — no new test infra.
 
 ## Out of scope
 
-- Replacing the custom drag system with a library (dnd-kit, etc.).
-- Reordering animations / FLIP transitions.
-- Pointer Events unification — keeping the mouse/touch split since current code relies on it.
+- Redesigning any page or component.
+- Bottom-tab navigation or any new mobile-only IA.
+- PWA install / offline behaviour (already handled elsewhere).
+- RTL polish beyond what existing tests cover.
