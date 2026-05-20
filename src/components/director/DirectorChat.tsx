@@ -1780,10 +1780,10 @@ function DirectorChatInner() {
               );
             }
             const isUser = b.role === "user";
-            if (!isUser) {
+            if (b.role === "assistant") {
               // Hide the streaming placeholder bubble; TypingIndicator covers it.
               if (b.content === "…" || b.content === "") return null;
-              const animate = (b as any).animate === true;
+              const animate = b.animate === true;
               return (
                 <div key={i} className="flex items-start gap-2 motion-safe:animate-fade-up">
                   <AssistantAvatar size="sm" state="idle" className="mt-1" />
@@ -1799,6 +1799,7 @@ function DirectorChatInner() {
                 </div>
               );
             }
+            if (!isUser) return null;
             return (
               <Message key={i} from="user" className="items-end">
                 <MessageContent
