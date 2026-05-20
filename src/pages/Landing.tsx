@@ -277,6 +277,25 @@ function Hero({ scrollY }: { scrollY: MotionValue<number> }) {
       ref={ref}
       className="relative flex min-h-screen items-center justify-center overflow-hidden pt-24"
     >
+      {/* Layer 0: ambient background video */}
+      {!reduce && (
+        <video
+          className="pointer-events-none absolute inset-0 h-full w-full object-cover"
+          src="/hero-bg.mp4"
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="metadata"
+          aria-hidden
+        />
+      )}
+      {/* Dimming overlay over the video for legibility */}
+      <div
+        className="pointer-events-none absolute inset-0 bg-background/70"
+        aria-hidden
+      />
+
       {/* Layer 1: base amber wash anchoring the light source (top-right) */}
       <div
         className="pointer-events-none absolute inset-0"
