@@ -170,8 +170,13 @@ function DirectorChatInner() {
   const [busy, setBusy] = useState(false);
   const [phase, setPhase] = useState<DirectorPhase>("thinking");
   const [resetOpen, setResetOpen] = useState(false);
+  const [showJumpLatest, setShowJumpLatest] = useState(false);
+  const [refreshSignal, setRefreshSignal] = useState(0);
   const sessionIdRef = useRef<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const isAtBottomRef = useRef(true);
+  const lastBubbleCountRef = useRef(0);
+  const bubblesRef = useRef<Bubble[]>([]);
   const lastSendRef = useRef<{ text: string; attachments: Attachment[] } | null>(null);
   const hydratedRef = useRef<string | null>(null);
   const localScope = routeSessionId ?? "new";
@@ -227,7 +232,26 @@ function DirectorChatInner() {
       sessionIdRef.current = data.id;
       const loaded = (data.messages as Bubble[]) || [WELCOME];
       const remote = loaded.length ? loaded : [WELCOME];
-      setBubbles((prev) => (remote.length >= prev.length ? remote : prev));
+      setBubbles((prev) => {
+        if (remote.length > prev.length) return remote;
+        if (remote.length === prev.length) {
+          // Merge fresher story_render acts from server (jobs that finished while away).
+          return prev.map((b, i) => {
+            const r = remote[i];
+            if (b?.role === "story_render" && r?.role === "story_render") {
+              const localDone = b.data.acts.filter(
+                (a) => a.status === "completed" || a.status === "failed",
+              ).length;
+              const remoteDone = r.data.acts.filter(
+                (a) => a.status === "completed" || a.status === "failed",
+              ).length;
+              if (remoteDone > localDone) return r;
+            }
+            return b;
+          });
+        }
+        return prev;
+      });
 
       // Also merge any video_jobs for this session that aren't already represented.
       const { data: jobs } = await supabase
@@ -305,9 +329,78 @@ function DirectorChatInner() {
     };
   }, [bubbles]);
 
+  // Smart autoscroll: only pull to bottom when the user is already pinned there,
+  // or when a brand-new bubble appears (so a freshly-sent message is visible).
+  // Status updates inside existing bubbles (e.g. ActStrip polling) never yank.
   useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
+    bubblesRef.current = bubbles;
+    const el = scrollRef.current;
+    if (!el) return;
+    const prevCount = lastBubbleCountRef.current;
+    const grew = bubbles.length > prevCount;
+    lastBubbleCountRef.current = bubbles.length;
+    if (isAtBottomRef.current || grew) {
+      // Defer to next frame so DOM has the new content height
+      requestAnimationFrame(() => {
+        el.scrollTo({ top: el.scrollHeight, behavior: isAtBottomRef.current ? "smooth" : "auto" });
+      });
+      if (isAtBottomRef.current) setShowJumpLatest(false);
+    } else {
+      // New content arrived while user is reading earlier messages
+      setShowJumpLatest(true);
+    }
   }, [bubbles]);
+
+  // Track scroll position to know whether to autoscroll on next update.
+  const handleScroll = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const distance = el.scrollHeight - el.scrollTop - el.clientHeight;
+    const atBottom = distance < 80;
+    isAtBottomRef.current = atBottom;
+    if (atBottom && showJumpLatest) setShowJumpLatest(false);
+  };
+
+  const jumpToLatest = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    isAtBottomRef.current = true;
+    el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+    setShowJumpLatest(false);
+  };
+
+  // When the tab/page becomes visible again, kick polling so the strip refreshes
+  // immediately instead of waiting up to 4s.
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === "visible") {
+        setRefreshSignal((n) => n + 1);
+      }
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", onVisible);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", onVisible);
+    };
+  }, []);
+
+  // Persist on unmount if any acts are still rendering, so navigating to another
+  // tool right after a poll tick never loses progress.
+  useEffect(() => {
+    return () => {
+      const snap = bubblesRef.current;
+      const hasPending = snap.some(
+        (b) =>
+          b.role === "story_render" &&
+          b.data.acts.some((a) => a.status === "queued" || a.status === "processing"),
+      );
+      if (hasPending && sessionIdRef.current) {
+        void persist(snap, null, null);
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Debounced localStorage save of in-progress draft.
   useEffect(() => {
@@ -1719,9 +1812,11 @@ function DirectorChatInner() {
     <div className="flex flex-col gap-2 h-[calc(100dvh-120px)] pb-[env(safe-area-inset-bottom)]">
 
 
+      <div className="relative flex-1 min-h-0">
       <div
         ref={scrollRef}
-        className="relative flex-1 overflow-y-auto border-[hsl(240_5%_13%)] p-3 sm:p-4 border-0 rounded-none"
+        onScroll={handleScroll}
+        className="absolute inset-0 overflow-y-auto border-[hsl(240_5%_13%)] p-3 sm:p-4 border-0 rounded-none"
       >
         {isEmpty && (
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
@@ -1998,6 +2093,7 @@ function DirectorChatInner() {
                       stitchStatus={b.data.stitchStatus}
                       stitchedVideoUrl={b.data.stitchedVideoUrl}
                       disabled={busy}
+                      refreshSignal={refreshSignal}
                       onActsUpdate={(next) => handleActsUpdate(i, next)}
                       onStitch={() => void handleStitch(i)}
                     />
@@ -2105,6 +2201,16 @@ function DirectorChatInner() {
           )}
           {pendingApproval && <AwaitingApprovalPill />}
         </div>
+      </div>
+      {showJumpLatest && (
+        <button
+          type="button"
+          onClick={jumpToLatest}
+          className="absolute left-1/2 -translate-x-1/2 bottom-3 z-20 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-background/90 border border-border/60 text-xs text-foreground/90 shadow-lg backdrop-blur hover:bg-background motion-safe:animate-fade-up"
+        >
+          Jump to latest ↓
+        </button>
+      )}
       </div>
 
       {pendingApproval && <BottomApprovalBar request={pendingApproval} />}

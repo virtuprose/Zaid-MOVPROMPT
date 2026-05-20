@@ -19,11 +19,12 @@ type Props = {
   stitchStatus?: "idle" | "running" | "done" | "failed";
   stitchedVideoUrl?: string;
   disabled?: boolean;
+  refreshSignal?: number;
   onActsUpdate: (next: ActTile[]) => void;
   onStitch: () => void;
 };
 
-export function ActStrip({ storyRenderId, title, acts, stitchStatus, stitchedVideoUrl, disabled, onStitch, onActsUpdate }: Props) {
+export function ActStrip({ storyRenderId, title, acts, stitchStatus, stitchedVideoUrl, disabled, refreshSignal, onStitch, onActsUpdate }: Props) {
   const pending = useMemo(
     () => acts.filter((a) => a.status === "queued" || a.status === "processing"),
     [acts],
@@ -31,7 +32,8 @@ export function ActStrip({ storyRenderId, title, acts, stitchStatus, stitchedVid
   const allDone = acts.length > 0 && acts.every((a) => a.status === "completed");
   const anyFailed = acts.some((a) => a.status === "failed");
 
-  // Poll pending acts every 4s.
+  // Poll pending acts every 4s, and immediately whenever refreshSignal bumps
+  // (e.g. tab returned to foreground).
   useEffect(() => {
     if (pending.length === 0) return;
     let cancelled = false;
@@ -62,7 +64,7 @@ export function ActStrip({ storyRenderId, title, acts, stitchStatus, stitchedVid
       cancelled = true;
       window.clearInterval(handle);
     };
-  }, [pending, acts, onActsUpdate]);
+  }, [pending, acts, onActsUpdate, refreshSignal]);
 
   const completedCount = acts.filter((a) => a.status === "completed").length;
 
