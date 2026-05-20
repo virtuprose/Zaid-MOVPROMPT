@@ -1,37 +1,40 @@
-# Free scroll + safe navigation during story render
+# Better progress UX for story rendering
 
-Two small, focused changes in the Director chat. No backend changes — render jobs already run server-side and survive navigation.
+Quality and pipeline stay the same (Seedance 2.0 ref, 1080p, 15s, audio, 4 acts in parallel). The wait isn't going away — but right now the UI gives you nothing while it happens. Three small client-only changes make it feel much faster.
 
-## 1. Stop hijacking the scroll while acts are rendering
+## 1. Tighter, adaptive polling
 
-Today `DirectorChat.tsx` (lines 308–310) force-scrolls to the bottom on every `bubbles` change. Because `ActStrip` polls every 4s and pushes new bubble state via `onActsUpdate`, the chat yanks itself back to the bottom every 4 seconds while you try to read older messages.
+In `src/components/director/ActStrip.tsx`:
 
-Fix in `src/components/director/DirectorChat.tsx`:
+- Currently polls every 4s. Switch to **2s for the first 60s**, then **4s after** (renders that finish fast feel near-instant; long renders don't hammer the function).
+- Reset back to 2s if a new act flips from `queued` → `processing`.
+- Keep the existing immediate poll on tab focus / visibility (already wired via `refreshSignal`).
 
-- Track whether the user is currently "pinned to bottom" using a ref (`isAtBottomRef`).
-- Update it on the scroll container's `onScroll` (threshold: within ~80px of the bottom).
-- Only call `scrollTo({ top: scrollHeight, behavior: "smooth" })` when `isAtBottomRef.current === true`.
-- When the user has scrolled up and new content arrives, show a small floating "Jump to latest" pill (bottom-center of the scroll area) that scrolls to bottom and re-pins. Hide it when pinned.
-- Keep the existing scroll-to-bottom on first mount / when a fresh user message is sent (force scroll in those two cases regardless of pin state).
+## 2. Per-act progress on each tile
 
-Result: while 4 Seedance acts are rendering you can freely scroll up to re-read the brief, location pick, or earlier bubbles. A pill appears if you want to jump back.
+Still in `ActStrip.tsx`, replace the static spinner with a richer state:
 
-## 2. Make leaving the tab safe (no lost progress)
+- **Elapsed timer** per tile (`0:42`) that ticks every second from the moment the act flips to `processing`.
+- **Thin shimmer progress bar** under each tile using a soft cyan→amber gradient (project tokens), looping every ~3s — purely cosmetic but it removes the "frozen" feeling.
+- **Status word** under the bar: "Queued" → "Rendering" → "Finalizing" (we flip to Finalizing after 90s, since that's typically when fal is muxing audio).
+- **Footer line** on the strip: "Typically 3–6 min on Cinematic · 1080p · 15s · audio" plus a live "X / 4 done · longest elapsed Y:ZZ".
 
-Render survival is already mostly correct: Seedance jobs run server-side, `handleActsUpdate` persists the `acts` array to `director_sessions.messages` on each poll tick, and `ActStrip` resumes polling when the session is reopened. The remaining gaps:
+## 3. Preview the first act as soon as it lands
 
-- The route loader at lines 211–230 keeps the local copy if it's longer than the server copy. After navigating back the local cache may be stale (jobs that finished while away). Change the merge so `story_render` bubbles always take the server's `acts` snapshot when the server version has more `completed`/`failed` acts than the cached one. Other bubble kinds keep current behavior.
-- Add a `visibilitychange` + `focus` listener that re-runs the existing video-job / acts poll once when the tab/page becomes visible again, so the strip refreshes immediately instead of waiting up to 4s.
-- Persist the `acts` snapshot on `beforeunload` / route change (call `persist(bubbles, null, null)` synchronously when `DirectorChat` unmounts if there are any `queued`/`processing` acts). This protects against an unmount happening mid-poll-tick before the latest update was saved.
+Today the ActStrip waits for all 4 acts before the user sees anything playable.
 
-No changes to `story-render`, `story-stitch`, `director-agent`, or the database schema. No changes to the sidebar/`Director.tsx`.
+- The moment any tile flips to `completed`, expand it inline with a small autoplay-muted `<video>` (using the existing `VideoBubble`-style chrome, no new component needed if it stays simple).
+- A subtle "Act 1 ready · 3 more rendering…" banner above the strip.
+- When all 4 finish, the "Stitch into one video" button lights up (existing behavior).
 
 ## Files touched
 
-- `src/components/director/DirectorChat.tsx` — pinned-scroll logic, "Jump to latest" pill, smarter server-merge for `story_render`, visibility/focus re-poll, unmount-persist.
-- `src/components/director/ActStrip.tsx` — minor: expose a manual `refresh()` (or accept a `refreshSignal` prop) so the parent's visibility listener can trigger an immediate poll.
+- `src/components/director/ActStrip.tsx` — adaptive polling, per-tile timer + shimmer + status word, inline preview of completed acts, footer telemetry.
+
+No backend, no schema, no API surface changes.
 
 ## Out of scope
 
-- Background push notification when a render finishes (could come later).
-- Multi-tab sync of the same session.
+- Changing model, resolution, duration, or audio (you chose to keep quality).
+- Background browser notification when the render completes in another tab.
+- Switching from polling to Realtime/SSE.
