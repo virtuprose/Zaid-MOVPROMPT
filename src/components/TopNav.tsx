@@ -9,7 +9,7 @@ import {
   CreditCard,
   Globe,
   ChevronRight,
-  PlayCircle,
+  
   GraduationCap,
   Gift,
   LogOut,
