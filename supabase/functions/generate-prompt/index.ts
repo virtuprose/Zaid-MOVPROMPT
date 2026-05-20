@@ -315,7 +315,13 @@ serve(async (req) => {
     }
     const variantBlock = variantHints ? `\n\n═══ VARIANT-SPECIFIC RULES ═══\n${variantHints}` : "";
 
-    const composedSystemPrompt = `${BASE_SYSTEM_PROMPT}\n\n${docSummary}\n\n${systemAddendum}${variantBlock}\n\n═══ FEW-SHOT EXAMPLE ═══\n${examples}`;
+    // Timeline Prompting addendum — appended when the user enables the toggle.
+    // Default beat duration of 10s; for multishot, beats are scoped per shot.
+    const timelineBlock = timelineEnabled === true
+      ? timelineAddendum({ defaultDuration: 10, perShot: workflowType === "multishot" })
+      : "";
+
+    const composedSystemPrompt = `${BASE_SYSTEM_PROMPT}\n\n${docSummary}\n\n${systemAddendum}${variantBlock}${timelineBlock}\n\n═══ FEW-SHOT EXAMPLE ═══\n${examples}`;
 
     let userText = `Workflow: ${workflowType}\nTarget Model: ${modelLabels[targetModel] || targetModel}\nActive Agent: ${displayName}\n\n`;
     if (description?.trim()) {
