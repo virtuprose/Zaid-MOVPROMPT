@@ -548,7 +548,7 @@ const TOOLS = [
     type: "function",
     function: {
       name: "request_story_render",
-      description: "Story mode step 5. Kick off 8 parallel Seedance 2.0 15-second renders (one per act), all sharing the locked character + prop + chosen location refs. The frontend creates an 8-tile strip + a Stitch button once all acts finish. Use ONLY in story mode after the user picks a location.",
+      description: "Story mode step 5. Kick off 4 parallel Seedance 2.0 15-second renders (one per act), all sharing the locked character + prop + chosen location refs. The frontend creates a 4-tile strip + a Stitch button once all acts finish. Use ONLY in story mode after the user picks a location.",
       parameters: {
         type: "object",
         properties: {
@@ -557,10 +557,10 @@ const TOOLS = [
           title: { type: "string", description: "Short title for the stitched story (max 60 chars)." },
           act_prompts: {
             type: "array",
-            minItems: 8,
-            maxItems: 8,
+            minItems: 4,
+            maxItems: 4,
             items: { type: "string" },
-            description: "Exactly 8 Seedance 2.0 prompts in order. Each must reference @Image1 (character), @Image2 (prop), @Image3 (location) where applicable.",
+            description: "Exactly 4 Seedance 2.0 prompts in order. Each must reference @Image1 (character), @Image2 (prop), @Image3 (location) where applicable.",
           },
           directors_note: { type: "string" },
         },
