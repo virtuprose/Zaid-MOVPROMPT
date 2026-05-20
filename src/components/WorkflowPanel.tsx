@@ -364,6 +364,57 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
     try { localStorage.setItem("movprompt.timelinePrompting", timelineEnabled ? "1" : "0"); } catch { /* ignore */ }
   }, [timelineEnabled]);
   const supportsTimeline = useMemo(() => supportsTimelinePrompting(selectedModel), [selectedModel]);
+
+  // Per-model target video duration (informs the generated prompt's pacing).
+  const modelControls = useMemo(() => getModelControls(selectedModel), [selectedModel]);
+  const durationOptions = useMemo<Array<number | "auto">>(() => {
+    const opts: Array<number | "auto"> = [];
+    if (modelControls.durations?.length) {
+      opts.push(...modelControls.durations);
+    } else if (modelControls.durationMin && modelControls.durationMax) {
+      const step = modelControls.durationStep ?? 1;
+      for (let n = modelControls.durationMin; n <= modelControls.durationMax; n += step) opts.push(n);
+    } else {
+      opts.push(5, 10);
+    }
+    if (modelControls.durationAuto) opts.push("auto");
+    return opts;
+  }, [modelControls]);
+  const [targetDuration, setTargetDuration] = useState<number | "auto">(() => {
+    const fallback = (modelControls.defaults?.duration as number | "auto" | undefined) ?? 10;
+    try {
+      const saved = localStorage.getItem(`movprompt.targetDuration.${selectedModel}`);
+      if (saved === "auto" && modelControls.durationAuto) return "auto";
+      const n = saved ? Number(saved) : NaN;
+      if (Number.isFinite(n) && durationOptions.includes(n as number)) return n;
+    } catch { /* ignore */ }
+    return fallback;
+  });
+  useEffect(() => {
+    // Re-resolve when model changes — snap to nearest allowed.
+    const fallback = (modelControls.defaults?.duration as number | "auto" | undefined) ?? 10;
+    let next: number | "auto" = fallback;
+    try {
+      const saved = localStorage.getItem(`movprompt.targetDuration.${selectedModel}`);
+      if (saved === "auto" && modelControls.durationAuto) next = "auto";
+      else {
+        const n = saved ? Number(saved) : NaN;
+        if (Number.isFinite(n) && durationOptions.includes(n as number)) next = n;
+      }
+    } catch { /* ignore */ }
+    if (next !== "auto" && !durationOptions.includes(next)) {
+      // snap
+      const nums = durationOptions.filter((d): d is number => typeof d === "number");
+      if (nums.length) {
+        next = nums.reduce((best, d) => Math.abs(d - (next as number)) < Math.abs(best - (next as number)) ? d : best, nums[0]);
+      }
+    }
+    setTargetDuration(next);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedModel]);
+  useEffect(() => {
+    try { localStorage.setItem(`movprompt.targetDuration.${selectedModel}`, String(targetDuration)); } catch { /* ignore */ }
+  }, [targetDuration, selectedModel]);
   const activeSlots = contract.supportsTwoFrameToggle && twoFrameMode ? 2 : contract.slots;
   const workflowType = deriveWorkflowType(selectedModel, activeSlots, contract.supportsMultiShotToggle && multiShotMode);
 
