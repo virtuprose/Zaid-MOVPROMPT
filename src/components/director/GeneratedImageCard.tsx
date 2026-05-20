@@ -202,22 +202,55 @@ export function GeneratedImageCard({ data, onRegenerate, onUnpinSubject }: Props
             </div>
           );
         })}
-        {inProgress && data.mode === "storyboard_panels" &&
-          Array.from({ length: Math.max(0, progress!.total - data.images.length) }).map((_, k) => {
-            const shotNum = data.images.length + k + 1;
-            const isNext = k === 0;
-            return (
-              <div
-                key={`ph-${shotNum}`}
-                className={cn(
-                  "relative rounded-lg overflow-hidden border border-border/30 bg-muted/20 aspect-square",
-                  isNext && "animate-pulse",
-                )}
-              >
-                <div className="absolute top-1 left-1 text-[10px] font-medium bg-background/60 text-muted-foreground px-1.5 py-0.5 rounded">
-                  {shotNum}
+        {data.mode === "storyboard_panels" && (inProgress || (data.failedIndices?.length ?? 0) > 0) &&
+          (() => {
+            const total = progress?.total ?? data.images.length + (data.failedIndices?.length ?? 0);
+            const filled = new Set(data.images.map((img, i) => img.shot_index ?? i + 1));
+            const failed = new Set(data.failedIndices ?? []);
+            const slots: number[] = [];
+            for (let s = 1; s <= total; s++) if (!filled.has(s)) slots.push(s);
+            const nextPending = slots.find((s) => !failed.has(s));
+            return slots.map((shotNum) => {
+              const isFailed = failed.has(shotNum);
+              const isNext = inProgress && shotNum === nextPending;
+              return (
+                <div
+                  key={`ph-${shotNum}`}
+                  className={cn(
+                    "relative rounded-lg overflow-hidden border aspect-square",
+                    isFailed
+                      ? "border-destructive/40 bg-destructive/10"
+                      : "border-border/30 bg-muted/20",
+                    isNext && "animate-pulse",
+                  )}
+                >
+                  <div className="absolute top-1 left-1 text-[10px] font-medium bg-background/60 text-muted-foreground px-1.5 py-0.5 rounded">
+                    {shotNum}
+                  </div>
+                  {isFailed && (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <span className="text-[10px] uppercase tracking-wide text-destructive/90 font-medium">Failed</span>
+                    </div>
+                  )}
+                  {isFailed && onRegenerate && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onRegenerate(
+                          `Regenerate panel ${shotNum} — keep the same anchor reference and locked style, just re-roll this one shot.`,
+                        )
+                      }
+                      className="absolute bottom-1 right-1 bg-background/85 hover:bg-background text-foreground text-[10px] font-medium px-2 py-1 rounded inline-flex items-center gap-1"
+                      title={`Retry panel ${shotNum}`}
+                    >
+                      <RotateCcw className="h-3 w-3" />
+                      Retry
+                    </button>
+                  )}
                 </div>
-              </div>
+              );
+            });
+          })()}
             );
           })}
       </div>
