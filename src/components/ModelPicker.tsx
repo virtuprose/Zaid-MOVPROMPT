@@ -13,7 +13,7 @@ interface ModelPickerProps {
   onModelChange: (v: string) => void;
 }
 
-const ALL_PROVIDERS = ["Veo", "Kling", "Seedance", "Sora", "Runway", "Wan", "Hailuo", "Pika"];
+
 
 const GROUP_META: Record<string, { short: string; company: string; order: number }> = {
   "Google": { short: "VEO", company: "by Google", order: 1 },
