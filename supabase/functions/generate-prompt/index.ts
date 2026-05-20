@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
-import { BASE_SYSTEM_PROMPT } from "./experts/_base.ts";
+import { BASE_SYSTEM_PROMPT, timelineAddendum } from "./experts/_base.ts";
 import { getAgent } from "./experts/registry.ts";
 import { getAgentProfile } from "./experts/profile-loader.ts";
 import { getKlingVariantHints } from "./experts/kling.ts";
