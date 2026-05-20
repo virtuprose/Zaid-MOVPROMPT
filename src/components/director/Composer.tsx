@@ -332,7 +332,7 @@ export function Composer({
                   return;
                 }
               }
-              if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+              if (e.key === "Enter" && !e.shiftKey && !(e.nativeEvent as any).isComposing && e.keyCode !== 229) {
                 e.preventDefault();
                 if (!busy) onSend();
               }
@@ -569,7 +569,7 @@ export function Composer({
                 ? "Remove flagged images to continue"
                 : scanning
                   ? "Scanning attachments…"
-                  : "⌘/Ctrl + Enter to send";
+                  : "Enter to send · Shift+Enter for newline";
               return (
                 <div className="flex items-center gap-2">
 
