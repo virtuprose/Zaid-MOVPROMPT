@@ -160,6 +160,7 @@ function DirectorChatInner() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const lastSendRef = useRef<{ text: string; attachments: Attachment[] } | null>(null);
   const hydratedRef = useRef<string | null>(null);
+  const askedIntentRef = useRef(false);
   const localScope = routeSessionId ?? "new";
   const { request: requestApproval } = useApproval();
 
