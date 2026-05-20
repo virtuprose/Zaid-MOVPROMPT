@@ -939,6 +939,23 @@ function DirectorChatInner() {
               content: `[Asked the user to describe the opening key frame scene before choosing aspect ratio. Waiting for their description.]`,
             });
           }
+        } else if (b.role === "location_picker") {
+          if (b.chosenIndex) {
+            history.push({
+              role: "user",
+              content: `Location chosen: ${b.chosenIndex}`,
+            });
+          } else {
+            history.push({
+              role: "assistant",
+              content: `[Generated the story asset bundle (1 character + 1 prop + ${b.payload.locations.length} locations) via generate_story_bundle. Waiting for the user to pick one location.]`,
+            });
+          }
+        } else if (b.role === "story_render") {
+          history.push({
+            role: "assistant",
+            content: `[Launched 4 parallel Seedance 2.0 acts via request_story_render — title "${b.data.title}", aspect ${b.data.aspect}. Acts are rendering; the client will stitch them into one ~1-minute video when they finish.]`,
+          });
         }
 
       }
