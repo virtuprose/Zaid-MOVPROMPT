@@ -2201,6 +2201,16 @@ function DirectorChatInner() {
           {pendingApproval && <AwaitingApprovalPill />}
         </div>
       </div>
+      {showJumpLatest && (
+        <button
+          type="button"
+          onClick={jumpToLatest}
+          className="absolute left-1/2 -translate-x-1/2 bottom-3 z-20 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-background/90 border border-border/60 text-xs text-foreground/90 shadow-lg backdrop-blur hover:bg-background motion-safe:animate-fade-up"
+        >
+          Jump to latest ↓
+        </button>
+      )}
+      </div>
 
       {pendingApproval && <BottomApprovalBar request={pendingApproval} />}
 
