@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import logoMark from "@/assets/logo-mark-white.svg";
+import directorAvatar from "@/assets/director-avatar.png";
 
 export type AvatarState = "idle" | "thinking" | "listening" | "success" | "scanning" | "nod";
 
@@ -49,11 +49,10 @@ export function AssistantAvatar({ state = "idle", size = "md", className }: Prop
         <span className="pointer-events-none absolute inset-[-3px] rounded-full border border-accent/70 motion-safe:animate-ping" />
       )}
       <img
-        src={logoMark}
+        src={directorAvatar}
         alt=""
         className={cn(
-          "relative z-10 h-[60%] w-[60%] object-contain",
-          "drop-shadow-[0_0_4px_hsl(var(--primary)/0.6)]",
+          "relative z-10 h-full w-full object-cover rounded-full",
         )}
       />
     </div>
