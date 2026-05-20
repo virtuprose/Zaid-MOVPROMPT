@@ -12,6 +12,7 @@ export type GeneratedImageBubbleData = {
   progress?: { done: number; total: number };
   subjectSheet?: boolean;
   subjectKind?: "character" | "product";
+  failedIndices?: number[];
 };
 
 type Props = {
