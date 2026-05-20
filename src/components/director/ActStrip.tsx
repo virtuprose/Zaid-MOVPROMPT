@@ -38,13 +38,25 @@ const statusWord = (status: ActTile["status"], elapsedMs: number) => {
   return elapsedMs > 90_000 ? "Finalizing" : "Rendering";
 };
 
-export function ActStrip({ title, acts, stitchStatus, stitchedVideoUrl, disabled, refreshSignal, onStitch, onActsUpdate }: Props) {
+export function ActStrip({ storyRenderId, title, acts, stitchStatus, stitchedVideoUrl, disabled, refreshSignal, onStitch, onActsUpdate }: Props) {
   const pending = useMemo(
     () => acts.filter((a) => a.status === "queued" || a.status === "processing"),
     [acts],
   );
   const allDone = acts.length > 0 && acts.every((a) => a.status === "completed");
   const anyFailed = acts.some((a) => a.status === "failed");
+
+  // Fire a one-shot event when all acts finish so the chat can surface a "Jump to Stitch" pill.
+  const firedReadyRef = useRef(false);
+  useEffect(() => {
+    if (allDone && !stitchedVideoUrl && !firedReadyRef.current) {
+      firedReadyRef.current = true;
+      window.dispatchEvent(
+        new CustomEvent("vidoprompt:acts-ready", { detail: { storyRenderId } }),
+      );
+    }
+    if (!allDone) firedReadyRef.current = false;
+  }, [allDone, stitchedVideoUrl, storyRenderId]);
 
   // Track when each act first entered "processing" so we can show an elapsed timer.
   const startedAtRef = useRef<Record<string, number>>({});
@@ -135,7 +147,7 @@ export function ActStrip({ title, acts, stitchStatus, stitchedVideoUrl, disabled
   const showFirstReadyBanner = !!firstCompleted && !allDone && !stitchedVideoUrl;
 
   return (
-    <div className="rounded-2xl bg-muted/15 p-4 sm:p-5 space-y-4 max-w-2xl">
+    <div className="rounded-2xl bg-muted/15 p-4 sm:p-5 space-y-4 max-w-2xl" data-stitch-anchor={storyRenderId}>
       <div className="flex items-center justify-between gap-3">
         <div>
           <div className="text-xs uppercase tracking-wide text-muted-foreground/80">
@@ -274,6 +286,7 @@ export function ActStrip({ title, acts, stitchStatus, stitchedVideoUrl, disabled
             disabled={disabled || !allDone || stitchStatus === "running"}
             onClick={onStitch}
             className="rounded-full gap-1.5"
+            data-stitch-button={storyRenderId}
           >
             <Film className="h-3.5 w-3.5" />
             {stitchStatus === "running" ? "Stitching…" : stitchStatus === "failed" ? "Retry stitch" : "Stitch into one video"}

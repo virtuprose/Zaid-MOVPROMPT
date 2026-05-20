@@ -171,6 +171,31 @@ function DirectorChatInner() {
   const [phase, setPhase] = useState<DirectorPhase>("thinking");
   const [resetOpen, setResetOpen] = useState(false);
   const [showJumpLatest, setShowJumpLatest] = useState(false);
+  const [readyToStitch, setReadyToStitch] = useState<string | null>(null);
+
+  // Listen for "all 4 acts ready" events from ActStrip to show a Jump-to-Stitch pill.
+  useEffect(() => {
+    const onReady = (e: Event) => {
+      const id = (e as CustomEvent<{ storyRenderId: string }>).detail?.storyRenderId;
+      if (id) setReadyToStitch(id);
+    };
+    window.addEventListener("vidoprompt:acts-ready", onReady);
+    return () => window.removeEventListener("vidoprompt:acts-ready", onReady);
+  }, []);
+
+  const jumpToStitch = () => {
+    if (!readyToStitch) return;
+    const btn = document.querySelector<HTMLButtonElement>(
+      `[data-stitch-button="${readyToStitch}"]`,
+    );
+    if (!btn) return;
+    btn.scrollIntoView({ behavior: "smooth", block: "center" });
+    btn.classList.add("ring-2", "ring-primary", "ring-offset-2", "ring-offset-background");
+    window.setTimeout(() => {
+      btn.classList.remove("ring-2", "ring-primary", "ring-offset-2", "ring-offset-background");
+    }, 2200);
+    setReadyToStitch(null);
+  };
   const [refreshSignal, setRefreshSignal] = useState(0);
   const sessionIdRef = useRef<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -2209,6 +2234,16 @@ function DirectorChatInner() {
           className="absolute left-1/2 -translate-x-1/2 bottom-3 z-20 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-background/90 border border-border/60 text-xs text-foreground/90 shadow-lg backdrop-blur hover:bg-background motion-safe:animate-fade-up"
         >
           Jump to latest ↓
+        </button>
+      )}
+      {readyToStitch && (
+        <button
+          type="button"
+          onClick={jumpToStitch}
+          className="absolute left-1/2 -translate-x-1/2 bottom-14 z-20 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-primary to-accent text-primary-foreground text-xs font-medium shadow-xl hover:opacity-95 motion-safe:animate-fade-up"
+        >
+          <Film className="h-3.5 w-3.5" />
+          All 4 acts ready — Stitch story ↓
         </button>
       )}
       </div>
