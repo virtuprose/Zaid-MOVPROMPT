@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import {
   motion,
@@ -21,6 +21,10 @@ import {
   Unlock,
   ChevronLeft,
   ChevronRight,
+  Upload,
+  Sparkles,
+  FileText,
+  Film,
 } from "lucide-react";
 import { Seo } from "@/components/Seo";
 import { cn } from "@/lib/utils";
@@ -492,20 +496,453 @@ function Features() {
     <section id="features" className="relative px-6 py-24 md:py-32">
       <div className="mx-auto max-w-6xl">
         <FadeUp className="mx-auto max-w-2xl text-center">
-          <SectionEyebrow>Workflow</SectionEyebrow>
-          <h2 className="mt-5 font-display text-[32px] font-bold leading-tight tracking-[-0.02em] text-foreground md:text-[40px]">
+          <SectionEyebrow>How It Works</SectionEyebrow>
+          <h2 id="how" className="mt-5 scroll-mt-24 font-display text-[32px] font-bold leading-tight tracking-[-0.02em] text-foreground md:text-[40px]">
             From Frame to Film in Seconds
           </h2>
           <p className="mt-4 text-[16px] text-muted-foreground">
-            One AI director. Four ways in. From a single frame to a full storyboard — directed end-to-end.
+            Drop a still. Chat with the Director. Ship a cinematic prompt — and the video that follows.
           </p>
         </FadeUp>
 
-        <div id="how" className="mt-16">
-          <FeatureDeck />
+        <div className="mt-14">
+          <HowItWorksWalkthrough />
+        </div>
+
+        <div className="mt-24">
+          <FadeUp className="mx-auto max-w-2xl text-center">
+            <SectionEyebrow>Workflows</SectionEyebrow>
+            <h3 className="mt-5 font-display text-[24px] font-bold tracking-[-0.02em] text-foreground md:text-[28px]">
+              Four ways in
+            </h3>
+          </FadeUp>
+          <div className="mt-10">
+            <FeatureDeck />
+          </div>
         </div>
       </div>
     </section>
+  );
+}
+
+/* ---------------- How It Works · Animated Walkthrough ---------------- */
+
+const WALKTHROUGH_STEPS = [
+  {
+    icon: Upload,
+    label: "Drop a frame",
+    hint: "Any still — your storyboard sketch, a screen-grab, a generated image.",
+  },
+  {
+    icon: Sparkles,
+    label: "Chat with the Director",
+    hint: "It reads the shot. Asks the right questions. Camera, light, motion.",
+  },
+  {
+    icon: FileText,
+    label: "Get the prompt",
+    hint: "A model-ready prompt with motion cues, lensing and negative prompt.",
+  },
+  {
+    icon: Film,
+    label: "Generate the shot",
+    hint: "Send it to Kling, Veo, Seedance — or batch a full storyboard.",
+  },
+];
+
+function HowItWorksWalkthrough() {
+  const reduce = useReducedMotion();
+  const ref = useRef<HTMLDivElement>(null);
+  const inView = useInView(ref, { amount: 0.4 });
+  const [step, setStep] = useState(0);
+
+  useEffect(() => {
+    if (!inView || reduce) return;
+    const id = window.setInterval(() => {
+      setStep((s) => (s + 1) % WALKTHROUGH_STEPS.length);
+    }, 3200);
+    return () => window.clearInterval(id);
+  }, [inView, reduce]);
+
+  return (
+    <div ref={ref} className="mx-auto grid max-w-5xl gap-8 md:grid-cols-[1.2fr_1fr] md:items-stretch">
+      {/* Stage */}
+      <div className="relative overflow-hidden rounded-2xl border border-border bg-card/60 p-5 backdrop-blur-sm">
+        {/* Ambient glow */}
+        <motion.div
+          aria-hidden
+          className="pointer-events-none absolute -inset-24"
+          animate={
+            reduce
+              ? undefined
+              : { background: [
+                  "radial-gradient(40% 40% at 30% 30%, hsl(var(--accent) / 0.18), transparent 70%)",
+                  "radial-gradient(40% 40% at 70% 60%, hsl(var(--primary) / 0.18), transparent 70%)",
+                  "radial-gradient(40% 40% at 30% 30%, hsl(var(--accent) / 0.18), transparent 70%)",
+                ] }
+          }
+          transition={{ duration: 9, repeat: Infinity, ease: "linear" }}
+        />
+
+        <div className="relative">
+          {/* Window chrome */}
+          <div className="mb-4 flex items-center gap-2">
+            <span className="h-2.5 w-2.5 rounded-full bg-destructive/70" />
+            <span className="h-2.5 w-2.5 rounded-full bg-accent/70" />
+            <span className="h-2.5 w-2.5 rounded-full bg-primary/70" />
+            <span className="ml-3 font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+              movprompt · session
+            </span>
+          </div>
+
+          <div className="relative h-[320px] sm:h-[340px]">
+            <WalkUpload active={step === 0} reduce={!!reduce} />
+            <WalkChat active={step === 1} reduce={!!reduce} />
+            <WalkPrompt active={step === 2} reduce={!!reduce} />
+            <WalkVideo active={step === 3} reduce={!!reduce} />
+          </div>
+        </div>
+      </div>
+
+      {/* Steps rail */}
+      <ol className="flex flex-col justify-center gap-3">
+        {WALKTHROUGH_STEPS.map((s, i) => {
+          const Icon = s.icon;
+          const active = i === step;
+          const done = i < step;
+          return (
+            <li key={s.label}>
+              <button
+                type="button"
+                onClick={() => setStep(i)}
+                className={cn(
+                  "group flex w-full items-start gap-4 rounded-xl border p-4 text-left transition-all duration-300",
+                  active
+                    ? "border-accent/50 bg-accent/5 shadow-[0_0_0_1px_hsl(var(--accent)/0.25)]"
+                    : "border-border bg-card/40 hover:border-accent/30",
+                )}
+              >
+                <span
+                  className={cn(
+                    "relative grid h-10 w-10 shrink-0 place-items-center rounded-lg border transition-colors",
+                    active
+                      ? "border-accent/50 bg-accent/10 text-accent"
+                      : done
+                        ? "border-primary/40 bg-primary/10 text-primary"
+                        : "border-border bg-background text-muted-foreground",
+                  )}
+                >
+                  <Icon className="h-4 w-4" />
+                  <span
+                    aria-hidden
+                    className={cn(
+                      "absolute -right-1.5 -top-1.5 grid h-4 w-4 place-items-center rounded-full text-[9px] font-bold",
+                      active
+                        ? "bg-accent text-accent-foreground"
+                        : done
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-muted text-muted-foreground",
+                    )}
+                  >
+                    {i + 1}
+                  </span>
+                </span>
+                <div className="min-w-0 flex-1 pt-0.5">
+                  <div
+                    className={cn(
+                      "font-display text-[15px] font-semibold",
+                      active ? "text-foreground" : "text-foreground/80",
+                    )}
+                  >
+                    {s.label}
+                  </div>
+                  <div className="mt-1 text-[13px] leading-relaxed text-muted-foreground">
+                    {s.hint}
+                  </div>
+                  {/* Progress line */}
+                  <div className="mt-3 h-px w-full overflow-hidden bg-border/70">
+                    <motion.div
+                      className="h-full bg-accent"
+                      initial={false}
+                      animate={{ width: active ? "100%" : done ? "100%" : "0%" }}
+                      transition={{ duration: active && !reduce ? 3.2 : 0.3, ease: "linear" }}
+                    />
+                  </div>
+                </div>
+              </button>
+            </li>
+          );
+        })}
+      </ol>
+    </div>
+  );
+}
+
+function StageLayer({
+  active,
+  children,
+}: {
+  active: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <motion.div
+      aria-hidden={!active}
+      initial={false}
+      animate={{
+        opacity: active ? 1 : 0,
+        scale: active ? 1 : 0.98,
+        y: active ? 0 : 8,
+      }}
+      transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+      className="absolute inset-0"
+      style={{ pointerEvents: active ? "auto" : "none" }}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+function WalkUpload({ active, reduce }: { active: boolean; reduce: boolean }) {
+  return (
+    <StageLayer active={active}>
+      <div className="flex h-full items-center justify-center">
+        <div className="relative grid h-full w-full place-items-center rounded-xl border border-dashed border-border bg-background/40">
+          {/* Sweeping scan line */}
+          <motion.div
+            aria-hidden
+            className="absolute inset-x-4 top-4 h-px bg-gradient-to-r from-transparent via-accent to-transparent"
+            initial={{ y: 0, opacity: 0 }}
+            animate={active && !reduce ? { y: [0, 240, 0], opacity: [0, 1, 0] } : { opacity: 0 }}
+            transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
+          />
+          {/* Frame placeholder filling in */}
+          <motion.div
+            className="relative h-[200px] w-[78%] overflow-hidden rounded-lg border border-border bg-gradient-to-br from-muted/40 to-background"
+            initial={{ opacity: 0, y: 12 }}
+            animate={active ? { opacity: 1, y: 0 } : { opacity: 0, y: 12 }}
+            transition={{ duration: 0.6, delay: active ? 0.1 : 0 }}
+          >
+            <motion.div
+              className="absolute inset-0"
+              style={{
+                background:
+                  "linear-gradient(135deg, hsl(var(--primary) / 0.25), hsl(var(--accent) / 0.18) 60%, transparent)",
+              }}
+              animate={active && !reduce ? { backgroundPosition: ["0% 0%", "100% 100%"] } : undefined}
+              transition={{ duration: 6, repeat: Infinity, repeatType: "mirror" }}
+            />
+            {/* Faux subject silhouette */}
+            <div className="absolute bottom-6 left-1/2 h-16 w-24 -translate-x-1/2 rounded-t-full bg-foreground/20 blur-[2px]" />
+            <div className="absolute right-4 top-3 rounded-full bg-background/70 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+              frame.jpg
+            </div>
+          </motion.div>
+          <div className="mt-4 flex items-center gap-2 text-[12px] text-muted-foreground">
+            <Upload className="h-3.5 w-3.5 text-accent" />
+            Drop any still — JPG, PNG, WebP
+          </div>
+        </div>
+      </div>
+    </StageLayer>
+  );
+}
+
+function WalkChat({ active, reduce }: { active: boolean; reduce: boolean }) {
+  const directorLine = "Got it. Slow dolly-in, golden hour key from camera-left, anamorphic flare. Confirm?";
+  const userLine = "Make it cinematic, 24fps, gentle push-in.";
+  return (
+    <StageLayer active={active}>
+      <div className="flex h-full flex-col justify-end gap-3 p-1">
+        <motion.div
+          className="self-end max-w-[78%] rounded-2xl rounded-tr-sm border border-border bg-background/70 px-4 py-2.5 text-[13px] text-foreground"
+          initial={{ opacity: 0, y: 10 }}
+          animate={active ? { opacity: 1, y: 0 } : { opacity: 0, y: 10 }}
+          transition={{ duration: 0.4, delay: active ? 0.1 : 0 }}
+        >
+          {userLine}
+        </motion.div>
+
+        <motion.div
+          className="self-start max-w-[86%] rounded-2xl rounded-tl-sm border border-accent/30 bg-accent/5 px-4 py-3"
+          initial={{ opacity: 0, y: 10 }}
+          animate={active ? { opacity: 1, y: 0 } : { opacity: 0, y: 10 }}
+          transition={{ duration: 0.4, delay: active ? 0.6 : 0 }}
+        >
+          <div className="mb-1 flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.18em] text-accent">
+            <Sparkles className="h-3 w-3" />
+            Director
+          </div>
+          <TypeLine text={directorLine} active={active} reduce={reduce} delay={0.8} />
+        </motion.div>
+
+        <motion.div
+          className="self-start flex items-center gap-1 px-2"
+          initial={{ opacity: 0 }}
+          animate={active && !reduce ? { opacity: [0, 1, 1, 0] } : { opacity: 0 }}
+          transition={{ duration: 2, repeat: Infinity, delay: 1.6 }}
+        >
+          {[0, 1, 2].map((i) => (
+            <motion.span
+              key={i}
+              className="h-1.5 w-1.5 rounded-full bg-accent/70"
+              animate={reduce ? undefined : { y: [0, -3, 0] }}
+              transition={{ duration: 0.8, repeat: Infinity, delay: i * 0.12 }}
+            />
+          ))}
+        </motion.div>
+      </div>
+    </StageLayer>
+  );
+}
+
+function TypeLine({
+  text,
+  active,
+  reduce,
+  delay = 0,
+}: {
+  text: string;
+  active: boolean;
+  reduce: boolean;
+  delay?: number;
+}) {
+  const [shown, setShown] = useState(reduce ? text.length : 0);
+  useEffect(() => {
+    if (!active) {
+      setShown(reduce ? text.length : 0);
+      return;
+    }
+    if (reduce) {
+      setShown(text.length);
+      return;
+    }
+    let i = 0;
+    const start = window.setTimeout(() => {
+      const id = window.setInterval(() => {
+        i += 1;
+        setShown(i);
+        if (i >= text.length) window.clearInterval(id);
+      }, 22);
+      // store for cleanup
+      (start as unknown as { _id?: number })._id = id;
+    }, delay * 1000);
+    return () => {
+      window.clearTimeout(start);
+      const inner = (start as unknown as { _id?: number })._id;
+      if (inner) window.clearInterval(inner);
+    };
+  }, [active, reduce, text, delay]);
+  return (
+    <p className="text-[13px] leading-relaxed text-foreground">
+      {text.slice(0, shown)}
+      <span className="ml-0.5 inline-block h-3.5 w-[2px] -mb-0.5 bg-accent align-middle" />
+    </p>
+  );
+}
+
+function WalkPrompt({ active, reduce }: { active: boolean; reduce: boolean }) {
+  const lines = [
+    { k: "shot", v: "MCU, anamorphic 2.39:1" },
+    { k: "camera", v: "slow dolly-in, 35mm, T2.0" },
+    { k: "light", v: "golden hour key, camera-left" },
+    { k: "motion", v: "subject still, leaves drift L→R" },
+    { k: "negative", v: "warp, extra fingers, banding" },
+  ];
+  return (
+    <StageLayer active={active}>
+      <div className="h-full overflow-hidden rounded-xl border border-border bg-background/70 p-4 font-mono text-[12px] leading-relaxed">
+        <div className="mb-2 flex items-center gap-2 text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+          <FileText className="h-3 w-3" />
+          prompt.json
+        </div>
+        <div className="space-y-1.5">
+          {lines.map((l, i) => (
+            <motion.div
+              key={l.k}
+              className="flex gap-3"
+              initial={{ opacity: 0, x: -8 }}
+              animate={active ? { opacity: 1, x: 0 } : { opacity: 0, x: -8 }}
+              transition={{ duration: 0.35, delay: active ? 0.15 + i * 0.18 : 0 }}
+            >
+              <span className="w-[68px] shrink-0 text-accent">{l.k}</span>
+              <span className="text-foreground/90">{l.v}</span>
+            </motion.div>
+          ))}
+        </div>
+        <motion.div
+          className="mt-4 inline-flex items-center gap-2 rounded-md border border-primary/40 bg-primary/10 px-2.5 py-1 text-[10px] uppercase tracking-[0.18em] text-primary"
+          initial={{ opacity: 0, y: 6 }}
+          animate={active ? { opacity: 1, y: 0 } : { opacity: 0, y: 6 }}
+          transition={{ duration: 0.4, delay: active ? 1.2 : 0 }}
+        >
+          <motion.span
+            className="h-1.5 w-1.5 rounded-full bg-primary"
+            animate={active && !reduce ? { opacity: [0.4, 1, 0.4] } : undefined}
+            transition={{ duration: 1.2, repeat: Infinity }}
+          />
+          copied to clipboard
+        </motion.div>
+      </div>
+    </StageLayer>
+  );
+}
+
+function WalkVideo({ active, reduce }: { active: boolean; reduce: boolean }) {
+  return (
+    <StageLayer active={active}>
+      <div className="relative h-full overflow-hidden rounded-xl border border-border bg-background">
+        {/* Animated cinematic gradient */}
+        <motion.div
+          className="absolute inset-0"
+          style={{
+            background:
+              "linear-gradient(120deg, hsl(var(--primary) / 0.35), hsl(var(--accent) / 0.25) 55%, hsl(220 40% 8%))",
+            backgroundSize: "200% 200%",
+          }}
+          animate={active && !reduce ? { backgroundPosition: ["0% 0%", "100% 100%"] } : undefined}
+          transition={{ duration: 6, repeat: Infinity, repeatType: "mirror", ease: "linear" }}
+        />
+        {/* Letterbox */}
+        <div className="absolute inset-x-0 top-0 h-8 bg-background" />
+        <div className="absolute inset-x-0 bottom-0 h-8 bg-background" />
+        {/* Light flare */}
+        <motion.div
+          aria-hidden
+          className="absolute -inset-y-10 w-32 rotate-12 bg-gradient-to-r from-transparent via-white/15 to-transparent blur-md"
+          initial={{ x: "-30%" }}
+          animate={active && !reduce ? { x: ["-30%", "130%"] } : undefined}
+          transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
+        />
+        {/* HUD */}
+        <div className="absolute left-3 top-10 flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.18em] text-foreground/80">
+          <motion.span
+            className="h-1.5 w-1.5 rounded-full bg-destructive"
+            animate={active && !reduce ? { opacity: [0.3, 1, 0.3] } : undefined}
+            transition={{ duration: 1, repeat: Infinity }}
+          />
+          REC · Kling 1.6
+        </div>
+        <div className="absolute right-3 top-10 font-mono text-[10px] uppercase tracking-[0.18em] text-foreground/80">
+          24fps · 2.39
+        </div>
+        {/* Timecode */}
+        <div className="absolute bottom-10 left-3 font-mono text-[10px] uppercase tracking-[0.18em] text-foreground/80">
+          00:00:04:12
+        </div>
+        {/* Play badge */}
+        <motion.div
+          className="absolute inset-0 grid place-items-center"
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={active ? { scale: 1, opacity: 1 } : { scale: 0.8, opacity: 0 }}
+          transition={{ duration: 0.5, delay: active ? 0.2 : 0 }}
+        >
+          <div className="grid h-14 w-14 place-items-center rounded-full border border-foreground/30 bg-background/60 backdrop-blur">
+            <Film className="h-5 w-5 text-accent" />
+          </div>
+        </motion.div>
+      </div>
+    </StageLayer>
   );
 }
 
