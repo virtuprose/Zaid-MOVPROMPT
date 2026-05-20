@@ -170,8 +170,13 @@ function DirectorChatInner() {
   const [busy, setBusy] = useState(false);
   const [phase, setPhase] = useState<DirectorPhase>("thinking");
   const [resetOpen, setResetOpen] = useState(false);
+  const [showJumpLatest, setShowJumpLatest] = useState(false);
+  const [refreshSignal, setRefreshSignal] = useState(0);
   const sessionIdRef = useRef<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const isAtBottomRef = useRef(true);
+  const lastBubbleCountRef = useRef(0);
+  const bubblesRef = useRef<Bubble[]>([]);
   const lastSendRef = useRef<{ text: string; attachments: Attachment[] } | null>(null);
   const hydratedRef = useRef<string | null>(null);
   const localScope = routeSessionId ?? "new";
