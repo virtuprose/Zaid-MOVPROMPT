@@ -301,9 +301,9 @@ function Hero({ scrollY }: { scrollY: MotionValue<number> }) {
           aria-hidden
         />
       )}
-      {/* Dimming overlay over the video for legibility */}
+      {/* Dimming gradient over the video for legibility without muddying it */}
       <div
-        className="pointer-events-none absolute inset-0 bg-background/70"
+        className="pointer-events-none absolute inset-0 bg-gradient-to-b from-background/30 via-background/20 to-background/70"
         aria-hidden
       />
 
@@ -313,36 +313,10 @@ function Hero({ scrollY }: { scrollY: MotionValue<number> }) {
         aria-hidden
         style={{
           background:
-            "radial-gradient(ellipse 90% 70% at 88% -10%, hsl(var(--accent) / 0.18), transparent 60%)",
+            "radial-gradient(ellipse 70% 55% at 95% -15%, hsl(var(--accent) / 0.10), transparent 60%)",
         }}
       />
 
-      {/* Layer 2: volumetric god-rays shafts from top-right */}
-      <motion.div
-        style={{ y: reduce ? 0 : layer1Y, x: reduce ? 0 : orbX }}
-        className="pointer-events-none absolute inset-0 overflow-hidden"
-        aria-hidden
-      >
-        <div
-          className={`absolute -top-[40%] -right-[20%] h-[180%] w-[140%] origin-top-right ${
-            reduce ? "" : "animate-god-rays-drift"
-          }`}
-          style={{
-            transform: "rotate(22deg)",
-            mixBlendMode: "screen",
-            backgroundImage: [
-              "linear-gradient(90deg, transparent 0%, transparent 8%, hsl(var(--accent) / 0.10) 9%, hsl(var(--accent) / 0.10) 11%, transparent 12%)",
-              "linear-gradient(90deg, transparent 0%, transparent 18%, hsl(var(--accent) / 0.06) 19%, hsl(var(--accent) / 0.06) 23%, transparent 24%)",
-              "linear-gradient(90deg, transparent 0%, transparent 30%, hsl(var(--accent) / 0.09) 31%, hsl(var(--accent) / 0.09) 33%, transparent 34%)",
-              "linear-gradient(90deg, transparent 0%, transparent 42%, hsl(var(--accent) / 0.05) 43%, hsl(var(--accent) / 0.05) 47%, transparent 48%)",
-              "linear-gradient(90deg, transparent 0%, transparent 56%, hsl(var(--accent) / 0.08) 57%, hsl(var(--accent) / 0.08) 59%, transparent 60%)",
-              "linear-gradient(90deg, transparent 0%, transparent 68%, hsl(var(--accent) / 0.04) 69%, hsl(var(--accent) / 0.04) 72%, transparent 73%)",
-              "linear-gradient(90deg, transparent 0%, transparent 80%, hsl(var(--accent) / 0.07) 81%, hsl(var(--accent) / 0.07) 83%, transparent 84%)",
-            ].join(","),
-            filter: "blur(24px)",
-          }}
-        />
-      </motion.div>
 
       {/* Layer 3: perspective grid */}
       <motion.div
