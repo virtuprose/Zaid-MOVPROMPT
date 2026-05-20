@@ -577,7 +577,7 @@ export const ar: Record<TranslationKey, string> = {
   "onboarding.step2.title": "دع الذكاء الاصطناعي يخرج",
   "onboarding.step2.desc": "نحلل المشهد ونصمم برومبت بمستوى مخرج محترف.",
   "onboarding.step3.title": "انسخ وأبدع",
-  "onboarding.step3.desc": "الصق في Kling أو Runway أو Wan أو أي أداة فيديو بالذكاء الاصطناعي.",
+  "onboarding.step3.desc": "الصق في Kling أو Wan أو أي أداة فيديو بالذكاء الاصطناعي.",
   "onboarding.cta": "هيا نبدأ",
 
   // Reference media

@@ -33,7 +33,7 @@ const NAV_LINKS = [
   
 ];
 
-const MODELS = ["Kling", "Veo", "Runway", "Seedance", "Pika", "Luma", "Hailuo", "Wan"];
+const MODELS = ["Kling", "Veo", "Seedance", "Pika", "Luma", "Hailuo", "Wan"];
 
 const FEATURES = [
   {
@@ -393,7 +393,7 @@ function Hero({ scrollY }: { scrollY: MotionValue<number> }) {
         <FadeUp delay={0.2}>
           <p className="mx-auto mt-5 max-w-2xl text-[15px] leading-relaxed text-muted-foreground md:text-[17px]">
             Drop a frame. Pick a model. Get a director-grade video prompt ready to paste into
-            Kling, Veo, Runway, Seedance, or any AI video tool.
+            Kling, Veo, Seedance, or any AI video tool.
           </p>
         </FadeUp>
         <FadeUp delay={0.3}>
@@ -788,7 +788,7 @@ export default function Landing() {
     <div className="relative min-h-screen bg-background text-foreground">
       <Seo
         title="MovPrompt — AI Director for Generative Video"
-        description="Drop a frame. Pick a model. Get director-grade AI video prompts for Kling, Veo, Runway, Seedance and more."
+        description="Drop a frame. Pick a model. Get director-grade AI video prompts for Kling, Veo, Seedance and more."
       />
 
       {/* Grain overlay */}
