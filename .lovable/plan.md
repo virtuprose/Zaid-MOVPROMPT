@@ -1,20 +1,30 @@
 ## Goal
-Replace the white triangular logo mark shown inside the Director's circular avatar with the uploaded illustrated portrait. Nothing else changes — the app logo, favicon, wordmark, and brand mark stay as-is.
+Hide the opening assistant greeting (and any follow-up nudge bubbles that appear before the user has typed anything) once the user sends their first message.
 
-## Changes
+## Where
+`src/components/director/DirectorChat.tsx`
 
-1. **Copy the uploaded image into the project**
-   - `code--copy user-uploads://Clean_Geometric_Shapes_Icon.png` → `src/assets/director-avatar.png`
+- `WELCOME` constant (line 140) and initial state `useState<Bubble[]>([WELCOME])` (line 167).
+- Restore path also seeds `[WELCOME]` when a session has no messages (lines 228–229).
+- The "Still there? Tell me the vibe…" line in the screenshot is not in source — it comes back from the `director-agent` LLM as an idle nudge bubble, so it lives in `bubbles` just like the welcome bubble. Treating *all leading assistant bubbles before the first user message* as intro chatter handles both in one place.
 
-2. **`src/components/director/AssistantAvatar.tsx`**
-   - Replace the import `import logoMark from "@/assets/logo-mark-white.svg"` with `import directorAvatar from "@/assets/director-avatar.png"`.
-   - Update the `<img src={logoMark} …>` to use `directorAvatar`.
-   - Adjust the image classes so the portrait fills the circle cleanly: change `h-[60%] w-[60%] object-contain` to `h-full w-full object-cover rounded-full`, and drop the amber `drop-shadow` (it was tuned for the wedge silhouette and would look muddy on a photo-style portrait). Keep the breathing halo, ring, and all state animations exactly as they are.
+## Change
+In the render loop that maps `bubbles` to UI, compute the index of the first `role === "user"` bubble. When the user has sent at least one message, skip rendering any assistant bubble whose index is **before** that first user bubble.
 
-## Scope guardrails
-- Do NOT touch `AperturalLogo`, `public/logo-mark*.svg`, `src/assets/logo-mark*.svg`, the wordmark, favicon, PWA icons, or `TopNav`.
-- Only the avatar shown by `AssistantAvatar` (used in `TypingIndicator` and the Director chat bubbles) changes.
+Pseudocode at the top of the bubbles render block:
 
-## Verification
-- Open `/director` and confirm the round avatar now shows the illustrated portrait, still framed by the amber halo + ring, and that thinking / scanning / success states still animate.
-- Check the top-nav logo and browser tab favicon are unchanged.
+```ts
+const firstUserIdx = bubbles.findIndex((b) => b.role === "user");
+const hasUserMessage = firstUserIdx !== -1;
+// inside the .map((b, i) => ...)
+if (hasUserMessage && i < firstUserIdx && b.role === "assistant") return null;
+```
+
+This keeps the welcome visible on a fresh/empty session (the existing behavior the user liked) and makes it (plus any pre-conversation nudges) vanish the moment the first user message is in the list.
+
+We do **not** mutate `bubbles` state, so persistence/history sent to the agent stays unchanged — purely a render filter.
+
+## Out of scope
+- No styling changes.
+- No edits to the avatar or backend.
+- No change to the idle-nudge logic itself (it just won't appear once the conversation has started, which is the desired behavior).
