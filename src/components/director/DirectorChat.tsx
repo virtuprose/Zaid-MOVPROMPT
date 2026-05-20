@@ -310,9 +310,78 @@ function DirectorChatInner() {
     };
   }, [bubbles]);
 
+  // Smart autoscroll: only pull to bottom when the user is already pinned there,
+  // or when a brand-new bubble appears (so a freshly-sent message is visible).
+  // Status updates inside existing bubbles (e.g. ActStrip polling) never yank.
   useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
+    bubblesRef.current = bubbles;
+    const el = scrollRef.current;
+    if (!el) return;
+    const prevCount = lastBubbleCountRef.current;
+    const grew = bubbles.length > prevCount;
+    lastBubbleCountRef.current = bubbles.length;
+    if (isAtBottomRef.current || grew) {
+      // Defer to next frame so DOM has the new content height
+      requestAnimationFrame(() => {
+        el.scrollTo({ top: el.scrollHeight, behavior: isAtBottomRef.current ? "smooth" : "auto" });
+      });
+      if (isAtBottomRef.current) setShowJumpLatest(false);
+    } else {
+      // New content arrived while user is reading earlier messages
+      setShowJumpLatest(true);
+    }
   }, [bubbles]);
+
+  // Track scroll position to know whether to autoscroll on next update.
+  const handleScroll = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const distance = el.scrollHeight - el.scrollTop - el.clientHeight;
+    const atBottom = distance < 80;
+    isAtBottomRef.current = atBottom;
+    if (atBottom && showJumpLatest) setShowJumpLatest(false);
+  };
+
+  const jumpToLatest = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    isAtBottomRef.current = true;
+    el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+    setShowJumpLatest(false);
+  };
+
+  // When the tab/page becomes visible again, kick polling so the strip refreshes
+  // immediately instead of waiting up to 4s.
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === "visible") {
+        setRefreshSignal((n) => n + 1);
+      }
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", onVisible);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", onVisible);
+    };
+  }, []);
+
+  // Persist on unmount if any acts are still rendering, so navigating to another
+  // tool right after a poll tick never loses progress.
+  useEffect(() => {
+    return () => {
+      const snap = bubblesRef.current;
+      const hasPending = snap.some(
+        (b) =>
+          b.role === "story_render" &&
+          b.data.acts.some((a) => a.status === "queued" || a.status === "processing"),
+      );
+      if (hasPending && sessionIdRef.current) {
+        void persist(snap, null, null);
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Debounced localStorage save of in-progress draft.
   useEffect(() => {
