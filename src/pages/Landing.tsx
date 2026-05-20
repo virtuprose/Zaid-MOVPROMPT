@@ -941,8 +941,7 @@ function SceneBreakdownCard({
           })}
         </div>
       </motion.div>
-      </div>
-    </section>
+    </motion.div>
   );
 }
 
