@@ -249,31 +249,19 @@ export const ModelPicker = ({ model, onModelChange }: ModelPickerProps) => {
             boxShadow: "0 8px 40px rgba(0,0,0,0.6)",
           }}
         >
-          {/* Search + providers + sort */}
-          <div className="sticky top-0 z-20 bg-popover border-b border-border/60 px-3 py-2">
-            <div className="relative">
-              <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          {/* Search + sort */}
+          <div className="sticky top-0 z-20 bg-popover border-b border-border/60 px-4 py-3">
+            <div className="relative border-b border-border/60">
+              <Search size={14} className="absolute left-1 top-1/2 -translate-y-1/2 text-muted-foreground" />
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 onKeyDown={(e) => e.stopPropagation()}
                 placeholder="Search models..."
-                className="w-full bg-secondary/60 border border-border rounded-md text-xs ps-7 pe-2 py-1.5 outline-none focus:border-primary/50 placeholder:text-muted-foreground"
+                className="w-full bg-transparent text-sm ps-7 pe-2 py-2 outline-none placeholder:text-muted-foreground"
               />
             </div>
-            <div className="mt-2">
-              <div className="text-[12px] text-muted-foreground mb-1">Available providers</div>
-              <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[11px] text-muted-foreground">
-                {ALL_PROVIDERS.map((p, i) => (
-                  <span key={p} className="inline-flex items-center">
-                    <span className="text-foreground/80 font-medium">{p}</span>
-                    {i < ALL_PROVIDERS.length - 1 && <span className="ms-1.5 opacity-40">·</span>}
-                  </span>
-                ))}
-              </div>
-            </div>
-            <div className="mt-2 flex items-center flex-wrap gap-1.5">
-              <span className="text-[12px] text-muted-foreground me-1">Sort by:</span>
+            <div className="mt-3 flex items-center gap-4">
               {SORT_OPTIONS.map((opt) => {
                 const active = sort === opt.id;
                 return (
@@ -283,10 +271,10 @@ export const ModelPicker = ({ model, onModelChange }: ModelPickerProps) => {
                     onClick={(e) => { e.preventDefault(); e.stopPropagation(); setSort(opt.id); }}
                     onPointerDown={(e) => e.stopPropagation()}
                     className={cn(
-                      "inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium border transition-colors duration-150",
+                      "text-[12px] font-medium transition-colors duration-150 pb-0.5 border-b",
                       active
-                        ? "bg-primary/15 text-primary border-primary/40"
-                        : "bg-transparent text-muted-foreground border-transparent hover:text-foreground hover:bg-white/[0.04]"
+                        ? "text-foreground border-primary"
+                        : "text-muted-foreground border-transparent hover:text-foreground"
                     )}
                   >
                     {opt.label}
@@ -295,6 +283,7 @@ export const ModelPicker = ({ model, onModelChange }: ModelPickerProps) => {
               })}
             </div>
           </div>
+
 
           <div
             style={{
