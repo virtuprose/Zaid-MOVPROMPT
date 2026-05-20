@@ -2236,6 +2236,16 @@ function DirectorChatInner() {
           Jump to latest ↓
         </button>
       )}
+      {readyToStitch && (
+        <button
+          type="button"
+          onClick={jumpToStitch}
+          className="absolute left-1/2 -translate-x-1/2 bottom-14 z-20 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-primary to-accent text-primary-foreground text-xs font-medium shadow-xl hover:opacity-95 motion-safe:animate-fade-up"
+        >
+          <Film className="h-3.5 w-3.5" />
+          All 4 acts ready — Stitch story ↓
+        </button>
+      )}
       </div>
 
       {pendingApproval && <BottomApprovalBar request={pendingApproval} />}
