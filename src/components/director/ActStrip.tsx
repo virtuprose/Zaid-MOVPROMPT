@@ -71,7 +71,7 @@ export function ActStrip({ storyRenderId, title, acts, stitchStatus, stitchedVid
       <div className="flex items-center justify-between gap-3">
         <div>
           <div className="text-xs uppercase tracking-wide text-muted-foreground/80">
-            Story render · 8 acts in parallel
+            Story render · 4 acts in parallel
           </div>
           <div className="text-sm text-foreground/90 truncate font-medium">{title}</div>
         </div>
@@ -155,7 +155,7 @@ export function ActStrip({ storyRenderId, title, acts, stitchStatus, stitchedVid
               ? "All acts ready. Stitch into one video."
               : anyFailed && pending.length === 0
                 ? "Some acts failed — stitch the rest, or re-render the whole story."
-                : "Renders are running in parallel. The Stitch button unlocks when all 8 finish."}
+                : "Renders are running in parallel. The Stitch button unlocks when all 4 finish."}
           </div>
           <Button
             type="button"
