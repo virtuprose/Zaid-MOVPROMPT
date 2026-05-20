@@ -364,7 +364,7 @@ function Hero({ scrollY }: { scrollY: MotionValue<number> }) {
       {/* Layer 4: content */}
       <div className="relative z-10 mx-auto flex max-w-3xl flex-col items-center px-6 text-center">
         <FadeUp>
-          <SectionEyebrow>AI Director of Photography</SectionEyebrow>
+          <SectionEyebrow>AI Director</SectionEyebrow>
         </FadeUp>
         <FadeUp delay={0.1}>
           <h1 className="mt-6 font-display text-[36px] font-bold leading-[1.05] tracking-[-0.03em] text-foreground md:text-[56px]">
