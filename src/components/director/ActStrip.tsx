@@ -286,6 +286,7 @@ export function ActStrip({ storyRenderId, title, acts, stitchStatus, stitchedVid
             disabled={disabled || !allDone || stitchStatus === "running"}
             onClick={onStitch}
             className="rounded-full gap-1.5"
+            data-stitch-button={storyRenderId}
           >
             <Film className="h-3.5 w-3.5" />
             {stitchStatus === "running" ? "Stitching…" : stitchStatus === "failed" ? "Retry stitch" : "Stitch into one video"}
