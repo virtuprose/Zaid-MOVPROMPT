@@ -27,7 +27,7 @@ type Body = {
   character_url?: string;
   prop_url?: string;
   location_url: string;
-  act_prompts: string[]; // 8 entries
+  act_prompts: string[]; // 4 entries
   title?: string;
 };
 
@@ -73,8 +73,8 @@ serve(async (req) => {
 
   try {
     const body = (await req.json()) as Body;
-    if (!body.aspect || !body.location_url || !Array.isArray(body.act_prompts) || body.act_prompts.length !== 8) {
-      return new Response(JSON.stringify({ error: "aspect, location_url, and exactly 8 act_prompts required" }), {
+    if (!body.aspect || !body.location_url || !Array.isArray(body.act_prompts) || body.act_prompts.length !== 4) {
+      return new Response(JSON.stringify({ error: "aspect, location_url, and exactly 4 act_prompts required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -92,13 +92,13 @@ serve(async (req) => {
 
     const provider = "seedance-2.0-ref";
     const perActCost = await videoCost(provider, duration);
-    const totalCost = perActCost * 8;
+    const totalCost = perActCost * 4;
     try {
       await chargeCredits({
         userId: uid,
         amount: totalCost,
         reason: "story_render",
-        metadata: { provider, duration, acts: 8 },
+        metadata: { provider, duration, acts: 4 },
       });
     } catch (e) {
       if (e instanceof InsufficientCreditsError) return insufficientResponse(corsHeaders);
@@ -107,7 +107,7 @@ serve(async (req) => {
 
     const storyRenderId = crypto.randomUUID();
 
-    // Insert 8 video_jobs rows up front so the client can poll them by id.
+    // Insert 4 video_jobs rows up front so the client can poll them by id.
     const rows = body.act_prompts.map((p, i) => ({
       user_id: uid,
       session_id: body.session_id || null,
@@ -122,7 +122,7 @@ serve(async (req) => {
       .from("video_jobs")
       .insert(rows)
       .select("id, act_index, prompt, status");
-    if (insErr || !inserted || inserted.length !== 8) {
+    if (insErr || !inserted || inserted.length !== 4) {
       console.error("story-render insert failed", insErr);
       await refundCredits({ userId: uid, amount: totalCost, reason: "story_render_refund", metadata: { stage: "insert_failed" } });
       return new Response(JSON.stringify({ error: "Could not create jobs" }), {
@@ -131,7 +131,7 @@ serve(async (req) => {
       });
     }
 
-    // Submit all 8 to fal in parallel.
+    // Submit all 4 to fal in parallel.
     const submitResults = await Promise.all(
       inserted.map(async (row) => {
         try {
