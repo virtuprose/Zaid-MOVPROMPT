@@ -121,6 +121,7 @@ export function LocationPickerCard({ locations, characterUrl, propUrl, aspect, c
 
       {/* Drop slot */}
       <div
+        data-location-slot
         onDragOver={(e) => {
           e.preventDefault();
           setOver(true);
@@ -139,9 +140,11 @@ export function LocationPickerCard({ locations, characterUrl, propUrl, aspect, c
           "max-w-md mx-auto w-full",
           chosenIndex
             ? "border-primary/50 bg-primary/5"
-            : over
-              ? "border-primary bg-primary/10"
-              : "border-border/40 bg-background/30",
+            : touchSnapped
+              ? "border-primary ring-2 ring-primary/40 bg-primary/10"
+              : over
+                ? "border-primary bg-primary/10"
+                : "border-border/40 bg-background/30",
         )}
       >
         {chosenIndex && locations[chosenIndex - 1] ? (
@@ -173,14 +176,19 @@ export function LocationPickerCard({ locations, characterUrl, propUrl, aspect, c
                 setDragIndex(loc.index);
               }}
               onDragEnd={() => setDragIndex(null)}
+              onTouchStart={(e) => onTouchStart(e, loc.index)}
+              onTouchMove={onTouchMove}
+              onTouchEnd={onTouchEnd}
+              onTouchCancel={onTouchEnd}
+              style={{ touchAction: dragIndex !== null ? "none" : "auto" }}
               onClick={() => !disabled && onChoose(loc.index)}
               disabled={disabled}
               className={cn(
-                "relative rounded-lg overflow-hidden border aspect-square group transition-all",
+                "relative rounded-lg overflow-hidden border aspect-square group transition-all select-none",
                 isChosen
                   ? "border-primary ring-2 ring-primary/50"
                   : "border-border/30 hover:border-border/60 hover:-translate-y-0.5",
-                dragIndex === loc.index && "opacity-40",
+                dragIndex === loc.index && "opacity-40 scale-95",
                 disabled && "opacity-60 cursor-not-allowed",
               )}
             >
