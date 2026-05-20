@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, BookOpen, PlayCircle, Sparkles, Lock, Move, AtSign, Image as ImageIcon, Lightbulb, HelpCircle, Compass } from "lucide-react";
+import { ArrowLeft, BookOpen, Sparkles, Lock, Move, AtSign, Image as ImageIcon, Lightbulb, HelpCircle, Compass } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
