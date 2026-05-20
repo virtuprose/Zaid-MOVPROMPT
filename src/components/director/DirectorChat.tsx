@@ -118,7 +118,8 @@ type Bubble =
       };
       submitted?: boolean;
     }
-  | { role: "video"; data: import("./VideoBubble").VideoBubbleData };
+  | { role: "video"; data: import("./VideoBubble").VideoBubbleData }
+  | { role: "intent_prompt"; content: string; chips: string[] };
 
 const WELCOME: Bubble = {
   role: "assistant",
