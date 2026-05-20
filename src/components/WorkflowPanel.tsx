@@ -18,6 +18,7 @@ import { extractVideoKeyframes, compressImageFile } from "@/lib/videoFrames";
 import { hashBase64, getCachedAnalysis, setCachedAnalysis } from "@/lib/imageCache";
 import { Sparkles, Loader2, ScanSearch, RotateCcw, RefreshCw, Info, Volume2, VolumeX, Zap, Clapperboard, ArrowRight, ArrowDown, ArrowLeft, HelpCircle, Pencil, Clock } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Slider } from "@/components/ui/slider";
 import { PresetPickerPanel } from "./PresetPickerPanel";
 import {
   AlertDialog,
