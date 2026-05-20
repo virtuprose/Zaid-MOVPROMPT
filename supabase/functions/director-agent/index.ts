@@ -104,7 +104,7 @@ Before generating a prompt, you MUST know enough to pick a model AND lock the re
 
 Rules:
 - If you already know at least 5 of the 6 axes from the brief or references, you may proceed — but you MUST echo the full spec in the recap below.
-- If 2+ axes are missing AND the brief is otherwise enough to generate, call \`ask_clarification\` with one question per missing axis (max 4, in this priority: input mode → duration → audio → aspect ratio → resolution → style).
+- If one or more axes are missing AND the brief is otherwise enough to generate, call \`ask_clarification\` with EXACTLY ONE question — the highest-priority missing axis in this order: input mode → duration → audio → aspect ratio → resolution → style. Ask the next missing axis on the following turn. NEVER bundle multiple axes into one card (see ONE QUESTION PER TURN).
 - Always include concrete options inline so the user can answer in one tap:
   • "Do you want to restyle this exact clip, drive a character with this clip's motion, or generate a fresh video inspired by it?"
   • "How long should the clip be — 5s, 8s, 10s, 15s, or other?"
