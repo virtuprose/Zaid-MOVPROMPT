@@ -808,7 +808,7 @@ function DirectorChatInner() {
 
 
 
-  const send = async (textOverride?: string) => {
+  const send = async (textOverride?: string, bubblesOverride?: Bubble[]) => {
     const text = (textOverride ?? input).trim();
     if (!text && attachments.length === 0) {
       toast.error("Add a brief or some references");
@@ -824,7 +824,8 @@ function DirectorChatInner() {
       attachments: turnAttachments.length ? turnAttachments : undefined,
     };
     // Drop any prior error bubble so retry replaces it cleanly.
-    const cleaned = bubbles.filter((b) => b.role !== "error");
+    const base = bubblesOverride ?? bubbles;
+    const cleaned = base.filter((b) => b.role !== "error");
     const next: Bubble[] = [...cleaned, userBubble];
     lastSendRef.current = { text: text || fallback, attachments: turnAttachments };
     setBubbles(next);
