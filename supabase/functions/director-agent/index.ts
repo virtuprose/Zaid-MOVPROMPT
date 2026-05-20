@@ -512,6 +512,63 @@ const TOOLS = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "generate_story_bundle",
+      description: "Story mode step 4. Generate the asset bundle for a multi-act story render in parallel: 1 character/subject sheet + 1 prop sheet + 7 distinct location key frames. The client renders a location-picker card after this returns so the user can drag one location into the slot. Use ONLY in story mode.",
+      parameters: {
+        type: "object",
+        properties: {
+          aspect: { type: "string", enum: ["16:9", "9:16", "1:1"] },
+          character_brief: { type: "string", description: "Full prompt for the protagonist sheet — describe identity, look, wardrobe, vibe." },
+          character_subject_kind: { type: "string", enum: ["character", "product"], description: "Default 'character'. Switch to 'product' if the brief is product-led." },
+          prop_brief: { type: "string", description: "Full prompt for the prop/object sheet — describe the hero item the character uses across the story." },
+          location_briefs: {
+            type: "array",
+            minItems: 7,
+            maxItems: 7,
+            items: { type: "string" },
+            description: "Exactly 7 visually distinct location prompts (e.g. one per planet / act). Each is a full single-panel key-frame prompt.",
+          },
+          character_reference_urls: {
+            type: "array",
+            maxItems: 4,
+            items: { type: "string" },
+            description: "Optional — uploaded face/product images to lock identity for the character sheet.",
+          },
+          directors_note: { type: "string" },
+        },
+        required: ["aspect", "character_brief", "prop_brief", "location_briefs"],
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "request_story_render",
+      description: "Story mode step 5. Kick off 8 parallel Seedance 2.0 15-second renders (one per act), all sharing the locked character + prop + chosen location refs. The frontend creates an 8-tile strip + a Stitch button once all acts finish. Use ONLY in story mode after the user picks a location.",
+      parameters: {
+        type: "object",
+        properties: {
+          aspect: { type: "string", enum: ["16:9", "9:16", "1:1"] },
+          duration: { type: "integer", minimum: 4, maximum: 15, description: "Per-act duration in seconds (default 15)." },
+          title: { type: "string", description: "Short title for the stitched story (max 60 chars)." },
+          act_prompts: {
+            type: "array",
+            minItems: 8,
+            maxItems: 8,
+            items: { type: "string" },
+            description: "Exactly 8 Seedance 2.0 prompts in order. Each must reference @Image1 (character), @Image2 (prop), @Image3 (location) where applicable.",
+          },
+          directors_note: { type: "string" },
+        },
+        required: ["aspect", "act_prompts"],
+        additionalProperties: false,
+      },
+    },
+  },
 ];
 
 async function callGatewayWithRetry(body: unknown, apiKey: string): Promise<Response> {
