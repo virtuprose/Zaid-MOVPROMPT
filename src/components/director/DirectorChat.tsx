@@ -1377,19 +1377,8 @@ function DirectorChatInner() {
     }
   }, [bubbles]);
 
-  // Idle nudge: send a soft prompt if the user has been silent on a fresh chat
-  useEffect(() => {
-    if (idleTimer.current) window.clearTimeout(idleTimer.current);
-    const onlyWelcome = bubbles.length === 1 && bubbles[0].role === "assistant";
-    if (!onlyWelcome || idleNudgedRef.current || busy || input || attachments.length) return;
-    idleTimer.current = window.setTimeout(() => {
-      idleNudgedRef.current = true;
-      setBubbles((prev) => [...prev, { role: "assistant", content: IDLE_NUDGE, animate: true }]);
-    }, 45000);
-    return () => {
-      if (idleTimer.current) window.clearTimeout(idleTimer.current);
-    };
-  }, [bubbles, busy, input, attachments.length]);
+  // Idle nudge removed.
+
 
   const avatarState: AvatarState = busy
     ? (attachments.length > 0 ? "scanning" : "thinking")
