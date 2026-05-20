@@ -5,8 +5,7 @@ import { Label } from "@/components/ui/label";
 import { MODEL_GROUPS, type ModelGroup, type ModelOption } from "@/lib/models";
 import { getContract } from "@/lib/modelContracts";
 import { useLanguage } from "@/i18n/LanguageContext";
-import { Sparkles, Search, HelpCircle, Pencil } from "lucide-react";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Sparkles, Search, Pencil } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface ModelPickerProps {
@@ -14,7 +13,7 @@ interface ModelPickerProps {
   onModelChange: (v: string) => void;
 }
 
-const ALL_PROVIDERS = ["Veo", "Kling", "Seedance", "Sora", "Runway", "Wan", "Hailuo", "Pika"];
+
 
 const GROUP_META: Record<string, { short: string; company: string; order: number }> = {
   "Google": { short: "VEO", company: "by Google", order: 1 },
@@ -60,11 +59,11 @@ function classifyTier(value: string, variant: string | null): Tier {
 }
 
 const TIER_PILL: Record<Tier, string> = {
-  lite: "border border-[#71717A] text-[#A1A1AA] bg-transparent",
-  fast: "border border-primary/60 text-primary bg-transparent",
-  flagship: "bg-primary text-primary-foreground border border-primary",
-  turbo: "border border-[#EF4444] text-[#EF4444] bg-transparent",
-  default: "border border-primary/60 text-primary bg-transparent",
+  lite: "border border-muted-foreground/30 text-muted-foreground bg-transparent",
+  fast: "border border-primary/40 text-primary bg-transparent",
+  flagship: "border border-primary/60 text-primary bg-transparent",
+  turbo: "border border-muted-foreground/30 text-muted-foreground bg-transparent",
+  default: "border border-muted-foreground/30 text-muted-foreground bg-transparent",
 };
 
 // Lower rank = better. Defaults to mid (5) if missing.
@@ -122,8 +121,8 @@ const ModelRow = ({ value, label, description, isAny, providerLabel }: ModelRowP
     <SelectItem
       value={value}
       className={cn(
-        "items-start py-2.5 ps-5 pe-4 min-h-[3rem] cursor-pointer relative",
-        "border-l-2 border-l-transparent transition-[background-color,border-color] duration-150 ease-out",
+        "items-start py-2.5 ps-4 pe-4 min-h-[3rem] cursor-pointer relative",
+        "border-l border-l-transparent transition-[background-color,border-color] duration-150 ease-out",
         "hover:border-l-primary hover:bg-[#161618]",
         "data-[state=checked]:border-l-primary data-[state=checked]:bg-primary/[0.06]",
         "data-[highlighted]:bg-[#161618] data-[highlighted]:[&_*]:text-inherit",
@@ -136,7 +135,7 @@ const ModelRow = ({ value, label, description, isAny, providerLabel }: ModelRowP
             {base}
           </span>
           {showFlagshipPill && (
-            <span className="inline-flex items-center px-1.5 py-[1px] rounded bg-primary text-primary-foreground border border-primary text-[10px] font-semibold uppercase tracking-wider leading-none">
+            <span className="inline-flex items-center px-1.5 py-[1px] rounded border border-primary/60 text-primary text-[10px] font-semibold uppercase tracking-wider leading-none">
               Flagship
             </span>
           )}
@@ -152,33 +151,10 @@ const ModelRow = ({ value, label, description, isAny, providerLabel }: ModelRowP
             </span>
           )}
           {isAny && (
-            <span className="inline-flex items-center px-1.5 py-[1px] rounded bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-wider leading-none">
+            <span className="inline-flex items-center px-1.5 py-[1px] rounded border border-primary/40 text-primary text-[10px] font-semibold uppercase tracking-wider leading-none">
               Recommended
             </span>
           )}
-          <TooltipProvider delayDuration={150}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  type="button"
-                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
-                  onPointerDown={(e) => e.stopPropagation()}
-                  className="ms-auto text-muted-foreground/60 hover:text-primary transition-colors"
-                  aria-label="Model info"
-                >
-                  <HelpCircle size={13} />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="right" align="start" className="max-w-xs text-xs">
-                <p className="mb-1.5">{description}</p>
-                <ul className="list-disc ps-4 space-y-0.5 text-muted-foreground">
-                  <li>Best for cinematic image-to-video</li>
-                  <li>Supports 16:9 / 9:16 / 1:1</li>
-                  <li>Up to ~10s clips</li>
-                </ul>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
         </div>
         {providerLabel && (
           <span className="text-[10px] uppercase tracking-wider text-muted-foreground/70 font-medium">
@@ -272,31 +248,19 @@ export const ModelPicker = ({ model, onModelChange }: ModelPickerProps) => {
             boxShadow: "0 8px 40px rgba(0,0,0,0.6)",
           }}
         >
-          {/* Search + providers + sort */}
-          <div className="sticky top-0 z-20 bg-popover border-b border-border/60 px-3 py-2">
-            <div className="relative">
-              <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          {/* Search + sort */}
+          <div className="sticky top-0 z-20 bg-popover border-b border-border/60 px-4 py-3">
+            <div className="relative border-b border-border/60">
+              <Search size={14} className="absolute left-1 top-1/2 -translate-y-1/2 text-muted-foreground" />
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 onKeyDown={(e) => e.stopPropagation()}
                 placeholder="Search models..."
-                className="w-full bg-secondary/60 border border-border rounded-md text-xs ps-7 pe-2 py-1.5 outline-none focus:border-primary/50 placeholder:text-muted-foreground"
+                className="w-full bg-transparent text-sm ps-7 pe-2 py-2 outline-none placeholder:text-muted-foreground"
               />
             </div>
-            <div className="mt-2">
-              <div className="text-[12px] text-muted-foreground mb-1">Available providers</div>
-              <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[11px] text-muted-foreground">
-                {ALL_PROVIDERS.map((p, i) => (
-                  <span key={p} className="inline-flex items-center">
-                    <span className="text-foreground/80 font-medium">{p}</span>
-                    {i < ALL_PROVIDERS.length - 1 && <span className="ms-1.5 opacity-40">·</span>}
-                  </span>
-                ))}
-              </div>
-            </div>
-            <div className="mt-2 flex items-center flex-wrap gap-1.5">
-              <span className="text-[12px] text-muted-foreground me-1">Sort by:</span>
+            <div className="mt-3 flex items-center gap-4">
               {SORT_OPTIONS.map((opt) => {
                 const active = sort === opt.id;
                 return (
@@ -306,10 +270,10 @@ export const ModelPicker = ({ model, onModelChange }: ModelPickerProps) => {
                     onClick={(e) => { e.preventDefault(); e.stopPropagation(); setSort(opt.id); }}
                     onPointerDown={(e) => e.stopPropagation()}
                     className={cn(
-                      "inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium border transition-colors duration-150",
+                      "text-[12px] font-medium transition-colors duration-150 pb-0.5 border-b",
                       active
-                        ? "bg-primary/15 text-primary border-primary/40"
-                        : "bg-transparent text-muted-foreground border-transparent hover:text-foreground hover:bg-white/[0.04]"
+                        ? "text-foreground border-primary"
+                        : "text-muted-foreground border-transparent hover:text-foreground"
                     )}
                   >
                     {opt.label}
@@ -318,6 +282,7 @@ export const ModelPicker = ({ model, onModelChange }: ModelPickerProps) => {
               })}
             </div>
           </div>
+
 
           <div
             style={{
@@ -344,15 +309,10 @@ export const ModelPicker = ({ model, onModelChange }: ModelPickerProps) => {
                 const meta = GROUP_META[group.label];
                 return (
                   <SelectGroup key={group.label}>
-                    <SelectLabel className="sticky top-0 z-10 px-3 py-2 bg-popover/95 backdrop-blur shadow-[0_1px_0_hsl(var(--border))]">
-                      <div className="text-xs font-bold text-foreground uppercase tracking-wider">
+                    <SelectLabel className="px-4 pt-5 pb-2 border-t border-border/40">
+                      <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.14em]">
                         {meta?.short ?? group.label}
                       </div>
-                      {meta && (
-                        <div className="text-[11px] text-muted-foreground lowercase font-normal mt-0.5">
-                          {meta.company}
-                        </div>
-                      )}
                     </SelectLabel>
                     {group.models.map((m) => (
                       <ModelRow
