@@ -546,12 +546,7 @@ function DirectorChatInner() {
           directorsNote: payload.directors_note,
           ...(payload.aspect_ratio ? { aspectRatio: payload.aspect_ratio } : {}),
           ...(isSheet ? { subjectSheet: true as const, subjectKind: sheetKind } : {}),
-          ...(failedIndices.length > 0
-            ? {
-                failedIndices: [...failedIndices],
-                progress: { done: streamTotal - failedIndices.length, total: streamTotal },
-              }
-            : {}),
+          ...(failedIndices.length > 0 ? { failedIndices: [...failedIndices] } : {}),
         },
       };
       const carrierBubble: Bubble = {
