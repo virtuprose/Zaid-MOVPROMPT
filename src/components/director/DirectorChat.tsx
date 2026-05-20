@@ -23,6 +23,9 @@ import { ModelChoiceCard } from "./ModelChoiceCard";
 import { GeneratedImageCard } from "./GeneratedImageCard";
 import { AspectChoiceCard, type AspectRatio } from "./AspectChoiceCard";
 import { SubjectLockChoiceCard, type SubjectKind } from "./SubjectLockChoiceCard";
+import { LocationPickerCard, type StoryLocation } from "./LocationPickerCard";
+import { ActStrip, type ActTile } from "./ActStrip";
+import { submitStoryBundle, submitStoryRender, submitStoryStitch } from "@/lib/director/api";
 
 import {
   streamDirectorAgent,
