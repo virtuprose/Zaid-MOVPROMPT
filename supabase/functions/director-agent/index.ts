@@ -217,16 +217,16 @@ const TOOLS = [
     function: {
       name: "ask_clarification",
       description:
-        "Ask 1–3 targeted questions when a missing detail would materially change the prompt. Use sparingly.",
+        "Ask ONE targeted question when a missing detail would materially change the prompt. HARD LIMIT: exactly 1 question per call — never bundle multiple axes.",
       parameters: {
         type: "object",
         properties: {
           questions: {
             type: "array",
             minItems: 1,
-            maxItems: 4,
+            maxItems: 1,
             items: { type: "string" },
-            description: "1–4 short, specific questions.",
+            description: "Exactly ONE short, specific question. Ask the next question on the following turn.",
           },
           reason: {
             type: "string",
