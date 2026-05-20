@@ -14,6 +14,7 @@ import {
   Camera,
   ArrowLeftRight,
   LayoutGrid,
+  Clapperboard,
   Menu,
   X,
   Lock,
