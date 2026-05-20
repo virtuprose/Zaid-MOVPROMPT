@@ -38,13 +38,25 @@ const statusWord = (status: ActTile["status"], elapsedMs: number) => {
   return elapsedMs > 90_000 ? "Finalizing" : "Rendering";
 };
 
-export function ActStrip({ title, acts, stitchStatus, stitchedVideoUrl, disabled, refreshSignal, onStitch, onActsUpdate }: Props) {
+export function ActStrip({ storyRenderId, title, acts, stitchStatus, stitchedVideoUrl, disabled, refreshSignal, onStitch, onActsUpdate }: Props) {
   const pending = useMemo(
     () => acts.filter((a) => a.status === "queued" || a.status === "processing"),
     [acts],
   );
   const allDone = acts.length > 0 && acts.every((a) => a.status === "completed");
   const anyFailed = acts.some((a) => a.status === "failed");
+
+  // Fire a one-shot event when all acts finish so the chat can surface a "Jump to Stitch" pill.
+  const firedReadyRef = useRef(false);
+  useEffect(() => {
+    if (allDone && !stitchedVideoUrl && !firedReadyRef.current) {
+      firedReadyRef.current = true;
+      window.dispatchEvent(
+        new CustomEvent("vidoprompt:acts-ready", { detail: { storyRenderId } }),
+      );
+    }
+    if (!allDone) firedReadyRef.current = false;
+  }, [allDone, stitchedVideoUrl, storyRenderId]);
 
   // Track when each act first entered "processing" so we can show an elapsed timer.
   const startedAtRef = useRef<Record<string, number>>({});
