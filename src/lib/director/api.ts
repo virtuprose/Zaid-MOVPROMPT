@@ -78,7 +78,77 @@ export type AgentResponse =
       directors_note?: string;
       scene_already_described?: boolean;
     }
+  | {
+      kind: "generate_story_bundle";
+      aspect: "16:9" | "9:16" | "1:1";
+      character_brief: string;
+      character_subject_kind?: "character" | "product";
+      prop_brief: string;
+      location_briefs: string[];
+      character_reference_urls?: string[];
+      directors_note?: string;
+    }
+  | {
+      kind: "request_story_render";
+      aspect: "16:9" | "9:16" | "1:1";
+      duration?: number;
+      title?: string;
+      act_prompts: string[];
+      directors_note?: string;
+    }
   | { kind: "message"; content: string };
+
+export type StoryAsset = { url: string; storage_path: string } | null;
+export type StoryBundleResponse = {
+  character: StoryAsset;
+  prop: StoryAsset;
+  locations: StoryAsset[];
+  missing: number;
+};
+
+export async function submitStoryBundle(input: {
+  aspect: "16:9" | "9:16" | "1:1";
+  character_brief: string;
+  character_subject_kind?: "character" | "product";
+  prop_brief: string;
+  location_briefs: string[];
+  character_reference_urls?: string[];
+}): Promise<StoryBundleResponse> {
+  const { data, error } = await supabase.functions.invoke("story-bundle", { body: input });
+  if (error) throw error;
+  return data as StoryBundleResponse;
+}
+
+export type StoryRenderResponse = {
+  story_render_id: string;
+  acts: Array<{ job_id: string; act_index: number; ok: boolean }>;
+  title: string;
+};
+
+export async function submitStoryRender(input: {
+  session_id?: string | null;
+  aspect: "16:9" | "9:16" | "1:1";
+  duration?: number;
+  character_url?: string;
+  prop_url?: string;
+  location_url: string;
+  act_prompts: string[];
+  title?: string;
+}): Promise<StoryRenderResponse> {
+  const { data, error } = await supabase.functions.invoke("story-render", { body: input });
+  if (error) throw error;
+  return data as StoryRenderResponse;
+}
+
+export async function submitStoryStitch(input: {
+  story_render_id: string;
+  session_id?: string | null;
+  title?: string;
+}): Promise<{ job_id: string; video_url: string; status: string }> {
+  const { data, error } = await supabase.functions.invoke("story-stitch", { body: input });
+  if (error) throw error;
+  return data as { job_id: string; video_url: string; status: string };
+}
 
 export type GeneratedImage = {
   url: string;
