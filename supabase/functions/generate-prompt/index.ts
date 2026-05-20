@@ -91,7 +91,7 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { images, workflowType, description, targetModel, sceneBreakdown, audioEnabled, references, elements, autoInjectElements, multiShotCount, elementMentions, compactMode, addendum, feedback, timelineEnabled } = body;
+    const { images, workflowType, description, targetModel, sceneBreakdown, audioEnabled, references, elements, autoInjectElements, multiShotCount, elementMentions, compactMode, addendum, feedback, timelineEnabled, targetDuration } = body;
     const isCompact = compactMode === true;
     const refinementAddendum: string =
       typeof addendum === "string" ? addendum.trim().slice(0, 600) : "";
@@ -316,9 +316,10 @@ serve(async (req) => {
     const variantBlock = variantHints ? `\n\n═══ VARIANT-SPECIFIC RULES ═══\n${variantHints}` : "";
 
     // Timeline Prompting addendum — appended when the user enables the toggle.
-    // Default beat duration of 10s; for multishot, beats are scoped per shot.
+    // Duration sourced from user-selected targetDuration; defaults to 10s.
+    const resolvedDuration = typeof targetDuration === "number" && targetDuration > 0 ? targetDuration : 10;
     const timelineBlock = timelineEnabled === true
-      ? timelineAddendum({ defaultDuration: 10, perShot: workflowType === "multishot" })
+      ? timelineAddendum({ defaultDuration: resolvedDuration, perShot: workflowType === "multishot" })
       : "";
 
     const composedSystemPrompt = `${BASE_SYSTEM_PROMPT}\n\n${docSummary}\n\n${systemAddendum}${variantBlock}${timelineBlock}\n\n═══ FEW-SHOT EXAMPLE ═══\n${examples}`;
@@ -367,6 +368,13 @@ serve(async (req) => {
     if (timelineEnabled === true) {
       userText += `Timeline Prompting: ENABLED — every mainPrompt MUST follow the TIMELINE / EFFECTS INVENTORY / DENSITY MAP / ENERGY ARC structure defined in the system prompt. Clock-pinned beats are required.\n\n`;
     }
+
+    if (typeof targetDuration === "number" && targetDuration > 0) {
+      userText += `Target video duration: ${targetDuration}s — set suggestedDuration to "${targetDuration}s" and pace beats/action to fit exactly this length.\n\n`;
+    } else if (targetDuration === "auto") {
+      userText += `Target video duration: AUTO — pick the most cinematic duration for this scene.\n\n`;
+    }
+
 
     // Refinement guidance: from auto-fix chips, AI critique suggestions, or thumbs-down feedback.
     // These are USER-DIRECTED corrections to the previous attempt. Honor them precisely without rewriting other parts.

@@ -36,6 +36,7 @@ import { trackGeneration } from "@/lib/analytics";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { getContract, deriveWorkflowType, supportsTimelinePrompting } from "@/lib/modelContracts";
+import { getModelControls } from "@/lib/director/videoModelControls";
 import { MODEL_GROUPS, getModelLabel } from "@/lib/models";
 import { parseEdgeFnError, pickErrorKey } from "@/lib/edgeFnError";
 import { detectAllIntents } from "@/lib/sceneIntent";
@@ -364,6 +365,57 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
     try { localStorage.setItem("movprompt.timelinePrompting", timelineEnabled ? "1" : "0"); } catch { /* ignore */ }
   }, [timelineEnabled]);
   const supportsTimeline = useMemo(() => supportsTimelinePrompting(selectedModel), [selectedModel]);
+
+  // Per-model target video duration (informs the generated prompt's pacing).
+  const modelControls = useMemo(() => getModelControls(selectedModel), [selectedModel]);
+  const durationOptions = useMemo<Array<number | "auto">>(() => {
+    const opts: Array<number | "auto"> = [];
+    if (modelControls.durations?.length) {
+      opts.push(...modelControls.durations);
+    } else if (modelControls.durationMin && modelControls.durationMax) {
+      const step = modelControls.durationStep ?? 1;
+      for (let n = modelControls.durationMin; n <= modelControls.durationMax; n += step) opts.push(n);
+    } else {
+      opts.push(5, 10);
+    }
+    if (modelControls.durationAuto) opts.push("auto");
+    return opts;
+  }, [modelControls]);
+  const [targetDuration, setTargetDuration] = useState<number | "auto">(() => {
+    const fallback = (modelControls.defaults?.duration as number | "auto" | undefined) ?? 10;
+    try {
+      const saved = localStorage.getItem(`movprompt.targetDuration.${selectedModel}`);
+      if (saved === "auto" && modelControls.durationAuto) return "auto";
+      const n = saved ? Number(saved) : NaN;
+      if (Number.isFinite(n) && durationOptions.includes(n as number)) return n;
+    } catch { /* ignore */ }
+    return fallback;
+  });
+  useEffect(() => {
+    // Re-resolve when model changes — snap to nearest allowed.
+    const fallback = (modelControls.defaults?.duration as number | "auto" | undefined) ?? 10;
+    let next: number | "auto" = fallback;
+    try {
+      const saved = localStorage.getItem(`movprompt.targetDuration.${selectedModel}`);
+      if (saved === "auto" && modelControls.durationAuto) next = "auto";
+      else {
+        const n = saved ? Number(saved) : NaN;
+        if (Number.isFinite(n) && durationOptions.includes(n as number)) next = n;
+      }
+    } catch { /* ignore */ }
+    if (next !== "auto" && !durationOptions.includes(next)) {
+      // snap
+      const nums = durationOptions.filter((d): d is number => typeof d === "number");
+      if (nums.length) {
+        next = nums.reduce((best, d) => Math.abs(d - (next as number)) < Math.abs(best - (next as number)) ? d : best, nums[0]);
+      }
+    }
+    setTargetDuration(next);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedModel]);
+  useEffect(() => {
+    try { localStorage.setItem(`movprompt.targetDuration.${selectedModel}`, String(targetDuration)); } catch { /* ignore */ }
+  }, [targetDuration, selectedModel]);
   const activeSlots = contract.supportsTwoFrameToggle && twoFrameMode ? 2 : contract.slots;
   const workflowType = deriveWorkflowType(selectedModel, activeSlots, contract.supportsMultiShotToggle && multiShotMode);
 
@@ -578,6 +630,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
             ? Math.min(10, Math.max(contract.multiShotCount ?? 0, elementsPayload.length))
             : undefined,
           timelineEnabled: supportsTimeline ? timelineEnabled : undefined,
+          targetDuration,
           compactMode: opts?.compact === true ? true : undefined,
           addendum,
           feedback: feedbackPayload,
@@ -1147,6 +1200,30 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
       </div>
     ) : (
       <div className="pt-6 mt-6 border-t border-white/[0.06] flex flex-col items-center gap-3">
+        {durationOptions.length > 0 && (
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            <span className="text-xs text-muted-foreground me-1">{t("wp.videoDuration" as any)}</span>
+            {durationOptions.map((d) => {
+              const active = targetDuration === d;
+              const label = d === "auto" ? "Auto" : `${d}s`;
+              return (
+                <button
+                  key={String(d)}
+                  type="button"
+                  onClick={() => setTargetDuration(d)}
+                  aria-pressed={active}
+                  className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                    active
+                      ? "border-accent/50 bg-accent/10 text-accent"
+                      : "border-white/[0.08] bg-white/[0.02] text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+        )}
         {supportsTimeline && (
           <TooltipProvider delayDuration={200}>
             <Tooltip>

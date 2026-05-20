@@ -1,65 +1,60 @@
-# Timeline Prompting toggle
+# Ask "how many seconds?" before generating
 
-Add a user-facing on/off switch shown right above the **Generate Cinematic Prompt** button. When enabled, the prompt is rewritten as a beat-by-beat timeline (clock-pinned actions, camera, light, audio, transitions, effects inventory, density map, energy arc) following the skill spec in the brief.
+After the user has picked a model and uploaded references, surface a small **Video duration** chooser directly above the **Generate Cinematic Prompt** button so the generated prompt is calibrated to the right length.
 
-Eligible models (toggle hidden for everything else, like an image-edit model):
-- Any `seedance*` (Pro, Pro Fast, 2.0, 2.0 Fast, base, Fast variants)
-- Any `kling*` (3.0, 3.0 Omni, 2.6, Motion-Control — excluding pure Edit)
-- Any `veo-3.1*` (Google / "Gemini Omni" family)
-- Also surface on the **Any Model** (Universal Prompt) flow, since it can resolve to one of the above
+## UI (in `src/components/WorkflowPanel.tsx`)
 
-Default state: **off** (timeline is an advanced technique; on by default would surprise existing users). Selection persists per session via `localStorage` (key `movprompt.timelinePrompting`).
-
-## UI
-
-In `src/components/WorkflowPanel.tsx`, next to the existing inline **Audio** pill in the collapsed model strip (and again right above the Generate button on the breakdown/generate phase), add a compact pill:
+Render a new compact row immediately above the Generate button (and the Timeline pill we just added):
 
 ```
-[ ⏱  Timeline  ●——  ]   ⓘ
+Video duration   [ 5s ] [ 8s ] [ 10s ] [ 15s ] …
 ```
 
-- Same visual treatment as `audioInlineToggle` (sub-tab pill, `aria-pressed`, accent when on).
-- Tooltip: *"Break the scene into clock-pinned beats with camera, light, and audio per timestamp. Best for Seedance, Kling, and Veo."*
-- Hidden when `!supportsTimeline(selectedModel)`.
+- Chips come from the selected model's `ModelControls` (`src/lib/director/videoModelControls.ts`):
+  - If `durations: number[]` → render each as a chip.
+  - If `durationMin/Max/Step` → render a small inline `<input type="number">` constrained to the range.
+  - If `durationAuto` is true → include an `Auto` chip.
+- Default selection = the model's `defaults.duration` (or 10 for the `any` model).
+- Persist last choice per model in `localStorage` (`movprompt.targetDuration.{model}`).
+- Visual treatment matches the Audio / Timeline pills (same sub-tab pill style, `aria-pressed`).
+- Label uses i18n key `wp.videoDuration` ("Video duration" / "مدة الفيديو").
+- Hidden only when the selected model has neither `durations` nor a `durationMin/Max` (extremely rare; falls back to a single 10s chip).
 
-## Contract change
+## State + payload
 
-`src/lib/modelContracts.ts`:
-- Add `supportsTimeline?: boolean` to `ModelContract`.
-- Set `true` for: `any`, all kling variants except pure `kling-*-edit`, all seedance variants, all `veo-3.1*`.
+In `WorkflowPanel.tsx`:
+- Add `const [targetDuration, setTargetDuration] = useState<number | "auto">(...)` resolved from `videoModelControls[selectedModel]?.defaults?.duration ?? 10`.
+- Reset / re-resolve when `selectedModel` changes (snap to nearest allowed value).
+- In the `supabase.functions.invoke("generate-prompt", { body: ... })` call (line 565), add:
+  ```
+  targetDuration,
+  ```
 
-## Wiring to generate-prompt
+## Edge function (`supabase/functions/generate-prompt/index.ts`)
 
-`src/components/WorkflowPanel.tsx` (around line 558):
-- Add a `timelineEnabled` state (read/write `localStorage`).
-- Pass `timelineEnabled: contract.supportsTimeline ? timelineEnabled : undefined` in the `supabase.functions.invoke("generate-prompt", { body: ... })` call.
-
-`supabase/functions/generate-prompt/index.ts`:
-- Accept new `timelineEnabled: boolean` in the request body.
-- When `true`, append a **Timeline Prompting addendum** to the system prompt for the resolved expert agent (Kling / Seedance / Veo / Generic). The addendum is the exact spec the user pasted (Role, Global Rules, Output Structure: TIMELINE / EFFECTS INVENTORY / DENSITY MAP / ENERGY ARC, beat-writing rules, duration calibration).
-- Duration source for calibration: derive from the model's default/locked duration (`videoModelControls`), defaulting to 10s.
-- For **multi-shot** workflows, generate the timeline **per shot** (each shot gets its own beat list scaled to its sub-duration).
-- Echo `timelineEnabled` in the returned `meta` so the UI can show a "Timeline" badge on the result card.
+- Destructure `targetDuration` from `body` (number | "auto" | undefined).
+- When present and numeric:
+  - Pass it into `timelineAddendum({ defaultDuration: targetDuration, perShot })` instead of the hard-coded 10.
+  - Append to `userText`: `Target video duration: ${targetDuration}s — set suggestedDuration accordingly and pace beats to this exact length.`
+- Echo it back in the result `meta` so the UI can show a "10s" badge on the result card (nice-to-have, same row as the Timeline badge).
 
 ## Files touched
 
-- `src/lib/modelContracts.ts` — add `supportsTimeline`, populate per family.
-- `src/components/WorkflowPanel.tsx` — state + toggle UI + payload field.
-- `src/i18n/translations/en.ts` + `ar.ts` — add `wp.timelinePrompting`, `wp.timelinePromptingHint`.
-- `supabase/functions/generate-prompt/index.ts` — read `timelineEnabled`, branch into timeline addendum.
-- `supabase/functions/generate-prompt/experts/_base.ts` (or each expert) — export `timelineAddendum()` builder so all three expert agents share one source of truth.
+- `src/components/WorkflowPanel.tsx` — new state, chip row, payload field.
+- `src/i18n/translations/en.ts` + `ar.ts` — `wp.videoDuration`, `wp.videoDurationHint`.
+- `supabase/functions/generate-prompt/index.ts` — read `targetDuration`, feed it to `timelineAddendum` and `userText`.
 
 ## Out of scope
 
-- No toggle in the Director chat composer (Director already drives beats conversationally; can be added in a follow-up if you want it there too).
-- No change to `generate-video` (timeline lives in the prompt text the video model consumes).
-- No new credits cost; same generation pricing.
+- No change to the Director chat composer (Director already asks duration conversationally via the `QuestionCard` duration presets).
+- No change to `generate-video` — the chosen seconds only steer the **prompt**; the actual render duration is still chosen in the Video Options dialog when the user hits "Generate Video".
+- No new credits cost.
 
 ## Verification
 
-1. Pick `seedance-2.0` → toggle appears, defaults off, flips on, persists on reload.
-2. Pick `kling-3.0-omni` → toggle appears.
-3. Pick `veo-3.1` → toggle appears.
-4. Pick `grok-imagine-edit` → toggle hidden.
-5. Toggle on + Generate → returned prompt contains the four sections (TIMELINE / EFFECTS INVENTORY / DENSITY MAP / ENERGY ARC) with timestamps matching the model's duration.
-6. Multi-shot on Seedance Pro → each shot has its own timeline.
+1. Pick `seedance-2.0` → duration chips show `5 / 10` (its allowed set), defaults to 10, persists per-model on reload.
+2. Pick `veo-3.1` → chips show `4 / 6 / 8`, defaults to 8.
+3. Pick `kling-v3-pro` → chips show `3 … 15`, defaults to 5.
+4. Pick `any` → defaults to 10 with a free numeric input.
+5. Generate with Timeline ON and 15s selected → output TIMELINE section spans `[00:00 – 00:15]` with the 10–16 beat calibration.
+6. Generate with Timeline OFF and 5s selected → `suggestedDuration: "5s"` in the result.
