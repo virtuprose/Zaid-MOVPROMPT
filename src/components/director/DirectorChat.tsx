@@ -113,6 +113,28 @@ type Bubble =
       };
       submitted?: boolean;
     }
+  | {
+      role: "location_picker";
+      payload: {
+        aspect: "16:9" | "9:16" | "1:1";
+        characterUrl?: string;
+        propUrl?: string;
+        locations: StoryLocation[];
+        actPromptsHint?: string;
+      };
+      chosenIndex?: number;
+    }
+  | {
+      role: "story_render";
+      data: {
+        storyRenderId: string;
+        title: string;
+        aspect: "16:9" | "9:16" | "1:1";
+        acts: ActTile[];
+        stitchStatus?: "idle" | "running" | "done" | "failed";
+        stitchedVideoUrl?: string;
+      };
+    }
   | { role: "video"; data: import("./VideoBubble").VideoBubbleData };
 
 const WELCOME: Bubble = {
