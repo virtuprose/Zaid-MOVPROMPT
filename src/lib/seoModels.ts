@@ -18,7 +18,7 @@ export const MODEL_FAMILIES: ModelFamily[] = [
     vendor: "Google DeepMind",
     tagline: "Cinematic prompts for Veo 3 and Veo 3.1",
     intro:
-      "Google Veo rewards precise cinematography language: lens, movement, lighting and physically grounded action. MovPrompt's Director of Photography crafts prompts tuned for Veo 3 and Veo 3.1 — including audio cues — so your shots feel directed, not generated.",
+      "Google Veo rewards precise cinematography language: lens, movement, lighting and physically grounded action. MovPrompt's AI Director crafts prompts tuned for Veo 3 and Veo 3.1 — including audio cues — so your shots feel directed, not generated.",
     bestFor: [
       "Photoreal scenes with believable physics",
       "Native synchronized dialogue and ambience",
