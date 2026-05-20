@@ -1200,6 +1200,30 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
       </div>
     ) : (
       <div className="pt-6 mt-6 border-t border-white/[0.06] flex flex-col items-center gap-3">
+        {durationOptions.length > 0 && (
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            <span className="text-xs text-muted-foreground me-1">{t("wp.videoDuration" as any)}</span>
+            {durationOptions.map((d) => {
+              const active = targetDuration === d;
+              const label = d === "auto" ? "Auto" : `${d}s`;
+              return (
+                <button
+                  key={String(d)}
+                  type="button"
+                  onClick={() => setTargetDuration(d)}
+                  aria-pressed={active}
+                  className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                    active
+                      ? "border-accent/50 bg-accent/10 text-accent"
+                      : "border-white/[0.08] bg-white/[0.02] text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+        )}
         {supportsTimeline && (
           <TooltipProvider delayDuration={200}>
             <Tooltip>
