@@ -1013,6 +1013,25 @@ function DirectorChatInner() {
             scene_already_described: resp.scene_already_described,
           };
 
+          // Story mode bypasses subject-lock + aspect chips — director drives step-by-step.
+          const isStoryStep = typeof resp.directors_note === "string" && /story step/i.test(resp.directors_note);
+          if (isStoryStep) {
+            await runImageGeneration(next, {
+              mode: resp.mode,
+              prompt: resp.prompt,
+              reference_urls: resp.reference_urls,
+              count: resp.count,
+              per_shot_prompts: resp.per_shot_prompts,
+              shot_index: resp.shot_index,
+              lock_mode: resp.lock_mode,
+              aspect_ratio: resp.aspect_ratio || "16:9",
+              directors_note: resp.directors_note,
+              scene_already_described: resp.scene_already_described,
+            });
+            setAttachments([]);
+            return;
+          }
+
           // If no subject sheet is pinned and we haven't asked yet this session,
           // surface the subject-lock chip BEFORE the aspect chip.
           const alreadyAsked = next.some((b) => b.role === "subject_lock_choice");
