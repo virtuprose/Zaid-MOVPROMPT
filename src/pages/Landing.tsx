@@ -501,41 +501,253 @@ function Features() {
           </p>
         </FadeUp>
 
-        <div id="how" className="mt-16 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-          {FEATURES.map((f, i) => {
-            const Icon = f.icon;
-            const isFlagship = "flagship" in f && f.flagship;
-            return (
-              <motion.div
-                key={f.title}
-                initial={{ opacity: 0, y: 60 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, amount: 0.3 }}
-                transition={{
-                  duration: 0.7,
-                  delay: i * 0.12,
-                  ease: [0.22, 1, 0.36, 1],
-                }}
-                className={cn(
-                  "group relative rounded-2xl border bg-card p-8 transition-all duration-300 hover:-translate-y-1",
-                  isFlagship
-                    ? "border-accent/30 shadow-[0_4px_40px_hsl(var(--accent)/0.12)] hover:border-accent/50 hover:shadow-[0_8px_56px_hsl(var(--accent)/0.18)]"
-                    : "border-border hover:border-accent/20 hover:shadow-[0_4px_32px_hsl(var(--accent)/0.08)]"
-                )}
-              >
-                <div className="mb-6 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-accent/10 to-accent/5">
-                  <Icon className="h-6 w-6 text-accent" strokeWidth={2} />
-                </div>
-                <h3 className="font-display text-[20px] font-semibold tracking-tight text-foreground">
-                  {f.title}
-                </h3>
-                <p className="mt-3 text-[15px] leading-relaxed text-muted-foreground">{f.body}</p>
-              </motion.div>
-            );
-          })}
+        <div id="how" className="mt-16">
+          <FeatureDeck />
         </div>
       </div>
     </section>
+  );
+}
+
+/* ---------------- Feature Deck ---------------- */
+
+function FeatureDeck() {
+  const reduce = useReducedMotion();
+  const [order, setOrder] = useState<number[]>(() => FEATURES.map((_, i) => i));
+  const [exitDir, setExitDir] = useState<1 | -1 | 0>(0);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const advance = (dir: 1 | -1) => {
+    setExitDir(dir);
+    // small delay so exit animation can play
+    window.setTimeout(
+      () => {
+        setOrder((o) => {
+          if (dir === 1) return [...o.slice(1), o[0]];
+          return [o[o.length - 1], ...o.slice(0, -1)];
+        });
+        setExitDir(0);
+      },
+      reduce ? 0 : 280,
+    );
+  };
+
+  // Keyboard nav when deck container is focused
+  const onKey = (e: React.KeyboardEvent) => {
+    if (e.key === "ArrowRight") advance(1);
+    if (e.key === "ArrowLeft") advance(-1);
+  };
+
+  const topIndex = order[0];
+
+  return (
+    <div className="flex flex-col items-center">
+      <div
+        ref={containerRef}
+        tabIndex={0}
+        onKeyDown={onKey}
+        className="relative h-[360px] w-full max-w-md outline-none [perspective:1200px] sm:h-[340px]"
+        aria-label="Features deck. Use arrow keys or drag to navigate."
+      >
+        {order.map((featureIdx, slot) => {
+          const isTop = slot === 0;
+          const depth = Math.min(slot, 3);
+          // Hide the 4th card visually but keep mounted for smooth rotation
+          const hidden = slot >= 3;
+          return (
+            <DeckCard
+              key={featureIdx}
+              feature={FEATURES[featureIdx]}
+              depth={depth}
+              isTop={isTop}
+              hidden={hidden}
+              exitDir={isTop ? exitDir : 0}
+              reduce={!!reduce}
+              onSwipe={advance}
+            />
+          );
+        })}
+      </div>
+
+      {/* Controls */}
+      <div className="mt-8 flex items-center gap-5">
+        <button
+          type="button"
+          onClick={() => advance(-1)}
+          aria-label="Previous feature"
+          className="grid h-10 w-10 place-items-center rounded-full border border-border bg-card text-muted-foreground transition hover:border-accent/40 hover:text-accent"
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </button>
+
+        <div className="flex items-center gap-2" role="tablist">
+          {FEATURES.map((f, i) => {
+            const active = i === topIndex;
+            return (
+              <button
+                key={f.title}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                aria-label={f.title}
+                onClick={() => {
+                  if (i === topIndex) return;
+                  // rotate order so chosen index becomes first
+                  setOrder((o) => {
+                    const pos = o.indexOf(i);
+                    return [...o.slice(pos), ...o.slice(0, pos)];
+                  });
+                }}
+                className={cn(
+                  "h-1.5 rounded-full transition-all duration-300",
+                  active ? "w-8 bg-accent" : "w-1.5 bg-border hover:bg-muted-foreground/60",
+                )}
+              />
+            );
+          })}
+        </div>
+
+        <button
+          type="button"
+          onClick={() => advance(1)}
+          aria-label="Next feature"
+          className="grid h-10 w-10 place-items-center rounded-full border border-border bg-card text-muted-foreground transition hover:border-accent/40 hover:text-accent"
+        >
+          <ChevronRight className="h-4 w-4" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ---------------- Deck Card ---------------- */
+
+function DeckCard({
+  feature,
+  depth,
+  isTop,
+  hidden,
+  exitDir,
+  reduce,
+  onSwipe,
+}: {
+  feature: (typeof FEATURES)[number];
+  depth: number;
+  isTop: boolean;
+  hidden: boolean;
+  exitDir: 1 | -1 | 0;
+  reduce: boolean;
+  onSwipe: (dir: 1 | -1) => void;
+}) {
+  const Icon = feature.icon;
+  const isFlagship = "flagship" in feature && (feature as { flagship?: boolean }).flagship;
+
+  // Tilt motion values
+  const tiltX = useMotionValue(0);
+  const tiltY = useMotionValue(0);
+  const springX = useSpring(tiltX, { stiffness: 220, damping: 18, mass: 0.4 });
+  const springY = useSpring(tiltY, { stiffness: 220, damping: 18, mass: 0.4 });
+
+  const draggingRef = useRef(false);
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  const handleMove = (e: React.PointerEvent) => {
+    if (!isTop || reduce || draggingRef.current) return;
+    if (typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches) return;
+    const el = cardRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const px = (e.clientX - rect.left) / rect.width - 0.5;
+    const py = (e.clientY - rect.top) / rect.height - 0.5;
+    tiltY.set(px * 12); // rotateY
+    tiltX.set(-py * 10); // rotateX
+  };
+
+  const resetTilt = () => {
+    tiltX.set(0);
+    tiltY.set(0);
+  };
+
+  // Animated state per depth (resting position in the stack)
+  const restingY = depth * 14;
+  const restingScale = 1 - depth * 0.05;
+  const restingOpacity = depth >= 3 ? 0 : 1 - depth * 0.18;
+
+  const animateTo =
+    isTop && exitDir !== 0
+      ? {
+          x: exitDir * 480,
+          opacity: 0,
+          rotateZ: exitDir * 14,
+          transition: { duration: 0.28, ease: [0.4, 0, 1, 1] },
+        }
+      : {
+          x: 0,
+          y: restingY,
+          scale: restingScale,
+          opacity: restingOpacity,
+          rotateZ: 0,
+        };
+
+  return (
+    <motion.div
+      ref={cardRef}
+      className={cn(
+        "absolute inset-0 select-none rounded-2xl border bg-card p-8 will-change-transform",
+        isTop ? "cursor-grab active:cursor-grabbing" : "pointer-events-none",
+        isFlagship
+          ? "border-accent/30 shadow-[0_8px_56px_hsl(var(--accent)/0.18)]"
+          : "border-border shadow-[0_4px_32px_hsl(var(--background)/0.4)]",
+        hidden && "opacity-0",
+      )}
+      style={
+        isTop
+          ? {
+              zIndex: 30 - depth,
+              rotateX: springX,
+              rotateY: springY,
+              transformStyle: "preserve-3d",
+            }
+          : { zIndex: 30 - depth }
+      }
+      initial={false}
+      animate={animateTo}
+      transition={
+        isTop && exitDir !== 0
+          ? undefined
+          : { type: "spring", stiffness: 260, damping: 28 }
+      }
+      drag={isTop && !reduce ? "x" : false}
+      dragElastic={0.6}
+      dragConstraints={{ left: 0, right: 0 }}
+      onDragStart={() => {
+        draggingRef.current = true;
+        resetTilt();
+      }}
+      onDragEnd={(_, info) => {
+        draggingRef.current = false;
+        const threshold = 120;
+        if (info.offset.x > threshold || info.velocity.x > 600) onSwipe(1);
+        else if (info.offset.x < -threshold || info.velocity.x < -600) onSwipe(-1);
+      }}
+      onPointerMove={handleMove}
+      onPointerLeave={resetTilt}
+      aria-hidden={!isTop}
+    >
+      <div className="mb-6 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-accent/10 to-accent/5">
+        <Icon className="h-6 w-6 text-accent" strokeWidth={2} />
+      </div>
+      <h3 className="font-display text-[22px] font-semibold tracking-tight text-foreground">
+        {feature.title}
+      </h3>
+      <p className="mt-3 text-[15px] leading-relaxed text-muted-foreground">{feature.body}</p>
+
+      {isTop && (
+        <span className="pointer-events-none absolute bottom-5 right-6 text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground/60">
+          Drag · ← →
+        </span>
+      )}
+    </motion.div>
   );
 }
 
