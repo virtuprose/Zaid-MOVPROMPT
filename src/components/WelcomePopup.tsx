@@ -42,7 +42,10 @@ const WelcomePopup = () => {
 
       if (data) {
         const key = `welcome_popup_seen_${data.id}`;
-        if (sessionStorage.getItem(key)) return;
+        if (sessionStorage.getItem(key)) {
+          try { sessionStorage.setItem("movprompt.welcomeChecked", "1"); } catch { /* ignore */ }
+          return;
+        }
         setPopup(data as Popup);
         setOpen(true);
         return;
@@ -55,6 +58,8 @@ const WelcomePopup = () => {
       if (isFirstSignup && !alreadySeen) {
         setShowOnboarding(true);
         setOpen(true);
+      } else {
+        try { sessionStorage.setItem("movprompt.welcomeChecked", "1"); } catch { /* ignore */ }
       }
     })();
     return () => { cancelled = true; };
@@ -69,7 +74,10 @@ const WelcomePopup = () => {
       localStorage.removeItem(FIRST_SIGNUP_FLAG);
     }
     // Signal the tour can start now that the welcome popup is dismissed
-    try { sessionStorage.setItem("movprompt.welcomeDismissed", "1"); } catch { /* ignore */ }
+    try {
+      sessionStorage.setItem("movprompt.welcomeDismissed", "1");
+      sessionStorage.setItem("movprompt.welcomeChecked", "1");
+    } catch { /* ignore */ }
     setOpen(false);
   };
 
