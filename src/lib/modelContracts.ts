@@ -25,6 +25,21 @@ export interface ModelContract {
   supportsElementReferences?: boolean;
   /** Maximum number of @Element references (default 10). */
   maxElements?: number;
+  /** Whether this model supports Timeline Prompting (beat-by-beat clock-pinned prompt). */
+  supportsTimeline?: boolean;
+}
+
+/** Centralized check: does this model support Timeline Prompting?
+ *  Enabled for Seedance, Kling (non-edit), Veo 3.1 family, and Any Model. */
+export function supportsTimelinePrompting(model: string): boolean {
+  if (model === "any") return true;
+  if (model.startsWith("seedance")) return true;
+  if (model.startsWith("veo-3.1")) return true;
+  if (model.startsWith("kling")) {
+    if (model.includes("-edit")) return false;
+    return true;
+  }
+  return false;
 }
 
 const STD: ModelContract = {
