@@ -91,7 +91,7 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { images, workflowType, description, targetModel, sceneBreakdown, audioEnabled, references, elements, autoInjectElements, multiShotCount, elementMentions, compactMode, addendum, feedback, timelineEnabled } = body;
+    const { images, workflowType, description, targetModel, sceneBreakdown, audioEnabled, references, elements, autoInjectElements, multiShotCount, elementMentions, compactMode, addendum, feedback, timelineEnabled, targetDuration } = body;
     const isCompact = compactMode === true;
     const refinementAddendum: string =
       typeof addendum === "string" ? addendum.trim().slice(0, 600) : "";
