@@ -364,6 +364,10 @@ serve(async (req) => {
         : `Audio: DISABLED — produce a SILENT video. Do not include any audio direction. Set audioBlock to "Silent — no audio".\n\n`;
     }
 
+    if (timelineEnabled === true) {
+      userText += `Timeline Prompting: ENABLED — every mainPrompt MUST follow the TIMELINE / EFFECTS INVENTORY / DENSITY MAP / ENERGY ARC structure defined in the system prompt. Clock-pinned beats are required.\n\n`;
+    }
+
     // Refinement guidance: from auto-fix chips, AI critique suggestions, or thumbs-down feedback.
     // These are USER-DIRECTED corrections to the previous attempt. Honor them precisely without rewriting other parts.
     if (refinementAddendum || feedbackLiked === false || feedbackReasons.length > 0 || feedbackNote) {
