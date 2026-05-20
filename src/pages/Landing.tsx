@@ -175,7 +175,7 @@ function Navbar() {
   return (
     <header
       className={cn(
-        "fixed inset-x-0 top-0 z-50 backdrop-blur-xl transition-all duration-300",
+        "fixed inset-x-0 top-0 z-50 transition-all duration-300",
         scrolled
           ? "bg-card/80 border-b border-border"
           : "bg-transparent border-b border-transparent",
