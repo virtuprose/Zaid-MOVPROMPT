@@ -157,15 +157,29 @@ const CONTROLS: Record<string, ModelControls> = {
     audio: true,
     defaults: { aspect_ratio: "16:9", duration: "auto", resolution: "1080p", audio: true },
   },
+  "seedance-2.0": {
+    aspectRatios: SEEDANCE_ASPECTS,
+    durationMin: 4,
+    durationMax: 15,
+    durationStep: 1,
+    durationAuto: true,
+    resolutions: ["480p", "720p", "1080p"],
+    audio: true,
+    defaults: { aspect_ratio: "16:9", duration: "auto", resolution: "1080p", audio: true },
+  },
   "seedance-v1-pro": {
     aspectRatios: SEEDANCE_ASPECTS,
-    durations: [5, 10],
+    durationMin: 3,
+    durationMax: 12,
+    durationStep: 1,
     resolutions: ["480p", "720p", "1080p"],
     defaults: { aspect_ratio: "16:9", duration: 5, resolution: "1080p" },
   },
   "seedance-v1-lite": {
     aspectRatios: SEEDANCE_ASPECTS,
-    durations: [5, 10],
+    durationMin: 3,
+    durationMax: 12,
+    durationStep: 1,
     resolutions: ["480p", "720p", "1080p"],
     defaults: { aspect_ratio: "16:9", duration: 5, resolution: "720p" },
   },
@@ -228,7 +242,17 @@ const FALLBACK: ModelControls = {
   defaults: { aspect_ratio: "16:9" },
 };
 
+// Universal Prompt ("Any model") — exposes a generic duration range for prompt pacing.
+const UNIVERSAL: ModelControls = {
+  aspectRatios: STD_ASPECTS,
+  durationMin: 5,
+  durationMax: 15,
+  durationStep: 1,
+  defaults: { aspect_ratio: "16:9", duration: 10 },
+};
+
 export function getModelControls(modelId: string): ModelControls {
+  if (modelId === "any") return UNIVERSAL;
   return CONTROLS[modelId] ?? FALLBACK;
 }
 

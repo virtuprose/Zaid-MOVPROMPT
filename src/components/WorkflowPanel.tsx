@@ -18,6 +18,7 @@ import { extractVideoKeyframes, compressImageFile } from "@/lib/videoFrames";
 import { hashBase64, getCachedAnalysis, setCachedAnalysis } from "@/lib/imageCache";
 import { Sparkles, Loader2, ScanSearch, RotateCcw, RefreshCw, Info, Volume2, VolumeX, Zap, Clapperboard, ArrowRight, ArrowDown, ArrowLeft, HelpCircle, Pencil, Clock } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Slider } from "@/components/ui/slider";
 import { PresetPickerPanel } from "./PresetPickerPanel";
 import {
   AlertDialog,
@@ -1200,30 +1201,82 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
       </div>
     ) : (
       <div className="pt-6 mt-6 border-t border-white/[0.06] flex flex-col items-center gap-3">
-        {durationOptions.length > 0 && (
-          <div className="flex flex-wrap items-center justify-center gap-2">
-            <span className="text-xs text-muted-foreground me-1">{t("wp.videoDuration" as any)}</span>
-            {durationOptions.map((d) => {
-              const active = targetDuration === d;
-              const label = d === "auto" ? "Auto" : `${d}s`;
-              return (
-                <button
-                  key={String(d)}
-                  type="button"
-                  onClick={() => setTargetDuration(d)}
-                  aria-pressed={active}
-                  className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
-                    active
-                      ? "border-accent/50 bg-accent/10 text-accent"
-                      : "border-white/[0.08] bg-white/[0.02] text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  {label}
-                </button>
-              );
-            })}
-          </div>
-        )}
+        {(() => {
+          const numericDurations = durationOptions.filter((d): d is number => typeof d === "number");
+          const supportsAuto = modelControls.durationAuto === true;
+          if (numericDurations.length === 0) return null;
+          const min = numericDurations[0];
+          const max = numericDurations[numericDurations.length - 1];
+
+          // Fixed-duration model: render a small read-only label, no slider.
+          if (numericDurations.length === 1) {
+            return (
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <span>{t("wp.videoDuration" as any)}</span>
+                <span className="rounded-full border border-white/[0.08] bg-white/[0.02] px-3 py-1 text-foreground/80">
+                  {min}s · fixed
+                </span>
+              </div>
+            );
+          }
+
+          // Continuous vs discrete. Slider walks an index into numericDurations
+          // so discrete sets (e.g. [5, 10]) snap correctly.
+          const isAuto = targetDuration === "auto";
+          const currentIdx = (() => {
+            if (isAuto) return numericDurations.indexOf(typeof modelControls.defaults?.duration === "number" ? (modelControls.defaults!.duration as number) : numericDurations[Math.floor(numericDurations.length / 2)]);
+            const i = numericDurations.indexOf(targetDuration as number);
+            if (i >= 0) return i;
+            // nearest
+            return numericDurations.reduce((bestI, d, i) => Math.abs(d - (targetDuration as number)) < Math.abs(numericDurations[bestI] - (targetDuration as number)) ? i : bestI, 0);
+          })();
+          const currentValue = numericDurations[Math.max(0, currentIdx)] ?? min;
+
+          return (
+            <div className="w-full max-w-md space-y-2">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted-foreground">{t("wp.videoDuration" as any)}</span>
+                <span className={`rounded-full border px-2.5 py-0.5 font-medium ${
+                  isAuto
+                    ? "border-white/[0.08] bg-white/[0.02] text-muted-foreground"
+                    : "border-accent/40 bg-accent/10 text-accent"
+                }`}>
+                  {isAuto ? "Auto" : `${currentValue}s`}
+                </span>
+              </div>
+              <Slider
+                value={[currentIdx]}
+                min={0}
+                max={numericDurations.length - 1}
+                step={1}
+                disabled={isAuto}
+                onValueChange={(v) => {
+                  const idx = Math.max(0, Math.min(numericDurations.length - 1, v[0] ?? 0));
+                  setTargetDuration(numericDurations[idx]);
+                }}
+                className={isAuto ? "opacity-40" : undefined}
+              />
+              <div className="flex items-center justify-between text-[10px] text-muted-foreground/70">
+                <span>{min}s</span>
+                {supportsAuto && (
+                  <button
+                    type="button"
+                    onClick={() => setTargetDuration(isAuto ? (typeof modelControls.defaults?.duration === "number" ? (modelControls.defaults!.duration as number) : min) : "auto")}
+                    aria-pressed={isAuto}
+                    className={`rounded-full border px-2.5 py-0.5 text-[11px] font-medium transition-colors ${
+                      isAuto
+                        ? "border-accent/50 bg-accent/10 text-accent"
+                        : "border-white/[0.08] bg-white/[0.02] text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    Auto
+                  </button>
+                )}
+                <span>{max}s</span>
+              </div>
+            </div>
+          );
+        })()}
         {supportsTimeline && (
           <TooltipProvider delayDuration={200}>
             <Tooltip>
