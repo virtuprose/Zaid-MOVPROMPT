@@ -210,7 +210,7 @@ export function LocationPickerCard({ locations, characterUrl, propUrl, aspect, c
 
       {chosenIndex && (
         <div className="text-center text-xs text-muted-foreground/80">
-          Location {chosenIndex} locked. Director is composing the 8 acts…
+          Location {chosenIndex} locked. Director is composing the 4 acts…
         </div>
       )}
     </div>

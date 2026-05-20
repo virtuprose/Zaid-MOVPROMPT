@@ -737,6 +737,76 @@ function DirectorChatInner() {
     void persist(next, null, null);
   };
 
+  const handleLocationChoice = (bubbleIndex: number, index: number) => {
+    if (busy) return;
+    const target = bubbles[bubbleIndex];
+    if (!target || target.role !== "location_picker" || target.chosenIndex) return;
+    setBubbles((prev) =>
+      prev.map((b, i) =>
+        i === bubbleIndex && b.role === "location_picker" ? { ...b, chosenIndex: index } : b,
+      ),
+    );
+    void send(`Location chosen: ${index}`);
+  };
+
+  const handleActsUpdate = (bubbleIndex: number, nextActs: ActTile[]) => {
+    setBubbles((prev) => {
+      const copy = [...prev];
+      const cur = copy[bubbleIndex];
+      if (cur?.role !== "story_render") return prev;
+      copy[bubbleIndex] = { ...cur, data: { ...cur.data, acts: nextActs } };
+      void persist(copy, null, null);
+      return copy;
+    });
+  };
+
+  const handleStitch = async (bubbleIndex: number) => {
+    const target = bubbles[bubbleIndex];
+    if (!target || target.role !== "story_render") return;
+    if (target.data.stitchStatus === "running") return;
+    setBubbles((prev) => {
+      const copy = [...prev];
+      const cur = copy[bubbleIndex];
+      if (cur?.role !== "story_render") return prev;
+      copy[bubbleIndex] = { ...cur, data: { ...cur.data, stitchStatus: "running" } };
+      return copy;
+    });
+    try {
+      const out = await submitStoryStitch({
+        story_render_id: target.data.storyRenderId,
+        session_id: sessionIdRef.current,
+        title: target.data.title,
+      });
+      setBubbles((prev) => {
+        const copy = [...prev];
+        const cur = copy[bubbleIndex];
+        if (cur?.role !== "story_render") return prev;
+        copy[bubbleIndex] = {
+          ...cur,
+          data: {
+            ...cur.data,
+            stitchStatus: "done",
+            stitchedVideoUrl: out.video_url,
+          },
+        };
+        void persist(copy, null, null);
+        return copy;
+      });
+      toast.success("Stitched into one video.");
+    } catch (e: any) {
+      setBubbles((prev) => {
+        const copy = [...prev];
+        const cur = copy[bubbleIndex];
+        if (cur?.role !== "story_render") return prev;
+        copy[bubbleIndex] = { ...cur, data: { ...cur.data, stitchStatus: "failed" } };
+        return copy;
+      });
+      if (!(await notifyInsufficientCredits(e))) toast.error(e?.message || "Stitch failed");
+    }
+  };
+
+
+
 
 
   const send = async (textOverride?: string) => {
@@ -869,6 +939,23 @@ function DirectorChatInner() {
               content: `[Asked the user to describe the opening key frame scene before choosing aspect ratio. Waiting for their description.]`,
             });
           }
+        } else if (b.role === "location_picker") {
+          if (b.chosenIndex) {
+            history.push({
+              role: "user",
+              content: `Location chosen: ${b.chosenIndex}`,
+            });
+          } else {
+            history.push({
+              role: "assistant",
+              content: `[Generated the story asset bundle (1 character + 1 prop + ${b.payload.locations.length} locations) via generate_story_bundle. Waiting for the user to pick one location.]`,
+            });
+          }
+        } else if (b.role === "story_render") {
+          history.push({
+            role: "assistant",
+            content: `[Launched 4 parallel Seedance 2.0 acts via request_story_render — title "${b.data.title}", aspect ${b.data.aspect}. Acts are rendering; the client will stitch them into one ~1-minute video when they finish.]`,
+          });
         }
 
       }
@@ -1117,9 +1204,121 @@ function DirectorChatInner() {
         } catch (e: any) {
           if (!(await notifyInsufficientCredits(e))) toast.error(e?.message || "Could not start render");
         }
+      } else if (resp.kind === "generate_story_bundle") {
+        // Story step 4 — build the asset bundle (1 character + 1 prop + 7 locations),
+        // then surface the location picker so the user can drop one into the slot.
+        const loadingBubble: Bubble = {
+          role: "assistant",
+          animate: true,
+          content: "Building the story asset bundle — character + prop + 7 locations…",
+        };
+        const withLoading: Bubble[] = [...next, loadingBubble];
+        setBubbles(withLoading);
+        try {
+          const bundle = await submitStoryBundle({
+            aspect: resp.aspect,
+            character_brief: resp.character_brief,
+            character_subject_kind: resp.character_subject_kind,
+            prop_brief: resp.prop_brief,
+            location_briefs: resp.location_briefs,
+            character_reference_urls: resp.character_reference_urls,
+          });
+          const locations = (bundle.locations || [])
+            .map((loc, i) => (loc ? { url: loc.url, storage_path: loc.storage_path, index: i + 1 } : null))
+            .filter((l): l is { url: string; storage_path: string; index: number } => !!l);
+          if (locations.length === 0) {
+            throw new Error("Could not generate any locations — try again.");
+          }
+          const pickerBubble: Bubble = {
+            role: "location_picker",
+            payload: {
+              aspect: resp.aspect,
+              characterUrl: bundle.character?.url,
+              propUrl: bundle.prop?.url,
+              locations,
+              actPromptsHint: resp.directors_note,
+            },
+          };
+          const finalNext: Bubble[] = [...next, pickerBubble];
+          setBubbles(finalNext);
+          setAttachments([]);
+          void persist(finalNext, null, null);
+          if (bundle.missing > 0) {
+            toast.warning(`${bundle.missing} location${bundle.missing === 1 ? "" : "s"} failed — pick from the ${locations.length} that worked.`);
+          } else {
+            toast.success("Bundle ready — pick your location.");
+          }
+          return;
+        } catch (e: any) {
+          if (!(await notifyInsufficientCredits(e))) toast.error(e?.message || "Could not build story bundle");
+          throw e;
+        }
+      } else if (resp.kind === "request_story_render") {
+        // Find the most recent location_picker with a chosen index — that's our render target.
+        let picker: Extract<Bubble, { role: "location_picker" }> | null = null;
+        for (let i = next.length - 1; i >= 0; i -= 1) {
+          const b = next[i];
+          if (b.role === "location_picker" && b.chosenIndex) {
+            picker = b;
+            break;
+          }
+        }
+        if (!picker || !picker.chosenIndex) {
+          added = { role: "assistant", animate: true, content: "Pick a location first, then I'll launch the acts." };
+        } else {
+          const loc = picker.payload.locations.find((l) => l.index === picker!.chosenIndex);
+          if (!loc) {
+            added = { role: "assistant", animate: true, content: "Couldn't resolve the chosen location — try picking again." };
+          } else {
+            const loadingBubble: Bubble = {
+              role: "assistant",
+              animate: true,
+              content: "Kicking off 4 parallel acts on Seedance 2.0…",
+            };
+            const withLoading: Bubble[] = [...next, loadingBubble];
+            setBubbles(withLoading);
+            try {
+              const out = await submitStoryRender({
+                session_id: sessionIdRef.current,
+                aspect: resp.aspect,
+                duration: resp.duration ?? 15,
+                character_url: picker.payload.characterUrl,
+                prop_url: picker.payload.propUrl,
+                location_url: loc.url,
+                act_prompts: resp.act_prompts,
+                title: resp.title,
+              });
+              const acts: ActTile[] = out.acts.map((a) => ({
+                jobId: a.job_id,
+                actIndex: a.act_index,
+                status: a.ok ? "processing" : "failed",
+              }));
+              const storyBubble: Bubble = {
+                role: "story_render",
+                data: {
+                  storyRenderId: out.story_render_id,
+                  title: out.title,
+                  aspect: resp.aspect,
+                  acts,
+                  stitchStatus: "idle",
+                },
+              };
+              const finalNext: Bubble[] = [...next, storyBubble];
+              setBubbles(finalNext);
+              setAttachments([]);
+              void persist(finalNext, null, resp.title || null);
+              toast.success("4 acts rendering in parallel.");
+              return;
+            } catch (e: any) {
+              if (!(await notifyInsufficientCredits(e))) toast.error(e?.message || "Could not launch story render");
+              throw e;
+            }
+          }
+        }
       } else {
         added = { role: "assistant", animate: true, content: (resp as any).content || "..." };
       }
+
 
       const finalNext: Bubble[] = [...next, added];
       setBubbles(finalNext);
@@ -1764,6 +1963,43 @@ function DirectorChatInner() {
                         handleSceneDescribeSubmit(i, answer);
                       }}
                       onSkip={() => handleSceneDescribeSubmit(i, "")}
+                    />
+                  </div>
+                </div>
+              );
+            }
+            if (b.role === "location_picker") {
+              return (
+                <div key={i} className="flex items-start gap-2 motion-safe:animate-fade-up">
+                  <AssistantAvatar size="sm" state="idle" className="mt-1" />
+                  <div className="flex-1">
+                    <LocationPickerCard
+                      locations={b.payload.locations}
+                      characterUrl={b.payload.characterUrl}
+                      propUrl={b.payload.propUrl}
+                      aspect={b.payload.aspect}
+                      chosenIndex={b.chosenIndex}
+                      disabled={busy || !!b.chosenIndex}
+                      onChoose={(index) => handleLocationChoice(i, index)}
+                    />
+                  </div>
+                </div>
+              );
+            }
+            if (b.role === "story_render") {
+              return (
+                <div key={i} className="flex items-start gap-2 motion-safe:animate-fade-up">
+                  <AssistantAvatar size="sm" state="idle" className="mt-1" />
+                  <div className="flex-1">
+                    <ActStrip
+                      storyRenderId={b.data.storyRenderId}
+                      title={b.data.title}
+                      acts={b.data.acts}
+                      stitchStatus={b.data.stitchStatus}
+                      stitchedVideoUrl={b.data.stitchedVideoUrl}
+                      disabled={busy}
+                      onActsUpdate={(next) => handleActsUpdate(i, next)}
+                      onStitch={() => void handleStitch(i)}
                     />
                   </div>
                 </div>
