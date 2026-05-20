@@ -307,15 +307,8 @@ function Hero({ scrollY }: { scrollY: MotionValue<number> }) {
         aria-hidden
       />
 
-      {/* Layer 1: base amber wash anchoring the light source (top-right) */}
-      <div
-        className="pointer-events-none absolute inset-0"
-        aria-hidden
-        style={{
-          background:
-            "radial-gradient(ellipse 70% 55% at 95% -15%, hsl(var(--accent) / 0.10), transparent 60%)",
-        }}
-      />
+
+
 
 
       {/* Layer 3: perspective grid */}
