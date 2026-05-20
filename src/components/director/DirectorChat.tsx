@@ -447,6 +447,7 @@ function DirectorChatInner() {
             images: [],
             directorsNote: payload.directors_note,
             progress: { done: 0, total: streamTotal },
+            failedIndices: [],
           },
         }
       : null;
@@ -458,6 +459,7 @@ function DirectorChatInner() {
     try {
       const api = await import("@/lib/director/api");
       const streamedImages: Array<{ url: string; storage_path: string; shot_index?: number }> = [];
+      const failedIndices: number[] = [];
       const result = isStreamingStoryboard
         ? await api.generateReferenceImageStream(
             {
@@ -471,8 +473,9 @@ function DirectorChatInner() {
               subject_kind: payload.subject_kind,
             },
             (ev) => {
-              if (ev.type === "panel") {
-                streamedImages.push(ev.value);
+              if (ev.type === "panel" || ev.type === "panel_error") {
+                if (ev.type === "panel") streamedImages.push(ev.value);
+                else if (!failedIndices.includes(ev.index)) failedIndices.push(ev.index);
                 setBubbles((prev) => {
                   const next = prev.slice();
                   const b = next[liveBubbleIndex];
@@ -484,7 +487,11 @@ function DirectorChatInner() {
                         images: [...streamedImages].sort(
                           (a, z) => (a.shot_index ?? 0) - (z.shot_index ?? 0),
                         ),
-                        progress: { done: streamedImages.length, total: streamTotal },
+                        progress: {
+                          done: streamedImages.length + failedIndices.length,
+                          total: streamTotal,
+                        },
+                        failedIndices: [...failedIndices],
                       },
                     };
                   }
