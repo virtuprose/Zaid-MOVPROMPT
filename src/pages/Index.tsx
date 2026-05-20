@@ -7,30 +7,16 @@ import { motion } from "framer-motion";
 import AnnouncementBanner from "@/components/AnnouncementBanner";
 import { InstallPrompt } from "@/components/InstallPrompt";
 import WelcomePopup from "@/components/WelcomePopup";
-import { TourOverlay } from "@/components/tour/TourOverlay";
-import { useTour } from "@/components/tour/TourProvider";
 import { TopNav } from "@/components/TopNav";
 
 const Index = () => {
   const [model, setModel] = useState("any");
   const { user, loading } = useAuth();
   const { t } = useLanguage();
-  const { start: startTour } = useTour();
 
   useEffect(() => {
     trackPageVisit("/");
   }, []);
-
-  // If user came from Learn page asking to start the tour
-  useEffect(() => {
-    try {
-      if (sessionStorage.getItem("movprompt.tour.requestStart") === "1") {
-        sessionStorage.removeItem("movprompt.tour.requestStart");
-        const t = setTimeout(() => startTour(), 600);
-        return () => clearTimeout(t);
-      }
-    } catch { /* ignore */ }
-  }, [startTour]);
 
   return (
     <div className="min-h-screen bg-background pb-[env(safe-area-inset-bottom)]">
@@ -61,7 +47,7 @@ const Index = () => {
       </div>
       <InstallPrompt />
       {!loading && user && <WelcomePopup />}
-      <TourOverlay />
+      
     </div>
   );
 };
