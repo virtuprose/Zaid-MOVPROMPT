@@ -192,6 +192,11 @@
   50% { border-color: hsl(var(--muted-foreground) / 0.5); }
 }
 
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(400%); }
+}
+
 .model-picker-content::-webkit-scrollbar { width: 8px; }
 .model-picker-content::-webkit-scrollbar-track { background: transparent; }
 .model-picker-content::-webkit-scrollbar-thumb {
