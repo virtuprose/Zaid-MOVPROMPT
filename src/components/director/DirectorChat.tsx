@@ -46,6 +46,14 @@ import {
 import { AssistantAvatar, type AvatarState } from "./AssistantAvatar";
 import { TypingIndicator } from "./TypingIndicator";
 import { TypewriterText } from "./TypewriterText";
+import { QuickReplies } from "./QuickReplies";
+
+const INTENT_CHIPS = [
+  "Use as a character reference",
+  "Use as a key frame",
+  "Recreate / remix this shot",
+  "Inspire a new scene",
+];
 
 type Bubble =
   | { role: "user"; content: string; attachments?: Attachment[] }
