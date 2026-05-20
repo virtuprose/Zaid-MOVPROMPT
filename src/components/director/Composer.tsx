@@ -332,7 +332,7 @@ export function Composer({
                   return;
                 }
               }
-              if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+              if (e.key === "Enter" && !e.shiftKey && !(e.nativeEvent as any).isComposing && e.keyCode !== 229) {
                 e.preventDefault();
                 if (!busy) onSend();
               }
