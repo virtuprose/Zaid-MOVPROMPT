@@ -232,7 +232,26 @@ function DirectorChatInner() {
       sessionIdRef.current = data.id;
       const loaded = (data.messages as Bubble[]) || [WELCOME];
       const remote = loaded.length ? loaded : [WELCOME];
-      setBubbles((prev) => (remote.length >= prev.length ? remote : prev));
+      setBubbles((prev) => {
+        if (remote.length > prev.length) return remote;
+        if (remote.length === prev.length) {
+          // Merge fresher story_render acts from server (jobs that finished while away).
+          return prev.map((b, i) => {
+            const r = remote[i];
+            if (b?.role === "story_render" && r?.role === "story_render") {
+              const localDone = b.data.acts.filter(
+                (a) => a.status === "completed" || a.status === "failed",
+              ).length;
+              const remoteDone = r.data.acts.filter(
+                (a) => a.status === "completed" || a.status === "failed",
+              ).length;
+              if (remoteDone > localDone) return r;
+            }
+            return b;
+          });
+        }
+        return prev;
+      });
 
       // Also merge any video_jobs for this session that aren't already represented.
       const { data: jobs } = await supabase
