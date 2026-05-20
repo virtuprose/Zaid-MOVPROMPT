@@ -3,6 +3,12 @@ import { Plus, X, ImageIcon, Film, Music } from "lucide-react";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { toast } from "sonner";
 import type { ReferenceKind } from "./ReferenceItem";
+import {
+  LONG_PRESS_MS,
+  MOVE_CANCEL_PX,
+  findDropTargetFromPoint,
+  triggerHaptic,
+} from "@/lib/touchDrag";
 
 export interface ElementItem {
   id: string;
@@ -37,11 +43,7 @@ export const ElementGrid = ({ items, onChange, max = 10 }: ElementGridProps) => 
   const touchStartPosRef = useRef<{ x: number; y: number } | null>(null);
   const touchActiveRef = useRef<boolean>(false);
 
-  const findTileIdFromPoint = (x: number, y: number): string | null => {
-    const el = document.elementFromPoint(x, y);
-    const tile = el?.closest<HTMLElement>("[data-element-tile-id]");
-    return tile?.dataset.elementTileId ?? null;
-  };
+  const lastSnappedRef = useRef<string | null>(null);
 
   const cancelTouchHold = () => {
     if (touchTimerRef.current !== null) {
@@ -58,36 +60,43 @@ export const ElementGrid = ({ items, onChange, max = 10 }: ElementGridProps) => 
     touchTimerRef.current = window.setTimeout(() => {
       touchActiveRef.current = true;
       setDraggingId(id);
-      if (navigator.vibrate) navigator.vibrate(15);
-    }, 250);
+      triggerHaptic();
+    }, LONG_PRESS_MS);
   };
 
   const onTouchMove = (e: React.TouchEvent) => {
     const touch = e.touches[0];
     const start = touchStartPosRef.current;
     if (!touchActiveRef.current) {
-      // If finger moves significantly before long-press fires, cancel hold (treat as scroll).
       if (start) {
         const dx = Math.abs(touch.clientX - start.x);
         const dy = Math.abs(touch.clientY - start.y);
-        if (dx > 8 || dy > 8) cancelTouchHold();
+        if (dx > MOVE_CANCEL_PX || dy > MOVE_CANCEL_PX) cancelTouchHold();
       }
       return;
     }
     e.preventDefault();
-    const overId = findTileIdFromPoint(touch.clientX, touch.clientY);
+    const hit = findDropTargetFromPoint(touch.clientX, touch.clientY, "[data-element-tile-id]");
+    const overId = hit?.id ?? null;
     setDragOverId(overId);
+    if (hit?.snapped && overId && overId !== lastSnappedRef.current) {
+      lastSnappedRef.current = overId;
+      triggerHaptic();
+    } else if (!hit?.snapped) {
+      lastSnappedRef.current = null;
+    }
   };
 
   const onTouchEnd = (e: React.TouchEvent) => {
     cancelTouchHold();
     if (touchActiveRef.current && draggingId) {
       const touch = e.changedTouches[0];
-      const targetId = findTileIdFromPoint(touch.clientX, touch.clientY);
-      if (targetId) reorder(draggingId, targetId);
+      const hit = findDropTargetFromPoint(touch.clientX, touch.clientY, "[data-element-tile-id]");
+      if (hit?.id) reorder(draggingId, hit.id);
     }
     touchActiveRef.current = false;
     touchStartPosRef.current = null;
+    lastSnappedRef.current = null;
     setDraggingId(null);
     setDragOverId(null);
   };
