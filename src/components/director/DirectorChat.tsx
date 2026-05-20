@@ -1533,7 +1533,6 @@ function DirectorChatInner() {
           <div className="flex-1" />
 
 
-          {(() => null)()}
           {bubbles.map((b, i) => {
             if (firstUserIdx !== -1 && i < firstUserIdx && b.role === "assistant") {
               return null;
