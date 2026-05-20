@@ -81,6 +81,7 @@ export const en = {
   "wp.confirmReset.cancel": "Keep them",
   "wp.reAnalyze": "Re-analyze",
   "wp.generatePrompt": "Generate Cinematic Prompt",
+  "wp.videoDuration": "Video duration",
   "wp.regeneratePrompt": "Regenerate Prompt",
   "wp.generatingPrompt": "Generating Prompt...",
   "wp.signInRequired": "Sign in required",
