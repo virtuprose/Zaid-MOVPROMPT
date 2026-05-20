@@ -732,6 +732,21 @@ function DirectorChatInner() {
       toast.error("Add a brief or some references");
       return;
     }
+    // If user sent only attachments with no text, ask what they want first.
+    if (!text && attachments.length > 0 && !askedIntentRef.current) {
+      askedIntentRef.current = true;
+      setBubbles((prev) => [
+        ...prev,
+        {
+          role: "intent_prompt",
+          content:
+            "What are you looking for? Tell me what you'd like to do with this so I can help.",
+          chips: INTENT_CHIPS,
+        },
+      ]);
+      return;
+    }
+    askedIntentRef.current = false;
     const fallback = attachments.length
       ? `References attached: ${attachments.length} file${attachments.length === 1 ? "" : "s"}`
       : "(See attached references.)";
