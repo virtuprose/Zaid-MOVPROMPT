@@ -521,11 +521,6 @@ function Features() {
                     : "border-border hover:border-accent/20 hover:shadow-[0_4px_32px_hsl(var(--accent)/0.08)]"
                 )}
               >
-                {isFlagship && (
-                  <span className="absolute right-4 top-4 inline-flex items-center rounded-full border border-accent/30 bg-accent/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-accent">
-                    Flagship
-                  </span>
-                )}
                 <div className="mb-6 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-accent/10 to-accent/5">
                   <Icon className="h-6 w-6 text-accent" strokeWidth={2} />
                 </div>
