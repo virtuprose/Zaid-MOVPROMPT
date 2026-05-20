@@ -77,7 +77,7 @@ Story mode is a fixed 5-step script. In every step's \`reason\` field, prefix wi
 
 - Story step 4 of 5 — ASSET BUNDLE: after aspect is picked, call \`generate_story_bundle\` with the chosen concept's character brief, prop/object brief, and exactly 7 location briefs (visually distinct planets / settings / acts), \`aspect\` set to the user's pick, and \`character_subject_kind\` = "character" (or "product" if the brief is product-led). Put "Story step 4 of 5 — building the asset bundle (1 character + 1 prop + 7 locations)." in \`directors_note\`.
 
-- Story step 5 of 5 — LAUNCH 8 ACTS: after the user drops one location into the slot (their next user turn will start with "Location chosen: <location_index>"), call \`request_story_render\` with EXACTLY 8 \`act_prompts\` (Act 1 opens, Acts 2-7 escalate / monster-of-the-week beats, Act 8 resolves), the chosen aspect, duration 15, audio true. Each act_prompt MUST echo the locked Seedance 2.0 vocabulary, name the character / prop using @Image1 / @Image2 / @Image3 tags, and stay self-contained as a 15-second beat. Put "Story step 5 of 5 — kicking off 8 parallel renders. I'll stitch them into one video when they finish." in \`directors_note\`.
+- Story step 5 of 5 — LAUNCH 4 ACTS: after the user drops one location into the slot (their next user turn will start with "Location chosen: <location_index>"), call \`request_story_render\` with EXACTLY 4 \`act_prompts\` (Act 1 opens, Acts 2-3 escalate / monster-of-the-week beats, Act 4 resolves), the chosen aspect, duration 15, audio true. Each act_prompt MUST echo the locked Seedance 2.0 vocabulary, name the character / prop using @Image1 / @Image2 / @Image3 tags, and stay self-contained as a 15-second beat. Put "Story step 5 of 5 — kicking off 4 parallel renders. I'll stitch them into one ~1-minute video when they finish." in \`directors_note\`.
 
 If the user taps "Switch to single shot" at any step, exit story mode immediately and re-run FIRST-TURN PATH CHOICE on their next turn.
 
@@ -548,7 +548,7 @@ const TOOLS = [
     type: "function",
     function: {
       name: "request_story_render",
-      description: "Story mode step 5. Kick off 8 parallel Seedance 2.0 15-second renders (one per act), all sharing the locked character + prop + chosen location refs. The frontend creates an 8-tile strip + a Stitch button once all acts finish. Use ONLY in story mode after the user picks a location.",
+      description: "Story mode step 5. Kick off 4 parallel Seedance 2.0 15-second renders (one per act), all sharing the locked character + prop + chosen location refs. The frontend creates a 4-tile strip + a Stitch button once all acts finish. Use ONLY in story mode after the user picks a location.",
       parameters: {
         type: "object",
         properties: {
@@ -557,10 +557,10 @@ const TOOLS = [
           title: { type: "string", description: "Short title for the stitched story (max 60 chars)." },
           act_prompts: {
             type: "array",
-            minItems: 8,
-            maxItems: 8,
+            minItems: 4,
+            maxItems: 4,
             items: { type: "string" },
-            description: "Exactly 8 Seedance 2.0 prompts in order. Each must reference @Image1 (character), @Image2 (prop), @Image3 (location) where applicable.",
+            description: "Exactly 4 Seedance 2.0 prompts in order. Each must reference @Image1 (character), @Image2 (prop), @Image3 (location) where applicable.",
           },
           directors_note: { type: "string" },
         },
