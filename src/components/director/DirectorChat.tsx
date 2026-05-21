@@ -1945,6 +1945,7 @@ function DirectorChatInner() {
                     }
                     referenceImageUrls={referenceImageUrls}
                     referenceImageSlots={referenceImageSlots}
+                    referenceStoragePaths={referenceStoragePaths}
                     preferredModelId={pickedModelId}
                     lockedSpec={resolvedSpec}
                   />
