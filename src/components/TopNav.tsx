@@ -13,6 +13,8 @@ import {
   GraduationCap,
   Gift,
   LogOut,
+  Sun,
+  Moon,
   User,
   Sparkles,
   Coins,
