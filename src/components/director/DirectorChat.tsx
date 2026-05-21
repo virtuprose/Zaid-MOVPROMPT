@@ -1816,6 +1816,8 @@ function DirectorChatInner() {
             onSend={send}
             busy={busy}
             showHelper={false}
+            onGenerateImagePrompt={generateImagePrompt}
+            imagePromptBusy={imagePromptBusy}
           />
         </div>
 
