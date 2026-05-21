@@ -123,9 +123,9 @@ const ModelRow = ({ value, label, description, isAny, providerLabel }: ModelRowP
       className={cn(
         "items-start py-2.5 ps-4 pe-4 min-h-[3rem] cursor-pointer relative",
         "border-l border-l-transparent transition-[background-color,border-color] duration-150 ease-out",
-        "hover:border-l-primary hover:bg-[#161618]",
+        "hover:border-l-primary hover:bg-muted",
         "data-[state=checked]:border-l-primary data-[state=checked]:bg-primary/[0.06]",
-        "data-[highlighted]:bg-[#161618] data-[highlighted]:[&_*]:text-inherit",
+        "data-[highlighted]:bg-muted data-[highlighted]:[&_*]:text-inherit",
         "[&>span:last-child]:block [&>span:last-child]:w-full [&>span:last-child]:min-w-0 [&>span:last-child]:flex-1"
       )}
     >

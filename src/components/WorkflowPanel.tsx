@@ -880,8 +880,8 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
     const btn = (active: boolean) =>
       `shrink-0 whitespace-nowrap rounded-full text-sm leading-none transition-colors ${
         active
-          ? "bg-[#F5A524] text-[#0A0A0B] font-semibold"
-          : "bg-transparent text-muted-foreground hover:bg-[#F5A524]/10 hover:text-foreground"
+          ? "bg-accent text-accent-foreground font-semibold"
+          : "bg-transparent text-muted-foreground hover:bg-accent/10 hover:text-foreground"
       }`;
 
     return (
@@ -1120,7 +1120,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
         aria-label={hasRequiredImages ? (isAnalyzing ? t("wp.analyzingScene") : t("wp.analyzeScene")) : "Upload an image to continue"}
         aria-busy={isAnalyzing}
         className={!hasRequiredImages
-          ? "w-full font-display font-medium bg-transparent border border-dashed border-[#3F3F46] text-[#71717A] hover:bg-transparent hover:text-[#71717A] disabled:opacity-100"
+          ? "w-full font-display font-medium bg-transparent border border-dashed border-border text-muted-foreground hover:bg-transparent hover:text-muted-foreground disabled:opacity-100"
           : "w-full font-display font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-md shadow-primary/[0.15]"}
       >
         {!hasRequiredImages ? (
@@ -1142,7 +1142,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
           onClick={() => { setSceneFrames([]); setPhase("breakdown"); }}
           disabled={isAnalyzing}
           aria-label="Skip & Generate Now"
-          className="inline-flex items-center gap-1.5 text-sm text-[#A1A1AA] hover:text-foreground transition-colors disabled:opacity-50 disabled:pointer-events-none focus:outline-none focus-visible:underline"
+          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50 disabled:pointer-events-none focus:outline-none focus-visible:underline"
         >
           Skip &amp; Generate Now <ArrowRight className="w-3.5 h-3.5 rtl:rotate-180" aria-hidden="true" />
         </button>
@@ -1162,7 +1162,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
         disabled={!hasRequiredImages || isAnalyzing}
         aria-label={hasRequiredImages ? t("wp.analyzeScene") : "Add at least one element reference to continue"}
         className={!hasRequiredImages
-          ? "w-full font-display font-medium bg-transparent border border-dashed border-[#3F3F46] text-[#71717A] hover:bg-transparent hover:text-[#71717A] disabled:opacity-100"
+          ? "w-full font-display font-medium bg-transparent border border-dashed border-border text-muted-foreground hover:bg-transparent hover:text-muted-foreground disabled:opacity-100"
           : "w-full font-display font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-md shadow-primary/[0.15]"}
       >
         {!hasRequiredImages ? (
@@ -1177,7 +1177,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
           onClick={() => { setSceneFrames([]); setPhase("breakdown"); }}
           disabled={isAnalyzing || !hasRequiredImages}
           aria-label="Skip & Generate Now"
-          className="inline-flex items-center gap-1.5 text-sm text-[#A1A1AA] hover:text-foreground transition-colors disabled:opacity-50 disabled:pointer-events-none focus:outline-none focus-visible:underline"
+          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50 disabled:pointer-events-none focus:outline-none focus-visible:underline"
         >
           Skip &amp; Generate Now <ArrowRight className="w-3.5 h-3.5 rtl:rotate-180" aria-hidden="true" />
         </button>
@@ -1186,7 +1186,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
   )
     : (phase === "breakdown" || phase === "generate") ? (
     results ? (
-      <div className="pt-6 mt-6 border-t border-white/[0.06] flex flex-col items-center gap-3">
+      <div className="pt-6 mt-6 border-t border-border/60 flex flex-col items-center gap-3">
         <button
           type="button"
           onClick={() => {
@@ -1200,7 +1200,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
         </button>
       </div>
     ) : (
-      <div className="pt-6 mt-6 border-t border-white/[0.06] flex flex-col items-center gap-3">
+      <div className="pt-6 mt-6 border-t border-border/60 flex flex-col items-center gap-3">
         {(() => {
           const numericDurations = durationOptions.filter((d): d is number => typeof d === "number");
           const supportsAuto = modelControls.durationAuto === true;
@@ -1213,7 +1213,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
             return (
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <span>{t("wp.videoDuration" as any)}</span>
-                <span className="rounded-full border border-white/[0.08] bg-white/[0.02] px-3 py-1 text-foreground/80">
+                <span className="rounded-full border border-border/60 bg-muted/40 px-3 py-1 text-foreground/80">
                   {min}s · fixed
                 </span>
               </div>
@@ -1238,7 +1238,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
                 <span className="text-muted-foreground">{t("wp.videoDuration" as any)}</span>
                 <span className={`rounded-full border px-2.5 py-0.5 font-medium ${
                   isAuto
-                    ? "border-white/[0.08] bg-white/[0.02] text-muted-foreground"
+                    ? "border-border/60 bg-muted/40 text-muted-foreground"
                     : "border-accent/40 bg-accent/10 text-accent"
                 }`}>
                   {isAuto ? "Auto" : `${currentValue}s`}
@@ -1266,7 +1266,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
                     className={`rounded-full border px-2.5 py-0.5 text-[11px] font-medium transition-colors ${
                       isAuto
                         ? "border-accent/50 bg-accent/10 text-accent"
-                        : "border-white/[0.08] bg-white/[0.02] text-muted-foreground hover:text-foreground"
+                        : "border-border/60 bg-muted/40 text-muted-foreground hover:text-foreground"
                     }`}
                   >
                     Auto
@@ -1288,7 +1288,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
                   className={`group inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
                     timelineEnabled
                       ? "border-accent/50 bg-accent/10 text-accent"
-                      : "border-white/[0.08] bg-white/[0.02] text-muted-foreground hover:text-foreground"
+                      : "border-border/60 bg-muted/40 text-muted-foreground hover:text-foreground"
                   }`}
                 >
                   <Clock className="w-3.5 h-3.5" />
@@ -1341,7 +1341,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
 
   const modelBlock = isBreakdownLike ? (
     <div className="space-y-1">
-      <div className="flex items-center justify-between gap-3 rounded-lg px-3 py-2 border border-white/[0.06] bg-white/[0.02]">
+      <div className="flex items-center justify-between gap-3 rounded-lg px-3 py-2 border border-border/60 bg-muted/40">
         <div className="flex items-center gap-2 min-w-0 flex-1">
           <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-display">
             Model
@@ -1575,7 +1575,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
 
             {resultsBlock}
 
-            <div className="flex items-start gap-2 rounded-lg border border-[#27272A] bg-[#161618] px-3 py-2 text-xs text-foreground/90">
+            <div className="flex items-start gap-2 rounded-lg border border-border bg-muted px-3 py-2 text-xs text-foreground/90">
               <Info className="w-3.5 h-3.5 text-primary mt-0.5 shrink-0" />
               <span>{t("scene.reviewHint" as any)}</span>
             </div>
@@ -1647,7 +1647,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
               </div>
             )}
             {phase === "generate" && !isLoading && !results && (
-              <div className="flex items-start gap-2 rounded-lg border border-[#27272A] bg-[#161618] px-3 py-2 text-xs text-foreground/90">
+              <div className="flex items-start gap-2 rounded-lg border border-border bg-muted px-3 py-2 text-xs text-foreground/90">
                 <Info className="w-3.5 h-3.5 text-primary mt-0.5 shrink-0" />
                 <span>{t("wp.skipNoFramesHint" as any)}</span>
               </div>
@@ -1670,7 +1670,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
   );
 
   const mobileStickyCta = hasRequiredImages && phase === "upload" ? (
-    <div className="lg:hidden fixed inset-x-0 bottom-0 z-40 px-4 pt-3 pb-[calc(env(safe-area-inset-bottom)+12px)] bg-background/95 backdrop-blur-md border-t border-white/[0.06]">
+    <div className="lg:hidden fixed inset-x-0 bottom-0 z-40 px-4 pt-3 pb-[calc(env(safe-area-inset-bottom)+12px)] bg-background/95 backdrop-blur-md border-t border-border/60">
       <Button
         size="lg"
         onClick={handleAnalyze}
@@ -1686,7 +1686,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
       </Button>
     </div>
   ) : (phase === "breakdown" || phase === "generate") && !isLoading && !isAnalyzing ? (
-    <div className="lg:hidden fixed inset-x-0 bottom-0 z-40 px-4 pt-3 pb-[calc(env(safe-area-inset-bottom)+12px)] bg-background/95 backdrop-blur-md border-t border-white/[0.06]">
+    <div className="lg:hidden fixed inset-x-0 bottom-0 z-40 px-4 pt-3 pb-[calc(env(safe-area-inset-bottom)+12px)] bg-background/95 backdrop-blur-md border-t border-border/60">
       <Button
         size="lg"
         onClick={() => handleGenerate()}

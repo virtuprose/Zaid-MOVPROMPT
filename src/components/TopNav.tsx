@@ -88,7 +88,7 @@ export function TopNav() {
       <div className="mx-auto flex h-14 max-w-[1500px] items-center gap-2 px-3 sm:px-5">
         {/* Logo */}
         <Link to="/" className="flex items-center gap-2 shrink-0 group">
-          <div className="w-8 h-8 rounded-lg bg-[hsl(240_5%_10%)] border border-border/60 flex items-center justify-center group-hover:border-accent/40 transition-colors">
+          <div className="w-8 h-8 rounded-lg bg-muted border border-border/60 flex items-center justify-center group-hover:border-accent/40 transition-colors">
             <img src={logoMark} alt="MovPrompt" className="w-5 h-5" />
           </div>
         </Link>
@@ -132,7 +132,7 @@ export function TopNav() {
           <button
             type="button"
             onClick={() => setPaletteOpen(true)}
-            className="hidden md:inline-flex items-center gap-2 h-9 w-[220px] xl:w-[280px] px-3 rounded-full bg-[hsl(240_5%_9%)] border border-border/50 text-muted-foreground hover:border-border hover:text-foreground transition-colors"
+            className="hidden md:inline-flex items-center gap-2 h-9 w-[220px] xl:w-[280px] px-3 rounded-full bg-muted border border-border/50 text-muted-foreground hover:border-border hover:text-foreground transition-colors"
             aria-label="Search"
           >
             <Search className="w-3.5 h-3.5" />
@@ -159,7 +159,7 @@ export function TopNav() {
               <Button
                 size="sm"
                 onClick={() => navigate("/library")}
-                className="hidden sm:inline-flex h-9 rounded-full px-3 gap-1.5 text-[13px] bg-transparent text-foreground border border-[#27272A] hover:bg-[hsl(240_5%_10%)] hover:border-border"
+                className="hidden sm:inline-flex h-9 rounded-full px-3 gap-1.5 text-[13px] bg-transparent text-foreground border border-border hover:bg-muted hover:border-border"
               >
                 <FolderOpen className="w-3.5 h-3.5 text-muted-foreground" />
                 Library
@@ -199,7 +199,7 @@ export function TopNav() {
                       <button
                         type="button"
                         onClick={() => navigate("/account/settings")}
-                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-[hsl(240_5%_11%)] transition-colors group"
+                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted transition-colors group"
                       >
                         <Avatar className="w-8 h-8">
                           <AvatarImage src={user.user_metadata?.avatar_url} />
@@ -215,49 +215,49 @@ export function TopNav() {
                         </div>
                         <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-accent transition-colors" />
                       </button>
-                      <DropdownMenuSeparator className="my-1.5 bg-[hsl(240_5%_12%)]" />
+                      <DropdownMenuSeparator className="my-1.5 bg-muted" />
                       <DropdownMenuItem
                         onClick={() => navigate("/account/settings")}
-                        className="gap-3 px-4 py-3 rounded-lg cursor-pointer focus:bg-[hsl(240_5%_11%)] focus:text-foreground group"
+                        className="gap-3 px-4 py-3 rounded-lg cursor-pointer focus:bg-muted focus:text-foreground group"
                       >
                         <Settings className="w-4 h-4 text-muted-foreground group-hover:text-accent group-focus:text-accent transition-colors" />
                         <span className="text-sm">Account settings</span>
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         onClick={() => navigate("/account/billing")}
-                        className="gap-3 px-4 py-3 rounded-lg cursor-pointer focus:bg-[hsl(240_5%_11%)] focus:text-foreground group"
+                        className="gap-3 px-4 py-3 rounded-lg cursor-pointer focus:bg-muted focus:text-foreground group"
                       >
                         <CreditCard className="w-4 h-4 text-muted-foreground group-hover:text-accent group-focus:text-accent transition-colors" />
                         <span className="text-sm">Billing & subscription</span>
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         onClick={() => navigate("/account/preferences")}
-                        className="gap-3 px-4 py-3 rounded-lg cursor-pointer focus:bg-[hsl(240_5%_11%)] focus:text-foreground group"
+                        className="gap-3 px-4 py-3 rounded-lg cursor-pointer focus:bg-muted focus:text-foreground group"
                       >
                         <Globe className="w-4 h-4 text-muted-foreground group-hover:text-accent group-focus:text-accent transition-colors" />
                         <span className="text-sm">Language & preferences</span>
                       </DropdownMenuItem>
-                      <DropdownMenuSeparator className="my-1.5 bg-[hsl(240_5%_12%)]" />
+                      <DropdownMenuSeparator className="my-1.5 bg-muted" />
                       <DropdownMenuItem
                         onSelect={(e) => { e.preventDefault(); toggleTheme(); }}
-                        className="gap-3 px-4 py-3 rounded-lg cursor-pointer focus:bg-[hsl(240_5%_11%)] focus:text-foreground group"
+                        className="gap-3 px-4 py-3 rounded-lg cursor-pointer focus:bg-muted focus:text-foreground group"
                       >
                         {theme === "dark"
                           ? <Sun className="w-4 h-4 text-muted-foreground group-hover:text-accent group-focus:text-accent transition-colors" />
                           : <Moon className="w-4 h-4 text-muted-foreground group-hover:text-accent group-focus:text-accent transition-colors" />}
                         <span className="text-sm">{theme === "dark" ? "Light mode" : "Dark mode"}</span>
                       </DropdownMenuItem>
-                      <DropdownMenuSeparator className="my-1.5 bg-[hsl(240_5%_12%)]" />
+                      <DropdownMenuSeparator className="my-1.5 bg-muted" />
                       <DropdownMenuItem
                         onClick={() => navigate("/learn")}
-                        className="gap-3 px-4 py-3 rounded-lg cursor-pointer focus:bg-[hsl(240_5%_11%)] focus:text-foreground group"
+                        className="gap-3 px-4 py-3 rounded-lg cursor-pointer focus:bg-muted focus:text-foreground group"
                       >
                         <GraduationCap className="w-4 h-4 text-muted-foreground group-hover:text-accent group-focus:text-accent transition-colors" />
                         <span className="text-sm">Learn</span>
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         onClick={() => navigate("/referrals")}
-                        className="gap-3 px-4 py-3 rounded-lg cursor-pointer focus:bg-[hsl(240_5%_11%)] focus:text-foreground group"
+                        className="gap-3 px-4 py-3 rounded-lg cursor-pointer focus:bg-muted focus:text-foreground group"
                       >
                         <Gift className="w-4 h-4 text-muted-foreground group-hover:text-accent group-focus:text-accent transition-colors" />
                         <div className="flex-1 min-w-0">
@@ -265,7 +265,7 @@ export function TopNav() {
                           <p className="text-[11px] text-muted-foreground leading-tight">Earn rewards</p>
                         </div>
                       </DropdownMenuItem>
-                      <DropdownMenuSeparator className="my-1.5 bg-[hsl(240_5%_12%)]" />
+                      <DropdownMenuSeparator className="my-1.5 bg-muted" />
                       <DropdownMenuItem
                         onClick={signOut}
                         className="gap-3 px-4 py-3 rounded-lg cursor-pointer text-muted-foreground focus:bg-destructive/10 focus:text-destructive group"

@@ -51,7 +51,7 @@ export const EmptyStateExamples = () => {
           <button
             key={i}
             type="button"
-            className="group flex w-full items-center gap-4 h-[140px] rounded-xl border border-border/60 bg-card/40 p-3 text-left transition-colors cursor-pointer hover:border-primary/40 hover:bg-[#161618]"
+            className="group flex w-full items-center gap-4 h-[140px] rounded-xl border border-border/60 bg-card/40 p-3 text-left transition-colors cursor-pointer hover:border-primary/40 hover:bg-muted"
           >
             <div className="w-[100px] h-[100px] shrink-0 rounded-md overflow-hidden bg-muted/40">
               <img

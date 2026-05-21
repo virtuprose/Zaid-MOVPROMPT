@@ -317,7 +317,7 @@ export const AnalyzingSkeleton = ({ framePreviews = [], onCancel }: AnalyzingSke
 
       {/* "While you wait" — callout-styled tip with rotating cinematography quotes */}
       <Card
-        className="border-[#27272A] overflow-hidden"
+        className="border-border overflow-hidden"
         style={{
           background:
             "linear-gradient(90deg, hsl(38 91% 55% / 0.06) 0%, #161618 35%)",

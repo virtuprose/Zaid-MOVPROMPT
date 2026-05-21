@@ -126,8 +126,8 @@ const NotificationBell = () => {
             hasUnread
               ? "bg-primary text-primary-foreground hover:bg-primary/90"
               : hasNotifications
-                ? "bg-white/[0.04] text-foreground hover:bg-white/[0.08]"
-                : "bg-transparent text-muted-foreground hover:text-foreground hover:bg-white/[0.04]"
+                ? "bg-muted/60 text-foreground hover:bg-muted"
+                : "bg-transparent text-muted-foreground hover:text-foreground hover:bg-muted/60"
           )}
         >
           <Bell className="h-5 w-5" />
@@ -201,7 +201,7 @@ const NotificationBell = () => {
             className="flex flex-col items-center justify-center text-center px-6 py-7 gap-2"
             style={{ minHeight: 140 }}
           >
-            <div className="h-9 w-9 rounded-full bg-white/[0.04] flex items-center justify-center">
+            <div className="h-9 w-9 rounded-full bg-muted/60 flex items-center justify-center">
               <BellOff className="h-4 w-4 text-muted-foreground" />
             </div>
             <p className="text-sm font-medium text-foreground">No notifications yet</p>
@@ -216,7 +216,7 @@ const NotificationBell = () => {
         >
           <Link
             to="/account/notifications"
-            className="inline-flex items-center justify-center h-8 w-8 rounded-md text-muted-foreground hover:text-foreground hover:bg-white/[0.04] transition-colors"
+            className="inline-flex items-center justify-center h-8 w-8 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
             aria-label="Notification settings"
             onClick={() => setOpen(false)}
           >
