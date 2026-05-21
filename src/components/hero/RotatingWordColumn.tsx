@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Play } from "lucide-react";
 
 const WORDS = [
@@ -15,16 +15,43 @@ const WORDS = [
 
 const ITEM_HEIGHT = 72; // px per word
 const INTERVAL = 1800;
+const TRANSITION_MS = 900;
+
+// Duplicate list so there's always a word above and below the marker.
+const LOOP = [...WORDS, ...WORDS];
 
 export const RotatingWordColumn = () => {
   const [active, setActive] = useState(0);
+  const [animate, setAnimate] = useState(true);
+  const resetTimer = useRef<number | null>(null);
 
   useEffect(() => {
-    const id = setInterval(() => {
-      setActive((i) => (i + 1) % WORDS.length);
+    const id = window.setInterval(() => {
+      setAnimate(true);
+      setActive((i) => i + 1);
     }, INTERVAL);
-    return () => clearInterval(id);
+    return () => window.clearInterval(id);
   }, []);
+
+  // After we've animated past the first copy, snap back by WORDS.length
+  // with the transition disabled — visually identical because the list is duplicated.
+  useEffect(() => {
+    if (active < WORDS.length) return;
+    if (resetTimer.current) window.clearTimeout(resetTimer.current);
+    resetTimer.current = window.setTimeout(() => {
+      setAnimate(false);
+      setActive((i) => i - WORDS.length);
+      // Re-enable transitions on the next frame.
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => setAnimate(true));
+      });
+    }, TRANSITION_MS + 20);
+    return () => {
+      if (resetTimer.current) window.clearTimeout(resetTimer.current);
+    };
+  }, [active]);
+
+  const activeMod = ((active % WORDS.length) + WORDS.length) % WORDS.length;
 
   return (
     <div
@@ -45,17 +72,20 @@ export const RotatingWordColumn = () => {
       </div>
 
       <div
-        className="absolute left-8 right-0 transition-transform duration-[900ms] ease-[cubic-bezier(0.65,0,0.35,1)]"
+        className="absolute left-8 right-0"
         style={{
           top: "50%",
           transform: `translateY(calc(-50% - ${active * ITEM_HEIGHT}px + ${ITEM_HEIGHT / 2}px))`,
+          transition: animate
+            ? `transform ${TRANSITION_MS}ms cubic-bezier(0.65,0,0.35,1)`
+            : "none",
         }}
       >
-        {WORDS.map((w, i) => {
-          const isActive = i === active;
+        {LOOP.map((w, i) => {
+          const isActive = i % WORDS.length === activeMod && i === active;
           return (
             <div
-              key={w}
+              key={`${w}-${i}`}
               className="flex items-center"
               style={{ height: ITEM_HEIGHT }}
             >
