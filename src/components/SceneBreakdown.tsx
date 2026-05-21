@@ -318,7 +318,7 @@ export const SceneBreakdown = ({
                         transition={{ delay: frameIdx * 0.12 + gIdx * 0.06 + i * 0.04 }}
                         className={`rounded-lg p-2.5 sm:p-3 transition-colors border ${
                           isLocked
-                            ? "border-white/10 bg-white/[0.02]"
+                            ? "border-border/60 bg-muted/40"
                             : "border-primary/30 bg-primary/[0.04]"
                         }`}
                       >

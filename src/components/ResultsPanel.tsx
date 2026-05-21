@@ -170,7 +170,7 @@ const ScriptedPrompt = ({ sections }: { sections: { header: string; body: string
         const tech = isTechnicalHeader(s.header);
         return (
           <Collapsible key={i} open={!!openMap[i]} onOpenChange={() => toggle(i)}>
-            <CollapsibleTrigger className="flex w-full items-center justify-between gap-2 rounded-md px-3 py-2 bg-background/60 hover:bg-[#161618] border border-accent/20 hover:border-accent/40 transition-colors group cursor-pointer">
+            <CollapsibleTrigger className="flex w-full items-center justify-between gap-2 rounded-md px-3 py-2 bg-background/60 hover:bg-muted border border-accent/20 hover:border-accent/40 transition-colors group cursor-pointer">
               {tech ? (
                 <span className="text-[11px] font-bold uppercase tracking-[0.1em] text-accent font-mono text-start">
                   [{s.header}]
@@ -224,7 +224,7 @@ const MainPromptHero = ({ value, result, modelLabel, modelValue, onSwitchModel, 
   if (isMeaningful(result.cameraSuggestions)) appended.push({ header: "CAMERA SUGGESTIONS", body: result.cameraSuggestions });
   const totalSections = (parsed?.length ?? 0) + appended.length;
   return (
-    <div className="relative rounded-xl p-4 sm:p-5 bg-[#1a1410] border border-accent/30">
+    <div className="relative rounded-xl p-4 sm:p-5 bg-accent/10 border border-accent/30">
       {result.recommendedModel && (
         <div className="mb-3 rounded-lg border-s-4 border-primary bg-primary/5 border border-primary/30 px-3 py-2.5">
           <div className="flex items-start justify-between gap-3 flex-wrap">
@@ -338,7 +338,7 @@ const MainPromptHero = ({ value, result, modelLabel, modelValue, onSwitchModel, 
 };
 
 const SectionToggle = ({ label, count, open }: { label: string; count?: number; open: boolean }) => (
-  <CollapsibleTrigger className="flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2.5 bg-secondary/30 hover:bg-[#161618] border border-border transition-colors group cursor-pointer">
+  <CollapsibleTrigger className="flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2.5 bg-secondary/30 hover:bg-muted border border-border transition-colors group cursor-pointer">
     <span className="text-sm font-medium text-foreground flex items-center gap-2">
       {label}
       {typeof count === "number" && count > 0 && (
