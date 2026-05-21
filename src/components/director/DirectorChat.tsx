@@ -2316,6 +2316,8 @@ function DirectorChatInner() {
             return undefined;
           })()}
           onQuickReply={(chip) => void send(chip)}
+          onGenerateImagePrompt={generateImagePrompt}
+          imagePromptBusy={imagePromptBusy}
         />
       </div>
 
