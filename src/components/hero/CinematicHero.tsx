@@ -66,7 +66,7 @@ export const CinematicHero = () => {
               AI video director
             </span>
             <Link
-              to="/learn"
+              to="/docs"
               className="flex items-center gap-1 text-xs text-white/70 hover:text-white bg-white/10 rounded-full px-3 py-1 transition"
             >
               Read the docs

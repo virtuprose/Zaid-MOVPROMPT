@@ -44,6 +44,7 @@ import AdminLogin from "./pages/AdminLogin.tsx";
 import Unsubscribe from "./pages/Unsubscribe.tsx";
 import Library from "./pages/Library.tsx";
 import Learn from "./pages/Learn.tsx";
+import Docs from "./pages/Docs.tsx";
 import Terms from "./pages/Terms.tsx";
 import PrivacyPolicy from "./pages/PrivacyPolicy.tsx";
 import QaMobile from "./pages/QaMobile.tsx";
@@ -76,6 +77,7 @@ const AppRoutes = () => {
         <Route path="/admin" element={<AuthGuard requireAdmin><Analytics /></AuthGuard>} />
         <Route path="/library" element={<AuthGuard><Library /></AuthGuard>} />
         <Route path="/learn" element={<Learn />} />
+        <Route path="/docs" element={<Docs />} />
         <Route path="/unsubscribe" element={<Unsubscribe />} />
         <Route path="/terms" element={<Terms />} />
         <Route path="/privacy" element={<PrivacyPolicy />} />
