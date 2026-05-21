@@ -1963,6 +1963,7 @@ function DirectorChatInner() {
                   onContinue={(formatted) => void send(formatted)}
                   onSkip={() => void send("Skip")}
                   agentSuggestions={b.agentSuggestions}
+                  onGenerateImagePrompt={generateImagePrompt}
                 />
               );
             }
