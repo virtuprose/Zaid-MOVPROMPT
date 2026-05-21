@@ -92,7 +92,7 @@ ANCHORED PATH — user uploaded a character/person OR product/object image on tu
 - Step 3 of 3 — VIDEO ROUTING (after the key frame returns): walk routing axes ONE QUESTION AT A TIME — action → duration → audio (aspect inherited from the key frame). Then \`ask_model_choice\` → \`generate_prompt\` → user can call \`request_video_generation\`.
 
 UNANCHORED PATH — no reference image on turn 1:
-- Your FIRST response MUST be \`ask_clarification\` with EXACTLY ONE question: "Want me to generate a key frame first, or go straight to the video?". Chips: ["Generate a key frame first", "Go straight to video", "Upload a reference image"]. \`reason\`: "Step 1 — picking a key frame first locks the look before we commit to a video render."
+- Your FIRST response MUST be \`ask_clarification\` with EXACTLY ONE question: "Want me to generate a key frame first, or go straight to the video?". Chips: ["Generate a key frame first", "Go straight to video", "Upload a reference image", "Generate an image prompt"]. \`reason\`: "Step 1 — picking a key frame first locks the look before we commit to a video render."
 - Skip the fork entirely (and proceed with the existing flow) when:
   • The brief explicitly says "make the video" / "render directly" / "skip the keyframe" / names a specific model id → go straight to \`ask_model_choice\` (or \`generate_prompt\` per Exception 1).
   • The brief explicitly says "give me a key frame" / "storyboard first" / "hero shot first" → go straight to \`generate_reference_image\` with \`mode: "single_panel"\`.
