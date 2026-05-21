@@ -368,11 +368,13 @@ export function PromptResultCard({ title, prompt, breakdown, directorsNote, onRe
 
   const saveToLibrary = async (silent = false) => {
     if (!user || saved) return;
+    const imagePaths = referenceStoragePaths.length > 0 ? referenceStoragePaths : undefined;
     const { error } = await supabase.from("prompt_history").insert({
       user_id: user.id,
       workflow_type: "director",
       target_model: recommendedModel.id,
       results: { title, prompt, breakdown, directors_note: directorsNote },
+      ...(imagePaths ? { image_paths: imagePaths } : {}),
     });
     if (error) {
       if (!silent) toast.error(error.message);
