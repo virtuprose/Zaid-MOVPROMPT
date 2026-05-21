@@ -9,12 +9,8 @@ import { Seo } from "@/components/Seo";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { trackPageVisit } from "@/lib/analytics";
 import { LearnSection } from "@/components/learn/LearnSection";
-import { ExampleCard } from "@/components/learn/ExampleCard";
 import { LEARN_TOC } from "@/components/learn/learnContent";
 import { TopNav } from "@/components/TopNav";
-import exampleTokyo from "@/assets/example-tokyo.jpg";
-import exampleDesert from "@/assets/example-desert.jpg";
-import examplePortrait from "@/assets/example-portrait.jpg";
 
 const Learn = () => {
   const navigate = useNavigate();
