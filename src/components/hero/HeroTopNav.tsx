@@ -1,4 +1,3 @@
-import { Search } from "lucide-react";
 import { Link } from "react-router-dom";
 import logoMark from "@/assets/logo-mark-white.svg";
 
@@ -6,7 +5,6 @@ const LINKS = [
   { label: "Create", to: "/director" },
   { label: "Models", to: "/gallery" },
   { label: "Library", to: "/library" },
-  { label: "Learn", to: "/learn" },
 ];
 
 export const HeroTopNav = () => {
@@ -27,20 +25,6 @@ export const HeroTopNav = () => {
             {l.label}
           </Link>
         ))}
-        <Link
-          to="/account/billing"
-          className="text-sm font-medium text-[hsl(var(--magnific-accent))] hover:opacity-80 transition-opacity"
-        >
-          Upgrade
-        </Link>
-      </div>
-
-      <div className="flex items-center gap-3">
-        <div className="hidden md:flex items-center gap-2 bg-white/10 backdrop-blur-md border border-white/15 rounded-full px-4 py-2 text-sm text-white/70 min-w-[220px]">
-          <Search className="w-4 h-4" />
-          <span>Search or create</span>
-        </div>
-        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[hsl(var(--magnific-accent))] to-amber-500 ring-2 ring-white/40" />
       </div>
     </nav>
   );
