@@ -29,6 +29,8 @@ type Props = {
   showHelper?: boolean;
   quickReplies?: string[];
   onQuickReply?: (chip: string) => void;
+  onGenerateImagePrompt?: () => void;
+  imagePromptBusy?: boolean;
 };
 
 export function Composer({
@@ -41,6 +43,8 @@ export function Composer({
   showHelper,
   quickReplies,
   onQuickReply,
+  onGenerateImagePrompt,
+  imagePromptBusy,
 }: Props) {
   const { user } = useAuth();
   const inputRef = useRef<HTMLInputElement>(null);
