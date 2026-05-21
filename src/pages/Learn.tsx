@@ -178,19 +178,32 @@ const Learn = () => {
 
             <LearnSection id="workflows" eyebrow={t("learn.toc.workflows" as any)} title={t("learn.wf.title" as any)}>
               <p>{t("learn.wf.intro" as any)}</p>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 {[
-                  { img: exampleTokyo, key: "single" },
-                  { img: exampleDesert, key: "multishot" },
-                  { img: examplePortrait, key: "twoframe" },
+                  { key: "single", icon: ImageIcon, accent: "from-primary/30 to-primary/5", step: "01" },
+                  { key: "multishot", icon: Sparkles, accent: "from-accent/30 to-accent/5", step: "02" },
+                  { key: "twoframe", icon: Move, accent: "from-primary/25 to-accent/10", step: "03" },
                 ].map((wf) => (
-                  <Card key={wf.key} className="overflow-hidden bg-card/60">
-                    <div className="aspect-video">
-                      <img src={wf.img} alt={t(`workflow.${wf.key}` as any)} loading="lazy" className="w-full h-full object-cover" />
+                  <Card
+                    key={wf.key}
+                    className="group relative overflow-hidden border-border/60 bg-card/40 p-5 transition-all hover:border-primary/40 hover:bg-card/70"
+                  >
+                    <div
+                      className={`absolute inset-0 opacity-0 transition-opacity duration-500 group-hover:opacity-100 bg-gradient-to-br ${wf.accent} pointer-events-none`}
+                    />
+                    <div className="relative flex items-start justify-between mb-4">
+                      <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary ring-1 ring-primary/20">
+                        <wf.icon className="w-5 h-5" />
+                      </span>
+                      <span className="text-[10px] font-mono font-semibold tracking-widest text-muted-foreground/60">
+                        {wf.step}
+                      </span>
                     </div>
-                    <div className="p-3">
-                      <div className="text-sm font-semibold text-foreground mb-1">{t(`workflow.${wf.key}` as any)}</div>
-                      <div className="text-xs text-muted-foreground">{t(`workflow.${wf.key}.desc` as any)}</div>
+                    <div className="relative text-sm font-semibold text-foreground mb-1.5">
+                      {t(`workflow.${wf.key}` as any)}
+                    </div>
+                    <div className="relative text-xs leading-relaxed text-muted-foreground">
+                      {t(`workflow.${wf.key}.desc` as any)}
                     </div>
                   </Card>
                 ))}
