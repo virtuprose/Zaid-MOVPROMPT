@@ -79,10 +79,19 @@ export async function requireUserId(): Promise<string> {
 }
 
 export async function ingestImage(file: File): Promise<Attachment> {
-  if (file.size > MAX_IMAGE_BYTES) throw new Error(`${file.name} is over 8MB`);
+  if (file.size > MAX_IMAGE_BYTES) throw new Error(`${file.name} is over 25MB`);
   const uid = await requireUserId();
-  const { storage_path, url } = await uploadAndSign(file, uid, file.name, file.type || "image/jpeg");
-  return { kind: "image", name: file.name, url, storage_path };
+  let blob: Blob = file;
+  let name = file.name;
+  let type = file.type || "image/jpeg";
+  if (file.size > IMAGE_COMPRESS_THRESHOLD) {
+    const down = await downscaleImage(file);
+    blob = down.blob;
+    name = down.name;
+    type = down.type;
+  }
+  const { storage_path, url } = await uploadAndSign(blob, uid, name, type);
+  return { kind: "image", name, url, storage_path };
 }
 
 export async function ingestVideo(file: File, frameCount = 3): Promise<Attachment[]> {
