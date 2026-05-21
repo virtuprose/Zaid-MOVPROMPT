@@ -226,11 +226,23 @@ function HistoryCard({
     const paths = entry.image_paths?.slice(0, 4) || [];
     if (paths.length === 0) return;
     let cancelled = false;
-    Promise.all(
-      paths.map((p) =>
-        supabase.storage.from("generation-images").createSignedUrl(p, 3600).then(({ data }) => data?.signedUrl || null),
-      ),
-    ).then((urls) => {
+    const resolveOne = async (raw: string): Promise<string | null> => {
+      // Supports: absolute URL, "<bucket>:<path>", or bare path in legacy `generation-images` bucket.
+      if (/^https?:\/\//i.test(raw)) return raw;
+      let bucket = "generation-images";
+      let path = raw;
+      const idx = raw.indexOf(":");
+      if (idx > 0) {
+        const maybeBucket = raw.slice(0, idx);
+        if (!maybeBucket.includes("/")) {
+          bucket = maybeBucket;
+          path = raw.slice(idx + 1);
+        }
+      }
+      const { data } = await supabase.storage.from(bucket).createSignedUrl(path, 3600);
+      return data?.signedUrl || null;
+    };
+    Promise.all(paths.map(resolveOne)).then((urls) => {
       if (!cancelled) setThumbUrls(urls.filter((u): u is string => !!u));
     });
     return () => { cancelled = true; };

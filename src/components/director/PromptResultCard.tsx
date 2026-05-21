@@ -60,6 +60,8 @@ type Props = {
   referenceImageUrls?: string[];
   /** Slot label per ref URL ("brand" | "character" | "location"), parallel to referenceImageUrls. */
   referenceImageSlots?: Array<"brand" | "character" | "location">;
+  /** Long-lived storage references for the same refs, formatted as "<bucket>:<path>" or absolute URL. */
+  referenceStoragePaths?: string[];
   /** Model the user already picked in the ModelChoiceCard for this prompt. Takes priority over recommendation. */
   preferredModelId?: string;
   /** Render spec the Director locked in (duration / aspect / audio / resolution / input_mode). Seeds the render dialog. */
@@ -270,7 +272,7 @@ function Section({
   );
 }
 
-export function PromptResultCard({ title, prompt, breakdown, directorsNote, onRefine, sessionId, hasReferenceImage = false, referenceImageUrls = [], referenceImageSlots = [], preferredModelId, lockedSpec }: Props) {
+export function PromptResultCard({ title, prompt, breakdown, directorsNote, onRefine, sessionId, hasReferenceImage = false, referenceImageUrls = [], referenceImageSlots = [], referenceStoragePaths = [], preferredModelId, lockedSpec }: Props) {
   const { user } = useAuth();
   const { request: requestApproval } = useApproval();
   const [copied, setCopied] = useState(false);
@@ -366,11 +368,13 @@ export function PromptResultCard({ title, prompt, breakdown, directorsNote, onRe
 
   const saveToLibrary = async (silent = false) => {
     if (!user || saved) return;
+    const imagePaths = referenceStoragePaths.length > 0 ? referenceStoragePaths : undefined;
     const { error } = await supabase.from("prompt_history").insert({
       user_id: user.id,
       workflow_type: "director",
       target_model: recommendedModel.id,
       results: { title, prompt, breakdown, directors_note: directorsNote },
+      ...(imagePaths ? { image_paths: imagePaths } : {}),
     });
     if (error) {
       if (!silent) toast.error(error.message);
