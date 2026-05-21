@@ -47,7 +47,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: "/", label: "MovPrompt" },
   { to: "/director", label: "AI Director" },
   { to: "/marketing", label: "Ads" },
-  { to: "/gallery", label: "Gallery" },
+  
 ];
 
 export function TopNav() {
