@@ -9,12 +9,8 @@ import { Seo } from "@/components/Seo";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { trackPageVisit } from "@/lib/analytics";
 import { LearnSection } from "@/components/learn/LearnSection";
-import { ExampleCard } from "@/components/learn/ExampleCard";
 import { LEARN_TOC } from "@/components/learn/learnContent";
 import { TopNav } from "@/components/TopNav";
-import exampleTokyo from "@/assets/example-tokyo.jpg";
-import exampleDesert from "@/assets/example-desert.jpg";
-import examplePortrait from "@/assets/example-portrait.jpg";
 
 const Learn = () => {
   const navigate = useNavigate();
@@ -295,29 +291,6 @@ const Learn = () => {
               </div>
             </LearnSection>
 
-            <LearnSection id="examples" eyebrow={t("learn.toc.examples" as any)} title={t("learn.examples.title" as any)}>
-              <p>{t("learn.examples.intro" as any)}</p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <ExampleCard
-                  image={exampleTokyo}
-                  alt="Neon Tokyo alley"
-                  model="Kling 3.0"
-                  prompt={t("learn.examples.ex1.prompt" as any)}
-                />
-                <ExampleCard
-                  image={exampleDesert}
-                  alt="Desert at golden hour"
-                  model="Seedance Pro"
-                  prompt={t("learn.examples.ex2.prompt" as any)}
-                />
-                <ExampleCard
-                  image={examplePortrait}
-                  alt="Rainy window portrait"
-                  model="Veo 3.1"
-                  prompt={t("learn.examples.ex3.prompt" as any)}
-                />
-              </div>
-            </LearnSection>
 
             <LearnSection id="pro-tips" eyebrow={t("learn.toc.proTips" as any)} title={t("learn.tips.title" as any)}>
               <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3 list-none p-0">

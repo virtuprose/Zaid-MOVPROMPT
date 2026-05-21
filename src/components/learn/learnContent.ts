@@ -10,7 +10,7 @@ export const LEARN_TOC: LearnTocItem[] = [
   { id: "scene-analysis", labelKey: "learn.toc.sceneAnalysis" },
   { id: "descriptions", labelKey: "learn.toc.descriptions" },
   { id: "references", labelKey: "learn.toc.references" },
-  { id: "examples", labelKey: "learn.toc.examples" },
+  
   { id: "pro-tips", labelKey: "learn.toc.proTips" },
   { id: "faq", labelKey: "learn.toc.faq" },
 ];
