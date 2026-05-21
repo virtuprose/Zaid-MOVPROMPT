@@ -1,53 +1,66 @@
-# Magnific-style cinematic hero
+# Image Prompt button for the Director
 
-Recreates the attached reference as a **new standalone page** at `/hero-preview` so your current Landing and Index stay untouched. You can review it in isolation, then we can promote it to `/` if you like it.
+Add a dedicated "Image Prompt" action to the Director chat. When the user clicks it (with or without a description / reference image), the AI Director returns a **pro, highly-structured image prompt** designed to be pasted into any image generator (Midjourney, Flux, SDXL, DALL·E, Nano Banana, Ideogram, etc.). Result is rendered in a new card with per-section copy and per-generator variants.
 
-## What it will look like
+This is purely a new capability — no existing video / story flow is touched.
 
-- **Full-bleed cinematic background** — uses your existing `src/assets/loop-portrait.mp4` (autoplay, muted, loop, `object-cover`) with a warm color-grade overlay + subtle vignette + fine grain to match the Magnific reds/ochres.
-- **Top nav** — transparent, minimal: logo-mark on the left, text links (Create, Models, Library, Learn), a pink **Upgrade** accent link, a search pill, and the user avatar on the right. Matches reference spacing exactly.
-- **Hero block (left-aligned, ~55% width)**:
-  - Small pill badge: `Ranked #1 AI video prompt director · Read the docs →`
-  - Massive display headline (2 lines, white, ~88px desktop / clamp down for mobile): **"The director's platform to shoot your best work"**
-  - Subhead (~18px, 80% white): "Every AI video model. Intelligent storyboards. Frame-perfect prompts. On-brand cinematography at any scale."
-  - Two CTAs: white solid **Start creating** + dark glass **▶ Why VidoPrompt?**
-- **Right-side rotating word column** (the signature Magnific move):
-  - Vertical stack of ghosted words that scrolls slowly upward on a loop
-  - Pink ▶ marker pinned at vertical center highlights the active word in white
-  - Words: *Scale campaigns · Generate prompts · Shoot cinematic shots · Build storyboards · Stitch scenes · Lock characters · Direct shots · Cast subjects · Stay on brand*
-- **Trust strip** at the bottom: "Trusted by creators, studios & agencies" + 6–7 grayscale logo placeholders (SVG text marks — easy to swap later).
+## UX
 
-## Typography & color
-
-- Headline: **Fraunces** (variable display serif-sans hybrid that matches Magnific's "Migra"-style condensed feel) loaded via Google Fonts, weight 700, tight tracking, -0.02em.
-- Body/UI: keep your existing Inter.
-- Accent pink for the ▶ marker + Upgrade link: `#FF3D7F` (Magnific-style hot pink), added as `--magnific-accent` token scoped to this page only — won't affect your global cyan/amber tokens.
-- Overlay: warm gradient `from-[#3a1a18]/30 via-[#6b2820]/20 to-[#2a0e0c]/60` + 4% noise.
+1. New round icon button in `Composer.tsx` toolbar, between **Enhance** (✨) and the mic, using the `ImageIcon` lucide icon with tooltip **"Generate image prompt"**.
+2. Behavior on click:
+   - If composer is empty and no attachments → sends a hidden intent `__image_prompt__` and the Director asks 1–2 quick chips (subject, style, aspect) before generating.
+   - If composer has a draft / reference image → sends the draft tagged with intent `image_prompt` so the Director skips straight to generating.
+3. Director replies with a new bubble `image_prompt_result` rendered by **`ImagePromptCard`** showing:
+   - Title + one-line concept
+   - Sections: Subject · Scene/Environment · Composition & Framing · Lighting · Color & Mood · Style references · Lens / camera feel · Technical (resolution, aspect, detail level) · Negative prompt
+   - **Generator variants** tabs: Midjourney v6 · Flux 1.1 Pro · SDXL · DALL·E 3 · Nano Banana · Ideogram · *Universal*. Each tab is a single copy-ready string formatted to that generator's conventions (MJ uses `--ar --style --stylize`, SDXL uses tag-style, DALL·E uses natural language, etc.).
+   - Copy buttons: per-section, per-variant, and "Copy all".
 
 ## Files
 
-**New:**
-- `src/pages/HeroPreview.tsx` — the page
-- `src/components/hero/CinematicHero.tsx` — hero composition
-- `src/components/hero/RotatingWordColumn.tsx` — right-side word reel (Framer Motion infinite loop)
-- `src/components/hero/HeroTopNav.tsx` — transparent top nav variant
-- `src/components/hero/TrustLogos.tsx` — grayscale logo row
+**New**
+- `src/components/director/ImagePromptCard.tsx` — renders the structured result + tabs + copy buttons (uses existing `Tabs`, `Button`, `toast`).
+- `supabase/functions/generate-image-prompt/index.ts` — edge function calling Lovable AI Gateway (`google/gemini-3.1-pro-preview`) with a strict system prompt + Zod-validated structured output (sections + 7 generator variants). CORS + JWT validation in code. Accepts `{ description, attachments?: {url,kind}[], aspect? }`.
 
-**Edited (minimal):**
-- `src/App.tsx` — register `<Route path="/hero-preview" element={<HeroPreview />} />`
-- `src/index.css` — add `@keyframes grain` + `.bg-grain` utility, and `@keyframes word-reel` (slow vertical scroll). No changes to existing tokens.
+**Edited**
+- `src/components/director/Composer.tsx` — add image-prompt icon button + new prop `onGenerateImagePrompt?: () => void`.
+- `src/components/director/DirectorChat.tsx`:
+  - Add bubble type `image_prompt_result` to the union and render path.
+  - Add `handleGenerateImagePrompt()` that calls `generate-image-prompt` with current composer text + last image attachment (if any), pushes a loading bubble then replaces with result. Pass to `<Composer onGenerateImagePrompt={…} />`.
+- `src/lib/director/api.ts` — thin wrapper `invokeImagePrompt(payload)`.
 
-## Motion details
+## Edge function contract
 
-- Headline: per-word fade-up stagger (Framer Motion, 60ms stagger, ease-out 0.6s) on mount.
-- Background video: 1.05 scale + 30s ken-burns pan via CSS keyframes for ambient life.
-- Word reel: `translateY` infinite loop, 22s duration, paused on hover, active word detected by IntersectionObserver against the central ▶ line so the highlight is always accurate.
-- CTAs: subtle hover scale 1.02 + glow.
+```ts
+// request
+{ description?: string; attachments?: { url: string; kind: "image" }[]; aspect?: "1:1"|"16:9"|"9:16"|"3:2"|"2:3"|"4:5" }
+
+// response
+{
+  concept: string,
+  sections: {
+    subject: string, scene: string, composition: string,
+    lighting: string, color_mood: string, style_refs: string,
+    lens_camera: string, technical: string, negative: string
+  },
+  variants: {
+    midjourney: string, flux: string, sdxl: string, dalle: string,
+    nano_banana: string, ideogram: string, universal: string
+  }
+}
+```
+
+System prompt enforces: no fluff, concrete nouns, named lighting + lens feel, explicit color palette, mood word, no copyrighted artist names unless the user asked, generator-idiomatic syntax per variant (MJ flags, SDXL comma tags, DALL·E natural sentences, etc.).
 
 ## Out of scope
 
-- No backend wiring, no auth, no analytics changes.
-- No edits to `Landing.tsx`, `Index.tsx`, `WorkflowPanel`, `DirectorChat`, or any existing route.
-- Logos are text-based SVG placeholders — swap to real partner logos later if/when relevant.
+- No DB persistence (results live in chat session like other Director bubbles).
+- No actual image generation — text prompt only.
+- No changes to existing video / story / reference-image flows.
+- No new model picker; uses Lovable AI Gateway default.
 
-After you approve, I'll build it and you can review at `/hero-preview`. If you love it, one follow-up message promotes it to `/`.
+## Verification
+
+- Click button with empty composer → Director asks chips.
+- Click with a 1-line subject + reference image → result card renders with 7 working copy buttons; each variant differs in syntax.
+- Card respects dark cinematic theme tokens.
