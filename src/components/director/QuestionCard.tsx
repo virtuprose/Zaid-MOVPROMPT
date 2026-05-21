@@ -178,15 +178,24 @@ export function QuestionCard({ reason, questions, disabled, attachments = [], on
               {!isDuration && suggestion && (
                 <div className="flex flex-wrap gap-1.5">
                   {suggestion.chips.map((chip) => {
-                    const active = isChipActive(value, chip);
+                    const isImagePromptChip = chip === IMAGE_PROMPT_CHIP;
+                    const active = !isImagePromptChip && isChipActive(value, chip);
                     return (
                       <button
                         key={chip}
                         type="button"
-                        onClick={() => setAnswer(i, toggleChip(value, chip))}
+                        onClick={() => {
+                          if (isImagePromptChip && onGenerateImagePrompt) {
+                            onGenerateImagePrompt();
+                            return;
+                          }
+                          setAnswer(i, toggleChip(value, chip));
+                        }}
                         className={cn(
                           "rounded-full px-3 py-1 text-xs border transition-colors",
-                          active
+                          isImagePromptChip
+                            ? "bg-primary/10 border-primary/40 text-foreground hover:bg-primary/20 hover:border-primary/60"
+                            : active
                             ? "bg-foreground/10 border-border/50 text-foreground"
                             : "bg-transparent border-border/30 text-muted-foreground hover:text-foreground hover:border-border/60",
                         )}
