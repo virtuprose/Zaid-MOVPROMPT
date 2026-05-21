@@ -6,8 +6,7 @@ import { HeroTopNav } from "./HeroTopNav";
 import { RotatingWordColumn } from "./RotatingWordColumn";
 import { TrustLogos } from "./TrustLogos";
 
-const VIDEO_URL =
-  "/__l5e/assets-v1/c9872701-904c-47f7-a371-e98a3a8f6f66/loop-portrait.mp4";
+const VIDEO_URL = "/hero-bg.mp4";
 
 const HEADLINE_LINES = [
   ["The", "director's", "platform", "to"],
