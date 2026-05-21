@@ -135,7 +135,8 @@ type Bubble =
         stitchedVideoUrl?: string;
       };
     }
-  | { role: "video"; data: import("./VideoBubble").VideoBubbleData };
+  | { role: "video"; data: import("./VideoBubble").VideoBubbleData }
+  | { role: "image_prompt_result"; data: import("./ImagePromptCard").ImagePromptData };
 
 const WELCOME: Bubble = {
   role: "assistant",
