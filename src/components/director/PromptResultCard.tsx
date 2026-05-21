@@ -60,6 +60,8 @@ type Props = {
   referenceImageUrls?: string[];
   /** Slot label per ref URL ("brand" | "character" | "location"), parallel to referenceImageUrls. */
   referenceImageSlots?: Array<"brand" | "character" | "location">;
+  /** Long-lived storage references for the same refs, formatted as "<bucket>:<path>" or absolute URL. */
+  referenceStoragePaths?: string[];
   /** Model the user already picked in the ModelChoiceCard for this prompt. Takes priority over recommendation. */
   preferredModelId?: string;
   /** Render spec the Director locked in (duration / aspect / audio / resolution / input_mode). Seeds the render dialog. */
