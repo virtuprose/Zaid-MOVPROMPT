@@ -272,7 +272,7 @@ function Section({
   );
 }
 
-export function PromptResultCard({ title, prompt, breakdown, directorsNote, onRefine, sessionId, hasReferenceImage = false, referenceImageUrls = [], referenceImageSlots = [], preferredModelId, lockedSpec }: Props) {
+export function PromptResultCard({ title, prompt, breakdown, directorsNote, onRefine, sessionId, hasReferenceImage = false, referenceImageUrls = [], referenceImageSlots = [], referenceStoragePaths = [], preferredModelId, lockedSpec }: Props) {
   const { user } = useAuth();
   const { request: requestApproval } = useApproval();
   const [copied, setCopied] = useState(false);
