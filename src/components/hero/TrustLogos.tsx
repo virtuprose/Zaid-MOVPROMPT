@@ -4,7 +4,7 @@ export const TrustLogos = () => {
   return (
     <div className="absolute bottom-0 inset-x-0 z-20 pb-8 px-6 md:px-10">
       <p className="text-center text-xs text-white/60 mb-4 tracking-wide">
-        Trusted by 1M+ creators — studios, agencies & enterprises
+        Trusted by creators — studios, agencies & enterprises
       </p>
       <div className="flex items-center justify-center gap-8 md:gap-12 flex-wrap opacity-70">
         {LOGOS.map((l) => (
