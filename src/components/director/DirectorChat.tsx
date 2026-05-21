@@ -2077,6 +2077,13 @@ function DirectorChatInner() {
                 </div>
               );
             }
+            if (b.role === "image_prompt_result") {
+              return (
+                <div key={i} className="motion-safe:animate-fade-up">
+                  <ImagePromptCard data={b.data} />
+                </div>
+              );
+            }
             if (b.role === "aspect_choice") {
               return (
                 <div key={i} className="flex items-start gap-2 motion-safe:animate-fade-up">
