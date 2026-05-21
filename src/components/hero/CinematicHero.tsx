@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { motion } from "framer-motion";
 import { Play, ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -14,6 +15,17 @@ const HEADLINE_LINES = [
 ];
 
 export const CinematicHero = () => {
+  useEffect(() => {
+    const id = "fraunces-font";
+    if (!document.getElementById(id)) {
+      const link = document.createElement("link");
+      link.id = id;
+      link.rel = "stylesheet";
+      link.href =
+        "https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700;9..144,800&display=swap";
+      document.head.appendChild(link);
+    }
+  }, []);
   return (
     <section className="relative w-full h-screen min-h-[780px] overflow-hidden bg-[#1a0a08]">
       {/* Background video */}

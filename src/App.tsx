@@ -9,7 +9,7 @@ import { OfflineFallback } from "@/components/OfflineFallback";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 
 import Index from "./pages/Index.tsx";
-import Landing from "./pages/Landing.tsx";
+import { CinematicHero } from "@/components/hero/CinematicHero";
 import { useAuth } from "@/hooks/useAuth";
 import { Loader2 } from "lucide-react";
 import { Navigate } from "react-router-dom";
@@ -34,7 +34,7 @@ const RootRoute = () => {
     }
     return <Index />;
   }
-  return <Landing />;
+  return <CinematicHero />;
 };
 import NotFound from "./pages/NotFound.tsx";
 import Analytics from "./pages/Analytics.tsx";
