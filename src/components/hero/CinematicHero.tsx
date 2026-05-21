@@ -140,7 +140,7 @@ export const CinematicHero = () => {
         </div>
       </div>
 
-      <TrustLogos />
+      
     </section>
   );
 };
