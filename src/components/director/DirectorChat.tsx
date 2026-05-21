@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import { notifyInsufficientCredits } from "@/lib/credits/insufficient";
 import { Composer } from "./Composer";
 import { PromptResultCard } from "./PromptResultCard";
+import { ImagePromptCard } from "./ImagePromptCard";
 import { ModelChoiceCard } from "./ModelChoiceCard";
 import { GeneratedImageCard } from "./GeneratedImageCard";
 import { AspectChoiceCard, type AspectRatio } from "./AspectChoiceCard";
