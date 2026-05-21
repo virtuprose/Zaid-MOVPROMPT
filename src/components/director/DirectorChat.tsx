@@ -1650,8 +1650,9 @@ function DirectorChatInner() {
   // then newest → oldest), dedupe by URL, cap at 9 (Seedance 2.0 ref limit).
   // First image is treated as brand/product, second as main character, rest as
   // location/scene — same convention as MarketingStudio.
-  const { referenceImageUrls, referenceImageSlots } = useMemo(() => {
+  const { referenceImageUrls, referenceImageSlots, referenceStoragePaths } = useMemo(() => {
     const urls: string[] = [];
+    const storagePaths: string[] = [];
     const seen = new Set<string>();
     const push = (a: Attachment) => {
       const url = (a as any).url as string | undefined;
@@ -1659,6 +1660,10 @@ function DirectorChatInner() {
       if ((a as any).kind && (a as any).kind !== "image") return;
       seen.add(url);
       urls.push(url);
+      const sp = (a as any).storage_path as string | undefined;
+      // Director attachments live in the `director-uploads` bucket. Prefix so the
+      // Library thumbnail loader can resolve them long-term (signed URLs expire).
+      storagePaths.push(sp ? `director-uploads:${sp}` : url);
     };
     for (const a of attachments) push(a);
     for (let i = bubbles.length - 1; i >= 0; i -= 1) {
@@ -1669,9 +1674,11 @@ function DirectorChatInner() {
     }
     const slotOrder: Array<"brand" | "character" | "location"> = ["brand", "character", "location"];
     const sliced = urls.slice(0, 9);
+    const slicedPaths = storagePaths.slice(0, 9);
     return {
       referenceImageUrls: sliced,
       referenceImageSlots: sliced.map((_, i) => slotOrder[Math.min(i, 2)]),
+      referenceStoragePaths: slicedPaths,
     };
   }, [attachments, bubbles]);
 
