@@ -57,6 +57,7 @@ import MarketingStudio from "./pages/MarketingStudio.tsx";
 import AccountSettings from "./pages/account/AccountSettings.tsx";
 import AccountBilling from "./pages/account/AccountBilling.tsx";
 import AccountPreferences from "./pages/account/AccountPreferences.tsx";
+import HeroPreview from "./pages/HeroPreview.tsx";
 
 const queryClient = new QueryClient();
 
@@ -90,6 +91,7 @@ const AppRoutes = () => {
         <Route path="/account/settings" element={<AuthGuard><AccountSettings /></AuthGuard>} />
         <Route path="/account/billing" element={<AuthGuard><AccountBilling /></AuthGuard>} />
         <Route path="/account/preferences" element={<AuthGuard><AccountPreferences /></AuthGuard>} />
+        <Route path="/hero-preview" element={<HeroPreview />} />
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
         <Route path="*" element={<NotFound />} />
       </Routes>
