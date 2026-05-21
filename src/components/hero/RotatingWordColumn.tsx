@@ -60,7 +60,7 @@ export const RotatingWordColumn = () => {
               style={{ height: ITEM_HEIGHT }}
             >
               <span
-                className={`font-display text-[44px] leading-none tracking-tight transition-all duration-500 ${
+                className={`font-magnific text-[44px] leading-none tracking-tight transition-all duration-500 ${
                   isActive
                     ? "text-white opacity-100"
                     : "text-white/25 opacity-60"

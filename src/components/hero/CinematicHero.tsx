@@ -63,7 +63,7 @@ export const CinematicHero = () => {
             </Link>
           </motion.div>
 
-          <h1 className="font-display text-white font-bold leading-[0.95] tracking-[-0.02em]">
+          <h1 className="font-magnific text-white font-bold leading-[0.95] tracking-[-0.02em]">
             {HEADLINE_LINES.map((line, li) => (
               <span key={li} className="block text-[clamp(48px,7.5vw,108px)]">
                 {line.map((w, wi) => (
