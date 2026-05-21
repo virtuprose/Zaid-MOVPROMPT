@@ -1,5 +1,6 @@
 import { createRoot } from "react-dom/client";
 import { LanguageProvider } from "./i18n/LanguageContext";
+import { ThemeProvider } from "./components/ThemeProvider";
 import App from "./App.tsx";
 import "./index.css";
 import { captureRefFromUrl } from "./lib/referrals";
@@ -19,7 +20,9 @@ if (splash) {
 }
 
 createRoot(document.getElementById("root")!).render(
-  <LanguageProvider>
-    <App />
-  </LanguageProvider>
+  <ThemeProvider>
+    <LanguageProvider>
+      <App />
+    </LanguageProvider>
+  </ThemeProvider>
 );

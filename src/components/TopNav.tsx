@@ -13,6 +13,8 @@ import {
   GraduationCap,
   Gift,
   LogOut,
+  Sun,
+  Moon,
   User,
   Sparkles,
   Coins,
@@ -30,6 +32,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { useAuth } from "@/hooks/useAuth";
+import { useTheme } from "@/components/ThemeProvider";
 import { useLanguage } from "@/i18n/LanguageContext";
 
 import { LanguageToggle } from "@/components/LanguageToggle";
@@ -49,6 +52,7 @@ const NAV_ITEMS: NavItem[] = [
 
 export function TopNav() {
   const { user, loading, signOut } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useLanguage();
@@ -232,6 +236,16 @@ export function TopNav() {
                       >
                         <Globe className="w-4 h-4 text-muted-foreground group-hover:text-accent group-focus:text-accent transition-colors" />
                         <span className="text-sm">Language & preferences</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator className="my-1.5 bg-[hsl(240_5%_12%)]" />
+                      <DropdownMenuItem
+                        onSelect={(e) => { e.preventDefault(); toggleTheme(); }}
+                        className="gap-3 px-4 py-3 rounded-lg cursor-pointer focus:bg-[hsl(240_5%_11%)] focus:text-foreground group"
+                      >
+                        {theme === "dark"
+                          ? <Sun className="w-4 h-4 text-muted-foreground group-hover:text-accent group-focus:text-accent transition-colors" />
+                          : <Moon className="w-4 h-4 text-muted-foreground group-hover:text-accent group-focus:text-accent transition-colors" />}
+                        <span className="text-sm">{theme === "dark" ? "Light mode" : "Dark mode"}</span>
                       </DropdownMenuItem>
                       <DropdownMenuSeparator className="my-1.5 bg-[hsl(240_5%_12%)]" />
                       <DropdownMenuItem

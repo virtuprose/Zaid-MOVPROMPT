@@ -1,19 +1,37 @@
-# Plan: Smooth, infinite rotating word column
+## Goal
+Add a light/dark theme toggle, surfaced in the signed-in account dropdown (and mirrored in Account → Preferences). Default stays dark.
 
-The column in `src/components/hero/RotatingWordColumn.tsx` has two bugs visible in the hero right rail:
+## Implementation
 
-1. **Empty gaps at the end of the cycle.** The list translates upward as `active` increments, but there are only 9 items, so the last few ticks expose empty space below the marker before snapping back to index 0.
-2. **The motion stops feeling tied to "each point."** When it wraps from item 8 → 0, it jumps backward all the way up instead of continuing forward.
+**1. Theme provider** — `src/components/ThemeProvider.tsx` (new)
+- Lightweight context: `theme: "dark" | "light"`, `setTheme`, `toggleTheme`.
+- Persists to `localStorage("movprompt-theme")`, defaults to `"dark"`.
+- Toggles `class="light"` on `<html>` (we keep dark as the base `:root`, light as override — no FOUC since default matches base).
+- Mount once in `src/main.tsx` (or `App.tsx`) around the router.
 
-## Fix
+**2. Light tokens** — `src/index.css`
+Add a `.light` block after `:root` overriding the semantic tokens only (background, foreground, card, popover, muted, secondary, border, input, sidebar-*). Keep `--primary`/`--accent` amber and `--brand` cyan as-is so brand identity survives. Light values (HSL):
+- background `0 0% 100%`, foreground `240 10% 8%`
+- card `0 0% 100%`, popover `0 0% 100%`
+- muted `240 5% 96%`, muted-foreground `240 5% 40%`
+- secondary `240 5% 94%`, border/input `240 6% 88%`
+- sidebar parallels above
 
-Rework `RotatingWordColumn.tsx` to a true infinite scroller:
+**3. Account dropdown item** — `src/components/TopNav.tsx`
+Add a `DropdownMenuItem` (Sun/Moon icon) above the existing separator near Preferences. Label: "Light mode" / "Dark mode". Clicking calls `toggleTheme()` without closing flow.
 
-- Render the `WORDS` array **twice** back-to-back so there's always content above and below the play marker — no more empty.
-- Keep an `active` counter that only **increments forward** (never wraps). Translate by `active * ITEM_HEIGHT`.
-- When `active` reaches `WORDS.length` (we've scrolled past the first copy), after the transition completes, **silently reset** to `active - WORDS.length` with the transition temporarily disabled. The duplicated copy makes the swap visually identical, so the motion looks continuous — always moving in the same direction with each tick.
-- Keep the pink `Play` marker pinned at vertical center; each new word slides into alignment with it on every tick (the "moving with each point" feel).
-- Keep current timing (`INTERVAL = 1800ms`, 900ms eased translate) and the top/bottom fade mask.
+**4. Preferences page card** — `src/pages/account/AccountPreferences.tsx`
+Add a third `Card` ("Appearance") with a small segmented control (Dark / Light) bound to the same context.
 
-## File touched
-- `src/components/hero/RotatingWordColumn.tsx` (only this file; no new imports beyond `useRef`)
+**5. Known scope limit (documented, not redesigned)**
+The cinematic landing hero (`CinematicHero.tsx` and its rotating column) uses a dark video background with hard-coded `#1a0a08`-style classes. It will keep its dark look in both modes — this matches the user request (toggle lives in the account dropdown, which only exists after sign-in, so the marketing hero is rarely viewed in "light mode"). All token-driven surfaces (Docs, Library, Director, Account, modals, dropdowns, nav) flip correctly.
+
+## Files
+- new: `src/components/ThemeProvider.tsx`
+- edit: `src/index.css` (add `.light` token block)
+- edit: `src/main.tsx` (wrap with `<ThemeProvider>`)
+- edit: `src/components/TopNav.tsx` (dropdown item + icon import + `useTheme`)
+- edit: `src/pages/account/AccountPreferences.tsx` (Appearance card)
+
+## Memory update
+After build, update `mem://index.md` Core: replace "Never light theme" with "Dark by default; optional light mode available via account dropdown (token-driven surfaces only — cinematic hero stays dark)."
