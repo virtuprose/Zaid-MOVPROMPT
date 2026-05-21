@@ -1567,7 +1567,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
                 disabled={isAnalyzing}
                 aria-label={t("wp.reAnalyze")}
                 title={t("wp.reAnalyze")}
-                className="gap-1.5 px-2 sm:px-3 border-white/20 text-muted-foreground hover:text-foreground hover:border-primary/50"
+                className="gap-1.5 px-2 sm:px-3 border-border text-muted-foreground hover:text-foreground hover:border-primary/50"
               >
                 <ScanSearch className="w-3.5 h-3.5" /> <span className="hidden sm:inline">{t("wp.reAnalyze")}</span>
               </Button>
