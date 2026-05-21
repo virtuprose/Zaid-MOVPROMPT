@@ -6,7 +6,6 @@ const LINKS = [
   { label: "Create", to: "/director" },
   { label: "Models", to: "/gallery" },
   { label: "Library", to: "/library" },
-  { label: "Learn", to: "/learn" },
 ];
 
 export const HeroTopNav = () => {
