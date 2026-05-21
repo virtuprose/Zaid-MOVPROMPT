@@ -19,7 +19,35 @@ export type Attachment =
   | { kind: "audio_transcript"; name: string; text: string; storage_path?: string }
   | { kind: "document"; name: string; text: string };
 
-const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
+const MAX_IMAGE_BYTES = 25 * 1024 * 1024;
+const IMAGE_COMPRESS_THRESHOLD = 6 * 1024 * 1024;
+
+async function downscaleImage(file: File, maxDim = 2048, quality = 0.9): Promise<{ blob: Blob; name: string; type: string }> {
+  const blobUrl = URL.createObjectURL(file);
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const el = new Image();
+      el.onload = () => resolve(el);
+      el.onerror = () => reject(new Error("Could not decode image"));
+      el.src = blobUrl;
+    });
+    const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+    const w = Math.round(img.width * scale);
+    const h = Math.round(img.height * scale);
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d")!;
+    ctx.drawImage(img, 0, 0, w, h);
+    const blob: Blob = await new Promise((resolve, reject) =>
+      canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("Could not encode image"))), "image/jpeg", quality),
+    );
+    const newName = file.name.replace(/\.[^.]+$/, "") + ".jpg";
+    return { blob, name: newName, type: "image/jpeg" };
+  } finally {
+    URL.revokeObjectURL(blobUrl);
+  }
+}
 const MAX_VIDEO_BYTES = 50 * 1024 * 1024;
 const MAX_DOC_BYTES = 10 * 1024 * 1024;
 const MAX_AUDIO_BYTES = 25 * 1024 * 1024;
