@@ -118,12 +118,13 @@ export const CinematicHero = () => {
             >
               Start creating
             </Link>
-            <button
+            <Link
+              to="/docs"
               className="flex items-center gap-2 bg-black/40 backdrop-blur-md text-white border border-white/15 font-medium px-6 py-3.5 rounded-xl hover:bg-black/55 transition-all"
             >
               <Play className="w-4 h-4 fill-white" strokeWidth={0} />
               Why MovPrompt?
-            </button>
+            </Link>
           </motion.div>
         </div>
 
