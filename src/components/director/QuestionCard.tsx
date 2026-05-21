@@ -29,9 +29,13 @@ type Props = {
   onSkip: () => void;
   /** Optional chips supplied by the Director (preferred over heuristic). */
   agentSuggestions?: AgentSuggestion[];
+  /** Triggers the Image Prompt generation flow when the special chip is picked. */
+  onGenerateImagePrompt?: () => void;
 };
 
-export function QuestionCard({ reason, questions, disabled, attachments = [], onAttach, onContinue, onSkip, agentSuggestions }: Props) {
+const IMAGE_PROMPT_CHIP = "Generate an image prompt";
+
+export function QuestionCard({ reason, questions, disabled, attachments = [], onAttach, onContinue, onSkip, agentSuggestions, onGenerateImagePrompt }: Props) {
   const [answers, setAnswers] = useState<string[]>(() => questions.map(() => ""));
   const [otherOpen, setOtherOpen] = useState<Record<number, boolean>>({});
   const [slotCounts, setSlotCounts] = useState<Record<number, number>>({});
