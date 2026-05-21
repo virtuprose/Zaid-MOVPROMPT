@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import { notifyInsufficientCredits } from "@/lib/credits/insufficient";
 import { Composer } from "./Composer";
 import { PromptResultCard } from "./PromptResultCard";
+import { ImagePromptCard } from "./ImagePromptCard";
 import { ModelChoiceCard } from "./ModelChoiceCard";
 import { GeneratedImageCard } from "./GeneratedImageCard";
 import { AspectChoiceCard, type AspectRatio } from "./AspectChoiceCard";
@@ -135,7 +136,8 @@ type Bubble =
         stitchedVideoUrl?: string;
       };
     }
-  | { role: "video"; data: import("./VideoBubble").VideoBubbleData };
+  | { role: "video"; data: import("./VideoBubble").VideoBubbleData }
+  | { role: "image_prompt_result"; data: import("./ImagePromptCard").ImagePromptData };
 
 const WELCOME: Bubble = {
   role: "assistant",
@@ -922,9 +924,46 @@ function DirectorChatInner() {
     }
   };
 
-
-
-
+  const [imagePromptBusy, setImagePromptBusy] = useState(false);
+  const generateImagePrompt = async () => {
+    const description = input.trim();
+    const imageAttachments = attachments
+      .filter((a) => a.kind === "image" || a.kind === "video_keyframes")
+      .map((a) => ({ url: (a as any).url as string, kind: a.kind as "image" | "video_keyframes" }))
+      .filter((a) => a.url);
+    if (!description && imageAttachments.length === 0) {
+      toast.error("Type a brief or attach a reference image first");
+      return;
+    }
+    setImagePromptBusy(true);
+    const userBubble: Bubble = {
+      role: "user",
+      content: description || "(Generate image prompt from references)",
+      attachments: attachments.length ? attachments : undefined,
+    };
+    setBubbles((prev) => [...prev, userBubble]);
+    setInput("");
+    setAttachments([]);
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-image-prompt", {
+        body: { description, attachments: imageAttachments, aspect: "16:9" },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+      setBubbles((prev) => [
+        ...prev,
+        { role: "image_prompt_result", data: data as import("./ImagePromptCard").ImagePromptData },
+      ]);
+    } catch (e: any) {
+      toast.error(e?.message || "Could not generate image prompt");
+      setBubbles((prev) => [
+        ...prev,
+        { role: "error", message: "Image prompt failed", detail: e?.message, retryable: true },
+      ]);
+    } finally {
+      setImagePromptBusy(false);
+    }
+  };
 
   const send = async (textOverride?: string, bubblesOverride?: Bubble[]) => {
     const text = (textOverride ?? input).trim();
@@ -1777,6 +1816,8 @@ function DirectorChatInner() {
             onSend={send}
             busy={busy}
             showHelper={false}
+            onGenerateImagePrompt={generateImagePrompt}
+            imagePromptBusy={imagePromptBusy}
           />
         </div>
 
@@ -2038,6 +2079,13 @@ function DirectorChatInner() {
                 </div>
               );
             }
+            if (b.role === "image_prompt_result") {
+              return (
+                <div key={i} className="motion-safe:animate-fade-up">
+                  <ImagePromptCard data={b.data} />
+                </div>
+              );
+            }
             if (b.role === "aspect_choice") {
               return (
                 <div key={i} className="flex items-start gap-2 motion-safe:animate-fade-up">
@@ -2268,6 +2316,8 @@ function DirectorChatInner() {
             return undefined;
           })()}
           onQuickReply={(chip) => void send(chip)}
+          onGenerateImagePrompt={generateImagePrompt}
+          imagePromptBusy={imagePromptBusy}
         />
       </div>
 

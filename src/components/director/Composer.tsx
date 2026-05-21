@@ -29,6 +29,8 @@ type Props = {
   showHelper?: boolean;
   quickReplies?: string[];
   onQuickReply?: (chip: string) => void;
+  onGenerateImagePrompt?: () => void;
+  imagePromptBusy?: boolean;
 };
 
 export function Composer({
@@ -41,6 +43,8 @@ export function Composer({
   showHelper,
   quickReplies,
   onQuickReply,
+  onGenerateImagePrompt,
+  imagePromptBusy,
 }: Props) {
   const { user } = useAuth();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -489,6 +493,29 @@ export function Composer({
                   {enhancing ? "Enhancing…" : "Enhance description"}
                 </TooltipContent>
               </Tooltip>
+
+              {onGenerateImagePrompt && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="ghost"
+                      onClick={onGenerateImagePrompt}
+                      disabled={busy || ingesting || imagePromptBusy || recording || transcribing}
+                      aria-label="Generate image prompt"
+                      className="h-11 w-11 sm:h-9 sm:w-9 rounded-full text-muted-foreground hover:text-foreground"
+                    >
+                      {imagePromptBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImageIcon className="w-4 h-4" />}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top">
+                    {imagePromptBusy ? "Composing image prompt…" : "Generate pro image prompt"}
+                  </TooltipContent>
+                </Tooltip>
+              )}
+
+
 
 
               {voice.supported && (
