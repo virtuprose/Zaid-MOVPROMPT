@@ -19,7 +19,35 @@ export type Attachment =
   | { kind: "audio_transcript"; name: string; text: string; storage_path?: string }
   | { kind: "document"; name: string; text: string };
 
-const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
+const MAX_IMAGE_BYTES = 25 * 1024 * 1024;
+const IMAGE_COMPRESS_THRESHOLD = 6 * 1024 * 1024;
+
+async function downscaleImage(file: File, maxDim = 2048, quality = 0.9): Promise<{ blob: Blob; name: string; type: string }> {
+  const blobUrl = URL.createObjectURL(file);
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const el = new Image();
+      el.onload = () => resolve(el);
+      el.onerror = () => reject(new Error("Could not decode image"));
+      el.src = blobUrl;
+    });
+    const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+    const w = Math.round(img.width * scale);
+    const h = Math.round(img.height * scale);
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d")!;
+    ctx.drawImage(img, 0, 0, w, h);
+    const blob: Blob = await new Promise((resolve, reject) =>
+      canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("Could not encode image"))), "image/jpeg", quality),
+    );
+    const newName = file.name.replace(/\.[^.]+$/, "") + ".jpg";
+    return { blob, name: newName, type: "image/jpeg" };
+  } finally {
+    URL.revokeObjectURL(blobUrl);
+  }
+}
 const MAX_VIDEO_BYTES = 50 * 1024 * 1024;
 const MAX_DOC_BYTES = 10 * 1024 * 1024;
 const MAX_AUDIO_BYTES = 25 * 1024 * 1024;
@@ -51,10 +79,19 @@ export async function requireUserId(): Promise<string> {
 }
 
 export async function ingestImage(file: File): Promise<Attachment> {
-  if (file.size > MAX_IMAGE_BYTES) throw new Error(`${file.name} is over 8MB`);
+  if (file.size > MAX_IMAGE_BYTES) throw new Error(`${file.name} is over 25MB`);
   const uid = await requireUserId();
-  const { storage_path, url } = await uploadAndSign(file, uid, file.name, file.type || "image/jpeg");
-  return { kind: "image", name: file.name, url, storage_path };
+  let blob: Blob = file;
+  let name = file.name;
+  let type = file.type || "image/jpeg";
+  if (file.size > IMAGE_COMPRESS_THRESHOLD) {
+    const down = await downscaleImage(file);
+    blob = down.blob;
+    name = down.name;
+    type = down.type;
+  }
+  const { storage_path, url } = await uploadAndSign(blob, uid, name, type);
+  return { kind: "image", name, url, storage_path };
 }
 
 export async function ingestVideo(file: File, frameCount = 3): Promise<Attachment[]> {
