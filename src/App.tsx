@@ -34,7 +34,7 @@ const RootRoute = () => {
     }
     return <Index />;
   }
-  return <Landing />;
+  return <CinematicHero />;
 };
 import NotFound from "./pages/NotFound.tsx";
 import Analytics from "./pages/Analytics.tsx";
