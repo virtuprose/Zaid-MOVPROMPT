@@ -4,7 +4,7 @@ import { Play, ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { HeroTopNav } from "./HeroTopNav";
 import { RotatingWordColumn } from "./RotatingWordColumn";
-import { TrustLogos } from "./TrustLogos";
+
 
 const VIDEO_URL = "/hero-bg.mp4";
 
@@ -140,7 +140,7 @@ export const CinematicHero = () => {
         </div>
       </div>
 
-      <TrustLogos />
+      
     </section>
   );
 };
