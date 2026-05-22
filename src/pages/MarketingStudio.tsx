@@ -111,7 +111,7 @@ export default function MarketingStudio() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
 
-  const { kits, activeKits: brandKits, activeIds: brandActiveIds, toggleActive: toggleBrandActive, deleteKit: deleteBrand } = useBrandKit();
+  const { kits, activeKits: brandKits, activeIds: brandActiveIds, toggleActive: toggleBrandActive, deleteKit: deleteBrand, reload: reloadBrands } = useBrandKit();
   const brandKit = brandKits[0] ?? null;
   const {
     kits: characterKits,
@@ -119,6 +119,7 @@ export default function MarketingStudio() {
     activeIds: characterActiveIds,
     toggleActive: toggleCharacterActive,
     deleteKit: deleteCharacter,
+    reload: reloadCharacters,
   } = useCharacterKit();
   const characterKit = characterActiveKits[0] ?? null;
   const [subjectOverride, setSubjectOverride] = useState<Subject | null>(null);
@@ -983,6 +984,7 @@ export default function MarketingStudio() {
             if (!o) setCharacterEditId(null);
           }}
           kitId={characterEditId}
+          onSaved={() => { void reloadCharacters(); }}
         />
 
         <BrandKitSheet
@@ -992,7 +994,9 @@ export default function MarketingStudio() {
             if (!o) setBrandEditId(null);
           }}
           kitId={brandEditId}
+          onSaved={() => { void reloadBrands(); }}
         />
+
 
         <ConfirmRightsDialog
           open={confirmOpen}
