@@ -64,6 +64,13 @@ export function BrandKitSheet({
         name: d.name?.trim() ? d.name : res.name ?? d.name,
         description: d.description?.trim() ? d.description : res.description ?? d.description,
         tagline: d.tagline?.trim() ? d.tagline : res.tagline ?? d.tagline,
+        // Fact-sheet fields: always refresh from the latest analysis so the
+        // video model can lock onto the real product details.
+        category: res.category ?? d.category,
+        visual_parts: res.visual_parts ?? d.visual_parts,
+        materials: res.materials ?? d.materials,
+        hero_colors: res.hero_colors ?? d.hero_colors,
+        packaging: res.packaging ?? d.packaging,
       }));
       setJustFilled(true);
       window.setTimeout(() => setJustFilled(false), 4000);
