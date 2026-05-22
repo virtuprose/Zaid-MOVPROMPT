@@ -65,26 +65,3 @@ export async function incrementShareViews(slug: string): Promise<void> {
   }
 }
 
-export interface GalleryItem {
-  slug: string;
-  title: string | null;
-  workflow_type: string;
-  target_model: string;
-  agent_name: string | null;
-  view_count: number;
-  created_at: string;
-  results: any;
-}
-
-export async function fetchGallery(opts?: { model?: string; limit?: number }): Promise<GalleryItem[]> {
-  let q = supabase
-    .from("shared_prompts")
-    .select("slug,title,workflow_type,target_model,agent_name,view_count,created_at,results")
-    .eq("featured", true)
-    .order("featured_at", { ascending: false })
-    .limit(opts?.limit ?? 60);
-  if (opts?.model) q = q.eq("target_model", opts.model);
-  const { data, error } = await q;
-  if (error) throw error;
-  return (data ?? []) as GalleryItem[];
-}

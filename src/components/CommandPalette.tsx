@@ -10,11 +10,11 @@ import {
   CommandSeparator,
 } from "@/components/ui/command";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { FileText, Folder, Image as ImageIcon, HelpCircle, Megaphone, Plus, Sparkles } from "lucide-react";
+import { FileText, Folder, HelpCircle, Megaphone, Plus, Sparkles } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 
-type Tab = "tasks" | "library" | "gallery" | "help";
+type Tab = "tasks" | "library" | "help";
 
 type TaskHit = { id: string; title: string | null; updated_at: string };
 
@@ -67,10 +67,9 @@ export function CommandPalette({ open, onOpenChange }: Props) {
       />
       <div className="px-3 pt-2">
         <Tabs value={tab} onValueChange={(v) => setTab(v as Tab)}>
-          <TabsList className="grid w-full grid-cols-4 h-8">
+          <TabsList className="grid w-full grid-cols-3 h-8">
             <TabsTrigger value="tasks" className="text-xs">Tasks</TabsTrigger>
             <TabsTrigger value="library" className="text-xs">Library</TabsTrigger>
-            <TabsTrigger value="gallery" className="text-xs">Gallery</TabsTrigger>
             <TabsTrigger value="help" className="text-xs">Help</TabsTrigger>
           </TabsList>
         </Tabs>
@@ -104,14 +103,6 @@ export function CommandPalette({ open, onOpenChange }: Props) {
               <Folder className="w-4 h-4 mr-2" /> Open Library
             </CommandItem>
             <CommandEmpty>Search across your library — coming soon.</CommandEmpty>
-          </CommandGroup>
-        )}
-        {tab === "gallery" && (
-          <CommandGroup heading="Gallery">
-            <CommandItem onSelect={() => go("/gallery")}>
-              <ImageIcon className="w-4 h-4 mr-2" /> Browse Gallery
-            </CommandItem>
-            <CommandEmpty>Inline gallery search — coming soon.</CommandEmpty>
           </CommandGroup>
         )}
         {tab === "help" && (

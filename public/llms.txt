@@ -8,10 +8,6 @@ MovPrompt analyzes a frame, breaks it into subject, background, lighting, and at
 
 - [Home](/): Drop a frame, pick a model, get a cinematic video prompt.
 - [Sign in](/auth): Sign in or create a MovPrompt account.
-- [Public gallery](/gallery): Browse cinematic prompts shared by the community.
-- [Veo prompt gallery](/models/veo): Prompts written for Google Veo 3 and Veo 3.1.
-- [Kling prompt gallery](/models/kling): Prompts written for Kling 2.5 → 3.0 Omni.
-- [Seedance prompt gallery](/models/seedance): Prompts written for ByteDance Seedance.
 - [Learn](/learn): Practical guide to writing director-grade AI video prompts.
 - [Privacy](/privacy): How MovPrompt collects and protects data.
 - [Terms](/terms): Terms of service.

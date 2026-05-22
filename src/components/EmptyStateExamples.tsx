@@ -1,5 +1,4 @@
 import { ArrowRight } from "lucide-react";
-import { Link } from "react-router-dom";
 import exampleTokyo from "@/assets/example-tokyo.jpg";
 import exampleDesert from "@/assets/example-desert.jpg";
 import examplePortrait from "@/assets/example-portrait.jpg";
@@ -81,12 +80,6 @@ export const EmptyStateExamples = () => {
           </button>
         ))}
       </div>
-      <Link
-        to="/gallery"
-        className="mt-4 inline-flex items-center gap-1 text-[13px] text-primary hover:text-primary/80 px-1"
-      >
-        See more examples <ArrowRight className="w-3 h-3" />
-      </Link>
     </div>
   );
 };
