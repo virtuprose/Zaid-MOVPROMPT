@@ -322,6 +322,21 @@ export function BrandKitSheet({
             placeholder="Sleep smarter. Run faster."
             max={60}
           />
+
+          {/* AI fact sheet — locks the product so the video looks like it */}
+          <FactSheet
+            draft={draft}
+            update={update}
+            analyzing={analyzing}
+            canReanalyze={!!draft.logo_url}
+            onReanalyze={() =>
+              runAnalyze(
+                draft.logo_path
+                  ? { imagePath: draft.logo_path }
+                  : { imageUrl: draft.logo_url },
+              )
+            }
+          />
         </div>
 
         {/* Footer */}
