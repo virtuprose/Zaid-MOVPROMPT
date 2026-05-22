@@ -984,6 +984,7 @@ export default function MarketingStudio() {
             if (!o) setCharacterEditId(null);
           }}
           kitId={characterEditId}
+          onSaved={() => { void reloadCharacters(); }}
         />
 
         <BrandKitSheet
@@ -993,7 +994,9 @@ export default function MarketingStudio() {
             if (!o) setBrandEditId(null);
           }}
           kitId={brandEditId}
+          onSaved={() => { void reloadBrands(); }}
         />
+
 
         <ConfirmRightsDialog
           open={confirmOpen}
