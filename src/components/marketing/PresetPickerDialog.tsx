@@ -481,7 +481,9 @@ export function PresetPickerDialog({
               </p>
             </div>
           )}
+          </>)}
         </div>
+
 
         <div className="border-t border-border/40 p-4 flex items-center justify-between gap-3 bg-[hsl(240_5%_8%)] rounded-b-3xl">
           <div className="flex items-center gap-3">
