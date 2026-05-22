@@ -504,6 +504,11 @@ export type BrandContext = {
   url?: string | null;
   tagline?: string | null;
   audience?: string | null;
+  category?: string | null;
+  visual_parts?: string | null;
+  materials?: string | null;
+  hero_colors?: string[] | null;
+  packaging?: string | null;
 };
 
 export type LocationContext = {
