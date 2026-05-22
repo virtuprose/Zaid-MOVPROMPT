@@ -325,7 +325,7 @@ export function BrandKitSheet({
           />
 
           {/* AI fact sheet — locks the product so the video looks like it */}
-          <FactSheet
+          <ProductFactSheet
             draft={draft}
             update={update}
             analyzing={analyzing}
