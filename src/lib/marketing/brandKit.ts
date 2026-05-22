@@ -156,6 +156,11 @@ export function useBrandKit() {
         tagline: next.tagline,
         audience: next.audience,
         logo_path: next.logo_path,
+        category: next.category,
+        visual_parts: next.visual_parts,
+        materials: next.materials,
+        hero_colors: next.hero_colors,
+        packaging: next.packaging,
       };
       if (!next.id && !payload.logo_path && next.logo_url) {
         console.warn(
