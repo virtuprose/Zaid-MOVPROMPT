@@ -31,9 +31,8 @@ export const ShareDialog = ({ open, onOpenChange, payload }: ShareDialogProps) =
     if (!payload) return;
     setCreating(true);
     try {
-      const { url } = await createSharedPrompt({ ...payload, featured: submitToGallery });
+      const { url } = await createSharedPrompt(payload);
       setShareUrl(url);
-      if (submitToGallery) toast.success("Submitted to public gallery");
     } catch (e: any) {
       console.error(e);
       toast.error(e?.message || "Could not create share link");
