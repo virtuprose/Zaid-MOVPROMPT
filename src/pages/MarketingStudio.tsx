@@ -335,6 +335,11 @@ export default function MarketingStudio() {
           url: b.url,
           tagline: b.tagline,
           audience: b.audience,
+          category: b.category,
+          visual_parts: b.visual_parts,
+          materials: b.materials,
+          hero_colors: b.hero_colors,
+          packaging: b.packaging,
         })),
         location: {
           place: location.place || undefined,
