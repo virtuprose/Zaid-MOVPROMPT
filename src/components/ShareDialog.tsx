@@ -23,7 +23,6 @@ export const ShareDialog = ({ open, onOpenChange, payload }: ShareDialogProps) =
     if (!next) {
       setShareUrl(null);
       setCopied(false);
-      setSubmitToGallery(false);
     }
     onOpenChange(next);
   };
