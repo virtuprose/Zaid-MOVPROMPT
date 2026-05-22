@@ -67,10 +67,9 @@ export function CommandPalette({ open, onOpenChange }: Props) {
       />
       <div className="px-3 pt-2">
         <Tabs value={tab} onValueChange={(v) => setTab(v as Tab)}>
-          <TabsList className="grid w-full grid-cols-4 h-8">
+          <TabsList className="grid w-full grid-cols-3 h-8">
             <TabsTrigger value="tasks" className="text-xs">Tasks</TabsTrigger>
             <TabsTrigger value="library" className="text-xs">Library</TabsTrigger>
-            <TabsTrigger value="gallery" className="text-xs">Gallery</TabsTrigger>
             <TabsTrigger value="help" className="text-xs">Help</TabsTrigger>
           </TabsList>
         </Tabs>
