@@ -14,6 +14,12 @@ export type BrandKit = {
   logo_path: string | null;
   /** Signed URL for previewing logo (not persisted). */
   logo_url?: string | null;
+  /** Product fact sheet — filled by AI on upload, editable by user. */
+  category: string | null;
+  visual_parts: string | null;
+  materials: string | null;
+  hero_colors: string[] | null;
+  packaging: string | null;
   updated_at?: string;
 };
 
@@ -26,6 +32,11 @@ export const EMPTY_BRAND_KIT: BrandKit = {
   audience: null,
   logo_path: null,
   logo_url: null,
+  category: null,
+  visual_parts: null,
+  materials: null,
+  hero_colors: null,
+  packaging: null,
 };
 
 export const MAX_BRANDS = 2;
