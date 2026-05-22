@@ -43,26 +43,11 @@ import { cn } from "@/lib/utils";
 
 type NavItem = { to: string; label: string; badge?: string };
 
-const isPreviewHost = () => {
-  if (typeof window === "undefined") return false;
-  const h = window.location.hostname;
-  return (
-    h.includes("id-preview--") ||
-    h.endsWith(".sandbox.lovable.dev") ||
-    h === "localhost" ||
-    h === "127.0.0.1"
-  );
-};
-
-const ALL_NAV_ITEMS: NavItem[] = [
+const NAV_ITEMS: NavItem[] = [
   { to: "/", label: "MovPrompt" },
   { to: "/director", label: "AI Director" },
   { to: "/marketing", label: "Ads" },
 ];
-
-const NAV_ITEMS: NavItem[] = ALL_NAV_ITEMS.filter(
-  (item) => item.to !== "/marketing" || isPreviewHost(),
-);
 
 
 export function TopNav() {
