@@ -578,12 +578,25 @@ function brandLineAt(b: BrandContext, refs: StudioBrief["imageRefs"], occurrence
   const labelPrefix =
     role === "hero" ? "Hero product" : role === "supporting" ? "Supporting product (share the frame, do not steal focus)" : "Product";
   const bits = [`${labelPrefix}: ${b.name}`];
+  if (b.category) bits.push(`Category: ${b.category}`);
   if (b.description) bits.push(b.description);
   if (b.tagline) bits.push(`Tagline: "${b.tagline}"`);
   if (b.audience) bits.push(`Audience: ${b.audience}`);
   if (b.url) bits.push(`Ref: ${b.url}`);
   if (tag) bits.push(`Use ${tag} as the exact logo/product reference — match it pixel-faithfully throughout the shot`);
-  return bits.join(" — ");
+
+  // PRODUCT LOCK — what every frame must visibly show. This is the single
+  // most important block for keeping the render anchored to the real product.
+  const lock: string[] = [];
+  if (b.visual_parts) lock.push(`visible parts: ${b.visual_parts}`);
+  if (b.materials) lock.push(`materials/finish: ${b.materials}`);
+  if (b.packaging) lock.push(`packaging: ${b.packaging}`);
+  if (b.hero_colors && b.hero_colors.length > 0) {
+    lock.push(`hero colors: ${b.hero_colors.join(", ")}`);
+  }
+  const line = bits.join(" — ");
+  if (lock.length === 0) return line;
+  return `${line}\nPRODUCT LOCK (${b.name}) — ${lock.join("; ")}. Show these exact details in every frame, especially the hero beat. Do not invent other parts, ingredients or colors.`;
 }
 
 function locationLine(l?: LocationContext, refs?: StudioBrief["imageRefs"]): string | null {
