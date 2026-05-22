@@ -1,108 +1,84 @@
 
-# How "Pick the format" works today
+# Make Scene + Location mutually exclusive with a clear 3-mode picker
 
-## 1. Where the data lives
+## Quick note on requests #2 and #3
 
-File: `src/lib/marketingStudio.ts`
+Today Setting + Location already live inside **one** dialog (the "Location" chip opens a picker that contains both the SETTINGS grid and the LocationPanel). Your requests are slightly in tension:
 
-The catalog is an array called `FORMATS: StudioPreset[]`. Each entry has this shape:
+- **#2** says split them into two tiles.
+- **#3** says add a 3-mode toggle inside one picker.
 
-```ts
-type StudioPreset = {
-  id: string;          // stable key, e.g. "hero-shot"
-  label: string;       // shown on the card, e.g. "Hero Shot"
-  description: string; // one-line subtitle on the card
-  category?: string;   // filter tab: "commercial" | "ugc" | "avatar" | "animated"
-  emoji?: string;      // fallback icon if no image
-  image?: string;      // cover image URL (currently Unsplash)
-  fragment: string;    // the actual prompt text injected into the AI
-};
-```
+A 3-mode toggle inside a single tile actually solves the same problem #2 is trying to solve (making the relationship visible) without doubling the toolbar. I'm proposing we go with the **3-mode unified tile** approach (#1 + #3 + #4) and skip splitting into two chips. If you'd rather have two separate chips, say the word and I'll redesign.
 
-Today there are ~16 presets across 4 categories. The picker is currently filtered to **commercial only**, so the visible ones are:
+## What changes
 
-| id | label | what its `fragment` adds to the prompt |
-|---|---|---|
-| hyper-motion | Speed Reveal | fast push-in, splash/particle FX, studio lighting |
-| hero-shot | Hero Shot | pedestal, dramatic key light, slow rotating camera |
-| demo | Demo | clean shots of the product performing its core action |
-| lifestyle | Lifestyle | product woven into a styled daily routine, warm color |
-| before-after | Before / After | split-screen wipe between two states |
-| documentary | Documentary | observational handheld, voiceover, real moments |
-| founder-talk | Founder Talk | founder direct-to-camera, sincere mid-shot |
-| problem-solution | Problem → Solution | frustration beat → product solves it cleanly |
+### 1. Rename the chip
 
-## 2. How the user picks one
+`Location` chip → **`Scene`**. Still one tile in the toolbar.
 
-Component: `src/components/marketing/PresetPickerDialog.tsx`, opened from `src/pages/MarketingStudio.tsx` (~line 921) as `<PresetPickerDialog open={openPicker === "format"} ...>`.
+The chip's value text shows the active mode:
+- *"Kitchen"* (preset mode)
+- *"Tokyo"* (real city mode)
+- *"Reference image"* (image mode)
+- *"Tokyo · Ref image"* if both real city + image (allowed — they reinforce each other)
 
-Flow:
-1. User clicks the "Format" tile in the studio → dialog opens with the filtered `FORMATS`.
-2. Cards render the `image` (or emoji fallback) + `label` + `description`.
-3. User clicks a card → local `draftId` is set; "Done" commits it back to the parent as `brief.formatId`.
-4. There's also a "+ Custom" card → writes free text into `brief.customFormat` instead of selecting an id.
+### 2. Add a Mode toggle at the top of the picker
 
-## 3. How the pick becomes a video prompt
-
-Composer: `composeStudioPrompt(brief)` in `marketingStudio.ts` (line 616).
-
-It builds the final Seedance/Veo prompt as a stack of lines:
+Inside `PresetPickerDialog` (used for the location picker), add a segmented control above the cards:
 
 ```
-Cinematic 9:16 social ad, 5 seconds, native audio.
-Subject: <product|app line>
-<brand line(s) with @ImageN refs>
-<character line(s) with @ImageN refs>
-<FORMAT.fragment>           ← this is where the picked preset lands
-<SETTING.fragment>
-<location line>
-Story: <user master prompt>
-Additional direction: <user note>
-End on a confident product hero frame...
+[ Preset scene ]  [ Real city ]  [ Reference image ]
 ```
 
-So the format preset's **only job** is to contribute its `fragment` string. If no preset is picked, `customFormat` is wrapped as `Format: <text>`.
+- **Preset scene** → shows the SETTINGS grid (Kitchen, Rooftop, Studio…) and hides the LocationPanel. Writes to `settingId` / `customSetting`. Clears `location.place` and `location.imagePath`.
+- **Real city** → hides the SETTINGS grid, shows only the city text input + suggested chips (Tokyo, Paris, Marrakech, NYC…). Writes to `location.place`. Clears `settingId` / `customSetting`. Image stays allowed but optional.
+- **Reference image** → hides the SETTINGS grid, shows only the image upload zone + an optional city text input below. Writes to `location.imagePath`. Clears `settingId` / `customSetting`.
 
-## 4. The full studio workflow (end-to-end)
+Switching modes **auto-clears** the values that don't belong to the new mode (this is request #1, generalized — Setting auto-disables whenever the user moves into Real city or Reference image mode).
 
-```
-MarketingStudio page
-  ├─ Subject toggle      → brief.subject ("product" | "app")
-  ├─ Master prompt box   → brief.master  (the story)
-  ├─ Brands row          → brief.brands[]   (+ optional reference images)
-  ├─ Characters row      → brief.characters[]
-  ├─ Location popover    → brief.location
-  ├─ Format picker  ←──── you are here       → brief.formatId / customFormat
-  ├─ Setting picker      → brief.settingId / customSetting
-  └─ Render settings     → model, aspect, duration
-            │
-            ▼
-   composeStudioPrompt(brief)   ← builds one prompt string
-            │
-            ▼
-   edge fn: write-ad-scene      ← optional LLM polish
-            │
-            ▼
-   edge fn: generate-video      ← Seedance/Veo, with reference_image_urls
-            │
-            ▼
-   Result card in the studio (preview + save to Library)
-```
+### 3. Conflict warning
 
-`imageRefs` ties uploaded reference images to `@Image1`, `@Image2`… tags inside brand/character/location lines so the model binds each subject to the right ref.
+If the user lands in the picker with conflicting state already set (e.g. a Setting preset + a location image, from an older session or template), show an amber banner at the top of the dialog:
 
-## 5. What "building it right" means in practice
+> ⚠️ Reference image will override the *Studio* preset. Pick one mode to keep both clean.
 
-When you add or change a format preset, you only need to:
+With a `[Use reference]` / `[Use preset]` resolver button pair. Same banner mirrored as a small amber dot on the Scene chip in the toolbar.
 
-1. Add an entry to `FORMATS` with a unique `id`, a card `label` + `description`, a `category` ("commercial" keeps it visible), an `image` (cover), and most importantly a tight `fragment` — 1–2 sentences in the same imperative voice as the existing ones (camera move, lighting, mood, sound). The `fragment` is what actually steers the video model.
-2. If you want it to surface in the picker, keep `category: "commercial"` (current filter) or widen the filter in `MarketingStudio.tsx` ~line 925.
-3. Cover image: today these are Unsplash URLs. For a more on-brand feel we can swap to generated stills stored in Supabase Storage or to short looping mp4 thumbnails (the dialog currently only renders `<img>`, so video thumbs would need a small component change).
+### 4. Initial mode selection
 
-## Open questions before I edit anything
+When the picker opens, pre-select the mode based on existing brief state:
+- `location.imagePath` present → **Reference image**
+- else `location.place` present → **Real city**
+- else (default) → **Preset scene**
 
-1. Do you want to **edit the existing 8 commercial formats** (rewrite labels / descriptions / fragments / cover images), **add new ones**, or **restructure the categories** (e.g. bring UGC back, add a new group)?
-2. For the card covers — keep Unsplash, switch to AI-generated stills, or use short looping videos?
-3. Anything you want to change in the **fragment style** itself (e.g. always mention audio, always specify a camera lens, always end on a logo beat)?
+## Files touched
 
-Answer those and I'll write a focused build plan.
+1. **`src/components/marketing/PresetPickerDialog.tsx`**
+   - Add optional `mode` prop set: `"preset" | "city" | "image"`, with `onModeChange`.
+   - Render a segmented toggle above the search/category row (only when this new prop is supplied — keeps the Format picker untouched).
+   - Conditionally hide the preset grid when mode ≠ "preset".
+   - Conditionally hide the `LocationPanel` based on mode (image mode → image-only; city mode → place text only).
+   - Render the conflict banner when called with conflicting initial state.
+
+2. **`src/components/marketing/LocationPanel.tsx`** (light touch)
+   - Add `showPlace?: boolean` and `showImage?: boolean` props so the picker can show only the relevant half per mode.
+
+3. **`src/pages/MarketingStudio.tsx`**
+   - Rename the chip from `Location` to `Scene` (icon stays `Globe2`).
+   - Track a local `placeMode` state for the picker. Derive its initial value from `settingId` / `location.place` / `location.imagePath`.
+   - When the user switches mode in the picker, clear the off-mode state (`setSettingId(undefined); setCustomSetting("")` for city/image modes; `setLocation(EMPTY_LOCATION)` for preset mode).
+   - Update the chip's value formatter to reflect the three modes.
+   - Show a tiny amber dot on the chip when conflicting state exists.
+
+4. **`src/lib/marketingStudio.ts`** — no schema change needed.
+   `composeStudioPrompt()` already does the right thing: if Setting is empty and Location is set (place + ref), it composes a clean prompt without conflict. Auto-clearing on the UI side is enough.
+
+## What we deliberately keep
+
+- The data shape (`brief.settingId`, `brief.location`) is unchanged so existing templates and `CommunityGrid` references keep working.
+- The Format picker is untouched.
+- Custom free-text scene stays available inside the Preset mode (the `+ Custom` card).
+
+## Open question
+
+The community templates today carry `settingId` only (e.g. `kitchen`, `rooftop`). They'll keep working as Preset mode. If you want, we can extend templates later to also carry `location.place` so the community feed can showcase city-specific ads — but that's a separate change.

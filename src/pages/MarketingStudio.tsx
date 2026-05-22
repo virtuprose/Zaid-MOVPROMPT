@@ -136,6 +136,7 @@ export default function MarketingStudio() {
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>("All");
 
   const [openPicker, setOpenPicker] = useState<"format" | "location" | null>(null);
+  const [placeMode, setPlaceMode] = useState<"preset" | "city" | "image">("preset");
   const [brandOpen, setBrandOpen] = useState(false);
   const [brandEditId, setBrandEditId] = useState<string | null>(null);
   const [characterOpen, setCharacterOpen] = useState(false);
@@ -759,21 +760,34 @@ export default function MarketingStudio() {
               />
               <PresetChip
                 icon={<Globe2 className="w-3.5 h-3.5" />}
-                label="Location"
+                label="Scene"
                 value={(() => {
+                  if (placeMode === "image" && location.imagePath) return "Reference image";
+                  if (placeMode === "city" && location.place) return location.place;
                   const sceneLabel =
                     setting?.label ||
                     (customSetting.trim()
                       ? `Custom: ${customSetting.trim().slice(0, 28)}${customSetting.trim().length > 28 ? "…" : ""}`
                       : undefined);
-                  const locSuffix = location.imagePath ? " · Ref image" : "";
-                  if (sceneLabel) return `${sceneLabel}${locSuffix}`;
-                  return location.imagePath ? "Reference image" : undefined;
+                  if (sceneLabel) {
+                    const locSuffix = location.place ? ` · ${location.place}` : location.imagePath ? " · Ref image" : "";
+                    return `${sceneLabel}${locSuffix}`;
+                  }
+                  if (location.imagePath) return "Reference image";
+                  if (location.place) return location.place;
+                  return undefined;
                 })()}
-                tooltip="Where the ad takes place — pick a scene or attach a reference image"
-                onClick={() => setOpenPicker("location")}
+                tooltip="Where the ad takes place — preset scene, real city, or reference image"
+                onClick={() => {
+                  // Pre-select mode based on current state
+                  if (location.imagePath) setPlaceMode("image");
+                  else if (location.place) setPlaceMode("city");
+                  else setPlaceMode("preset");
+                  setOpenPicker("location");
+                }}
                 flash={flashChips}
               />
+
 
               <RenderSettingsPopover value={renderSettings} onChange={setRenderSettings} />
 
@@ -937,13 +951,13 @@ export default function MarketingStudio() {
         <PresetPickerDialog
           open={openPicker === "location"}
           onOpenChange={(o) => !o && setOpenPicker(null)}
-          title="Pick the location"
-          subtitle="Where does the ad take place? Pick a scene type, add a real-world place, or attach a reference image."
+          title="Pick the scene"
+          subtitle="Where does the ad take place? Choose a preset scene, a real city, or a reference photo — one mode wins to keep the prompt clean."
           presets={SETTINGS}
           selectedId={settingId}
           onSelect={setSettingId}
-          searchPlaceholder="Search locations… (try 'rooftop' or 'cafe')"
-          customLabel="Custom location"
+          searchPlaceholder="Search scenes… (try 'rooftop' or 'cafe')"
+          customLabel="Custom scene"
           categories={[
             { id: "realistic", label: "Real", tooltip: "Real-world settings — bedrooms, kitchens, streets" },
             { id: "unrealistic", label: "Stylized", tooltip: "Stylized scenes — surreal, dramatic, cinematic" },
@@ -952,6 +966,14 @@ export default function MarketingStudio() {
           onLocationChange={setLocation}
           customValue={customSetting}
           onCustomChange={setCustomSetting}
+          placeMode={placeMode}
+          onPlaceModeChange={(m) => {
+            setPlaceMode(m);
+            if (m !== "preset") {
+              setSettingId(undefined);
+              setCustomSetting("");
+            }
+          }}
         />
 
         <CharacterKitSheet
