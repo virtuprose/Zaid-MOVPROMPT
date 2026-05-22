@@ -27,14 +27,14 @@ export function BrandsRow({
           className="w-full rounded-2xl border border-dashed border-border/60 bg-secondary/10 hover:border-[#F5A524]/60 hover:bg-[#F5A524]/5 transition-all px-5 py-6 flex items-center justify-between gap-4 text-left group"
         >
           <div>
-            <p className="text-sm font-medium text-foreground">Add your first brand</p>
+            <p className="text-sm font-medium text-foreground">Add your first product</p>
             <p className="text-xs text-muted-foreground mt-1">
               We'll reuse the logo, tagline & description on every ad.
             </p>
           </div>
           <span className="inline-flex items-center gap-1.5 h-9 px-4 rounded-full bg-[#F5A524] text-black text-xs font-semibold group-hover:bg-[#F5A524]/90">
             <Plus className="w-3.5 h-3.5" />
-            New brand
+            New product
           </span>
         </button>
       </section>
@@ -126,7 +126,7 @@ export function BrandsRow({
           className="shrink-0 w-[140px] h-[84px] rounded-2xl border border-dashed border-border/60 bg-secondary/10 hover:border-[#F5A524]/60 hover:bg-[#F5A524]/5 transition-all flex flex-col items-center justify-center gap-1.5 text-muted-foreground hover:text-foreground"
         >
           <Plus className="w-4 h-4" />
-          <span className="text-xs font-medium">New brand</span>
+          <span className="text-xs font-medium">New product</span>
         </button>
       </div>
     </section>
@@ -137,7 +137,7 @@ function SectionHeader({ count }: { count: number }) {
   return (
     <div className="flex items-center justify-between mb-3">
       <h2 className="text-[11px] uppercase tracking-[0.15em] font-semibold text-muted-foreground">
-        Your brands
+        Your products
       </h2>
       {count > 0 && (
         <span className="text-[10px] text-muted-foreground/70 tabular-nums">
