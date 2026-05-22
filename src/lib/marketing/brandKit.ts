@@ -273,6 +273,11 @@ export type BrandImageAnalysis = {
   name: string | null;
   description: string | null;
   tagline: string | null;
+  category: string | null;
+  visual_parts: string | null;
+  materials: string | null;
+  hero_colors: string[] | null;
+  packaging: string | null;
 };
 
 export async function analyzeBrandImage(input: {
