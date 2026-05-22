@@ -1,11 +1,10 @@
 import { motion } from "framer-motion";
-import { Layers, Library as LibraryIcon, Image as ImageIcon, ArrowLeftRight, Check } from "lucide-react";
+import { Layers, Library as LibraryIcon, ArrowLeftRight, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const TIPS = [
   { icon: Layers, title: "8 supported AI models", desc: "Veo, Kling, Seedance, Runway and more — all from one tool." },
   { icon: LibraryIcon, title: "Saved automatically", desc: "Every prompt lands in your private library." },
-  { icon: ImageIcon, title: "Public Gallery", desc: "Browse community prompts and remix them." },
   { icon: ArrowLeftRight, title: "Start + End transitions", desc: "Generate two-frame motion stories with one upload." },
 ];
 
