@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Search, Check, Plus, Sparkles, X } from "lucide-react";
+import { Search, Check, Plus, Sparkles, X, AlertTriangle, Image as ImageIcon, MapPin, LayoutGrid } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,11 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { cn } from "@/lib/utils";
 import type { StudioPreset } from "@/lib/marketingStudio";
 import { LocationPanel } from "@/components/marketing/LocationPanel";
-import type { LocationInput } from "@/lib/marketing/brandKit";
+import { EMPTY_LOCATION, type LocationInput } from "@/lib/marketing/brandKit";
+
+export type PlaceMode = "preset" | "city" | "image";
+
+const PLACE_SUGGESTIONS = ["Tokyo", "Paris", "New York", "Marrakech", "Dubai", "London", "Seoul", "Lagos"];
 
 type Props = {
   open: boolean;
