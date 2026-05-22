@@ -760,21 +760,34 @@ export default function MarketingStudio() {
               />
               <PresetChip
                 icon={<Globe2 className="w-3.5 h-3.5" />}
-                label="Location"
+                label="Scene"
                 value={(() => {
+                  if (placeMode === "image" && location.imagePath) return "Reference image";
+                  if (placeMode === "city" && location.place) return location.place;
                   const sceneLabel =
                     setting?.label ||
                     (customSetting.trim()
                       ? `Custom: ${customSetting.trim().slice(0, 28)}${customSetting.trim().length > 28 ? "…" : ""}`
                       : undefined);
-                  const locSuffix = location.imagePath ? " · Ref image" : "";
-                  if (sceneLabel) return `${sceneLabel}${locSuffix}`;
-                  return location.imagePath ? "Reference image" : undefined;
+                  if (sceneLabel) {
+                    const locSuffix = location.place ? ` · ${location.place}` : location.imagePath ? " · Ref image" : "";
+                    return `${sceneLabel}${locSuffix}`;
+                  }
+                  if (location.imagePath) return "Reference image";
+                  if (location.place) return location.place;
+                  return undefined;
                 })()}
-                tooltip="Where the ad takes place — pick a scene or attach a reference image"
-                onClick={() => setOpenPicker("location")}
+                tooltip="Where the ad takes place — preset scene, real city, or reference image"
+                onClick={() => {
+                  // Pre-select mode based on current state
+                  if (location.imagePath) setPlaceMode("image");
+                  else if (location.place) setPlaceMode("city");
+                  else setPlaceMode("preset");
+                  setOpenPicker("location");
+                }}
                 flash={flashChips}
               />
+
 
               <RenderSettingsPopover value={renderSettings} onChange={setRenderSettings} />
 
