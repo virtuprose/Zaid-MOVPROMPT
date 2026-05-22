@@ -105,14 +105,6 @@ export function CommandPalette({ open, onOpenChange }: Props) {
             <CommandEmpty>Search across your library — coming soon.</CommandEmpty>
           </CommandGroup>
         )}
-        {tab === "gallery" && (
-          <CommandGroup heading="Gallery">
-            <CommandItem onSelect={() => go("/gallery")}>
-              <ImageIcon className="w-4 h-4 mr-2" /> Browse Gallery
-            </CommandItem>
-            <CommandEmpty>Inline gallery search — coming soon.</CommandEmpty>
-          </CommandGroup>
-        )}
         {tab === "help" && (
           <CommandGroup heading="Help">
             <CommandItem onSelect={() => go("/learn")}>
