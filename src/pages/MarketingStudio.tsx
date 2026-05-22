@@ -922,19 +922,16 @@ export default function MarketingStudio() {
           open={openPicker === "format"}
           onOpenChange={(o) => !o && setOpenPicker(null)}
           title="Pick the format that hits"
-          subtitle="From unboxing to UGC — choose the type of video that fits your product and audience."
-          presets={FORMATS}
+          subtitle="Polished brand formats — pick the commercial style that fits your product."
+          presets={FORMATS.filter((f) => f.category === "commercial")}
           selectedId={formatId}
           onSelect={setFormatId}
-          searchPlaceholder="Search formats… (try 'UGC' or 'unboxing')"
+          searchPlaceholder="Search formats…"
           customLabel="Custom format"
           customValue={customFormat}
           onCustomChange={setCustomFormat}
           categories={[
-            { id: "ugc", label: "UGC", tooltip: "Casual social-media formats" },
             { id: "commercial", label: "Commercial", tooltip: "Polished brand formats" },
-            
-            { id: "animated", label: "Animated", tooltip: "Motion-graphic formats" },
           ]}
         />
         <PresetPickerDialog
