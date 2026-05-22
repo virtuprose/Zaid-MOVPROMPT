@@ -197,42 +197,57 @@ export type Database = {
       brand_kits: {
         Row: {
           audience: string | null
+          category: string | null
           created_at: string
           description: string
+          hero_colors: Json | null
           id: string
           logo_path: string | null
+          materials: string | null
           name: string
+          packaging: string | null
           subject: string
           tagline: string | null
           updated_at: string
           url: string | null
           user_id: string
+          visual_parts: string | null
         }
         Insert: {
           audience?: string | null
+          category?: string | null
           created_at?: string
           description?: string
+          hero_colors?: Json | null
           id?: string
           logo_path?: string | null
+          materials?: string | null
           name?: string
+          packaging?: string | null
           subject?: string
           tagline?: string | null
           updated_at?: string
           url?: string | null
           user_id: string
+          visual_parts?: string | null
         }
         Update: {
           audience?: string | null
+          category?: string | null
           created_at?: string
           description?: string
+          hero_colors?: Json | null
           id?: string
           logo_path?: string | null
+          materials?: string | null
           name?: string
+          packaging?: string | null
           subject?: string
           tagline?: string | null
           updated_at?: string
           url?: string | null
           user_id?: string
+          visual_parts?: string | null
         }
         Relationships: []
       }
