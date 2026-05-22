@@ -1,9 +1,13 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
-import { ChevronDown, Sparkles, X } from "lucide-react";
+import { ChevronDown, Sparkles, X, Mic, Square, Loader2 } from "lucide-react";
 import { useLanguage } from "@/i18n/LanguageContext";
+import { useAuth } from "@/hooks/useAuth";
+import { useVoiceCapture } from "@/lib/director/useVoiceCapture";
+import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 interface ConfigPanelProps {
   description: string;
@@ -13,6 +17,40 @@ interface ConfigPanelProps {
 export const ConfigPanel = ({ description, onDescriptionChange }: ConfigPanelProps) => {
   const [isOpen, setIsOpen] = useState(true);
   const { t } = useLanguage();
+  const { user } = useAuth();
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const descRef = useRef(description);
+  useEffect(() => {
+    descRef.current = description;
+  }, [description]);
+
+  const { state, level, supported, start, stop } = useVoiceCapture({
+    userId: user?.id ?? null,
+    onTranscript: (text) => {
+      const current = descRef.current;
+      const next = current ? `${current.replace(/\s+$/, "")} ${text}` : text;
+      onDescriptionChange(next);
+      requestAnimationFrame(() => textareaRef.current?.focus());
+    },
+    onError: (msg) => toast.error(msg),
+  });
+
+  const [elapsed, setElapsed] = useState(0);
+  useEffect(() => {
+    if (state !== "recording") {
+      setElapsed(0);
+      return;
+    }
+    const startedAt = Date.now();
+    const id = window.setInterval(() => setElapsed(Math.floor((Date.now() - startedAt) / 1000)), 250);
+    return () => window.clearInterval(id);
+  }, [state]);
+
+  const formatTime = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+
+  const showMic = supported && !!user;
+  const isRecording = state === "recording";
+  const isTranscribing = state === "transcribing";
 
   const charCount = description.length;
 
@@ -64,11 +102,64 @@ export const ConfigPanel = ({ description, onDescriptionChange }: ConfigPanelPro
               </div>
               <div className="relative">
                 <Textarea
+                  ref={textareaRef}
                   value={description}
                   onChange={(e) => onDescriptionChange(e.target.value)}
                   placeholder={t("config.placeholder")}
-                  className="bg-secondary border-border resize-none min-h-[100px] pb-7"
+                  className={cn(
+                    "bg-secondary border-border resize-none min-h-[100px] pb-9",
+                    showMic && "ps-12",
+                  )}
                 />
+                {showMic && (
+                  <div className="absolute bottom-2 start-2 flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (isRecording) stop();
+                        else if (state === "idle" || state === "error") start();
+                      }}
+                      disabled={isTranscribing}
+                      aria-label={
+                        isRecording ? t("config.stopRecording") : t("config.record")
+                      }
+                      title={
+                        isRecording ? t("config.stopRecording") : t("config.record")
+                      }
+                      className={cn(
+                        "relative inline-flex items-center justify-center w-8 h-8 rounded-full border transition-colors",
+                        isRecording
+                          ? "bg-destructive text-destructive-foreground border-destructive"
+                          : "bg-background/60 border-border text-muted-foreground hover:text-foreground hover:bg-background",
+                        isTranscribing && "opacity-70 cursor-not-allowed",
+                      )}
+                    >
+                      {isTranscribing ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : isRecording ? (
+                        <>
+                          <Square className="w-3.5 h-3.5 fill-current" />
+                          <span
+                            className="absolute inset-0 rounded-full border-2 border-destructive/60 animate-ping"
+                            style={{ opacity: 0.4 + level * 0.6 }}
+                          />
+                        </>
+                      ) : (
+                        <Mic className="w-4 h-4" />
+                      )}
+                    </button>
+                    {isRecording && (
+                      <span className="text-[11px] tabular-nums text-destructive font-medium">
+                        {formatTime(elapsed)}
+                      </span>
+                    )}
+                    {isTranscribing && (
+                      <span className="text-[11px] text-muted-foreground">
+                        {t("config.transcribing")}
+                      </span>
+                    )}
+                  </div>
+                )}
                 <span className="absolute bottom-2 end-3 text-[10px] text-muted-foreground/70 pointer-events-none">
                   {t("config.charsCount").replace("{n}", String(charCount))}
                 </span>
