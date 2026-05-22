@@ -10,11 +10,11 @@ import {
   CommandSeparator,
 } from "@/components/ui/command";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { FileText, Folder, Image as ImageIcon, HelpCircle, Megaphone, Plus, Sparkles } from "lucide-react";
+import { FileText, Folder, HelpCircle, Megaphone, Plus, Sparkles } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 
-type Tab = "tasks" | "library" | "gallery" | "help";
+type Tab = "tasks" | "library" | "help";
 
 type TaskHit = { id: string; title: string | null; updated_at: string };
 
