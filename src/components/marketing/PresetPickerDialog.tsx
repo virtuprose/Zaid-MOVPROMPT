@@ -30,6 +30,9 @@ type Props = {
   customValue?: string;
   onCustomChange?: (v: string) => void;
   customLabel?: string;
+  /** Optional: enables the Place mode toggle (preset / city / image). */
+  placeMode?: PlaceMode;
+  onPlaceModeChange?: (m: PlaceMode) => void;
 };
 
 export function PresetPickerDialog({
