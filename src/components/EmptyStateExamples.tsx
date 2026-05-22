@@ -81,12 +81,6 @@ export const EmptyStateExamples = () => {
           </button>
         ))}
       </div>
-      <Link
-        to="/gallery"
-        className="mt-4 inline-flex items-center gap-1 text-[13px] text-primary hover:text-primary/80 px-1"
-      >
-        See more examples <ArrowRight className="w-3 h-3" />
-      </Link>
     </div>
   );
 };
