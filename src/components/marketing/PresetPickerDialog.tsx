@@ -50,12 +50,16 @@ export function PresetPickerDialog({
   customValue,
   onCustomChange,
   customLabel = "Custom",
+  placeMode,
+  onPlaceModeChange,
 }: Props) {
+  const hasPlaceModes = !!placeMode && !!onPlaceModeChange;
   const [tab, setTab] = useState<string>("all");
   const [q, setQ] = useState("");
   const [draftId, setDraftId] = useState<string | undefined>(selectedId);
   const [draftCustom, setDraftCustom] = useState<string>(customValue ?? "");
   const [draftLocation, setDraftLocation] = useState<LocationInput | undefined>(locationValue);
+  const [draftMode, setDraftMode] = useState<PlaceMode>(placeMode ?? "preset");
   const [customOpen, setCustomOpen] = useState<boolean>(!!(customValue && !selectedId));
   const cancelledRef = useRef(false);
 
