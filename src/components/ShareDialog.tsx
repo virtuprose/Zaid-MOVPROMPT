@@ -75,18 +75,6 @@ export const ShareDialog = ({ open, onOpenChange, payload }: ShareDialogProps) =
               <div>• Uploaded images are <span className="text-foreground">not</span> shared.</div>
               <div>• You can revoke the link anytime from this dialog.</div>
             </div>
-            <label className="flex items-start gap-2.5 rounded-md border border-border bg-card/40 p-3 cursor-pointer hover:border-primary/40 transition-colors">
-              <input
-                type="checkbox"
-                checked={submitToGallery}
-                onChange={(e) => setSubmitToGallery(e.target.checked)}
-                className="mt-0.5 h-4 w-4 accent-primary cursor-pointer"
-              />
-              <div className="text-xs leading-relaxed">
-                <div className="font-display font-semibold text-foreground">Submit to public gallery</div>
-                <div className="text-muted-foreground">Feature this prompt set on the MovPrompt gallery and the matching model landing page.</div>
-              </div>
-            </label>
             <Button onClick={handleCreate} disabled={creating} className="w-full">
               {creating ? (
                 <>
