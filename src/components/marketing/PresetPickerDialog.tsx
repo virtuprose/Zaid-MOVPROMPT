@@ -69,6 +69,7 @@ export function PresetPickerDialog({
       setDraftId(selectedId);
       setDraftCustom(customValue ?? "");
       setDraftLocation(locationValue);
+      setDraftMode(placeMode ?? "preset");
       setCustomOpen(!!(customValue && !selectedId));
       setQ("");
       setTab("all");
@@ -86,6 +87,33 @@ export function PresetPickerDialog({
 
   const noMatch = q.trim().length > 0 && filtered.length === 0;
   const supportsCustom = !!onCustomChange;
+  const showPresets = !hasPlaceModes || draftMode === "preset";
+  const showCityInput = hasPlaceModes && (draftMode === "city" || draftMode === "image");
+  const showImagePanel = hasPlaceModes ? draftMode === "image" : !!(locationValue && onLocationChange);
+
+  // Detect conflicts: a preset is picked AND a city or image is also set.
+  const hasPreset = !!draftId || !!draftCustom.trim();
+  const hasCity = !!draftLocation?.place?.trim();
+  const hasImage = !!draftLocation?.imagePath;
+  const conflict = hasPlaceModes && hasPreset && (hasCity || hasImage);
+
+  const switchMode = (m: PlaceMode) => {
+    setDraftMode(m);
+    onPlaceModeChange?.(m);
+    if (m === "preset") {
+      // leaving location modes — clear city + image
+      setDraftLocation(EMPTY_LOCATION);
+    } else {
+      // moving into city or image — clear preset
+      setDraftId(undefined);
+      setDraftCustom("");
+      setCustomOpen(false);
+      if (m === "city") {
+        // city mode keeps place but clears image
+        setDraftLocation((prev) => ({ ...(prev ?? EMPTY_LOCATION), imagePath: null, imageUrl: null }));
+      }
+    }
+  };
 
   const commit = useCallback(() => {
     if (supportsCustom) {
@@ -99,7 +127,7 @@ export function PresetPickerDialog({
     } else {
       onSelect(draftId);
     }
-    if (onLocationChange && draftLocation) onLocationChange(draftLocation);
+    if (onLocationChange) onLocationChange(draftLocation ?? EMPTY_LOCATION);
   }, [supportsCustom, draftCustom, draftId, draftLocation, onCustomChange, onSelect, onLocationChange]);
 
   const apply = () => {
