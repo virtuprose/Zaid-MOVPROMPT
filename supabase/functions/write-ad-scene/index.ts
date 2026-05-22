@@ -78,10 +78,19 @@ function buildUserContent(b: Brief): string {
     if (!br?.name) return;
     const role = brands.length === 1 ? "Product/Brand" : i === 0 ? "Hero product" : "Supporting product (shares the frame)";
     const bits = [br.name];
+    if (br.category) bits.push(`category: ${br.category}`);
     if (br.description) bits.push(br.description);
     if (br.tagline) bits.push(`tagline: "${br.tagline}"`);
     if (br.audience) bits.push(`audience: ${br.audience}`);
     lines.push(`${role}: ${bits.join(" — ")}`);
+    const lock: string[] = [];
+    if (br.visual_parts) lock.push(`visible parts: ${br.visual_parts}`);
+    if (br.materials) lock.push(`materials/finish: ${br.materials}`);
+    if (br.packaging) lock.push(`packaging: ${br.packaging}`);
+    if (br.hero_colors && br.hero_colors.length > 0) lock.push(`hero colors: ${br.hero_colors.join(", ")}`);
+    if (lock.length > 0) {
+      lines.push(`PRODUCT LOCK for ${br.name} — ${lock.join("; ")}. The hero frame MUST visibly show these exact parts/colors. Do not invent other parts, ingredients or colors.`);
+    }
   });
   const chars: CharLite[] = b.characters && b.characters.length > 0 ? b.characters : b.character ? [b.character] : [];
   chars.forEach((ch, i) => {
