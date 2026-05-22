@@ -39,7 +39,17 @@ Rules:
 - Don't write marketing taglines. Write what the camera sees and what the person does.
 - Stay under 90 words. Output only the scene text — no preamble, no quotes.`;
 
-type BrandLite = { name?: string; description?: string; tagline?: string; audience?: string };
+type BrandLite = {
+  name?: string;
+  description?: string;
+  tagline?: string;
+  audience?: string;
+  category?: string | null;
+  visual_parts?: string | null;
+  materials?: string | null;
+  hero_colors?: string[] | null;
+  packaging?: string | null;
+};
 type CharLite = { name?: string; role?: string; description?: string };
 
 type Brief = {
