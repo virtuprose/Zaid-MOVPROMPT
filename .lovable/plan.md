@@ -1,33 +1,42 @@
-# Hide "Ads" tool on the live site only
+# Remove the Gallery entirely
 
-Keep the Ads (Marketing Studio) entry visible in the preview/test environment, but hide it from end users on the published site.
+Delete the public prompt gallery so it stops rendering anywhere in the app.
 
-## How environments are detected
+## Heads-up: `/models/:slug` also renders the gallery
 
-Lovable serves the project on three host patterns:
-- **Preview (test)**: `id-preview--*.lovable.app` and `*.sandbox.lovable.dev`
-- **Published**: `movprompt.lovable.app`
-- **Custom domain (live)**: `movprompt.com`, `www.movprompt.com`
+`src/pages/ModelLanding.tsx` is a thin wrapper around `GalleryView` from `Gallery.tsx`. Removing the gallery means this model-landing page can no longer render either — the plan removes it too. If you want to keep `/models/:slug` with a different (non-gallery) layout, say so and I'll skip that part.
 
-We treat anything that isn't a preview host as "live".
+## Files to delete
 
-## Change
+- `src/pages/Gallery.tsx`
+- `src/pages/ModelLanding.tsx` (depends on `GalleryView`)
 
-Edit `src/components/TopNav.tsx`:
+## Edits
 
-1. Add a small helper:
-   ```ts
-   const isPreviewHost = () => {
-     if (typeof window === "undefined") return false;
-     const h = window.location.hostname;
-     return h.includes("id-preview--") || h.endsWith(".sandbox.lovable.dev") || h === "localhost";
-   };
-   ```
-2. Filter the `NAV_ITEMS` array (used by both desktop and mobile nav) so the `{ to: "/marketing", label: "Ads" }` entry is dropped when `!isPreviewHost()`.
+1. **`src/App.tsx`** — remove the imports and routes:
+   - `import Gallery from "./pages/Gallery.tsx";`
+   - `import ModelLanding from "./pages/ModelLanding.tsx";`
+   - `<Route path="/gallery" ... />`
+   - `<Route path="/models/:slug" ... />`
 
-The `/marketing` route in `App.tsx` stays intact — direct visits still work, but nothing in the UI links to it on the live site.
+2. **`src/components/CommandPalette.tsx`** — drop the Gallery tab:
+   - Remove `"gallery"` from the `Tab` union.
+   - Remove the `<TabsTrigger value="gallery">` and the `tab === "gallery"` block.
 
-## Out of scope
+3. **`src/components/EmptyStateExamples.tsx`** — remove the `to="/gallery"` link (or repoint it to `/director`; default is to remove).
 
-- No backend/auth changes.
-- Route is not removed, so it can be re-enabled instantly by deleting the filter.
+4. **`src/components/ShareDialog.tsx`** — remove the "Submit to public gallery" checkbox UI and the `submitToGallery` state. Calls to `createSharedPrompt` will pass `featured: false` implicitly (omit the flag).
+
+5. **`src/components/onboarding/StepQuickTips.tsx`** — remove the "Public Gallery" tip item.
+
+6. **`src/lib/sharePrompt.ts`** — remove the unused `GalleryItem` type and `fetchGallery()` function.
+
+## Left as-is (not user-visible "gallery section")
+
+- `learn.toc.examples` / `learn.examples.title` translations say "Examples gallery" — this is the Learn page's local examples grid, unrelated to the public Gallery page. Leaving them alone.
+- `public/sitemap.xml` and `public/llms.txt` — if they reference `/gallery`, I'll scrub those entries too during implementation.
+
+## Verification
+
+- Build passes (typecheck after deletions).
+- `rg -i "from \"@/pages/Gallery\"|/gallery"` in `src/` returns no hits.
