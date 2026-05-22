@@ -81,8 +81,6 @@ const AppRoutes = () => {
         <Route path="/privacy" element={<PrivacyPolicy />} />
         <Route path="/qa/mobile" element={<QaMobile />} />
         <Route path="/p/:slug" element={<SharedPrompt />} />
-        <Route path="/gallery" element={<Gallery />} />
-        <Route path="/models/:slug" element={<ModelLanding />} />
         <Route path="/referrals" element={<AuthGuard><Referrals /></AuthGuard>} />
         <Route path="/onboarding" element={<AuthGuard><Onboarding /></AuthGuard>} />
         <Route path="/director" element={<AuthGuard><Director /></AuthGuard>} />
