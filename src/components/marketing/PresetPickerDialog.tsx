@@ -347,6 +347,7 @@ export function PresetPickerDialog({
           )}
 
 
+          {showPresets && (<>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
             {filtered.map((p) => {
               const active = p.id === draftId && !draftCustom;
