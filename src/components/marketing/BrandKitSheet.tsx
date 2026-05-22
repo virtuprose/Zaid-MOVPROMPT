@@ -105,13 +105,13 @@ export function BrandKitSheet({
 
   const handleSave = async () => {
     if (!draft.name.trim()) {
-      toast.error("Name your brand first");
+      toast.error("Name your product first");
       return;
     }
     setSaving(true);
     try {
       const saved = await saveKit(draft);
-      toast.success("Brand kit saved");
+      toast.success("Product saved");
       onSaved?.(saved);
       onOpenChange(false);
     } catch (e: any) {
@@ -123,10 +123,10 @@ export function BrandKitSheet({
 
   const handleDelete = async () => {
     if (!draft.id) return;
-    if (!window.confirm("Delete this brand?")) return;
+    if (!window.confirm("Delete this product?")) return;
     try {
       await deleteKit(draft.id);
-      toast.success("Brand deleted");
+      toast.success("Product deleted");
       onOpenChange(false);
     } catch (e: any) {
       toast.error(e?.message || "Could not delete");
@@ -141,10 +141,10 @@ export function BrandKitSheet({
         {/* Header */}
         <div className="px-6 pt-6 pb-4 border-b border-border/60">
           <DialogTitle className="text-lg font-semibold tracking-tight">
-            {draft.id ? "Edit brand" : "New brand"}
+            {draft.id ? "Edit product" : "New product"}
           </DialogTitle>
           <DialogDescription className="text-sm text-muted-foreground mt-1">
-            Saved to your brand library — reuse it on any ad.
+            Saved to your product library — reuse it on any ad.
           </DialogDescription>
         </div>
 
@@ -339,7 +339,7 @@ export function BrandKitSheet({
             className="min-w-[140px] bg-[#F5A524] text-black hover:bg-[#F5A524]/90"
           >
             {saving && <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />}
-            {draft.id ? "Save changes" : "Save brand"}
+            {draft.id ? "Save changes" : "Save product"}
           </Button>
         </div>
       </DialogContent>

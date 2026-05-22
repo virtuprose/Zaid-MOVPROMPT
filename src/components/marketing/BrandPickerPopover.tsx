@@ -38,7 +38,7 @@ export function BrandPickerPopover({
 
         {kits.length === 0 ? (
           <div className="px-2 py-3 text-xs text-muted-foreground">
-            No brands yet. Create your first one below.
+            No products yet. Create your first one below.
           </div>
         ) : (
           <ul className="max-h-64 overflow-y-auto">
@@ -112,7 +112,7 @@ export function BrandPickerPopover({
             className="w-full flex items-center gap-2 px-2 py-2 rounded-lg text-sm hover:bg-muted/40 text-foreground"
           >
             <Plus className="w-3.5 h-3.5" />
-            New brand
+            New product
           </button>
         </div>
       </PopoverContent>
