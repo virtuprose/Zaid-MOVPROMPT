@@ -951,13 +951,13 @@ export default function MarketingStudio() {
         <PresetPickerDialog
           open={openPicker === "location"}
           onOpenChange={(o) => !o && setOpenPicker(null)}
-          title="Pick the location"
-          subtitle="Where does the ad take place? Pick a scene type, add a real-world place, or attach a reference image."
+          title="Pick the scene"
+          subtitle="Where does the ad take place? Choose a preset scene, a real city, or a reference photo — one mode wins to keep the prompt clean."
           presets={SETTINGS}
           selectedId={settingId}
           onSelect={setSettingId}
-          searchPlaceholder="Search locations… (try 'rooftop' or 'cafe')"
-          customLabel="Custom location"
+          searchPlaceholder="Search scenes… (try 'rooftop' or 'cafe')"
+          customLabel="Custom scene"
           categories={[
             { id: "realistic", label: "Real", tooltip: "Real-world settings — bedrooms, kitchens, streets" },
             { id: "unrealistic", label: "Stylized", tooltip: "Stylized scenes — surreal, dramatic, cinematic" },
@@ -966,6 +966,14 @@ export default function MarketingStudio() {
           onLocationChange={setLocation}
           customValue={customSetting}
           onCustomChange={setCustomSetting}
+          placeMode={placeMode}
+          onPlaceModeChange={(m) => {
+            setPlaceMode(m);
+            if (m !== "preset") {
+              setSettingId(undefined);
+              setCustomSetting("");
+            }
+          }}
         />
 
         <CharacterKitSheet
