@@ -39,8 +39,28 @@ Deno.serve(async (req) => {
 
     const sys =
       subject === "app"
-        ? "You are a brand strategist. The image is a mobile app icon or screenshot. Infer the brand name (visible text or best guess), a one-line description (≤120 chars) of what the app does, and a punchy tagline (≤60 chars). If you cannot confidently infer a field, set it to null."
-        : "You are a brand strategist. The image is a product photo or logo. Infer the brand name (visible text or best guess), a one-line description (≤120 chars) of the product, and a punchy tagline (≤60 chars). If you cannot confidently infer a field, set it to null.";
+        ? `You are a brand + product analyst. The image is a mobile app icon or screenshot.
+Return a full PRODUCT FACT SHEET so a video AI can render the app faithfully.
+- name: brand/app name (visible text or best guess)
+- description: ≤120 chars, what the app does
+- tagline: ≤60 chars, punchy
+- category: ≤40 chars, app type (e.g. "habit tracker", "AI photo editor", "finance dashboard")
+- visual_parts: ≤180 chars, what is on the screen — key UI elements, screens, mascot, icon shape (e.g. "rounded square icon, blue gradient, white play triangle, subtle shadow")
+- materials: ≤80 chars, finish/feel (e.g. "glassmorphism, soft shadows, glossy") or null
+- hero_colors: 3-5 dominant colors as plain English words (e.g. ["electric blue","white","soft purple"])
+- packaging: ≤40 chars, form factor (e.g. "iPhone screenshot", "app icon on home screen") or null
+If you cannot confidently infer a field, set it to null. Never invent ingredients/parts that aren't visible.`
+        : `You are a brand + product analyst. The image is a product photo or logo.
+Return a full PRODUCT FACT SHEET so a video AI can render this exact product faithfully.
+- name: brand/product name (visible text or best guess)
+- description: ≤120 chars, what it is and what it does
+- tagline: ≤60 chars, punchy
+- category: ≤40 chars, specific product type (e.g. "smash burger", "running sneaker", "vitamin C serum", "cold brew can")
+- visual_parts: ≤220 chars, comma-separated list of every visible physical element a video must show — for food list ingredients & build (e.g. "toasted sesame brioche bun, double smash beef patty, melted American cheese, pickles, shredded lettuce"); for objects list components (e.g. "white knit upper, black swoosh, gum sole, white laces").
+- materials: ≤100 chars, surface/finish (e.g. "frosted glass bottle with matte black cap", "brushed aluminum can", "soft leather upper") or null
+- hero_colors: 3-5 dominant colors as plain English words (e.g. ["golden brown","deep red","cream"])
+- packaging: ≤60 chars, what it is served/sold in (e.g. "on parchment paper in red basket", "12oz aluminum can", "30ml glass dropper bottle") or null
+If you cannot confidently infer a field, set it to null. NEVER invent ingredients, parts or colors not visible in the image — accuracy matters more than completeness.`;
 
     const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -55,7 +75,7 @@ Deno.serve(async (req) => {
           {
             role: "user",
             content: [
-              { type: "text", text: "Analyze this image and return brand fields." },
+              { type: "text", text: "Analyze this image and return the product fact sheet." },
               { type: "image_url", image_url: { url: imageUrl } },
             ],
           },
@@ -65,15 +85,32 @@ Deno.serve(async (req) => {
             type: "function",
             function: {
               name: "set_brand",
-              description: "Return inferred brand fields.",
+              description: "Return inferred product fact sheet.",
               parameters: {
                 type: "object",
                 properties: {
                   name: { type: ["string", "null"] },
                   description: { type: ["string", "null"] },
                   tagline: { type: ["string", "null"] },
+                  category: { type: ["string", "null"] },
+                  visual_parts: { type: ["string", "null"] },
+                  materials: { type: ["string", "null"] },
+                  hero_colors: {
+                    type: ["array", "null"],
+                    items: { type: "string" },
+                  },
+                  packaging: { type: ["string", "null"] },
                 },
-                required: ["name", "description", "tagline"],
+                required: [
+                  "name",
+                  "description",
+                  "tagline",
+                  "category",
+                  "visual_parts",
+                  "materials",
+                  "hero_colors",
+                  "packaging",
+                ],
                 additionalProperties: false,
               },
             },
@@ -97,6 +134,11 @@ Deno.serve(async (req) => {
       name: clamp(parsed.name, 80),
       description: clamp(parsed.description, 120),
       tagline: clamp(parsed.tagline, 60),
+      category: clamp(parsed.category, 40),
+      visual_parts: clamp(parsed.visual_parts, 220),
+      materials: clamp(parsed.materials, 100),
+      hero_colors: clampArr(parsed.hero_colors, 5, 30),
+      packaging: clamp(parsed.packaging, 60),
     });
   } catch (e) {
     return json({ error: String((e as Error)?.message ?? e) }, 500);
@@ -108,6 +150,16 @@ function clamp(v: unknown, max: number): string | null {
   const t = v.trim();
   if (!t) return null;
   return t.length > max ? t.slice(0, max) : t;
+}
+
+function clampArr(v: unknown, maxItems: number, maxLen: number): string[] | null {
+  if (!Array.isArray(v)) return null;
+  const out = v
+    .map((x) => (typeof x === "string" ? x.trim() : ""))
+    .filter((x) => x.length > 0)
+    .slice(0, maxItems)
+    .map((x) => (x.length > maxLen ? x.slice(0, maxLen) : x));
+  return out.length > 0 ? out : null;
 }
 
 function json(body: unknown, status = 200) {

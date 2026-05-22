@@ -32,13 +32,24 @@ const SYSTEM_PROMPT = `You are a video ad director. Given a Format, Location and
 Rules:
 - 2 to 4 sentences, present tense, plain prose. No lists, no headings, no emojis.
 - Beat-by-beat: open with a strong attention grabber, deliver the Format style in the Location, end on a confident product hero frame.
-- If a product is given, name it explicitly. If an avatar/character is given, refer to them by their name and treat them as the on-camera person.
+- If a product is given, name it explicitly AND describe its visible parts in the hero frame. Treat the PRODUCT LOCK fields (category, visible parts, materials, packaging, hero colors) as ground truth — the hero beat must visibly show those exact parts/colors. Never invent ingredients, components or colors that aren't in the lock.
+- If an avatar/character is given, refer to them by their name and treat them as the on-camera person.
 - If multiple products or characters are provided, the first is the hero/lead; others are supporting and must share the frame without stealing focus from the hero/lead.
 - Treat Format and Setting as LOCKED structure — never override their framing, category or core beat. If an "Additional direction" note is provided, treat it as an adaptation layer that adjusts tone, mood, palette or small details on top of the preset.
 - Don't write marketing taglines. Write what the camera sees and what the person does.
 - Stay under 90 words. Output only the scene text — no preamble, no quotes.`;
 
-type BrandLite = { name?: string; description?: string; tagline?: string; audience?: string };
+type BrandLite = {
+  name?: string;
+  description?: string;
+  tagline?: string;
+  audience?: string;
+  category?: string | null;
+  visual_parts?: string | null;
+  materials?: string | null;
+  hero_colors?: string[] | null;
+  packaging?: string | null;
+};
 type CharLite = { name?: string; role?: string; description?: string };
 
 type Brief = {
@@ -67,10 +78,19 @@ function buildUserContent(b: Brief): string {
     if (!br?.name) return;
     const role = brands.length === 1 ? "Product/Brand" : i === 0 ? "Hero product" : "Supporting product (shares the frame)";
     const bits = [br.name];
+    if (br.category) bits.push(`category: ${br.category}`);
     if (br.description) bits.push(br.description);
     if (br.tagline) bits.push(`tagline: "${br.tagline}"`);
     if (br.audience) bits.push(`audience: ${br.audience}`);
     lines.push(`${role}: ${bits.join(" — ")}`);
+    const lock: string[] = [];
+    if (br.visual_parts) lock.push(`visible parts: ${br.visual_parts}`);
+    if (br.materials) lock.push(`materials/finish: ${br.materials}`);
+    if (br.packaging) lock.push(`packaging: ${br.packaging}`);
+    if (br.hero_colors && br.hero_colors.length > 0) lock.push(`hero colors: ${br.hero_colors.join(", ")}`);
+    if (lock.length > 0) {
+      lines.push(`PRODUCT LOCK for ${br.name} — ${lock.join("; ")}. The hero frame MUST visibly show these exact parts/colors. Do not invent other parts, ingredients or colors.`);
+    }
   });
   const chars: CharLite[] = b.characters && b.characters.length > 0 ? b.characters : b.character ? [b.character] : [];
   chars.forEach((ch, i) => {

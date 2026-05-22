@@ -14,6 +14,12 @@ export type BrandKit = {
   logo_path: string | null;
   /** Signed URL for previewing logo (not persisted). */
   logo_url?: string | null;
+  /** Product fact sheet — filled by AI on upload, editable by user. */
+  category: string | null;
+  visual_parts: string | null;
+  materials: string | null;
+  hero_colors: string[] | null;
+  packaging: string | null;
   updated_at?: string;
 };
 
@@ -26,6 +32,11 @@ export const EMPTY_BRAND_KIT: BrandKit = {
   audience: null,
   logo_path: null,
   logo_url: null,
+  category: null,
+  visual_parts: null,
+  materials: null,
+  hero_colors: null,
+  packaging: null,
 };
 
 export const MAX_BRANDS = 2;
@@ -55,7 +66,7 @@ export function useBrandKit() {
     const [{ data: rows }, { data: sel }] = await Promise.all([
       supabase
         .from("brand_kits")
-        .select("id,subject,name,description,url,tagline,audience,logo_path,updated_at")
+        .select("id,subject,name,description,url,tagline,audience,logo_path,category,visual_parts,materials,hero_colors,packaging,updated_at")
         .eq("user_id", user.id)
         .order("updated_at", { ascending: false }),
       supabase
@@ -145,6 +156,11 @@ export function useBrandKit() {
         tagline: next.tagline,
         audience: next.audience,
         logo_path: next.logo_path,
+        category: next.category,
+        visual_parts: next.visual_parts,
+        materials: next.materials,
+        hero_colors: next.hero_colors,
+        packaging: next.packaging,
       };
       if (!next.id && !payload.logo_path && next.logo_url) {
         console.warn(
@@ -157,7 +173,7 @@ export function useBrandKit() {
           .from("brand_kits")
           .update(payload)
           .eq("id", next.id)
-          .select("id,subject,name,description,url,tagline,audience,logo_path,updated_at")
+          .select("id,subject,name,description,url,tagline,audience,logo_path,category,visual_parts,materials,hero_colors,packaging,updated_at")
           .single();
         if (error) throw error;
         saved = data as BrandKit;
@@ -165,7 +181,7 @@ export function useBrandKit() {
         const { data, error } = await supabase
           .from("brand_kits")
           .insert(payload)
-          .select("id,subject,name,description,url,tagline,audience,logo_path,updated_at")
+          .select("id,subject,name,description,url,tagline,audience,logo_path,category,visual_parts,materials,hero_colors,packaging,updated_at")
           .single();
         if (error) throw error;
         saved = data as BrandKit;
@@ -257,6 +273,11 @@ export type BrandImageAnalysis = {
   name: string | null;
   description: string | null;
   tagline: string | null;
+  category: string | null;
+  visual_parts: string | null;
+  materials: string | null;
+  hero_colors: string[] | null;
+  packaging: string | null;
 };
 
 export async function analyzeBrandImage(input: {
