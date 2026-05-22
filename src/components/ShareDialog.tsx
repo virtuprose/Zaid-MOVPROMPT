@@ -16,7 +16,7 @@ export const ShareDialog = ({ open, onOpenChange, payload }: ShareDialogProps) =
   const [creating, setCreating] = useState(false);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-  const [submitToGallery, setSubmitToGallery] = useState(false);
+  
 
   // Reset when dialog opens with a fresh payload.
   const handleOpen = (next: boolean) => {
