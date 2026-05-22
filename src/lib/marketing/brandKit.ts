@@ -66,7 +66,7 @@ export function useBrandKit() {
     const [{ data: rows }, { data: sel }] = await Promise.all([
       supabase
         .from("brand_kits")
-        .select("id,subject,name,description,url,tagline,audience,logo_path,updated_at")
+        .select("id,subject,name,description,url,tagline,audience,logo_path,category,visual_parts,materials,hero_colors,packaging,updated_at")
         .eq("user_id", user.id)
         .order("updated_at", { ascending: false }),
       supabase
@@ -168,7 +168,7 @@ export function useBrandKit() {
           .from("brand_kits")
           .update(payload)
           .eq("id", next.id)
-          .select("id,subject,name,description,url,tagline,audience,logo_path,updated_at")
+          .select("id,subject,name,description,url,tagline,audience,logo_path,category,visual_parts,materials,hero_colors,packaging,updated_at")
           .single();
         if (error) throw error;
         saved = data as BrandKit;
@@ -176,7 +176,7 @@ export function useBrandKit() {
         const { data, error } = await supabase
           .from("brand_kits")
           .insert(payload)
-          .select("id,subject,name,description,url,tagline,audience,logo_path,updated_at")
+          .select("id,subject,name,description,url,tagline,audience,logo_path,category,visual_parts,materials,hero_colors,packaging,updated_at")
           .single();
         if (error) throw error;
         saved = data as BrandKit;
