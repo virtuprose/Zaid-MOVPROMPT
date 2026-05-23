@@ -174,7 +174,7 @@ export default function MarketingStudio() {
       const [{ data: done }, { data: active }] = await Promise.all([
         supabase
           .from("video_jobs")
-          .select("id,video_url,created_at,liked,prompt")
+          .select("id,video_url,created_at,liked,prompt,metadata")
           .eq("user_id", user.id)
           .is("deleted_at", null)
           .is("session_id", null)
