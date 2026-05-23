@@ -115,6 +115,8 @@ export default function MarketingStudio() {
 
   const { kits, activeKits: brandKits, activeIds: brandActiveIds, toggleActive: toggleBrandActive, deleteKit: deleteBrand, reload: reloadBrands } = useBrandKit();
   const brandKit = brandKits[0] ?? null;
+  const { identity: brandIdentity } = useBrandIdentity();
+  const [brandIdentityOpen, setBrandIdentityOpen] = useState(false);
   const {
     kits: characterKits,
     activeKits: characterActiveKits,
