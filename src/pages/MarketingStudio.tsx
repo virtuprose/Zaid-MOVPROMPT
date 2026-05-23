@@ -204,6 +204,8 @@ export default function MarketingStudio() {
 
   const format = find(FORMATS, formatId);
   const setting = find(SETTINGS, settingId);
+  const needsAvatar = format?.category === "avatar" && characterActiveIds.length === 0;
+
 
   const hasInputs =
     master.trim().length > 0 ||
