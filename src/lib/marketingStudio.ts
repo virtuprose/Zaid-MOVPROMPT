@@ -736,10 +736,16 @@ export function brandIdentityLine(b?: BrandIdentityContext | null): string | nul
   } else if (b.font_hint) {
     bits.push(`font hint: ${b.font_hint}`);
   }
+  if (b.lighting_style) bits.push(`lighting: ${b.lighting_style.replace(/-/g, " ")}`);
+  if (b.finish_vibe) bits.push(`finish/feel: ${b.finish_vibe.replace(/-/g, " ")}`);
+  if (b.pacing) bits.push(`pacing: ${b.pacing.replace(/-/g, " ")}`);
+  if (b.logo_treatment) bits.push(`logo treatment: ${b.logo_treatment.replace(/-/g, " ")}`);
+  if (b.industry) bits.push(`industry: ${b.industry}`);
+  if (b.brand_voice) bits.push(`voice: ${b.brand_voice}`);
   if (b.mood_notes) bits.push(`mood: ${b.mood_notes}`);
   if (b.tagline) bits.push(`tagline: "${b.tagline}"`);
   if (bits.length === 0) return null;
-  return `BRAND LOCK — ${bits.join("; ")}. Apply the palette to lighting, props, wardrobe and background tones. Match the typography vibe for any on-screen text. Honor the mood. Never use the AVOID colors. Do NOT recolor the real product itself — the Product Lock above always wins on the product's own appearance.`;
+  return `BRAND LOCK — ${bits.join("; ")}. Apply the palette, lighting, finish and pacing across every shot. Match the typography vibe for any on-screen text. Honor the logo treatment instruction. Never use the AVOID colors. Do NOT recolor the real product itself — the Product Lock above always wins on the product's own appearance.`;
 }
 
 export function composeStudioPrompt(brief: StudioBrief): string {
