@@ -93,7 +93,7 @@ If you cannot confidently infer a field, set it to null. NEVER invent ingredient
             role: "user",
             content: [
               { type: "text", text: "Analyze this image and return the product fact sheet." },
-              { type: "image_url", image_url: { url: imageUrl } },
+              { type: "image_url", image_url: { url: inlineImage } },
             ],
           },
         ],
