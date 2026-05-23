@@ -575,7 +575,7 @@ export type StudioBrief = {
    * binds each subject to the right ref. Multiple `brand`/`character`
    * entries are supported and matched by occurrence index.
    */
-  imageRefs?: Array<"brand" | "character" | "location">;
+  imageRefs?: Array<"brand" | "brand-angle" | "character" | "location">;
   /** Free-text adaptation layer — preset stays the locked structure, this tweaks tone/details. */
   userNote?: string;
   /** Brand identity (palette, typography vibe, mood) applied to lighting/props/text. */
@@ -587,7 +587,7 @@ const find = (list: StudioPreset[], id?: string) =>
 
 function refTagAt(
   refs: StudioBrief["imageRefs"],
-  slot: "brand" | "character" | "location",
+  slot: "brand" | "brand-angle" | "character" | "location",
   occurrence = 0,
 ): string | null {
   if (!refs) return null;
