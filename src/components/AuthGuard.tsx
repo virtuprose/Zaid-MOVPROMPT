@@ -3,11 +3,14 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Navigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
+import { TopNav } from "@/components/TopNav";
 
 interface AuthGuardProps {
   children: React.ReactNode;
   requireAdmin?: boolean;
+  fallback?: React.ReactNode;
 }
+
 
 export const AuthGuard = ({ children, requireAdmin = false }: AuthGuardProps) => {
   const { user, loading } = useAuth();
