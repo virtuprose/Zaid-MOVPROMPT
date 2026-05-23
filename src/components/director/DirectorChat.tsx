@@ -1968,6 +1968,15 @@ function DirectorChatInner() {
                     preferredModelId={pickedModelId}
                     lockedSpec={resolvedSpec}
                   />
+                  {!b.partial && (
+                    <MessageFeedback
+                      sessionId={sessionIdRef.current}
+                      messageIndex={i}
+                      contentKind="prompt"
+                      content={b.data.prompt}
+                      className="pl-2"
+                    />
+                  )}
                 </div>
               );
             }
@@ -1980,18 +1989,27 @@ function DirectorChatInner() {
                 return false;
               })();
               return (
-                <QuestionCard
-                  key={i}
-                  reason={b.reason}
-                  questions={b.questions}
-                  disabled={!isLatestQuestions || busy}
-                  attachments={attachments}
-                  onAttach={setAttachments}
-                  onContinue={(formatted) => void send(formatted)}
-                  onSkip={() => void send("Skip")}
-                  agentSuggestions={b.agentSuggestions}
-                  onGenerateImagePrompt={generateImagePrompt}
-                />
+                <div key={i}>
+                  <QuestionCard
+                    reason={b.reason}
+                    questions={b.questions}
+                    disabled={!isLatestQuestions || busy}
+                    attachments={attachments}
+                    onAttach={setAttachments}
+                    onContinue={(formatted) => void send(formatted)}
+                    onSkip={() => void send("Skip")}
+                    agentSuggestions={b.agentSuggestions}
+                    onGenerateImagePrompt={generateImagePrompt}
+                  />
+                  <MessageFeedback
+                    sessionId={sessionIdRef.current}
+                    messageIndex={i}
+                    contentKind="question"
+                    content={b.questions[0] ?? b.reason}
+                    questionText={b.questions[0]}
+                    className="pl-2"
+                  />
+                </div>
               );
             }
             if (b.role === "model_choice") {
