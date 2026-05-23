@@ -339,6 +339,9 @@ export function CharacterKitSheet({
         </div>
       </DialogContent>
 
+      {null}
+
+
       <Dialog open={lightboxOpen && hasImage} onOpenChange={setLightboxOpen}>
         <DialogContent className="max-w-[92vw] sm:max-w-[860px] p-0 gap-0 bg-background/95 border-border/60 overflow-hidden">
           <DialogTitle className="sr-only">Reference photo preview</DialogTitle>
