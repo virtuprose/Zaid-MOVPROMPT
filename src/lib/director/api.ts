@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Attachment } from "./ingest";
+import type { TasteProfile } from "./tasteProfile";
 
 export type DirectorMsg = { role: "user" | "assistant"; content: string };
 
@@ -305,11 +306,13 @@ export async function streamDirectorAgent(
   attachments: Attachment[],
   onPartial: (partial: AgentResponse) => void,
   signal?: AbortSignal,
-  options: StreamOptions = {},
+  options: StreamOptions & { tasteProfile?: TasteProfile | null } = {},
 ): Promise<AgentResponse> {
   const idleTimeoutMs = options.idleTimeoutMs ?? 30_000;
   const totalTimeoutMs = options.totalTimeoutMs ?? 120_000;
   const onPhase = options.onPhase;
+  const tasteProfile = options.tasteProfile ?? null;
+
 
   // Initial phase — analyzing image if any visual attachment is present.
   const hasVisual = attachments.some(
@@ -378,7 +381,7 @@ export async function streamDirectorAgent(
         Authorization: `Bearer ${token}`,
         apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
       },
-      body: JSON.stringify({ messages, attachments, stream: true }),
+      body: JSON.stringify({ messages, attachments, stream: true, tasteProfile }),
       signal: controller.signal,
     });
   } catch (err: any) {
