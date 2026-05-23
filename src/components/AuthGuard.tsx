@@ -58,12 +58,24 @@ export const AuthGuard = ({ children, requireAdmin = false, fallback }: AuthGuar
 
   // Still loading auth or role check
   if (loading || (requireAdmin && !roleResolved)) {
+    if (fallback) {
+      return (
+        <>
+          <TopNav />
+          {fallback}
+        </>
+      );
+    }
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="w-6 h-6 animate-spin text-primary" />
+      <div className="min-h-screen bg-background flex flex-col">
+        <TopNav />
+        <div className="flex-1 flex items-center justify-center">
+          <Loader2 className="w-6 h-6 animate-spin text-primary" />
+        </div>
       </div>
     );
   }
+
 
   if (!user) {
     return <Navigate to={requireAdmin ? "/admin/login" : "/auth"} replace />;
