@@ -808,6 +808,25 @@ export default function MarketingStudio() {
 
 
               <RenderSettingsPopover value={renderSettings} onChange={setRenderSettings} />
+              <button
+                type="button"
+                onClick={() => setBrandIdentityOpen(true)}
+                className={cn(
+                  "inline-flex items-center gap-1.5 h-9 px-3 rounded-full border text-xs transition-colors",
+                  hasBrandIdentity(brandIdentity)
+                    ? "border-[#F5A524]/50 bg-[#F5A524]/10 text-foreground"
+                    : "border-dashed border-border/60 bg-secondary/30 text-muted-foreground hover:text-foreground hover:border-[#F5A524]/50",
+                )}
+                title="Brand kit: logo, colors, typography, mood"
+              >
+                {brandIdentity?.primary_color && (
+                  <span className="w-3 h-3 rounded-full border border-border/40" style={{ background: brandIdentity.primary_color }} />
+                )}
+                <span>Brand kit</span>
+                {hasBrandIdentity(brandIdentity) && (
+                  <span className="text-[9px] uppercase tracking-wider text-[#F5A524] font-semibold">On</span>
+                )}
+              </button>
 
               <div className="ml-auto flex items-center gap-2">
                 {(() => {
