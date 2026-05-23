@@ -27,6 +27,8 @@ import { SubjectLockChoiceCard, type SubjectKind } from "./SubjectLockChoiceCard
 import { LocationPickerCard, type StoryLocation } from "./LocationPickerCard";
 import { ActStrip, type ActTile } from "./ActStrip";
 import { submitStoryBundle, submitStoryRender, submitStoryStitch } from "@/lib/director/api";
+import { loadTasteProfile, EMPTY_TASTE_PROFILE, type TasteProfile } from "@/lib/director/tasteProfile";
+import { MessageFeedback } from "./MessageFeedback";
 
 import {
   streamDirectorAgent,
@@ -174,6 +176,22 @@ function DirectorChatInner() {
   const [resetOpen, setResetOpen] = useState(false);
   const [showJumpLatest, setShowJumpLatest] = useState(false);
   const [readyToStitch, setReadyToStitch] = useState<string | null>(null);
+  const [tasteProfile, setTasteProfile] = useState<TasteProfile>(EMPTY_TASTE_PROFILE);
+
+  // Load the user's taste profile once per mount (and refresh when user changes).
+  useEffect(() => {
+    let cancelled = false;
+    if (!user?.id) {
+      setTasteProfile(EMPTY_TASTE_PROFILE);
+      return;
+    }
+    void loadTasteProfile(user.id).then((p) => {
+      if (!cancelled) setTasteProfile(p);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]);
 
   // Listen for "all 4 acts ready" events from ActStrip to show a Jump-to-Stitch pill.
   useEffect(() => {
@@ -1197,6 +1215,7 @@ function DirectorChatInner() {
             idleTimeoutMs: 30_000,
             totalTimeoutMs: 120_000,
             onPhase: (p) => setPhase(p),
+            tasteProfile,
           });
           lastErr = null;
           break;
