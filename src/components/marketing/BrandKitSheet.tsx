@@ -471,6 +471,26 @@ export function BrandKitSheet({
   );
 }
 
+function Card({ title, helper, children }: { title: string; helper?: string; children: React.ReactNode }) {
+  return (
+    <section className="rounded-2xl border border-border/40 bg-secondary/10 p-4 space-y-4">
+      <header className="space-y-0.5">
+        <h3 className="text-sm font-semibold text-foreground tracking-tight">{title}</h3>
+        {helper && <p className="text-xs text-muted-foreground">{helper}</p>}
+      </header>
+      {children}
+    </section>
+  );
+}
+
+function SubLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <Label className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">
+      {children}
+    </Label>
+  );
+}
+
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
     <Label className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">
@@ -478,6 +498,7 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
     </Label>
   );
 }
+
 
 function Segmented({ children }: { children: React.ReactNode }) {
   return (
