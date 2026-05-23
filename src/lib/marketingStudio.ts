@@ -530,7 +530,10 @@ export type CharacterContext = {
   description?: string | null;
   role?: string | null;
   hasImage?: boolean;
+  /** "face" = lock face only (outfit flexible). "full" = lock face + body + outfit from the reference. */
+  shot_type?: "face" | "full";
 };
+
 
 export type BrandIdentityContext = {
   primary_color?: string | null;
