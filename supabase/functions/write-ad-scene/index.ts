@@ -51,7 +51,7 @@ type BrandLite = {
   hero_colors?: string[] | null;
   packaging?: string | null;
 };
-type CharLite = { name?: string; role?: string; description?: string };
+type CharLite = { name?: string; role?: string; description?: string; shot_type?: "face" | "full" };
 
 type BrandIdentityLite = {
   primary_color?: string | null;
