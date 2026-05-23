@@ -1,23 +1,21 @@
-## Goal
+## Issue
 
-Finish unifying the pattern by fixing the only two row-style components in the app that still have un-docked hover actions: `BrandsRow` and `CharactersRow`. Everywhere else the pattern already applies (popover/dropdown chrome was upgraded at the primitive level last turn; Library / Director / PromptResultCard already use the unified DropdownMenu).
+In the format picker dialog, active and hovered preset tiles use `scale-[1.02]`. The grid lives inside an `overflow-y-auto` scroll container, so the scaled-up tile's top edge (and its amber ring shadow) gets clipped by the scroll viewport whenever a tile in the top row is active or hovered — visible as the chopped-off top corner in the screenshot.
 
-## Changes
+## Fix
 
-### `src/components/marketing/BrandsRow.tsx` and `src/components/marketing/CharactersRow.tsx`
+In `src/components/marketing/PresetPickerDialog.tsx`, remove the `scale-[1.02]` transform from both the preset tile button and the custom-scene card. Keep the visual emphasis via the existing amber border + ring shadow + slight shadow lift — no layout shift, no clipping.
 
-Each currently renders the edit + delete buttons as two separate floating squares stacked top-right. Replace with the picker pattern:
+Specifically:
 
-- **Floating action chip**: one rounded container (`rounded-lg border border-border/60 bg-[hsl(240_6%_9%)]/95 backdrop-blur px-0.5`) holding both icon buttons inline, absolute top-right, `opacity-0 group-hover:opacity-100`. Same visual chip as in `BrandPickerPopover`.
-- **Pill thumbnail**: keep current avatar size, use `rounded-lg` (brand) and `rounded-full` (character) — already correct, no change.
-- **Active state**: replace the small amber circle+check with an inline `Active` pill badge in the title row (`px-1.5 py-px rounded-full bg-[#F5A524]/15 text-[#F5A524] text-[9px] uppercase tracking-wider font-semibold`) — same treatment as the Hero badge in the picker. This stops the check from competing with the thumbnail and matches the unified language.
-- Keep the outer amber border ring on active to preserve at-a-glance recognition.
+- Preset tile (active and hover): drop `hover:scale-[1.02]` and `scale-[1.02]` on the active branch; keep `hover:border-[#F5A524]/60`, `hover:shadow-[0_0_0_3px_hsl(35_90%_55%/0.15)]`, and the active ring/shadow.
+- Custom card: drop `hover:scale-[1.02]`; keep border and bg hover states.
 
-### Out of scope
+## Out of scope
 
-- No edits to the picker popovers, primitive Popover/Dropdown chrome, marketing studio, library, director, admin, learn, or any other page.
-- No new components, no prop changes.
+- No changes to grid layout, dialog padding, or other tile content (label, hover "Click to use" pill, check badge, broken-image fallback we just added).
+- No changes elsewhere in the app.
 
 ## Verification
 
-After build, on `/marketing`: hover any product or character tile — the two action buttons appear together inside a single floating chip (no row reflow). The active tile shows an inline amber "Active" pill instead of the circle-check.
+Open `/marketing`, launch the format picker, hover and select tiles in the top row — neither the corners nor the amber ring should clip.

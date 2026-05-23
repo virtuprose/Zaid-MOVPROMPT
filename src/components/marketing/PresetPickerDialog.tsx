@@ -362,9 +362,9 @@ export function PresetPickerDialog({
                   }}
                   className={cn(
                     "group relative aspect-[3/4] rounded-2xl overflow-hidden border bg-muted/20 text-left transition-all",
-                    "hover:border-[#F5A524]/60 hover:scale-[1.02] hover:shadow-[0_0_0_3px_hsl(35_90%_55%/0.15)]",
+                    "hover:border-[#F5A524]/60 hover:shadow-[0_0_0_3px_hsl(35_90%_55%/0.15)]",
                     active
-                      ? "border-[#F5A524] scale-[1.02] shadow-[0_0_0_3px_hsl(35_90%_55%/0.35)]"
+                      ? "border-[#F5A524] shadow-[0_0_0_3px_hsl(35_90%_55%/0.35)]"
                       : "border-border/40",
                   )}
                 >
