@@ -124,7 +124,11 @@ export function LocationPopover({
   return (
     <Popover open={open} onOpenChange={handleOpen}>
       <PopoverTrigger asChild>{trigger}</PopoverTrigger>
-      <PopoverContent className="w-[380px] p-0" align="start">
+      <PopoverContent
+        className="w-[380px] p-0 rounded-2xl border-border/60 bg-[hsl(240_6%_7%)]/95 backdrop-blur-xl shadow-2xl shadow-black/50 overflow-hidden"
+        align="start"
+        sideOffset={8}
+      >
         <Tabs defaultValue="place" className="w-full">
           <TabsList className="w-full rounded-none border-b border-border/50 bg-transparent p-0 h-auto">
             <TabsTrigger
