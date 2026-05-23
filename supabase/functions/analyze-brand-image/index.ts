@@ -34,6 +34,23 @@ Deno.serve(async (req) => {
     }
     if (!imageUrl) return json({ error: "image required" }, 400);
 
+    // Gemini only accepts PNG/JPEG/WebP/GIF via URL. AVIF (and other formats) fail
+    // with a 400. Fetch the image server-side and inline it as a data URL with its
+    // actual MIME type so the gateway can pass it through regardless of extension.
+    let inlineImage = imageUrl;
+    try {
+      const imgRes = await fetch(imageUrl);
+      if (imgRes.ok) {
+        const ct = imgRes.headers.get("content-type") || "image/jpeg";
+        const buf = new Uint8Array(await imgRes.arrayBuffer());
+        let bin = "";
+        for (let i = 0; i < buf.length; i++) bin += String.fromCharCode(buf[i]);
+        inlineImage = `data:${ct};base64,${btoa(bin)}`;
+      }
+    } catch (e) {
+      console.warn("analyze-brand-image: inline fetch failed, falling back to URL", e);
+    }
+
     const apiKey = Deno.env.get("LOVABLE_API_KEY");
     if (!apiKey) return json({ error: "missing api key" }, 500);
 
@@ -76,7 +93,7 @@ If you cannot confidently infer a field, set it to null. NEVER invent ingredient
             role: "user",
             content: [
               { type: "text", text: "Analyze this image and return the product fact sheet." },
-              { type: "image_url", image_url: { url: imageUrl } },
+              { type: "image_url", image_url: { url: inlineImage } },
             ],
           },
         ],
