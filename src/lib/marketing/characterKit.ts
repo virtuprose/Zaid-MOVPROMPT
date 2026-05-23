@@ -142,6 +142,7 @@ export function useCharacterKit() {
         description: next.description,
         role: next.role,
         reference_path: next.reference_path,
+        shot_type: next.shot_type ?? "face",
       };
       if (!next.id && !payload.reference_path && next.reference_url) {
         console.warn(
@@ -154,7 +155,7 @@ export function useCharacterKit() {
           .from("character_kits")
           .update(payload)
           .eq("id", next.id)
-          .select("id,name,description,role,reference_path,updated_at")
+          .select("id,name,description,role,reference_path,shot_type,updated_at")
           .single();
         if (error) throw error;
         saved = data as CharacterKit;
@@ -162,11 +163,12 @@ export function useCharacterKit() {
         const { data, error } = await supabase
           .from("character_kits")
           .insert(payload)
-          .select("id,name,description,role,reference_path,updated_at")
+          .select("id,name,description,role,reference_path,shot_type,updated_at")
           .single();
         if (error) throw error;
         saved = data as CharacterKit;
       }
+
       saved.reference_url = await signRef(saved.reference_path);
       await reload();
       if (saved.id) {
