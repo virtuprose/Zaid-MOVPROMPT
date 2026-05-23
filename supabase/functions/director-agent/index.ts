@@ -871,7 +871,7 @@ Output via the \`storyboard_shots\` tool ONLY.`;
       );
     }
 
-    const { messages, attachments, stream } = body as {
+    const { messages, attachments, stream, tasteProfile } = body as {
       messages: Array<{ role: "user" | "assistant"; content: string }>;
       attachments?: Array<{
         kind: "image" | "video_keyframes" | "audio_transcript" | "document";
@@ -880,6 +880,13 @@ Output via the \`storyboard_shots\` tool ONLY.`;
         text?: string;
       }>;
       stream?: boolean;
+      tasteProfile?: {
+        likedPrompts?: string[];
+        dislikedPrompts?: string[];
+        chipBoosts?: Record<string, number>;
+        verbosity?: "terse" | "balanced" | "detailed";
+        chipReliance?: "chips_first" | "mixed" | "freeform_friendly";
+      } | null;
     };
 
     if (!Array.isArray(messages) || messages.length === 0) {
