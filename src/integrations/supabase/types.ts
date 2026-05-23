@@ -505,6 +505,45 @@ export type Database = {
         }
         Relationships: []
       }
+      director_message_feedback: {
+        Row: {
+          chip_label: string | null
+          content: string
+          content_kind: string
+          created_at: string
+          id: string
+          message_index: number | null
+          question_text: string | null
+          rating: number
+          session_id: string | null
+          user_id: string
+        }
+        Insert: {
+          chip_label?: string | null
+          content: string
+          content_kind: string
+          created_at?: string
+          id?: string
+          message_index?: number | null
+          question_text?: string | null
+          rating: number
+          session_id?: string | null
+          user_id: string
+        }
+        Update: {
+          chip_label?: string | null
+          content?: string
+          content_kind?: string
+          created_at?: string
+          id?: string
+          message_index?: number | null
+          question_text?: string | null
+          rating?: number
+          session_id?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       director_sessions: {
         Row: {
           brief_context: Json

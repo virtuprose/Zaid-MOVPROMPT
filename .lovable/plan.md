@@ -1,90 +1,85 @@
 ## Goal
 
-Let users attach **multiple product angle photos** (and optionally a **spec sheet** image/PDF) to a product in the Brand Kit, so the video model locks the same product across all shots — front, back, side, packaging, etc. The current single "Logo / product image" stays as the hero/primary reference; the new uploads are additional locks.
+Make the AI Director "learn" from each user globally. Two signals feed one taste profile that the `director-agent` reads on every turn.
 
-## How it shows up in the UI
+## Signals captured
 
-Inside `BrandKitSheet.tsx`, below the existing hero image uploader and above the AI fact sheet:
+1. **Per-message thumbs (new)** — 👍 / 👎 on every Director reply: clarification questions, prompt drafts, suggestion chips, recommendations.
+2. **Video likes (existing)** — the heart on rendered `video_jobs` already present in `DirectorChat`, `PromptResultCard`, `VideoBubble`.
 
-```text
-┌─ Hero image (existing, unchanged) ──────────────┐
-│  [ uploaded product photo ]                     │
-└─────────────────────────────────────────────────┘
+Both feed one global "taste profile" per user (no per-session memory).
 
-Additional angles (optional, up to 5)
-┌───────┬───────┬───────┬───────┬───────┐
-│ front │ side  │ back  │ top   │ + add │
-│  ✕    │  ✕    │  ✕    │  ✕    │       │
-└───────┴───────┴───────┴───────┴───────┘
-Tip: more angles = stronger 3D lock across shots.
+## What the Director does with it
 
-Product spec sheet (optional)
-[ + upload PDF or image ]   helps the AI read exact labels, ingredients, dimensions
-```
-
-Each angle thumbnail has a tiny editable label chip (`front` / `back` / `left` / `right` / `top` / `bottom` / `packaging` / free text) and a remove ✕. Reorder via drag is **out of scope** for v1.
+- **Inject liked prompts as style few-shots** — top 2–3 highest-signal prompts (liked video OR 👍'd prompt draft) passed into `director-agent` system context as "USER-APPROVED STYLE REFERENCES".
+- **Avoid disliked patterns** — top 2–3 most-disliked prompt drafts injected as "USER-REJECTED PATTERNS — do not mimic tone, structure, or vocabulary".
+- **Rank suggestion chips by past likes** — chip text appearing in liked prompts/replies gets boosted; chips appearing in disliked ones get suppressed or dropped. Sorting happens in the agent's `suggestions` post-processing.
+- **Bias question style / pacing** — derive two scalars from feedback history: `verbosity` (terse ↔ detailed) and `chip_reliance` (mostly chips ↔ mostly free-text). Append a short "USER COMMUNICATION PREFERENCE" line to the system prompt so the agent picks shorter questions / more chips when that's what gets thumbs-up.
 
 ## Data model
 
-**New table `product_references`** (one row per extra image, separate from `brand_kits` to keep that row small and avoid jsonb gymnastics):
+New table `director_message_feedback` (migration):
 
-| column | type | notes |
-|---|---|---|
-| `id` | uuid pk | |
-| `brand_kit_id` | uuid | FK-style ref (kept loose, like other tables) |
-| `user_id` | uuid | for RLS |
-| `kind` | text | `'angle'` or `'spec_sheet'` |
-| `image_path` | text | storage path in `director-uploads` |
-| `label` | text nullable | e.g. `front`, `packaging` |
-| `position` | smallint default 0 | display order |
-| `created_at` | timestamptz default now() |
+```text
+id uuid pk
+user_id uuid          -- auth.uid()
+session_id uuid       -- FK director_sessions.id (nullable)
+message_index int     -- position in session.messages
+content_kind text     -- 'question' | 'prompt' | 'recommendation' | 'chip'
+content text          -- the assistant text (or chip label) being rated
+rating smallint       -- +1 or -1
+chip_label text       -- optional, when content_kind = 'chip'
+question_text text    -- optional, the parent question for chip ratings
+created_at timestamptz
+```
 
-RLS: standard 4 policies, `auth.uid() = user_id` (mirrors `character_kits`).
+RLS: owner-only CRUD (`auth.uid() = user_id`). Filtered index on `(user_id, created_at desc)`.
 
-Storage: reuse the existing private `director-uploads` bucket; new prefix `brand-references/<user_id>/<uuid>.<ext>`. Signed URLs on read, same pattern as `signLogo`.
+No schema change to `video_jobs` — `liked` + `metadata` from the previous loop are reused.
 
-No new bucket. No edge function changes required for the upload itself.
+## Taste profile builder
 
-## Code changes
+`src/lib/director/tasteProfile.ts` (new) exports `loadTasteProfile(userId)` returning:
 
-1. **Migration** — create `product_references` + RLS policies. Cap enforced in app code, not SQL.
+```ts
+{
+  likedPrompts: string[];        // ≤3, most recent thumbs-up prompts + liked-video prompts
+  dislikedPrompts: string[];     // ≤3, most recent thumbs-down prompts
+  chipBoosts: Record<string,number>;   // chip text → score
+  verbosity: 'terse' | 'balanced' | 'detailed';
+  chipReliance: 'chips_first' | 'mixed' | 'freeform_friendly';
+}
+```
 
-2. **`src/lib/marketing/brandKit.ts`**
-   - Extend `BrandKit` type with `references?: ProductReference[]` (loaded alongside the kit).
-   - Add `loadReferences(brand_kit_id)`, `addReference(brand_kit_id, file, kind, label)`, `updateReferenceLabel`, `removeReference` to the `useBrandKit` hook.
-   - Each reference gets a signed `image_url` on read.
+Logic: pull last ~50 feedback rows + last ~20 liked `video_jobs`. Bucket by `content_kind`. Verbosity = inverse mean of liked-question length. Chip reliance = ratio of 👍'd chip taps vs 👍'd freeform answers.
 
-3. **`src/components/marketing/BrandKitSheet.tsx`**
-   - New section "Additional angles" with a grid + Add button. Max 5 angles; show count.
-   - New section "Product spec sheet" — single optional file (image or PDF). Just stores the file; we won't OCR it in v1.
-   - When the kit is brand new (no `id` yet), defer uploads to a local pending list and flush them after the kit is saved (so we have a `brand_kit_id`). Same pattern the hero image already uses.
+## Wiring
 
-4. **`src/pages/MarketingStudio.tsx`** (`refSlots` builder around line 326)
-   - After pushing the existing brand logo slot, push one slot per angle: `{ slot: "brand-angle", url: ref.image_url, label: ref.label }`.
-   - Spec sheet is **not** sent as an image reference (FAL/Seedance expects photos, not docs). Skipped for v1.
-   - Cap total references passed to the model at 6 (1 hero + 5 angles) to stay within provider limits.
-
-5. **`src/lib/marketingStudio.ts`** (prompt composer / `referenceSlotsForPrompt`)
-   - When >=1 angle ref exists, append a **PRODUCT LOCK** line: "Product identity is fixed across every shot — match shape, label text, colors, materials, and proportions from the reference frames; the additional frames are alternate angles of the same product, not different products."
-   - If labels are present, include them in the same line ("Reference 2 = front, Reference 3 = packaging, …") so the writer can request specific angles per shot.
-
-6. **`src/lib/director/api.ts` / `write-ad-scene` edge function**
-   - Pass the angle labels through the scene-writing payload so the director can pick "front shot" or "packaging close-up" intentionally per scene. Backwards compatible (optional field).
-
-7. **`BrandsRow.tsx` / picker thumbnails** — no change. Hero image stays the thumbnail.
-
-## Out of scope (v1)
-
-- OCR of the spec-sheet PDF. We store it for the user's own reference, but don't parse it. We can add a `parse-product-sheet` edge function later that calls Gemini vision on each PDF page and merges fields into the fact sheet.
-- Drag-to-reorder angles.
-- Per-shot manual angle picker in the storyboard UI (the director already picks via labels in the prompt).
-- Video references.
+- **`supabase/functions/director-agent/index.ts`**
+  - Accept `tasteProfile` in request body (validated with zod).
+  - Inject into system prompt: a `USER-APPROVED STYLE REFERENCES` block (likedPrompts), a `USER-REJECTED PATTERNS` block (dislikedPrompts), and a one-line `USER COMMUNICATION PREFERENCE` (verbosity + chipReliance).
+  - After the LLM returns `suggestions`, re-sort each `chips` array by `chipBoosts` (boosts up, suppressed down, hard-drop if score ≤ −2).
+- **`src/lib/director/api.ts`** — `runDirectorAgent` forwards `tasteProfile`.
+- **`src/components/director/DirectorChat.tsx`**
+  - Load taste profile once per session mount, pass to every `runDirectorAgent` call.
+  - Render small 👍/👎 buttons under each assistant message (questions, prompt drafts, recommendations). On click → insert into `director_message_feedback` and optimistically update local state. Show subtle "Saved — Director will adapt" toast on first thumb of a session.
+  - Chip tap already implies positive signal; record it as `rating=+1, content_kind='chip'` automatically.
+- **`src/components/director/PromptResultCard.tsx`, `VideoBubble.tsx`** — no UI change; the heart already sets `video_jobs.liked` which the taste profile reads.
 
 ## Files touched
 
-- new migration: `product_references` table + RLS
-- `src/lib/marketing/brandKit.ts` — types + hook methods
-- `src/components/marketing/BrandKitSheet.tsx` — UI sections
-- `src/pages/MarketingStudio.tsx` — refSlots builder
-- `src/lib/marketingStudio.ts` — PRODUCT LOCK prompt block + label hints
-- `src/lib/director/api.ts` and `supabase/functions/write-ad-scene/index.ts` — pass labels through
+```text
+NEW  supabase/migrations/<ts>_director_feedback.sql
+EDIT supabase/functions/director-agent/index.ts
+EDIT src/lib/director/api.ts
+NEW  src/lib/director/tasteProfile.ts
+EDIT src/components/director/DirectorChat.tsx
+NEW  src/components/director/MessageFeedback.tsx   // small 👍/👎 row
+EDIT src/integrations/supabase/types.ts            // auto, after migration
+```
+
+## Out of scope (intentionally)
+
+- No model fine-tuning or vector store.
+- No cross-user "popular chips" — taste profile is strictly per user.
+- No retroactive backfill — existing chats start with empty profile and learn from the next thumb.
