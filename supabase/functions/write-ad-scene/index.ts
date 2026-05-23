@@ -118,6 +118,19 @@ function buildUserContent(b: Brief): string {
   if (b.location?.hasImage) {
     lines.push(`A reference image of the location is attached and will be passed to the video model — describe the scene so it matches the look, framing, lighting and palette of that reference.`);
   }
+  const bi = b.brandIdentity;
+  if (bi) {
+    const parts: string[] = [];
+    if (bi.primary_color) parts.push(`primary ${bi.primary_color}`);
+    if (bi.supporting_colors && bi.supporting_colors.length > 0) parts.push(`supporting ${bi.supporting_colors.join(" / ")}`);
+    if (bi.avoid_colors && bi.avoid_colors.length > 0) parts.push(`AVOID ${bi.avoid_colors.join(", ")}`);
+    if (bi.typography_vibe) parts.push(`typography vibe ${bi.typography_vibe}${bi.font_hint ? ` (${bi.font_hint})` : ""}`);
+    if (bi.mood_notes) parts.push(`mood: ${bi.mood_notes}`);
+    if (bi.tagline) parts.push(`brand tagline: "${bi.tagline}"`);
+    if (parts.length > 0) {
+      lines.push(`BRAND IDENTITY — ${parts.join("; ")}. Apply this palette and mood to lighting, props, wardrobe and background tones. Match the typography vibe for any on-screen text. Never use AVOID colors. Keep the product's own appearance accurate to its PRODUCT LOCK.`);
+    }
+  }
   const note = b.userNote?.trim();
   if (note) {
     lines.push(`Additional direction (adaptation layer — adjust tone/mood/details, but keep the Format and Setting structure locked): ${note.slice(0, 400)}`);
