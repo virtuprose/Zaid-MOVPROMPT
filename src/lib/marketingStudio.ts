@@ -627,11 +627,20 @@ function brandLineAt(
   if (b.tagline) bits.push(`Tagline: "${b.tagline}"`);
   if (b.audience) bits.push(`Audience: ${b.audience}`);
   if (b.url) bits.push(`Ref: ${b.url}`);
-  if (tag) bits.push(`Use ${tag} as the exact logo/product reference — match it pixel-faithfully throughout the shot`);
+  // Distinguish brand wordmark/logo from actual product photos.
+  // The brand-image slot is the LOGO; only product-angle refs lock product shape.
+  const angleLabels = b.angle_labels ?? [];
+  const hasAngles = angleLabels.length > 0;
+  if (tag) {
+    bits.push(
+      hasAngles
+        ? `Use ${tag} as the brand wordmark/logo only — place it on packaging, screens or end-card; do NOT use it as the product silhouette. Product shape, parts and proportions come from the angle references below and the PRODUCT LOCK spec.`
+        : `Use ${tag} as the brand wordmark/logo only — do NOT treat it as a photo of the product. Render the product itself faithfully from the PRODUCT LOCK spec below (shape, parts, materials, colors). Use ${tag} only for any visible logo, end-card or packaging mark.`,
+    );
+  }
 
   // Additional angle references (front / back / packaging / …) — same product
   // from different viewpoints, so the model can lock 3D shape across shots.
-  const angleLabels = b.angle_labels ?? [];
   const angleTags: string[] = [];
   for (let k = 0; k < angleLabels.length; k++) {
     const t = refTagAt(refs, "brand-angle", angleOffset + k);
@@ -639,7 +648,7 @@ function brandLineAt(
   }
   if (angleTags.length > 0) {
     bits.push(
-      `Additional angle references of the same product (alternate viewpoints, NOT different products): ${angleTags.join("; ")}. Treat shape, label text, colors and proportions as the union of all these refs — pick the angle that best fits each shot.`,
+      `Product photo references (alternate viewpoints of the SAME product, NOT different products): ${angleTags.join("; ")}. Treat shape, label text, colors and proportions as the union of all these refs — pick the angle that best fits each shot. These — not the logo — are the source of truth for product appearance.`,
     );
   }
 
