@@ -97,7 +97,7 @@ export function AccuracyBoostDialog({
             onClick={() => onGenerateAnyway(dontShow)}
             className="bg-[#F5A524] text-black hover:bg-[#F5A524]/90"
           >
-            Generate anyway
+            Continue
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
