@@ -1140,6 +1140,29 @@ export default function MarketingStudio() {
           }}
         />
 
+        <AccuracyBoostDialog
+          open={accuracyOpen}
+          result={accuracyResult}
+          onCancel={() => setAccuracyOpen(false)}
+          onGenerateAnyway={(dontShow) => {
+            if (dontShow) sessionStorage.setItem(ACCURACY_ACK_KEY, "1");
+            setAccuracyOpen(false);
+            proceedToRights();
+          }}
+          onAddPhotos={() => {
+            setAccuracyOpen(false);
+            const target = brandKits.find(
+              (b) => !b.logo_url || (b.references ?? []).filter((r) => r.kind === "angle").length === 0,
+            ) ?? brandKits[0];
+            setBrandEditId(target?.id ?? null);
+            setBrandOpen(true);
+          }}
+          onAddIdentity={() => {
+            setAccuracyOpen(false);
+            setBrandIdentityOpen(true);
+          }}
+        />
+
         <AlertDialog open={cancelJobId !== null} onOpenChange={(o) => !o && setCancelJobId(null)}>
           <AlertDialogContent>
             <AlertDialogHeader>
