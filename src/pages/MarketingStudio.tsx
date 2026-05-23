@@ -52,6 +52,8 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { ConfirmRightsDialog } from "@/components/director/ConfirmRightsDialog";
 import { PresetPickerDialog } from "@/components/marketing/PresetPickerDialog";
+import { AccuracyBoostDialog } from "@/components/marketing/AccuracyBoostDialog";
+import { evaluateAccuracyRisk, shortTip, type AccuracyRiskResult } from "@/lib/marketing/accuracyRisk";
 import {
   FORMATS,
   SETTINGS,
@@ -85,6 +87,7 @@ import loopTokyo from "@/assets/loop-tokyo.mp4.asset.json";
 import loopUnderwater from "@/assets/loop-underwater.mp4.asset.json";
 
 const RIGHTS_KEY = "vidoprompt:rights-ack";
+const ACCURACY_ACK_KEY = "vidoprompt:accuracy-ack";
 const find = (list: StudioPreset[], id?: string) =>
   id ? list.find((p) => p.id === id) : undefined;
 
@@ -147,6 +150,8 @@ export default function MarketingStudio() {
   const [characterOpen, setCharacterOpen] = useState(false);
   const [characterEditId, setCharacterEditId] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [accuracyOpen, setAccuracyOpen] = useState(false);
+  const [accuracyResult, setAccuracyResult] = useState<AccuracyRiskResult | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [drafting, setDrafting] = useState(false);
   const [renderSettings, setRenderSettings] = useState<RenderSettings>(RENDER_DEFAULTS);
@@ -335,11 +340,20 @@ export default function MarketingStudio() {
     brandIdentity,
   ]);
 
-  const startGenerate = () => {
-    if (!ready) {
-      toast.error("Pick a format and a location first.");
-      return;
-    }
+  const computeAccuracyRisk = (): AccuracyRiskResult =>
+    evaluateAccuracyRisk({
+      subject,
+      brandKits: brandKits.map((b) => ({
+        name: b.name,
+        logo_url: b.logo_url,
+        references: b.references,
+      })),
+      hasCharacterRef: characterActiveKits.some((c) => !!c.reference_url),
+      hasLocationImage: !!location.imageUrl,
+      hasBrandIdentity: hasBrandIdentity(brandIdentity),
+    });
+
+  const proceedToRights = () => {
     if (sessionStorage.getItem(RIGHTS_KEY) === "1") {
       void doGenerate();
       return;
@@ -347,20 +361,22 @@ export default function MarketingStudio() {
     setConfirmOpen(true);
   };
 
-  const doGenerate = async () => {
-    // Soft warning: product subject with only a logo and no real product photos
-    // tends to produce wrong-looking products (the model invents the shape from text).
-    if (subject === "product") {
-      const logoOnlyBrand = brandKits.find(
-        (b) => b.logo_url && (b.references ?? []).filter((r) => r.kind === "angle").length === 0,
-      );
-      if (logoOnlyBrand) {
-        toast.warning(
-          `${logoOnlyBrand.name || "Your product"} has a logo but no product photos — the render may not match the real product. Add 1–3 angle photos in the brand kit for a faithful result.`,
-          { duration: 6000 },
-        );
-      }
+  const startGenerate = () => {
+    if (!ready) {
+      toast.error("Pick a format and a location first.");
+      return;
     }
+    const risk = computeAccuracyRisk();
+    const acked = sessionStorage.getItem(ACCURACY_ACK_KEY) === "1";
+    if (!acked && (risk.level === "high" || risk.level === "medium") && risk.risks.length > 0) {
+      setAccuracyResult(risk);
+      setAccuracyOpen(true);
+      return;
+    }
+    proceedToRights();
+  };
+
+  const doGenerate = async () => {
     setSubmitting(true);
     try {
       // Build the ordered ref list first so we can tag @ImageN in the prompt
@@ -948,6 +964,21 @@ export default function MarketingStudio() {
                 {format?.label || "Custom format"} · {setting?.label || customSetting.trim() || location.place || "Reference image"} · {renderSettings.aspect_ratio} · {renderSettings.duration}s · {renderSettings.resolution} · audio on
               </div>
             )}
+
+            {ready && (() => {
+              const risk = computeAccuracyRisk();
+              const tip = shortTip(risk);
+              if (!tip) return null;
+              return (
+                <button
+                  type="button"
+                  onClick={() => { setAccuracyResult(risk); setAccuracyOpen(true); }}
+                  className="mt-2 text-[11px] text-amber-400/90 hover:text-amber-300 underline-offset-2 hover:underline text-left"
+                >
+                  {tip}
+                </button>
+              );
+            })()}
           </div>
           </div>
 
@@ -1121,6 +1152,29 @@ export default function MarketingStudio() {
             if (dontShow) sessionStorage.setItem(RIGHTS_KEY, "1");
             setConfirmOpen(false);
             void doGenerate();
+          }}
+        />
+
+        <AccuracyBoostDialog
+          open={accuracyOpen}
+          result={accuracyResult}
+          onCancel={() => setAccuracyOpen(false)}
+          onGenerateAnyway={(dontShow) => {
+            if (dontShow) sessionStorage.setItem(ACCURACY_ACK_KEY, "1");
+            setAccuracyOpen(false);
+            proceedToRights();
+          }}
+          onAddPhotos={() => {
+            setAccuracyOpen(false);
+            const target = brandKits.find(
+              (b) => !b.logo_url || (b.references ?? []).filter((r) => r.kind === "angle").length === 0,
+            ) ?? brandKits[0];
+            setBrandEditId(target?.id ?? null);
+            setBrandOpen(true);
+          }}
+          onAddIdentity={() => {
+            setAccuracyOpen(false);
+            setBrandIdentityOpen(true);
           }}
         />
 
