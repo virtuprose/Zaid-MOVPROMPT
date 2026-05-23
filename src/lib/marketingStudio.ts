@@ -135,7 +135,7 @@ export const FORMATS: StudioPreset[] = [
     category: "commercial",
     image: u("photo-1490481651871-ab68de25d43d"),
     fragment:
-      "Lifestyle commercial, product naturally integrated into a beautifully styled daily routine, warm cinematic color",
+      "Elite $1M-production lifestyle commercial — 8k full-frame Sony FX3/A1 color science, Sigma prime shallow DOF, smooth Steadicam, natural golden-hour or high-end architectural light, authentic candid talent. Build 4–6 sequences ending on The Lifestyle Hero: (1) The Vibe — beautifully composed establishing shot of talent in an aspirational setting, atmosphere before product reveal; (2) The Organic Introduction — medium shot, talent seamlessly brings the product into their routine with genuine anticipation; (3) Sensory Interaction — close-up of tactile use, sun flare catching the moment, background blurred; (4) Shared Experience (optional) — friends/partner join, spontaneous laughter, product naturally part of the moment; (5) Detail in Motion (optional) — dynamic tracking shot on a premium product detail mid-use; (6) The Lifestyle Hero — wide cinematic hero, talent confident and relaxed, product prominently and naturally placed. Focus on human connection, authentic emotion, organic movement, cinematic depth.",
   },
   {
     id: "before-after",
