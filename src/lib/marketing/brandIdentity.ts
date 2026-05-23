@@ -9,12 +9,45 @@ export type TypographyVibe =
   | "handwritten"
   | "monospace";
 
-export const TYPOGRAPHY_VIBES: { id: TypographyVibe; label: string; hint: string }[] = [
-  { id: "modern-sans", label: "Modern sans", hint: "Clean, geometric, Inter-style" },
-  { id: "editorial-serif", label: "Editorial serif", hint: "Refined, magazine-grade" },
-  { id: "bold-display", label: "Bold display", hint: "Heavy, condensed, punchy" },
-  { id: "handwritten", label: "Handwritten", hint: "Casual, organic, marker" },
-  { id: "monospace", label: "Monospace", hint: "Technical, code-like" },
+export const TYPOGRAPHY_VIBES: { id: TypographyVibe; label: string; hint: string; sample: string; fontFamily: string }[] = [
+  { id: "modern-sans", label: "Modern sans", hint: "Clean, geometric", sample: "Aa", fontFamily: "'Inter', 'Helvetica Neue', sans-serif" },
+  { id: "editorial-serif", label: "Editorial serif", hint: "Magazine-grade", sample: "Aa", fontFamily: "'Playfair Display', Georgia, serif" },
+  { id: "bold-display", label: "Bold display", hint: "Heavy, condensed", sample: "Aa", fontFamily: "'Bebas Neue', Impact, sans-serif" },
+  { id: "handwritten", label: "Handwritten", hint: "Casual, organic", sample: "Aa", fontFamily: "'Caveat', 'Brush Script MT', cursive" },
+  { id: "monospace", label: "Monospace", hint: "Technical, code-like", sample: "Aa", fontFamily: "'JetBrains Mono', 'Courier New', monospace" },
+];
+
+export type LightingStyle = "natural" | "soft-studio" | "hard-contrast" | "golden-hour" | "neon-night" | "overcast";
+export type FinishVibe = "premium-glass" | "matte-minimal" | "organic-warm" | "industrial-raw" | "playful-pop" | "retro-film";
+export type Pacing = "slow-elegant" | "balanced" | "punchy-fast";
+export type LogoTreatment = "none" | "subtle-watermark" | "end-card-reveal" | "hero-product";
+
+export const LIGHTING_STYLES: { id: LightingStyle; label: string; hint: string }[] = [
+  { id: "natural", label: "Natural", hint: "Window / daylight" },
+  { id: "soft-studio", label: "Soft studio", hint: "Diffused, even" },
+  { id: "hard-contrast", label: "Hard contrast", hint: "Sharp shadows" },
+  { id: "golden-hour", label: "Golden hour", hint: "Warm low sun" },
+  { id: "neon-night", label: "Neon night", hint: "Color-lit dark" },
+  { id: "overcast", label: "Overcast", hint: "Flat, moody" },
+];
+export const FINISH_VIBES: { id: FinishVibe; label: string; hint: string }[] = [
+  { id: "premium-glass", label: "Premium glass", hint: "Glossy, reflective" },
+  { id: "matte-minimal", label: "Matte minimal", hint: "Soft, restrained" },
+  { id: "organic-warm", label: "Organic warm", hint: "Natural materials" },
+  { id: "industrial-raw", label: "Industrial raw", hint: "Concrete, steel" },
+  { id: "playful-pop", label: "Playful pop", hint: "Bright, candy" },
+  { id: "retro-film", label: "Retro film", hint: "Grainy, analog" },
+];
+export const PACING_OPTIONS: { id: Pacing; label: string; hint: string }[] = [
+  { id: "slow-elegant", label: "Slow & elegant", hint: "Long takes" },
+  { id: "balanced", label: "Balanced", hint: "Mixed rhythm" },
+  { id: "punchy-fast", label: "Punchy & fast", hint: "Quick cuts" },
+];
+export const LOGO_TREATMENTS: { id: LogoTreatment; label: string; hint: string }[] = [
+  { id: "none", label: "None", hint: "No logo on screen" },
+  { id: "subtle-watermark", label: "Subtle watermark", hint: "Corner mark" },
+  { id: "end-card-reveal", label: "End-card reveal", hint: "Final beat" },
+  { id: "hero-product", label: "Hero placement", hint: "On packaging" },
 ];
 
 export type BrandIdentity = {
@@ -28,6 +61,12 @@ export type BrandIdentity = {
   font_hint: string | null;
   mood_notes: string | null;
   tagline: string | null;
+  lighting_style: LightingStyle | null;
+  finish_vibe: FinishVibe | null;
+  pacing: Pacing | null;
+  logo_treatment: LogoTreatment | null;
+  brand_voice: string | null;
+  industry: string | null;
 };
 
 export const EMPTY_BRAND_IDENTITY: BrandIdentity = {
@@ -40,6 +79,12 @@ export const EMPTY_BRAND_IDENTITY: BrandIdentity = {
   font_hint: null,
   mood_notes: null,
   tagline: null,
+  lighting_style: null,
+  finish_vibe: null,
+  pacing: null,
+  logo_treatment: null,
+  brand_voice: null,
+  industry: null,
 };
 
 async function signLogo(path: string | null): Promise<string | null> {
