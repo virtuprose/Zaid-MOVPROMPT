@@ -1054,7 +1054,7 @@ export default function MarketingStudio() {
           onOpenChange={(o) => !o && setOpenPicker(null)}
           title="Pick the scene"
           subtitle="Where does the ad take place? Choose a preset scene, a real city, or a reference photo — one mode wins to keep the prompt clean."
-          presets={SETTINGS}
+          presets={sortedSettings}
           selectedId={settingId}
           onSelect={setSettingId}
           searchPlaceholder="Search scenes… (try 'rooftop' or 'cafe')"
