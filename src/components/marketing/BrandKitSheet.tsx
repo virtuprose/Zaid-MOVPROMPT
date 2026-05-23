@@ -370,6 +370,37 @@ export function BrandKitSheet({
             )}
           </div>
 
+          {/* Additional angles + spec sheet */}
+          <AnglesSection
+            references={draft.references ?? []}
+            uploading={angleUploading}
+            specUploading={specUploading}
+            onPickAngle={() => angleFileRef.current?.click()}
+            onPickSpec={() => specFileRef.current?.click()}
+            onRelabel={updateReferenceLabel}
+            onRemove={removeReference}
+          />
+          <input
+            ref={angleFileRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              handleAngleFile(e.target.files?.[0]);
+              e.currentTarget.value = "";
+            }}
+          />
+          <input
+            ref={specFileRef}
+            type="file"
+            accept="image/*,application/pdf"
+            className="hidden"
+            onChange={(e) => {
+              handleSpecFile(e.target.files?.[0]);
+              e.currentTarget.value = "";
+            }}
+          />
+
           {/* Fields */}
           <Field
             label="Name"
