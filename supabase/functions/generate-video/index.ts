@@ -491,7 +491,7 @@ serve(async (req) => {
     }
 
     // Submit new job
-    let { prompt, provider = "seedance-v1-pro", session_id, options, reference_image_urls, storyboard_session_id, storyboard_shot_index } = body as {
+    let { prompt, provider = "seedance-v1-pro", session_id, options, reference_image_urls, storyboard_session_id, storyboard_shot_index, metadata } = body as {
       prompt?: string;
       provider?: string;
       session_id?: string;
@@ -499,10 +499,13 @@ serve(async (req) => {
       reference_image_urls?: string[];
       storyboard_session_id?: string;
       storyboard_shot_index?: number;
+      metadata?: Record<string, unknown> | null;
     };
     const refImages = Array.isArray(reference_image_urls)
       ? reference_image_urls.filter((u): u is string => typeof u === "string" && u.length > 0)
       : [];
+    const safeMetadata =
+      metadata && typeof metadata === "object" && !Array.isArray(metadata) ? metadata : null;
 
     if ((!prompt || !prompt.trim()) && session_id) {
       const { data: session } = await admin
@@ -589,6 +592,7 @@ serve(async (req) => {
         reference_image_urls: refImages.length > 0 ? refImages : null,
         storyboard_session_id: typeof storyboard_session_id === "string" && storyboard_session_id.length > 0 ? storyboard_session_id : null,
         storyboard_shot_index: typeof storyboard_shot_index === "number" && Number.isFinite(storyboard_shot_index) ? storyboard_shot_index : null,
+        metadata: safeMetadata,
       })
       .select("*")
       .single();

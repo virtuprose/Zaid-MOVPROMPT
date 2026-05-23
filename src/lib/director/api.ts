@@ -545,7 +545,11 @@ export async function submitVideoJob(
   sessionId?: string | null,
   options?: VideoOptions,
   referenceImages?: string[],
-  extras?: { storyboard_session_id?: string; storyboard_shot_index?: number },
+  extras?: {
+    storyboard_session_id?: string;
+    storyboard_shot_index?: number;
+    metadata?: Record<string, unknown> | null;
+  },
 ): Promise<VideoJob> {
   const normalizedPrompt = prompt.trim();
   if (!normalizedPrompt) {
@@ -561,6 +565,7 @@ export async function submitVideoJob(
       reference_image_urls: referenceImages && referenceImages.length > 0 ? referenceImages : undefined,
       storyboard_session_id: extras?.storyboard_session_id,
       storyboard_shot_index: extras?.storyboard_shot_index,
+      metadata: extras?.metadata ?? undefined,
     },
   });
   if (error) throw error;
@@ -684,6 +689,8 @@ export type AdSceneBrief = {
     mood_notes?: string | null;
     tagline?: string | null;
   } | null;
+  /** Up to ~3 prompts from the user's previously-liked ads, used as style references. */
+  likedExamples?: string[];
 };
 
 export async function writeAdScene(

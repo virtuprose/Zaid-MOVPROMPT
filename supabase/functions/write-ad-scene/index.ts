@@ -76,6 +76,8 @@ type Brief = {
   location?: { place?: string; hasImage?: boolean } | null;
   userNote?: string;
   brandIdentity?: BrandIdentityLite | null;
+  /** Up to ~3 prompts from the user's previously-liked ads to bias style. */
+  likedExamples?: string[];
 };
 
 function buildUserContent(b: Brief): string {
@@ -143,6 +145,16 @@ function buildUserContent(b: Brief): string {
   const note = b.userNote?.trim();
   if (note) {
     lines.push(`Additional direction (adaptation layer — adjust tone/mood/details, but keep the Format and Setting structure locked): ${note.slice(0, 400)}`);
+  }
+  const examples = (b.likedExamples ?? [])
+    .map((s) => (typeof s === "string" ? s.trim() : ""))
+    .filter((s) => s.length > 0)
+    .slice(0, 3)
+    .map((s) => s.slice(0, 280));
+  if (examples.length > 0) {
+    lines.push(
+      `USER'S APPROVED STYLE REFERENCES — the user previously LIKED these scene drafts. Mimic their tone, cadence and beat structure (not the literal subject matter); use them as taste signal only, do not copy nouns or break the locked Format/Setting:\n${examples.map((s, i) => `${i + 1}. ${s}`).join("\n")}`,
+    );
   }
   lines.push("\nWrite the scene now.");
   return lines.join("\n");
