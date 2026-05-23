@@ -689,6 +689,8 @@ export type AdSceneBrief = {
     mood_notes?: string | null;
     tagline?: string | null;
   } | null;
+  /** Up to ~3 prompts from the user's previously-liked ads, used as style references. */
+  likedExamples?: string[];
 };
 
 export async function writeAdScene(
