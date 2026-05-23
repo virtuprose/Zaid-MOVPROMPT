@@ -81,7 +81,7 @@ export function useBrandKit() {
       return;
     }
     setLoading(true);
-    const [{ data: rows }, { data: sel }] = await Promise.all([
+    const [{ data: rows }, { data: sel }, { data: refRows }] = await Promise.all([
       supabase
         .from("brand_kits")
         .select("id,subject,name,description,url,tagline,audience,logo_path,category,visual_parts,materials,hero_colors,packaging,updated_at")
@@ -92,10 +92,24 @@ export function useBrandKit() {
         .select("brand_kit_id,position")
         .eq("user_id", user.id)
         .order("position", { ascending: true }),
+      supabase
+        .from("product_references")
+        .select("id,brand_kit_id,kind,image_path,label,position")
+        .eq("user_id", user.id)
+        .order("position", { ascending: true }),
     ]);
     const list = (rows ?? []) as BrandKit[];
+    const refsByKit: Record<string, ProductReference[]> = {};
+    for (const r of (refRows ?? []) as ProductReference[]) {
+      const signedUrl = await signLogo(r.image_path);
+      (refsByKit[r.brand_kit_id] ||= []).push({ ...r, image_url: signedUrl });
+    }
     const signed = await Promise.all(
-      list.map(async (k) => ({ ...k, logo_url: await signLogo(k.logo_path) })),
+      list.map(async (k) => ({
+        ...k,
+        logo_url: await signLogo(k.logo_path),
+        references: k.id ? refsByKit[k.id] ?? [] : [],
+      })),
     );
     setKits(signed);
     const ids = (sel ?? [])
