@@ -339,7 +339,6 @@ export function CharacterKitSheet({
         </div>
       </DialogContent>
 
-      {null}
 
 
       <Dialog open={lightboxOpen && hasImage} onOpenChange={setLightboxOpen}>
