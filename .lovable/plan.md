@@ -1,61 +1,77 @@
-## The idea — yes, let's build it
+## Goal
 
-Right now the "products" panel holds the *thing being sold* (burger, sneaker, serum). What you're describing is the **brand layer on top** — the visual identity that controls how the ad *looks* regardless of which product is featured: logo, brand colors, typography, and a couple of "do / don't" notes.
+Make avatar uploads produce **consistent** characters across shots without forcing the user to fill a long form. Tell the model exactly what the photo means (face-only vs full look) and auto-extract the visible details so the user just reviews them.
 
-A Brand Kit is reused across every ad. A product is what's *in* the ad. Two different concepts, both needed.
+## What changes for the user
 
-## What the user fills in (one-time, then reused)
+In the existing **Character Kit** sheet, above the upload box, add a **shot type** toggle:
 
-A new **Brand Kit** card at the top of `/marketing`, above Products:
+```
+What does this photo show?
+( ● ) Face / headshot      ( ○ ) Full look (head-to-toe + outfit)
+```
 
-- **Logo** (upload) — already shown in ads where it makes sense (corner, end card)
-- **Brand colors** — 1 primary + up to 4 supporting, picked from swatches or hex. Optional "use as dominant palette" toggle.
-- **Avoid colors** — e.g. "no blue, no neon pink" (the exact pain you hit)
-- **Typography vibe** — pick from a small list (Modern sans, Editorial serif, Bold display, Handwritten, Monospace) + optional font name if they know it. We can't ship real fonts to the video model, but we can describe the look so on-screen text matches.
-- **Mood / style notes** — short free-text ("premium, minimal, lots of white space")
-- **Tagline / brand line** (optional) — overrides the per-product tagline if set
+After they upload:
+1. A small "Analyzing photo…" spinner runs (~2s).
+2. The **Description** field is auto-filled — e.g. *"Mid-20s woman, athletic build, shoulder-length brown hair, warm tan skin, white tee, light denim jacket, gold hoop earrings."*
+3. User reviews/edits, hits Save. Nothing forced.
 
-One Brand Kit per user for v1 (keep it simple; multi-brand later if needed).
+That's the entire UX change. No new form fields, no questionnaire.
 
-## How it changes the generation flow
+## How shot type changes the generated video
 
-The Brand Kit feeds the same two stages that the Product fact sheet already feeds, but at a different priority:
+| Shot type | What the prompt locks |
+|---|---|
+| **Face / headshot** | Face matches reference photo. Body/wardrobe come from the Description text (or stay "natural, consistent across shots" if blank). Lets the user reuse one face with different outfits per ad. |
+| **Full look** | Face + build + wardrobe + accessories all locked from the reference. Used as-is across every shot. Best for brand mascots, founders, fashion. |
 
-1. **Scene draft (`write-ad-scene`)** — gets a `brandKit` block alongside Product + Format + Setting. System prompt instruction: *"Apply the brand palette to lighting, props, and background tones. Avoid forbidden colors. Match the typography vibe for any on-screen text. Keep the product accurate."*
+This is enforced in the **CHARACTER LOCK** block of `composeStudioPrompt` and in the `write-ad-scene` system prompt.
 
-2. **Final video prompt (`composeStudioPrompt`)** — injects a **BRAND LOCK** block right after the existing PRODUCT LOCK:
-   > Brand lock — Acme Co: primary #C8102E, supporting #1A1A1A / #F5F0E6. Avoid: blue, neon. Typography: bold editorial serif. Mood: premium, minimal. Apply to lighting, props, background, and any on-screen text. Do not recolor the real product.
+## Technical details
 
-**Priority order at render:**
-1. Product Lock (product stays accurate — bun stays bun)
-2. Brand Lock (palette, mood, typography vibe applied to *everything around* the product)
-3. Format + Setting structure
-4. Describe-box note (adaptation)
-5. Model creativity
+### 1. DB migration — add `shot_type` to `character_kits`
+```sql
+ALTER TABLE public.character_kits
+  ADD COLUMN shot_type text NOT NULL DEFAULT 'face';
+-- allowed values enforced in app: 'face' | 'full'
+```
+No RLS changes (existing policies cover it).
 
-So if your brand is red/cream and you pick "UGC + Kitchen", the kitchen lighting leans warm, the props skew cream/red, the on-screen text matches your typography vibe — but the burger still looks like *your* burger.
+### 2. New edge function: `describe-character`
+- Input: `{ image_url: string, shot_type: 'face' | 'full' }`
+- Calls **Lovable AI** with `google/gemini-3.1-pro-preview` (vision).
+- System prompt asks for a single 1–2 sentence physical description optimized for video-prompt continuity. For `shot_type='face'` it focuses on face/hair/skin/age; for `'full'` it adds build, wardrobe, footwear, accessories.
+- Returns `{ description: string }`.
+- `verify_jwt = true` (uses caller's session), CORS enabled, Zod validation.
 
-## UI
+### 3. Wire into `CharacterKitSheet.tsx`
+- Add `shot_type` to draft state + radio toggle UI above the upload area.
+- In the existing `uploadReference` flow: after upload succeeds, set a `describing` flag, call `describe-character` with the new `reference_url`, and `update("description", result.description)`. Show the existing "Analyzing photo…" spinner area (it's already partially scaffolded with the "Filled by AI" hint at line 243).
+- Don't overwrite a description the user already typed — only auto-fill when the field is empty.
 
-- New "Brand Kit" strip at the top of `/marketing`, before the Products row. Compact card with logo thumbnail + color swatches + "Edit" button.
-- "Edit Brand Kit" sheet (same pattern as `BrandKitSheet` for products): logo upload, color pickers (swatch + hex), avoid-colors chips, typography vibe picker, mood textarea.
-- Small inline indicator on the Generate button: "Using Acme brand kit" so the user knows it's being applied.
-- Toggle per-ad: "Apply brand kit" (on by default) — lets the user turn it off for a single render.
+### 4. Update `useCharacterKit` hook
+- Include `shot_type` in the row shape, save path, and the `CharacterContext` returned to the studio.
 
-## Technical bits (skip if non-technical)
+### 5. Prompt composition (`src/lib/marketingStudio.ts`)
+- Extend `CharacterContext` with `shot_type`.
+- In the CHARACTER LOCK block (around line 702):
+  - `shot_type='face'` → `"Face matches reference image. Wardrobe and styling: {description or 'natural, consistent across all shots'}."`
+  - `shot_type='full'` → `"Face, build, wardrobe, and accessories all match reference image exactly. Keep identical across every shot."`
 
-- **DB**: new table `brand_identities` (one row per user) with `logo_path`, `primary_color`, `supporting_colors jsonb`, `avoid_colors jsonb`, `typography_vibe`, `font_hint`, `mood_notes`, `tagline`. RLS by `user_id`. (Naming it `brand_identities` to avoid colliding with the existing `brand_kits` table, which is really *products*.)
-- **`src/lib/marketing/brandIdentity.ts`**: `useBrandIdentity()` hook with `identity`, `saveIdentity`, `uploadLogo`. Mirrors `useBrandKit` shape.
-- **New component**: `src/components/marketing/BrandIdentityCard.tsx` (compact strip) + `BrandIdentitySheet.tsx` (edit form). Reuse the swatch UI from the curated palette presets in the design-question system.
-- **`MarketingStudio.tsx`**: render the new card above `BrandsRow`. Pass the loaded identity into the ad draft + render pipeline. Add the "Apply brand kit" toggle to render settings (`RenderSettingsPopover`).
-- **`write-ad-scene/index.ts`**: extend payload schema with `brandKit`, extend system prompt to apply palette/avoid/typography.
-- **`composeStudioPrompt`** in `src/lib/marketingStudio.ts`: add `BRAND LOCK` block after PRODUCT LOCK when identity is provided and toggle is on.
-- No changes to the Products flow, FORMATS, or SETTINGS catalogs.
+### 6. Edge function `write-ad-scene`
+- Add `shot_type` to each character in the payload.
+- Update the system prompt's character section to mirror the same two-mode behavior so the auto-written describe-box stays aligned with the final lock.
 
-## What you'll feel
+## Out of scope (deliberately deferred)
+- Multi-photo references per character (face + outfit separately)
+- Per-shot wardrobe changes inside one storyboard
+- Body-shape / vibe chips — the auto-extracted description already covers this in natural language
 
-Set your brand kit once: logo, red + cream palette, "no blue", "bold editorial serif", "premium minimal". Now every ad — burger, fries, drink — comes out in your palette, with on-screen text that matches your vibe, never drifting into the generic blue/purple AI look. Products stay accurate; the *world around them* finally looks like your brand.
-
-## One question before I build
-
-For v1, should the Brand Kit be **one per user** (simplest, matches a single business owner) or **multiple brand kits** like the Products list (good if you're an agency running ads for several clients)?
+## Files touched
+- `supabase/migrations/<new>.sql` — add `shot_type` column
+- `supabase/functions/describe-character/index.ts` — new
+- `supabase/functions/write-ad-scene/index.ts` — pass through `shot_type`
+- `src/lib/marketing/characterKit.ts` — extend hook
+- `src/components/marketing/CharacterKitSheet.tsx` — toggle + auto-describe call
+- `src/lib/marketingStudio.ts` — CHARACTER LOCK logic
+- `src/lib/director/api.ts` — type for `shot_type`
