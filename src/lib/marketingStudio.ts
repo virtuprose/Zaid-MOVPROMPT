@@ -521,6 +521,8 @@ export type BrandContext = {
   materials?: string | null;
   hero_colors?: string[] | null;
   packaging?: string | null;
+  /** Ordered labels for additional angle reference images (front, back, packaging, …). */
+  angle_labels?: string[];
 };
 
 export type LocationContext = {
