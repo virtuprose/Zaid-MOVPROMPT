@@ -53,6 +53,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { ConfirmRightsDialog } from "@/components/director/ConfirmRightsDialog";
 import { PresetPickerDialog } from "@/components/marketing/PresetPickerDialog";
 import { AccuracyBoostDialog } from "@/components/marketing/AccuracyBoostDialog";
+import { DescribeAdMic } from "@/components/marketing/DescribeAdMic";
 import { evaluateAccuracyRisk, shortTip, type AccuracyRiskResult } from "@/lib/marketing/accuracyRisk";
 import {
   FORMATS,
@@ -842,6 +843,7 @@ export default function MarketingStudio() {
                 aria-label="Describe your ad"
                 className="flex-1 h-full bg-transparent border-0 outline-none text-sm text-foreground placeholder:text-muted-foreground/70"
               />
+              <DescribeAdMic value={userNote} onChange={setUserNote} maxLength={280} />
               {userNote.trim() && (
                 <button
                   type="button"
