@@ -54,7 +54,7 @@ export function useCharacterKit() {
     const [{ data: rows }, { data: sel }] = await Promise.all([
       supabase
         .from("character_kits")
-        .select("id,name,description,role,reference_path,updated_at")
+        .select("id,name,description,role,reference_path,shot_type,updated_at")
         .eq("user_id", user.id)
         .order("updated_at", { ascending: false }),
       supabase
@@ -63,6 +63,7 @@ export function useCharacterKit() {
         .eq("user_id", user.id)
         .order("position", { ascending: true }),
     ]);
+
     const list = (rows ?? []) as CharacterKit[];
     const signed = await Promise.all(
       list.map(async (k) => ({ ...k, reference_url: await signRef(k.reference_path) })),
