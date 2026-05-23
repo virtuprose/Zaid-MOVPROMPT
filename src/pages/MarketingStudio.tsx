@@ -348,6 +348,19 @@ export default function MarketingStudio() {
   };
 
   const doGenerate = async () => {
+    // Soft warning: product subject with only a logo and no real product photos
+    // tends to produce wrong-looking products (the model invents the shape from text).
+    if (subject === "product") {
+      const logoOnlyBrand = brandKits.find(
+        (b) => b.logo_url && (b.references ?? []).filter((r) => r.kind === "angle").length === 0,
+      );
+      if (logoOnlyBrand) {
+        toast.warning(
+          `${logoOnlyBrand.name || "Your product"} has a logo but no product photos — the render may not match the real product. Add 1–3 angle photos in the brand kit for a faithful result.`,
+          { duration: 6000 },
+        );
+      }
+    }
     setSubmitting(true);
     try {
       // Build the ordered ref list first so we can tag @ImageN in the prompt
