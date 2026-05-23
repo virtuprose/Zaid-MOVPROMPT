@@ -362,9 +362,9 @@ export function PresetPickerDialog({
                   }}
                   className={cn(
                     "group relative aspect-[3/4] rounded-2xl overflow-hidden border bg-muted/20 text-left transition-all",
-                    "hover:border-[#F5A524]/60 hover:scale-[1.02] hover:shadow-[0_0_0_3px_hsl(35_90%_55%/0.15)]",
+                    "hover:border-[#F5A524]/60 hover:shadow-[0_0_0_3px_hsl(35_90%_55%/0.15)]",
                     active
-                      ? "border-[#F5A524] scale-[1.02] shadow-[0_0_0_3px_hsl(35_90%_55%/0.35)]"
+                      ? "border-[#F5A524] shadow-[0_0_0_3px_hsl(35_90%_55%/0.35)]"
                       : "border-border/40",
                   )}
                 >
@@ -436,7 +436,7 @@ export function PresetPickerDialog({
                 }}
                 className={cn(
                   "group aspect-[3/4] rounded-2xl border-2 border-dashed bg-muted/10 flex flex-col items-center justify-center gap-2 transition-all p-4 text-center",
-                  "hover:border-[#F5A524]/70 hover:bg-[#F5A524]/5 hover:scale-[1.02]",
+                  "hover:border-[#F5A524]/70 hover:bg-[#F5A524]/5",
                   draftCustom && !draftId
                     ? "border-[#F5A524] bg-[#F5A524]/5"
                     : "border-border/50",
