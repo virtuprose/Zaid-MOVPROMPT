@@ -570,6 +570,8 @@ export type StudioBrief = {
   imageRefs?: Array<"brand" | "character" | "location">;
   /** Free-text adaptation layer — preset stays the locked structure, this tweaks tone/details. */
   userNote?: string;
+  /** Brand identity (palette, typography vibe, mood) applied to lighting/props/text. */
+  brandIdentity?: BrandIdentityContext | null;
 };
 
 const find = (list: StudioPreset[], id?: string) =>
