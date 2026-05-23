@@ -22,6 +22,7 @@ Deno.serve(async (req) => {
 
     const body = await req.json().catch(() => ({}));
     let imageUrl: string | null = body.imageUrl ?? null;
+    const shotType: "face" | "full" = body.shotType === "full" ? "full" : "face";
 
     if (!imageUrl && body.imagePath) {
       const { data } = await supabase.storage
@@ -34,8 +35,14 @@ Deno.serve(async (req) => {
     const apiKey = Deno.env.get("LOVABLE_API_KEY");
     if (!apiKey) return json({ error: "missing api key" }, 500);
 
-    const sys =
-      "You are a casting director writing a reusable character reference for an AI video generator. Look at the photo(s) and write a vivid, specific physical description so the generator can recreate the SAME person consistently across shots. Cover: apparent age range, gender presentation, ethnicity/skin tone, hair (length, color, texture, style), face shape, eyes (color, shape), eyebrows, nose, lips, distinguishing features (freckles, moles, glasses, jewelry, tattoos), build/height impression, current outfit (color, fabric, fit), and overall vibe/expression. Also propose a short friendly first name and a one-word role (e.g. Talent, Founder, Customer, Athlete). Keep description under 480 chars, factual and neutral, no opinions about beauty. Do not name a real person.";
+    const sysFace =
+      "You are a casting director writing a reusable character reference for an AI video generator. The uploaded photo is a FACE / HEADSHOT — describe only what is visible above the shoulders so the same person can be re-rendered in any outfit. Cover: apparent age range, gender presentation, ethnicity/skin tone, hair (length, color, texture, style), face shape, eyes (color, shape), eyebrows, nose, lips, distinguishing features (freckles, moles, glasses, jewelry, tattoos), and overall vibe/expression. Do NOT describe body, outfit, or anything below the shoulders. Also propose a short friendly first name and a one-word role (Talent, Founder, Customer, Athlete). Keep description under 420 chars, factual and neutral. Do not name a real person.";
+
+    const sysFull =
+      "You are a casting director writing a reusable character reference for an AI video generator. The uploaded photo is a FULL LOOK (head-to-toe) — describe BOTH the person and the exact outfit so the same person AND same outfit can be re-rendered consistently across every shot. Cover face details (age range, gender presentation, ethnicity/skin tone, hair, eyes, distinguishing features), build/height impression, posture, AND wardrobe in detail (every visible garment with color/fabric/fit, footwear, accessories, jewelry). Also propose a short friendly first name and a one-word role (Talent, Founder, Customer, Athlete). Keep description under 500 chars, factual and neutral. Do not name a real person.";
+
+    const sys = shotType === "full" ? sysFull : sysFace;
+
 
     const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",

@@ -57,10 +57,10 @@ export function CharacterKitSheet({
   const update = <K extends keyof CharacterKit>(k: K, v: CharacterKit[K]) =>
     setDraft((d) => ({ ...d, [k]: v }));
 
-  const runAnalyze = async (imagePath: string) => {
+  const runAnalyze = async (imagePath: string, shotType: "face" | "full") => {
     setAnalyzing(true);
     try {
-      const res = await analyzeCharacterImage({ imagePath });
+      const res = await analyzeCharacterImage({ imagePath, shotType });
       setDraft((d) => ({
         ...d,
         name: d.name?.trim() ? d.name : (res.name ?? d.name),
@@ -87,13 +87,23 @@ export function CharacterKitSheet({
       const path = await uploadReference(file);
       update("reference_path", path);
       update("reference_url", URL.createObjectURL(file));
-      void runAnalyze(path);
+      void runAnalyze(path, draft.shot_type ?? "face");
     } catch (e: any) {
       toast.error(e?.message || "Upload failed");
     } finally {
       setUploading(false);
     }
   };
+
+  const handleShotTypeChange = (next: "face" | "full") => {
+    update("shot_type", next);
+    if (draft.reference_path) {
+      // Re-analyze with the new framing so the description matches the mode.
+      void runAnalyze(draft.reference_path, next);
+    }
+  };
+
+
 
 
   const handleSave = async () => {
@@ -143,8 +153,37 @@ export function CharacterKitSheet({
         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
           <div className="space-y-2">
             <Label className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">
+              What does this photo show?
+            </Label>
+            <div className="grid grid-cols-2 gap-2">
+              {([
+                { id: "face", title: "Face / headshot", hint: "Lock the face. Outfit stays flexible per ad." },
+                { id: "full", title: "Full look", hint: "Lock face + body + outfit. Same look every shot." },
+              ] as const).map((opt) => {
+                const active = (draft.shot_type ?? "face") === opt.id;
+                return (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => handleShotTypeChange(opt.id)}
+                    className={cn(
+                      "text-left rounded-xl border px-3 py-2.5 transition-colors",
+                      active
+                        ? "border-[#F5A524] bg-[#F5A524]/10"
+                        : "border-border/60 bg-secondary/20 hover:border-[#F5A524]/40",
+                    )}
+                  >
+                    <p className="text-sm font-medium text-foreground">{opt.title}</p>
+                    <p className="text-[11px] text-muted-foreground leading-snug mt-0.5">{opt.hint}</p>
+                  </button>
+                );
+              })}
+            </div>
+
+            <Label className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium pt-2 block">
               Reference photo
             </Label>
+
             {hasImage ? (
               <div className="flex items-center gap-3 p-2.5 sm:pr-3 rounded-xl border border-border/60 bg-secondary/20">
                 <button

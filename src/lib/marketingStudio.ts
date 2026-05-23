@@ -530,7 +530,10 @@ export type CharacterContext = {
   description?: string | null;
   role?: string | null;
   hasImage?: boolean;
+  /** "face" = lock face only (outfit flexible). "full" = lock face + body + outfit from the reference. */
+  shot_type?: "face" | "full";
 };
+
 
 export type BrandIdentityContext = {
   primary_color?: string | null;
@@ -642,15 +645,28 @@ function characterLineAt(c: CharacterContext, refs: StudioBrief["imageRefs"], oc
   const bits = [`${labelPrefix}: ${c.name}`];
   if (c.role) bits.push(`Role: ${c.role}`);
   if (c.description) bits.push(c.description);
+  const shot = c.shot_type ?? "face";
   if (c.hasImage) {
-    bits.push(
-      tag
-        ? `Use ${tag} as the character reference — match their face, hair and styling consistently across every frame`
-        : "A reference photo of the character is provided — match their face, hair and styling consistently",
-    );
+    if (shot === "full") {
+      bits.push(
+        tag
+          ? `Use ${tag} as the full-look reference — match face, build, wardrobe, footwear and accessories EXACTLY, and keep them identical across every shot`
+          : "A full-look reference photo is provided — match face, build, wardrobe and accessories exactly, identical across every shot",
+      );
+    } else {
+      const wardrobe = c.description?.trim()
+        ? `wardrobe per description above`
+        : `wardrobe natural and consistent across every shot`;
+      bits.push(
+        tag
+          ? `Use ${tag} as the face reference — match face, hair and skin tone consistently across every frame; ${wardrobe}`
+          : `A face reference photo is provided — match face, hair and skin tone consistently; ${wardrobe}`,
+      );
+    }
   }
   return bits.join(" — ");
 }
+
 
 export function brandIdentityLine(b?: BrandIdentityContext | null): string | null {
   if (!b) return null;

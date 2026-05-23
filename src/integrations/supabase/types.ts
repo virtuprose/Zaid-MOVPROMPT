@@ -351,6 +351,7 @@ export type Database = {
           name: string
           reference_path: string | null
           role: string | null
+          shot_type: string
           updated_at: string
           user_id: string
         }
@@ -361,6 +362,7 @@ export type Database = {
           name?: string
           reference_path?: string | null
           role?: string | null
+          shot_type?: string
           updated_at?: string
           user_id: string
         }
@@ -371,6 +373,7 @@ export type Database = {
           name?: string
           reference_path?: string | null
           role?: string | null
+          shot_type?: string
           updated_at?: string
           user_id?: string
         }

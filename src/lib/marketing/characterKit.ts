@@ -2,12 +2,16 @@ import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 
+export type CharacterShotType = "face" | "full";
+
 export type CharacterKit = {
   id?: string;
   name: string;
   description: string;
   role: string | null;
   reference_path: string | null;
+  /** Whether the reference image is a face/headshot or a full head-to-toe look. */
+  shot_type: CharacterShotType;
   /** Signed URL for previewing reference image (not persisted). */
   reference_url?: string | null;
   updated_at?: string;
@@ -18,8 +22,10 @@ export const EMPTY_CHARACTER_KIT: CharacterKit = {
   description: "",
   role: null,
   reference_path: null,
+  shot_type: "face",
   reference_url: null,
 };
+
 
 export const MAX_CHARACTERS = 3;
 
@@ -48,7 +54,7 @@ export function useCharacterKit() {
     const [{ data: rows }, { data: sel }] = await Promise.all([
       supabase
         .from("character_kits")
-        .select("id,name,description,role,reference_path,updated_at")
+        .select("id,name,description,role,reference_path,shot_type,updated_at")
         .eq("user_id", user.id)
         .order("updated_at", { ascending: false }),
       supabase
@@ -57,6 +63,7 @@ export function useCharacterKit() {
         .eq("user_id", user.id)
         .order("position", { ascending: true }),
     ]);
+
     const list = (rows ?? []) as CharacterKit[];
     const signed = await Promise.all(
       list.map(async (k) => ({ ...k, reference_url: await signRef(k.reference_path) })),
@@ -135,6 +142,7 @@ export function useCharacterKit() {
         description: next.description,
         role: next.role,
         reference_path: next.reference_path,
+        shot_type: next.shot_type ?? "face",
       };
       if (!next.id && !payload.reference_path && next.reference_url) {
         console.warn(
@@ -147,7 +155,7 @@ export function useCharacterKit() {
           .from("character_kits")
           .update(payload)
           .eq("id", next.id)
-          .select("id,name,description,role,reference_path,updated_at")
+          .select("id,name,description,role,reference_path,shot_type,updated_at")
           .single();
         if (error) throw error;
         saved = data as CharacterKit;
@@ -155,11 +163,12 @@ export function useCharacterKit() {
         const { data, error } = await supabase
           .from("character_kits")
           .insert(payload)
-          .select("id,name,description,role,reference_path,updated_at")
+          .select("id,name,description,role,reference_path,shot_type,updated_at")
           .single();
         if (error) throw error;
         saved = data as CharacterKit;
       }
+
       saved.reference_url = await signRef(saved.reference_path);
       await reload();
       if (saved.id) {
@@ -232,6 +241,7 @@ export type CharacterImageAnalysis = {
 export async function analyzeCharacterImage(input: {
   imagePath?: string | null;
   imageUrl?: string | null;
+  shotType?: CharacterShotType;
 }): Promise<CharacterImageAnalysis> {
   const { data, error } = await supabase.functions.invoke("analyze-character-image", {
     body: input,
@@ -239,3 +249,4 @@ export async function analyzeCharacterImage(input: {
   if (error) throw error;
   return data as CharacterImageAnalysis;
 }
+
