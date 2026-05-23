@@ -187,6 +187,7 @@ export function RenderSettingsPopover({
             </Pill>
           ))}
         </Row>
+        </div>
       </PopoverContent>
     </Popover>
   );
