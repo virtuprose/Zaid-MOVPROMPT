@@ -39,17 +39,19 @@ function Row({
   return (
     <div
       className={cn(
-        "rounded-xl border bg-secondary/30 transition-colors",
-        active ? "border-[#F5A524]/40" : "border-border/40",
+        "rounded-xl transition-colors",
+        active
+          ? "bg-[#F5A524]/10 ring-1 ring-inset ring-[#F5A524]/40"
+          : "hover:bg-white/[0.04]",
       )}
     >
       <button
         type="button"
         onClick={onClick}
-        className="w-full flex items-center gap-3 px-3 h-11 text-sm"
+        className="w-full flex items-center gap-3 px-2.5 h-11 text-sm rounded-xl"
       >
         <span className="text-muted-foreground">{icon}</span>
-        <span className="text-foreground/90">{label}</span>
+        <span className="text-foreground/90 font-medium">{label}</span>
         <span className="ml-auto flex items-center gap-1 text-foreground/80 tabular-nums">
           {value}
           <ChevronRight
@@ -61,7 +63,7 @@ function Row({
         </span>
       </button>
       {active && (
-        <div className="px-3 pb-3 pt-1 flex flex-wrap gap-1.5">{children}</div>
+        <div className="px-2.5 pb-2.5 pt-1 flex flex-wrap gap-1.5">{children}</div>
       )}
     </div>
   );
