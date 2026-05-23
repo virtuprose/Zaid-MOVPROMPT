@@ -359,6 +359,7 @@ export default function MarketingStudio() {
         })),
         imageRefs,
         userNote: userNote.trim() || undefined,
+        brandIdentity: brandIdentity ?? undefined,
       });
       // Provider routing:
       //   0 refs → seedance-v1-pro (text-only, fast/cheap)
