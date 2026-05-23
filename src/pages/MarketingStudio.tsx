@@ -261,6 +261,7 @@ export default function MarketingStudio() {
               ? { place: location.place || undefined, hasImage: !!location.imagePath }
               : null,
           userNote: userNote.trim() || undefined,
+          brandIdentity: brandIdentity ?? undefined,
         },
         controller.signal,
       )
