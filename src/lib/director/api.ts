@@ -691,6 +691,12 @@ export type AdSceneBrief = {
     font_hint?: string | null;
     mood_notes?: string | null;
     tagline?: string | null;
+    lighting_style?: string | null;
+    finish_vibe?: string | null;
+    pacing?: string | null;
+    logo_treatment?: string | null;
+    brand_voice?: string | null;
+    industry?: string | null;
   } | null;
   /** Up to ~3 prompts from the user's previously-liked ads, used as style references. */
   likedExamples?: string[];
