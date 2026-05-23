@@ -57,10 +57,10 @@ export function CharacterKitSheet({
   const update = <K extends keyof CharacterKit>(k: K, v: CharacterKit[K]) =>
     setDraft((d) => ({ ...d, [k]: v }));
 
-  const runAnalyze = async (imagePath: string) => {
+  const runAnalyze = async (imagePath: string, shotType: "face" | "full") => {
     setAnalyzing(true);
     try {
-      const res = await analyzeCharacterImage({ imagePath });
+      const res = await analyzeCharacterImage({ imagePath, shotType });
       setDraft((d) => ({
         ...d,
         name: d.name?.trim() ? d.name : (res.name ?? d.name),
@@ -87,13 +87,23 @@ export function CharacterKitSheet({
       const path = await uploadReference(file);
       update("reference_path", path);
       update("reference_url", URL.createObjectURL(file));
-      void runAnalyze(path);
+      void runAnalyze(path, draft.shot_type ?? "face");
     } catch (e: any) {
       toast.error(e?.message || "Upload failed");
     } finally {
       setUploading(false);
     }
   };
+
+  const handleShotTypeChange = (next: "face" | "full") => {
+    update("shot_type", next);
+    if (draft.reference_path) {
+      // Re-analyze with the new framing so the description matches the mode.
+      void runAnalyze(draft.reference_path, next);
+    }
+  };
+
+
 
 
   const handleSave = async () => {
