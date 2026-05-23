@@ -297,6 +297,7 @@ export default function MarketingStudio() {
     location.imagePath,
     subject,
     userNote,
+    brandIdentity,
   ]);
 
   const startGenerate = () => {
