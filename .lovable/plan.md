@@ -1,40 +1,23 @@
 ## Goal
 
-Unify every popover and dropdown across the entire app to match the BrandPickerPopover surface — without touching every call site. Do this by upgrading the two shadcn primitives so the default chrome IS the unified design.
+Finish unifying the pattern by fixing the only two row-style components in the app that still have un-docked hover actions: `BrandsRow` and `CharactersRow`. Everywhere else the pattern already applies (popover/dropdown chrome was upgraded at the primitive level last turn; Library / Director / PromptResultCard already use the unified DropdownMenu).
 
-## Approach
+## Changes
 
-Change the default classes on `PopoverContent`, `DropdownMenuContent`, and `DropdownMenuSubContent` so they ship with:
+### `src/components/marketing/BrandsRow.tsx` and `src/components/marketing/CharactersRow.tsx`
 
-- `rounded-2xl` (was `rounded-md`)
-- `border-border/60`
-- `bg-popover/95 backdrop-blur-xl` (token-themed so light mode still works)
-- `shadow-2xl shadow-black/40` (was `shadow-md`)
-- `p-1.5` defaults for menus so items breathe
+Each currently renders the edit + delete buttons as two separate floating squares stacked top-right. Replace with the picker pattern:
 
-Update `DropdownMenuItem`, `DropdownMenuCheckboxItem`, `DropdownMenuRadioItem`, `DropdownMenuSubTrigger` to:
+- **Floating action chip**: one rounded container (`rounded-lg border border-border/60 bg-[hsl(240_6%_9%)]/95 backdrop-blur px-0.5`) holding both icon buttons inline, absolute top-right, `opacity-0 group-hover:opacity-100`. Same visual chip as in `BrandPickerPopover`.
+- **Pill thumbnail**: keep current avatar size, use `rounded-lg` (brand) and `rounded-full` (character) — already correct, no change.
+- **Active state**: replace the small amber circle+check with an inline `Active` pill badge in the title row (`px-1.5 py-px rounded-full bg-[#F5A524]/15 text-[#F5A524] text-[9px] uppercase tracking-wider font-semibold`) — same treatment as the Hero badge in the picker. This stops the check from competing with the thumbnail and matches the unified language.
+- Keep the outer amber border ring on active to preserve at-a-glance recognition.
 
-- `rounded-lg` instead of `rounded-sm`
-- `px-2.5 py-2` for consistent breathing room
-- `focus:bg-accent/40 focus:text-foreground` (subtler than full accent, matches the brand-picker `hover:bg-white/[0.04]` feel via tokens so light-mode still reads)
+### Out of scope
 
-These edits live in two files:
-
-- `src/components/ui/popover.tsx`
-- `src/components/ui/dropdown-menu.tsx`
-
-## Compatibility
-
-- Existing callers that pass their own className still override (Tailwind merge order is preserved).
-- The four marketing popovers that already pin explicit glass classes (`bg-[hsl(240_6%_7%)]/95`, custom widths) keep working — their classes win.
-- Light mode keeps working because we use `bg-popover` (already token-driven) plus blur/shadow on top.
-
-## Out of scope
-
-- No edits to individual call sites (TopNav, NotificationBell, Library, Director, ResultsPanel, MentionTextarea, etc.). The primitive upgrade flows through.
-- No changes to behavior, no prop changes, no new exports.
-- No changes to the marketing popovers we just shipped.
+- No edits to the picker popovers, primitive Popover/Dropdown chrome, marketing studio, library, director, admin, learn, or any other page.
+- No new components, no prop changes.
 
 ## Verification
 
-After build: open TopNav account dropdown, NotificationBell, ModelPicker dropdowns, Library row menus, and Director popovers — all should share the same rounded glass surface, soft shadow, and item padding.
+After build, on `/marketing`: hover any product or character tile — the two action buttons appear together inside a single floating chip (no row reflow). The active tile shows an inline amber "Active" pill instead of the circle-check.

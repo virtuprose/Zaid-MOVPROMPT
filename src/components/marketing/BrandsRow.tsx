@@ -1,4 +1,4 @@
-import { Building2, Check, Pencil, Plus, Trash2 } from "lucide-react";
+import { Building2, Pencil, Plus, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { BrandKit } from "@/lib/marketing/brandKit";
 
@@ -77,28 +77,30 @@ export function BrandsRow({
                   )}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="truncate text-sm font-medium text-foreground">
-                    {k.name || "Untitled"}
+                  <div className="flex items-center gap-1.5">
+                    <span className="truncate text-sm font-medium text-foreground">
+                      {k.name || "Untitled"}
+                    </span>
+                    {active && (
+                      <span className="shrink-0 px-1.5 py-px rounded-full bg-[#F5A524]/15 text-[#F5A524] text-[9px] uppercase tracking-wider font-semibold leading-none">
+                        Active
+                      </span>
+                    )}
                   </div>
                   <div className="text-[10px] uppercase tracking-wider text-muted-foreground mt-0.5">
                     {k.subject}
                   </div>
                 </div>
-                {active && (
-                  <div className="w-5 h-5 rounded-full bg-[#F5A524] text-black flex items-center justify-center shrink-0">
-                    <Check className="w-3 h-3" strokeWidth={3} />
-                  </div>
-                )}
               </button>
 
-              <div className="absolute top-1.5 right-1.5 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="absolute top-1.5 right-1.5 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity bg-[hsl(240_6%_9%)]/95 backdrop-blur rounded-lg border border-border/60 px-0.5">
                 <button
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation();
                     k.id && onEdit(k.id);
                   }}
-                  className="w-6 h-6 rounded-md bg-background/90 backdrop-blur border border-border/60 text-muted-foreground hover:text-foreground flex items-center justify-center"
+                  className="w-6 h-6 flex items-center justify-center text-muted-foreground hover:text-foreground"
                   aria-label="Edit"
                 >
                   <Pencil className="w-3 h-3" />
@@ -109,7 +111,7 @@ export function BrandsRow({
                     e.stopPropagation();
                     k.id && onDelete(k.id);
                   }}
-                  className="w-6 h-6 rounded-md bg-background/90 backdrop-blur border border-border/60 text-muted-foreground hover:text-destructive flex items-center justify-center"
+                  className="w-6 h-6 flex items-center justify-center text-muted-foreground hover:text-destructive"
                   aria-label="Delete"
                 >
                   <Trash2 className="w-3 h-3" />
