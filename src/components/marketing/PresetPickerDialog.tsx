@@ -368,7 +368,18 @@ export function PresetPickerDialog({
                       : "border-border/40",
                   )}
                 >
-                  {p.image ? (
+                  {p.video ? (
+                    <video
+                      src={p.video}
+                      poster={p.image}
+                      muted
+                      loop
+                      autoPlay
+                      playsInline
+                      preload="metadata"
+                      className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    />
+                  ) : p.image ? (
                     <img
                       src={p.image}
                       alt={p.label}

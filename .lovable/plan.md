@@ -1,77 +1,37 @@
 ## Goal
 
-Make avatar uploads produce **consistent** characters across shots without forcing the user to fill a long form. Tell the model exactly what the photo means (face-only vs full look) and auto-extract the visible details so the user just reviews them.
+Make the 2nd preset card in the open PresetPickerDialog play the uploaded `Cinematic_AI_Director_2.mp4` as a muted autoplay loop instead of showing a still image. All other preset cards stay as images.
 
-## What changes for the user
+## Which preset?
 
-In the existing **Character Kit** sheet, above the upload box, add a **shot type** toggle:
+The picker is rendered from two lists in `MarketingStudio.tsx`:
+- `FORMATS.filter(f => f.category === "commercial")` — Commercial formats
+- `SETTINGS` — Scene settings
 
-```
-What does this photo show?
-( ● ) Face / headshot      ( ○ ) Full look (head-to-toe + outfit)
-```
+Both live in `src/lib/marketingStudio.ts`. I will attach the video to the preset you actually have open. Please confirm in chat which one — e.g. "Commercial formats, 2nd card" or "Settings, 2nd card" — and I'll wire it to that exact entry. If you don't reply I'll default to the **2nd commercial format** preset (the picker most likely to feature a hero video).
 
-After they upload:
-1. A small "Analyzing photo…" spinner runs (~2s).
-2. The **Description** field is auto-filled — e.g. *"Mid-20s woman, athletic build, shoulder-length brown hair, warm tan skin, white tee, light denim jacket, gold hoop earrings."*
-3. User reviews/edits, hits Save. Nothing forced.
+## Steps
 
-That's the entire UX change. No new form fields, no questionnaire.
+1. **Add the asset.** Copy `Cinematic_AI_Director_2.mp4` to `public/presets/cinematic-ai-director.mp4` so it's served as a static URL (`/presets/cinematic-ai-director.mp4`). Videos don't belong in `src/assets` (no bundler benefit, large file).
 
-## How shot type changes the generated video
+2. **Extend the preset type.** In `src/lib/marketingStudio.ts`, add an optional `video?: string` field to the `StudioPreset` type alongside the existing `image`.
 
-| Shot type | What the prompt locks |
-|---|---|
-| **Face / headshot** | Face matches reference photo. Body/wardrobe come from the Description text (or stay "natural, consistent across shots" if blank). Lets the user reuse one face with different outfits per ad. |
-| **Full look** | Face + build + wardrobe + accessories all locked from the reference. Used as-is across every shot. Best for brand mascots, founders, fashion. |
+3. **Render video when present.** In `src/components/marketing/PresetPickerDialog.tsx` around line 371, change the image branch to:
+   - if `p.video` → render a `<video src={p.video} muted loop autoPlay playsInline preload="metadata" poster={p.image}>` with the same `absolute inset-0 w-full h-full object-cover` classes and group-hover scale transition
+   - else if `p.image` → existing `<img>`
+   - else → existing emoji fallback
+   The poster falls back to `p.image` so the card still shows something instantly while the video loads.
 
-This is enforced in the **CHARACTER LOCK** block of `composeStudioPrompt` and in the `write-ad-scene` system prompt.
+4. **Attach the video to the chosen preset.** Set `video: "/presets/cinematic-ai-director.mp4"` on the single confirmed preset entry. Leave its `image` in place to act as the poster frame.
 
-## Technical details
+## Out of scope
 
-### 1. DB migration — add `shot_type` to `character_kits`
-```sql
-ALTER TABLE public.character_kits
-  ADD COLUMN shot_type text NOT NULL DEFAULT 'face';
--- allowed values enforced in app: 'face' | 'full'
-```
-No RLS changes (existing policies cover it).
-
-### 2. New edge function: `describe-character`
-- Input: `{ image_url: string, shot_type: 'face' | 'full' }`
-- Calls **Lovable AI** with `google/gemini-3.1-pro-preview` (vision).
-- System prompt asks for a single 1–2 sentence physical description optimized for video-prompt continuity. For `shot_type='face'` it focuses on face/hair/skin/age; for `'full'` it adds build, wardrobe, footwear, accessories.
-- Returns `{ description: string }`.
-- `verify_jwt = true` (uses caller's session), CORS enabled, Zod validation.
-
-### 3. Wire into `CharacterKitSheet.tsx`
-- Add `shot_type` to draft state + radio toggle UI above the upload area.
-- In the existing `uploadReference` flow: after upload succeeds, set a `describing` flag, call `describe-character` with the new `reference_url`, and `update("description", result.description)`. Show the existing "Analyzing photo…" spinner area (it's already partially scaffolded with the "Filled by AI" hint at line 243).
-- Don't overwrite a description the user already typed — only auto-fill when the field is empty.
-
-### 4. Update `useCharacterKit` hook
-- Include `shot_type` in the row shape, save path, and the `CharacterContext` returned to the studio.
-
-### 5. Prompt composition (`src/lib/marketingStudio.ts`)
-- Extend `CharacterContext` with `shot_type`.
-- In the CHARACTER LOCK block (around line 702):
-  - `shot_type='face'` → `"Face matches reference image. Wardrobe and styling: {description or 'natural, consistent across all shots'}."`
-  - `shot_type='full'` → `"Face, build, wardrobe, and accessories all match reference image exactly. Keep identical across every shot."`
-
-### 6. Edge function `write-ad-scene`
-- Add `shot_type` to each character in the payload.
-- Update the system prompt's character section to mirror the same two-mode behavior so the auto-written describe-box stays aligned with the final lock.
-
-## Out of scope (deliberately deferred)
-- Multi-photo references per character (face + outfit separately)
-- Per-shot wardrobe changes inside one storyboard
-- Body-shape / vibe chips — the auto-extracted description already covers this in natural language
+- No changes to preset selection logic, prompt composition, or the picker's other modes (city / image).
+- No autoplay-on-hover / pause-on-blur logic — every video card just loops quietly. We can add that later if multiple cards end up using video.
+- No new DB columns or edge function changes.
 
 ## Files touched
-- `supabase/migrations/<new>.sql` — add `shot_type` column
-- `supabase/functions/describe-character/index.ts` — new
-- `supabase/functions/write-ad-scene/index.ts` — pass through `shot_type`
-- `src/lib/marketing/characterKit.ts` — extend hook
-- `src/components/marketing/CharacterKitSheet.tsx` — toggle + auto-describe call
-- `src/lib/marketingStudio.ts` — CHARACTER LOCK logic
-- `src/lib/director/api.ts` — type for `shot_type`
+
+- `public/presets/cinematic-ai-director.mp4` (new — copied from upload)
+- `src/lib/marketingStudio.ts` (type + one preset entry)
+- `src/components/marketing/PresetPickerDialog.tsx` (video branch in the card render)
