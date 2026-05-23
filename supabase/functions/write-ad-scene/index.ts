@@ -76,6 +76,8 @@ type Brief = {
   location?: { place?: string; hasImage?: boolean } | null;
   userNote?: string;
   brandIdentity?: BrandIdentityLite | null;
+  /** Up to ~3 prompts from the user's previously-liked ads to bias style. */
+  likedExamples?: string[];
 };
 
 function buildUserContent(b: Brief): string {
