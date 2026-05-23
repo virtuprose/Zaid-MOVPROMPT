@@ -53,6 +53,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { ConfirmRightsDialog } from "@/components/director/ConfirmRightsDialog";
 import { PresetPickerDialog } from "@/components/marketing/PresetPickerDialog";
 import { AccuracyBoostDialog } from "@/components/marketing/AccuracyBoostDialog";
+import { DescribeAdMic } from "@/components/marketing/DescribeAdMic";
 import { evaluateAccuracyRisk, shortTip, type AccuracyRiskResult } from "@/lib/marketing/accuracyRisk";
 import {
   FORMATS,
