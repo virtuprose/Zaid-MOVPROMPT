@@ -139,6 +139,51 @@ export type Database = {
           },
         ]
       }
+      brand_identities: {
+        Row: {
+          avoid_colors: Json | null
+          created_at: string
+          font_hint: string | null
+          id: string
+          logo_path: string | null
+          mood_notes: string | null
+          primary_color: string | null
+          supporting_colors: Json | null
+          tagline: string | null
+          typography_vibe: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avoid_colors?: Json | null
+          created_at?: string
+          font_hint?: string | null
+          id?: string
+          logo_path?: string | null
+          mood_notes?: string | null
+          primary_color?: string | null
+          supporting_colors?: Json | null
+          tagline?: string | null
+          typography_vibe?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avoid_colors?: Json | null
+          created_at?: string
+          font_hint?: string | null
+          id?: string
+          logo_path?: string | null
+          mood_notes?: string | null
+          primary_color?: string | null
+          supporting_colors?: Json | null
+          tagline?: string | null
+          typography_vibe?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       brand_kit_selection: {
         Row: {
           brand_kit_id: string | null

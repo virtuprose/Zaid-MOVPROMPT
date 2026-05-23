@@ -532,6 +532,16 @@ export type CharacterContext = {
   hasImage?: boolean;
 };
 
+export type BrandIdentityContext = {
+  primary_color?: string | null;
+  supporting_colors?: string[] | null;
+  avoid_colors?: string[] | null;
+  typography_vibe?: string | null;
+  font_hint?: string | null;
+  mood_notes?: string | null;
+  tagline?: string | null;
+};
+
 export type StudioBrief = {
   subject: Subject;
   master: string;
@@ -560,6 +570,8 @@ export type StudioBrief = {
   imageRefs?: Array<"brand" | "character" | "location">;
   /** Free-text adaptation layer — preset stays the locked structure, this tweaks tone/details. */
   userNote?: string;
+  /** Brand identity (palette, typography vibe, mood) applied to lighting/props/text. */
+  brandIdentity?: BrandIdentityContext | null;
 };
 
 const find = (list: StudioPreset[], id?: string) =>
@@ -640,6 +652,28 @@ function characterLineAt(c: CharacterContext, refs: StudioBrief["imageRefs"], oc
   return bits.join(" — ");
 }
 
+export function brandIdentityLine(b?: BrandIdentityContext | null): string | null {
+  if (!b) return null;
+  const bits: string[] = [];
+  if (b.primary_color) bits.push(`primary ${b.primary_color}`);
+  if (b.supporting_colors && b.supporting_colors.length > 0) {
+    bits.push(`supporting ${b.supporting_colors.join(" / ")}`);
+  }
+  if (b.avoid_colors && b.avoid_colors.length > 0) {
+    bits.push(`AVOID: ${b.avoid_colors.join(", ")}`);
+  }
+  if (b.typography_vibe) {
+    const label = b.typography_vibe.replace(/-/g, " ");
+    bits.push(`typography vibe: ${label}${b.font_hint ? ` (${b.font_hint})` : ""}`);
+  } else if (b.font_hint) {
+    bits.push(`font hint: ${b.font_hint}`);
+  }
+  if (b.mood_notes) bits.push(`mood: ${b.mood_notes}`);
+  if (b.tagline) bits.push(`tagline: "${b.tagline}"`);
+  if (bits.length === 0) return null;
+  return `BRAND LOCK — ${bits.join("; ")}. Apply the palette to lighting, props, wardrobe and background tones. Match the typography vibe for any on-screen text. Honor the mood. Never use the AVOID colors. Do NOT recolor the real product itself — the Product Lock above always wins on the product's own appearance.`;
+}
+
 export function composeStudioPrompt(brief: StudioBrief): string {
   const format = find(FORMATS, brief.formatId);
   const setting = find(SETTINGS, brief.settingId);
@@ -647,6 +681,8 @@ export function composeStudioPrompt(brief: StudioBrief): string {
     brief.subject === "app"
       ? "Subject: a mobile app — feature its UI prominently on a phone screen held by the presenter."
       : "Subject: a physical product — feature it cleanly in-hand or on a hero surface.";
+
+
 
   const brands = brief.brands && brief.brands.length > 0
     ? brief.brands
@@ -676,6 +712,7 @@ export function composeStudioPrompt(brief: StudioBrief): string {
     "Cinematic 9:16 social ad, 5 seconds, native audio.",
     subjectLine,
     ...brandLines,
+    brandIdentityLine(brief.brandIdentity),
     ...characterLines,
     format?.fragment ?? (brief.customFormat?.trim() ? `Format: ${brief.customFormat.trim()}` : null),
     setting?.fragment ?? (brief.customSetting?.trim() ? `Setting: ${brief.customSetting.trim()}` : null),

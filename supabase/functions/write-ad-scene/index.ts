@@ -36,6 +36,7 @@ Rules:
 - If an avatar/character is given, refer to them by their name and treat them as the on-camera person.
 - If multiple products or characters are provided, the first is the hero/lead; others are supporting and must share the frame without stealing focus from the hero/lead.
 - Treat Format and Setting as LOCKED structure — never override their framing, category or core beat. If an "Additional direction" note is provided, treat it as an adaptation layer that adjusts tone, mood, palette or small details on top of the preset.
+- If a BRAND IDENTITY block is provided, weave its palette into the lighting, wardrobe, props and background tones, honor the mood, match the typography vibe for any on-screen text, and avoid the listed colors. Never recolor the product itself away from its PRODUCT LOCK.
 - Don't write marketing taglines. Write what the camera sees and what the person does.
 - Stay under 90 words. Output only the scene text — no preamble, no quotes.`;
 
@@ -52,6 +53,16 @@ type BrandLite = {
 };
 type CharLite = { name?: string; role?: string; description?: string };
 
+type BrandIdentityLite = {
+  primary_color?: string | null;
+  supporting_colors?: string[] | null;
+  avoid_colors?: string[] | null;
+  typography_vibe?: string | null;
+  font_hint?: string | null;
+  mood_notes?: string | null;
+  tagline?: string | null;
+};
+
 type Brief = {
   subject?: "product" | "app";
   format?: { label?: string; fragment?: string; custom?: string };
@@ -62,6 +73,7 @@ type Brief = {
   characters?: CharLite[];
   location?: { place?: string; hasImage?: boolean } | null;
   userNote?: string;
+  brandIdentity?: BrandIdentityLite | null;
 };
 
 function buildUserContent(b: Brief): string {
@@ -106,6 +118,19 @@ function buildUserContent(b: Brief): string {
   }
   if (b.location?.hasImage) {
     lines.push(`A reference image of the location is attached and will be passed to the video model — describe the scene so it matches the look, framing, lighting and palette of that reference.`);
+  }
+  const bi = b.brandIdentity;
+  if (bi) {
+    const parts: string[] = [];
+    if (bi.primary_color) parts.push(`primary ${bi.primary_color}`);
+    if (bi.supporting_colors && bi.supporting_colors.length > 0) parts.push(`supporting ${bi.supporting_colors.join(" / ")}`);
+    if (bi.avoid_colors && bi.avoid_colors.length > 0) parts.push(`AVOID ${bi.avoid_colors.join(", ")}`);
+    if (bi.typography_vibe) parts.push(`typography vibe ${bi.typography_vibe}${bi.font_hint ? ` (${bi.font_hint})` : ""}`);
+    if (bi.mood_notes) parts.push(`mood: ${bi.mood_notes}`);
+    if (bi.tagline) parts.push(`brand tagline: "${bi.tagline}"`);
+    if (parts.length > 0) {
+      lines.push(`BRAND IDENTITY — ${parts.join("; ")}. Apply this palette and mood to lighting, props, wardrobe and background tones. Match the typography vibe for any on-screen text. Never use AVOID colors. Keep the product's own appearance accurate to its PRODUCT LOCK.`);
+    }
   }
   const note = b.userNote?.trim();
   if (note) {

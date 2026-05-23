@@ -60,6 +60,8 @@ import {
   type StudioPreset,
 } from "@/lib/marketingStudio";
 import { useBrandKit, EMPTY_LOCATION, type LocationInput } from "@/lib/marketing/brandKit";
+import { useBrandIdentity, hasBrandIdentity } from "@/lib/marketing/brandIdentity";
+import { BrandIdentitySheet } from "@/components/marketing/BrandIdentitySheet";
 import { BrandKitSheet } from "@/components/marketing/BrandKitSheet";
 import { BrandPickerPopover } from "@/components/marketing/BrandPickerPopover";
 import { CharacterPickerPopover } from "@/components/marketing/CharacterPickerPopover";
@@ -113,6 +115,8 @@ export default function MarketingStudio() {
 
   const { kits, activeKits: brandKits, activeIds: brandActiveIds, toggleActive: toggleBrandActive, deleteKit: deleteBrand, reload: reloadBrands } = useBrandKit();
   const brandKit = brandKits[0] ?? null;
+  const { identity: brandIdentity } = useBrandIdentity();
+  const [brandIdentityOpen, setBrandIdentityOpen] = useState(false);
   const {
     kits: characterKits,
     activeKits: characterActiveKits,
@@ -257,6 +261,7 @@ export default function MarketingStudio() {
               ? { place: location.place || undefined, hasImage: !!location.imagePath }
               : null,
           userNote: userNote.trim() || undefined,
+          brandIdentity: brandIdentity ?? undefined,
         },
         controller.signal,
       )
@@ -292,6 +297,7 @@ export default function MarketingStudio() {
     location.imagePath,
     subject,
     userNote,
+    brandIdentity,
   ]);
 
   const startGenerate = () => {
@@ -353,6 +359,7 @@ export default function MarketingStudio() {
         })),
         imageRefs,
         userNote: userNote.trim() || undefined,
+        brandIdentity: brandIdentity ?? undefined,
       });
       // Provider routing:
       //   0 refs → seedance-v1-pro (text-only, fast/cheap)
@@ -801,6 +808,25 @@ export default function MarketingStudio() {
 
 
               <RenderSettingsPopover value={renderSettings} onChange={setRenderSettings} />
+              <button
+                type="button"
+                onClick={() => setBrandIdentityOpen(true)}
+                className={cn(
+                  "inline-flex items-center gap-1.5 h-9 px-3 rounded-full border text-xs transition-colors",
+                  hasBrandIdentity(brandIdentity)
+                    ? "border-[#F5A524]/50 bg-[#F5A524]/10 text-foreground"
+                    : "border-dashed border-border/60 bg-secondary/30 text-muted-foreground hover:text-foreground hover:border-[#F5A524]/50",
+                )}
+                title="Brand kit: logo, colors, typography, mood"
+              >
+                {brandIdentity?.primary_color && (
+                  <span className="w-3 h-3 rounded-full border border-border/40" style={{ background: brandIdentity.primary_color }} />
+                )}
+                <span>Brand kit</span>
+                {hasBrandIdentity(brandIdentity) && (
+                  <span className="text-[9px] uppercase tracking-wider text-[#F5A524] font-semibold">On</span>
+                )}
+              </button>
 
               <div className="ml-auto flex items-center gap-2">
                 {(() => {
@@ -1006,6 +1032,9 @@ export default function MarketingStudio() {
           kitId={brandEditId}
           onSaved={() => { void reloadBrands(); }}
         />
+
+        <BrandIdentitySheet open={brandIdentityOpen} onOpenChange={setBrandIdentityOpen} />
+
 
 
         <ConfirmRightsDialog
