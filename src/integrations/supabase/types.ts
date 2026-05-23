@@ -142,11 +142,17 @@ export type Database = {
       brand_identities: {
         Row: {
           avoid_colors: Json | null
+          brand_voice: string | null
           created_at: string
+          finish_vibe: string | null
           font_hint: string | null
           id: string
+          industry: string | null
+          lighting_style: string | null
           logo_path: string | null
+          logo_treatment: string | null
           mood_notes: string | null
+          pacing: string | null
           primary_color: string | null
           supporting_colors: Json | null
           tagline: string | null
@@ -156,11 +162,17 @@ export type Database = {
         }
         Insert: {
           avoid_colors?: Json | null
+          brand_voice?: string | null
           created_at?: string
+          finish_vibe?: string | null
           font_hint?: string | null
           id?: string
+          industry?: string | null
+          lighting_style?: string | null
           logo_path?: string | null
+          logo_treatment?: string | null
           mood_notes?: string | null
+          pacing?: string | null
           primary_color?: string | null
           supporting_colors?: Json | null
           tagline?: string | null
@@ -170,11 +182,17 @@ export type Database = {
         }
         Update: {
           avoid_colors?: Json | null
+          brand_voice?: string | null
           created_at?: string
+          finish_vibe?: string | null
           font_hint?: string | null
           id?: string
+          industry?: string | null
+          lighting_style?: string | null
           logo_path?: string | null
+          logo_treatment?: string | null
           mood_notes?: string | null
+          pacing?: string | null
           primary_color?: string | null
           supporting_colors?: Json | null
           tagline?: string | null
