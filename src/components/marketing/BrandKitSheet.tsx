@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-import { useBrandKit, EMPTY_BRAND_KIT, analyzeBrandImage, type BrandKit } from "@/lib/marketing/brandKit";
+import { useBrandKit, EMPTY_BRAND_KIT, analyzeBrandImage, MAX_BRAND_ANGLES, type BrandKit, type ProductReference } from "@/lib/marketing/brandKit";
 import type { Subject } from "@/lib/marketingStudio";
 import { ProductFactSheet } from "./ProductFactSheet";
 
@@ -28,7 +28,7 @@ export function BrandKitSheet({
   /** When set, edit this kit. When null/undefined, create a new one. */
   kitId?: string | null;
 }) {
-  const { kits, saveKit, deleteKit, uploadLogo } = useBrandKit();
+  const { kits, saveKit, deleteKit, uploadLogo, addReference, updateReferenceLabel, removeReference } = useBrandKit();
   const [draft, setDraft] = useState<BrandKit>(EMPTY_BRAND_KIT);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
