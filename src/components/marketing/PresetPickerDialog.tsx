@@ -436,7 +436,7 @@ export function PresetPickerDialog({
                 }}
                 className={cn(
                   "group aspect-[3/4] rounded-2xl border-2 border-dashed bg-muted/10 flex flex-col items-center justify-center gap-2 transition-all p-4 text-center",
-                  "hover:border-[#F5A524]/70 hover:bg-[#F5A524]/5 hover:scale-[1.02]",
+                  "hover:border-[#F5A524]/70 hover:bg-[#F5A524]/5",
                   draftCustom && !draftId
                     ? "border-[#F5A524] bg-[#F5A524]/5"
                     : "border-border/50",
