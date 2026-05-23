@@ -439,14 +439,11 @@ export default function MarketingStudio() {
       });
       // Provider routing:
       //   0 refs → seedance-v1-pro (text-only, fast/cheap)
-      //   1 ref  → seedance-2.0 image-to-video (animate single still + native audio)
-      //   2+ refs → seedance-2.0 reference-to-video (multi-ref identity lock, up to 9 images)
+      //   1+ refs → seedance-2.0 reference-to-video (identity lock across the clip;
+      //             avoids using the product photo as the literal first frame, which
+      //             produced a visible "product still" flash at the start of the video)
       const provider =
-        referenceImages.length === 0
-          ? "seedance-v1-pro"
-          : referenceImages.length === 1
-            ? "seedance-2.0"
-            : "seedance-2.0-ref";
+        referenceImages.length === 0 ? "seedance-v1-pro" : "seedance-2.0-ref";
       const job = await submitVideoJob(
         prompt,
         provider,
