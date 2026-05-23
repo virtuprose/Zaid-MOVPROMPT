@@ -1033,6 +1033,9 @@ export default function MarketingStudio() {
           onSaved={() => { void reloadBrands(); }}
         />
 
+        <BrandIdentitySheet open={brandIdentityOpen} onOpenChange={setBrandIdentityOpen} />
+
+
 
         <ConfirmRightsDialog
           open={confirmOpen}
