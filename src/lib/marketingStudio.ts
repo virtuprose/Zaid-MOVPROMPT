@@ -101,6 +101,15 @@ export const FORMATS: StudioPreset[] = [
       "Hyper-realistic 3D product commercial, 8k, high-speed phantom camera at 1000fps slow-motion, cinematic studio lighting. Sequence 1 (Texture): extreme macro close-up panning over the product, hyper-detailed surface textures (condensation, finish, micro-detail). Sequence 2 (Kinetic Ingredients): zero-gravity explosion of raw ingredients and key props colliding mid-air in crisp photorealistic detail against a clean color backdrop. Sequence 3 (Fluid Dynamics): massive sweeping high-speed liquid splash erupts and spirals around the product, camera zooms rapidly through the center of the splash. Sequence 4 (The Reveal): wide hero shot of the product in its final packaging, perfectly lit, suspended center-frame, surrounded by slowly falling ingredients and props. Premium, vibrant, million-dollar production value",
   },
   {
+    id: "tactile-stopmotion",
+    label: "Tactile Stop-Motion",
+    description: "Handcrafted claymation/papercraft diorama, 4–6 sequences ending in a reveal",
+    category: "commercial",
+    image: u("photo-1559191669-e1b3a2c0a3ab"),
+    fragment:
+      "Premium tactile stop-motion commercial, 8k resolution, miniature set design, tilt-shift macro photography, warm studio micro-lighting, 12fps staccato animation style, hyper-detailed handmade textures (clay, construction paper, felt, balsa wood, fabric). Sequence 1 (The Miniature Stage): macro shot of a handcrafted diorama made of pastel seamless paper and textured felt, miniature studio lights flicker on, environment sets the mood for the product. Sequence 2 (Frame-by-Frame Assembly): the product builds itself in a snappy frame-by-frame sequence, individual pieces of smooth polymer clay and laser-cut wood slide, pop and stack together with visible charming imperfection. Sequence 3 (Material Morphing): key ingredients introduced through tactile morphing — a ball of clay rolls in and squashes into an ingredient shape, colliding with another and bursting into a shower of paper confetti and wool tufts. Sequence 4 (Playful Interaction): the product scoots across the felt surface leaving a physical trail, a miniature invisible hand visibly adjusts its position in classic stop-motion stutter. Sequence 5 (Tactile Macro): extreme macro tilt-shift close-up on the product's surface, focus on paper grain, clay thumbprints and stray felt fibers, highlighting the handmade artisanal quality. Sequence 6 (The Diorama Reveal): wide hero pull-back to the completed product perfectly framed in its miniature handmade set, crafted props suspended on visible wires in the background. Premium, artisanal, highly tactile production value.",
+  },
+  {
     id: "hero-shot",
     label: "Hero Shot",
     description: "Single dramatic product reveal",
