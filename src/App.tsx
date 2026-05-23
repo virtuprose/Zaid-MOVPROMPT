@@ -53,6 +53,8 @@ import Referrals from "./pages/Referrals.tsx";
 import Onboarding from "./pages/Onboarding.tsx";
 import Director from "./pages/Director.tsx";
 import MarketingStudio from "./pages/MarketingStudio.tsx";
+import { MarketingStudioSkeleton } from "@/components/marketing/MarketingStudioSkeleton";
+
 import AccountSettings from "./pages/account/AccountSettings.tsx";
 import AccountBilling from "./pages/account/AccountBilling.tsx";
 import AccountPreferences from "./pages/account/AccountPreferences.tsx";
@@ -85,7 +87,7 @@ const AppRoutes = () => {
         <Route path="/onboarding" element={<AuthGuard><Onboarding /></AuthGuard>} />
         <Route path="/director" element={<AuthGuard><Director /></AuthGuard>} />
         <Route path="/director/:sessionId" element={<AuthGuard><Director /></AuthGuard>} />
-        <Route path="/marketing" element={<AuthGuard><MarketingStudio /></AuthGuard>} />
+        <Route path="/marketing" element={<AuthGuard fallback={<MarketingStudioSkeleton />}><MarketingStudio /></AuthGuard>} />
         <Route path="/account/settings" element={<AuthGuard><AccountSettings /></AuthGuard>} />
         <Route path="/account/billing" element={<AuthGuard><AccountBilling /></AuthGuard>} />
         <Route path="/account/preferences" element={<AuthGuard><AccountPreferences /></AuthGuard>} />

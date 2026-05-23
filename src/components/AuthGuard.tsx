@@ -3,13 +3,16 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Navigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
+import { TopNav } from "@/components/TopNav";
 
 interface AuthGuardProps {
   children: React.ReactNode;
   requireAdmin?: boolean;
+  fallback?: React.ReactNode;
 }
 
-export const AuthGuard = ({ children, requireAdmin = false }: AuthGuardProps) => {
+
+export const AuthGuard = ({ children, requireAdmin = false, fallback }: AuthGuardProps) => {
   const { user, loading } = useAuth();
   const [roleResolved, setRoleResolved] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -55,12 +58,24 @@ export const AuthGuard = ({ children, requireAdmin = false }: AuthGuardProps) =>
 
   // Still loading auth or role check
   if (loading || (requireAdmin && !roleResolved)) {
+    if (fallback) {
+      return (
+        <>
+          <TopNav />
+          {fallback}
+        </>
+      );
+    }
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="w-6 h-6 animate-spin text-primary" />
+      <div className="min-h-screen bg-background flex flex-col">
+        <TopNav />
+        <div className="flex-1 flex items-center justify-center">
+          <Loader2 className="w-6 h-6 animate-spin text-primary" />
+        </div>
       </div>
     );
   }
+
 
   if (!user) {
     return <Navigate to={requireAdmin ? "/admin/login" : "/auth"} replace />;
