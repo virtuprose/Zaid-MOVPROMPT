@@ -121,15 +121,6 @@ export const FORMATS: StudioPreset[] = [
       "Elite $1M-production Hero Shot reveal — epic, iconic, monolithic product reveal in the spirit of luxury car or flagship tech launches. Style directive: cinematic epic reveal, 8k photorealistic, anamorphic lens aesthetic, ultra-slow motion (1000fps+), dramatic high-contrast lighting (volumetric rim light, lens flares, God rays), intense atmosphere (swirling smoke, particle dust), blockbuster CGI physics. Treat the product as a monumental object or legendary character. Build 4–6 sequences ALWAYS ending with The Ultimate Hero Reveal: (1) The Tease / Build-up — tight macro on a mysterious pristine detail, slow rotation, only hints of shape revealed by sweeping dramatic rim lighting in moody atmospheric setting (swirling smoke, deep shadows); (2) Kinetic Power Introduction — ultra-slow-motion tracking shot, a high-speed blast of an element (water droplets, fire, lightning, particle dust) is unleashed and barely misses the pristine surface, emphasizing durability and power; (3) Monolithic Scale — extreme low-angle tracking shot sweeping upwards, the product looms over the camera like a massive monolithic monument, volumetric light and God rays pierce the atmosphere highlighting premium craftsmanship and colossal scale; (4) The Precision Detail (optional) — fast-paced intense macro montage, rapid-fire cuts of textures, logo, materials snapping together with mechanical precision under sharp brilliant light; (5) The Action Burst (optional) — dynamic bullet-time tracking move around the product as it performs an action (opening, activating), debris and particles fly around it frozen in slow motion; (6) The Ultimate Hero Reveal — final iconic wide shot, product perfectly centered bathed in triumphant golden or brilliantly white God lighting, camera slowly pulls back revealing the product standing solitary and powerful within an epic breathtaking landscape (cliffside at sunset, futuristic vault). Legendary, undisputed production value.",
   },
   {
-    id: "demo",
-    label: "Demo",
-    description: "Product in action, results-focused",
-    category: "commercial",
-    image: u("photo-1556761175-5973dc0f32e7"),
-    fragment:
-      "Demo format: clean cinematic shots of the product performing its core action, crisp sound design on each step",
-  },
-  {
     id: "lifestyle",
     label: "Lifestyle",
     description: "Product woven into daily life",
@@ -148,33 +139,6 @@ export const FORMATS: StudioPreset[] = [
     video: "/presets/before-after.mp4",
     fragment:
       "Elite $1M-production before/after transformation commercial — cinematic 8k photorealistic storytelling, high-contrast emotional shift, dramatic transition effects, precise macro and wide-angle cinematography. CRITICAL TIMING RULE: split the total duration exactly in half. Sequences 1–3 (Problem + Catalyst + Process) occupy the FIRST 50% of the clip. The Reveal Transition lands precisely at the MIDPOINT (50% mark) of the video — NOT in the final second. Sequences 5–6 (Confident After + Transformation Hero) occupy the FINAL 50% so the 'After' state holds for half the duration. Build 4–6 sequences: (1) The Problem State — establish the negative 'before' with dim, cool or uneven lighting (macro of aged/cracked/dirty surface, frustrated person in a cluttered room); (2) The Catalyst (optional) — high-speed macro close-up of the product being applied or activated, the exact moment interaction begins (first drop of serum hitting the surface, power button pressed); (3) The Process In Motion — fast-paced montage with dynamic tracking shots or time-lapse showing the product actively working (dirt lifting, fabric smoothing, space de-cluttering); (4) The Reveal Transition — executed at the EXACT MIDPOINT of the video (not the end), describe the exact visual mechanism (vertical wipe left-to-right erasing the dullness, seamless morph, or camera pan from 'before' into 'after'), lighting shifts from dim to radiant and warm; (5) The Confident After — medium shot or close-up of the subject looking satisfied/happy, highlight the new quality (glow of skin, sheen of surface, calm of space), occupying the third quarter of the clip; (6) The Transformation Hero — held for the entire final quarter ending on an iconic wide shot or split-screen with 'Before' left and 'After' right, clean graphic demarcation, perfectly framed and lit, undeniable premium transformation.",
-  },
-  {
-    id: "documentary",
-    label: "Documentary",
-    description: "Narrative-driven brand story",
-    category: "commercial",
-    image: u("photo-1522202176988-66273c2fd55f"),
-    fragment:
-      "Documentary style, observational handheld camera, voiceover narration, real moments around the product or its makers",
-  },
-  {
-    id: "founder-talk",
-    label: "Founder Talk",
-    description: "Founder direct-to-camera",
-    category: "commercial",
-    image: u("photo-1560250097-0b93528c311a"),
-    fragment:
-      "Founder direct-to-camera, soft studio light, sincere mid-shot, the founder explains the why behind the product",
-  },
-  {
-    id: "problem-solution",
-    label: "Problem → Solution",
-    description: "Pain point, then relief",
-    category: "commercial",
-    image: u("photo-1454165804606-c3d57bc86b40"),
-    fragment:
-      "Problem-solution arc: open on a relatable frustration, beat of tension, then product solves it cleanly with a happy payoff",
   },
   {
     id: "day-in-life",
