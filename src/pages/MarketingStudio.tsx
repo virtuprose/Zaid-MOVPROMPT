@@ -252,6 +252,9 @@ export default function MarketingStudio() {
             materials: b.materials,
             hero_colors: b.hero_colors,
             packaging: b.packaging,
+            angle_labels: (b.references ?? [])
+              .filter((r) => r.kind === "angle")
+              .map((r) => r.label || "angle"),
           })),
           characters: characterActiveKits.map((c) => ({
             name: c.name,
@@ -321,9 +324,15 @@ export default function MarketingStudio() {
     try {
       // Build the ordered ref list first so we can tag @ImageN in the prompt
       // in the exact order the URLs are sent to Seedance reference-to-video.
-      const refSlots: Array<{ slot: "brand" | "character" | "location"; url: string }> = [];
+      const refSlots: Array<{ slot: "brand" | "brand-angle" | "character" | "location"; url: string }> = [];
       for (const b of brandKits) {
         if (b.logo_url) refSlots.push({ slot: "brand", url: b.logo_url });
+        // Push this brand's angle refs immediately after its hero ref so
+        // angle occurrences line up by brand order in the prompt composer.
+        const angleRefs = (b.references ?? []).filter((r) => r.kind === "angle" && r.image_url);
+        for (const r of angleRefs) {
+          refSlots.push({ slot: "brand-angle", url: r.image_url! });
+        }
       }
       for (const c of characterActiveKits) {
         if (c.reference_url) refSlots.push({ slot: "character", url: c.reference_url });
@@ -350,6 +359,9 @@ export default function MarketingStudio() {
           materials: b.materials,
           hero_colors: b.hero_colors,
           packaging: b.packaging,
+          angle_labels: (b.references ?? [])
+            .filter((r) => r.kind === "angle")
+            .map((r) => r.label || "angle"),
         })),
         location: {
           place: location.place || undefined,

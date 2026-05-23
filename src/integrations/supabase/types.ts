@@ -773,6 +773,39 @@ export type Database = {
         }
         Relationships: []
       }
+      product_references: {
+        Row: {
+          brand_kit_id: string
+          created_at: string
+          id: string
+          image_path: string
+          kind: string
+          label: string | null
+          position: number
+          user_id: string
+        }
+        Insert: {
+          brand_kit_id: string
+          created_at?: string
+          id?: string
+          image_path: string
+          kind?: string
+          label?: string | null
+          position?: number
+          user_id: string
+        }
+        Update: {
+          brand_kit_id?: string
+          created_at?: string
+          id?: string
+          image_path?: string
+          kind?: string
+          label?: string | null
+          position?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           admin_notes: string | null

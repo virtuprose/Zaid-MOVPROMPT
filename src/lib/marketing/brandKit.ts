@@ -3,6 +3,19 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import type { Subject } from "@/lib/marketingStudio";
 
+export type ProductReferenceKind = "angle" | "spec_sheet";
+
+export type ProductReference = {
+  id: string;
+  brand_kit_id: string;
+  kind: ProductReferenceKind;
+  image_path: string;
+  /** Signed URL for previewing (not persisted). */
+  image_url?: string | null;
+  label: string | null;
+  position: number;
+};
+
 export type BrandKit = {
   id?: string;
   subject: Subject;
@@ -20,6 +33,8 @@ export type BrandKit = {
   materials: string | null;
   hero_colors: string[] | null;
   packaging: string | null;
+  /** Extra product references (angle photos + optional spec sheet). */
+  references?: ProductReference[];
   updated_at?: string;
 };
 
@@ -37,7 +52,10 @@ export const EMPTY_BRAND_KIT: BrandKit = {
   materials: null,
   hero_colors: null,
   packaging: null,
+  references: [],
 };
+
+export const MAX_BRAND_ANGLES = 5;
 
 export const MAX_BRANDS = 2;
 
@@ -63,7 +81,7 @@ export function useBrandKit() {
       return;
     }
     setLoading(true);
-    const [{ data: rows }, { data: sel }] = await Promise.all([
+    const [{ data: rows }, { data: sel }, { data: refRows }] = await Promise.all([
       supabase
         .from("brand_kits")
         .select("id,subject,name,description,url,tagline,audience,logo_path,category,visual_parts,materials,hero_colors,packaging,updated_at")
@@ -74,10 +92,24 @@ export function useBrandKit() {
         .select("brand_kit_id,position")
         .eq("user_id", user.id)
         .order("position", { ascending: true }),
+      supabase
+        .from("product_references")
+        .select("id,brand_kit_id,kind,image_path,label,position")
+        .eq("user_id", user.id)
+        .order("position", { ascending: true }),
     ]);
     const list = (rows ?? []) as BrandKit[];
+    const refsByKit: Record<string, ProductReference[]> = {};
+    for (const r of (refRows ?? []) as ProductReference[]) {
+      const signedUrl = await signLogo(r.image_path);
+      (refsByKit[r.brand_kit_id] ||= []).push({ ...r, image_url: signedUrl });
+    }
     const signed = await Promise.all(
-      list.map(async (k) => ({ ...k, logo_url: await signLogo(k.logo_path) })),
+      list.map(async (k) => ({
+        ...k,
+        logo_url: await signLogo(k.logo_path),
+        references: k.id ? refsByKit[k.id] ?? [] : [],
+      })),
     );
     setKits(signed);
     const ids = (sel ?? [])
@@ -251,6 +283,69 @@ export function useBrandKit() {
     [user],
   );
 
+  const addReference = useCallback(
+    async (
+      brand_kit_id: string,
+      file: File,
+      kind: ProductReferenceKind,
+      label: string | null,
+    ): Promise<ProductReference> => {
+      if (!user) throw new Error("Not signed in");
+      const ext = file.name.split(".").pop() || "png";
+      const path = `marketing/${user.id}/brand-references/${crypto.randomUUID()}.${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from("director-uploads")
+        .upload(path, file, { upsert: false });
+      if (upErr) throw upErr;
+      const existing = kits.find((k) => k.id === brand_kit_id)?.references ?? [];
+      const position = existing.length;
+      const { data, error } = await supabase
+        .from("product_references")
+        .insert({
+          brand_kit_id,
+          user_id: user.id,
+          kind,
+          image_path: path,
+          label,
+          position,
+        })
+        .select("id,brand_kit_id,kind,image_path,label,position")
+        .single();
+      if (error) throw error;
+      const ref = data as ProductReference;
+      ref.image_url = await signLogo(ref.image_path);
+      await reload();
+      return ref;
+    },
+    [user, kits, reload],
+  );
+
+  const updateReferenceLabel = useCallback(
+    async (id: string, label: string | null) => {
+      if (!user) throw new Error("Not signed in");
+      const { error } = await supabase
+        .from("product_references")
+        .update({ label })
+        .eq("id", id);
+      if (error) throw error;
+      await reload();
+    },
+    [user, reload],
+  );
+
+  const removeReference = useCallback(
+    async (id: string) => {
+      if (!user) throw new Error("Not signed in");
+      const { error } = await supabase
+        .from("product_references")
+        .delete()
+        .eq("id", id);
+      if (error) throw error;
+      await reload();
+    },
+    [user, reload],
+  );
+
   return {
     kits,
     activeKit,
@@ -265,6 +360,9 @@ export function useBrandKit() {
     deleteKit,
     uploadLogo,
     uploadLocationImage,
+    addReference,
+    updateReferenceLabel,
+    removeReference,
     reload,
   };
 }

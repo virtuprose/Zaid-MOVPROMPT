@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-import { useBrandKit, EMPTY_BRAND_KIT, analyzeBrandImage, type BrandKit } from "@/lib/marketing/brandKit";
+import { useBrandKit, EMPTY_BRAND_KIT, analyzeBrandImage, MAX_BRAND_ANGLES, type BrandKit, type ProductReference } from "@/lib/marketing/brandKit";
 import type { Subject } from "@/lib/marketingStudio";
 import { ProductFactSheet } from "./ProductFactSheet";
 
@@ -28,7 +28,7 @@ export function BrandKitSheet({
   /** When set, edit this kit. When null/undefined, create a new one. */
   kitId?: string | null;
 }) {
-  const { kits, saveKit, deleteKit, uploadLogo } = useBrandKit();
+  const { kits, saveKit, deleteKit, uploadLogo, addReference, updateReferenceLabel, removeReference } = useBrandKit();
   const [draft, setDraft] = useState<BrandKit>(EMPTY_BRAND_KIT);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -52,6 +52,75 @@ export function BrandKitSheet({
     // reloads brands mid-edit.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, kitId]);
+
+  // Keep `references` synced from the latest kits list (other fields stay
+  // local to preserve in-progress edits).
+  useEffect(() => {
+    if (!draft.id) return;
+    const fresh = kits.find((k) => k.id === draft.id);
+    if (!fresh) return;
+    setDraft((d) => ({ ...d, references: fresh.references ?? [] }));
+  }, [kits, draft.id]);
+
+  const [angleUploading, setAngleUploading] = useState(false);
+  const [specUploading, setSpecUploading] = useState(false);
+  const angleFileRef = useRef<HTMLInputElement>(null);
+  const specFileRef = useRef<HTMLInputElement>(null);
+
+  const ensureSavedKit = async (): Promise<string | null> => {
+    if (draft.id) return draft.id;
+    if (!draft.name.trim()) {
+      toast.error("Name your product first, then add angle photos.");
+      return null;
+    }
+    try {
+      const saved = await saveKit(draft);
+      setDraft((d) => ({ ...d, id: saved.id, updated_at: saved.updated_at }));
+      return saved.id ?? null;
+    } catch (e: any) {
+      toast.error(e?.message || "Couldn't save product");
+      return null;
+    }
+  };
+
+  const handleAngleFile = async (file?: File | null) => {
+    if (!file) return;
+    if (file.size > 25 * 1024 * 1024) { toast.error("Image must be under 25MB"); return; }
+    const angles = (draft.references ?? []).filter((r) => r.kind === "angle");
+    if (angles.length >= MAX_BRAND_ANGLES) {
+      toast.error(`Up to ${MAX_BRAND_ANGLES} angle photos`);
+      return;
+    }
+    const kid = await ensureSavedKit();
+    if (!kid) return;
+    setAngleUploading(true);
+    try {
+      const label = ["front", "back", "side", "top", "packaging"][angles.length] ?? null;
+      await addReference(kid, file, "angle", label);
+    } catch (e: any) {
+      toast.error(e?.message || "Couldn't upload angle");
+    } finally {
+      setAngleUploading(false);
+    }
+  };
+
+  const handleSpecFile = async (file?: File | null) => {
+    if (!file) return;
+    if (file.size > 25 * 1024 * 1024) { toast.error("File must be under 25MB"); return; }
+    const kid = await ensureSavedKit();
+    if (!kid) return;
+    setSpecUploading(true);
+    try {
+      // Remove any existing spec sheet first (only one allowed).
+      const existingSpec = (draft.references ?? []).find((r) => r.kind === "spec_sheet");
+      if (existingSpec) await removeReference(existingSpec.id);
+      await addReference(kid, file, "spec_sheet", null);
+    } catch (e: any) {
+      toast.error(e?.message || "Couldn't upload spec sheet");
+    } finally {
+      setSpecUploading(false);
+    }
+  };
 
   const update = <K extends keyof BrandKit>(k: K, v: BrandKit[K]) =>
     setDraft((d) => ({ ...d, [k]: v }));
@@ -301,6 +370,37 @@ export function BrandKitSheet({
             )}
           </div>
 
+          {/* Additional angles + spec sheet */}
+          <AnglesSection
+            references={draft.references ?? []}
+            uploading={angleUploading}
+            specUploading={specUploading}
+            onPickAngle={() => angleFileRef.current?.click()}
+            onPickSpec={() => specFileRef.current?.click()}
+            onRelabel={updateReferenceLabel}
+            onRemove={removeReference}
+          />
+          <input
+            ref={angleFileRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              handleAngleFile(e.target.files?.[0]);
+              e.currentTarget.value = "";
+            }}
+          />
+          <input
+            ref={specFileRef}
+            type="file"
+            accept="image/*,application/pdf"
+            className="hidden"
+            onChange={(e) => {
+              handleSpecFile(e.target.files?.[0]);
+              e.currentTarget.value = "";
+            }}
+          />
+
           {/* Fields */}
           <Field
             label="Name"
@@ -478,6 +578,113 @@ function FieldArea({
         maxLength={max}
         className="mt-1.5 min-h-[96px] resize-none"
       />
+    </div>
+  );
+}
+
+function AnglesSection({
+  references,
+  uploading,
+  specUploading,
+  onPickAngle,
+  onPickSpec,
+  onRelabel,
+  onRemove,
+}: {
+  references: ProductReference[];
+  uploading: boolean;
+  specUploading: boolean;
+  onPickAngle: () => void;
+  onPickSpec: () => void;
+  onRelabel: (id: string, label: string | null) => Promise<void>;
+  onRemove: (id: string) => Promise<void>;
+}) {
+  const angles = references.filter((r) => r.kind === "angle");
+  const spec = references.find((r) => r.kind === "spec_sheet");
+  const canAdd = angles.length < MAX_BRAND_ANGLES;
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <div className="flex items-center justify-between">
+          <SectionLabel>Additional angles · optional</SectionLabel>
+          <span className="text-[10px] text-muted-foreground/70 tabular-nums">
+            {angles.length}/{MAX_BRAND_ANGLES}
+          </span>
+        </div>
+        <div className="mt-2 grid grid-cols-3 sm:grid-cols-4 gap-2">
+          {angles.map((r) => (
+            <div key={r.id} className="relative group rounded-lg overflow-hidden border border-border/60 bg-muted/30 aspect-square">
+              {r.image_url ? (
+                <img src={r.image_url} alt={r.label ?? "angle"} className="w-full h-full object-cover" />
+              ) : null}
+              <input
+                value={r.label ?? ""}
+                onChange={(e) => onRelabel(r.id, e.target.value || null)}
+                placeholder="label"
+                className="absolute bottom-1 left-1 right-7 h-6 px-1.5 rounded bg-black/70 text-white text-[10px] outline-none placeholder:text-white/50"
+              />
+              <button
+                type="button"
+                onClick={() => onRemove(r.id)}
+                aria-label="Remove angle"
+                className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/70 text-white inline-flex items-center justify-center opacity-0 group-hover:opacity-100 transition"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+          ))}
+          {canAdd && (
+            <button
+              type="button"
+              onClick={onPickAngle}
+              disabled={uploading}
+              className={cn(
+                "aspect-square rounded-lg border border-dashed border-border hover:border-accent/60 hover:bg-secondary/20 bg-secondary/10",
+                "flex flex-col items-center justify-center gap-1 text-muted-foreground transition",
+              )}
+            >
+              {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImagePlus className="w-4 h-4" />}
+              <span className="text-[10px] font-medium">Add angle</span>
+            </button>
+          )}
+        </div>
+        <p className="mt-1.5 text-[11px] text-muted-foreground">
+          More angles (front, back, packaging…) = stronger 3D lock so the product looks identical across every shot.
+        </p>
+      </div>
+
+      <div>
+        <SectionLabel>Product spec sheet · optional</SectionLabel>
+        {spec ? (
+          <div className="mt-2 flex items-center gap-3 p-2.5 rounded-lg border border-border/60 bg-secondary/20">
+            <div className="w-10 h-10 rounded-md bg-muted/40 inline-flex items-center justify-center text-[10px] font-semibold text-muted-foreground">
+              {/\.pdf$/i.test(spec.image_path) ? "PDF" : "IMG"}
+            </div>
+            <div className="flex-1 min-w-0 text-xs text-foreground/80 truncate">Spec sheet attached</div>
+            <Button type="button" variant="ghost" size="sm" onClick={onPickSpec} disabled={specUploading} className="h-8">
+              {specUploading ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Upload className="w-3.5 h-3.5 mr-1.5" />}
+              Replace
+            </Button>
+            <Button type="button" variant="ghost" size="icon" onClick={() => onRemove(spec.id)} className="h-8 w-8 text-muted-foreground hover:text-foreground" aria-label="Remove spec sheet">
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={onPickSpec}
+            disabled={specUploading}
+            className="mt-2 w-full h-[72px] rounded-lg border border-dashed border-border hover:border-accent/60 hover:bg-secondary/20 bg-secondary/10 flex flex-col items-center justify-center gap-1 text-muted-foreground transition"
+          >
+            {specUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+            <span className="text-xs font-medium">Upload PDF or image</span>
+          </button>
+        )}
+        <p className="mt-1.5 text-[11px] text-muted-foreground">
+          Optional — kept on file so you can re-check exact labels, ingredients or dimensions later.
+        </p>
+      </div>
     </div>
   );
 }

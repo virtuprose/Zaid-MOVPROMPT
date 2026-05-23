@@ -521,6 +521,8 @@ export type BrandContext = {
   materials?: string | null;
   hero_colors?: string[] | null;
   packaging?: string | null;
+  /** Ordered labels for additional angle reference images (front, back, packaging, …). */
+  angle_labels?: string[];
 };
 
 export type LocationContext = {
@@ -573,7 +575,7 @@ export type StudioBrief = {
    * binds each subject to the right ref. Multiple `brand`/`character`
    * entries are supported and matched by occurrence index.
    */
-  imageRefs?: Array<"brand" | "character" | "location">;
+  imageRefs?: Array<"brand" | "brand-angle" | "character" | "location">;
   /** Free-text adaptation layer — preset stays the locked structure, this tweaks tone/details. */
   userNote?: string;
   /** Brand identity (palette, typography vibe, mood) applied to lighting/props/text. */
@@ -585,7 +587,7 @@ const find = (list: StudioPreset[], id?: string) =>
 
 function refTagAt(
   refs: StudioBrief["imageRefs"],
-  slot: "brand" | "character" | "location",
+  slot: "brand" | "brand-angle" | "character" | "location",
   occurrence = 0,
 ): string | null {
   if (!refs) return null;
@@ -599,7 +601,13 @@ function refTagAt(
   return null;
 }
 
-function brandLineAt(b: BrandContext, refs: StudioBrief["imageRefs"], occurrence: number, role: "hero" | "supporting" | "only"): string | null {
+function brandLineAt(
+  b: BrandContext,
+  refs: StudioBrief["imageRefs"],
+  occurrence: number,
+  role: "hero" | "supporting" | "only",
+  angleOffset = 0,
+): string | null {
   if (!b || !b.name) return null;
   const tag = refTagAt(refs, "brand", occurrence);
   const labelPrefix =
@@ -611,6 +619,20 @@ function brandLineAt(b: BrandContext, refs: StudioBrief["imageRefs"], occurrence
   if (b.audience) bits.push(`Audience: ${b.audience}`);
   if (b.url) bits.push(`Ref: ${b.url}`);
   if (tag) bits.push(`Use ${tag} as the exact logo/product reference — match it pixel-faithfully throughout the shot`);
+
+  // Additional angle references (front / back / packaging / …) — same product
+  // from different viewpoints, so the model can lock 3D shape across shots.
+  const angleLabels = b.angle_labels ?? [];
+  const angleTags: string[] = [];
+  for (let k = 0; k < angleLabels.length; k++) {
+    const t = refTagAt(refs, "brand-angle", angleOffset + k);
+    if (t) angleTags.push(`${t} = ${angleLabels[k] || `angle ${k + 1}`}`);
+  }
+  if (angleTags.length > 0) {
+    bits.push(
+      `Additional angle references of the same product (alternate viewpoints, NOT different products): ${angleTags.join("; ")}. Treat shape, label text, colors and proportions as the union of all these refs — pick the angle that best fits each shot.`,
+    );
+  }
 
   // PRODUCT LOCK — what every frame must visibly show. This is the single
   // most important block for keeping the render anchored to the real product.
@@ -710,14 +732,18 @@ export function composeStudioPrompt(brief: StudioBrief): string {
     ? brief.characters
     : brief.character ? [brief.character] : [];
 
-  const brandLines = brands.map((b, i) =>
-    brandLineAt(
+  let angleOffsetCursor = 0;
+  const brandLines = brands.map((b, i) => {
+    const myOffset = angleOffsetCursor;
+    angleOffsetCursor += (b.angle_labels?.length ?? 0);
+    return brandLineAt(
       b,
       brief.imageRefs,
       i,
       brands.length === 1 ? "only" : i === 0 ? "hero" : "supporting",
-    ),
-  );
+      myOffset,
+    );
+  });
   const characterLines = characters.map((c, i) =>
     characterLineAt(
       c,

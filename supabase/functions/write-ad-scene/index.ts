@@ -50,6 +50,8 @@ type BrandLite = {
   materials?: string | null;
   hero_colors?: string[] | null;
   packaging?: string | null;
+  /** Ordered labels for extra angle reference photos of the same product. */
+  angle_labels?: string[];
 };
 type CharLite = { name?: string; role?: string; description?: string; shot_type?: "face" | "full" };
 
@@ -102,6 +104,9 @@ function buildUserContent(b: Brief): string {
     if (br.hero_colors && br.hero_colors.length > 0) lock.push(`hero colors: ${br.hero_colors.join(", ")}`);
     if (lock.length > 0) {
       lines.push(`PRODUCT LOCK for ${br.name} — ${lock.join("; ")}. The hero frame MUST visibly show these exact parts/colors. Do not invent other parts, ingredients or colors.`);
+    }
+    if (br.angle_labels && br.angle_labels.length > 0) {
+      lines.push(`Extra angle references for ${br.name} — ${br.angle_labels.join(", ")}. These are alternate viewpoints of the SAME product (not different products). You may direct shots to use a specific angle (e.g. "shows the ${br.angle_labels[0]}") to vary framing while keeping the product identical across cuts.`);
     }
   });
   const chars: CharLite[] = b.characters && b.characters.length > 0 ? b.characters : b.character ? [b.character] : [];
