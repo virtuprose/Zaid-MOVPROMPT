@@ -3,6 +3,19 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import type { Subject } from "@/lib/marketingStudio";
 
+export type ProductReferenceKind = "angle" | "spec_sheet";
+
+export type ProductReference = {
+  id: string;
+  brand_kit_id: string;
+  kind: ProductReferenceKind;
+  image_path: string;
+  /** Signed URL for previewing (not persisted). */
+  image_url?: string | null;
+  label: string | null;
+  position: number;
+};
+
 export type BrandKit = {
   id?: string;
   subject: Subject;
@@ -20,6 +33,8 @@ export type BrandKit = {
   materials: string | null;
   hero_colors: string[] | null;
   packaging: string | null;
+  /** Extra product references (angle photos + optional spec sheet). */
+  references?: ProductReference[];
   updated_at?: string;
 };
 
@@ -37,7 +52,10 @@ export const EMPTY_BRAND_KIT: BrandKit = {
   materials: null,
   hero_colors: null,
   packaging: null,
+  references: [],
 };
+
+export const MAX_BRAND_ANGLES = 5;
 
 export const MAX_BRANDS = 2;
 
