@@ -1043,6 +1043,7 @@ export type Database = {
           fal_status_url: string | null
           id: string
           liked: boolean
+          metadata: Json | null
           prompt: string
           provider: string
           reference_image_urls: Json | null
@@ -1065,6 +1066,7 @@ export type Database = {
           fal_status_url?: string | null
           id?: string
           liked?: boolean
+          metadata?: Json | null
           prompt: string
           provider: string
           reference_image_urls?: Json | null
@@ -1087,6 +1089,7 @@ export type Database = {
           fal_status_url?: string | null
           id?: string
           liked?: boolean
+          metadata?: Json | null
           prompt?: string
           provider?: string
           reference_image_urls?: Json | null
