@@ -60,6 +60,8 @@ import {
   type StudioPreset,
 } from "@/lib/marketingStudio";
 import { useBrandKit, EMPTY_LOCATION, type LocationInput } from "@/lib/marketing/brandKit";
+import { useBrandIdentity, hasBrandIdentity } from "@/lib/marketing/brandIdentity";
+import { BrandIdentitySheet } from "@/components/marketing/BrandIdentitySheet";
 import { BrandKitSheet } from "@/components/marketing/BrandKitSheet";
 import { BrandPickerPopover } from "@/components/marketing/BrandPickerPopover";
 import { CharacterPickerPopover } from "@/components/marketing/CharacterPickerPopover";
