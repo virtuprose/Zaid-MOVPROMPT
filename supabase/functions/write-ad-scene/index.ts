@@ -111,8 +111,11 @@ function buildUserContent(b: Brief): string {
     const bits = [ch.name];
     if (ch.role) bits.push(`role: ${ch.role}`);
     if (ch.description) bits.push(ch.description);
+    const shot = ch.shot_type === "full" ? "full-look reference (face + body + outfit locked)" : "face reference (lock face only, wardrobe per description)";
+    bits.push(`reference type: ${shot}`);
     lines.push(`${role}: ${bits.join(" — ")}`);
   });
+
   if (b.location?.place) {
     lines.push(`Real-world location: ${b.location.place} (match its architecture, light, culture).`);
   }
