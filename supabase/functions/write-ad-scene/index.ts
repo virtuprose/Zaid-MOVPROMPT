@@ -50,6 +50,8 @@ type BrandLite = {
   materials?: string | null;
   hero_colors?: string[] | null;
   packaging?: string | null;
+  /** Ordered labels for extra angle reference photos of the same product. */
+  angle_labels?: string[];
 };
 type CharLite = { name?: string; role?: string; description?: string; shot_type?: "face" | "full" };
 
