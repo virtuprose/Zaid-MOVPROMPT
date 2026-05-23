@@ -150,6 +150,8 @@ export default function MarketingStudio() {
   const [characterOpen, setCharacterOpen] = useState(false);
   const [characterEditId, setCharacterEditId] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [accuracyOpen, setAccuracyOpen] = useState(false);
+  const [accuracyResult, setAccuracyResult] = useState<AccuracyRiskResult | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [drafting, setDrafting] = useState(false);
   const [renderSettings, setRenderSettings] = useState<RenderSettings>(RENDER_DEFAULTS);
