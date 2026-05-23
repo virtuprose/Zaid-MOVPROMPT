@@ -674,6 +674,15 @@ export type AdSceneBrief = {
   location?: { place?: string; hasImage?: boolean } | null;
   /** Free-text adaptation layer — preset stays locked, this tweaks tone/details. */
   userNote?: string;
+  brandIdentity?: {
+    primary_color?: string | null;
+    supporting_colors?: string[] | null;
+    avoid_colors?: string[] | null;
+    typography_vibe?: string | null;
+    font_hint?: string | null;
+    mood_notes?: string | null;
+    tagline?: string | null;
+  } | null;
 };
 
 export async function writeAdScene(
