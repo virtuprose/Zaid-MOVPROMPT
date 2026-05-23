@@ -1,85 +1,62 @@
-## Goal
+# Director Feedback Loop
 
-Make the AI Director "learn" from each user globally. Two signals feed one taste profile that the `director-agent` reads on every turn.
+Make the AI Director adapt to each user's taste using two signals:
+1. **Per-message 👍/👎** on assistant replies in the Director chat (new)
+2. **Heart likes** on rendered videos (already exists on `video_jobs.liked`)
 
-## Signals captured
+Both feed a **global, per-user taste profile** injected into every new Director session.
 
-1. **Per-message thumbs (new)** — 👍 / 👎 on every Director reply: clarification questions, prompt drafts, suggestion chips, recommendations.
-2. **Video likes (existing)** — the heart on rendered `video_jobs` already present in `DirectorChat`, `PromptResultCard`, `VideoBubble`.
+## What gets built
 
-Both feed one global "taste profile" per user (no per-session memory).
+### 1. Taste profile builder — `src/lib/director/tasteProfile.ts` (new)
+Pure client helper. Queries Supabase for the current user and returns:
+- `likedPrompts: string[]` — up to 3 most recent `video_jobs.prompt` where `liked = true`
+- `dislikedPrompts: string[]` — up to 3 recent `director_message_feedback` rows where `rating = -1` and `content_kind = 'prompt'`
+- `chipBoosts: Record<string, number>` — sum of ratings per `chip_label` from feedback (e.g. `{ "Golden hour": +2, "Neon": -1 }`)
+- `verbosity: 'terse' | 'balanced' | 'detailed'` — inferred from thumb ratios on `content_kind='question'` (long questions disliked → terse; short questions disliked → detailed)
+- `chipReliance: 'chips_first' | 'mixed' | 'freeform_friendly'` — inferred from chip rating volume vs question ratings
 
-## What the Director does with it
+Cached in-memory per session mount.
 
-- **Inject liked prompts as style few-shots** — top 2–3 highest-signal prompts (liked video OR 👍'd prompt draft) passed into `director-agent` system context as "USER-APPROVED STYLE REFERENCES".
-- **Avoid disliked patterns** — top 2–3 most-disliked prompt drafts injected as "USER-REJECTED PATTERNS — do not mimic tone, structure, or vocabulary".
-- **Rank suggestion chips by past likes** — chip text appearing in liked prompts/replies gets boosted; chips appearing in disliked ones get suppressed or dropped. Sorting happens in the agent's `suggestions` post-processing.
-- **Bias question style / pacing** — derive two scalars from feedback history: `verbosity` (terse ↔ detailed) and `chip_reliance` (mostly chips ↔ mostly free-text). Append a short "USER COMMUNICATION PREFERENCE" line to the system prompt so the agent picks shorter questions / more chips when that's what gets thumbs-up.
+### 2. Director agent — `supabase/functions/director-agent/index.ts`
+- Accept optional `tasteProfile` in request body (zod-validated)
+- Inject into system prompt:
+  - `USER-APPROVED STYLE REFERENCES` block listing `likedPrompts` ("Match this aesthetic when relevant")
+  - `USER-REJECTED PATTERNS` block listing `dislikedPrompts` ("Avoid this style/approach")
+  - Verbosity directive ("Keep questions terse" / "Offer richer detail")
+  - Chip reliance directive ("Lead with chips" / "Prefer free-text prompting")
+- After model response, re-sort returned `chips` array by `chipBoosts`:
+  - Boost score ≥ +1 → move to front
+  - Score ≤ −2 → drop entirely
+  - Otherwise preserve model order
 
-## Data model
+### 3. API client — `src/lib/director/api.ts`
+`runDirectorAgent` accepts and forwards `tasteProfile` to the edge function.
 
-New table `director_message_feedback` (migration):
+### 4. Feedback UI — `src/components/director/MessageFeedback.tsx` (new)
+Small inline row under each assistant message:
+- 👍 / 👎 ghost icon buttons (cyan glow on active state, matches design tokens)
+- On click: insert into `director_message_feedback` with `user_id`, `session_id`, `message_index`, `content_kind` (derived from message: 'question' | 'prompt' | 'recommendation'), `content` (the message text), `rating` (+1/-1), `question_text` (if it was a question)
+- Optimistic state — click toggles visually immediately
+- First-ever thumb in a session triggers toast: "Saved — the Director will adapt to your taste"
 
-```text
-id uuid pk
-user_id uuid          -- auth.uid()
-session_id uuid       -- FK director_sessions.id (nullable)
-message_index int     -- position in session.messages
-content_kind text     -- 'question' | 'prompt' | 'recommendation' | 'chip'
-content text          -- the assistant text (or chip label) being rated
-rating smallint       -- +1 or -1
-chip_label text       -- optional, when content_kind = 'chip'
-question_text text    -- optional, the parent question for chip ratings
-created_at timestamptz
-```
+### 5. Chat wiring — `src/components/director/DirectorChat.tsx`
+- On mount: load taste profile once, hold in component state
+- Pass `tasteProfile` to every `runDirectorAgent` call
+- Render `<MessageFeedback />` under each assistant message (skip user messages and pure system status)
+- Derive `content_kind` per message: presence of `chips` or `?` → 'question'; presence of finalized prompt → 'prompt'; else 'recommendation'
 
-RLS: owner-only CRUD (`auth.uid() = user_id`). Filtered index on `(user_id, created_at desc)`.
-
-No schema change to `video_jobs` — `liked` + `metadata` from the previous loop are reused.
-
-## Taste profile builder
-
-`src/lib/director/tasteProfile.ts` (new) exports `loadTasteProfile(userId)` returning:
-
-```ts
-{
-  likedPrompts: string[];        // ≤3, most recent thumbs-up prompts + liked-video prompts
-  dislikedPrompts: string[];     // ≤3, most recent thumbs-down prompts
-  chipBoosts: Record<string,number>;   // chip text → score
-  verbosity: 'terse' | 'balanced' | 'detailed';
-  chipReliance: 'chips_first' | 'mixed' | 'freeform_friendly';
-}
-```
-
-Logic: pull last ~50 feedback rows + last ~20 liked `video_jobs`. Bucket by `content_kind`. Verbosity = inverse mean of liked-question length. Chip reliance = ratio of 👍'd chip taps vs 👍'd freeform answers.
-
-## Wiring
-
-- **`supabase/functions/director-agent/index.ts`**
-  - Accept `tasteProfile` in request body (validated with zod).
-  - Inject into system prompt: a `USER-APPROVED STYLE REFERENCES` block (likedPrompts), a `USER-REJECTED PATTERNS` block (dislikedPrompts), and a one-line `USER COMMUNICATION PREFERENCE` (verbosity + chipReliance).
-  - After the LLM returns `suggestions`, re-sort each `chips` array by `chipBoosts` (boosts up, suppressed down, hard-drop if score ≤ −2).
-- **`src/lib/director/api.ts`** — `runDirectorAgent` forwards `tasteProfile`.
-- **`src/components/director/DirectorChat.tsx`**
-  - Load taste profile once per session mount, pass to every `runDirectorAgent` call.
-  - Render small 👍/👎 buttons under each assistant message (questions, prompt drafts, recommendations). On click → insert into `director_message_feedback` and optimistically update local state. Show subtle "Saved — Director will adapt" toast on first thumb of a session.
-  - Chip tap already implies positive signal; record it as `rating=+1, content_kind='chip'` automatically.
-- **`src/components/director/PromptResultCard.tsx`, `VideoBubble.tsx`** — no UI change; the heart already sets `video_jobs.liked` which the taste profile reads.
+## Out of scope
+- No retroactive backfill of prior sessions
+- No cross-user "popular chips"
+- No model fine-tuning — purely prompt-engineering + chip re-ranking
+- No thumbs on user's own messages or chip taps (chips get implicit signal via the resulting prompt being liked/disliked)
 
 ## Files touched
+- new: `src/lib/director/tasteProfile.ts`
+- new: `src/components/director/MessageFeedback.tsx`
+- edit: `supabase/functions/director-agent/index.ts`
+- edit: `src/lib/director/api.ts`
+- edit: `src/components/director/DirectorChat.tsx`
 
-```text
-NEW  supabase/migrations/<ts>_director_feedback.sql
-EDIT supabase/functions/director-agent/index.ts
-EDIT src/lib/director/api.ts
-NEW  src/lib/director/tasteProfile.ts
-EDIT src/components/director/DirectorChat.tsx
-NEW  src/components/director/MessageFeedback.tsx   // small 👍/👎 row
-EDIT src/integrations/supabase/types.ts            // auto, after migration
-```
-
-## Out of scope (intentionally)
-
-- No model fine-tuning or vector store.
-- No cross-user "popular chips" — taste profile is strictly per user.
-- No retroactive backfill — existing chats start with empty profile and learn from the next thumb.
+Migration + table already exist (`director_message_feedback` with RLS).

@@ -871,7 +871,7 @@ Output via the \`storyboard_shots\` tool ONLY.`;
       );
     }
 
-    const { messages, attachments, stream } = body as {
+    const { messages, attachments, stream, tasteProfile } = body as {
       messages: Array<{ role: "user" | "assistant"; content: string }>;
       attachments?: Array<{
         kind: "image" | "video_keyframes" | "audio_transcript" | "document";
@@ -880,6 +880,13 @@ Output via the \`storyboard_shots\` tool ONLY.`;
         text?: string;
       }>;
       stream?: boolean;
+      tasteProfile?: {
+        likedPrompts?: string[];
+        dislikedPrompts?: string[];
+        chipBoosts?: Record<string, number>;
+        verbosity?: "terse" | "balanced" | "detailed";
+        chipReliance?: "chips_first" | "mixed" | "freeform_friendly";
+      } | null;
     };
 
     if (!Array.isArray(messages) || messages.length === 0) {
@@ -925,11 +932,62 @@ Output via the \`storyboard_shots\` tool ONLY.`;
           ]
         : (last.content || "") + attachmentBlock;
 
+    // Build per-user taste profile addendum from feedback signal.
+    let tasteAddendum = "";
+    if (tasteProfile) {
+      const liked = (tasteProfile.likedPrompts ?? []).filter(Boolean).slice(0, 3);
+      const disliked = (tasteProfile.dislikedPrompts ?? []).filter(Boolean).slice(0, 3);
+      const boosts = Object.entries(tasteProfile.chipBoosts ?? {})
+        .filter(([, v]) => typeof v === "number" && v !== 0)
+        .sort((a, b) => b[1] - a[1]);
+      const liftedChips = boosts.filter(([, v]) => v >= 1).slice(0, 8).map(([k]) => k);
+      const droppedChips = boosts.filter(([, v]) => v <= -2).slice(0, 8).map(([k]) => k);
+
+      const blocks: string[] = [];
+      if (liked.length) {
+        blocks.push(
+          "USER-APPROVED STYLE REFERENCES (the user previously liked these rendered prompts — match this aesthetic, vocabulary, and pacing when relevant):\n" +
+            liked.map((p, i) => `  [Liked ${i + 1}] ${p.slice(0, 600)}`).join("\n"),
+        );
+      }
+      if (disliked.length) {
+        blocks.push(
+          "USER-REJECTED PATTERNS (the user thumbs-downed these — do NOT repeat this style, framing, or wording):\n" +
+            disliked.map((p, i) => `  [Avoid ${i + 1}] ${p.slice(0, 400)}`).join("\n"),
+        );
+      }
+      if (liftedChips.length || droppedChips.length) {
+        blocks.push(
+          "CHIP RANKING SIGNAL — when populating `suggestions[].chips`, put these favored chips FIRST when they fit the question: " +
+            (liftedChips.join(", ") || "(none)") +
+            ". Avoid offering these chips: " +
+            (droppedChips.join(", ") || "(none)") +
+            ".",
+        );
+      }
+      const v = tasteProfile.verbosity;
+      if (v === "terse") {
+        blocks.push("VERBOSITY: User prefers TERSE questions — one short sentence, no preamble.");
+      } else if (v === "detailed") {
+        blocks.push("VERBOSITY: User wants more context in questions — include a brief why-this-matters note.");
+      }
+      const cr = tasteProfile.chipReliance;
+      if (cr === "chips_first") {
+        blocks.push("CHIP RELIANCE: User answers via chips — always offer 4–5 strong chips per question.");
+      } else if (cr === "freeform_friendly") {
+        blocks.push("CHIP RELIANCE: User prefers free-text — keep chips minimal (2–3) and lean on `allow_other: true`.");
+      }
+      if (blocks.length) {
+        tasteAddendum = "\n\n═══ PERSONAL TASTE PROFILE (apply to THIS user) ═══\n" + blocks.join("\n\n");
+      }
+    }
+
     const aiMessages = [
-      { role: "system", content: SYSTEM_PROMPT },
+      { role: "system", content: SYSTEM_PROMPT + tasteAddendum },
       ...prior.map((m) => ({ role: m.role, content: m.content })),
       { role: last.role, content: lastUserContent },
     ];
+
 
     const requestBody = {
       model: "google/gemini-3.1-pro-preview",

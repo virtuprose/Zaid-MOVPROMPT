@@ -27,6 +27,8 @@ import { SubjectLockChoiceCard, type SubjectKind } from "./SubjectLockChoiceCard
 import { LocationPickerCard, type StoryLocation } from "./LocationPickerCard";
 import { ActStrip, type ActTile } from "./ActStrip";
 import { submitStoryBundle, submitStoryRender, submitStoryStitch } from "@/lib/director/api";
+import { loadTasteProfile, EMPTY_TASTE_PROFILE, type TasteProfile } from "@/lib/director/tasteProfile";
+import { MessageFeedback } from "./MessageFeedback";
 
 import {
   streamDirectorAgent,
@@ -174,6 +176,22 @@ function DirectorChatInner() {
   const [resetOpen, setResetOpen] = useState(false);
   const [showJumpLatest, setShowJumpLatest] = useState(false);
   const [readyToStitch, setReadyToStitch] = useState<string | null>(null);
+  const [tasteProfile, setTasteProfile] = useState<TasteProfile>(EMPTY_TASTE_PROFILE);
+
+  // Load the user's taste profile once per mount (and refresh when user changes).
+  useEffect(() => {
+    let cancelled = false;
+    if (!user?.id) {
+      setTasteProfile(EMPTY_TASTE_PROFILE);
+      return;
+    }
+    void loadTasteProfile(user.id).then((p) => {
+      if (!cancelled) setTasteProfile(p);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]);
 
   // Listen for "all 4 acts ready" events from ActStrip to show a Jump-to-Stitch pill.
   useEffect(() => {
@@ -1197,6 +1215,7 @@ function DirectorChatInner() {
             idleTimeoutMs: 30_000,
             totalTimeoutMs: 120_000,
             onPhase: (p) => setPhase(p),
+            tasteProfile,
           });
           lastErr = null;
           break;
@@ -1949,6 +1968,15 @@ function DirectorChatInner() {
                     preferredModelId={pickedModelId}
                     lockedSpec={resolvedSpec}
                   />
+                  {!b.partial && (
+                    <MessageFeedback
+                      sessionId={sessionIdRef.current}
+                      messageIndex={i}
+                      contentKind="prompt"
+                      content={b.data.prompt}
+                      className="pl-2"
+                    />
+                  )}
                 </div>
               );
             }
@@ -1961,18 +1989,27 @@ function DirectorChatInner() {
                 return false;
               })();
               return (
-                <QuestionCard
-                  key={i}
-                  reason={b.reason}
-                  questions={b.questions}
-                  disabled={!isLatestQuestions || busy}
-                  attachments={attachments}
-                  onAttach={setAttachments}
-                  onContinue={(formatted) => void send(formatted)}
-                  onSkip={() => void send("Skip")}
-                  agentSuggestions={b.agentSuggestions}
-                  onGenerateImagePrompt={generateImagePrompt}
-                />
+                <div key={i}>
+                  <QuestionCard
+                    reason={b.reason}
+                    questions={b.questions}
+                    disabled={!isLatestQuestions || busy}
+                    attachments={attachments}
+                    onAttach={setAttachments}
+                    onContinue={(formatted) => void send(formatted)}
+                    onSkip={() => void send("Skip")}
+                    agentSuggestions={b.agentSuggestions}
+                    onGenerateImagePrompt={generateImagePrompt}
+                  />
+                  <MessageFeedback
+                    sessionId={sessionIdRef.current}
+                    messageIndex={i}
+                    contentKind="question"
+                    content={b.questions[0] ?? b.reason}
+                    questionText={b.questions[0]}
+                    className="pl-2"
+                  />
+                </div>
               );
             }
             if (b.role === "model_choice") {
@@ -2005,6 +2042,13 @@ function DirectorChatInner() {
                       });
                       void send(`Target model: ${modelId}`);
                     }}
+                  />
+                  <MessageFeedback
+                    sessionId={sessionIdRef.current}
+                    messageIndex={i}
+                    contentKind="recommendation"
+                    content={`Model: ${b.recommended_model_id} — ${b.reason}`}
+                    className="pl-2"
                   />
                 </div>
               );
@@ -2191,15 +2235,25 @@ function DirectorChatInner() {
               return (
                 <div key={i} className="flex items-start gap-2 motion-safe:animate-fade-up">
                   <AssistantAvatar size="sm" state="idle" className="mt-1" />
-                  <Message from="assistant" className="flex-1">
-                    <MessageContent className="whitespace-pre-wrap leading-relaxed text-foreground/90">
-                      {animate ? (
-                        <TypewriterText text={b.content} speed={20} />
-                      ) : (
-                        b.content
-                      )}
-                    </MessageContent>
-                  </Message>
+                  <div className="flex-1">
+                    <Message from="assistant">
+                      <MessageContent className="whitespace-pre-wrap leading-relaxed text-foreground/90">
+                        {animate ? (
+                          <TypewriterText text={b.content} speed={20} />
+                        ) : (
+                          b.content
+                        )}
+                      </MessageContent>
+                    </Message>
+                    {i > 0 && (
+                      <MessageFeedback
+                        sessionId={sessionIdRef.current}
+                        messageIndex={i}
+                        contentKind="recommendation"
+                        content={b.content}
+                      />
+                    )}
+                  </div>
                 </div>
               );
             }
