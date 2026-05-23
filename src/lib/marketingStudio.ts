@@ -628,8 +628,8 @@ function brandLineAt(
   if (tag) {
     bits.push(
       hasAngles
-        ? `Use ${tag} as the brand wordmark/logo only — place it on packaging, screens or end-card; do NOT use it as the product silhouette. Product shape, parts and proportions come from the angle references below and the PRODUCT LOCK spec.`
-        : `Use ${tag} as the brand wordmark/logo only — do NOT treat it as a photo of the product. Render the product itself faithfully from the PRODUCT LOCK spec below (shape, parts, materials, colors). Use ${tag} only for any visible logo, end-card or packaging mark.`,
+        ? `Use ${tag} as the brand wordmark/logo only — it MUST appear visibly as an END-CARD stamp over the final hero frame, and also on any packaging, screens, garment tags or labels when the scene includes them; do NOT use it as the product silhouette. Product shape, parts and proportions come from the angle references below and the PRODUCT LOCK spec.`
+        : `Use ${tag} as the brand wordmark/logo only — it MUST appear visibly as an END-CARD stamp over the final hero frame, and on any packaging, screens or label moments in the scene; do NOT treat it as a photo of the product. Render the product itself faithfully from the PRODUCT LOCK spec below (shape, parts, materials, colors). Use ${tag} only for the visible logo, end-card or packaging mark.`,
     );
   }
 
