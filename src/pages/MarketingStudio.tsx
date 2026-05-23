@@ -206,6 +206,33 @@ export default function MarketingStudio() {
   const setting = find(SETTINGS, settingId);
   const needsAvatar = format?.category === "avatar" && characterActiveIds.length === 0;
 
+  // ── Like-driven personalization ──────────────────────────────
+  // Count likes per formatId / settingId from the user's own ads to rank presets,
+  // and surface the top-liked prompts as style references for the scene writer.
+  const likeSignal = useMemo(() => {
+    const formats: Record<string, number> = {};
+    const settings: Record<string, number> = {};
+    const likedPrompts: string[] = [];
+    for (const ad of userAds) {
+      if (!ad.liked) continue;
+      const m = (ad.metadata ?? {}) as { formatId?: string; settingId?: string };
+      if (m.formatId) formats[m.formatId] = (formats[m.formatId] ?? 0) + 1;
+      if (m.settingId) settings[m.settingId] = (settings[m.settingId] ?? 0) + 1;
+      if (typeof ad.prompt === "string" && ad.prompt.trim()) likedPrompts.push(ad.prompt.trim());
+    }
+    return { formats, settings, likedPrompts: likedPrompts.slice(0, 3) };
+  }, [userAds]);
+
+  const sortedCommercialFormats = useMemo(() => {
+    const list = FORMATS.filter((f) => f.category === "commercial");
+    return [...list].sort((a, b) => (likeSignal.formats[b.id] ?? 0) - (likeSignal.formats[a.id] ?? 0));
+  }, [likeSignal.formats]);
+
+  const sortedSettings = useMemo(() => {
+    return [...SETTINGS].sort((a, b) => (likeSignal.settings[b.id] ?? 0) - (likeSignal.settings[a.id] ?? 0));
+  }, [likeSignal.settings]);
+
+
 
   const hasInputs =
     master.trim().length > 0 ||
