@@ -1,36 +1,22 @@
-## Issues with New character dialog
+## Goal
 
-1. Identity (Name, Role, Description) is dumped at the bottom under uppercase form-chrome labels with no grouping.
-2. The "What does this photo show?" tile pair and the Reference photo dropzone live inside the same `<div>` with no visual separation, so the whole top half reads as one undifferentiated block.
-3. All three labels (shot-type, reference, fields) share the same UPPERCASE TRACKING style → no hierarchy.
+When the Accuracy Boost dialog appears after upload, clicking the amber "Generate anyway" button should NOT start video generation. It should just dismiss the dialog and remember the acknowledgement, so the user can review their setup and then explicitly click the yellow **Generate Ad** button to kick off generation.
 
-## Fix (single file: `src/components/marketing/CharacterKitSheet.tsx`)
+## Changes
 
-Mirror the BrandKitSheet card pattern for consistency across the marketing library.
+**1. `src/pages/MarketingStudio.tsx` (around line 1164)**
 
-### Reorganize body into 2 grouped cards
+In the `<AccuracyBoostDialog onGenerateAnyway={...}>` handler, remove the `proceedToRights()` call. Keep:
+- `sessionStorage.setItem(ACCURACY_ACK_KEY, "1")` when "don't show again" is checked, so the dialog is suppressed for the rest of the session and the next Generate Ad click goes straight through.
+- `setAccuracyOpen(false)` to close the dialog.
 
-Each card = `rounded-2xl border border-border/40 bg-secondary/10 p-4 space-y-4` with a bold title + one-line helper.
+This way the dialog simply closes; nothing is generated until the user clicks Generate Ad again.
 
-1. **Card 1 — Reference photo**
-   - Helper: "Pick what the photo shows, then upload a portrait."
-   - Subsection: "What does this photo show?" (the two existing Face / Full look tiles)
-   - Subsection: Upload (existing dropzone or attached-chip)
-   - Existing "Reading…" / "Filled by AI" pill stays inside this card
-2. **Card 2 — Identity**
-   - Helper: "Used by the Director to describe your character."
-   - Name (required)
-   - Role (optional)
-   - Description (textarea, 0/500)
+**2. `src/components/marketing/AccuracyBoostDialog.tsx`**
 
-### Typography
-- Card titles: `text-sm font-semibold text-foreground tracking-tight`
-- Subsection labels inside cards keep the small uppercase muted style (unchanged)
-- Field labels switch from uppercase tracked to plain small `text-[11px] text-muted-foreground` so they don't compete with card titles
+Relabel the amber action from "Generate anyway" to **"Continue"** so the button copy matches its new behavior (just dismiss + acknowledge). No other UX changes — Cancel and the fix shortcuts stay the same.
 
-### Out of scope
-- No changes to save/delete/upload/analyze logic, lightbox, or shot-type analyze re-run.
-- No changes to other components.
+## Out of scope
 
-## Verification
-Open Marketing Studio → New character. Dialog should show two clearly bordered cards (Reference photo, Identity), and the Name field no longer looks like a form-chrome label.
+- No changes to the normal Generate Ad flow, credits, rights confirmation dialog, or the accuracy-risk detection itself.
+- No backend / edge function changes.

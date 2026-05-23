@@ -1164,7 +1164,6 @@ export default function MarketingStudio() {
           onGenerateAnyway={(dontShow) => {
             if (dontShow) sessionStorage.setItem(ACCURACY_ACK_KEY, "1");
             setAccuracyOpen(false);
-            proceedToRights();
           }}
           onAddPhotos={() => {
             setAccuracyOpen(false);
