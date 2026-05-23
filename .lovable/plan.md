@@ -1,62 +1,82 @@
-# Director Feedback Loop
+## Goal
 
-Make the AI Director adapt to each user's taste using two signals:
-1. **Per-message 👍/👎** on assistant replies in the Director chat (new)
-2. **Heart likes** on rendered videos (already exists on `video_jobs.liked`)
+Make the Ad video flow in Marketing Studio handle all three input cases cleanly, and warn the user *before* generating when their setup is likely to produce an off-brand / wrong-looking product — without ever blocking them.
 
-Both feed a **global, per-user taste profile** injected into every new Director session.
+## The three cases (all keep working)
 
-## What gets built
+1. **Single product photo** — 1 reference image → seedance-2.0 image-to-video (animates the still, highest fidelity to that one frame).
+2. **Multi-angle photos** — 2+ reference images → seedance-2.0-ref (identity-locked across angles).
+3. **Multi-angle + brand kit** (logo, colors, tagline, etc.) — same multi-ref pipeline, with brand identity injected into the prompt for tone/typography/palette consistency.
 
-### 1. Taste profile builder — `src/lib/director/tasteProfile.ts` (new)
-Pure client helper. Queries Supabase for the current user and returns:
-- `likedPrompts: string[]` — up to 3 most recent `video_jobs.prompt` where `liked = true`
-- `dislikedPrompts: string[]` — up to 3 recent `director_message_feedback` rows where `rating = -1` and `content_kind = 'prompt'`
-- `chipBoosts: Record<string, number>` — sum of ratings per `chip_label` from feedback (e.g. `{ "Golden hour": +2, "Neon": -1 }`)
-- `verbosity: 'terse' | 'balanced' | 'detailed'` — inferred from thumb ratios on `content_kind='question'` (long questions disliked → terse; short questions disliked → detailed)
-- `chipReliance: 'chips_first' | 'mixed' | 'freeform_friendly'` — inferred from chip rating volume vs question ratings
+Routing logic in `doGenerate` already does this — no change to the provider routing.
 
-Cached in-memory per session mount.
+## What changes
 
-### 2. Director agent — `supabase/functions/director-agent/index.ts`
-- Accept optional `tasteProfile` in request body (zod-validated)
-- Inject into system prompt:
-  - `USER-APPROVED STYLE REFERENCES` block listing `likedPrompts` ("Match this aesthetic when relevant")
-  - `USER-REJECTED PATTERNS` block listing `dislikedPrompts` ("Avoid this style/approach")
-  - Verbosity directive ("Keep questions terse" / "Offer richer detail")
-  - Chip reliance directive ("Lead with chips" / "Prefer free-text prompting")
-- After model response, re-sort returned `chips` array by `chipBoosts`:
-  - Boost score ≥ +1 → move to front
-  - Score ≤ −2 → drop entirely
-  - Otherwise preserve model order
+### 1. New pre-generation "Boost accuracy" dialog
 
-### 3. API client — `src/lib/director/api.ts`
-`runDirectorAgent` accepts and forwards `tasteProfile` to the edge function.
+Component: `src/components/marketing/AccuracyBoostDialog.tsx` (new).
 
-### 4. Feedback UI — `src/components/director/MessageFeedback.tsx` (new)
-Small inline row under each assistant message:
-- 👍 / 👎 ghost icon buttons (cyan glow on active state, matches design tokens)
-- On click: insert into `director_message_feedback` with `user_id`, `session_id`, `message_index`, `content_kind` (derived from message: 'question' | 'prompt' | 'recommendation'), `content` (the message text), `rating` (+1/-1), `question_text` (if it was a question)
-- Optimistic state — click toggles visually immediately
-- First-ever thumb in a session triggers toast: "Saved — the Director will adapt to your taste"
+Triggered from `handleGenerate` *before* the rights confirmation (or merged into the same flow — see Technical). Only shown when the current setup has a known fidelity risk:
 
-### 5. Chat wiring — `src/components/director/DirectorChat.tsx`
-- On mount: load taste profile once, hold in component state
-- Pass `tasteProfile` to every `runDirectorAgent` call
-- Render `<MessageFeedback />` under each assistant message (skip user messages and pure system status)
-- Derive `content_kind` per message: presence of `chips` or `?` → 'question'; presence of finalized prompt → 'prompt'; else 'recommendation'
+- **Risk A — no reference images at all** (text-only): "The model will invent the product look. Upload a photo for an accurate render."
+- **Risk B — logo only, no angle photos** (current `logoOnlyBrand` toast case): "We have your logo but no product photos. Add 1–3 angle photos so the real product appears in the video."
+- **Risk C — single angle, no brand kit**: "One angle works, but adding more angles + a brand kit locks the product's shape, color, and packaging across the shot."
+- **Risk D — angles present but no brand kit/identity**: soft nudge to add brand identity (colors, tagline) for on-brand styling.
+
+Dialog actions:
+- **"Add references"** → closes dialog, opens the relevant editor (Brand Kit editor for A/B/C, Brand Identity sheet for D). User can come back and click Generate again.
+- **"Generate anyway"** → proceeds to existing rights confirmation → `doGenerate()`.
+- **"Don't show again for this session"** checkbox → stored in `sessionStorage` under `vidoprompt:accuracy-ack`.
+
+The current `toast.warning` for logo-only is removed (replaced by the richer dialog).
+
+### 2. Risk evaluator helper
+
+`src/lib/marketing/accuracyRisk.ts` (new): pure function
+
+```ts
+evaluateAccuracyRisk({ subject, brandKits, characterKits, hasLocationImage, brandIdentity }) 
+  => { level: 'none'|'low'|'medium'|'high', risks: Risk[], primaryAction: 'add-photos'|'add-brand'|'add-identity'|null }
+```
+
+Used both by the dialog and (optionally) for a small inline hint badge near the Generate button so users see the recommendation without needing to click.
+
+### 3. Inline hint near Generate button
+
+Tiny text under/next to "Generate Video" reflecting the highest current risk, e.g. *"Tip: add 2+ angle photos for an accurate product render."* Clicking the tip opens the same dialog. Purely visual nudge — no behavior change.
+
+### 4. Generation flow update in `MarketingStudio.tsx`
+
+`handleGenerate` becomes:
+1. Validate format/location (unchanged).
+2. Evaluate accuracy risk. If `level >= medium` and not acknowledged this session → open `AccuracyBoostDialog`.
+3. On "Generate anyway" → existing rights check → `doGenerate`.
+4. Remove the in-`doGenerate` `toast.warning` (now surfaced upfront).
+
+No changes to `doGenerate` body, `composeStudioPrompt`, provider routing, or the edge function. This stays purely a frontend/UX layer.
 
 ## Out of scope
-- No retroactive backfill of prior sessions
-- No cross-user "popular chips"
-- No model fine-tuning — purely prompt-engineering + chip re-ranking
-- No thumbs on user's own messages or chip taps (chips get implicit signal via the resulting prompt being liked/disliked)
 
-## Files touched
-- new: `src/lib/director/tasteProfile.ts`
-- new: `src/components/director/MessageFeedback.tsx`
-- edit: `supabase/functions/director-agent/index.ts`
-- edit: `src/lib/director/api.ts`
-- edit: `src/components/director/DirectorChat.tsx`
+- No changes to the video model, prompt composer, or provider routing.
+- No mandatory blocking — user can always generate with whatever they have.
+- No new database tables.
 
-Migration + table already exist (`director_message_feedback` with RLS).
+## Technical notes
+
+- `AccuracyBoostDialog` uses shadcn `AlertDialog` for consistency with `ConfirmRightsDialog`.
+- Session-only ack (not persisted to DB) so the nudge returns next session — matches the rights-ack pattern already in the file.
+- The "Add references" CTA reuses existing `setBrandEditId` / `setBrandIdentityOpen` setters already in `MarketingStudio.tsx`.
+
+## Files
+
+- **New**: `src/lib/marketing/accuracyRisk.ts`
+- **New**: `src/components/marketing/AccuracyBoostDialog.tsx`
+- **Edit**: `src/pages/MarketingStudio.tsx` (wire dialog into `handleGenerate`, remove old toast, add inline tip)
+
+## Question for you before I build
+
+The three cases you described all live under the same "Marketing Studio → Generate Video" button today. Do you want me to:
+- **(a)** keep it as one flow with the smart pre-generation dialog above (recommended — minimal disruption), or
+- **(b)** surface the three cases as explicit choices (e.g. "Quick / Multi-angle / Full brand") in the UI before generating?
+
+I'll go with (a) unless you say otherwise.
