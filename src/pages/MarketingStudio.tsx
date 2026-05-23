@@ -360,7 +360,9 @@ export default function MarketingStudio() {
           description: c.description,
           role: c.role,
           hasImage: !!c.reference_path,
+          shot_type: c.shot_type,
         })),
+
         imageRefs,
         userNote: userNote.trim() || undefined,
         brandIdentity: brandIdentity ?? undefined,
