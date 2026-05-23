@@ -2,6 +2,13 @@ export interface ModelOption {
   value: string;
   label: string;
   descriptionKey: string;
+  /**
+   * When set, this entry is hidden from the picker unless the model_id
+   * matching `availabilityKey` is marked `available = true` in the
+   * `model_availability` table. Lets us pre-wire new gateway models
+   * (e.g. Gemini Omni Flash) and reveal them automatically when they land.
+   */
+  gated?: { availabilityKey: string };
 }
 
 export interface ModelGroup {
@@ -32,8 +39,15 @@ export const MODEL_GROUPS: ModelGroup[] = [
       { value: "veo-3.1", label: "Veo 3.1", descriptionKey: "models.desc.veo-3.1" },
       { value: "veo-3-fast", label: "Veo 3 Fast", descriptionKey: "models.desc.veo-3-fast" },
       { value: "veo-3", label: "Veo 3", descriptionKey: "models.desc.veo-3" },
+      {
+        value: "gemini-omni-flash",
+        label: "Gemini Omni Flash",
+        descriptionKey: "models.desc.gemini-omni-flash",
+        gated: { availabilityKey: "google/gemini-omni-flash" },
+      },
     ],
   },
+
   {
     label: "ByteDance (Seedance)",
     models: [

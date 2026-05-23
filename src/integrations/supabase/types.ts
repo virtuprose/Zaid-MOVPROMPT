@@ -697,6 +697,36 @@ export type Database = {
         }
         Relationships: []
       }
+      model_availability: {
+        Row: {
+          available: boolean
+          display_name: string
+          first_available_at: string | null
+          last_checked_at: string | null
+          last_error: string | null
+          model_id: string
+          updated_at: string
+        }
+        Insert: {
+          available?: boolean
+          display_name: string
+          first_available_at?: string | null
+          last_checked_at?: string | null
+          last_error?: string | null
+          model_id: string
+          updated_at?: string
+        }
+        Update: {
+          available?: boolean
+          display_name?: string
+          first_available_at?: string | null
+          last_checked_at?: string | null
+          last_error?: string | null
+          model_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       notification_reads: {
         Row: {
           id: string
