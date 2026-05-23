@@ -1,105 +1,74 @@
-## Goal
+# Brand Kit — redesign + content tightening
 
-Stop manually monitoring whether Gemini Omni Flash is live on the Lovable AI Gateway. Run a scheduled probe, persist the result, and have the model picker reveal the entry automatically (with a toast for the user) the first time the probe succeeds — no code change required when it lands.
+Two parallel goals: make the side panel feel on-brand (cinematic dark + cyan/amber accents instead of flat black), and turn its fields into something the Director actually uses when writing scenes.
 
-## How it works
+## Why the current panel falls flat
 
-```text
-pg_cron (every 15 min)
-  └─> calls edge function `check-model-availability`
-        └─> probes Lovable AI Gateway for each tracked model id
-              ├─ success  → upsert row { available: true, first_available_at }
-              └─ failure  → upsert row { available: false, last_error }
-                  table: public.model_availability  (Realtime ON)
-                                                  │
-                                  ┌───────────────┘
-                                  ▼
-       useModelAvailability() hook (Realtime subscription)
-                                  ▼
-       ModelPicker filters catalog entry `gemini-omni-flash`
-       (gated: true) → shown only when row.available === true
-                                  ▼
-       Toast on first-seen + small "NEW" badge for 7 days
-```
+- Pure flat black, no depth, no accent — doesn't match the rest of VidoPrompt (cyan/amber glow, Space Grotesk headings).
+- Sections are visually identical — eye has nothing to lock onto, swatches and chips read as a wall of dots.
+- Logo tile is a tiny 64×64 square next to a bare "Upload" button — no drop zone, no preview affordance.
+- Color preset row repeats verbatim in two sections (Primary + Supporting) — feels lazy.
+- Typography "vibe" cards are unstyled — labels rendered in body font, so you can't see the vibe you're picking.
+- Fields are generic ("mood notes", "tagline") — none of them describe the things a DoP actually needs: lighting, finish, pacing, logo treatment.
 
-## Pieces
+## Redesign — visual direction
 
-### 1. Database
+Locked tokens: cinematic dark surfaces, `primary` cyan, `accent` amber, Space Grotesk display / Inter body. Light mode follows the same token map.
 
-Migration:
+Structure of the new sheet (top → bottom):
 
-- `public.model_availability`
-  - `model_id text primary key` (e.g. `google/gemini-omni-flash`)
-  - `display_name text not null`
-  - `available boolean not null default false`
-  - `last_checked_at timestamptz`
-  - `first_available_at timestamptz`
-  - `last_error text`
-- RLS: public `select` (anyone signed in can read availability flags); no public `insert/update/delete`. Edge function uses the service role.
-- Add table to `supabase_realtime` publication so the hook gets push updates.
-- Seed row: `('google/gemini-omni-flash', 'Gemini Omni Flash', false, …)`. Designed so adding more models in the future is just another seed row.
+1. **Header band** — sheet header gets a faint cyan→amber gradient hairline under the title, palette icon swapped for an amber glow chip. Subtitle: *"Your brand's DNA — used on every shot the Director writes."*
+2. **Logo card** — full-width dashed drop zone (matches the existing Visuals drop zone in `BrandKitSheet`), live preview tile on the left, "Replace / Remove" inline. Empty state shows a soft cyan ring on hover.
+3. **Color system** — single grouped card with three rows: **Primary** (large swatches, selected one gets amber ring + hex label), **Supporting** (smaller swatches, max 4, drag-style chips with hex), **Avoid** (destructive-tinted chips, presets shown as outline pills).
+4. **Typography** — replace tiny label cards with preview tiles that render each vibe *in its own font* (Inter, Playfair, Bebas, Caveat, JetBrains Mono via Google fonts already available). Selected tile gets amber border + subtle inner glow.
+5. **Cinematic feel** *(new section)* — 2-col chip grid for the four new prompt-shaping fields below.
+6. **Voice** — tagline + a new short "brand voice" line (≤120 chars).
+7. **Footer** — sticky, with **Clear** ghost on the left, **Cancel / Save brand kit** on the right. Save button stays amber but uses the design-system `bg-accent` token instead of the hardcoded `#F5A524`.
 
-### 2. Edge function — `check-model-availability`
+Micro-details:
+- Replace every hardcoded `#F5A524` with `bg-accent` / `text-accent` / `ring-accent`.
+- Cards use `bg-card/40` with `border-border/60` and a 1px inner highlight on top (`shadow-[inset_0_1px_0_hsl(var(--foreground)/0.04)]`) for the cinematic-glass feel used elsewhere.
+- Selected states use amber ring (`ring-2 ring-accent`) + soft glow (`shadow-[0_0_0_4px_hsl(var(--accent)/0.12)]`).
+- Section headers in Space Grotesk, uppercase tracking-wide micro-eyebrow above the label.
 
-- `verify_jwt = false`, callable by cron and by an admin debug button.
-- For each row in `model_availability`, send a minimal probe to `https://ai.gateway.lovable.dev/v1/chat/completions`:
-  - body: `{ model, messages: [{role:"user",content:"ping"}], max_tokens: 1 }`
-  - 200 / valid completion → mark `available = true`, set `first_available_at` if null.
-  - 400/404 with "model not found" / "unsupported model" → `available = false`, store error.
-  - 429 / 5xx → leave previous state untouched (transient), just bump `last_checked_at`.
-- Always update `last_checked_at`. Uses service role key to write.
-- Returns a JSON summary so the admin button can show what changed.
+## Content — make it useful for video
 
-### 3. Scheduled run
+Current fields stop at colors + "mood notes". A DoP brief needs more. Add these (all optional, all pipe into `brandIdentityLine` and `write-ad-scene`):
 
-Migration enables `pg_cron` + `pg_net` and schedules:
+| New field | Type | Why it matters to the model |
+|---|---|---|
+| `lighting_style` | enum chip: *natural, soft studio, hard contrast, golden hour, neon night, overcast* | Drives the actual lighting plan in every shot |
+| `finish_vibe` | enum chip: *premium glass, matte minimal, organic warm, industrial raw, playful pop, retro film* | Controls textures, surfaces, props |
+| `pacing` | enum chip: *slow & elegant, balanced, punchy & fast* | Affects camera moves and cut rhythm hints |
+| `logo_treatment` | enum chip: *none, subtle watermark, end-card reveal, hero product placement* | Tells the Director where/whether to feature the logo |
+| `brand_voice` | short text (≤120 ch) | Used for any on-screen text / VO suggestions |
+| `industry` | short text (≤40 ch) | Anchors the visual world (skincare vs SaaS vs fashion) |
 
-```sql
-select cron.schedule(
-  'check-model-availability',
-  '*/15 * * * *',
-  $$ select net.http_post(
-       url := 'https://foaxkfpblyovbocvmtjj.supabase.co/functions/v1/check-model-availability',
-       headers := jsonb_build_object('Content-Type','application/json'),
-       body := '{}'::jsonb
-     ); $$
-);
-```
+Reword existing labels for clarity:
+- "Mood / style notes" → "Free-form notes — anything else the Director should remember" (helper text explains examples).
+- "Avoid colors" helper → "Hard no's. The Director won't use these in lighting, props, wardrobe, or backgrounds."
+- "Typography vibe" helper → "Used for any on-screen text in the video."
 
-### 4. Catalog entry (gated)
+### Wire-through (so the new fields actually reach the prompt)
 
-In `supabase/functions/_shared/videoModelCatalog.ts`, add a new entry for `gemini-omni-flash` with full capabilities metadata and a new optional field `gated?: { availabilityKey: string }`. The key matches the `model_id` row. All existing catalog entries leave `gated` undefined and behave unchanged.
-
-### 5. Frontend hook + picker integration
-
-- `src/hooks/useModelAvailability.ts` — fetches the table once on mount, subscribes to Realtime, returns `Record<modelId, { available, firstAvailableAt }>`. Caches in `localStorage` so the picker doesn't flicker on refresh.
-- `src/components/ModelPicker.tsx` — before rendering catalog entries, filter out any entry with `gated` whose `availabilityKey` is not `available` in the hook's data. When `firstAvailableAt` is within 7 days, show a small "NEW" pill on the entry.
-- One-time toast: when the hook transitions a tracked model from `false → true` in a live session, fire `toast.success("Gemini Omni Flash is now available — try it from the model picker.")`. Persist a "seen" flag in `localStorage` so the toast only fires once per user.
-
-### 6. Admin affordance (small)
-
-In the admin Analytics tab, add a one-row "Model availability" card listing tracked models, their flag, last check, and a "Check now" button that invokes the edge function. Read-only otherwise.
+1. DB: add 6 nullable columns to `brand_identities` (`lighting_style text`, `finish_vibe text`, `pacing text`, `logo_treatment text`, `brand_voice text`, `industry text`). No RLS change.
+2. `src/lib/marketing/brandIdentity.ts` — extend `BrandIdentity` type, `EMPTY_BRAND_IDENTITY`, `save()` payload, `reload()` mapping.
+3. `src/lib/marketingStudio.ts` — extend `BrandIdentityContext` and `brandIdentityLine()` so each new field appends a clean phrase (e.g. `lighting: golden hour`, `finish: premium glass`, `pacing: punchy`, `logo treatment: end-card reveal`, `voice: ${brand_voice}`, `industry: ${industry}`).
+4. `supabase/functions/write-ad-scene/index.ts` — mirror the same fields in `BrandIdentityLite` + the inline prompt builder.
+5. `src/pages/MarketingStudio.tsx` — pass the new fields into the brief payload (single object spread, already centralised).
 
 ## Files touched
 
-- `supabase/migrations/<ts>_model_availability.sql` — table, RLS, realtime publication, seed row, pg_cron schedule.
-- `supabase/functions/check-model-availability/index.ts` — new probe function.
-- `supabase/config.toml` — register the new function (verify_jwt = false).
-- `supabase/functions/_shared/videoModelCatalog.ts` — add `gemini-omni-flash` entry + optional `gated` field on the type.
-- `src/hooks/useModelAvailability.ts` — new hook with Realtime subscription.
-- `src/components/ModelPicker.tsx` — filter gated entries, "NEW" pill, first-seen toast.
-- `src/components/admin/AnalyticsTab.tsx` — small "Model availability" card with manual recheck button.
-
-## Out of scope
-
-- No changes to existing models, ranking logic, or generation pipeline.
-- No quota / usage tracking — purely an availability flag.
-- Not generalizing to every future model right now; the table makes it trivial to add rows later, but only `gemini-omni-flash` is seeded.
+- `src/components/marketing/BrandIdentitySheet.tsx` — full visual rewrite + new field UI.
+- `src/lib/marketing/brandIdentity.ts` — type + persistence.
+- `src/lib/marketingStudio.ts` — `BrandIdentityContext` + `brandIdentityLine`.
+- `supabase/functions/write-ad-scene/index.ts` — `BrandIdentityLite` + prompt line.
+- `src/pages/MarketingStudio.tsx` — pass-through.
+- `supabase/migrations/<ts>_brand_identity_video_fields.sql` — 6 nullable columns.
 
 ## Verification
 
-- Run migration → seed row exists, RLS allows authenticated `select`, no public write.
-- Manually invoke `check-model-availability` → row's `available` is `false` and `last_error` reflects the "model not found" response from the gateway.
-- Temporarily seed a known-good model id (e.g. `google/gemini-3-flash-preview`) → re-run → row flips to `true`, `first_available_at` set. Remove the temp row afterward.
-- In the picker, `gemini-omni-flash` is hidden today; flipping the row to `true` via the admin button makes it appear and triggers the toast.
-- pg_cron entry visible via `select * from cron.job;`.
+- Open Brand Kit on dark + light theme → header gradient, amber selected states, typography tiles render in their real fonts, drop zone hover glows cyan.
+- Save with all new fields populated → row persists; reopen → all values rehydrate.
+- Generate a scene in Marketing Studio → inspect the prompt sent to `write-ad-scene` and confirm the new bits (`lighting`, `finish`, `pacing`, `logo treatment`, `voice`, `industry`) appear in the brand-identity line.
+- Clear brand kit → row deleted, sheet returns to empty state.
