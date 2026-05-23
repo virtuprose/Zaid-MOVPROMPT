@@ -2043,6 +2043,13 @@ function DirectorChatInner() {
                       void send(`Target model: ${modelId}`);
                     }}
                   />
+                  <MessageFeedback
+                    sessionId={sessionIdRef.current}
+                    messageIndex={i}
+                    contentKind="recommendation"
+                    content={`Model: ${b.recommended_model_id} — ${b.reason}`}
+                    className="pl-2"
+                  />
                 </div>
               );
             }
@@ -2228,15 +2235,25 @@ function DirectorChatInner() {
               return (
                 <div key={i} className="flex items-start gap-2 motion-safe:animate-fade-up">
                   <AssistantAvatar size="sm" state="idle" className="mt-1" />
-                  <Message from="assistant" className="flex-1">
-                    <MessageContent className="whitespace-pre-wrap leading-relaxed text-foreground/90">
-                      {animate ? (
-                        <TypewriterText text={b.content} speed={20} />
-                      ) : (
-                        b.content
-                      )}
-                    </MessageContent>
-                  </Message>
+                  <div className="flex-1">
+                    <Message from="assistant">
+                      <MessageContent className="whitespace-pre-wrap leading-relaxed text-foreground/90">
+                        {animate ? (
+                          <TypewriterText text={b.content} speed={20} />
+                        ) : (
+                          b.content
+                        )}
+                      </MessageContent>
+                    </Message>
+                    {i > 0 && (
+                      <MessageFeedback
+                        sessionId={sessionIdRef.current}
+                        messageIndex={i}
+                        contentKind="recommendation"
+                        content={b.content}
+                      />
+                    )}
+                  </div>
                 </div>
               );
             }
