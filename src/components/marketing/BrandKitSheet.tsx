@@ -226,205 +226,205 @@ export function BrandKitSheet({
         </div>
 
         {/* Body */}
-        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
-          {/* Type */}
-          <div>
-            <SectionLabel>Type</SectionLabel>
-            <Segmented>
-              <SegBtn
-                icon={<Gift className="w-4 h-4" />}
-                label="Product"
-                active={draft.subject === "product"}
-                onClick={() => update("subject", "product" as Subject)}
-              />
-            </Segmented>
-          </div>
+        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+          {/* Card 1 — Product basics */}
+          <Card title="Product basics" helper="The essentials shown on every ad.">
+            <Field
+              label="Name"
+              required
+              value={draft.name}
+              onChange={(v) => update("name", v)}
+              placeholder="Acme Sneakers"
+            />
+            <Field
+              label="Tagline"
+              value={draft.tagline ?? ""}
+              onChange={(v) => update("tagline", v || null)}
+              placeholder="Sleep smarter. Run faster."
+              max={60}
+            />
+          </Card>
 
-          {/* Logo source */}
-          <div>
-            <SectionLabel>
-              {draft.subject === "app" ? "App icon / screenshot" : "Logo / product image"}
-            </SectionLabel>
-            <Segmented>
-              <SegBtn
-                icon={<Upload className="w-4 h-4" />}
-                label="Upload"
-                active={logoMode === "upload"}
-                onClick={() => setLogoMode("upload")}
-              />
-              <SegBtn
-                icon={<LinkIcon className="w-4 h-4" />}
-                label="Image URL"
-                active={logoMode === "url"}
-                onClick={() => setLogoMode("url")}
-              />
-            </Segmented>
+          {/* Card 2 — Visuals */}
+          <Card
+            title="Visuals"
+            helper="Upload a main image so the Director can lock onto your product."
+          >
+            <div>
+              <SubLabel>
+                {draft.subject === "app" ? "App icon / screenshot" : "Main image"}
+              </SubLabel>
+              <Segmented>
+                <SegBtn
+                  icon={<Upload className="w-4 h-4" />}
+                  label="Upload"
+                  active={logoMode === "upload"}
+                  onClick={() => setLogoMode("upload")}
+                />
+                <SegBtn
+                  icon={<LinkIcon className="w-4 h-4" />}
+                  label="Image URL"
+                  active={logoMode === "url"}
+                  onClick={() => setLogoMode("url")}
+                />
+              </Segmented>
 
-            {logoMode === "upload" ? (
-              hasLogo ? (
-                <div className="mt-3 flex items-center gap-4 p-3 pr-4 rounded-xl border border-border/60 bg-secondary/20">
-                  <div className="relative w-16 h-16 rounded-lg overflow-hidden bg-muted/30 shrink-0">
-                    <img src={draft.logo_url!} alt="Brand" className="w-full h-full object-cover" />
+              {logoMode === "upload" ? (
+                hasLogo ? (
+                  <div className="mt-3 flex items-center gap-4 p-3 pr-4 rounded-xl border border-border/60 bg-secondary/20">
+                    <div className="relative w-16 h-16 rounded-lg overflow-hidden bg-muted/30 shrink-0">
+                      <img src={draft.logo_url!} alt="Brand" className="w-full h-full object-cover" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-foreground/90 truncate">
+                        {draft.name?.trim() || "Brand image"}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-0.5 inline-flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                        {analyzing ? "Analyzing…" : "Ready"}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        disabled={uploading}
+                        onClick={() => fileRef.current?.click()}
+                        className="h-8"
+                      >
+                        {uploading ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Upload className="w-3.5 h-3.5 mr-1.5" />}
+                        Replace
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                          update("logo_path", null);
+                          update("logo_url", null);
+                        }}
+                        className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                        aria-label="Remove image"
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-foreground/90 truncate">
-                      {draft.name?.trim() || "Brand image"}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-0.5 inline-flex items-center gap-1.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                      {analyzing ? "Analyzing…" : "Ready"}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-1 shrink-0">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      disabled={uploading}
-                      onClick={() => fileRef.current?.click()}
-                      className="h-8"
-                    >
-                      {uploading ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Upload className="w-3.5 h-3.5 mr-1.5" />}
-                      Replace
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => {
-                        update("logo_path", null);
-                        update("logo_url", null);
-                      }}
-                      className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                      aria-label="Remove image"
-                    >
-                      <X className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => fileRef.current?.click()}
+                    onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                    onDragLeave={() => setDragOver(false)}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      setDragOver(false);
+                      handleFile(e.dataTransfer.files?.[0]);
+                    }}
+                    className={cn(
+                      "mt-3 w-full h-[140px] rounded-xl border border-dashed flex flex-col items-center justify-center gap-2 transition-all",
+                      "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent/60",
+                      dragOver
+                        ? "border-accent bg-accent/5"
+                        : "border-border hover:border-accent/60 hover:bg-secondary/20 bg-secondary/10",
+                    )}
+                  >
+                    {uploading ? (
+                      <Loader2 className="w-6 h-6 text-muted-foreground animate-spin" />
+                    ) : (
+                      <ImagePlus className="w-6 h-6 text-muted-foreground" />
+                    )}
+                    <p className="text-sm font-medium text-foreground/90">Drag & drop or click to upload</p>
+                    <p className="text-xs text-muted-foreground">PNG, JPG, WEBP — up to 25 MB</p>
+                  </button>
+                )
               ) : (
-                <button
-                  type="button"
-                  onClick={() => fileRef.current?.click()}
-                  onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-                  onDragLeave={() => setDragOver(false)}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    setDragOver(false);
-                    handleFile(e.dataTransfer.files?.[0]);
-                  }}
-                  className={cn(
-                    "mt-3 w-full h-[140px] rounded-xl border border-dashed flex flex-col items-center justify-center gap-2 transition-all",
-                    "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent/60",
-                    dragOver
-                      ? "border-accent bg-accent/5"
-                      : "border-border hover:border-accent/60 hover:bg-secondary/20 bg-secondary/10",
-                  )}
-                >
-                  {uploading ? (
-                    <Loader2 className="w-6 h-6 text-muted-foreground animate-spin" />
-                  ) : (
-                    <ImagePlus className="w-6 h-6 text-muted-foreground" />
-                  )}
-                  <p className="text-sm font-medium text-foreground/90">Drag & drop or click to upload</p>
-                  <p className="text-xs text-muted-foreground">PNG, JPG, WEBP — up to 25 MB</p>
-                </button>
-              )
-            ) : (
-              <div className="mt-3 space-y-1.5">
-                <div className="relative">
-                  <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    value={draft.logo_url ?? ""}
-                    onChange={(e) => handleUrlChange(e.target.value)}
-                    placeholder="https://example.com/logo.png"
-                    className="pl-9"
-                  />
+                <div className="mt-3 space-y-1.5">
+                  <div className="relative">
+                    <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      value={draft.logo_url ?? ""}
+                      onChange={(e) => handleUrlChange(e.target.value)}
+                      placeholder="https://example.com/logo.png"
+                      className="pl-9"
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">Paste a direct link to an image (PNG, JPG, WEBP)</p>
                 </div>
-                <p className="text-xs text-muted-foreground">Paste a direct link to an image (PNG, JPG, WEBP)</p>
-              </div>
-            )}
+              )}
 
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => handleFile(e.target.files?.[0])}
+              />
+
+              {(analyzing || justFilled) && (
+                <div className="mt-2.5 inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-accent/10 text-accent text-[11px] font-medium">
+                  {analyzing ? (
+                    <>
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                      Reading your brand…
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-3 h-3" />
+                      Filled by AI — edit anything
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <AnglesSection
+              references={draft.references ?? []}
+              uploading={angleUploading}
+              specUploading={specUploading}
+              onPickAngle={() => angleFileRef.current?.click()}
+              onPickSpec={() => specFileRef.current?.click()}
+              onRelabel={updateReferenceLabel}
+              onRemove={removeReference}
+            />
             <input
-              ref={fileRef}
+              ref={angleFileRef}
               type="file"
               accept="image/*"
               className="hidden"
-              onChange={(e) => handleFile(e.target.files?.[0])}
+              onChange={(e) => {
+                handleAngleFile(e.target.files?.[0]);
+                e.currentTarget.value = "";
+              }}
             />
+            <input
+              ref={specFileRef}
+              type="file"
+              accept="image/*,application/pdf"
+              className="hidden"
+              onChange={(e) => {
+                handleSpecFile(e.target.files?.[0]);
+                e.currentTarget.value = "";
+              }}
+            />
+          </Card>
 
-            {(analyzing || justFilled) && (
-              <div className="mt-2.5 inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-accent/10 text-accent text-[11px] font-medium">
-                {analyzing ? (
-                  <>
-                    <Loader2 className="w-3 h-3 animate-spin" />
-                    Reading your brand…
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="w-3 h-3" />
-                    Filled by AI — edit anything
-                  </>
-                )}
-              </div>
-            )}
-          </div>
+          {/* Card 3 — Description */}
+          <Card
+            title="Detailed description"
+            helper="What it does, who it's for, what makes it different."
+          >
+            <FieldArea
+              label="Description"
+              value={draft.description}
+              onChange={(v) => update("description", v)}
+              placeholder="What it does, who it's for, what makes it different…"
+              max={500}
+            />
+          </Card>
 
-          {/* Additional angles + spec sheet */}
-          <AnglesSection
-            references={draft.references ?? []}
-            uploading={angleUploading}
-            specUploading={specUploading}
-            onPickAngle={() => angleFileRef.current?.click()}
-            onPickSpec={() => specFileRef.current?.click()}
-            onRelabel={updateReferenceLabel}
-            onRemove={removeReference}
-          />
-          <input
-            ref={angleFileRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={(e) => {
-              handleAngleFile(e.target.files?.[0]);
-              e.currentTarget.value = "";
-            }}
-          />
-          <input
-            ref={specFileRef}
-            type="file"
-            accept="image/*,application/pdf"
-            className="hidden"
-            onChange={(e) => {
-              handleSpecFile(e.target.files?.[0]);
-              e.currentTarget.value = "";
-            }}
-          />
-
-          {/* Fields */}
-          <Field
-            label="Name"
-            required
-            value={draft.name}
-            onChange={(v) => update("name", v)}
-            placeholder="Acme Sneakers"
-          />
-          <FieldArea
-            label="Detailed description"
-            value={draft.description}
-            onChange={(v) => update("description", v)}
-            placeholder="What it does, who it's for, what makes it different…"
-            max={500}
-          />
-          <Field
-            label="Tagline"
-            value={draft.tagline ?? ""}
-            onChange={(v) => update("tagline", v || null)}
-            placeholder="Sleep smarter. Run faster."
-            max={60}
-          />
-
-          {/* AI fact sheet — locks the product so the video looks like it */}
+          {/* Card 4 — AI fact sheet */}
           <ProductFactSheet
             draft={draft}
             update={update}
@@ -439,6 +439,7 @@ export function BrandKitSheet({
             }
           />
         </div>
+
 
         {/* Footer */}
         <div className="px-6 py-4 border-t border-border/60 flex items-center gap-2">
