@@ -87,6 +87,7 @@ import loopTokyo from "@/assets/loop-tokyo.mp4.asset.json";
 import loopUnderwater from "@/assets/loop-underwater.mp4.asset.json";
 
 const RIGHTS_KEY = "vidoprompt:rights-ack";
+const ACCURACY_ACK_KEY = "vidoprompt:accuracy-ack";
 const find = (list: StudioPreset[], id?: string) =>
   id ? list.find((p) => p.id === id) : undefined;
 
