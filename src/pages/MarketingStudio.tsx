@@ -257,7 +257,9 @@ export default function MarketingStudio() {
             name: c.name,
             role: c.role,
             description: c.description,
+            shot_type: c.shot_type,
           })),
+
           location:
             location.place || location.imagePath
               ? { place: location.place || undefined, hasImage: !!location.imagePath }
