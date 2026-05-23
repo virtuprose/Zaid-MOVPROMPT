@@ -132,6 +132,15 @@ export const FORMATS: StudioPreset[] = [
       "Elite $1M-production lifestyle commercial — 8k full-frame Sony FX3/A1 color science, Sigma prime shallow DOF, smooth Steadicam, natural golden-hour or high-end architectural light, authentic candid talent. Build 4–6 sequences ending on The Lifestyle Hero: (1) The Vibe — beautifully composed establishing shot of talent in an aspirational setting, atmosphere before product reveal; (2) The Organic Introduction — medium shot, talent seamlessly brings the product into their routine with genuine anticipation; (3) Sensory Interaction — close-up of tactile use, sun flare catching the moment, background blurred; (4) Shared Experience (optional) — friends/partner join, spontaneous laughter, product naturally part of the moment; (5) Detail in Motion (optional) — dynamic tracking shot on a premium product detail mid-use; (6) The Lifestyle Hero — wide cinematic hero, talent confident and relaxed, product prominently and naturally placed. Focus on human connection, authentic emotion, organic movement, cinematic depth.",
   },
   {
+    id: "fashion-dream",
+    label: "Fashion Dream",
+    description: "6-sequence luxury fashion lifestyle: fantasy world, elite community, lifestyle hero",
+    category: "commercial",
+    image: u("photo-1490481651871-ab68de25d43d"),
+    fragment:
+      "Elite $1M-production cinematic luxury lifestyle commercial — 8k resolution, high-fashion editorial aesthetic, elegant atmosphere, soft volumetric lighting, smooth Steadicam movement, ethereal light, cinematic shallow depth of field, premium brand feel in the spirit of Chanel, Ralph Lauren, Gucci. Build 6 sequences ALWAYS ending with The Lifestyle Hero: (1) The Fantasy / Establishing — beautifully composed establishing shot setting the mood in an elegant high-status location, lighting highlights the atmosphere before the product is fully revealed; (2) The Elegant Introduction — talent seamlessly introduces the product into their routine with natural candid movement, medium shot with an aura of exclusivity and sophistication; (3) Sensory Luxury — close-up on the tactile sensory experience of using the product, camera catches a sun flare during the interaction, shallow depth of field blurs the beautiful background; (4) The Elite Community — narrative expands to friends or a partner in the setting, spontaneous laughter and organic conversation, the product is a natural part of this shared joyful moment, resting on a table or passed between hands; (5) The Detail in Motion — dynamic tracking shot focusing on a specific premium detail of the product while it is actively in motion or being used (sunlight catching the rim of a glass, fabric flowing as the talent spins); (6) The Lifestyle Hero — wide cinematic hero shot tying the whole narrative together, talent looking confident and relaxed in the beautiful setting, product prominently and naturally placed in the frame. Aspirational, narrative-driven, exclusive social community feel, million-dollar production value.",
+  },
+  {
     id: "before-after",
     label: "Before / After",
     description: "Side-by-side transformation",
