@@ -241,6 +241,7 @@ export type CharacterImageAnalysis = {
 export async function analyzeCharacterImage(input: {
   imagePath?: string | null;
   imageUrl?: string | null;
+  shotType?: CharacterShotType;
 }): Promise<CharacterImageAnalysis> {
   const { data, error } = await supabase.functions.invoke("analyze-character-image", {
     body: input,
@@ -248,3 +249,4 @@ export async function analyzeCharacterImage(input: {
   if (error) throw error;
   return data as CharacterImageAnalysis;
 }
+
