@@ -53,6 +53,75 @@ export function BrandKitSheet({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, kitId]);
 
+  // Keep `references` synced from the latest kits list (other fields stay
+  // local to preserve in-progress edits).
+  useEffect(() => {
+    if (!draft.id) return;
+    const fresh = kits.find((k) => k.id === draft.id);
+    if (!fresh) return;
+    setDraft((d) => ({ ...d, references: fresh.references ?? [] }));
+  }, [kits, draft.id]);
+
+  const [angleUploading, setAngleUploading] = useState(false);
+  const [specUploading, setSpecUploading] = useState(false);
+  const angleFileRef = useRef<HTMLInputElement>(null);
+  const specFileRef = useRef<HTMLInputElement>(null);
+
+  const ensureSavedKit = async (): Promise<string | null> => {
+    if (draft.id) return draft.id;
+    if (!draft.name.trim()) {
+      toast.error("Name your product first, then add angle photos.");
+      return null;
+    }
+    try {
+      const saved = await saveKit(draft);
+      setDraft((d) => ({ ...d, id: saved.id, updated_at: saved.updated_at }));
+      return saved.id ?? null;
+    } catch (e: any) {
+      toast.error(e?.message || "Couldn't save product");
+      return null;
+    }
+  };
+
+  const handleAngleFile = async (file?: File | null) => {
+    if (!file) return;
+    if (file.size > 25 * 1024 * 1024) { toast.error("Image must be under 25MB"); return; }
+    const angles = (draft.references ?? []).filter((r) => r.kind === "angle");
+    if (angles.length >= MAX_BRAND_ANGLES) {
+      toast.error(`Up to ${MAX_BRAND_ANGLES} angle photos`);
+      return;
+    }
+    const kid = await ensureSavedKit();
+    if (!kid) return;
+    setAngleUploading(true);
+    try {
+      const label = ["front", "back", "side", "top", "packaging"][angles.length] ?? null;
+      await addReference(kid, file, "angle", label);
+    } catch (e: any) {
+      toast.error(e?.message || "Couldn't upload angle");
+    } finally {
+      setAngleUploading(false);
+    }
+  };
+
+  const handleSpecFile = async (file?: File | null) => {
+    if (!file) return;
+    if (file.size > 25 * 1024 * 1024) { toast.error("File must be under 25MB"); return; }
+    const kid = await ensureSavedKit();
+    if (!kid) return;
+    setSpecUploading(true);
+    try {
+      // Remove any existing spec sheet first (only one allowed).
+      const existingSpec = (draft.references ?? []).find((r) => r.kind === "spec_sheet");
+      if (existingSpec) await removeReference(existingSpec.id);
+      await addReference(kid, file, "spec_sheet", null);
+    } catch (e: any) {
+      toast.error(e?.message || "Couldn't upload spec sheet");
+    } finally {
+      setSpecUploading(false);
+    }
+  };
+
   const update = <K extends keyof BrandKit>(k: K, v: BrandKit[K]) =>
     setDraft((d) => ({ ...d, [k]: v }));
 
