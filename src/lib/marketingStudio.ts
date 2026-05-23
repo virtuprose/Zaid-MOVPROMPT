@@ -732,14 +732,18 @@ export function composeStudioPrompt(brief: StudioBrief): string {
     ? brief.characters
     : brief.character ? [brief.character] : [];
 
-  const brandLines = brands.map((b, i) =>
-    brandLineAt(
+  let angleOffsetCursor = 0;
+  const brandLines = brands.map((b, i) => {
+    const myOffset = angleOffsetCursor;
+    angleOffsetCursor += (b.angle_labels?.length ?? 0);
+    return brandLineAt(
       b,
       brief.imageRefs,
       i,
       brands.length === 1 ? "only" : i === 0 ? "hero" : "supporting",
-    ),
-  );
+      myOffset,
+    );
+  });
   const characterLines = characters.map((c, i) =>
     characterLineAt(
       c,
