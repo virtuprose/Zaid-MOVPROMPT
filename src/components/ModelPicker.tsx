@@ -186,6 +186,7 @@ export const ModelPicker = ({ model, onModelChange }: ModelPickerProps) => {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<SortMode>("recommended");
+  const availability = useModelAvailability();
 
   useEffect(() => {
     setFlash(true);
@@ -193,11 +194,17 @@ export const ModelPicker = ({ model, onModelChange }: ModelPickerProps) => {
     return () => clearTimeout(id);
   }, [model]);
 
+  // Filter gated entries by live availability flags, then sort groups.
   const sortedGroups: ModelGroup[] = useMemo(() => {
-    return [...MODEL_GROUPS].sort(
-      (a, b) => (GROUP_META[a.label]?.order ?? 99) - (GROUP_META[b.label]?.order ?? 99)
-    );
-  }, []);
+    const filterGated = (m: ModelOption) =>
+      !m.gated || availability[m.gated.availabilityKey]?.available === true;
+    return [...MODEL_GROUPS]
+      .map((g) => ({ ...g, models: g.models.filter(filterGated) }))
+      .sort(
+        (a, b) => (GROUP_META[a.label]?.order ?? 99) - (GROUP_META[b.label]?.order ?? 99)
+      );
+  }, [availability]);
+
 
   const q = query.trim().toLowerCase();
 
