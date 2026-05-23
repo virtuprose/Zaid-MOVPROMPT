@@ -2,12 +2,16 @@ import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 
+export type CharacterShotType = "face" | "full";
+
 export type CharacterKit = {
   id?: string;
   name: string;
   description: string;
   role: string | null;
   reference_path: string | null;
+  /** Whether the reference image is a face/headshot or a full head-to-toe look. */
+  shot_type: CharacterShotType;
   /** Signed URL for previewing reference image (not persisted). */
   reference_url?: string | null;
   updated_at?: string;
@@ -18,8 +22,10 @@ export const EMPTY_CHARACTER_KIT: CharacterKit = {
   description: "",
   role: null,
   reference_path: null,
+  shot_type: "face",
   reference_url: null,
 };
+
 
 export const MAX_CHARACTERS = 3;
 
