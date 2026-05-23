@@ -157,6 +157,27 @@ export default function MarketingStudio() {
   const [drafting, setDrafting] = useState(false);
   const [renderSettings, setRenderSettings] = useState<RenderSettings>(RENDER_DEFAULTS);
 
+  // Reset studio config when the last product is detached
+  const prevBrandCountRef = useRef(brandActiveIds.length);
+  useEffect(() => {
+    const prev = prevBrandCountRef.current;
+    const curr = brandActiveIds.length;
+    if (prev > 0 && curr === 0) {
+      setMaster("");
+      setFormatId(undefined);
+      setCustomFormat("");
+      setUserNote("");
+      setSettingId(undefined);
+      setCustomSetting("");
+      setLocation(EMPTY_LOCATION);
+      setPlaceMode("preset");
+      setSubjectOverride(null);
+      setOpenPicker(null);
+      for (const id of characterActiveIds) void toggleCharacterActive(id);
+    }
+    prevBrandCountRef.current = curr;
+  }, [brandActiveIds.length, characterActiveIds, toggleCharacterActive]);
+
   const [userAds, setUserAds] = useState<UserAd[]>([]);
   const [pendingJobs, setPendingJobs] = useState<VideoJob[]>([]);
   const [deleteAdId, setDeleteAdId] = useState<string | null>(null);
