@@ -380,12 +380,27 @@ export function PresetPickerDialog({
                       className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                     />
                   ) : p.image ? (
-                    <img
-                      src={p.image}
-                      alt={p.label}
-                      loading="lazy"
-                      className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                    />
+                    <>
+                      <img
+                        src={p.image}
+                        alt={p.label}
+                        loading="lazy"
+                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        onError={(e) => {
+                          const img = e.currentTarget as HTMLImageElement;
+                          img.style.display = "none";
+                          const fb = img.nextElementSibling as HTMLElement | null;
+                          if (fb) fb.style.display = "flex";
+                        }}
+                      />
+                      <div
+                        className="absolute inset-0 bg-gradient-to-br from-primary/20 via-accent/10 to-transparent items-center justify-center text-5xl"
+                        style={{ display: "none" }}
+                        aria-hidden
+                      >
+                        <span>{p.emoji ?? "🎬"}</span>
+                      </div>
+                    </>
                   ) : (
                     <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-accent/10 to-transparent flex items-center justify-center text-5xl">
                       <span>{p.emoji ?? "🎬"}</span>
