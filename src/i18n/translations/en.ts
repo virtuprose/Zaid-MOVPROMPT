@@ -630,6 +630,8 @@ export const en = {
   "models.desc.veo-3.1": "Flagship Veo — sustained motion, native synced audio, best-in-class realism for dialogue scenes.",
   "models.desc.veo-3-fast": "Compact Veo 3 with audio. Good baseline for talking/performance clips.",
   "models.desc.veo-3": "Full-structure Veo 3 — audio + cinematography for dialogue-driven scenes.",
+  "models.desc.gemini-omni-flash": "Google's any-input video model — create anything from text, image, or video references. Powers Google Flow.",
+
   "models.desc.seedance-2.0-fast": "Fast element-reference mode. Best for quick product/character composites with @refs.",
   "models.desc.seedance-2.0": "Element references + shooting script. Best for choreographed fashion/dance/product.",
   "models.desc.seedance-1.5-pro": "Stable legacy single-shot shooting script.",
