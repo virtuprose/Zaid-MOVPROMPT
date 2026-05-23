@@ -296,6 +296,7 @@ export default function MarketingStudio() {
               : null,
           userNote: userNote.trim() || undefined,
           brandIdentity: brandIdentity ?? undefined,
+          likedExamples: likeSignal.likedPrompts,
         },
         controller.signal,
       )
