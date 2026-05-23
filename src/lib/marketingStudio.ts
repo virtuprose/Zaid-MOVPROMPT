@@ -652,9 +652,35 @@ function characterLineAt(c: CharacterContext, refs: StudioBrief["imageRefs"], oc
   return bits.join(" — ");
 }
 
+export function brandIdentityLine(b?: BrandIdentityContext | null): string | null {
+  if (!b) return null;
+  const bits: string[] = [];
+  if (b.primary_color) bits.push(`primary ${b.primary_color}`);
+  if (b.supporting_colors && b.supporting_colors.length > 0) {
+    bits.push(`supporting ${b.supporting_colors.join(" / ")}`);
+  }
+  if (b.avoid_colors && b.avoid_colors.length > 0) {
+    bits.push(`AVOID: ${b.avoid_colors.join(", ")}`);
+  }
+  if (b.typography_vibe) {
+    const label = b.typography_vibe.replace(/-/g, " ");
+    bits.push(`typography vibe: ${label}${b.font_hint ? ` (${b.font_hint})` : ""}`);
+  } else if (b.font_hint) {
+    bits.push(`font hint: ${b.font_hint}`);
+  }
+  if (b.mood_notes) bits.push(`mood: ${b.mood_notes}`);
+  if (b.tagline) bits.push(`tagline: "${b.tagline}"`);
+  if (bits.length === 0) return null;
+  return `BRAND LOCK — ${bits.join("; ")}. Apply the palette to lighting, props, wardrobe and background tones. Match the typography vibe for any on-screen text. Honor the mood. Never use the AVOID colors. Do NOT recolor the real product itself — the Product Lock above always wins on the product's own appearance.`;
+}
+
 export function composeStudioPrompt(brief: StudioBrief): string {
   const format = find(FORMATS, brief.formatId);
   const setting = find(SETTINGS, brief.settingId);
+  const subjectLine =
+    brief.subject === "app"
+      ? "Subject: a mobile app — feature its UI prominently on a phone screen held by the presenter."
+      : "Subject: a physical product — feature it cleanly in-hand or on a hero surface.";
   const subjectLine =
     brief.subject === "app"
       ? "Subject: a mobile app — feature its UI prominently on a phone screen held by the presenter."
