@@ -964,6 +964,21 @@ export default function MarketingStudio() {
                 {format?.label || "Custom format"} · {setting?.label || customSetting.trim() || location.place || "Reference image"} · {renderSettings.aspect_ratio} · {renderSettings.duration}s · {renderSettings.resolution} · audio on
               </div>
             )}
+
+            {ready && (() => {
+              const risk = computeAccuracyRisk();
+              const tip = shortTip(risk);
+              if (!tip) return null;
+              return (
+                <button
+                  type="button"
+                  onClick={() => { setAccuracyResult(risk); setAccuracyOpen(true); }}
+                  className="mt-2 text-[11px] text-amber-400/90 hover:text-amber-300 underline-offset-2 hover:underline text-left"
+                >
+                  {tip}
+                </button>
+              );
+            })()}
           </div>
           </div>
 
