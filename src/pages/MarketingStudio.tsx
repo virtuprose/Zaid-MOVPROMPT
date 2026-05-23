@@ -252,6 +252,9 @@ export default function MarketingStudio() {
             materials: b.materials,
             hero_colors: b.hero_colors,
             packaging: b.packaging,
+            angle_labels: (b.references ?? [])
+              .filter((r) => r.kind === "angle")
+              .map((r) => r.label || "angle"),
           })),
           characters: characterActiveKits.map((c) => ({
             name: c.name,
