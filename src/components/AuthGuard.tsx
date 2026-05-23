@@ -12,7 +12,7 @@ interface AuthGuardProps {
 }
 
 
-export const AuthGuard = ({ children, requireAdmin = false }: AuthGuardProps) => {
+export const AuthGuard = ({ children, requireAdmin = false, fallback }: AuthGuardProps) => {
   const { user, loading } = useAuth();
   const [roleResolved, setRoleResolved] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
