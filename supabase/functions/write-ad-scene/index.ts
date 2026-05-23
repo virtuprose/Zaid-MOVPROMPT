@@ -36,6 +36,7 @@ Rules:
 - If an avatar/character is given, refer to them by their name and treat them as the on-camera person.
 - If multiple products or characters are provided, the first is the hero/lead; others are supporting and must share the frame without stealing focus from the hero/lead.
 - Treat Format and Setting as LOCKED structure — never override their framing, category or core beat. If an "Additional direction" note is provided, treat it as an adaptation layer that adjusts tone, mood, palette or small details on top of the preset.
+- If a BRAND IDENTITY block is provided, weave its palette into the lighting, wardrobe, props and background tones, honor the mood, match the typography vibe for any on-screen text, and avoid the listed colors. Never recolor the product itself away from its PRODUCT LOCK.
 - Don't write marketing taglines. Write what the camera sees and what the person does.
 - Stay under 90 words. Output only the scene text — no preamble, no quotes.`;
 
