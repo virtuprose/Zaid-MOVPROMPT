@@ -1038,7 +1038,7 @@ export default function MarketingStudio() {
           onOpenChange={(o) => !o && setOpenPicker(null)}
           title="Pick the format that hits"
           subtitle="Polished brand formats — pick the commercial style that fits your product."
-          presets={FORMATS.filter((f) => f.category === "commercial")}
+          presets={sortedCommercialFormats}
           selectedId={formatId}
           onSelect={setFormatId}
           searchPlaceholder="Search formats…"
