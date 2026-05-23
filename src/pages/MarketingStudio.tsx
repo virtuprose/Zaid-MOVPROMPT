@@ -52,6 +52,8 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { ConfirmRightsDialog } from "@/components/director/ConfirmRightsDialog";
 import { PresetPickerDialog } from "@/components/marketing/PresetPickerDialog";
+import { AccuracyBoostDialog } from "@/components/marketing/AccuracyBoostDialog";
+import { evaluateAccuracyRisk, shortTip, type AccuracyRiskResult } from "@/lib/marketing/accuracyRisk";
 import {
   FORMATS,
   SETTINGS,
