@@ -15,3 +15,6 @@ project_id = "foaxkfpblyovbocvmtjj"
     verify_jwt = true
   [functions.generate-preset-preview]
     verify_jwt = false
+  [functions.check-model-availability]
+    verify_jwt = false
+
