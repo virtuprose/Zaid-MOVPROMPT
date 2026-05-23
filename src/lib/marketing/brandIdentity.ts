@@ -139,6 +139,12 @@ export function useBrandIdentity() {
         font_hint: row.font_hint,
         mood_notes: row.mood_notes,
         tagline: row.tagline,
+        lighting_style: row.lighting_style ?? null,
+        finish_vibe: row.finish_vibe ?? null,
+        pacing: row.pacing ?? null,
+        logo_treatment: row.logo_treatment ?? null,
+        brand_voice: row.brand_voice ?? null,
+        industry: row.industry ?? null,
       });
     } else {
       setIdentity(null);
@@ -163,6 +169,12 @@ export function useBrandIdentity() {
         font_hint: next.font_hint,
         mood_notes: next.mood_notes,
         tagline: next.tagline,
+        lighting_style: next.lighting_style,
+        finish_vibe: next.finish_vibe,
+        pacing: next.pacing,
+        logo_treatment: next.logo_treatment,
+        brand_voice: next.brand_voice,
+        industry: next.industry,
       };
       const { error } = await supabase
         .from("brand_identities")
