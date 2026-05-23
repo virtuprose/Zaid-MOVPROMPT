@@ -428,6 +428,16 @@ export default function MarketingStudio() {
           audio: true,
         },
         referenceImages,
+        {
+          metadata: {
+            formatId: formatId ?? null,
+            settingId: settingId ?? null,
+            customFormat: customFormat.trim() || null,
+            customSetting: customSetting.trim() || null,
+            subject,
+            place: location.place || null,
+          },
+        },
       );
       sessionJobIdsRef.current.add(job.id);
       setPendingJobs((prev) => [job, ...prev.filter((j) => j.id !== job.id)]);
