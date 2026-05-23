@@ -1,4 +1,4 @@
-import { UserRound, Check, Pencil, Plus, Trash2 } from "lucide-react";
+import { UserRound, Pencil, Plus, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { CharacterKit } from "@/lib/marketing/characterKit";
 
