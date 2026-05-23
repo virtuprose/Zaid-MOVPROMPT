@@ -592,6 +592,7 @@ serve(async (req) => {
         reference_image_urls: refImages.length > 0 ? refImages : null,
         storyboard_session_id: typeof storyboard_session_id === "string" && storyboard_session_id.length > 0 ? storyboard_session_id : null,
         storyboard_shot_index: typeof storyboard_shot_index === "number" && Number.isFinite(storyboard_shot_index) ? storyboard_shot_index : null,
+        metadata: safeMetadata,
       })
       .select("*")
       .single();
