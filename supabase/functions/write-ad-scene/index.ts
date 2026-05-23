@@ -52,6 +52,16 @@ type BrandLite = {
 };
 type CharLite = { name?: string; role?: string; description?: string };
 
+type BrandIdentityLite = {
+  primary_color?: string | null;
+  supporting_colors?: string[] | null;
+  avoid_colors?: string[] | null;
+  typography_vibe?: string | null;
+  font_hint?: string | null;
+  mood_notes?: string | null;
+  tagline?: string | null;
+};
+
 type Brief = {
   subject?: "product" | "app";
   format?: { label?: string; fragment?: string; custom?: string };
@@ -62,6 +72,7 @@ type Brief = {
   characters?: CharLite[];
   location?: { place?: string; hasImage?: boolean } | null;
   userNote?: string;
+  brandIdentity?: BrandIdentityLite | null;
 };
 
 function buildUserContent(b: Brief): string {
