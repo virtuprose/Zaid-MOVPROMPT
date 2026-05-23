@@ -681,10 +681,8 @@ export function composeStudioPrompt(brief: StudioBrief): string {
     brief.subject === "app"
       ? "Subject: a mobile app — feature its UI prominently on a phone screen held by the presenter."
       : "Subject: a physical product — feature it cleanly in-hand or on a hero surface.";
-  const subjectLine =
-    brief.subject === "app"
-      ? "Subject: a mobile app — feature its UI prominently on a phone screen held by the presenter."
-      : "Subject: a physical product — feature it cleanly in-hand or on a hero surface.";
+
+
 
   const brands = brief.brands && brief.brands.length > 0
     ? brief.brands
