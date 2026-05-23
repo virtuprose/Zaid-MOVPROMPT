@@ -532,6 +532,16 @@ export type CharacterContext = {
   hasImage?: boolean;
 };
 
+export type BrandIdentityContext = {
+  primary_color?: string | null;
+  supporting_colors?: string[] | null;
+  avoid_colors?: string[] | null;
+  typography_vibe?: string | null;
+  font_hint?: string | null;
+  mood_notes?: string | null;
+  tagline?: string | null;
+};
+
 export type StudioBrief = {
   subject: Subject;
   master: string;
