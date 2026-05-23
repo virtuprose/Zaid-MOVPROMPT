@@ -39,17 +39,19 @@ function Row({
   return (
     <div
       className={cn(
-        "rounded-xl border bg-secondary/30 transition-colors",
-        active ? "border-[#F5A524]/40" : "border-border/40",
+        "rounded-xl transition-colors",
+        active
+          ? "bg-[#F5A524]/10 ring-1 ring-inset ring-[#F5A524]/40"
+          : "hover:bg-white/[0.04]",
       )}
     >
       <button
         type="button"
         onClick={onClick}
-        className="w-full flex items-center gap-3 px-3 h-11 text-sm"
+        className="w-full flex items-center gap-3 px-2.5 h-11 text-sm rounded-xl"
       >
         <span className="text-muted-foreground">{icon}</span>
-        <span className="text-foreground/90">{label}</span>
+        <span className="text-foreground/90 font-medium">{label}</span>
         <span className="ml-auto flex items-center gap-1 text-foreground/80 tabular-nums">
           {value}
           <ChevronRight
@@ -61,7 +63,7 @@ function Row({
         </span>
       </button>
       {active && (
-        <div className="px-3 pb-3 pt-1 flex flex-wrap gap-1.5">{children}</div>
+        <div className="px-2.5 pb-2.5 pt-1 flex flex-wrap gap-1.5">{children}</div>
       )}
     </div>
   );
@@ -126,8 +128,14 @@ export function RenderSettingsPopover({
       <PopoverContent
         align="start"
         sideOffset={8}
-        className="w-[320px] p-2 space-y-1.5 bg-[hsl(240_5%_8%)]/95 backdrop-blur border-border/60"
+        className="w-[320px] p-2 rounded-2xl border-border/60 bg-[hsl(240_6%_7%)]/95 backdrop-blur-xl shadow-2xl shadow-black/50"
       >
+        <div className="px-2 pt-1 pb-2">
+          <span className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground/80 font-semibold">
+            Render settings
+          </span>
+        </div>
+        <div className="space-y-1">
         <Row
           icon={<Square className="w-4 h-4" />}
           label="Aspect ratio"
@@ -179,6 +187,7 @@ export function RenderSettingsPopover({
             </Pill>
           ))}
         </Row>
+        </div>
       </PopoverContent>
     </Popover>
   );
