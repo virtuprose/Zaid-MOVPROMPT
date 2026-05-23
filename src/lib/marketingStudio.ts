@@ -145,7 +145,7 @@ export const FORMATS: StudioPreset[] = [
     category: "commercial",
     image: u("photo-1517694712202-14dd9538aa97"),
     fragment:
-      "Split-screen before/after transformation, smooth wipe between states, clear visual contrast, satisfying payoff frame",
+      "Elite $1M-production before/after transformation commercial — cinematic 8k photorealistic storytelling, high-contrast emotional shift, dramatic transition effects, precise macro and wide-angle cinematography. Build 4–6 sequences ending on The Transformation Hero: (1) The Problem State — establish the negative 'before' with dim, cool or uneven lighting (e.g., macro of aged/cracked/dirty surface, frustrated person in a cluttered room); (2) The Catalyst (optional) — high-speed macro close-up of the product being applied or activated, the exact moment interaction begins (first drop of serum hitting the surface, power button pressed); (3) The Process In Motion — fast-paced montage with dynamic tracking shots or time-lapse showing the product actively working (dirt lifting, fabric smoothing, space de-cluttering); (4) The Reveal Transition — describe the exact visual mechanism (vertical wipe left-to-right erasing the dullness, seamless morph, or camera pan from 'before' into 'after'), lighting shifts from dim to radiant and warm; (5) The Confident After (optional) — medium shot or close-up of the subject looking satisfied/happy, highlight the new quality (glow of skin, sheen of surface, calm of space); (6) The Transformation Hero — iconic wide shot or split-screen with 'Before' left and 'After' right, clean graphic demarcation, perfectly framed and lit, undeniable premium transformation.",
   },
   {
     id: "documentary",
