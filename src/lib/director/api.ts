@@ -669,8 +669,9 @@ export type AdSceneBrief = {
   setting?: { label?: string; fragment?: string; custom?: string };
   brand?: { name?: string; description?: string; tagline?: string | null; audience?: string | null } | null;
   brands?: Array<{ name?: string; description?: string; tagline?: string | null; audience?: string | null }>;
-  character?: { name?: string; role?: string | null; description?: string | null } | null;
-  characters?: Array<{ name?: string; role?: string | null; description?: string | null }>;
+  character?: { name?: string; role?: string | null; description?: string | null; shot_type?: "face" | "full" } | null;
+  characters?: Array<{ name?: string; role?: string | null; description?: string | null; shot_type?: "face" | "full" }>;
+
   location?: { place?: string; hasImage?: boolean } | null;
   /** Free-text adaptation layer — preset stays locked, this tweaks tone/details. */
   userNote?: string;
