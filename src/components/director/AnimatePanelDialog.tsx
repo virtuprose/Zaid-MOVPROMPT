@@ -333,6 +333,71 @@ export function AnimatePanelDialog({
             </div>
           </div>
 
+          {/* Audio plan */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between gap-2">
+              <div className="text-[11px] font-semibold uppercase tracking-wide text-foreground/85">
+                Sound {mode === "all" && <span className="text-muted-foreground/70 normal-case text-[10px] font-normal">· applied to every panel</span>}
+              </div>
+              {modelHasNativeAudio ? (
+                <Badge variant="secondary" className="bg-primary/15 text-primary border-primary/40 text-[10px] py-0 gap-1">
+                  <Volume2 className="h-2.5 w-2.5" /> Native audio
+                </Badge>
+              ) : (
+                <Badge variant="secondary" className="bg-muted/40 text-muted-foreground border-border text-[10px] py-0 gap-1">
+                  <VolumeX className="h-2.5 w-2.5" /> Silent model
+                </Badge>
+              )}
+            </div>
+            <div className="grid grid-cols-2 gap-1.5">
+              {([
+                { id: "none" as const,    label: "No audio",    icon: VolumeX,        hint: "Silent clip" },
+                { id: "music" as const,   label: "Music",       icon: Music,          hint: "Underscore track" },
+                { id: "sfx" as const,     label: "Sound FX",    icon: AudioWaveform,  hint: "Diegetic SFX" },
+                { id: "ambient" as const, label: "Ambient",     icon: Wind,           hint: "Room / world tone" },
+              ]).map(({ id, label, icon: Icon, hint }) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setAudioPlan(id)}
+                  className={cn(
+                    "flex items-start gap-2 rounded-md border px-2.5 py-1.5 text-left transition-colors",
+                    audioPlan === id
+                      ? "border-primary/50 bg-primary/10"
+                      : "border-border/40 bg-background/30 hover:border-border hover:bg-muted/30",
+                  )}
+                >
+                  <Icon className={cn("h-3.5 w-3.5 mt-0.5 shrink-0", audioPlan === id ? "text-primary" : "text-muted-foreground")} />
+                  <div className="min-w-0">
+                    <div className={cn("text-[11px] font-medium", audioPlan === id ? "text-foreground" : "text-foreground/85")}>{label}</div>
+                    <div className="text-[10px] text-muted-foreground/70 leading-tight">{hint}</div>
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            {/* Audio compatibility notice */}
+            {wantsAudio && !modelHasNativeAudio && (
+              <div className="flex items-start gap-2 rounded-md border border-accent/30 bg-accent/5 px-2.5 py-2">
+                <AlertTriangle className="h-3.5 w-3.5 text-accent shrink-0 mt-0.5" />
+                <div className="text-[11px] leading-snug text-foreground/85 space-y-1">
+                  <p>
+                    <span className="font-medium">{selectedModel?.label || selected}</span> produces a silent clip. Your {audioPlan} will be generated separately and mixed onto the video — this requires an ElevenLabs key (ask the team to enable it).
+                  </p>
+                  {swapTarget && (
+                    <button
+                      type="button"
+                      onClick={() => setSelected(swapTarget.id)}
+                      className="text-[11px] text-primary hover:underline font-medium"
+                    >
+                      → Switch to {swapTarget.label} for native sync sound
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Aspect (read-only) */}
           {aspectRatio && (
             <div className="text-[11px] text-muted-foreground/80">
