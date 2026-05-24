@@ -31,6 +31,8 @@ type Props = {
   onQuickReply?: (chip: string) => void;
   onGenerateImagePrompt?: () => void;
   imagePromptBusy?: boolean;
+  mode?: "director" | "free_chat";
+  onModeChange?: (mode: "director" | "free_chat") => void;
 };
 
 export function Composer({
@@ -45,6 +47,8 @@ export function Composer({
   onQuickReply,
   onGenerateImagePrompt,
   imagePromptBusy,
+  mode = "director",
+  onModeChange,
 }: Props) {
   const { user } = useAuth();
   const inputRef = useRef<HTMLInputElement>(null);
