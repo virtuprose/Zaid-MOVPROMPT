@@ -154,6 +154,7 @@ export function VideoOptionsDialog({ open, model, prompt, initialOptions, onCanc
     () => (model ? getModelControls(model.id) : null),
     [model],
   );
+  const prices = usePricing();
   const [options, setOptions] = useState<VideoOptions>({});
   const [advancedOpen, setAdvancedOpen] = useState(false);
 
@@ -351,7 +352,6 @@ export function VideoOptionsDialog({ open, model, prompt, initialOptions, onCanc
 
       <div className="flex justify-end items-center gap-2 pt-2 border-t border-border/60">
         {(() => {
-          const prices = usePricing();
           const dur =
             typeof options.duration === "number"
               ? options.duration
