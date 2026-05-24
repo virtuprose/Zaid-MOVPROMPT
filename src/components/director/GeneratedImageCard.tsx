@@ -281,7 +281,7 @@ export function GeneratedImageCard({ data, onRegenerate, onUnpinSubject }: Props
             className="h-8 text-xs"
             onClick={() =>
               regen(
-                "Extend this key frame into a sequence — propose 8 continuation beats that keep the same scene, lighting, lens, color grade, and composition (only action and framing change), then generate them as a scene-locked storyboard.",
+                "Extend this key frame into a sequence — propose 6 continuation beats that keep the same scene, lighting, lens, color grade, and composition (only action and framing change), then generate them as a scene-locked storyboard.",
               )
             }
           >

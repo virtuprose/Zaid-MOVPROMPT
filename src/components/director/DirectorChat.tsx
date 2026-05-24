@@ -618,10 +618,10 @@ function DirectorChatInner() {
       liveImageBubble ? [...baseBubbles, liveImageBubble] : [...baseBubbles, loadingBubble],
     );
 
+    const streamedImages: Array<{ url: string; storage_path: string; shot_index?: number }> = [];
+    const failedIndices: number[] = [];
     try {
       const api = await import("@/lib/director/api");
-      const streamedImages: Array<{ url: string; storage_path: string; shot_index?: number }> = [];
-      const failedIndices: number[] = [];
       const result = isStreamingStoryboard
         ? await api.generateReferenceImageStream(
             {
@@ -744,10 +744,19 @@ function DirectorChatInner() {
       }
     } catch (e: any) {
       const handled = await notifyInsufficientCredits(e);
+      // If the stream dropped mid-flight we may already have some panels —
+      // keep them visible and tell the user what's missing instead of going silent.
+      const partial = isStreamingStoryboard && streamedImages.length > 0;
+      const droppedConnection =
+        /network|fetch|stream|aborted|closed|terminated|ECONN/i.test(String(e?.message || ""));
       const message = handled
         ? "You're out of credits — top up to keep generating."
-        : e?.message || "Image generation failed";
-      if (!handled) toast.error(message);
+        : partial
+          ? `Generated ${streamedImages.length} of ${streamTotal} panels before the connection dropped. Unused credits were refunded — say "continue" to render the remaining ${streamTotal - streamedImages.length}.`
+          : droppedConnection
+            ? "Connection dropped before any panels finished. Credits refunded — try again."
+            : e?.message || "Image generation failed";
+      if (!handled) toast.error(partial ? "Partial storyboard — see chat" : message);
       setBubbles((prev) => {
         const trimmed =
           prev.length && prev[prev.length - 1].role === "assistant"
