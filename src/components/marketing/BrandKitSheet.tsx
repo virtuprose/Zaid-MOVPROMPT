@@ -667,12 +667,12 @@ function AnglesSection({
               )}
             >
               {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImagePlus className="w-4 h-4" />}
-              <span className="text-[10px] font-medium">Add angle</span>
+              <span className="text-[10px] font-medium">Add photo</span>
             </button>
           )}
         </div>
         <p className="mt-1.5 text-[11px] text-muted-foreground">
-          More angles (front, back, packaging…) = stronger 3D lock so the product looks identical across every shot.
+          Angles, packaging, lifestyle — anything that shows the product. More references = stronger 3D lock so it looks identical across every shot.
         </p>
       </div>
 
