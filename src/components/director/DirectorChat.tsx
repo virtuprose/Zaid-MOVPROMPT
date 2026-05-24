@@ -287,6 +287,8 @@ function DirectorChatInner() {
       sessionIdRef.current = data.id;
       const loaded = (data.messages as Bubble[]) || [WELCOME];
       const remote = loaded.length ? loaded : [WELCOME];
+      // Re-sign storage-backed URLs before they hit the DOM.
+      const remoteRefreshed = (await refreshBubbleSignedUrls(remote.slice())) as Bubble[];
       setBubbles((prev) => {
         if (remote.length > prev.length) return remote;
         if (remote.length === prev.length) {
