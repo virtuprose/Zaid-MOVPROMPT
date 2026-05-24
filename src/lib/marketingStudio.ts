@@ -92,6 +92,7 @@ export const FORMATS: StudioPreset[] = [
     video: "/presets/speed-reveal.mp4",
     fragment:
       "High-kinetic cinematic commercial, 8k resolution, FPV drone physics, extreme speed-ramping (fast-slow-fast), seamless spatial transitions, motion blur, hyper-dynamic camera angles, high-end motion control rig aesthetic. Build 4–6 sequences that never break kinetic momentum until the final frame, always ending with The Sudden Stop Reveal. Sequence 1 (The FPV Dive): high-velocity establishing shot, camera behaves like an FPV drone diving rapidly from the sky or a high vantage point directly toward the product, surroundings blur with intense speed before snapping into sharp focus right in front of the hero. Sequence 2 (The Speed Ramp Detail): camera rapidly orbits the product, mid-spin the footage speed-ramps into extreme 1000fps slow-motion to highlight a specific premium feature (a splash of liquid, a glowing LED, a mechanical click), then the camera instantly whips away at high speed. Sequence 3 (The Portal Transition): camera executes a rapid push-in, flying directly into a dark or reflective part of the product (through a glass lens, into a drop of condensation, through a vent) which acts as a seamless portal instantly transitioning out into a completely new contrasting secondary environment. Sequence 4 (The Kinetic Match-Cut — optional): product moves rapidly across the frame; every time it passes behind a foreground object (pillar, splash of element), the background and the product's color/variation instantly match-cut to a new version while maintaining the exact same trajectory and speed. Sequence 5 (The Reverse Pull-out — optional): camera, currently inside the product's internal mechanics or texture, suddenly flies backward in reverse at high speed, seamlessly zooming out through the outer shell to reveal the full product mid-air spinning dynamically. Sequence 6 (The Sudden Stop Reveal): camera is pulling back at maximum velocity from the product, then hits a dead-stop on a dime, all motion blur vanishes instantly, leaving a crisp brilliantly lit perfect 8k wide hero shot of the product frozen center-frame against a premium color/texture backdrop. Premium, high-impact, million-dollar finish.",
+    lockScene: true,
   },
   {
     id: "hype-motion",
@@ -102,6 +103,7 @@ export const FORMATS: StudioPreset[] = [
     video: "/presets/cinematic-ai-director.mp4",
     fragment:
       "Hyper-realistic 3D product commercial, 8k, high-speed phantom camera at 1000fps slow-motion, cinematic studio lighting. Sequence 1 (Texture): extreme macro close-up panning over the product, hyper-detailed surface textures (condensation, finish, micro-detail). Sequence 2 (Kinetic Ingredients): zero-gravity explosion of raw ingredients and key props colliding mid-air in crisp photorealistic detail against a clean color backdrop. Sequence 3 (Fluid Dynamics): massive sweeping high-speed liquid splash erupts and spirals around the product, camera zooms rapidly through the center of the splash. Sequence 4 (The Reveal): wide hero shot of the product in its final packaging, perfectly lit, suspended center-frame, surrounded by slowly falling ingredients and props. Premium, vibrant, million-dollar production value",
+    lockScene: true,
   },
   {
     id: "realistic-3d",
@@ -122,6 +124,7 @@ export const FORMATS: StudioPreset[] = [
     video: "/presets/tactile-stopmotion.mp4",
     fragment:
       "Premium tactile stop-motion commercial, 8k resolution, miniature set design, tilt-shift macro photography, warm studio micro-lighting, 12fps staccato animation style, hyper-detailed handmade textures (clay, construction paper, felt, balsa wood, fabric). Sequence 1 (The Miniature Stage): macro shot of a handcrafted diorama made of pastel seamless paper and textured felt, miniature studio lights flicker on, environment sets the mood for the product. Sequence 2 (Frame-by-Frame Assembly): the product builds itself in a snappy frame-by-frame sequence, individual pieces of smooth polymer clay and laser-cut wood slide, pop and stack together with visible charming imperfection. Sequence 3 (Material Morphing): key ingredients introduced through tactile morphing — a ball of clay rolls in and squashes into an ingredient shape, colliding with another and bursting into a shower of paper confetti and wool tufts. Sequence 4 (Playful Interaction): the product scoots across the felt surface leaving a physical trail, a miniature invisible hand visibly adjusts its position in classic stop-motion stutter. Sequence 5 (Tactile Macro): extreme macro tilt-shift close-up on the product's surface, focus on paper grain, clay thumbprints and stray felt fibers, highlighting the handmade artisanal quality. Sequence 6 (The Diorama Reveal): wide hero pull-back to the completed product perfectly framed in its miniature handmade set, crafted props suspended on visible wires in the background. Premium, artisanal, highly tactile production value.",
+    lockScene: true,
   },
   {
     id: "hero-shot",
@@ -132,6 +135,7 @@ export const FORMATS: StudioPreset[] = [
     video: "/presets/hero-shot.mp4",
     fragment:
       "Elite $1M-production Hero Shot reveal — epic, iconic, monolithic product reveal in the spirit of luxury car or flagship tech launches. Style directive: cinematic epic reveal, 8k photorealistic, anamorphic lens aesthetic, ultra-slow motion (1000fps+), dramatic high-contrast lighting (volumetric rim light, lens flares, God rays), intense atmosphere (swirling smoke, particle dust), blockbuster CGI physics. Treat the product as a monumental object or legendary character. Build 4–6 sequences ALWAYS ending with The Ultimate Hero Reveal: (1) The Tease / Build-up — tight macro on a mysterious pristine detail, slow rotation, only hints of shape revealed by sweeping dramatic rim lighting in moody atmospheric setting (swirling smoke, deep shadows); (2) Kinetic Power Introduction — ultra-slow-motion tracking shot, a high-speed blast of an element (water droplets, fire, lightning, particle dust) is unleashed and barely misses the pristine surface, emphasizing durability and power; (3) Monolithic Scale — extreme low-angle tracking shot sweeping upwards, the product looms over the camera like a massive monolithic monument, volumetric light and God rays pierce the atmosphere highlighting premium craftsmanship and colossal scale; (4) The Precision Detail (optional) — fast-paced intense macro montage, rapid-fire cuts of textures, logo, materials snapping together with mechanical precision under sharp brilliant light; (5) The Action Burst (optional) — dynamic bullet-time tracking move around the product as it performs an action (opening, activating), debris and particles fly around it frozen in slow motion; (6) The Ultimate Hero Reveal — final iconic wide shot, product perfectly centered bathed in triumphant golden or brilliantly white God lighting, camera slowly pulls back revealing the product standing solitary and powerful within an epic breathtaking landscape (cliffside at sunset, futuristic vault). Legendary, undisputed production value.",
+    lockScene: true,
   },
   {
     id: "lifestyle",
@@ -201,6 +205,7 @@ export const FORMATS: StudioPreset[] = [
     image: u("photo-1620712943543-bcc4688e7485"),
     fragment:
       "Animated explainer style, clean motion graphics, bold typography, illustrated icons walk through the value prop",
+    lockScene: true,
   },
 ];
 
