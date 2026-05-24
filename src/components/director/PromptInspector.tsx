@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { FileText, Copy, Check, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
@@ -88,20 +89,24 @@ export function PromptInspector({ ctx, shotIndex, triggerClassName, triggerTitle
 
   return (
     <Popover>
-      <PopoverTrigger asChild>
-        <button
-          type="button"
-          onClick={(e) => e.stopPropagation()}
-          className={
-            triggerClassName ??
-            "absolute top-1 right-[68px] opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity bg-background/85 hover:bg-background text-foreground p-1.5 rounded"
-          }
-          title={triggerTitle ?? "Inspect prompt"}
-          aria-label={triggerTitle ?? "Inspect prompt"}
-        >
-          <FileText className="h-3 w-3" />
-        </button>
-      </PopoverTrigger>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              onClick={(e) => e.stopPropagation()}
+              className={
+                triggerClassName ??
+                "absolute top-1 right-[68px] opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-all bg-background/85 hover:bg-primary hover:text-primary-foreground text-foreground p-1.5 rounded"
+              }
+              aria-label={triggerTitle ?? "Inspect prompt"}
+            >
+              <FileText className="h-3 w-3" />
+            </button>
+          </PopoverTrigger>
+        </TooltipTrigger>
+        <TooltipContent>{triggerTitle ?? "Inspect prompt"}</TooltipContent>
+      </Tooltip>
       <PopoverContent
         side="top"
         align="end"
