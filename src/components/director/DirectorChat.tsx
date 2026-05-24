@@ -2252,8 +2252,13 @@ function DirectorChatInner() {
                   <AssistantAvatar size="sm" state="idle" className="mt-1" />
                   <div className="flex-1">
                     <Message from="assistant">
-                      <MessageContent className="whitespace-pre-wrap leading-relaxed text-foreground/90">
-                        {animate ? (
+                      <MessageContent className={cn(
+                        "leading-relaxed text-foreground/90",
+                        b.markdown ? "prose prose-invert prose-sm max-w-none" : "whitespace-pre-wrap",
+                      )}>
+                        {b.markdown ? (
+                          <ReactMarkdown>{b.content}</ReactMarkdown>
+                        ) : animate ? (
                           <TypewriterText text={b.content} speed={20} />
                         ) : (
                           b.content
