@@ -676,6 +676,7 @@ function DirectorChatInner() {
               per_shot_prompts: payload.per_shot_prompts,
               lock_mode: payload.lock_mode,
               subject_kind: payload.subject_kind,
+              quality,
             },
             (ev) => {
               if (ev.type === "panel" || ev.type === "panel_error") {
