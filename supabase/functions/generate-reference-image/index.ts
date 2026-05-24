@@ -15,6 +15,15 @@ const SIGNED_URL_TTL = 60 * 60;
 type Mode = "character_sheet" | "storyboard_panels" | "single_panel";
 type LockMode = "character" | "scene" | "auto";
 
+type StyleSpec = {
+  lens?: string;
+  lighting?: string;
+  palette?: string;
+  film_emulation?: string;
+  grade?: string;
+  mood?: string;
+};
+
 type Body = {
   mode?: Mode;
   prompt?: string;
@@ -25,6 +34,7 @@ type Body = {
   shot_index?: number; // when regenerating a single panel inside an existing 3x3 grid
   lock_mode?: LockMode; // "character" | "scene" (key-frame extension) | "auto" (default)
   subject_kind?: "character" | "product"; // shapes the character_sheet layout copy
+  style_spec?: StyleSpec; // optional locked DP spec injected into every panel prompt
 };
 
 const IDENTITY_LOCK =
@@ -35,6 +45,28 @@ const SCENE_LOCK =
 
 const HERO_FRAME_SUFFIX =
   " Single polished hero frame: cinematic composition, intentional depth of field, controlled lighting, clean negative space. No text, no captions, no watermark, no UI overlays.";
+
+// Applied to EVERY storyboard panel so panels are finished cinematography stills,
+// not draft beats. This is the biggest quality lever for downstream video renders.
+const PANEL_POLISH_SUFFIX =
+  " Single polished storyboard frame. Cinematic composition with deliberate negative space, lens-correct geometry, controlled depth of field, motivated lighting with clear key/fill/rim separation, consistent film grain, finished color grade. Photographic finish — no draft sketch quality, no rough lines, no concept-art looseness. No text, no captions, no watermark, no UI overlay, no on-image labels, no shot numbers burned in.";
+
+function buildStyleHeader(spec?: StyleSpec): string {
+  if (!spec) return "";
+  const parts: string[] = [];
+  if (spec.lens) parts.push(`lens ${spec.lens}`);
+  if (spec.lighting) parts.push(`lighting ${spec.lighting}`);
+  if (spec.palette) parts.push(`palette ${spec.palette}`);
+  if (spec.film_emulation) parts.push(`stock ${spec.film_emulation}`);
+  if (spec.grade) parts.push(`grade ${spec.grade}`);
+  if (spec.mood) parts.push(`mood ${spec.mood}`);
+  if (parts.length === 0) return "";
+  return `LOCKED STYLE — ${parts.join(" · ")}. Apply to this frame verbatim. `;
+}
+
+function buildAspectClause(aspect: string): string {
+  return ` Frame composed for ${aspect} aspect ratio — fill the full frame, no letterboxing, no pillarboxing, no border bars, no padding.`;
+}
 
 
 function dataUrlToBlob(dataUrl: string): { blob: Blob; mime: string } {
@@ -165,6 +197,8 @@ serve(async (req) => {
     let prompts: string[];
     let shotIndices: number[]; // per-prompt shot_index for storyboard_panels
     const isChain = mode === "storyboard_panels" && !regenIndex;
+    const styleHeader = buildStyleHeader(body.style_spec);
+    const aspectClause = buildAspectClause(aspect);
     if (mode === "storyboard_panels") {
       const raw =
         Array.isArray(body.per_shot_prompts) && body.per_shot_prompts.length > 0
@@ -175,14 +209,14 @@ serve(async (req) => {
             );
       const total = regenIndex ? 9 : raw.length;
       const continuityClause = isChain
-        ? " Same character, wardrobe, hair, face, and props as the attached previous panel — only the action and framing change."
+        ? " Match the previous panel exactly: same character, wardrobe, hair, face, props, lens, focal length, lighting direction, color grade, film stock, contrast, atmospheric density, time of day, and weather. Only the action and framing change between frames."
         : "";
       const subjectClause = referenceUrls.length >= 2
         ? " Match the subject (character or product) shown in the first attached reference sheet — keep face, wardrobe, hair, branding, and proportions exact."
         : "";
       prompts = raw.map((beat, i) => {
         const shotNum = regenIndex ?? i + 1;
-        return `${lockPrefix}Shot ${shotNum} of ${total}: ${beat}${continuityClause}${subjectClause}`;
+        return `${styleHeader}${lockPrefix}Shot ${shotNum} of ${total}: ${beat}${continuityClause}${subjectClause}${aspectClause}${PANEL_POLISH_SUFFIX}`;
       });
       shotIndices = regenIndex
         ? prompts.map(() => regenIndex)
@@ -196,8 +230,8 @@ serve(async (req) => {
         : "";
       const sheetTemplate =
         subjectKind === "product"
-          ? `${sheetLock}Product / object reference sheet, single image, split composition. Left half: a large, left-aligned detailed closeup of the item showing material, texture, and craftsmanship. Right half: a multi-angle view of the same item showing four angles in this order — front, right side, left side, and back (or top if the item is rotationally symmetrical). All views on a seamless pure white background, even soft studio lighting, no hands, no people, no props, no shadows beneath the item. Absolutely no text, no labels, no captions, no annotations, no measurements, no watermarks, no logos overlay, no borders, no soft gradients, no color swatches. Photorealistic. ${basePrompt}`
-          : `${sheetLock}Character reference sheet, single image, split composition. Left half: a large, left-aligned closeup portrait of the character (head and shoulders, outfit visible at the top, neutral expression, looking at camera). Right half: a full-body multi-angle view of the same character showing four poses in this order — front view, right side profile, left side profile, and back view. Consistent identity, wardrobe, hair, and proportions across every view. All views on a seamless pure white background, even soft studio lighting, no harsh shadows under the feet, no extra props beyond what the character wears. Absolutely no text, no labels, no captions, no annotations, no watermarks, no borders, no soft gradients, no color swatches. Photorealistic. ${basePrompt}`;
+          ? `${styleHeader}${sheetLock}Product / object reference sheet, single image, split composition. Left half: a large, left-aligned detailed closeup of the item showing material, texture, and craftsmanship. Right half: a multi-angle view of the same item showing four angles in this order — front, right side, left side, and back (or top if the item is rotationally symmetrical). All views on a seamless pure white background, even soft studio lighting, no hands, no people, no props, no shadows beneath the item. Absolutely no text, no labels, no captions, no annotations, no measurements, no watermarks, no logos overlay, no borders, no soft gradients, no color swatches. Photorealistic. ${basePrompt}`
+          : `${styleHeader}${sheetLock}Character reference sheet, single image, split composition. Left half: a large, left-aligned closeup portrait of the character (head and shoulders, outfit visible at the top, neutral expression, looking at camera). Right half: a full-body multi-angle view of the same character showing four poses in this order — front view, right side profile, left side profile, and back view. Consistent identity, wardrobe, hair, and proportions across every view. All views on a seamless pure white background, even soft studio lighting, no harsh shadows under the feet, no extra props beyond what the character wears. Absolutely no text, no labels, no captions, no annotations, no watermarks, no borders, no soft gradients, no color swatches. Photorealistic. ${basePrompt}`;
       prompts = [sheetTemplate];
       shotIndices = [];
     } else {
@@ -206,7 +240,10 @@ serve(async (req) => {
       // append a polish suffix so the model treats it as a finished still
       // rather than a draft.
       const suffix = !hasReference ? HERO_FRAME_SUFFIX : "";
-      prompts = Array.from({ length: count }, () => `${lockPrefix}${basePrompt}${suffix}`);
+      prompts = Array.from(
+        { length: count },
+        () => `${styleHeader}${lockPrefix}${basePrompt}${suffix}${aspectClause}`,
+      );
       shotIndices = [];
     }
 

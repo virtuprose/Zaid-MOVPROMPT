@@ -13,6 +13,15 @@ export type LockedSpec = {
   style?: "photoreal" | "cinematic-film" | "stylized" | "anime";
 };
 
+export type StyleSpec = {
+  lens?: string;
+  lighting?: string;
+  palette?: string;
+  film_emulation?: string;
+  grade?: string;
+  mood?: string;
+};
+
 export type Breakdown = {
   subject?: string;
   action?: string;
@@ -79,6 +88,7 @@ export type AgentResponse =
       lock_mode?: "character" | "scene" | "auto";
       directors_note?: string;
       scene_already_described?: boolean;
+      style_spec?: StyleSpec;
     }
   | {
       kind: "generate_story_bundle";
@@ -168,6 +178,7 @@ export async function generateReferenceImage(input: {
   shot_index?: number;
   lock_mode?: "character" | "scene" | "auto";
   subject_kind?: "character" | "product";
+  style_spec?: StyleSpec;
 }): Promise<{ mode: string; images: GeneratedImage[] }> {
   const { data, error } = await supabase.functions.invoke("generate-reference-image", {
     body: input,

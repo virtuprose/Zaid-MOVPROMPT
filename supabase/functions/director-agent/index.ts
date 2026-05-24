@@ -487,7 +487,7 @@ const TOOLS = [
             maxItems: 9,
             items: { type: "string" },
             description:
-              "Required for storyboard_panels. One prompt per panel, in shot order, each including the per-shot beat plus the locked style vocabulary. The edge function automatically prepends the identity-lock phrase and the 'Shot N of N:' prefix when a character reference is attached.",
+              "Required for storyboard_panels. One prompt per panel, in shot order. EACH entry MUST be 30–60 words and MUST name, in this order: (a) subject + micro-action (1 present-tense sentence), (b) shot type + camera angle (WS / MS / MCU / CU / OTS / insert + low/eye/high angle), (c) camera move (static / slow push / dolly / pan / handheld micro-drift), (d) lens (focal length range, e.g. 35mm / 50mm / 85mm), (e) lighting (key direction + fill ratio + practicals + time of day + color temp), (f) mood in 3 words. Single-clause beats like 'she opens the door' are forbidden. The edge function automatically prepends the LOCKED STYLE header, the identity-lock phrase, the 'Shot N of N:' prefix, an aspect clause, and a polish suffix — do NOT duplicate those.",
           },
           shot_index: {
             type: "integer",
@@ -502,15 +502,31 @@ const TOOLS = [
             description:
               "How to lock generations to the attached reference. 'character' (default when ref is a character sheet) preserves face/hair/outfit. 'scene' (use for key-frame extensions: product shots, landscapes, establishing frames) preserves location, lighting, lens, and composition. 'auto' defers to the default (character lock when ref present).",
           },
+          style_spec: {
+            type: "object",
+            description:
+              "REQUIRED for storyboard_panels, RECOMMENDED for character_sheet and single_panel. The locked DP spec, echoed verbatim from the locked_spec / breakdown. The edge function renders this as a 'LOCKED STYLE — lens X · lighting Y · …' header pre-pended to every panel prompt so the look stays consistent across panels. NEVER omit on storyboard_panels.",
+            properties: {
+              lens: { type: "string", description: "Focal length + character, e.g. '35mm anamorphic, shallow DOF'." },
+              lighting: { type: "string", description: "Key direction + ratio + practicals + time of day + color temp." },
+              palette: { type: "string", description: "Dominant colors, e.g. 'teal shadows, amber highlights, desaturated mids'." },
+              film_emulation: { type: "string", description: "Stock / look reference, e.g. 'Kodak Portra 400', 'Fuji 500T', 'digital clean'." },
+              grade: { type: "string", description: "Color grade direction, e.g. 'teal-orange', 'warm bleach bypass', 'cool documentary'." },
+              mood: { type: "string", description: "3-5 word emotional register, e.g. 'tense, intimate, dread'." },
+            },
+            additionalProperties: false,
+          },
           directors_note: {
             type: "string",
-            description: "Short note shown to the user explaining why you generated these.",
+            description:
+              "Short note shown to the user. For storyboard_panels MUST include a one-line shot-to-shot grammar plan BEFORE the panel list, e.g. 'Cut from WS → MCU → insert → OTS → MS → WS. Light moves clockwise across the sequence.' This forces cinematic thinking and lets the user catch a weak edit before render.",
           },
           scene_already_described: {
             type: "boolean",
             description:
               "Set TRUE for mode=single_panel when the user's brief already includes the full key-frame scene (environment + subject + camera + lighting + mood). The client will skip the 'describe the opening key frame' step after the subject sheet and render the key frame from your prompt verbatim. Set FALSE (or omit) when the brief only names a subject and a scene description is still needed.",
           },
+
 
         },
         required: ["mode", "prompt"],

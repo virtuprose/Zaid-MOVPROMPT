@@ -516,6 +516,7 @@ function DirectorChatInner() {
       lock_mode?: "character" | "scene" | "auto";
       directors_note?: string;
       subject_kind?: "character" | "product";
+      style_spec?: import("@/lib/director/api").StyleSpec;
     },
     options?: { subjectSheet?: boolean; subjectKind?: "character" | "product" },
   ) => {
@@ -1298,6 +1299,7 @@ function DirectorChatInner() {
               aspect_ratio: resp.aspect_ratio || "16:9",
               directors_note: resp.directors_note,
               scene_already_described: resp.scene_already_described,
+              style_spec: resp.style_spec,
             } as any);
             setAttachments([]);
             return;
@@ -1345,6 +1347,7 @@ function DirectorChatInner() {
           shot_index: resp.shot_index,
           lock_mode: resp.lock_mode,
           directors_note: resp.directors_note,
+          style_spec: resp.style_spec,
         });
         return;
       } else if (resp.kind === "request_video_generation") {
