@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Paperclip, Send, Loader2, X, FileText, Image as ImageIcon, Music, ShieldCheck, ShieldAlert, ShieldQuestion, Mic, Square, Sparkles } from "lucide-react";
+import { Paperclip, Send, Loader2, X, FileText, Image as ImageIcon, Music, ShieldCheck, ShieldAlert, ShieldQuestion, Mic, Square, Sparkles, MessageCircle, Film } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
