@@ -1086,47 +1086,29 @@ export default function MarketingStudio() {
             {mode === "full" && (
               <>
                 <SectionHeader
-                  title={showCommunity ? "Community ads" : "Your ads"}
+                  title="Your ads"
                   subtitle={
-                    showCommunity
-                      ? "Click any template to load its format and location."
-                      : pendingJobs.length > 0
-                        ? "Your ad is rendering — it'll appear here in a moment."
-                        : "Tap one to revisit it in your Library."
-                  }
-                  right={
-                    <div className="flex items-center gap-1 rounded-full bg-muted/30 p-1">
-                      <ToggleTab active={!showCommunity} onClick={() => setShowCommunity(false)}>
-                        Yours ({adCount})
-                      </ToggleTab>
-                      <ToggleTab active={showCommunity} onClick={() => setShowCommunity(true)}>
-                        Community
-                      </ToggleTab>
-                    </div>
+                    pendingJobs.length > 0
+                      ? "Your ad is rendering — it'll appear here in a moment."
+                      : "Tap one to revisit it in your Library."
                   }
                 />
-                {showCommunity ? (
-                  <CommunityGrid
-                    ads={filteredAds}
-                    onPick={(ad) => applyTemplate(ad.template)}
-                  />
-                ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-                    {pendingJobs.map((job) => (
-                      <PendingAdCard key={job.id} onCancel={() => handleCancelJob(job.id)} />
-                    ))}
-                    {userAds.map((ad) => (
-                      <UserAdCard
-                        key={ad.id}
-                        ad={ad}
-                        onClick={() => setPreviewAd(ad)}
-                        onDownload={() => handleDownloadAd(ad)}
-                        onToggleLike={() => handleToggleLike(ad)}
-                        onDelete={() => setDeleteAdId(ad.id)}
-                      />
-                    ))}
-                  </div>
-                )}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                  {pendingJobs.map((job) => (
+                    <PendingAdCard key={job.id} onCancel={() => handleCancelJob(job.id)} />
+                  ))}
+                  {userAds.map((ad) => (
+                    <UserAdCard
+                      key={ad.id}
+                      ad={ad}
+                      onClick={() => setPreviewAd(ad)}
+                      onDownload={() => handleDownloadAd(ad)}
+                      onToggleLike={() => handleToggleLike(ad)}
+                      onDelete={() => setDeleteAdId(ad.id)}
+                    />
+                  ))}
+                </div>
+
               </>
             )}
           </section>
