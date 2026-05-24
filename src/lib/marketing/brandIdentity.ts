@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useSyncExternalStore } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -114,59 +114,97 @@ export function hasBrandIdentity(b: BrandIdentity | null | undefined): boolean {
   );
 }
 
+// Module-level shared store so all consumers (chip + sheet) see the same state.
+let currentIdentity: BrandIdentity | null = null;
+let currentLoading = true;
+let currentUserId: string | null | undefined = undefined;
+let inflight: Promise<void> | null = null;
+const listeners = new Set<() => void>();
+const emit = () => listeners.forEach((l) => l());
+
+async function loadFor(userId: string | null): Promise<void> {
+  currentUserId = userId;
+  currentLoading = true;
+  emit();
+  if (!userId) {
+    currentIdentity = null;
+    currentLoading = false;
+    emit();
+    return;
+  }
+  const { data } = await supabase
+    .from("brand_identities")
+    .select("*")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (data) {
+    const row = data as any;
+    const logo_url = await signLogo(row.logo_path);
+    currentIdentity = {
+      id: row.id,
+      logo_path: row.logo_path,
+      logo_url,
+      primary_color: row.primary_color,
+      supporting_colors: row.supporting_colors ?? null,
+      avoid_colors: row.avoid_colors ?? null,
+      typography_vibe: row.typography_vibe,
+      font_hint: row.font_hint,
+      mood_notes: row.mood_notes,
+      tagline: row.tagline,
+      lighting_style: row.lighting_style ?? null,
+      finish_vibe: row.finish_vibe ?? null,
+      pacing: row.pacing ?? null,
+      logo_treatment: row.logo_treatment ?? null,
+      brand_voice: row.brand_voice ?? null,
+      industry: row.industry ?? null,
+    };
+  } else {
+    currentIdentity = null;
+  }
+  currentLoading = false;
+  emit();
+}
+
+function ensureLoaded(userId: string | null) {
+  if (currentUserId === userId) return;
+  inflight = loadFor(userId);
+}
+
+const subscribe = (cb: () => void) => {
+  listeners.add(cb);
+  return () => {
+    listeners.delete(cb);
+  };
+};
+
 export function useBrandIdentity() {
   const { user } = useAuth();
-  const [identity, setIdentity] = useState<BrandIdentity | null>(null);
-  const [loading, setLoading] = useState(true);
+  const userId = user?.id ?? null;
 
-  const reload = useCallback(async () => {
-    if (!user) {
-      setIdentity(null);
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    const { data } = await supabase
-      .from("brand_identities")
-      .select("*")
-      .eq("user_id", user.id)
-      .maybeSingle();
-    if (data) {
-      const row = data as any;
-      const logo_url = await signLogo(row.logo_path);
-      setIdentity({
-        id: row.id,
-        logo_path: row.logo_path,
-        logo_url,
-        primary_color: row.primary_color,
-        supporting_colors: row.supporting_colors ?? null,
-        avoid_colors: row.avoid_colors ?? null,
-        typography_vibe: row.typography_vibe,
-        font_hint: row.font_hint,
-        mood_notes: row.mood_notes,
-        tagline: row.tagline,
-        lighting_style: row.lighting_style ?? null,
-        finish_vibe: row.finish_vibe ?? null,
-        pacing: row.pacing ?? null,
-        logo_treatment: row.logo_treatment ?? null,
-        brand_voice: row.brand_voice ?? null,
-        industry: row.industry ?? null,
-      });
-    } else {
-      setIdentity(null);
-    }
-    setLoading(false);
-  }, [user]);
+  const identity = useSyncExternalStore(
+    subscribe,
+    () => currentIdentity,
+    () => currentIdentity,
+  );
+  const loading = useSyncExternalStore(
+    subscribe,
+    () => currentLoading,
+    () => currentLoading,
+  );
 
   useEffect(() => {
-    reload();
-  }, [reload]);
+    ensureLoaded(userId);
+  }, [userId]);
+
+  const reload = useCallback(async () => {
+    await loadFor(userId);
+  }, [userId]);
 
   const save = useCallback(
     async (next: BrandIdentity) => {
-      if (!user) throw new Error("Not signed in");
+      if (!userId) throw new Error("Not signed in");
       const payload = {
-        user_id: user.id,
+        user_id: userId,
         logo_path: next.logo_path,
         primary_color: next.primary_color,
         supporting_colors: next.supporting_colors,
@@ -186,30 +224,31 @@ export function useBrandIdentity() {
         .from("brand_identities")
         .upsert(payload, { onConflict: "user_id" });
       if (error) throw error;
-      await reload();
+      await loadFor(userId);
     },
-    [user, reload],
+    [userId],
   );
 
   const clear = useCallback(async () => {
-    if (!user) return;
-    await supabase.from("brand_identities").delete().eq("user_id", user.id);
-    await reload();
-  }, [user, reload]);
+    if (!userId) return;
+    await supabase.from("brand_identities").delete().eq("user_id", userId);
+    await loadFor(userId);
+  }, [userId]);
 
   const uploadLogo = useCallback(
     async (file: File) => {
-      if (!user) throw new Error("Not signed in");
+      if (!userId) throw new Error("Not signed in");
       const ext = file.name.split(".").pop() || "png";
-      const path = `marketing/${user.id}/identity/logo-${Date.now()}.${ext}`;
+      const path = `marketing/${userId}/identity/logo-${Date.now()}.${ext}`;
       const { error } = await supabase.storage
         .from("director-uploads")
         .upload(path, file, { upsert: true });
       if (error) throw error;
       return path;
     },
-    [user],
+    [userId],
   );
 
   return { identity, loading, save, clear, uploadLogo, reload };
 }
+

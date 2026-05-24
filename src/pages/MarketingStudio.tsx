@@ -19,6 +19,7 @@ import {
   AppWindow,
   Download,
   Trash2,
+  CheckCircle2,
 } from "lucide-react";
 
 import {
@@ -944,7 +945,10 @@ export default function MarketingStudio() {
                 )}
                 <span>Brand kit</span>
                 {hasBrandIdentity(brandIdentity) && (
-                  <span className="text-[9px] uppercase tracking-wider text-[#F5A524] font-semibold">On</span>
+                  <span className="inline-flex items-center gap-1 text-[9px] uppercase tracking-wider text-[#F5A524] font-semibold">
+                    <CheckCircle2 className="w-3 h-3" strokeWidth={2.5} />
+                    On
+                  </span>
                 )}
               </button>
 
