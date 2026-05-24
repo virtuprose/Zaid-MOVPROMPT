@@ -716,6 +716,7 @@ function DirectorChatInner() {
             shot_index: payload.shot_index,
             lock_mode: payload.lock_mode,
             subject_kind: payload.subject_kind,
+            quality,
           });
 
       const role: "character" | "storyboard" | "reference" | "key_frame" =
