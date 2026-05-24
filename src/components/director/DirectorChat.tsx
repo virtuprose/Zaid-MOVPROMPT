@@ -1856,6 +1856,8 @@ function DirectorChatInner() {
             showHelper={false}
             onGenerateImagePrompt={generateImagePrompt}
             imagePromptBusy={imagePromptBusy}
+            mode={chatMode}
+            onModeChange={handleModeChange}
           />
         </div>
 
