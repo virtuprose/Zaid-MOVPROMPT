@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogClose } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { PromptInspector, type InspectorContext } from "./PromptInspector";
 
 export type GeneratedImageBubbleData = {
   mode: "character_sheet" | "storyboard_panels" | "single_panel";
@@ -14,6 +15,7 @@ export type GeneratedImageBubbleData = {
   subjectSheet?: boolean;
   subjectKind?: "character" | "product";
   failedIndices?: number[];
+  inspector?: InspectorContext;
 };
 
 export type AnimatePanelInput = {
@@ -393,6 +395,17 @@ export function GeneratedImageCard({ data, onRegenerate, onUnpinSubject, onAnima
                     <Play className="h-3 w-3" />
                   )}
                 </button>
+              )}
+              {data.inspector && (
+                <PromptInspector
+                  ctx={data.inspector}
+                  shotIndex={data.mode === "storyboard_panels" ? shotNum : undefined}
+                  triggerTitle={
+                    data.mode === "storyboard_panels"
+                      ? `Inspect prompt · Shot ${shotNum}`
+                      : "Inspect prompt"
+                  }
+                />
               )}
               <button
                 type="button"
