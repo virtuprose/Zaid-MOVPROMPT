@@ -125,6 +125,47 @@ async function generateOne(
   return img as string;
 }
 
+// Upscale a data URL (or http url) via FAL clarity-upscaler. Returns a data URL
+// to keep the rest of the pipeline (dataUrlToBlob) unchanged.
+async function upscaleViaFal(
+  falKey: string,
+  sourceUrl: string,
+  scale: 2 | 4,
+): Promise<string> {
+  const resp = await fetch("https://fal.run/fal-ai/clarity-upscaler", {
+    method: "POST",
+    headers: {
+      Authorization: `Key ${falKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      image_url: sourceUrl,
+      upscale_factor: scale,
+      creativity: 0.2,
+      resemblance: 1.5,
+      num_inference_steps: 18,
+    }),
+  });
+  if (!resp.ok) {
+    const txt = await resp.text();
+    const err: any = new Error(`fal_upscale_${resp.status}`);
+    err.status = resp.status;
+    err.detail = txt;
+    throw err;
+  }
+  const data = await resp.json();
+  const outUrl: string | undefined = data?.image?.url || data?.images?.[0]?.url;
+  if (!outUrl) throw new Error("fal_no_image");
+  // Fetch as bytes and re-encode as data URL so dataUrlToBlob works downstream.
+  const imgResp = await fetch(outUrl);
+  if (!imgResp.ok) throw new Error(`fal_fetch_${imgResp.status}`);
+  const buf = new Uint8Array(await imgResp.arrayBuffer());
+  const mime = imgResp.headers.get("content-type") || "image/png";
+  let bin = "";
+  for (let i = 0; i < buf.length; i++) bin += String.fromCharCode(buf[i]);
+  return `data:${mime};base64,${btoa(bin)}`;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
