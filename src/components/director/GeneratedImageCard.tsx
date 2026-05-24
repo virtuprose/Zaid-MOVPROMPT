@@ -1,4 +1,4 @@
-import { RotateCcw, Film, Maximize2, X, ChevronLeft, ChevronRight, Download, Wand2, Lightbulb } from "lucide-react";
+import { RotateCcw, Film, Maximize2, X, ChevronLeft, ChevronRight, Download, Wand2, Lightbulb, Play, Loader2 } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -16,10 +16,19 @@ export type GeneratedImageBubbleData = {
   failedIndices?: number[];
 };
 
+export type AnimatePanelInput = {
+  url: string;
+  shot_index: number;
+  directorsNote?: string;
+  aspectRatio?: "1:1" | "16:9" | "9:16";
+};
+
 type Props = {
   data: GeneratedImageBubbleData;
   onRegenerate?: (intent: string) => void;
   onUnpinSubject?: () => void;
+  onAnimatePanel?: (panel: AnimatePanelInput) => void | Promise<void>;
+  onAnimateAllPanels?: (panels: AnimatePanelInput[]) => void | Promise<void>;
 };
 
 // ---- Layer 3 chip presets ----
