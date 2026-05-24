@@ -55,7 +55,7 @@ import { TypewriterText } from "./TypewriterText";
 
 type Bubble =
   | { role: "user"; content: string; attachments?: Attachment[] }
-  | { role: "assistant"; content: string; animate?: boolean }
+  | { role: "assistant"; content: string; animate?: boolean; markdown?: boolean }
   | {
       role: "result";
       data: Extract<AgentResponse, { kind: "generate_prompt" }>;
