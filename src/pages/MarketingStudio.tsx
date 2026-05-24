@@ -233,6 +233,17 @@ export default function MarketingStudio() {
   const format = find(FORMATS, formatId);
   const setting = find(SETTINGS, settingId);
   const needsAvatar = format?.category === "avatar" && characterActiveIds.length === 0;
+  const sceneLocked = !!format?.lockScene;
+
+  // When a scene-locked format is picked, clear any scene/location selection
+  // so it doesn't conflict with the baked-in scene from the format fragment.
+  useEffect(() => {
+    if (!sceneLocked) return;
+    if (settingId) setSettingId(undefined);
+    if (customSetting) setCustomSetting("");
+    if (location.place || location.imagePath || location.imageUrl) setLocation(EMPTY_LOCATION);
+    if (placeMode !== "preset") setPlaceMode("preset");
+  }, [sceneLocked]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Like-driven personalization ──────────────────────────────
   // Count likes per formatId / settingId from the user's own ads to rank presets,
@@ -274,7 +285,7 @@ export default function MarketingStudio() {
     !!location.imagePath;
   const ready = !!(
     (formatId || customFormat.trim()) &&
-    (settingId || customSetting.trim() || location.place || location.imagePath)
+    (sceneLocked || settingId || customSetting.trim() || location.place || location.imagePath)
   );
 
   // Auto-write the describe box from the current Format/Hook/Setting + brand/avatar/location.
@@ -901,6 +912,7 @@ export default function MarketingStudio() {
                 icon={<Globe2 className="w-3.5 h-3.5" />}
                 label="Scene"
                 value={(() => {
+                  if (sceneLocked) return "Baked into format";
                   if (placeMode === "image" && location.imagePath) return "Reference image";
                   if (placeMode === "city" && location.place) return location.place;
                   const sceneLabel =
@@ -916,7 +928,12 @@ export default function MarketingStudio() {
                   if (location.place) return location.place;
                   return undefined;
                 })()}
-                tooltip="Where the ad takes place — preset scene, real city, or reference image"
+                tooltip={
+                  sceneLocked
+                    ? `${format?.label} bakes in its own scene — no location pick needed`
+                    : "Where the ad takes place — preset scene, real city, or reference image"
+                }
+                disabled={sceneLocked}
                 onClick={() => {
                   // Pre-select mode based on current state
                   if (location.imagePath) setPlaceMode("image");
@@ -1301,6 +1318,7 @@ function PresetChip({
   tooltip,
   onClick,
   flash,
+  disabled,
 }: {
   icon: React.ReactNode;
   label: string;
@@ -1308,19 +1326,23 @@ function PresetChip({
   tooltip: string;
   onClick: () => void;
   flash?: boolean;
+  disabled?: boolean;
 }) {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
         <button
           type="button"
-          onClick={onClick}
+          onClick={disabled ? undefined : onClick}
+          disabled={disabled}
           className={cn(
             "inline-flex items-center gap-1.5 rounded-full border px-3 h-9 text-xs transition-all duration-300",
-            value
+            disabled
+              ? "border-border/30 bg-muted/10 text-muted-foreground/60 cursor-not-allowed opacity-70"
+              : value
               ? "border-[hsl(0_72%_55%)]/50 bg-[hsl(0_72%_55%)]/10 text-foreground"
               : "border-border/40 bg-muted/20 text-muted-foreground hover:text-foreground hover:border-border",
-            flash && value &&
+            !disabled && flash && value &&
               "border-[hsl(35_90%_55%)] bg-[hsl(35_90%_55%)]/20 text-foreground shadow-[0_0_18px_hsl(35_90%_55%/0.5)] scale-[1.04]",
           )}
         >
@@ -1328,7 +1350,7 @@ function PresetChip({
           <span className="font-medium">
             {value ? `${label}: ${value}` : label}
           </span>
-          <ChevronDown className="w-3.5 h-3.5 opacity-60" />
+          {!disabled && <ChevronDown className="w-3.5 h-3.5 opacity-60" />}
         </button>
       </TooltipTrigger>
       <TooltipContent>{tooltip}</TooltipContent>
