@@ -252,7 +252,7 @@ export default function MarketingStudio() {
   }, [userAds]);
 
   const sortedCommercialFormats = useMemo(() => {
-    const list = FORMATS.filter((f) => f.category === "commercial");
+    const list = FORMATS.filter((f) => f.category === "commercial" || f.category === "avatar");
     return [...list].sort((a, b) => (likeSignal.formats[b.id] ?? 0) - (likeSignal.formats[a.id] ?? 0));
   }, [likeSignal.formats]);
 
@@ -1122,6 +1122,7 @@ export default function MarketingStudio() {
           onCustomChange={setCustomFormat}
           categories={[
             { id: "commercial", label: "Commercial", tooltip: "Polished brand formats" },
+            { id: "avatar", label: "Avatar", tooltip: "Avatar-driven formats — face-lock onto your uploaded character" },
           ]}
         />
         <PresetPickerDialog
