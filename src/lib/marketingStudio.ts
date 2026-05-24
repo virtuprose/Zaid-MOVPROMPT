@@ -84,6 +84,16 @@ export const FORMATS: StudioPreset[] = [
 
   // ── Commercial / brand ──────────────────────
   {
+    id: "elite-10seq",
+    label: "Elite",
+    description: "10-Sequence Phantom Reveal",
+    category: "commercial",
+    image: u("photo-1542291026-7eec264c27ff"),
+    fragment:
+      "Elite $1,000,000-production commercial directed by an elite commercial video director and prompt engineer specializing in high-speed, macro-fluid cinematography (phantom camera style). Style directive: Hyper-realistic 3D product commercial, 8k resolution, high-speed phantom camera, 1000fps slow-motion, cinematic studio lighting, macro cinematography, dark contrasting monochromatic background. Subject: the user's product (adapt ingredients, textures, elements and colors to perfectly match the specific product). TOTAL RUNTIME: exactly 15 seconds, distributed across EXACTLY 10 sequences (~1.5s each), always ending with The Ultimate Reveal. Sequence 1 (The Drop / Introduction): slow-motion, gravity-defying drop of the raw product; the item slowly rotates into the frame against a rich, dark, contrasting brand-color backdrop. Sequence 2 (Macro Texture): extreme macro close-up panning over the product; focus on hyper-detailed textures relevant to it (baked crevices, matte finish, frosty condensation, glossy lacquer). Sequence 3 (Elemental Pour): dynamic, sweeping simulation — a viscous, slow-motion pour of a relevant liquid/element (melted chocolate, fresh water, shimmering serum, liquid gold) cascading down from the top of the frame. Sequence 4 (The Coating): extreme close-up of the liquid/element perfectly coating and contouring to the product's unique shape, highlighting its premium quality and appetizing/luxurious nature. Sequence 5 (The Kinetic Split): camera pulls back slightly as the product suddenly cracks, snaps or splits apart in mid-air with crisp, mechanical or organic precision. Sequence 6 (The Inner Core): extreme macro push-in on the newly revealed interior; emphasize rich internal textures (stretchy gooey caramel, advanced internal tech components, crisp fresh layers). Sequence 7 (Kinetic Ingredients): zero-gravity explosion of raw ingredients — primary ingredient and a secondary prop/ingredient colliding mid-air in crisp photorealistic detail against the backdrop. Sequence 8 (The Spin & Morph): bullet-time camera rotation around the floating debris; scattered elements rapidly pull together, magnetically morphing into the final, packaged version of the product. Sequence 9 (The Packaging Drop): the fully packaged product drops into the center of the frame; as it locks into position, a subtle high-speed secondary shockwave (dust, tiny liquid droplets, light rays) bursts off its surface. Sequence 10 (The Ultimate Reveal): wide hero shot showing the product in its final packaging perfectly lit and suspended in the center of the frame, surrounded by slowly falling ingredients/props. Premium, vibrant, 1-million-dollar production value.",
+    lockScene: true,
+  },
+  {
     id: "hyper-motion",
     label: "Speed Reveal",
     description: "Full Throttle Reveal",
