@@ -1349,12 +1349,19 @@ function DirectorChatInner() {
         return;
       } else if (resp.kind === "request_video_generation") {
         const refCount = referenceImageUrls.length;
-        const provider =
+        const fromDirector = resp.model_id && findVideoModel(resp.model_id) ? resp.model_id : null;
+        const fromUser =
+          chosenModelIdRef.current && findVideoModel(chosenModelIdRef.current)
+            ? chosenModelIdRef.current
+            : null;
+        const fallback =
           refCount >= 2 ? "seedance-2.0-ref" : refCount === 1 ? "seedance-2.0" : "seedance-v1-pro";
+        const provider = fromDirector || fromUser || fallback;
+        const providerLabel = findVideoModel(provider)?.label || provider;
         added = {
           role: "assistant",
           animate: true,
-          content: `Sending this to the ${provider} renderer…`,
+          content: `Sending this to the ${providerLabel} renderer…`,
         };
         try {
           const basePrompt = resp.prompt?.trim() || getLatestGeneratedPrompt();
