@@ -95,6 +95,7 @@ type Bubble =
         scene_already_described?: boolean;
       };
       chosen?: AspectRatio;
+      chosenQuality?: ImageQuality;
     }
   | {
       role: "subject_lock_choice";
