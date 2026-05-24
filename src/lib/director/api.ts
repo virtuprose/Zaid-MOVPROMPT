@@ -385,7 +385,7 @@ export async function streamDirectorAgent(
         Authorization: `Bearer ${token}`,
         apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
       },
-      body: JSON.stringify({ messages, attachments, stream: true, tasteProfile }),
+      body: JSON.stringify({ messages, attachments, stream: true, tasteProfile, mode }),
       signal: controller.signal,
     });
   } catch (err: any) {
