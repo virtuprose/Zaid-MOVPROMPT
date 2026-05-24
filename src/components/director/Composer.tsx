@@ -33,6 +33,8 @@ type Props = {
   imagePromptBusy?: boolean;
   mode?: "director" | "free_chat";
   onModeChange?: (mode: "director" | "free_chat") => void;
+  /** Bump to refocus the textarea (and place caret at end) — used by handoffs. */
+  focusSignal?: number;
 };
 
 export function Composer({
@@ -49,6 +51,7 @@ export function Composer({
   imagePromptBusy,
   mode = "director",
   onModeChange,
+  focusSignal,
 }: Props) {
   const { user } = useAuth();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -57,6 +60,24 @@ export function Composer({
   const [pageDrag, setPageDrag] = useState(false);
   const [ingesting, setIngesting] = useState(false);
   const [enhancing, setEnhancing] = useState(false);
+
+  // External handoffs (e.g. "Send to Director", "Ask DP about this") bump
+  // focusSignal so we refocus the textarea and put the caret at the end.
+  useEffect(() => {
+    if (focusSignal === undefined) return;
+    const ta = taRef.current;
+    if (!ta) return;
+    requestAnimationFrame(() => {
+      ta.focus();
+      const pos = ta.value.length;
+      try {
+        ta.setSelectionRange(pos, pos);
+      } catch {
+        /* ignore */
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusSignal]);
 
   const handleEnhance = useCallback(async () => {
     const draft = value.trim();

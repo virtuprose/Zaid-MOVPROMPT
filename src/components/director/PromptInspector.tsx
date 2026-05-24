@@ -2,9 +2,10 @@ import { useMemo, useState } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
-import { FileText, Copy, Check, ExternalLink } from "lucide-react";
+import { FileText, Copy, Check, ExternalLink, MessageCircleQuestion } from "lucide-react";
 import { toast } from "sonner";
 import { composePromptPreview, referenceRole } from "@/lib/director/composePromptPreview";
+import { ASK_DP_EVENT, type AskDpDetail } from "@/lib/director/sessionContext";
 import type { StyleSpec } from "@/lib/director/api";
 
 export type InspectorContext = {
@@ -118,15 +119,35 @@ export function PromptInspector({ ctx, shotIndex, triggerClassName, triggerTitle
             <pre className="text-[11px] leading-snug font-mono whitespace-pre-wrap bg-muted/40 border border-border/40 rounded p-2 max-h-56 overflow-auto text-foreground/90">
               {composed}
             </pre>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={onCopy}
-              className="absolute top-1 right-1 h-6 px-2 text-[10px]"
-            >
-              {copied ? <Check className="h-3 w-3 mr-1" /> : <Copy className="h-3 w-3 mr-1" />}
-              {copied ? "Copied" : "Copy"}
-            </Button>
+            <div className="absolute top-1 right-1 flex items-center gap-1">
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  const label = shotIndex
+                    ? `panel ${shotIndex}`
+                    : "this prompt";
+                  const prefill = `Explain the prompt for ${label}: what's driving the lens, lighting and palette choices, and what would you change to push it further?`;
+                  window.dispatchEvent(
+                    new CustomEvent<AskDpDetail>(ASK_DP_EVENT, { detail: { prefill } }),
+                  );
+                }}
+                className="h-6 px-2 text-[10px] text-accent hover:text-accent hover:bg-accent/10"
+                title="Switch to Free chat with this prompt prefilled"
+              >
+                <MessageCircleQuestion className="h-3 w-3 mr-1" />
+                Ask DP
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={onCopy}
+                className="h-6 px-2 text-[10px]"
+              >
+                {copied ? <Check className="h-3 w-3 mr-1" /> : <Copy className="h-3 w-3 mr-1" />}
+                {copied ? "Copied" : "Copy"}
+              </Button>
+            </div>
           </div>
         </Section>
 

@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import ReactMarkdown from "react-markdown";
-import { RotateCcw, FileText, Music, Sparkles, MessageCircleMore, ArrowRight, Film, Megaphone, LayoutGrid, Wand2 } from "lucide-react";
+import { RotateCcw, FileText, Music, Sparkles, MessageCircleMore, ArrowRight, Film, Megaphone, LayoutGrid, Wand2, Send as SendIcon } from "lucide-react";
 import { Message, MessageContent } from "@/components/ai-elements/message";
 import { QuestionCard } from "./QuestionCard";
 import { cn } from "@/lib/utils";
@@ -30,6 +30,14 @@ import { ActStrip, type ActTile } from "./ActStrip";
 import { submitStoryBundle, submitStoryRender, submitStoryStitch } from "@/lib/director/api";
 import { loadTasteProfile, EMPTY_TASTE_PROFILE, type TasteProfile } from "@/lib/director/tasteProfile";
 import { MessageFeedback } from "./MessageFeedback";
+import { FreeChatChips } from "./FreeChatChips";
+import {
+  buildSessionContextBlock,
+  buildContextChips,
+  extractSessionContext,
+  ASK_DP_EVENT,
+  type AskDpDetail,
+} from "@/lib/director/sessionContext";
 
 import {
   streamDirectorAgent,
@@ -172,6 +180,7 @@ function DirectorChatInner() {
   const { sessionId: routeSessionId } = useParams<{ sessionId?: string }>();
   const [bubbles, setBubbles] = useState<Bubble[]>([WELCOME]);
   const [input, setInput] = useState("");
+  const [composerFocusTick, setComposerFocusTick] = useState(0);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [busy, setBusy] = useState(false);
   const [phase, setPhase] = useState<DirectorPhase>("thinking");
@@ -1117,6 +1126,12 @@ function DirectorChatInner() {
       // Serialize EVERY bubble (including result / questions / model_choice) into the
       // history so the agent remembers what it already asked, generated, and recommended.
       const history: DirectorMsg[] = [];
+      // In Free chat mode, ground the model with a compact session context so
+      // the user can reference panels/style/attachments by name.
+      if (chatMode === "free_chat") {
+        const ctxBlock = buildSessionContextBlock(next, sessionTitle);
+        if (ctxBlock) history.push({ role: "user", content: ctxBlock });
+      }
       for (const b of next) {
         if (b.role === "user") {
           const attachLine =
@@ -1677,6 +1692,21 @@ function DirectorChatInner() {
 
   const isEmpty = bubbles.length === 1 && bubbles[0].role === "assistant";
 
+  // Free-chat session-context chips (memoized off bubbles + title).
+  const freeChatChips = useMemo(() => {
+    const ctx = extractSessionContext(bubbles, null);
+    return buildContextChips(ctx);
+  }, [bubbles]);
+  const insertChipToken = useCallback((token: string) => {
+    setInput((prev) => {
+      const trimmed = prev.trimEnd();
+      const next = trimmed.length ? `${trimmed} ${token} ` : `${token} `;
+      return next;
+    });
+    setComposerFocusTick((t) => t + 1);
+  }, []);
+  
+
   const firstName = (() => {
     const meta = (user as any)?.user_metadata?.full_name as string | undefined;
     if (meta) return meta.split(" ")[0];
@@ -1745,7 +1775,37 @@ function DirectorChatInner() {
       /* ignore */
     }
   }, []);
+
+  // Handoff: switch mode + prefill the composer + focus.
+  const handoffPrefill = useCallback(
+    (nextMode: "director" | "free_chat", text: string) => {
+      handleModeChange(nextMode);
+      setInput(text);
+      setComposerFocusTick((t) => t + 1);
+    },
+    [handleModeChange],
+  );
+  const askDirector = useCallback(
+    (prefill: string) => handoffPrefill("director", prefill),
+    [handoffPrefill],
+  );
+  const askDP = useCallback(
+    (prefill: string) => handoffPrefill("free_chat", prefill),
+    [handoffPrefill],
+  );
+
+  // Listen for cards / inspector firing "ask the DP" with a prefill.
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<AskDpDetail>).detail;
+      if (detail?.prefill) askDP(detail.prefill);
+    };
+    window.addEventListener(ASK_DP_EVENT, handler);
+    return () => window.removeEventListener(ASK_DP_EVENT, handler);
+  }, [askDP]);
+
   const activeCat = CATEGORIES.find((c) => c.id === activeCategory) ?? CATEGORIES[0];
+
 
 
   const [sessionTitle, setSessionTitle] = useState<string | null>(null);
@@ -1952,6 +2012,11 @@ function DirectorChatInner() {
           onFocusCapture={() => setComposerFocused(true)}
           onBlurCapture={() => setComposerFocused(false)}
         >
+          <FreeChatChips
+            active={chatMode === "free_chat" && !isEmpty}
+            chips={freeChatChips}
+            onChipClick={insertChipToken}
+          />
           <Composer
             value={input}
             onChange={setInput}
@@ -1964,6 +2029,7 @@ function DirectorChatInner() {
             imagePromptBusy={imagePromptBusy}
             mode={chatMode}
             onModeChange={handleModeChange}
+            focusSignal={composerFocusTick}
           />
         </div>
 
@@ -2381,6 +2447,23 @@ function DirectorChatInner() {
                         content={b.content}
                       />
                     )}
+                    {b.markdown && b.content && (
+                      <div className="mt-1.5 flex justify-end">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            askDirector(
+                              `Based on the DP's note above, please update the prompt: ${b.content.slice(0, 240)}${b.content.length > 240 ? "…" : ""}`,
+                            )
+                          }
+                          className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/5 px-2.5 py-1 text-[11px] text-primary/90 hover:bg-primary/15 hover:text-primary transition-colors"
+                          title="Switch to Director and prefill this as an instruction"
+                        >
+                          <SendIcon className="w-3 h-3" />
+                          Send to Director
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               );
@@ -2490,6 +2573,11 @@ function DirectorChatInner() {
       {pendingApproval && <BottomApprovalBar request={pendingApproval} />}
 
       <div className="max-w-3xl mx-auto w-full">
+        <FreeChatChips
+          active={chatMode === "free_chat" && !isEmpty}
+          chips={freeChatChips}
+          onChipClick={insertChipToken}
+        />
         <Composer
           value={input}
           onChange={setInput}
@@ -2511,6 +2599,7 @@ function DirectorChatInner() {
           imagePromptBusy={imagePromptBusy}
           mode={chatMode}
           onModeChange={handleModeChange}
+          focusSignal={composerFocusTick}
         />
       </div>
 
