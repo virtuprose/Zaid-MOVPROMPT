@@ -590,7 +590,13 @@ serve(async (req) => {
     ) {
       provider = "kling-v3-4k";
     }
-    const model = FAL_MODELS[provider];
+    // If a starting frame is attached and the provider has an image-to-video
+    // variant, route to it so the model actually sees the source image
+    // (preserves character identity, composition, lighting). Without this,
+    // animating a storyboard panel falls back to text-to-video and the
+    // generated character drifts off the source.
+    const useI2V = refImages.length > 0 && !!FAL_MODELS_I2V[provider];
+    const model = useI2V ? FAL_MODELS_I2V[provider] : FAL_MODELS[provider];
     if (!model) {
       return new Response(JSON.stringify({ error: `Unknown provider: ${provider}` }), {
         status: 400,
