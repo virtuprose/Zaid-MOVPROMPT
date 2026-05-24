@@ -65,6 +65,7 @@ export type AgentResponse =
       kind: "request_video_generation";
       prompt: string;
       provider_preference?: "seedance" | "veo" | "kling" | "any";
+      model_id?: string;
     }
   | {
       kind: "generate_reference_image";

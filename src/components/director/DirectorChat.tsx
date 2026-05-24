@@ -42,6 +42,7 @@ import {
 import { VideoBubble } from "./VideoBubble";
 import type { Attachment } from "@/lib/director/ingest";
 import * as localState from "@/lib/director/localState";
+import { findVideoModel } from "@/lib/director/videoModels";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import logoMark from "@/assets/logo-mark-white.svg";
@@ -225,6 +226,7 @@ function DirectorChatInner() {
   const bubblesRef = useRef<Bubble[]>([]);
   const lastSendRef = useRef<{ text: string; attachments: Attachment[] } | null>(null);
   const hydratedRef = useRef<string | null>(null);
+  const chosenModelIdRef = useRef<string | null>(null);
   const localScope = routeSessionId ?? "new";
   const { request: requestApproval } = useApproval();
 
@@ -1347,12 +1349,19 @@ function DirectorChatInner() {
         return;
       } else if (resp.kind === "request_video_generation") {
         const refCount = referenceImageUrls.length;
-        const provider =
+        const fromDirector = resp.model_id && findVideoModel(resp.model_id) ? resp.model_id : null;
+        const fromUser =
+          chosenModelIdRef.current && findVideoModel(chosenModelIdRef.current)
+            ? chosenModelIdRef.current
+            : null;
+        const fallback =
           refCount >= 2 ? "seedance-2.0-ref" : refCount === 1 ? "seedance-2.0" : "seedance-v1-pro";
+        const provider = fromDirector || fromUser || fallback;
+        const providerLabel = findVideoModel(provider)?.label || provider;
         added = {
           role: "assistant",
           animate: true,
-          content: `Sending this to the ${provider} renderer…`,
+          content: `Sending this to the ${providerLabel} renderer…`,
         };
         try {
           const basePrompt = resp.prompt?.trim() || getLatestGeneratedPrompt();
@@ -2060,6 +2069,7 @@ function DirectorChatInner() {
                     disabled={!isLatest || busy || !!b.chosen}
                     hasReferenceImage={hasReferenceImage}
                     onConfirm={(modelId) => {
+                      chosenModelIdRef.current = modelId;
                       setBubbles((prev) => {
                         const copy = [...prev];
                         copy[i] = { ...b, chosen: modelId };

@@ -427,6 +427,11 @@ const TOOLS = [
         type: "object",
         properties: {
           prompt: { type: "string" },
+          model_id: {
+            type: "string",
+            description:
+              "REQUIRED when the user has picked a specific model via ask_model_choice OR named one in their brief (e.g. 'kling-v3-pro', 'veo-3.1', 'seedance-v1-pro'). Echo back the EXACT playbook id the user picked — the frontend will route the render to that exact model. Only omit if the user never expressed a preference.",
+          },
           provider_preference: {
             type: "string",
             enum: ["seedance", "veo", "kling", "any"],
