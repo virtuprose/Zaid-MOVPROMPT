@@ -284,6 +284,7 @@ export function GeneratedImageCard({ data, onRegenerate, onUnpinSubject, onAnima
   const [animatingShots, setAnimatingShots] = useState<Set<number>>(new Set());
   const [animateAllOpen, setAnimateAllOpen] = useState(false);
   const [animatingAll, setAnimatingAll] = useState(false);
+  const [singleAnimate, setSingleAnimate] = useState<AnimatePanelInput | null>(null);
 
   const handleAnimateOne = useCallback(async (panel: AnimatePanelInput) => {
     if (!onAnimatePanel) return;
@@ -304,9 +305,8 @@ export function GeneratedImageCard({ data, onRegenerate, onUnpinSubject, onAnima
     }
   }, [onAnimatePanel, animatingShots]);
 
-  const handleAnimateAll = useCallback(async () => {
+  const handleAnimateAll = useCallback(async (result: AnimateDialogResult) => {
     if (!onAnimateAllPanels) return;
-    setAnimateAllOpen(false);
     setAnimatingAll(true);
     try {
       const panels: AnimatePanelInput[] = data.images.map((img, i) => ({
@@ -314,12 +314,15 @@ export function GeneratedImageCard({ data, onRegenerate, onUnpinSubject, onAnima
         shot_index: img.shot_index ?? i + 1,
         directorsNote: data.directorsNote,
         aspectRatio: data.aspectRatio,
+        provider: result.provider,
+        duration: result.duration,
       }));
       await onAnimateAllPanels(panels);
     } finally {
       setAnimatingAll(false);
     }
   }, [onAnimateAllPanels, data.images, data.directorsNote, data.aspectRatio]);
+
 
   const progress = data.progress;
   const inProgress = !!progress && progress.done < progress.total;
