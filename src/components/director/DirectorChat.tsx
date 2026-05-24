@@ -215,6 +215,19 @@ function DirectorChatInner() {
     return () => window.removeEventListener("vidoprompt:acts-ready", onReady);
   }, []);
 
+  // Quick-action prefill from RightRail
+  useEffect(() => {
+    const onAction = (e: Event) => {
+      const detail = (e as CustomEvent<{ action: string; text?: string }>).detail;
+      if (detail?.action === "prefill" && detail.text) {
+        setInput((prev) => (prev ? `${prev} ${detail.text}` : detail.text!));
+        setComposerFocusTick((t) => t + 1);
+      }
+    };
+    window.addEventListener("director:quick-action", onAction);
+    return () => window.removeEventListener("director:quick-action", onAction);
+  }, []);
+
   const jumpToStitch = () => {
     if (!readyToStitch) return;
     const btn = document.querySelector<HTMLButtonElement>(
