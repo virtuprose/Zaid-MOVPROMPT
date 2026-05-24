@@ -15,6 +15,15 @@ const SIGNED_URL_TTL = 60 * 60;
 type Mode = "character_sheet" | "storyboard_panels" | "single_panel";
 type LockMode = "character" | "scene" | "auto";
 
+type StyleSpec = {
+  lens?: string;
+  lighting?: string;
+  palette?: string;
+  film_emulation?: string;
+  grade?: string;
+  mood?: string;
+};
+
 type Body = {
   mode?: Mode;
   prompt?: string;
@@ -25,6 +34,7 @@ type Body = {
   shot_index?: number; // when regenerating a single panel inside an existing 3x3 grid
   lock_mode?: LockMode; // "character" | "scene" (key-frame extension) | "auto" (default)
   subject_kind?: "character" | "product"; // shapes the character_sheet layout copy
+  style_spec?: StyleSpec; // optional locked DP spec injected into every panel prompt
 };
 
 const IDENTITY_LOCK =
@@ -35,6 +45,28 @@ const SCENE_LOCK =
 
 const HERO_FRAME_SUFFIX =
   " Single polished hero frame: cinematic composition, intentional depth of field, controlled lighting, clean negative space. No text, no captions, no watermark, no UI overlays.";
+
+// Applied to EVERY storyboard panel so panels are finished cinematography stills,
+// not draft beats. This is the biggest quality lever for downstream video renders.
+const PANEL_POLISH_SUFFIX =
+  " Single polished storyboard frame. Cinematic composition with deliberate negative space, lens-correct geometry, controlled depth of field, motivated lighting with clear key/fill/rim separation, consistent film grain, finished color grade. Photographic finish — no draft sketch quality, no rough lines, no concept-art looseness. No text, no captions, no watermark, no UI overlay, no on-image labels, no shot numbers burned in.";
+
+function buildStyleHeader(spec?: StyleSpec): string {
+  if (!spec) return "";
+  const parts: string[] = [];
+  if (spec.lens) parts.push(`lens ${spec.lens}`);
+  if (spec.lighting) parts.push(`lighting ${spec.lighting}`);
+  if (spec.palette) parts.push(`palette ${spec.palette}`);
+  if (spec.film_emulation) parts.push(`stock ${spec.film_emulation}`);
+  if (spec.grade) parts.push(`grade ${spec.grade}`);
+  if (spec.mood) parts.push(`mood ${spec.mood}`);
+  if (parts.length === 0) return "";
+  return `LOCKED STYLE — ${parts.join(" · ")}. Apply to this frame verbatim. `;
+}
+
+function buildAspectClause(aspect: string): string {
+  return ` Frame composed for ${aspect} aspect ratio — fill the full frame, no letterboxing, no pillarboxing, no border bars, no padding.`;
+}
 
 
 function dataUrlToBlob(dataUrl: string): { blob: Blob; mime: string } {
