@@ -1,34 +1,45 @@
-# Fix: Animate & Polish buttons unclickable
+# Make the Polish popover clear and usable
 
-## Root cause
+The popover that opens from the amber Polish (wand) button on each generated panel is currently confusing: the title "Polish panel 3" is jargon, the chips use cryptic abbreviations (WS, MS, MCU, CU, ECU, OTS), the type is tiny (10.5px), and there's no explanation of what Polish actually does. We'll fix the wording, expand the abbreviations, give each section a one-line hint, and tighten the visual hierarchy — all in `GeneratedImageCard.tsx` (the `PolishPanelPopover` + `Chip` / `ChipGroup` helpers).
 
-In `src/components/director/GeneratedImageCard.tsx`, each panel renders these absolute-positioned children, in this DOM order:
+## What changes
 
-1. Panel number badge (top-left)
-2. **Polish** button — `absolute top-1 right-1`
-3. **Animate** button — `absolute top-1 right-9`
-4. **Inspect** button — `absolute top-1 right-[68px]`
-5. **Expand** button — `absolute inset-0` (covers the WHOLE panel)
-6. Download (bottom-left)
-7. Redo (bottom-right)
+**1. Header — explain what Polish does**
+- Title: **"Refine this shot"** (instead of "Polish panel 3"), with a small muted suffix "· Panel 3".
+- Subtitle rewritten in plain language: *"Adjust any of these to re-render just this panel. Leave a row untouched to keep it the same."*
 
-The Expand button (#5) is rendered **after** Polish/Animate/Inspect, so in stacking order it sits on top of them and swallows their clicks. That matches the session replay: hovering a panel only ever surfaces the "Expand", "Regenerate", and "Download" tooltips — never "Animate" or "Polish".
+**2. Abbreviations → human labels (with the short code as a hint)**
+Replace the `SHOT_CHIPS` flat strings with `{ label, hint }` pairs so each chip shows the full name and a tiny code below / in a tooltip:
 
-Download and Redo still work because they're rendered **after** Expand in the DOM, so they paint above it.
+```text
+Wide shot (WS)        Medium shot (MS)       Medium close-up (MCU)
+Close-up (CU)         Extreme close-up (ECU) Over-the-shoulder (OTS)
+Insert               Low angle              Eye level
+High angle           Dutch tilt
+```
 
-## Fix
+Camera move, Lighting and Mood already use readable labels — keep them but group "angle" chips visually separate from "framing" chips inside the Shot type section.
 
-In `GeneratedImageCard.tsx`, inside the panel `<div className="group relative …">` (around lines 358–465):
+**3. Section headers with one-line guidance**
+Each `ChipGroup` gets a short helper line under the title:
+- **Framing & angle** — "How tight is the camera, and where is it?"
+- **Camera move** — "How does the camera move during the shot?"
+- **Lighting** — "What's the dominant light source and quality?"
+- **Mood** — "What should the shot feel like?"
 
-1. Move the **Expand** button block (lines 415–429) to render **first** inside the panel, immediately after the `<img>` — before the number badge, Polish, Animate, and Inspect. This puts the full-area Expand button at the bottom of the stack so the corner buttons sit above it and receive clicks.
-2. Add `z-10` to each of the corner buttons (Polish, Animate, Inspect trigger, Download, Redo) as a belt-and-braces guarantee, and `z-0` to the Expand button.
-3. No behavior change to Expand: clicking anywhere on the image (outside the small corner buttons) still opens the lightbox.
+**4. Visual fixes**
+- Bump chip text from `text-[10.5px]` to `text-xs` (12px) and chip padding to `px-2.5 py-1` for tap comfort.
+- Active chip uses the existing primary token; add a subtle ring so the selection is obvious at a glance.
+- Add a small "Clear" link at the right of each section header that appears only when that section has a selection, so users can reset one dimension without hunting.
+- Widen the popover from `w-80` to `w-[22rem]` and add `max-h-[70vh] overflow-y-auto` so all four sections fit on smaller screens without the action row getting clipped.
+- Footer: keep Cancel + primary action, but rename **"Polish shot"** → **"Re-render this shot"** (clearer outcome) and add a tiny muted note on the left: *"Only this panel changes."*
 
-No other files change. No backend or logic change — purely DOM ordering + z-index inside one component.
+**5. Empty-state affordance**
+If the user opens the popover and applies with nothing selected, show an inline hint instead of silently re-rendering: *"Pick at least one change, or close to leave the shot as-is."* (Disable the primary button until at least one chip is active.)
 
-## Verification
+## Files touched
+- `src/components/director/GeneratedImageCard.tsx` — `Chip`, `ChipGroup`, `PolishPanelPopover`, `SHOT_CHIPS` data shape. No other files.
 
-- Hover panel 3 → "Animate panel 3" tooltip appears on the amber icon, click triggers `onAnimatePanel`.
-- Hover panel 3 → "Polish panel 3" tooltip appears on the wand icon, click opens the Polish popover.
-- Clicking the empty image area still opens the Expand lightbox.
-- Download and Redo continue to work.
+## Out of scope
+- The `RelightSequencePopover` (sequence-wide relight) — only mentioned for reference. If you want the same clarity pass applied there too, say so and I'll extend the plan.
+- Backend prompt string sent to `generate-reference-image` stays the same (still emits "shot type → Wide shot (WS)" etc., which the model already handles).
