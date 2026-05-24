@@ -24,6 +24,8 @@ type StyleSpec = {
   mood?: string;
 };
 
+type Quality = "1K" | "2K" | "4K";
+
 type Body = {
   mode?: Mode;
   prompt?: string;
@@ -35,7 +37,10 @@ type Body = {
   lock_mode?: LockMode; // "character" | "scene" (key-frame extension) | "auto" (default)
   subject_kind?: "character" | "product"; // shapes the character_sheet layout copy
   style_spec?: StyleSpec; // optional locked DP spec injected into every panel prompt
+  quality?: Quality; // 1K = native (~1024px), 2K = 2x upscale (free), 4K = 4x upscale (+credits)
 };
+
+const UPSCALE_4K_FALLBACK_PRICE = 3; // credits per panel upscaled to 4K
 
 const IDENTITY_LOCK =
   "Same character as the attached reference image. Maintain exact face, hair, skin tone, age, body proportions, and outfit. Do not redesign the character.";
