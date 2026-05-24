@@ -1,27 +1,56 @@
-## Add "Nokhadha" preset to Marketing Studio
+# Plan — Free Chat Mode for AI Director
 
-Add a new format preset in `src/lib/marketingStudio.ts` inside the `FORMATS` array, under the `avatar` category (since it adapts to a user-uploaded avatar/face).
+## Goal
 
-### Entry
+Give users an escape hatch from the rigid, scripted Director flow. A simple toggle in the Composer switches the Director between:
 
-```ts
-{
-  id: "nokhadha",
-  label: "Nokhadha",
-  description: "Gulf Heritage Epic",
-  category: "avatar",
-  emoji: "⛵",
-  fragment:
-    "Cinematic historical realism, Gulf heritage epic, 9:16 vertical. Adapt only the avatar's face (and body if full-body reference) — keep the traditional Kuwaiti Nokhadha outfit and historical maritime atmosphere completely unaltered. A legendary Kuwaiti Nokhadha stands at the front of a massive traditional wooden dhow ship in the Arabian Gulf during golden sunset, strong facial features, sunburned skin from years at sea, traditional Gulf clothing moving aggressively with the wind, deep focused eyes toward the horizon, powerful calm leadership presence. Loyal crew works behind him preparing ropes and sails with disciplined teamwork. Cinematic waves crash, seagulls fly overhead. Sequence 1 [0–3s]: wide aerial cinematic shot of the dhow crossing the Arabian Gulf at sunset, huge realistic waves, dramatic sky, strong ocean wind, crew moving naturally, Nokhadha standing still like a fearless leader at the bow, drone slowly pushing forward. Sequence 2 [3–6s]: medium cinematic shots of the Nokhadha commanding his crew with confident hand gestures, crew pulling ropes, adjusting sails, rowing in sync, close-up of weathered hands gripping wooden ship controls, hyper-realistic cloth movement, strong diegetic sound of ropes, wind, waves and creaking wood. Sequence 3 [6–9s]: close-up hero shot of the Nokhadha's face, sweat and sea-salt texture, emotional determined eyes, camera slowly orbiting with sunlight raking one side of his face, crew watching with respect behind him. Sequence 4 [9–12s]: the dhow approaches a Kuwaiti coastal town at sunset, traditional mud houses and old Kuwaiti architecture in the distance, people gathering on the shore, children running excitedly, cinematic telephoto compression. Sequence 5 [12–15s]: epic final hero shot — the Nokhadha steps off the dhow onto the shore, crew follows carrying goods and pearl-diving equipment, townspeople watch with pride, slow-motion cinematic walk, warm sunset backlight, final frame holds briefly on the Nokhadha looking toward his town like a respected legendary leader. Camera: ARRI Alexa 65 look, anamorphic lens flares, 35mm + 85mm mix, handheld realism mixed with stabilized cinematic tracking, natural motion blur, shallow depth of field, cinematic contrast. Enhancement tags: cinematic realism, historical epic, arabian gulf heritage, ultra detailed, emotional storytelling, realistic water simulation, cinematic lighting, authentic kuwait heritage, filmic composition, dramatic atmosphere. Negative: modern buildings, modern boats, modern clothing, cartoon, low quality, blurry faces, extra fingers, AI glitches, oversaturated colors, futuristic elements, subtitles, watermark, text overlay, shaky camera, unrealistic ocean, fantasy armor, sci-fi elements, plastic skin, HDR look, bad anatomy, duplicated people.",
-}
-```
+- **Director mode** (current): tool-driven, step-by-step, generates sheets/frames/prompts/videos.
+- **Free Chat mode** (new): a normal LLM chat. The model answers freely in markdown, can still see uploaded images, but does **not** call any tools, does **not** force step-by-step questions, does **not** generate images or videos.
 
-### Placement
+This solves the "answers feel wrong / confusing" problem when the user just wants to ask a question, brainstorm, or chat.
 
-Insert near the other `category: "avatar"` entries (around the `talking-avatar` block ~line 175 in `src/lib/marketingStudio.ts`). No other files change.
+## UX
 
-### Notes
+1. A small **mode pill** in the Composer toolbar with two options: `Director` (default) and `Free Chat`. Visible at all times, sticky per session.
+2. When `Free Chat` is active:
+   - Composer placeholder changes to "Ask anything…"
+   - Assistant replies render as a normal markdown bubble (`ReactMarkdown`) — no tool cards, no "Step X of Y" headers, no chips.
+   - Attachments still upload and are sent to the model for vision.
+3. Switching modes mid-session is allowed. History is preserved; the new mode just changes how the next turn is interpreted.
+4. Free Chat replies are saved to the same session so the user can scroll back through the mixed conversation.
 
-- Uses `emoji: "⛵"` as the thumbnail fallback (no image/video asset yet — can be added later by dropping `/presets/nokhadha.mp4` into `public/presets/`).
-- Aspect ratio (9:16) is encoded inside the fragment so it composes correctly with the existing prompt builder.
-- Negative-prompt and enhancement tags are embedded inline since `StudioPreset` only exposes a single `fragment` field.
+## Technical approach
+
+### Backend — `supabase/functions/director-agent/index.ts`
+
+- Accept a new optional `mode: "director" | "free_chat"` field on the request body. Default `"director"` to preserve existing behavior.
+- When `mode === "free_chat"`:
+  - Skip the 1000-line scripted system prompt entirely.
+  - Use a short system prompt: "You are a helpful AI assistant for a filmmaker working on generative video prompts. Answer in clean markdown. Be concise. You can see uploaded images. Do NOT call any tools."
+  - Send the request to Lovable AI Gateway with **no `tools` array** and **no `tool_choice`** — forcing a plain text completion.
+  - Return a new `AgentResponse` shape: `{ kind: "free_chat", text: string }` (or extend the existing union).
+
+### Frontend
+
+- **`src/lib/director/api.ts`** — add `mode` param to `callDirectorAgent` and stream variant. Extend `AgentResponse` type with the free-chat branch.
+- **`src/components/director/Composer.tsx`** — add the mode pill; persist selection in component state + localStorage (`director.mode`).
+- **`src/components/director/DirectorChat.tsx`** — pass `mode` into the agent call. When the response is `kind: "free_chat"`, render a plain markdown bubble (reuse existing message component if available, else add a small `<ReactMarkdown>` block).
+- Persist the free-chat assistant message into `director_sessions.messages` with `role: "assistant"`, `content: text`, and a flag like `freeChat: true` so it renders correctly on reload.
+
+### No DB migration needed
+
+`director_sessions.messages` is already a JSONB array. Free-chat turns slot in alongside existing turns.
+
+## Out of scope
+
+- No image/video generation in Free Chat mode (the whole point is a plain answer).
+- No change to existing Director scripts or steps.
+- No streaming refactor — Free Chat can use non-streaming `invoke` for v1; streaming can come later.
+
+## Files to touch
+
+- `supabase/functions/director-agent/index.ts` — mode branching, simpler prompt, tool-less call.
+- `src/lib/director/api.ts` — type + param.
+- `src/components/director/Composer.tsx` — mode pill UI.
+- `src/components/director/DirectorChat.tsx` — render free-chat bubble, persist mode flag.
+- (optional) `src/components/director/FreeChatBubble.tsx` — small markdown renderer if no reusable one exists.

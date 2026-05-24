@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Paperclip, Send, Loader2, X, FileText, Image as ImageIcon, Music, ShieldCheck, ShieldAlert, ShieldQuestion, Mic, Square, Sparkles } from "lucide-react";
+import { Paperclip, Send, Loader2, X, FileText, Image as ImageIcon, Music, ShieldCheck, ShieldAlert, ShieldQuestion, Mic, Square, Sparkles, MessageCircle, Film } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
@@ -31,6 +31,8 @@ type Props = {
   onQuickReply?: (chip: string) => void;
   onGenerateImagePrompt?: () => void;
   imagePromptBusy?: boolean;
+  mode?: "director" | "free_chat";
+  onModeChange?: (mode: "director" | "free_chat") => void;
 };
 
 export function Composer({
@@ -45,6 +47,8 @@ export function Composer({
   onQuickReply,
   onGenerateImagePrompt,
   imagePromptBusy,
+  mode = "director",
+  onModeChange,
 }: Props) {
   const { user } = useAuth();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -341,7 +345,7 @@ export function Composer({
                 if (!busy) onSend();
               }
             }}
-            placeholder="What are you making? Describe the mood, action, and setting — or drop your references. Type @ to reference a file."
+            placeholder={mode === "free_chat" ? "Ask anything — plain chat mode." : "What are you making? Describe the mood, action, and setting — or drop your references. Type @ to reference a file."}
             rows={2}
             disabled={busy}
             className="w-full resize-none bg-transparent px-4 pt-3 pb-2 text-sm leading-relaxed placeholder:text-muted-foreground focus:outline-none min-h-[64px]"
@@ -462,7 +466,45 @@ export function Composer({
           )}
 
           <div className="flex items-center justify-between gap-2 px-2 pb-2">
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 flex-wrap">
+              {onModeChange && (
+                <div
+                  role="tablist"
+                  aria-label="Director mode"
+                  className="inline-flex items-center rounded-full border border-border/50 bg-muted/30 p-0.5 mr-1"
+                >
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={mode === "director"}
+                    onClick={() => onModeChange("director")}
+                    disabled={busy}
+                    className={cn(
+                      "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors",
+                      mode === "director"
+                        ? "bg-accent/20 text-accent"
+                        : "text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    <Film className="w-3 h-3" /> Director
+                  </button>
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={mode === "free_chat"}
+                    onClick={() => onModeChange("free_chat")}
+                    disabled={busy}
+                    className={cn(
+                      "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors",
+                      mode === "free_chat"
+                        ? "bg-primary/20 text-primary"
+                        : "text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    <MessageCircle className="w-3 h-3" /> Free chat
+                  </button>
+                </div>
+              )}
               <Button
                 type="button"
                 size="icon"

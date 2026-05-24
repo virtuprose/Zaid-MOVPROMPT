@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect, useMemo, useCallback } from "react";
+import ReactMarkdown from "react-markdown";
 import { RotateCcw, FileText, Music, Sparkles, MessageCircleMore, ArrowRight, Film, Megaphone, LayoutGrid, Wand2 } from "lucide-react";
 import { Message, MessageContent } from "@/components/ai-elements/message";
 import { QuestionCard } from "./QuestionCard";
@@ -55,7 +56,7 @@ import { TypewriterText } from "./TypewriterText";
 
 type Bubble =
   | { role: "user"; content: string; attachments?: Attachment[] }
-  | { role: "assistant"; content: string; animate?: boolean }
+  | { role: "assistant"; content: string; animate?: boolean; markdown?: boolean }
   | {
       role: "result";
       data: Extract<AgentResponse, { kind: "generate_prompt" }>;
@@ -1216,6 +1217,7 @@ function DirectorChatInner() {
             totalTimeoutMs: 120_000,
             onPhase: (p) => setPhase(p),
             tasteProfile,
+            mode: chatMode,
           });
           lastErr = null;
           break;
@@ -1492,7 +1494,7 @@ function DirectorChatInner() {
           }
         }
       } else {
-        added = { role: "assistant", animate: true, content: (resp as any).content || "..." };
+        added = { role: "assistant", animate: chatMode !== "free_chat", content: (resp as any).content || "...", markdown: chatMode === "free_chat" };
       }
 
 
@@ -1627,6 +1629,18 @@ function DirectorChatInner() {
 
   const [activeCategory, setActiveCategory] = useState<string>("cinema");
   const [composerFocused, setComposerFocused] = useState(false);
+  const [chatMode, setChatMode] = useState<"director" | "free_chat">(() => {
+    if (typeof window === "undefined") return "director";
+    return (localStorage.getItem("director.mode") as "director" | "free_chat") || "director";
+  });
+  const handleModeChange = useCallback((next: "director" | "free_chat") => {
+    setChatMode(next);
+    try {
+      localStorage.setItem("director.mode", next);
+    } catch {
+      /* ignore */
+    }
+  }, []);
   const activeCat = CATEGORIES.find((c) => c.id === activeCategory) ?? CATEGORIES[0];
 
 
@@ -1844,6 +1858,8 @@ function DirectorChatInner() {
             showHelper={false}
             onGenerateImagePrompt={generateImagePrompt}
             imagePromptBusy={imagePromptBusy}
+            mode={chatMode}
+            onModeChange={handleModeChange}
           />
         </div>
 
@@ -2237,8 +2253,13 @@ function DirectorChatInner() {
                   <AssistantAvatar size="sm" state="idle" className="mt-1" />
                   <div className="flex-1">
                     <Message from="assistant">
-                      <MessageContent className="whitespace-pre-wrap leading-relaxed text-foreground/90">
-                        {animate ? (
+                      <MessageContent className={cn(
+                        "leading-relaxed text-foreground/90",
+                        b.markdown ? "prose prose-invert prose-sm max-w-none" : "whitespace-pre-wrap",
+                      )}>
+                        {b.markdown ? (
+                          <ReactMarkdown>{b.content}</ReactMarkdown>
+                        ) : animate ? (
                           <TypewriterText text={b.content} speed={20} />
                         ) : (
                           b.content
@@ -2381,6 +2402,8 @@ function DirectorChatInner() {
           onQuickReply={(chip) => void send(chip)}
           onGenerateImagePrompt={generateImagePrompt}
           imagePromptBusy={imagePromptBusy}
+          mode={chatMode}
+          onModeChange={handleModeChange}
         />
       </div>
 
