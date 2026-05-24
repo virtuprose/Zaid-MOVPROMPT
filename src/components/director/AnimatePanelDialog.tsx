@@ -34,6 +34,15 @@ const STORAGE_KEY = "vp.animatePanel.lastModel";
 const AUDIO_KEY = "vp.animatePanel.lastAudioPlan";
 const FALLBACK_MODEL = "kling-v3-standard";
 
+// Models with native audio (the model generates sync sound/music itself).
+// Anything not in this set produces a silent clip — we offer post-mux audio.
+const NATIVE_AUDIO_MODELS = new Set<string>([
+  "veo-3.1", "veo-3.1-fast", "veo-3.1-lite", "veo-3", "veo-3-fast",
+  "kling-omni", "kling-v3-pro", "kling-v3-standard", "kling-v3-4k",
+  "seedance-2.0", "seedance-2.0-ref",
+  "hailuo-02-pro",
+]);
+
 // When the user picks an audio-less model and wants sound, suggest an
 // audio-capable sibling so they can swap with one click.
 const AUDIO_SWAP: Record<string, { id: string; label: string }> = {
@@ -177,7 +186,7 @@ export function AnimatePanelDialog({
     }
   };
 
-  const modelHasNativeAudio = !!selectedModel?.audio;
+  const modelHasNativeAudio = NATIVE_AUDIO_MODELS.has(selected);
   const swapTarget = AUDIO_SWAP[selected];
   const wantsAudio = audioPlan !== "none";
 
