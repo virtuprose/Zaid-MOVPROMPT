@@ -205,6 +205,7 @@ export const FORMATS: StudioPreset[] = [
     image: u("photo-1620712943543-bcc4688e7485"),
     fragment:
       "Animated explainer style, clean motion graphics, bold typography, illustrated icons walk through the value prop",
+    lockScene: true,
   },
 ];
 
