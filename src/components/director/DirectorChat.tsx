@@ -1754,7 +1754,37 @@ function DirectorChatInner() {
       /* ignore */
     }
   }, []);
+
+  // Handoff: switch mode + prefill the composer + focus.
+  const handoffPrefill = useCallback(
+    (nextMode: "director" | "free_chat", text: string) => {
+      handleModeChange(nextMode);
+      setInput(text);
+      setComposerFocusTick((t) => t + 1);
+    },
+    [handleModeChange],
+  );
+  const askDirector = useCallback(
+    (prefill: string) => handoffPrefill("director", prefill),
+    [handoffPrefill],
+  );
+  const askDP = useCallback(
+    (prefill: string) => handoffPrefill("free_chat", prefill),
+    [handoffPrefill],
+  );
+
+  // Listen for cards / inspector firing "ask the DP" with a prefill.
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<AskDpDetail>).detail;
+      if (detail?.prefill) askDP(detail.prefill);
+    };
+    window.addEventListener(ASK_DP_EVENT, handler);
+    return () => window.removeEventListener(ASK_DP_EVENT, handler);
+  }, [askDP]);
+
   const activeCat = CATEGORIES.find((c) => c.id === activeCategory) ?? CATEGORIES[0];
+
 
 
   const [sessionTitle, setSessionTitle] = useState<string | null>(null);
