@@ -2186,6 +2186,8 @@ function DirectorChatInner() {
                         if (busy) return;
                         void send(intent);
                       }}
+                      onAnimatePanel={b.data.mode === "storyboard_panels" ? handleAnimatePanel : undefined}
+                      onAnimateAllPanels={b.data.mode === "storyboard_panels" ? handleAnimateAllPanels : undefined}
                       onUnpinSubject={
                         b.data.subjectSheet
                           ? () => {
