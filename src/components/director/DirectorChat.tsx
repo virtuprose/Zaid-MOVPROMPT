@@ -249,7 +249,14 @@ function DirectorChatInner() {
     hydratedRef.current = hydrationKey;
     const cached = localState.load(userId, localScope);
     if (cached) {
-      if (cached.bubbles?.length) setBubbles(cached.bubbles as Bubble[]);
+      if (cached.bubbles?.length) {
+        const hydrated = cached.bubbles as Bubble[];
+        setBubbles(hydrated);
+        // Re-sign any storage-backed image URLs that may have expired since save.
+        void refreshBubbleSignedUrls(hydrated.slice()).then((refreshed) =>
+          setBubbles(refreshed as Bubble[]),
+        );
+      }
       if (typeof cached.input === "string") setInput(cached.input);
       if (Array.isArray(cached.attachments)) setAttachments(cached.attachments);
       if (cached.sessionId) sessionIdRef.current = cached.sessionId;
