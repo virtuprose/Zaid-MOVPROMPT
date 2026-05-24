@@ -107,10 +107,6 @@ export function PromptInspector({ ctx, shotIndex, triggerClassName, triggerTitle
         </TooltipTrigger>
         <TooltipContent>{triggerTitle ?? "Inspect prompt"}</TooltipContent>
       </Tooltip>
-        >
-          <FileText className="h-3 w-3" />
-        </button>
-      </PopoverTrigger>
       <PopoverContent
         side="top"
         align="end"
