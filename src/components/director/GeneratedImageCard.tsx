@@ -1,8 +1,9 @@
-import { RotateCcw, Film, Maximize2, X, ChevronLeft, ChevronRight, Download } from "lucide-react";
+import { RotateCcw, Film, Maximize2, X, ChevronLeft, ChevronRight, Download, Wand2, Lightbulb } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogClose } from "@/components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 export type GeneratedImageBubbleData = {
   mode: "character_sheet" | "storyboard_panels" | "single_panel";
@@ -20,6 +21,159 @@ type Props = {
   onRegenerate?: (intent: string) => void;
   onUnpinSubject?: () => void;
 };
+
+// ---- Layer 3 chip presets ----
+const SHOT_CHIPS = ["WS", "MS", "MCU", "CU", "ECU", "OTS", "Insert", "Low angle", "Eye level", "High angle", "Dutch tilt"];
+const MOVE_CHIPS = ["Static", "Slow push-in", "Slow pull-out", "Dolly", "Pan", "Tilt", "Handheld micro-drift", "Crane", "Tracking"];
+const LIGHT_CHIPS = ["Golden hour key", "Blue hour", "Hard side key", "Soft front fill", "Backlight rim", "Practical only", "Moonlit", "Window light", "Top-down hard"];
+const MOOD_CHIPS = ["Tense", "Serene", "Melancholic", "Triumphant", "Intimate", "Ominous", "Awe", "Lonely"];
+
+const GRADE_CHIPS = ["Teal & amber", "Bleach bypass", "Warm filmic", "Cool desaturated", "High-contrast noir", "Pastel halation", "Kodachrome saturated", "Cross-processed"];
+const FILM_CHIPS = ["Kodak Vision3 500T", "Kodak Portra 400", "Cinestill 800T", "Fuji Eterna", "Arri Alexa native", "Ilford HP5 B&W", "16mm grain", "65mm IMAX clean"];
+const ATMO_CHIPS = ["Dawn mist", "Dusk haze", "Heavy atmosphere", "Clean air", "Rain wet", "Smoke-filled", "Dust motes", "Night fog"];
+
+function Chip({
+  label, active, onClick,
+}: { label: string; active: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "text-[10.5px] px-2 py-0.5 rounded-full border transition-colors",
+        active
+          ? "bg-primary/15 text-primary border-primary/40"
+          : "bg-muted/30 text-muted-foreground/85 border-border/40 hover:bg-muted/50",
+      )}
+    >
+      {label}
+    </button>
+  );
+}
+
+function ChipGroup({
+  title, options, value, onChange,
+}: { title: string; options: string[]; value: string | null; onChange: (v: string | null) => void }) {
+  return (
+    <div className="space-y-1.5">
+      <div className="text-[10px] uppercase tracking-wide text-muted-foreground/70">{title}</div>
+      <div className="flex flex-wrap gap-1">
+        {options.map((o) => (
+          <Chip key={o} label={o} active={value === o} onClick={() => onChange(value === o ? null : o)} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function PolishPanelPopover({
+  shotNum, onApply,
+}: { shotNum: number; onApply: (intent: string) => void }) {
+  const [shot, setShot] = useState<string | null>(null);
+  const [move, setMove] = useState<string | null>(null);
+  const [light, setLight] = useState<string | null>(null);
+  const [mood, setMood] = useState<string | null>(null);
+  const [open, setOpen] = useState(false);
+
+  const apply = () => {
+    const overrides: string[] = [];
+    if (shot) overrides.push(`shot type → ${shot}`);
+    if (move) overrides.push(`camera move → ${move}`);
+    if (light) overrides.push(`lighting → ${light}`);
+    if (mood) overrides.push(`mood → ${mood}`);
+    const overrideClause = overrides.length
+      ? ` Apply these polish overrides for this single shot: ${overrides.join("; ")}.`
+      : "";
+    const intent = `Polish panel ${shotNum} — keep the same anchor reference, same character/wardrobe/world, same color grade and film stock as the rest of the sequence. Tighten composition, motivated lighting, lens-correct geometry, finished cinematography quality (no draft sketch look).${overrideClause} Re-render only this single panel.`;
+    onApply(intent);
+    setOpen(false);
+  };
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          onClick={(e) => e.stopPropagation()}
+          className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity bg-background/85 hover:bg-background text-foreground p-1.5 rounded"
+          title={`Polish panel ${shotNum}`}
+          aria-label={`Polish panel ${shotNum}`}
+        >
+          <Wand2 className="h-3 w-3" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent side="top" align="end" className="w-80 space-y-3">
+        <div>
+          <div className="text-xs font-medium text-foreground">Polish panel {shotNum}</div>
+          <div className="text-[10.5px] text-muted-foreground/80">Override one or more dimensions, then re-render just this shot.</div>
+        </div>
+        <ChipGroup title="Shot type" options={SHOT_CHIPS} value={shot} onChange={setShot} />
+        <ChipGroup title="Camera move" options={MOVE_CHIPS} value={move} onChange={setMove} />
+        <ChipGroup title="Lighting" options={LIGHT_CHIPS} value={light} onChange={setLight} />
+        <ChipGroup title="Mood" options={MOOD_CHIPS} value={mood} onChange={setMood} />
+        <div className="flex justify-end gap-2 pt-1">
+          <Button type="button" size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setOpen(false)}>
+            Cancel
+          </Button>
+          <Button type="button" size="sm" className="h-7 text-xs" onClick={apply}>
+            Polish shot
+          </Button>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function RelightSequencePopover({ onApply }: { onApply: (intent: string) => void }) {
+  const [light, setLight] = useState<string | null>(null);
+  const [grade, setGrade] = useState<string | null>(null);
+  const [film, setFilm] = useState<string | null>(null);
+  const [atmo, setAtmo] = useState<string | null>(null);
+  const [open, setOpen] = useState(false);
+
+  const apply = () => {
+    const parts: string[] = [];
+    if (light) parts.push(`lighting: ${light}`);
+    if (grade) parts.push(`color grade: ${grade}`);
+    if (film) parts.push(`film emulation: ${film}`);
+    if (atmo) parts.push(`atmosphere: ${atmo}`);
+    const spec = parts.length ? ` New locked style_spec → ${parts.join(" · ")}.` : "";
+    const intent = `Re-light the whole sequence — re-render every panel with a tightened style_spec. Keep the exact same shot beats, framing, blocking, subject/wardrobe/props; only the lighting, color grade, film stock and atmospheric density change. Propagate the new spec identically to every panel so the grade locks across the series.${spec}`;
+    onApply(intent);
+    setOpen(false);
+  };
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button type="button" size="sm" variant="secondary" className="h-7 text-xs">
+          <Lightbulb className="h-3 w-3 mr-1" />
+          Re-light all panels
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent side="top" align="start" className="w-96 space-y-3">
+        <div>
+          <div className="text-xs font-medium text-foreground">Re-light the whole sequence</div>
+          <div className="text-[10.5px] text-muted-foreground/80">
+            Lock a new lighting / grade / film stock and propagate it to every panel. Shot beats stay the same.
+          </div>
+        </div>
+        <ChipGroup title="Lighting" options={LIGHT_CHIPS} value={light} onChange={setLight} />
+        <ChipGroup title="Color grade" options={GRADE_CHIPS} value={grade} onChange={setGrade} />
+        <ChipGroup title="Film emulation" options={FILM_CHIPS} value={film} onChange={setFilm} />
+        <ChipGroup title="Atmosphere" options={ATMO_CHIPS} value={atmo} onChange={setAtmo} />
+        <div className="flex justify-end gap-2 pt-1">
+          <Button type="button" size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setOpen(false)}>
+            Cancel
+          </Button>
+          <Button type="button" size="sm" className="h-7 text-xs" onClick={apply}>
+            Re-light sequence
+          </Button>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
 
 export function GeneratedImageCard({ data, onRegenerate, onUnpinSubject }: Props) {
   const [zoomIndex, setZoomIndex] = useState<number | null>(null);
@@ -164,6 +318,9 @@ export function GeneratedImageCard({ data, onRegenerate, onUnpinSubject }: Props
                   {shotNum}
                 </div>
               )}
+              {data.mode === "storyboard_panels" && onRegenerate && (
+                <PolishPanelPopover shotNum={shotNum} onApply={regen} />
+              )}
               <button
                 type="button"
                 onClick={() => setZoomIndex(i)}
@@ -269,6 +426,9 @@ export function GeneratedImageCard({ data, onRegenerate, onUnpinSubject }: Props
             <RotateCcw className="h-3 w-3 mr-1" />
             Regenerate all panels
           </Button>
+          {data.mode === "storyboard_panels" && !inProgress && (data.failedIndices?.length ?? 0) === 0 && (
+            <RelightSequencePopover onApply={regen} />
+          )}
           {data.mode === "storyboard_panels" && !inProgress && (data.failedIndices?.length ?? 0) === 0 && (
             <Button
               type="button"
