@@ -1,59 +1,71 @@
-## Diagnosis — why your videos feel weak
+# Plan — One-click "Animate this panel" on storyboard frames
 
-I pulled the storyboard pipeline apart. The image model (`google/gemini-3.1-flash-image-preview`) is fine; the problem is **what we send it for each panel**.
+## Goal
+Add a one-click affordance to every storyboard panel that animates that exact frame as the starting image, using **Kling 2.1 Master** (`kling-v2.1-master`) with a motion prompt derived from the panel's locked context. Result drops into the chat as a normal video bubble so the existing player handles preview, polling, and download.
 
-Today, when the Director triggers `generate_reference_image` mode `storyboard_panels`, each panel prompt is built like this:
+## UX
 
-```
-Shot 3 of 6: she opens the door and steps inside.
-```
+On each storyboard panel (hover state, alongside the existing Polish / Redo / Download / Expand controls):
 
-That's it. No lens, no lighting, no color grade, no composition, no aspect framing language, no "no text / no captions" guard. Compare that to the opening **key frame**, which gets a polish suffix:
+- New icon button: **Animate** (Play icon), top-left area of the hover overlay, mirrored opposite the existing Polish wand.
+- Click → fires the animation request immediately (no dialog), shows a toast "Animating panel N with Kling 2.1 Master — it'll appear here when ready", and inserts a video bubble in the chat.
+- Disabled while a previous animate request for that same panel is in flight (per-panel local state); icon swaps to a spinner.
+- Tooltip: `Animate panel N · Kling 2.1 Master`.
 
-```
-… cinematic composition, intentional depth of field, controlled lighting,
-clean negative space. No text, no captions, no watermark, no UI overlays.
-```
+No new modal, no model picker, no options. Pre-filled with sensible defaults so the test is genuinely one-click.
 
-That's why the key frame looks great and the storyboard panels look like rough drafts. The video model (Seedance / Kling / Veo) then renders motion off those drafts — and amplifies every weakness (flat lighting, drifting grade, identity wobble, bad framing). So the *real* fix is upstream: **make every panel as polished and as locked as the hero key frame**.
+Sequence-level affordance (in the action row already containing "Regenerate all", "Re-light all", "Generate 6 more"):
+- **Animate all panels** button (Play icon, secondary) — fires the same call for every panel sequentially with a 500ms stagger so we don't slam the API; each lands as its own video bubble in panel order. Confirms once via a small popover ("This will queue N renders on Kling 2.1 Master") to prevent accidental fan-out spend.
 
-## Fix — three layers
+## Behavior contract
 
-### Layer 1 — Edge function (`supabase/functions/generate-reference-image/index.ts`)
+For each animate click:
 
-The single highest‑leverage change. Today only `single_panel` with no reference gets `HERO_FRAME_SUFFIX`. We extend that idea to every storyboard panel and tighten continuity.
+1. **Starting frame** = the panel's signed `img.url` (already public/signed for display).
+2. **Model** = hard-coded `kling-v2.1-master`.
+3. **Prompt** = a short motion-only prompt built from what we already know about the panel:
+   - The Director's note for the scene (`data.directorsNote`) if present.
+   - A motion stub appropriate for the shot (default: `"Bring this still to life — preserve the exact composition, character, wardrobe, lighting, and color grade. Add subtle natural motion: micro-parallax, breath, atmospheric drift, ambient particles. Camera holds with a slow imperceptible push-in. 5 seconds, cinematic."`).
+   - Panel index appended as a tag so the video bubble is traceable back to its source panel.
+4. **Reference image** = the panel URL passed via `referenceImages` (Kling i2v path). We reuse the existing `submitVideoJob(prompt, provider, sessionId, options?, referenceImages?)` — no API change.
+5. **Options** = `{ duration: 5, aspect_ratio: data.aspectRatio || "16:9" }` if `VideoOptions` supports those keys; otherwise omitted so the function defaults apply.
+6. **Extras** = pass `storyboard_session_id` (current session) and `storyboard_shot_index` (panel number) so the video row is correctly attributed in the library.
 
-1. **`PANEL_POLISH_SUFFIX`** — appended to every storyboard panel prompt:
-   > "Single polished storyboard frame at this aspect ratio. Cinematic composition, deliberate negative space, lens‑correct geometry, controlled depth of field, motivated lighting with clear key/fill/rim, color grade matches the previous panel exactly, no draft sketch quality, no rough lines. No text, no captions, no watermark, no UI overlay, no on‑image labels."
-2. **Stronger continuity clause** — current clause only mentions wardrobe / face / props. Extend to: *"Match the previous panel's lens, focal length, lighting direction, color grade, film stock, contrast, and atmospheric density. Same world, same time of day, same weather."*
-3. **Accept an optional `style_spec` payload** on the edge function: `{ lens, lighting, palette, film_emulation, grade, mood }`. When present, render it as a one‑line "LOCKED STYLE" header pre‑pended to every panel prompt (and to character_sheet) so the locked spec lives inside the image call instead of trusting the Director to re‑echo it correctly each time.
-4. **Reinforce aspect** in panel prompts — append `"Frame composed for ${aspect} — no letterboxing, no pillarboxing, no border bars."` so the model stops cropping to its default 1:1.
+## Wiring
 
-### Layer 2 — Director system prompt (`supabase/functions/director-agent/index.ts`)
+`GeneratedImageCard.tsx`
+- Add prop: `onAnimatePanel?: (panel: { url: string; shot_index: number; directorsNote?: string }) => void | Promise<void>`.
+- Add per-panel `animatingIndex` state set for in-flight panels (Set<number>) so we can spin the button.
+- Render the new Animate button only when `data.mode === "storyboard_panels"` AND `onAnimatePanel` is provided AND `!inProgress`.
+- Sequence-level "Animate all panels" button gated the same way as the existing "Re-light all" (no in-flight panels, no failed panels).
 
-Tighten the contract for what each `per_shot_prompts[i]` MUST contain. New hard rule in the IMAGE GENERATION section:
+`DirectorChat.tsx`
+- Implement `handleAnimatePanel` next to the existing video submission path (~line 1380):
+  - Build the motion prompt (helper `buildAnimateFromPanelPrompt(panel, sceneNote)`).
+  - Call `submitVideoJob(prompt, "kling-v2.1-master", sessionIdRef.current, options, [panel.url], { storyboard_session_id, storyboard_shot_index })`.
+  - On success, push a `Bubble` of role `"video"` with the returned `jobId/status/videoUrl`, persist, toast.
+  - On `insufficient_credits` reuse `notifyInsufficientCredits(e)`.
+- Pass `onAnimatePanel={handleAnimatePanel}` to every `<GeneratedImageCard ... mode="storyboard_panels" />` mount.
+- Implement `handleAnimateAllPanels(panels)` that loops with `await new Promise(r => setTimeout(r, 500))` between calls and surfaces a single summary toast on completion ("Queued N Kling 2.1 Master renders").
 
-> Every entry in `per_shot_prompts` MUST be 30–60 words and MUST name, in order: (a) subject + micro‑action (1 sentence, present tense), (b) shot type + camera position (WS / MS / CU / OTS / insert + low/eye/high angle), (c) camera move (static / slow push / dolly / pan / handheld micro‑drift), (d) lens (focal length range), (e) lighting (key direction, fill ratio, practicals, time of day), (f) mood / emotional beat in 3 words. Single‑clause beats like "she opens the door" are rejected.
+## Files to change
 
-Also add a `style_spec` field to the `generate_reference_image` tool schema so the Director passes the locked DP spec through verbatim every call — no more relying on it being baked into each `per_shot_prompts[i]` correctly.
+- `src/components/director/GeneratedImageCard.tsx` — new `AnimateButton` + sequence-level "Animate all panels" control + new prop, no styling changes outside the existing hover-overlay pattern.
+- `src/components/director/DirectorChat.tsx` — new handlers, prop wiring.
+- (Optional) `src/lib/director/animatePanelPrompt.ts` — tiny helper to keep the motion-prompt builder out of the component.
 
-For multi‑panel calls, require the Director to include a one‑line **shot‑to‑shot grammar plan** in `directors_note` BEFORE the call (e.g. "Cut from WS → MCU → insert → OTS → MS → WS. Light moves clockwise across the sequence."). This forces it to think cinematically, not just listing beats.
+## Out of scope (deliberately)
 
-### Layer 3 — UI (`src/components/director/GeneratedImageCard.tsx`)
+- No Veo branch, no model picker — the user explicitly chose Kling 2.1 Master for this test.
+- No new edge function. The existing `generate-video` already accepts `provider`, `reference_image_urls`, `storyboard_session_id`, `storyboard_shot_index`.
+- No DB migrations.
+- No changes to storyboard generation, character lock, or Layer 3 polish flow.
 
-Two small additions on the existing storyboard card:
+## Verification
 
-1. **"Polish this panel" inline action** per panel — opens a tiny popover with: shot type, camera move, lighting, mood (editable chips), then re‑runs `regen()` for that single panel with the upgraded prompt. Reuses the existing per‑index regenerate path.
-2. **"Re‑light the whole sequence"** button on the finished storyboard card — re‑runs all panels with a tighter `style_spec` (same shot beats, but the user can flip the lighting/grade/film stock in one place and propagate to every panel).
+1. Generate a fresh 6-panel storyboard.
+2. Hover one panel → click Animate → confirm: toast appears, video bubble shows "queued/processing", panel image is visibly the source frame inside the resulting clip (identity + grade inherited).
+3. Click "Animate all panels" → 6 video bubbles appear in panel order; spot-check that panels 1, 4, 6 inherit the locked grade.
+4. Check network: each call is `POST /generate-video` with `provider: "kling-v2.1-master"` and a single `reference_image_urls` entry equal to the panel URL.
 
-## Out of scope
-
-- Switching image models. `gemini-3.1-flash-image-preview` is fine once the prompts upstream are right; jumping to a heavier model would only mask the prompt issue and cost more credits.
-- Changes to the video render path itself (`generate-video`, `submitVideoJob`). The reference frames are what feed the video model — fix those and the video result tracks automatically.
-- The Composer / chat surface — no changes to how the user talks to the Director.
-
-## What you'll feel after this
-
-- Storyboard panels will look like finished cinematography stills, not sketches.
-- The grade, lighting direction, and lens feel won't drift between panel 1 and panel 6.
-- The video model will have a much stronger visual anchor to extrapolate motion from, so the final clip inherits the polish instead of fighting it.
+Expected outcome: clips inherit the cinematic baseline of the storyboard, validating the upstream Layer 1–3 work. If they don't, the bottleneck is the video-prompt construction (Layer 4), not the storyboard.
