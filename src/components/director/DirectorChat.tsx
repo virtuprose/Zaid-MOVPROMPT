@@ -180,6 +180,7 @@ function DirectorChatInner() {
   const { sessionId: routeSessionId } = useParams<{ sessionId?: string }>();
   const [bubbles, setBubbles] = useState<Bubble[]>([WELCOME]);
   const [input, setInput] = useState("");
+  const [composerFocusTick, setComposerFocusTick] = useState(0);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [busy, setBusy] = useState(false);
   const [phase, setPhase] = useState<DirectorPhase>("thinking");
