@@ -306,12 +306,16 @@ export async function streamDirectorAgent(
   attachments: Attachment[],
   onPartial: (partial: AgentResponse) => void,
   signal?: AbortSignal,
-  options: StreamOptions & { tasteProfile?: TasteProfile | null } = {},
+  options: StreamOptions & {
+    tasteProfile?: TasteProfile | null;
+    mode?: "director" | "free_chat";
+  } = {},
 ): Promise<AgentResponse> {
   const idleTimeoutMs = options.idleTimeoutMs ?? 30_000;
   const totalTimeoutMs = options.totalTimeoutMs ?? 120_000;
   const onPhase = options.onPhase;
   const tasteProfile = options.tasteProfile ?? null;
+  const mode = options.mode ?? "director";
 
 
   // Initial phase — analyzing image if any visual attachment is present.
