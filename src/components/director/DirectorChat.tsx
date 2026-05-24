@@ -1493,7 +1493,7 @@ function DirectorChatInner() {
           }
         }
       } else {
-        added = { role: "assistant", animate: true, content: (resp as any).content || "..." };
+        added = { role: "assistant", animate: chatMode !== "free_chat", content: (resp as any).content || "...", markdown: chatMode === "free_chat" };
       }
 
 
