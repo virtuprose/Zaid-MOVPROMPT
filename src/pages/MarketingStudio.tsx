@@ -292,6 +292,13 @@ export default function MarketingStudio() {
   // Re-runs on every trio change. Aborts in-flight requests when picks change again.
   useEffect(() => {
     if (!ready) return;
+    // Scene-locked formats (e.g. Nokhadha) bake their own scene into the
+    // fragment — the edge function requires a location, so just seed the
+    // master prompt with the fragment and skip the auto-draft call.
+    if (sceneLocked && format?.fragment) {
+      setMaster(format.fragment);
+      return;
+    }
     const controller = new AbortController();
     const timer = window.setTimeout(() => {
       setDrafting(true);
