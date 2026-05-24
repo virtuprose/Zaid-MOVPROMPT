@@ -516,6 +516,7 @@ function DirectorChatInner() {
       lock_mode?: "character" | "scene" | "auto";
       directors_note?: string;
       subject_kind?: "character" | "product";
+      style_spec?: import("@/lib/director/api").StyleSpec;
     },
     options?: { subjectSheet?: boolean; subjectKind?: "character" | "product" },
   ) => {
