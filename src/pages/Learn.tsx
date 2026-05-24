@@ -79,10 +79,6 @@ const Learn = () => {
         description="A practical guide to writing director-grade AI video prompts: workflows, models, scene analysis, references, and pro tips."
         path="/learn"
       />
-      {/* Ambient glow */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-primary/5 rounded-full blur-[120px]" />
-      </div>
 
       <div className="relative z-10 container max-w-6xl mx-auto px-4 py-4 sm:py-6">
 
