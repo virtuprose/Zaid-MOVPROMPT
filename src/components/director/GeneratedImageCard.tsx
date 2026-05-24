@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogClose } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { PromptInspector, type InspectorContext } from "./PromptInspector";
-import { AnimatePanelDialog, type AnimateDialogResult } from "./AnimatePanelDialog";
+import { AnimatePanelDialog, type AnimateDialogResult, type AudioPlan } from "./AnimatePanelDialog";
 
 export type GeneratedImageBubbleData = {
   mode: "character_sheet" | "storyboard_panels" | "single_panel";
@@ -27,6 +27,7 @@ export type AnimatePanelInput = {
   aspectRatio?: "1:1" | "16:9" | "9:16";
   provider?: string;
   duration?: 5 | 10;
+  audioPlan?: AudioPlan;
 };
 
 type Props = {
@@ -316,6 +317,7 @@ export function GeneratedImageCard({ data, onRegenerate, onUnpinSubject, onAnima
         aspectRatio: data.aspectRatio,
         provider: result.provider,
         duration: result.duration,
+        audioPlan: result.audioPlan,
       }));
       await onAnimateAllPanels(panels);
     } finally {
@@ -751,7 +753,7 @@ export function GeneratedImageCard({ data, onRegenerate, onUnpinSubject, onAnima
       directorsNote={singleAnimate?.directorsNote ?? data.directorsNote}
       onConfirm={async (result) => {
         if (!singleAnimate) return;
-        await handleAnimateOne({ ...singleAnimate, provider: result.provider, duration: result.duration });
+        await handleAnimateOne({ ...singleAnimate, provider: result.provider, duration: result.duration, audioPlan: result.audioPlan });
         setSingleAnimate(null);
       }}
     />
