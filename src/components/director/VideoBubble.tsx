@@ -39,7 +39,10 @@ type Props = {
 
 export function VideoBubble({ data, onChange }: Props) {
   const [hover, setHover] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
+  const [stageIdx, setStageIdx] = useState(0);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const isRendering = data.status !== "completed" && data.status !== "failed";
 
   useEffect(() => {
     const v = videoRef.current;
@@ -50,6 +53,21 @@ export function VideoBubble({ data, onChange }: Props) {
       v.currentTime = 0;
     }
   }, [hover, data.status]);
+
+  useEffect(() => {
+    if (!isRendering) return;
+    const t = window.setInterval(() => setElapsed((s) => s + 1), 1000);
+    return () => window.clearInterval(t);
+  }, [isRendering]);
+
+  useEffect(() => {
+    if (!isRendering || data.status === "queued") return;
+    const t = window.setInterval(
+      () => setStageIdx((i) => (i + 1) % RENDER_STAGES.length),
+      2200,
+    );
+    return () => window.clearInterval(t);
+  }, [isRendering, data.status]);
 
   const toggleLike = async () => {
     const next = !data.liked;
