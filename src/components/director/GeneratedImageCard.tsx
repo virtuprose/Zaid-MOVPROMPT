@@ -370,6 +370,30 @@ export function GeneratedImageCard({ data, onRegenerate, onUnpinSubject, onAnima
               {data.mode === "storyboard_panels" && onRegenerate && (
                 <PolishPanelPopover shotNum={shotNum} onApply={regen} />
               )}
+              {data.mode === "storyboard_panels" && onAnimatePanel && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    void handleAnimateOne({
+                      url: img.url,
+                      shot_index: shotNum,
+                      directorsNote: data.directorsNote,
+                      aspectRatio: data.aspectRatio,
+                    });
+                  }}
+                  disabled={animatingShots.has(shotNum)}
+                  className="absolute top-1 right-9 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity bg-background/85 hover:bg-background text-foreground p-1.5 rounded disabled:opacity-60"
+                  title={`Animate panel ${shotNum} · Kling 2.1 Master`}
+                  aria-label={`Animate panel ${shotNum}`}
+                >
+                  {animatingShots.has(shotNum) ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <Play className="h-3 w-3" />
+                  )}
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => setZoomIndex(i)}
