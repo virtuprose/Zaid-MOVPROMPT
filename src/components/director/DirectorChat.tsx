@@ -557,7 +557,10 @@ function DirectorChatInner() {
           : (payload.per_shot_prompts?.length ?? Math.min(Math.max(payload.count ?? 9, 1), 9))
         : Math.min(Math.max(payload.count ?? 1, 1), 9);
     const PER_IMAGE_CREDITS = 5;
-    const approvalCost = imageCount * PER_IMAGE_CREDITS;
+    const UPSCALE_4K_PER_PANEL = 3;
+    const quality: ImageQuality = payload.quality || "1K";
+    const upscaleCost = quality === "4K" ? UPSCALE_4K_PER_PANEL * imageCount : 0;
+    const approvalCost = imageCount * PER_IMAGE_CREDITS + upscaleCost;
     const approvalLabel =
       payload.mode === "storyboard_panels"
         ? payload.shot_index
