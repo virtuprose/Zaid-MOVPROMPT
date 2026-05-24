@@ -225,9 +225,10 @@ export async function refreshSignedUrl(storage_path: string): Promise<string | n
 }
 
 // Walk hydrated bubbles and swap stale signed URLs for fresh ones.
-// Mutates a shallow-cloned bubble list. Safe to call with any bubble array shape.
+// Returns a deep-cloned bubble list so React re-renders pick it up.
 export async function refreshBubbleSignedUrls<T extends any[]>(bubbles: T): Promise<T> {
-  // Collect every (storage_path -> setters) pairing so we sign each path once.
+  const cloned = JSON.parse(JSON.stringify(bubbles)) as T;
+
   const pathToSetters = new Map<string, Array<(url: string) => void>>();
   const add = (p: string | undefined | null, set: (url: string) => void) => {
     if (!p) return;
@@ -236,7 +237,7 @@ export async function refreshBubbleSignedUrls<T extends any[]>(bubbles: T): Prom
     pathToSetters.set(p, arr);
   };
 
-  for (const b of bubbles as any[]) {
+  for (const b of cloned as any[]) {
     if (!b) continue;
     if (b.role === "generated_images" && Array.isArray(b.data?.images)) {
       for (const img of b.data.images) {
@@ -250,7 +251,7 @@ export async function refreshBubbleSignedUrls<T extends any[]>(bubbles: T): Prom
     }
   }
 
-  if (pathToSetters.size === 0) return bubbles;
+  if (pathToSetters.size === 0) return cloned;
 
   await Promise.all(
     Array.from(pathToSetters.entries()).map(async ([path, setters]) => {
@@ -258,7 +259,7 @@ export async function refreshBubbleSignedUrls<T extends any[]>(bubbles: T): Prom
       if (fresh) setters.forEach((set) => set(fresh));
     }),
   );
-  return bubbles;
+  return cloned;
 }
 
 export function classifyFile(file: File): "image" | "video" | "audio" | "document" | "unknown" {
