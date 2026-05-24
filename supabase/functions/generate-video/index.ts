@@ -73,6 +73,34 @@ const FAL_MODELS: Record<string, string> = {
   kling: "fal-ai/kling-video/v2/master/text-to-video",
 };
 
+// Image-to-video variants. When a starting image is provided, we route to
+// these endpoints so the model actually SEES the source frame (preserves
+// character identity, composition, lighting). Without this map every Kling
+// animation collapses to text-to-video and drifts off the source panel.
+const FAL_MODELS_I2V: Record<string, string> = {
+  "kling-v3-pro": "fal-ai/kling-video/v3/pro/image-to-video",
+  "kling-v3-standard": "fal-ai/kling-video/v3/standard/image-to-video",
+  "kling-v3-4k": "fal-ai/kling-video/v3/4k/image-to-video",
+  "kling-omni": "fal-ai/kling-video/o3/pro/image-to-video",
+  "kling-v2.5-turbo-pro": "fal-ai/kling-video/v2.5-turbo/pro/image-to-video",
+  "kling-v2.1-master": "fal-ai/kling-video/v2.1/master/image-to-video",
+  "kling-v2-master": "fal-ai/kling-video/v2/master/image-to-video",
+  "kling-v1.6-pro": "fal-ai/kling-video/v1.6/pro/image-to-video",
+  "kling-v1.6-standard": "fal-ai/kling-video/v1.6/standard/image-to-video",
+  "kling-v1.5-pro": "fal-ai/kling-video/v1.5/pro/image-to-video",
+  "kling-v1-pro": "fal-ai/kling-video/v1/pro/image-to-video",
+  "kling-v1-standard": "fal-ai/kling-video/v1/standard/image-to-video",
+  "veo-3.1": "fal-ai/veo3.1/image-to-video",
+  "veo-3.1-fast": "fal-ai/veo3.1/fast/image-to-video",
+  "veo-3.1-lite": "fal-ai/veo3.1/lite/image-to-video",
+  "veo-3": "fal-ai/veo3/image-to-video",
+  "veo-3-fast": "fal-ai/veo3/fast/image-to-video",
+  "veo-2": "fal-ai/veo2/image-to-video",
+  "hailuo-02-pro": "fal-ai/minimax/hailuo-02/pro/image-to-video",
+  "hailuo-02-standard": "fal-ai/minimax/hailuo-02/standard/image-to-video",
+  "runway-gen3-turbo": "fal-ai/runway-gen3/turbo/image-to-video",
+};
+
 // (Pre-flight content moderation moved to the `moderate-image` function,
 // which runs at upload time on the reference image itself.)
 
@@ -139,12 +167,19 @@ type VideoOptions = {
   prompt_optimizer?: boolean;
 };
 
-function buildFalPayload(provider: string, prompt: string, opts: VideoOptions = {}, referenceImages: string[] = []) {
+function buildFalPayload(
+  provider: string,
+  prompt: string,
+  opts: VideoOptions = {},
+  referenceImages: string[] = [],
+  useI2V = false,
+) {
   const payload: Record<string, unknown> = { prompt };
   const family = provider.split("-")[0]; // kling | veo | seedance | hailuo | runway | ltx | wan
   const set = (k: string, v: unknown) => {
     if (v !== undefined && v !== null) payload[k] = v;
   };
+  const startingFrame = useI2V && referenceImages.length > 0 ? referenceImages[0] : null;
 
   switch (family) {
     case "veo":
@@ -152,6 +187,7 @@ function buildFalPayload(provider: string, prompt: string, opts: VideoOptions = 
       if (opts.duration !== undefined) set("duration", `${opts.duration}s`);
       set("resolution", opts.resolution);
       if (opts.audio !== undefined) set("generate_audio", opts.audio);
+      if (startingFrame) set("image_url", startingFrame);
       break;
     case "kling":
       set("aspect_ratio", opts.aspect_ratio);
@@ -168,6 +204,8 @@ function buildFalPayload(provider: string, prompt: string, opts: VideoOptions = 
       if (provider === "kling-omni-ref" && referenceImages.length > 0) {
         set("reference_images", referenceImages.slice(0, 7).map((url) => ({ image_url: url })));
       }
+      // Image-to-video: pass the starting frame so character identity is preserved.
+      if (startingFrame) set("image_url", startingFrame);
       break;
     case "seedance":
       set("aspect_ratio", opts.aspect_ratio);
@@ -200,10 +238,12 @@ function buildFalPayload(provider: string, prompt: string, opts: VideoOptions = 
       if (opts.duration !== undefined) set("duration", String(opts.duration));
       set("resolution", opts.resolution);
       if (opts.prompt_optimizer !== undefined) set("prompt_optimizer", opts.prompt_optimizer);
+      if (startingFrame) set("image_url", startingFrame);
       break;
     case "runway":
       set("aspect_ratio", opts.aspect_ratio);
       if (opts.duration !== undefined) set("duration", String(opts.duration));
+      if (startingFrame) set("image_url", startingFrame);
       break;
     case "ltx":
       set("aspect_ratio", opts.aspect_ratio);
@@ -550,7 +590,13 @@ serve(async (req) => {
     ) {
       provider = "kling-v3-4k";
     }
-    const model = FAL_MODELS[provider];
+    // If a starting frame is attached and the provider has an image-to-video
+    // variant, route to it so the model actually sees the source image
+    // (preserves character identity, composition, lighting). Without this,
+    // animating a storyboard panel falls back to text-to-video and the
+    // generated character drifts off the source.
+    const useI2V = refImages.length > 0 && !!FAL_MODELS_I2V[provider];
+    const model = useI2V ? FAL_MODELS_I2V[provider] : FAL_MODELS[provider];
     if (!model) {
       return new Response(JSON.stringify({ error: `Unknown provider: ${provider}` }), {
         status: 400,
@@ -609,7 +655,7 @@ serve(async (req) => {
     let submitData: Record<string, any> | null = null;
     try {
       submitData = await fal.queue.submit(model, {
-        input: buildFalPayload(provider, normalizedPrompt, options, refImages),
+        input: buildFalPayload(provider, normalizedPrompt, options, refImages, useI2V),
       }) as Record<string, any>;
     } catch (error) {
       console.error("fal submit error", error);
