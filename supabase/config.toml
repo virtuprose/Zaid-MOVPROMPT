@@ -17,4 +17,6 @@ project_id = "foaxkfpblyovbocvmtjj"
     verify_jwt = false
   [functions.check-model-availability]
     verify_jwt = false
+  [functions.recommend-animate-model]
+    verify_jwt = false
 

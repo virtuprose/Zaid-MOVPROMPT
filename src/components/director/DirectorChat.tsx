@@ -1042,16 +1042,17 @@ function DirectorChatInner() {
 
   const handleAnimatePanel = useCallback(async (panel: import("./GeneratedImageCard").AnimatePanelInput) => {
     const { buildAnimateFromPanelPrompt } = await import("@/lib/director/animatePanelPrompt");
-    const provider = "kling-v2.1-master";
+    const provider = panel.provider || "kling-v2.1-master";
+    const providerLabel = findVideoModel(provider)?.label || provider;
     const prompt = buildAnimateFromPanelPrompt({
       shotIndex: panel.shot_index,
       directorsNote: panel.directorsNote,
     });
     const options = {
       aspect_ratio: panel.aspectRatio || "16:9",
-      duration: 5,
+      duration: panel.duration || 5,
     } as any;
-    toast(`Animating panel ${panel.shot_index} on Kling 2.1 Master…`);
+    toast(`Animating panel ${panel.shot_index} on ${providerLabel}…`);
     try {
       const job = await submitVideoJob(
         prompt,
@@ -1088,12 +1089,16 @@ function DirectorChatInner() {
   }, []);
 
   const handleAnimateAllPanels = useCallback(async (panels: import("./GeneratedImageCard").AnimatePanelInput[]) => {
+    const providerLabel = panels[0]?.provider
+      ? (findVideoModel(panels[0].provider)?.label || panels[0].provider)
+      : "Kling 2.1 Master";
     for (const panel of panels) {
       await handleAnimatePanel(panel);
       await new Promise((r) => setTimeout(r, 500));
     }
-    toast.success(`Queued ${panels.length} Kling 2.1 Master renders`);
+    toast.success(`Queued ${panels.length} ${providerLabel} renders`);
   }, [handleAnimatePanel]);
+
 
 
   const send = async (textOverride?: string, bubblesOverride?: Bubble[]) => {

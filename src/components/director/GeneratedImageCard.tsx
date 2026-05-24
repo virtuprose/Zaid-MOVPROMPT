@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogClose } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { PromptInspector, type InspectorContext } from "./PromptInspector";
+import { AnimatePanelDialog, type AnimateDialogResult } from "./AnimatePanelDialog";
 
 export type GeneratedImageBubbleData = {
   mode: "character_sheet" | "storyboard_panels" | "single_panel";
@@ -24,6 +25,8 @@ export type AnimatePanelInput = {
   shot_index: number;
   directorsNote?: string;
   aspectRatio?: "1:1" | "16:9" | "9:16";
+  provider?: string;
+  duration?: 5 | 10;
 };
 
 type Props = {
@@ -281,6 +284,7 @@ export function GeneratedImageCard({ data, onRegenerate, onUnpinSubject, onAnima
   const [animatingShots, setAnimatingShots] = useState<Set<number>>(new Set());
   const [animateAllOpen, setAnimateAllOpen] = useState(false);
   const [animatingAll, setAnimatingAll] = useState(false);
+  const [singleAnimate, setSingleAnimate] = useState<AnimatePanelInput | null>(null);
 
   const handleAnimateOne = useCallback(async (panel: AnimatePanelInput) => {
     if (!onAnimatePanel) return;
@@ -301,9 +305,8 @@ export function GeneratedImageCard({ data, onRegenerate, onUnpinSubject, onAnima
     }
   }, [onAnimatePanel, animatingShots]);
 
-  const handleAnimateAll = useCallback(async () => {
+  const handleAnimateAll = useCallback(async (result: AnimateDialogResult) => {
     if (!onAnimateAllPanels) return;
-    setAnimateAllOpen(false);
     setAnimatingAll(true);
     try {
       const panels: AnimatePanelInput[] = data.images.map((img, i) => ({
@@ -311,12 +314,15 @@ export function GeneratedImageCard({ data, onRegenerate, onUnpinSubject, onAnima
         shot_index: img.shot_index ?? i + 1,
         directorsNote: data.directorsNote,
         aspectRatio: data.aspectRatio,
+        provider: result.provider,
+        duration: result.duration,
       }));
       await onAnimateAllPanels(panels);
     } finally {
       setAnimatingAll(false);
     }
   }, [onAnimateAllPanels, data.images, data.directorsNote, data.aspectRatio]);
+
 
   const progress = data.progress;
   const inProgress = !!progress && progress.done < progress.total;
@@ -484,7 +490,7 @@ export function GeneratedImageCard({ data, onRegenerate, onUnpinSubject, onAnima
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
-                        void handleAnimateOne({
+                        setSingleAnimate({
                           url: img.url,
                           shot_index: shotNum,
                           directorsNote: data.directorsNote,
@@ -502,7 +508,7 @@ export function GeneratedImageCard({ data, onRegenerate, onUnpinSubject, onAnima
                       )}
                     </button>
                   </TooltipTrigger>
-                  <TooltipContent>Animate panel {shotNum} · Kling 2.1 Master</TooltipContent>
+                  <TooltipContent>Animate panel {shotNum}…</TooltipContent>
                 </Tooltip>
               )}
               {data.inspector && (
@@ -625,40 +631,21 @@ export function GeneratedImageCard({ data, onRegenerate, onUnpinSubject, onAnima
             <RelightSequencePopover onApply={regen} />
           )}
           {data.mode === "storyboard_panels" && !inProgress && (data.failedIndices?.length ?? 0) === 0 && onAnimateAllPanels && (
-            <Popover open={animateAllOpen} onOpenChange={setAnimateAllOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="secondary"
-                  className="h-7 text-xs"
-                  disabled={animatingAll}
-                >
-                  {animatingAll ? (
-                    <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                  ) : (
-                    <Play className="h-3 w-3 mr-1" />
-                  )}
-                  Animate all panels
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent side="top" align="start" className="w-72 space-y-3">
-                <div>
-                  <div className="text-xs font-medium text-foreground">Animate all panels</div>
-                  <div className="text-[10.5px] text-muted-foreground/80">
-                    Queues {data.images.length} Kling 2.1 Master renders — one per panel — using each frame as the starting image. Charges credits per clip.
-                  </div>
-                </div>
-                <div className="flex justify-end gap-2">
-                  <Button type="button" size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setAnimateAllOpen(false)}>
-                    Cancel
-                  </Button>
-                  <Button type="button" size="sm" className="h-7 text-xs" onClick={() => void handleAnimateAll()}>
-                    Queue {data.images.length} renders
-                  </Button>
-                </div>
-              </PopoverContent>
-            </Popover>
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              className="h-7 text-xs"
+              disabled={animatingAll}
+              onClick={() => setAnimateAllOpen(true)}
+            >
+              {animatingAll ? (
+                <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+              ) : (
+                <Play className="h-3 w-3 mr-1" />
+              )}
+              Animate all panels
+            </Button>
           )}
           {data.mode === "storyboard_panels" && !inProgress && (data.failedIndices?.length ?? 0) === 0 && (
             <Button
@@ -753,6 +740,34 @@ export function GeneratedImageCard({ data, onRegenerate, onUnpinSubject, onAnima
         </DialogClose>
       </DialogContent>
     </Dialog>
+
+    {/* Per-panel animate dialog with AI model recommendation */}
+    <AnimatePanelDialog
+      open={!!singleAnimate}
+      onOpenChange={(o) => { if (!o) setSingleAnimate(null); }}
+      mode="single"
+      shotIndex={singleAnimate?.shot_index}
+      aspectRatio={singleAnimate?.aspectRatio ?? data.aspectRatio}
+      directorsNote={singleAnimate?.directorsNote ?? data.directorsNote}
+      onConfirm={async (result) => {
+        if (!singleAnimate) return;
+        await handleAnimateOne({ ...singleAnimate, provider: result.provider, duration: result.duration });
+        setSingleAnimate(null);
+      }}
+    />
+
+    {/* Animate-all dialog */}
+    <AnimatePanelDialog
+      open={animateAllOpen}
+      onOpenChange={setAnimateAllOpen}
+      mode="all"
+      totalPanels={data.images.length}
+      aspectRatio={data.aspectRatio}
+      directorsNote={data.directorsNote}
+      onConfirm={async (result) => {
+        await handleAnimateAll(result);
+      }}
+    />
     </>
   );
 }
