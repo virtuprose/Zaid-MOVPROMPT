@@ -18,6 +18,8 @@ export type StudioPreset = {
   image?: string;
   /** Optional cover video URL (autoplay/muted/loop) shown in preset cards. */
   video?: string;
+  /** If true, this format bakes in its own scene/location — the Scene picker should be locked. */
+  lockScene?: boolean;
 };
 
 const u = (id: string) =>
