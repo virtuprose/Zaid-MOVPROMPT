@@ -254,7 +254,7 @@ export function GeneratedImageCard({ data, onRegenerate, onUnpinSubject }: Props
       </div>
 
       {onRegenerate && isGrid && (
-        <div className="pt-1">
+        <div className="pt-1 flex flex-wrap gap-2">
           <Button
             type="button"
             size="sm"
@@ -269,6 +269,22 @@ export function GeneratedImageCard({ data, onRegenerate, onUnpinSubject }: Props
             <RotateCcw className="h-3 w-3 mr-1" />
             Regenerate all panels
           </Button>
+          {data.mode === "storyboard_panels" && !inProgress && (data.failedIndices?.length ?? 0) === 0 && (
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              className="h-7 text-xs"
+              onClick={() =>
+                regen(
+                  "Continue this storyboard — generate 6 more panels that pick up exactly where the last one ended. Keep the same scene anchor, locked style, lighting, lens, and color grade; only action and framing advance. Number the new panels starting from N+1 where N is the last existing panel.",
+                )
+              }
+            >
+              <Film className="h-3 w-3 mr-1" />
+              Generate 6 more beats
+            </Button>
+          )}
         </div>
       )}
 
