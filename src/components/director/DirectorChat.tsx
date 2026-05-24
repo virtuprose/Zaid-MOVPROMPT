@@ -2012,6 +2012,11 @@ function DirectorChatInner() {
           onFocusCapture={() => setComposerFocused(true)}
           onBlurCapture={() => setComposerFocused(false)}
         >
+          <FreeChatChips
+            active={chatMode === "free_chat" && !isEmpty}
+            chips={freeChatChips}
+            onChipClick={insertChipToken}
+          />
           <Composer
             value={input}
             onChange={setInput}
@@ -2024,6 +2029,7 @@ function DirectorChatInner() {
             imagePromptBusy={imagePromptBusy}
             mode={chatMode}
             onModeChange={handleModeChange}
+            focusSignal={composerFocusTick}
           />
         </div>
 
