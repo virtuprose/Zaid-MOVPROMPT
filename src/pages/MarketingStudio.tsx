@@ -19,6 +19,7 @@ import {
   AppWindow,
   Download,
   Trash2,
+  CheckCircle2,
 } from "lucide-react";
 
 import {
