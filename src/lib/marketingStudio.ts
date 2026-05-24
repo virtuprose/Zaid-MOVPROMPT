@@ -584,6 +584,16 @@ export type StudioBrief = {
   userNote?: string;
   /** Brand identity (palette, typography vibe, mood) applied to lighting/props/text. */
   brandIdentity?: BrandIdentityContext | null;
+  /** Overlay controls (end-card, logo, headline/CTA/price). */
+  overlay?: OverlayBrief;
+};
+
+export type OverlayBrief = {
+  mode: "none" | "endcard" | "lower_third" | "corner" | "center";
+  logo: boolean;
+  headline?: string;
+  cta?: string;
+  price?: string;
 };
 
 const find = (list: StudioPreset[], id?: string) =>
@@ -611,6 +621,7 @@ function brandLineAt(
   occurrence: number,
   role: "hero" | "supporting" | "only",
   angleOffset = 0,
+  overlay?: OverlayBrief,
 ): string | null {
   if (!b || !b.name) return null;
   const tag = refTagAt(refs, "brand", occurrence);
@@ -626,12 +637,21 @@ function brandLineAt(
   // The brand-image slot is the LOGO; only product-angle refs lock product shape.
   const angleLabels = b.angle_labels ?? [];
   const hasAngles = angleLabels.length > 0;
+  const cleanMode = overlay && (overlay.mode === "none" || overlay.logo === false);
   if (tag) {
-    bits.push(
-      hasAngles
-        ? `Use ${tag} as the brand wordmark/logo only — it MUST appear visibly as an END-CARD stamp over the final hero frame, and also on any packaging, screens, garment tags or labels when the scene includes them; do NOT use it as the product silhouette. Product shape, parts and proportions come from the angle references below and the PRODUCT LOCK spec.`
-        : `Use ${tag} as the brand wordmark/logo only — it MUST appear visibly as an END-CARD stamp over the final hero frame, and on any packaging, screens or label moments in the scene; do NOT treat it as a photo of the product. Render the product itself faithfully from the PRODUCT LOCK spec below (shape, parts, materials, colors). Use ${tag} only for the visible logo, end-card or packaging mark.`,
-    );
+    if (cleanMode) {
+      bits.push(
+        hasAngles
+          ? `Use ${tag} only as a color/style/typography reference for the brand. Do NOT render ${tag} as an end-card stamp, watermark, or on-screen graphic anywhere in the video. Product shape, parts and proportions come from the angle references below and the PRODUCT LOCK spec.`
+          : `Use ${tag} only as a color/style/typography reference for the brand. Do NOT render ${tag} as an end-card stamp, watermark, or on-screen graphic anywhere in the video. Render the product itself faithfully from the PRODUCT LOCK spec below (shape, parts, materials, colors).`,
+      );
+    } else {
+      bits.push(
+        hasAngles
+          ? `Use ${tag} as the brand wordmark/logo only — it MUST appear visibly as an END-CARD stamp over the final hero frame, and also on any packaging, screens, garment tags or labels when the scene includes them; do NOT use it as the product silhouette. Product shape, parts and proportions come from the angle references below and the PRODUCT LOCK spec.`
+          : `Use ${tag} as the brand wordmark/logo only — it MUST appear visibly as an END-CARD stamp over the final hero frame, and on any packaging, screens or label moments in the scene; do NOT treat it as a photo of the product. Render the product itself faithfully from the PRODUCT LOCK spec below (shape, parts, materials, colors). Use ${tag} only for the visible logo, end-card or packaging mark.`,
+      );
+    }
   }
 
   // Additional angle references (front / back / packaging / …) — same product
@@ -706,7 +726,7 @@ function characterLineAt(c: CharacterContext, refs: StudioBrief["imageRefs"], oc
 }
 
 
-export function brandIdentityLine(b?: BrandIdentityContext | null): string | null {
+export function brandIdentityLine(b?: BrandIdentityContext | null, overlayOff = false): string | null {
   if (!b) return null;
   const bits: string[] = [];
   if (b.primary_color) bits.push(`primary ${b.primary_color}`);
@@ -731,7 +751,37 @@ export function brandIdentityLine(b?: BrandIdentityContext | null): string | nul
   if (b.mood_notes) bits.push(`mood: ${b.mood_notes}`);
   if (b.tagline) bits.push(`tagline: "${b.tagline}"`);
   if (bits.length === 0) return null;
-  return `BRAND LOCK — ${bits.join("; ")}. Apply the palette, lighting, finish and pacing across every shot. Match the typography vibe for any on-screen text. Honor the logo treatment instruction. Never use the AVOID colors. Do NOT recolor the real product itself — the Product Lock above always wins on the product's own appearance.`;
+  const base = `BRAND LOCK — ${bits.join("; ")}. Apply the palette, lighting, finish and pacing across every shot. Never use the AVOID colors. Do NOT recolor the real product itself — the Product Lock above always wins on the product's own appearance.`;
+  if (overlayOff) return base;
+  return `${base} Match the typography vibe for any on-screen text. Honor the logo treatment instruction.`;
+}
+
+export function overlayLine(overlay?: OverlayBrief): string | null {
+  if (!overlay) return null;
+  if (overlay.mode === "none" || overlay.logo === false && !overlay.headline && !overlay.cta && !overlay.price) {
+    if (overlay.mode === "none") {
+      return `OVERLAY LOCK — CLEAN RENDER. Do NOT add any end-card, wordmark, logo, on-screen text, captions, price tags, or graphic overlays at any point in the video. The product appears unbranded: no visible logos on packaging, labels, screens or garments either. Final beat is a clean product hero shot with zero graphics.`;
+    }
+  }
+  const placement =
+    overlay.mode === "endcard"
+      ? "a clean full-frame END-CARD at the final beat (held ~1s then fade)"
+      : overlay.mode === "lower_third"
+      ? "a lower-third overlay pinned to the bottom of the hero frame"
+      : overlay.mode === "corner"
+      ? "a small corner overlay (lower-right) on the hero frame"
+      : "a centered overlay over the hero frame";
+  const items: string[] = [];
+  if (overlay.logo) items.push("the brand wordmark/logo");
+  if (overlay.headline) items.push(`headline "${overlay.headline}"`);
+  if (overlay.cta) items.push(`CTA "${overlay.cta}"`);
+  const layout = items.length > 0
+    ? `Render ${items.join(", ")} as ${placement}, in the brand's typography vibe and palette.`
+    : `Render ${placement} in the brand's typography vibe and palette.`;
+  const priceLine = overlay.price
+    ? ` Additionally, overlay a small price/offer badge "${overlay.price}" on the product beat (corner badge, brand colors).`
+    : "";
+  return `OVERLAY LOCK — ${layout}${priceLine} Keep all on-screen text legible, kerned, and free of typos.`;
 }
 
 export function composeStudioPrompt(brief: StudioBrief): string {
@@ -742,7 +792,8 @@ export function composeStudioPrompt(brief: StudioBrief): string {
       ? "Subject: a mobile app — feature its UI prominently on a phone screen held by the presenter."
       : "Subject: a physical product — feature it cleanly in-hand or on a hero surface.";
 
-
+  const overlay = brief.overlay;
+  const overlayOff = !!overlay && (overlay.mode === "none" || overlay.logo === false);
 
   const brands = brief.brands && brief.brands.length > 0
     ? brief.brands
@@ -761,6 +812,7 @@ export function composeStudioPrompt(brief: StudioBrief): string {
       i,
       brands.length === 1 ? "only" : i === 0 ? "hero" : "supporting",
       myOffset,
+      overlay,
     );
   });
   const characterLines = characters.map((c, i) =>
@@ -772,11 +824,19 @@ export function composeStudioPrompt(brief: StudioBrief): string {
     ),
   );
 
+  const cleanOverride = overlay?.mode === "none"
+    ? "OVERRIDE: Ignore any end-card, wordmark, logo, or on-screen text beat described in the format/setting fragments above. Replace any such beat with a clean hero shot of the product — no graphics, no captions, no logos, no packaging branding."
+    : null;
+
+  const closingLine = overlay?.mode === "none"
+    ? "End on a confident product hero frame. No text, no logos, no graphics on screen at any point."
+    : "End on a confident product hero frame. Keep text-on-screen minimal and legible.";
+
   const parts = [
     "Cinematic 9:16 social ad, 5 seconds, native audio.",
     subjectLine,
     ...brandLines,
-    brandIdentityLine(brief.brandIdentity),
+    brandIdentityLine(brief.brandIdentity, overlayOff),
     ...characterLines,
     format?.fragment ?? (brief.customFormat?.trim() ? `Format: ${brief.customFormat.trim()}` : null),
     setting?.fragment ?? (brief.customSetting?.trim() ? `Setting: ${brief.customSetting.trim()}` : null),
@@ -785,8 +845,11 @@ export function composeStudioPrompt(brief: StudioBrief): string {
     brief.userNote?.trim()
       ? `Additional direction (adapt tone and details on top of the locked preset, do not override structure): ${brief.userNote.trim()}`
       : null,
-    "End on a confident product hero frame. Keep text-on-screen minimal and legible.",
+    overlayLine(overlay),
+    cleanOverride,
+    closingLine,
   ].filter(Boolean);
+
 
   return parts.join("\n");
 }
