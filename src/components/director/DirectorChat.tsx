@@ -604,6 +604,22 @@ function DirectorChatInner() {
 
     // For streaming storyboard, mount the live image bubble immediately and
     // skip the text loading bubble (the progress bar replaces it).
+    const inspectorCtx: import("./GeneratedImageCard").GeneratedImageBubbleData["inspector"] = {
+      mode: payload.mode,
+      basePrompt: payload.prompt,
+      perShotPrompts: payload.per_shot_prompts,
+      styleSpec: payload.style_spec,
+      lockMode: payload.lock_mode,
+      referenceUrls: payload.reference_urls,
+      aspectRatio: payload.aspect_ratio,
+      subjectKind: payload.subject_kind,
+      isChain: payload.mode === "storyboard_panels" && !payload.shot_index,
+      totalShots:
+        payload.mode === "storyboard_panels"
+          ? (payload.per_shot_prompts?.length ?? payload.count ?? streamTotal)
+          : undefined,
+    };
+
     const liveImageBubble: Bubble | null = isStreamingStoryboard
       ? {
           role: "generated_images",
@@ -613,6 +629,7 @@ function DirectorChatInner() {
             directorsNote: payload.directors_note,
             progress: { done: 0, total: streamTotal },
             failedIndices: [],
+            inspector: inspectorCtx,
           },
         }
       : null;
