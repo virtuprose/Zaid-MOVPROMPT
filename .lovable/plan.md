@@ -1,99 +1,116 @@
-# Fill the Director gutters — widen chat + right context rail
+# Fix Animate: character identity + audio awareness
 
-## Goal
-Kill the ~300px of dead space on either side of the Director chat without breaking the conversational flow. Keep the chat centered and readable, but bump its width and add a persistent **right rail** that holds the four context modules you picked.
+## Why this happened
 
-## Layout change
+You picked **Kling 2.1 Master**. I traced it end-to-end:
 
-Current grid:
-```text
-[ 240px session sidebar ][ chat capped at max-w-3xl, centered in remaining space ]
+1. **Character drift root cause** — In `supabase/functions/generate-video/index.ts`, every Kling id is mapped to a **text-to-video** fal endpoint:
+   ```
+   "kling-v2.1-master": "fal-ai/kling-video/v2.1/master/text-to-video"
+   ```
+   The `buildFalPayload` function for `case "kling"` **never sets `image_url`**. So when you animated panel #1, the panel image was uploaded as a reference but **never reached Kling** — Kling regenerated the scene from the text prompt alone. Same color/location (because the prompt described them), totally different character (because the model never saw your subject's face).
+
+2. **No audio** — Kling 2.1 Master has `audio: false` in the catalog. The dialog doesn't tell you this and offers no audio choice, so the clip ships silent with zero warning.
+
+3. **No session audio plan** — Each panel is animated independently. Even if one panel had music, the next wouldn't match.
+
+## What to build
+
+### 1. Route panel animation to image-to-video endpoints (fixes character drift)
+
+Add a parallel map `FAL_MODELS_I2V` in `generate-video/index.ts`:
+
+```ts
+const FAL_MODELS_I2V: Record<string, string> = {
+  "kling-v3-pro":          "fal-ai/kling-video/v3/pro/image-to-video",
+  "kling-v3-standard":     "fal-ai/kling-video/v3/standard/image-to-video",
+  "kling-v3-4k":           "fal-ai/kling-video/v3/4k/image-to-video",
+  "kling-omni":            "fal-ai/kling-video/o3/pro/image-to-video",
+  "kling-v2.5-turbo-pro":  "fal-ai/kling-video/v2.5-turbo/pro/image-to-video",
+  "kling-v2.1-master":     "fal-ai/kling-video/v2.1/master/image-to-video",
+  "kling-v2-master":       "fal-ai/kling-video/v2/master/image-to-video",
+  "kling-v1.6-pro":        "fal-ai/kling-video/v1.6/pro/image-to-video",
+  "kling-v1.6-standard":   "fal-ai/kling-video/v1.6/standard/image-to-video",
+  "kling-v1.5-pro":        "fal-ai/kling-video/v1.5/pro/image-to-video",
+  "kling-v1-pro":          "fal-ai/kling-video/v1/pro/image-to-video",
+  "veo-3.1":               "fal-ai/veo3.1/image-to-video",
+  "veo-3.1-fast":          "fal-ai/veo3.1/fast/image-to-video",
+  "veo-3":                 "fal-ai/veo3/image-to-video",
+  "hailuo-02-pro":         "fal-ai/minimax/hailuo-02/pro/image-to-video",
+  "hailuo-02-standard":    "fal-ai/minimax/hailuo-02/standard/image-to-video",
+  "runway-gen3-turbo":     "fal-ai/runway-gen3/turbo/image-to-video",
+  // Seedance already i2v-by-default in current map — keep as-is.
+};
 ```
 
-New grid (≥1280px):
-```text
-[ 240px sessions ][ chat max-w-4xl (~896px), left-aligned ][ 360px right rail ]
+Routing rule: if `reference_image_urls[0]` is present **and** the provider has an i2v variant, use it and set `image_url: referenceImages[0]` in the Kling/Veo/Hailuo/Runway branches of `buildFalPayload`. This is the fix that makes the character actually stay the same.
+
+### 2. Surface audio capability + add an audio plan to `AnimatePanelDialog`
+
+Add a new section below the model picker:
+
+```
+SOUND
+( ) No audio          ← silent clip
+(•) Background music  ← Director picks a track style matching the scene
+( ) Sound effects     ← discrete diegetic SFX
+( ) Environmental     ← ambient room/world tone
 ```
 
-- Below `lg`: right rail collapses into a floating button (bottom-right) that opens it as a Sheet, so mobile/tablet are unchanged.
-- Above `lg`: rail is pinned, user can collapse it to a 48px icon strip via a chevron.
-- Chat bumps from `max-w-3xl` → `max-w-4xl` (storyboards finally breathe; in-stream cards like aspect picker get ~25% more room).
+- When the selected model has `audio: false` (Kling 2.1 Master, all legacy Kling, Veo 2, …): show an amber inline note: *"Kling 2.1 Master has no native audio. We'll generate your chosen sound in post and mux it onto the clip."* Offer a 1-click swap to an audio-capable equivalent ("Use Veo 3.1 Fast for native sync sound").
+- When the selected model has `audio: true` and the user picks Music/SFX/Ambient: route through the model's native audio (e.g. Veo's `generate_audio`).
+- Persist the audio choice on the result payload so the next dialog opens pre-selected.
 
-## Right rail — 4 stacked sections
+### 3. Session-level audio plan for "Animate all panels"
 
-Single scrollable column, each section is a collapsible card (all open by default, state persisted in localStorage). Order top→bottom:
+When the user clicks "Animate all panels" the dialog asks **once**, then propagates:
 
-### 1. Quick Actions
-4–6 one-click chips that dispatch the same intents the Director would:
-- "Build storyboard from last image"
-- "Animate last frame" (opens existing `AnimatePanelDialog`)
-- "Generate variants" (re-runs last image prompt with seed shuffle)
-- "Export all prompts" (downloads .txt/.json of session)
-- "New shot" (jumps to free-chat with a fresh prompt scaffold)
+- Audio plan stored on the storyboard render record (new field in metadata on the `generated_images` bubble: `audio_plan: { mode, style?, model }`).
+- Each panel render reuses the same plan **and** the same `style` seed so transitions feel continuous (e.g. "warm orchestral cello, 90 bpm" stays across all 6 shots, not 6 random tracks).
+- Director-agent prompts each panel with the shared style context so dialogue/SFX cues stay coherent shot-to-shot.
 
-Disabled state when no relevant context exists (e.g. Animate disabled until first image lands).
+### 4. Smarter recommendations in `recommend-animate-model`
 
-### 2. Storyboard / Shot Outline
-Mini-map of the current storyboard.
-- One row per panel: thumbnail (40×40), shot # + one-line caption, status dot (queued / rendering / done / failed).
-- Click → smooth-scrolls the chat to that panel and pulses its border.
-- Empty state: "No storyboard yet — ask the Director to build one."
-- Reads from existing storyboard bubbles in `DirectorChat` message stream; no new backend.
+Update the system prompt + tool schema to also return `audio_capability` and `identity_lock_strength`. Recommendation rules:
 
-### 3. Reference Tray
-Thumbnail grid (3 cols) of every image this session — uploaded refs + generated frames.
-- Source: scans `messages` for `image` / `attachment` / `storyboard_panel` bubble types.
-- Drag → drops into Composer as a new attachment (reuses `AttachmentDropzone` handler).
-- Click → opens lightbox preview.
-- Filter pills: All / Uploaded / Generated.
-- Empty state: "Drop or generate something — it'll land here."
+- **Multi-panel storyboard (mode = "all")** → strongly prefer multi-reference models for identity lock: `kling-omni` (best), `seedance-2.0-ref`, then audio-capable singles.
+- **Single panel from a storyboard** → prefer audio-capable i2v with strong identity: `veo-3.1` > `kling-v3-pro` > `seedance-2.0` > Kling 2.1 Master (only when the user explicitly wants legacy look).
+- Update the fallback default from `kling-v2.1-master` to `kling-v3-standard` (audio + i2v + cheaper than Pro).
+- The recommendation card now includes a one-liner: *"Native audio · Strong identity lock · 5–10s"* so users see the trade-off before clicking.
 
-### 4. Session Health
-Compact stat strip:
-- Credits remaining (from existing credits hook).
-- Current model (Gemini 3.1 Pro Preview).
-- Attachments staged in composer (count).
-- Session token estimate (rough char/4 estimate of message history).
-- Tiny "Reset session" button.
+### 5. Post-mux audio path (when model has no native audio)
+
+When user picks Music/SFX/Ambient on an audio-less model, after fal returns the silent mp4:
+
+- Call ElevenLabs music or SFX gen with a prompt derived from the panel's Director note + shared audio plan style.
+- Mux audio onto the video via a new edge function `mux-audio` using fal's `fal-ai/ffmpeg-api/compose` (already proven in the project pattern). Result replaces the original video URL on the bubble.
+- This requires `ELEVENLABS_API_KEY`. **I'll need you to add this secret if you want music/SFX on audio-less models.** Without it, the option is greyed out with "Add ElevenLabs key to enable."
 
 ## Files
 
-**New**
-- `src/components/director/RightRail.tsx` — shell + collapse logic + sheet wrapper.
-- `src/components/director/rail/QuickActionsCard.tsx`
-- `src/components/director/rail/StoryboardOutlineCard.tsx`
-- `src/components/director/rail/ReferenceTrayCard.tsx`
-- `src/components/director/rail/SessionHealthCard.tsx`
-- `src/components/director/rail/RailSection.tsx` — shared collapsible wrapper (header + chevron + body).
-
 **Edited**
-- `src/pages/Director.tsx` — grid becomes `lg:grid-cols-[240px_1fr_360px]`, mounts `<RightRail/>`, passes shared state (messages, scrollToBubble callback, composer dispatch).
-- `src/components/director/DirectorChat.tsx` — bump outer chat container `max-w-3xl` → `max-w-4xl`; expose a `scrollToBubble(id)` imperative handle for the outline; expose a `dispatchAttachment(asset)` handler for drag-drop from tray.
-- `src/components/director/Composer.tsx` — accept dropped reference asset from the tray.
+- `supabase/functions/generate-video/index.ts` — add `FAL_MODELS_I2V`, route by presence of starting frame, set `image_url` for Kling/Veo/Hailuo/Runway when i2v.
+- `supabase/functions/recommend-animate-model/index.ts` — new system prompt rules, return `audio_capability`, default to `kling-v3-standard`.
+- `src/components/director/AnimatePanelDialog.tsx` — audio plan radios, audio-capability badge, post-mux notice, "Use audio-capable equivalent" swap.
+- `src/components/director/GeneratedImageCard.tsx` — pass `audioPlan` through `onAnimatePanel` / `onAnimateAllPanels`.
+- `src/components/director/DirectorChat.tsx` — persist & propagate `audioPlan` across the "animate all" loop; store on bubble metadata.
+- `src/lib/director/videoModels.ts` (re-exporter) — surfaces no change, just consumers read `audio` flag.
 
-**No backend changes.** Pure presentation + existing client state.
+**New**
+- `supabase/functions/mux-audio/index.ts` — generates ElevenLabs audio + composes with fal ffmpeg, returns new video url.
 
-## Visual
-
-- Rail bg: `hsl(var(--card)/0.4)` with `border-l border-border/40`, matches session sidebar weight.
-- Section headers: Space Grotesk, uppercase, 11px, muted-foreground.
-- Cards inside rail: rounded-xl, `bg-card/60`, subtle inner glow on hover.
-- Cyan accent for active states (selected outline panel, drag-hover on tray).
-- Smooth 200ms collapse animation (existing `transition-all`).
-
-## Tradeoffs / out of scope
-
-- Not rebuilding the chat as split-pane (your original idea) — outline + reference tray give you the spatial overview without breaking conversational flow.
-- Not adding a left third column — keeps cognitive load down and works on 1366px laptops.
-- Quick Actions intentionally limited to 4–6 — more would become a junk drawer; we can add a "More…" menu later.
-- No new analytics / persistence beyond localStorage collapse state.
+**Secrets**
+- `ELEVENLABS_API_KEY` — required for post-mux audio when the selected model is audio-less. I'll prompt for it before wiring step 5.
 
 ## Verification
 
-1. On a 1600px screen: gutters gone, chat at 896px, rail at 360px, session sidebar at 240px.
-2. On a 1280px screen: same three columns, rail readable.
-3. On <1024px: rail collapses to floating button → opens as Sheet.
-4. Generate an image → it appears in Reference Tray within the same tick.
-5. Build a storyboard → outline lists every panel, click jumps + pulses.
-6. Click "Animate last frame" → opens `AnimatePanelDialog` with the correct frame preloaded.
-7. Collapse rail → chat re-centers smoothly, state persists across reloads.
+1. Re-animate panel #1 with **Kling 2.1 Master** → character matches the source panel (because i2v endpoint sees the image).
+2. Open dialog → "Kling 2.1 Master" shows amber "No native audio" badge + post-mux notice.
+3. Pick "Animate all panels" → audio plan asked once → all 6 panels share the same music style.
+4. Pick `veo-3.1` → audio plan goes through native `generate_audio: true`.
+5. Recommendation for a 6-panel storyboard returns `kling-omni` (multi-ref) or `seedance-2.0-ref`, not `kling-v2.1-master`.
+
+## Out of scope
+
+- True cross-panel character locking via a single reference set (requires switching the whole storyboard animation flow to `kling-omni-ref` with all 6 panels as references — bigger redesign, propose separately).
+- Voiceover / dialogue generation — Music/SFX/Ambient only for now.
