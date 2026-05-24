@@ -1312,6 +1312,7 @@ function PresetChip({
   tooltip,
   onClick,
   flash,
+  disabled,
 }: {
   icon: React.ReactNode;
   label: string;
@@ -1319,19 +1320,23 @@ function PresetChip({
   tooltip: string;
   onClick: () => void;
   flash?: boolean;
+  disabled?: boolean;
 }) {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
         <button
           type="button"
-          onClick={onClick}
+          onClick={disabled ? undefined : onClick}
+          disabled={disabled}
           className={cn(
             "inline-flex items-center gap-1.5 rounded-full border px-3 h-9 text-xs transition-all duration-300",
-            value
+            disabled
+              ? "border-border/30 bg-muted/10 text-muted-foreground/60 cursor-not-allowed opacity-70"
+              : value
               ? "border-[hsl(0_72%_55%)]/50 bg-[hsl(0_72%_55%)]/10 text-foreground"
               : "border-border/40 bg-muted/20 text-muted-foreground hover:text-foreground hover:border-border",
-            flash && value &&
+            !disabled && flash && value &&
               "border-[hsl(35_90%_55%)] bg-[hsl(35_90%_55%)]/20 text-foreground shadow-[0_0_18px_hsl(35_90%_55%/0.5)] scale-[1.04]",
           )}
         >
@@ -1339,7 +1344,7 @@ function PresetChip({
           <span className="font-medium">
             {value ? `${label}: ${value}` : label}
           </span>
-          <ChevronDown className="w-3.5 h-3.5 opacity-60" />
+          {!disabled && <ChevronDown className="w-3.5 h-3.5 opacity-60" />}
         </button>
       </TooltipTrigger>
       <TooltipContent>{tooltip}</TooltipContent>
