@@ -1055,17 +1055,35 @@ function DirectorChatInner() {
 
   const handleAnimatePanel = useCallback(async (panel: import("./GeneratedImageCard").AnimatePanelInput) => {
     const { buildAnimateFromPanelPrompt } = await import("@/lib/director/animatePanelPrompt");
-    const provider = panel.provider || "kling-v2.1-master";
+    const provider = panel.provider || "kling-v3-standard";
     const providerLabel = findVideoModel(provider)?.label || provider;
+    const audioPlan = panel.audioPlan || "none";
+    // Append a concise audio directive so models that take audio cues
+    // (Veo / Kling v3 / Seedance 2.0) generate matching sound.
+    const audioDirective =
+      audioPlan === "music"
+        ? " Score with a continuous underscore that matches the scene's mood."
+        : audioPlan === "sfx"
+          ? " Include diegetic sound effects for every visible action."
+          : audioPlan === "ambient"
+            ? " Include subtle ambient room/world tone matching the location."
+            : "";
     const prompt = buildAnimateFromPanelPrompt({
       shotIndex: panel.shot_index,
-      directorsNote: panel.directorsNote,
+      directorsNote: (panel.directorsNote || "") + audioDirective,
     });
+    const NATIVE_AUDIO = new Set([
+      "veo-3.1", "veo-3.1-fast", "veo-3.1-lite", "veo-3", "veo-3-fast",
+      "kling-omni", "kling-v3-pro", "kling-v3-standard", "kling-v3-4k",
+      "seedance-2.0", "seedance-2.0-ref", "hailuo-02-pro",
+    ]);
+    const wantsAudio = audioPlan !== "none";
     const options = {
       aspect_ratio: panel.aspectRatio || "16:9",
       duration: panel.duration || 5,
+      audio: NATIVE_AUDIO.has(provider) ? wantsAudio : undefined,
     } as any;
-    toast(`Animating panel ${panel.shot_index} on ${providerLabel}…`);
+    toast(`Animating panel ${panel.shot_index} on ${providerLabel}${wantsAudio ? ` · ${audioPlan}` : " · silent"}…`);
     try {
       const job = await submitVideoJob(
         prompt,
@@ -1076,7 +1094,7 @@ function DirectorChatInner() {
         {
           storyboard_session_id: sessionIdRef.current || undefined,
           storyboard_shot_index: panel.shot_index,
-          metadata: { source: "animate_panel", panel_url: panel.url },
+          metadata: { source: "animate_panel", panel_url: panel.url, audio_plan: audioPlan },
         },
       );
       const videoBubble: Bubble = {
