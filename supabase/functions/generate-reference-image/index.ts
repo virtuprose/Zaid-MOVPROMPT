@@ -421,11 +421,14 @@ serve(async (req) => {
           const missing = prompts.length - okCount;
           if (missing > 0) {
             try {
+              const refundAmount =
+                perImage * missing +
+                (effectiveQuality === "4K" ? upscalePrice4K * missing : 0);
               await refundCredits({
                 userId,
-                amount: perImage * missing,
+                amount: refundAmount,
                 reason: "image_generation_refund",
-                metadata: { missing, errCount, clientGone },
+                metadata: { missing, errCount, clientGone, quality: effectiveQuality },
               });
             } catch (e) {
               console.error("refund failed", e);
