@@ -215,6 +215,19 @@ function DirectorChatInner() {
     return () => window.removeEventListener("vidoprompt:acts-ready", onReady);
   }, []);
 
+  // Quick-action prefill from RightRail
+  useEffect(() => {
+    const onAction = (e: Event) => {
+      const detail = (e as CustomEvent<{ action: string; text?: string }>).detail;
+      if (detail?.action === "prefill" && detail.text) {
+        setInput((prev) => (prev ? `${prev} ${detail.text}` : detail.text!));
+        setComposerFocusTick((t) => t + 1);
+      }
+    };
+    window.addEventListener("director:quick-action", onAction);
+    return () => window.removeEventListener("director:quick-action", onAction);
+  }, []);
+
   const jumpToStitch = () => {
     if (!readyToStitch) return;
     const btn = document.querySelector<HTMLButtonElement>(
@@ -1998,7 +2011,7 @@ function DirectorChatInner() {
 
   if (isEmpty) {
     return (
-      <div className="flex flex-col gap-8 min-h-[calc(100dvh-120px)] justify-center max-w-3xl mx-auto w-full px-2 sm:px-0 pb-[env(safe-area-inset-bottom)]">
+      <div className="flex flex-col gap-8 min-h-[calc(100dvh-120px)] justify-center max-w-4xl mx-auto w-full px-2 sm:px-0 pb-[env(safe-area-inset-bottom)]">
         {/* Hero: logo + greeting */}
         <div className="flex items-center gap-5 sm:gap-7">
           <div
@@ -2114,7 +2127,7 @@ function DirectorChatInner() {
             <img src={logoMark} alt="" className="w-32 h-32 opacity-[0.05]" />
           </div>
         )}
-        <div className="flex flex-col gap-6 min-h-full max-w-3xl mx-auto w-full">
+        <div className="flex flex-col gap-6 min-h-full max-w-4xl mx-auto w-full">
           <div className="flex-1" />
 
 
@@ -2585,7 +2598,7 @@ function DirectorChatInner() {
 
       {pendingApproval && <BottomApprovalBar request={pendingApproval} />}
 
-      <div className="max-w-3xl mx-auto w-full">
+      <div className="max-w-4xl mx-auto w-full">
         <FreeChatChips
           active={chatMode === "free_chat" && !isEmpty}
           chips={freeChatChips}
