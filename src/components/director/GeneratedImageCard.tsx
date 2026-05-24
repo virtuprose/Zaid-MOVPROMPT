@@ -490,7 +490,7 @@ export function GeneratedImageCard({ data, onRegenerate, onUnpinSubject, onAnima
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
-                        void handleAnimateOne({
+                        setSingleAnimate({
                           url: img.url,
                           shot_index: shotNum,
                           directorsNote: data.directorsNote,
@@ -508,7 +508,7 @@ export function GeneratedImageCard({ data, onRegenerate, onUnpinSubject, onAnima
                       )}
                     </button>
                   </TooltipTrigger>
-                  <TooltipContent>Animate panel {shotNum} · Kling 2.1 Master</TooltipContent>
+                  <TooltipContent>Animate panel {shotNum}…</TooltipContent>
                 </Tooltip>
               )}
               {data.inspector && (
