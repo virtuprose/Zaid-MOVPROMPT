@@ -1,45 +1,72 @@
-# Make the Polish popover clear and usable
+## Goal
 
-The popover that opens from the amber Polish (wand) button on each generated panel is currently confusing: the title "Polish panel 3" is jargon, the chips use cryptic abbreviations (WS, MS, MCU, CU, ECU, OTS), the type is tiny (10.5px), and there's no explanation of what Polish actually does. We'll fix the wording, expand the abbreviations, give each section a one-line hint, and tighten the visual hierarchy — all in `GeneratedImageCard.tsx` (the `PolishPanelPopover` + `Chip` / `ChipGroup` helpers).
+Make every "waiting" state in the Director feel like one cinematic loader — same dots, same avatar, same rotating caption, same in‑button spinner. No more random "Generating storyboard panels…" plain text that doesn't match the typing indicator.
 
 ## What changes
 
-**1. Header — explain what Polish does**
-- Title: **"Refine this shot"** (instead of "Polish panel 3"), with a small muted suffix "· Panel 3".
-- Subtitle rewritten in plain language: *"Adjust any of these to re-render just this panel. Leave a row untouched to keep it the same."*
+### 1. One shared loader primitive
 
-**2. Abbreviations → human labels (with the short code as a hint)**
-Replace the `SHOT_CHIPS` flat strings with `{ label, hint }` pairs so each chip shows the full name and a tiny code below / in a tooltip:
+Create `src/components/director/CinematicLoader.tsx` exporting two surfaces that share the exact same dot animation, color, and timing as today's `TypingIndicator`:
 
-```text
-Wide shot (WS)        Medium shot (MS)       Medium close-up (MCU)
-Close-up (CU)         Extreme close-up (ECU) Over-the-shoulder (OTS)
-Insert               Low angle              Eye level
-High angle           Dutch tilt
-```
+- `<CinematicLoader caption | captions | stages />` — full bubble: `AssistantAvatar` + animated 3‑dot pill + rotating caption underneath. Used in the chat stream and inside cards.
+- `<CinematicSpinner size?: "sm"|"xs" />` — tiny inline 3‑dot variant for buttons (replaces the mismatched `Loader2 animate-spin`). Same primary‑cyan dots, just scaled down.
 
-Camera move, Lighting and Mood already use readable labels — keep them but group "angle" chips visually separate from "framing" chips inside the Shot type section.
+Caption rotation reuses the existing 2.2s interval + `prefers-reduced-motion` fallback.
 
-**3. Section headers with one-line guidance**
-Each `ChipGroup` gets a short helper line under the title:
-- **Framing & angle** — "How tight is the camera, and where is it?"
-- **Camera move** — "How does the camera move during the shot?"
-- **Lighting** — "What's the dominant light source and quality?"
-- **Mood** — "What should the shot feel like?"
+### 2. Chat message loading bubbles (DirectorChat.tsx)
 
-**4. Visual fixes**
-- Bump chip text from `text-[10.5px]` to `text-xs` (12px) and chip padding to `px-2.5 py-1` for tap comfort.
-- Active chip uses the existing primary token; add a subtle ring so the selection is obvious at a glance.
-- Add a small "Clear" link at the right of each section header that appears only when that section has a selection, so users can reset one dimension without hunting.
-- Widen the popover from `w-80` to `w-[22rem]` and add `max-h-[70vh] overflow-y-auto` so all four sections fit on smaller screens without the action row getting clipped.
-- Footer: keep Cancel + primary action, but rename **"Polish shot"** → **"Re-render this shot"** (clearer outcome) and add a tiny muted note on the left: *"Only this panel changes."*
+Add a new bubble role `loading` with `{ stage: "image" | "story_bundle" | "story_render" | "render_handoff" | "panels" | "character_sheet" | "reference" | "custom"; captions?: string[] }`.
 
-**5. Empty-state affordance**
-If the user opens the popover and applies with nothing selected, show an inline hint instead of silently re-rendering: *"Pick at least one change, or close to leave the shot as-is."* (Disable the primary button until at least one chip is active.)
+Replace these plain‑text `animate: true` bubbles with `role: "loading"` bubbles that render `<CinematicLoader />`:
 
-## Files touched
-- `src/components/director/GeneratedImageCard.tsx` — `Chip`, `ChipGroup`, `PolishPanelPopover`, `SHOT_CHIPS` data shape. No other files.
+- "Generating storyboard panels…" → `stage: "panels"`
+- "Designing a character sheet…" → `stage: "character_sheet"`
+- "Generating a reference frame…" → `stage: "reference"`
+- "Building the story asset bundle — character + prop + 7 locations…" → `stage: "story_bundle"`
+- "Kicking off 4 parallel acts on Seedance 2.0…" → `stage: "story_render"`
+- "Sending this to the {provider} renderer…" → `stage: "render_handoff"`, captions include provider name
+
+Each stage gets a curated rotating caption set (e.g. panels → "Blocking the sequence…", "Lighting panel 3…", "Color‑grading the set…"). Loading bubbles are transient — never persisted (already guarded by `busy`).
+
+### 3. De‑dupe: single indicator at a time
+
+In the render loop, when the **last** bubble in the stream is `role: "loading"`, suppress the bottom `<TypingIndicator />`. Otherwise keep it. Result: exactly one cinematic loader visible at any moment.
+
+### 4. Image generation card progress (GeneratedImageCard.tsx)
+
+Replace the two `Loader2 animate-spin` indicators (storyboard chain progress at line ~505 and animate button placeholder at ~643) with `<CinematicSpinner size="xs" />`. The storyboard progress bar keeps its `done/total` counter but the leading icon becomes the 3‑dot indicator so it visually matches the chat loader.
+
+### 5. Video render bubble (VideoBubble.tsx)
+
+Keep the existing cinematic stage names ("Warming up the lens", "Blocking the shot", "Lighting the scene", "Rolling camera", "Rendering frames", "Final color pass"). Refactor the visual: render `<CinematicLoader captions={RENDER_STAGES} />` (avatar + dots + rotating stage label) instead of the current bespoke layout. The `queued → processing` advance still drives `stageIdx`.
+
+### 6. In‑button spinners
+
+Swap every `<Loader2 className="… animate-spin" />` inside a button for `<CinematicSpinner size="xs" />` in these files:
+
+- `Composer.tsx` (Send, Paperclip ingesting, Sparkles enhancing, Image prompt, plus two more occurrences)
+- `GeneratedImageCard.tsx` (Animate, Animate‑all, Polish re‑render)
+- `PromptResultCard.tsx` (Generate video CTA)
+- `QuestionUploadSlot.tsx` and `AttachmentDropzone.tsx` (ingest spinners)
+- `AnimatePanelDialog.tsx` if it has any
+
+The `Loader2` import is removed from each file once unused.
+
+### 7. Tokens & motion
+
+Dot color stays `bg-primary/80`. The `animate-dot-bounce` keyframe already exists in tailwind config and `index.css` — no new tokens needed. `motion-safe:` and `prefers-reduced-motion` fallback are preserved everywhere.
 
 ## Out of scope
-- The `RelightSequencePopover` (sequence-wide relight) — only mentioned for reference. If you want the same clarity pass applied there too, say so and I'll extend the plan.
-- Backend prompt string sent to `generate-reference-image` stays the same (still emits "shot type → Wide shot (WS)" etc., which the model already handles).
+
+- No backend changes (no edge function or schema edits).
+- No copy changes outside loading captions.
+- `TypingIndicator.tsx` keeps its current API — internally it just imports the new `CinematicLoader` to stay DRY.
+- Toasts and `AwaitingApprovalPill` are not loaders, untouched.
+
+## Verification
+
+1. Open `/director/...`, send a storyboard request → see only ONE loader (cinematic dots + rotating caption like "Blocking the sequence…"), no duplicate text bubble + typing indicator.
+2. Trigger "Animate panel" → button shows 3 dots (not Loader2 spin), chat shows render‑handoff loader, then VideoBubble shows the same dots + rotating stage name.
+3. Use Composer's Enhance/Image prompt/Send → buttons all show the same 3‑dot spinner.
+4. Toggle `prefers-reduced-motion` → all loaders fall back to "Director is working…" static label, no dot bounce.
+5. Reload mid‑generation → no stale loading bubble persists (guard at line 474 already handles this).
