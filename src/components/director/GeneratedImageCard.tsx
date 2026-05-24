@@ -740,6 +740,34 @@ export function GeneratedImageCard({ data, onRegenerate, onUnpinSubject, onAnima
         </DialogClose>
       </DialogContent>
     </Dialog>
+
+    {/* Per-panel animate dialog with AI model recommendation */}
+    <AnimatePanelDialog
+      open={!!singleAnimate}
+      onOpenChange={(o) => { if (!o) setSingleAnimate(null); }}
+      mode="single"
+      shotIndex={singleAnimate?.shot_index}
+      aspectRatio={singleAnimate?.aspectRatio ?? data.aspectRatio}
+      directorsNote={singleAnimate?.directorsNote ?? data.directorsNote}
+      onConfirm={async (result) => {
+        if (!singleAnimate) return;
+        await handleAnimateOne({ ...singleAnimate, provider: result.provider, duration: result.duration });
+        setSingleAnimate(null);
+      }}
+    />
+
+    {/* Animate-all dialog */}
+    <AnimatePanelDialog
+      open={animateAllOpen}
+      onOpenChange={setAnimateAllOpen}
+      mode="all"
+      totalPanels={data.images.length}
+      aspectRatio={data.aspectRatio}
+      directorsNote={data.directorsNote}
+      onConfirm={async (result) => {
+        await handleAnimateAll(result);
+      }}
+    />
     </>
   );
 }
