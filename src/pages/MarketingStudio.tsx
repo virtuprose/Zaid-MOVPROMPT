@@ -1122,6 +1122,7 @@ export default function MarketingStudio() {
           onCustomChange={setCustomFormat}
           categories={[
             { id: "commercial", label: "Commercial", tooltip: "Polished brand formats" },
+            { id: "avatar", label: "Avatar", tooltip: "Avatar-driven formats — face-lock onto your uploaded character" },
           ]}
         />
         <PresetPickerDialog
