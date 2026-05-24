@@ -396,6 +396,17 @@ export function GeneratedImageCard({ data, onRegenerate, onUnpinSubject, onAnima
                   )}
                 </button>
               )}
+              {data.inspector && (
+                <PromptInspector
+                  ctx={data.inspector}
+                  shotIndex={data.mode === "storyboard_panels" ? shotNum : undefined}
+                  triggerTitle={
+                    data.mode === "storyboard_panels"
+                      ? `Inspect prompt · Shot ${shotNum}`
+                      : "Inspect prompt"
+                  }
+                />
+              )}
               <button
                 type="button"
                 onClick={() => setZoomIndex(i)}
