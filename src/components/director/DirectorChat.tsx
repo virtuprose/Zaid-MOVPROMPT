@@ -2447,6 +2447,23 @@ function DirectorChatInner() {
                         content={b.content}
                       />
                     )}
+                    {b.markdown && b.content && (
+                      <div className="mt-1.5 flex justify-end">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            askDirector(
+                              `Based on the DP's note above, please update the prompt: ${b.content.slice(0, 240)}${b.content.length > 240 ? "…" : ""}`,
+                            )
+                          }
+                          className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/5 px-2.5 py-1 text-[11px] text-primary/90 hover:bg-primary/15 hover:text-primary transition-colors"
+                          title="Switch to Director and prefill this as an instruction"
+                        >
+                          <SendIcon className="w-3 h-3" />
+                          Send to Director
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               );
