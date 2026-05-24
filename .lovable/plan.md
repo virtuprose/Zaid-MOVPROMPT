@@ -1,72 +1,99 @@
+# Fill the Director gutters — widen chat + right context rail
+
 ## Goal
+Kill the ~300px of dead space on either side of the Director chat without breaking the conversational flow. Keep the chat centered and readable, but bump its width and add a persistent **right rail** that holds the four context modules you picked.
 
-Make every "waiting" state in the Director feel like one cinematic loader — same dots, same avatar, same rotating caption, same in‑button spinner. No more random "Generating storyboard panels…" plain text that doesn't match the typing indicator.
+## Layout change
 
-## What changes
+Current grid:
+```text
+[ 240px session sidebar ][ chat capped at max-w-3xl, centered in remaining space ]
+```
 
-### 1. One shared loader primitive
+New grid (≥1280px):
+```text
+[ 240px sessions ][ chat max-w-4xl (~896px), left-aligned ][ 360px right rail ]
+```
 
-Create `src/components/director/CinematicLoader.tsx` exporting two surfaces that share the exact same dot animation, color, and timing as today's `TypingIndicator`:
+- Below `lg`: right rail collapses into a floating button (bottom-right) that opens it as a Sheet, so mobile/tablet are unchanged.
+- Above `lg`: rail is pinned, user can collapse it to a 48px icon strip via a chevron.
+- Chat bumps from `max-w-3xl` → `max-w-4xl` (storyboards finally breathe; in-stream cards like aspect picker get ~25% more room).
 
-- `<CinematicLoader caption | captions | stages />` — full bubble: `AssistantAvatar` + animated 3‑dot pill + rotating caption underneath. Used in the chat stream and inside cards.
-- `<CinematicSpinner size?: "sm"|"xs" />` — tiny inline 3‑dot variant for buttons (replaces the mismatched `Loader2 animate-spin`). Same primary‑cyan dots, just scaled down.
+## Right rail — 4 stacked sections
 
-Caption rotation reuses the existing 2.2s interval + `prefers-reduced-motion` fallback.
+Single scrollable column, each section is a collapsible card (all open by default, state persisted in localStorage). Order top→bottom:
 
-### 2. Chat message loading bubbles (DirectorChat.tsx)
+### 1. Quick Actions
+4–6 one-click chips that dispatch the same intents the Director would:
+- "Build storyboard from last image"
+- "Animate last frame" (opens existing `AnimatePanelDialog`)
+- "Generate variants" (re-runs last image prompt with seed shuffle)
+- "Export all prompts" (downloads .txt/.json of session)
+- "New shot" (jumps to free-chat with a fresh prompt scaffold)
 
-Add a new bubble role `loading` with `{ stage: "image" | "story_bundle" | "story_render" | "render_handoff" | "panels" | "character_sheet" | "reference" | "custom"; captions?: string[] }`.
+Disabled state when no relevant context exists (e.g. Animate disabled until first image lands).
 
-Replace these plain‑text `animate: true` bubbles with `role: "loading"` bubbles that render `<CinematicLoader />`:
+### 2. Storyboard / Shot Outline
+Mini-map of the current storyboard.
+- One row per panel: thumbnail (40×40), shot # + one-line caption, status dot (queued / rendering / done / failed).
+- Click → smooth-scrolls the chat to that panel and pulses its border.
+- Empty state: "No storyboard yet — ask the Director to build one."
+- Reads from existing storyboard bubbles in `DirectorChat` message stream; no new backend.
 
-- "Generating storyboard panels…" → `stage: "panels"`
-- "Designing a character sheet…" → `stage: "character_sheet"`
-- "Generating a reference frame…" → `stage: "reference"`
-- "Building the story asset bundle — character + prop + 7 locations…" → `stage: "story_bundle"`
-- "Kicking off 4 parallel acts on Seedance 2.0…" → `stage: "story_render"`
-- "Sending this to the {provider} renderer…" → `stage: "render_handoff"`, captions include provider name
+### 3. Reference Tray
+Thumbnail grid (3 cols) of every image this session — uploaded refs + generated frames.
+- Source: scans `messages` for `image` / `attachment` / `storyboard_panel` bubble types.
+- Drag → drops into Composer as a new attachment (reuses `AttachmentDropzone` handler).
+- Click → opens lightbox preview.
+- Filter pills: All / Uploaded / Generated.
+- Empty state: "Drop or generate something — it'll land here."
 
-Each stage gets a curated rotating caption set (e.g. panels → "Blocking the sequence…", "Lighting panel 3…", "Color‑grading the set…"). Loading bubbles are transient — never persisted (already guarded by `busy`).
+### 4. Session Health
+Compact stat strip:
+- Credits remaining (from existing credits hook).
+- Current model (Gemini 3.1 Pro Preview).
+- Attachments staged in composer (count).
+- Session token estimate (rough char/4 estimate of message history).
+- Tiny "Reset session" button.
 
-### 3. De‑dupe: single indicator at a time
+## Files
 
-In the render loop, when the **last** bubble in the stream is `role: "loading"`, suppress the bottom `<TypingIndicator />`. Otherwise keep it. Result: exactly one cinematic loader visible at any moment.
+**New**
+- `src/components/director/RightRail.tsx` — shell + collapse logic + sheet wrapper.
+- `src/components/director/rail/QuickActionsCard.tsx`
+- `src/components/director/rail/StoryboardOutlineCard.tsx`
+- `src/components/director/rail/ReferenceTrayCard.tsx`
+- `src/components/director/rail/SessionHealthCard.tsx`
+- `src/components/director/rail/RailSection.tsx` — shared collapsible wrapper (header + chevron + body).
 
-### 4. Image generation card progress (GeneratedImageCard.tsx)
+**Edited**
+- `src/pages/Director.tsx` — grid becomes `lg:grid-cols-[240px_1fr_360px]`, mounts `<RightRail/>`, passes shared state (messages, scrollToBubble callback, composer dispatch).
+- `src/components/director/DirectorChat.tsx` — bump outer chat container `max-w-3xl` → `max-w-4xl`; expose a `scrollToBubble(id)` imperative handle for the outline; expose a `dispatchAttachment(asset)` handler for drag-drop from tray.
+- `src/components/director/Composer.tsx` — accept dropped reference asset from the tray.
 
-Replace the two `Loader2 animate-spin` indicators (storyboard chain progress at line ~505 and animate button placeholder at ~643) with `<CinematicSpinner size="xs" />`. The storyboard progress bar keeps its `done/total` counter but the leading icon becomes the 3‑dot indicator so it visually matches the chat loader.
+**No backend changes.** Pure presentation + existing client state.
 
-### 5. Video render bubble (VideoBubble.tsx)
+## Visual
 
-Keep the existing cinematic stage names ("Warming up the lens", "Blocking the shot", "Lighting the scene", "Rolling camera", "Rendering frames", "Final color pass"). Refactor the visual: render `<CinematicLoader captions={RENDER_STAGES} />` (avatar + dots + rotating stage label) instead of the current bespoke layout. The `queued → processing` advance still drives `stageIdx`.
+- Rail bg: `hsl(var(--card)/0.4)` with `border-l border-border/40`, matches session sidebar weight.
+- Section headers: Space Grotesk, uppercase, 11px, muted-foreground.
+- Cards inside rail: rounded-xl, `bg-card/60`, subtle inner glow on hover.
+- Cyan accent for active states (selected outline panel, drag-hover on tray).
+- Smooth 200ms collapse animation (existing `transition-all`).
 
-### 6. In‑button spinners
+## Tradeoffs / out of scope
 
-Swap every `<Loader2 className="… animate-spin" />` inside a button for `<CinematicSpinner size="xs" />` in these files:
-
-- `Composer.tsx` (Send, Paperclip ingesting, Sparkles enhancing, Image prompt, plus two more occurrences)
-- `GeneratedImageCard.tsx` (Animate, Animate‑all, Polish re‑render)
-- `PromptResultCard.tsx` (Generate video CTA)
-- `QuestionUploadSlot.tsx` and `AttachmentDropzone.tsx` (ingest spinners)
-- `AnimatePanelDialog.tsx` if it has any
-
-The `Loader2` import is removed from each file once unused.
-
-### 7. Tokens & motion
-
-Dot color stays `bg-primary/80`. The `animate-dot-bounce` keyframe already exists in tailwind config and `index.css` — no new tokens needed. `motion-safe:` and `prefers-reduced-motion` fallback are preserved everywhere.
-
-## Out of scope
-
-- No backend changes (no edge function or schema edits).
-- No copy changes outside loading captions.
-- `TypingIndicator.tsx` keeps its current API — internally it just imports the new `CinematicLoader` to stay DRY.
-- Toasts and `AwaitingApprovalPill` are not loaders, untouched.
+- Not rebuilding the chat as split-pane (your original idea) — outline + reference tray give you the spatial overview without breaking conversational flow.
+- Not adding a left third column — keeps cognitive load down and works on 1366px laptops.
+- Quick Actions intentionally limited to 4–6 — more would become a junk drawer; we can add a "More…" menu later.
+- No new analytics / persistence beyond localStorage collapse state.
 
 ## Verification
 
-1. Open `/director/...`, send a storyboard request → see only ONE loader (cinematic dots + rotating caption like "Blocking the sequence…"), no duplicate text bubble + typing indicator.
-2. Trigger "Animate panel" → button shows 3 dots (not Loader2 spin), chat shows render‑handoff loader, then VideoBubble shows the same dots + rotating stage name.
-3. Use Composer's Enhance/Image prompt/Send → buttons all show the same 3‑dot spinner.
-4. Toggle `prefers-reduced-motion` → all loaders fall back to "Director is working…" static label, no dot bounce.
-5. Reload mid‑generation → no stale loading bubble persists (guard at line 474 already handles this).
+1. On a 1600px screen: gutters gone, chat at 896px, rail at 360px, session sidebar at 240px.
+2. On a 1280px screen: same three columns, rail readable.
+3. On <1024px: rail collapses to floating button → opens as Sheet.
+4. Generate an image → it appears in Reference Tray within the same tick.
+5. Build a storyboard → outline lists every panel, click jumps + pulses.
+6. Click "Animate last frame" → opens `AnimatePanelDialog` with the correct frame preloaded.
+7. Collapse rail → chat re-centers smoothly, state persists across reloads.
