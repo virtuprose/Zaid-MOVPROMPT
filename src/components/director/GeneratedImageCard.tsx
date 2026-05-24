@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogClose } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { PromptInspector, type InspectorContext } from "./PromptInspector";
 
 export type GeneratedImageBubbleData = {
   mode: "character_sheet" | "storyboard_panels" | "single_panel";
@@ -14,6 +15,7 @@ export type GeneratedImageBubbleData = {
   subjectSheet?: boolean;
   subjectKind?: "character" | "product";
   failedIndices?: number[];
+  inspector?: InspectorContext;
 };
 
 export type AnimatePanelInput = {
