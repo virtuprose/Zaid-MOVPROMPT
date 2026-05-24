@@ -631,40 +631,21 @@ export function GeneratedImageCard({ data, onRegenerate, onUnpinSubject, onAnima
             <RelightSequencePopover onApply={regen} />
           )}
           {data.mode === "storyboard_panels" && !inProgress && (data.failedIndices?.length ?? 0) === 0 && onAnimateAllPanels && (
-            <Popover open={animateAllOpen} onOpenChange={setAnimateAllOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="secondary"
-                  className="h-7 text-xs"
-                  disabled={animatingAll}
-                >
-                  {animatingAll ? (
-                    <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                  ) : (
-                    <Play className="h-3 w-3 mr-1" />
-                  )}
-                  Animate all panels
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent side="top" align="start" className="w-72 space-y-3">
-                <div>
-                  <div className="text-xs font-medium text-foreground">Animate all panels</div>
-                  <div className="text-[10.5px] text-muted-foreground/80">
-                    Queues {data.images.length} Kling 2.1 Master renders — one per panel — using each frame as the starting image. Charges credits per clip.
-                  </div>
-                </div>
-                <div className="flex justify-end gap-2">
-                  <Button type="button" size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setAnimateAllOpen(false)}>
-                    Cancel
-                  </Button>
-                  <Button type="button" size="sm" className="h-7 text-xs" onClick={() => void handleAnimateAll()}>
-                    Queue {data.images.length} renders
-                  </Button>
-                </div>
-              </PopoverContent>
-            </Popover>
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              className="h-7 text-xs"
+              disabled={animatingAll}
+              onClick={() => setAnimateAllOpen(true)}
+            >
+              {animatingAll ? (
+                <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+              ) : (
+                <Play className="h-3 w-3 mr-1" />
+              )}
+              Animate all panels
+            </Button>
           )}
           {data.mode === "storyboard_panels" && !inProgress && (data.failedIndices?.length ?? 0) === 0 && (
             <Button
