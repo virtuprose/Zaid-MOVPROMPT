@@ -5,6 +5,22 @@ import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { findVideoModel } from "@/lib/director/videoModels";
+
+const RENDER_STAGES = [
+  "Warming up the lens",
+  "Blocking the shot",
+  "Lighting the scene",
+  "Rolling camera",
+  "Rendering frames",
+  "Final color pass",
+];
+
+function formatElapsed(seconds: number) {
+  const m = Math.floor(seconds / 60).toString().padStart(2, "0");
+  const s = (seconds % 60).toString().padStart(2, "0");
+  return `${m}:${s}`;
+}
 
 export type VideoBubbleData = {
   jobId: string;
