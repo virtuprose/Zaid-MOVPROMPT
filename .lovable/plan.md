@@ -1,37 +1,42 @@
-# Add "Continue +6 beats" button to finished storyboards
+## Why this happens
 
-## What
+When you pick **kling-v3-pro** in the model chooser, the chooser sends `"Target model: kling-v3-pro"` back to the Director, and the Director writes a perfect Kling‑tuned prompt. But when it finally fires the render, the frontend **ignores the picked model** and chooses the provider purely from the reference‑image count:
 
-When a `storyboard_panels` card finishes rendering (not in-progress, no pending failures), show an optional button next to "Regenerate all panels":
+`src/components/director/DirectorChat.tsx` (line 1350‑1351):
+```ts
+const provider =
+  refCount >= 2 ? "seedance-2.0-ref" : refCount === 1 ? "seedance-2.0" : "seedance-v1-pro";
+```
 
-**`+ Generate 6 more beats`**
+So no matter what you pick, it always renders on Seedance. The Director tool schema for `request_video_generation` also only exposes a broad `provider_preference` ("seedance" | "veo" | "kling" | "any"), never the specific model id, so the picked id is lost on the way back.
 
-Clicking it sends a Director instruction to extend the existing sequence by 6 more panels, continuing from the last one — same scene, lighting, lens, color grade, and style lock, with shot numbering continuing from where the current storyboard ended.
+## Fix
 
-## Where
+Carry the user's pick all the way through to `submitVideoJob`.
 
-**Single file:** `src/components/director/GeneratedImageCard.tsx`
+### 1. Director tool schema — `supabase/functions/director-agent/index.ts`
 
-In the `onRegenerate && isGrid` block (around line 260, the "Regenerate all panels" button), add a second button alongside it. Only render it when:
-- `data.mode === "storyboard_panels"`
-- `!inProgress`
-- `(data.failedIndices?.length ?? 0) === 0` (don't offer continuation while there are still failed slots to retry)
+In the `request_video_generation` tool, add an explicit `model_id` field (the exact playbook id, e.g. `kling-v3-pro`, `veo-3.1`, `seedance-v1-pro`). Update the instructions so that when the user has already picked a model via `ask_model_choice` or named one in their brief, the Director MUST echo that id back in `model_id`. Keep `provider_preference` as a soft fallback.
 
-The button calls `regen(intent)` with a prompt like:
+### 2. Director response type — `src/lib/director/api.ts`
 
-> "Continue this storyboard — generate 6 more panels that pick up exactly where the last one ended. Keep the same scene anchor, locked style, lighting, lens, and color grade; only action and framing advance. Number the new panels starting from N+1 where N is the last existing panel."
+Add `model_id?: string` to the `request_video_generation` variant of the response union.
 
-The Director already knows how to route this to `generate_reference_image` with `mode: "storyboard_panels"` and `lock_mode: "scene"` because the scene anchor + style are already pinned in the session — same code path as "Extend frame-by-frame," just additive.
+### 3. Frontend wiring — `src/components/director/DirectorChat.tsx`
 
-## Out of scope
+- Add a `chosenModelIdRef` (useRef) that records the latest model id the user confirmed in `ModelChoiceCard.onConfirm` (line ~2062), in addition to the existing `send("Target model: …")` call.
+- In the `resp.kind === "request_video_generation"` branch (line ~1348), resolve the provider in this priority order:
+  1. `resp.model_id` if present and valid (lookup against the known video models registry).
+  2. `chosenModelIdRef.current` if set.
+  3. The current Seedance heuristic as a last‑resort fallback (only when neither the Director nor the user has picked anything).
+- Pass the resolved id as `provider` to `submitVideoJob` and to the video bubble.
+- Update the assistant status line to read `Sending this to the {resolvedModel.label} renderer…` instead of the raw provider slug.
 
-- No changes to the edge function or Director agent — they already support arbitrary panel counts and scene-locked chains.
-- No new state, no shot-index plumbing — the Director infers the starting number from session context.
-- No copy changes to existing buttons.
+### 4. Sanity
 
-## Verify
+`FAL_MODELS` in `supabase/functions/generate-video/index.ts` already maps `kling-v3-pro` → `fal-ai/kling-video/v3/pro/text-to-video`, so once the frontend passes the right provider string the render goes to Kling end‑to‑end. No backend changes needed beyond the schema/prompt update.
 
-1. Generate or extend a storyboard so a finished 6-panel card is visible.
-2. Confirm the new "+ Generate 6 more beats" button appears next to "Regenerate all panels."
-3. Click it → Director responds and 6 new panels stream in, visually continuing the previous sequence with shot numbers 7–12.
-4. While those 6 are rendering, the button should not appear on the new in-progress card (already gated by `!inProgress`).
+### Out of scope
+
+- No change to credit pricing logic (already keyed off model id).
+- No change to the storyboard render path (`request_story_render`), which already locks to Seedance 2.0 intentionally.
