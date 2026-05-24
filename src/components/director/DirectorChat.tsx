@@ -2062,6 +2062,7 @@ function DirectorChatInner() {
                     disabled={!isLatest || busy || !!b.chosen}
                     hasReferenceImage={hasReferenceImage}
                     onConfirm={(modelId) => {
+                      chosenModelIdRef.current = modelId;
                       setBubbles((prev) => {
                         const copy = [...prev];
                         copy[i] = { ...b, chosen: modelId };
