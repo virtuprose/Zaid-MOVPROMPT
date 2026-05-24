@@ -35,7 +35,25 @@ type Props = {
 };
 
 // ---- Layer 3 chip presets ----
-const SHOT_CHIPS = ["WS", "MS", "MCU", "CU", "ECU", "OTS", "Insert", "Low angle", "Eye level", "High angle", "Dutch tilt"];
+// ---- Layer 3 chip presets ----
+type ChipDef = { label: string; value: string };
+
+const FRAMING_CHIPS: ChipDef[] = [
+  { label: "Wide shot (WS)", value: "Wide shot (WS)" },
+  { label: "Medium shot (MS)", value: "Medium shot (MS)" },
+  { label: "Medium close-up (MCU)", value: "Medium close-up (MCU)" },
+  { label: "Close-up (CU)", value: "Close-up (CU)" },
+  { label: "Extreme close-up (ECU)", value: "Extreme close-up (ECU)" },
+  { label: "Over-the-shoulder (OTS)", value: "Over-the-shoulder (OTS)" },
+  { label: "Insert", value: "Insert" },
+];
+const ANGLE_CHIPS: ChipDef[] = [
+  { label: "Low angle", value: "Low angle" },
+  { label: "Eye level", value: "Eye level" },
+  { label: "High angle", value: "High angle" },
+  { label: "Dutch tilt", value: "Dutch tilt" },
+];
+
 const MOVE_CHIPS = ["Static", "Slow push-in", "Slow pull-out", "Dolly", "Pan", "Tilt", "Handheld micro-drift", "Crane", "Tracking"];
 const LIGHT_CHIPS = ["Golden hour key", "Blue hour", "Hard side key", "Soft front fill", "Backlight rim", "Practical only", "Moonlit", "Window light", "Top-down hard"];
 const MOOD_CHIPS = ["Tense", "Serene", "Melancholic", "Triumphant", "Intimate", "Ominous", "Awe", "Lonely"];
@@ -52,10 +70,10 @@ function Chip({
       type="button"
       onClick={onClick}
       className={cn(
-        "text-[10.5px] px-2 py-0.5 rounded-full border transition-colors",
+        "text-xs px-2.5 py-1 rounded-full border transition-colors",
         active
-          ? "bg-primary/15 text-primary border-primary/40"
-          : "bg-muted/30 text-muted-foreground/85 border-border/40 hover:bg-muted/50",
+          ? "bg-primary/15 text-primary border-primary/50 ring-1 ring-primary/40"
+          : "bg-muted/30 text-muted-foreground/85 border-border/40 hover:bg-muted/50 hover:text-foreground",
       )}
     >
       {label}
@@ -64,15 +82,39 @@ function Chip({
 }
 
 function ChipGroup({
-  title, options, value, onChange,
-}: { title: string; options: string[]; value: string | null; onChange: (v: string | null) => void }) {
+  title, hint, options, value, onChange,
+}: {
+  title: string;
+  hint?: string;
+  options: Array<string | ChipDef>;
+  value: string | null;
+  onChange: (v: string | null) => void;
+}) {
   return (
     <div className="space-y-1.5">
-      <div className="text-[10px] uppercase tracking-wide text-muted-foreground/70">{title}</div>
-      <div className="flex flex-wrap gap-1">
-        {options.map((o) => (
-          <Chip key={o} label={o} active={value === o} onClick={() => onChange(value === o ? null : o)} />
-        ))}
+      <div className="flex items-baseline justify-between gap-2">
+        <div className="min-w-0">
+          <div className="text-[11px] font-semibold uppercase tracking-wide text-foreground/85">{title}</div>
+          {hint && <div className="text-[10.5px] text-muted-foreground/75 leading-snug">{hint}</div>}
+        </div>
+        {value && (
+          <button
+            type="button"
+            onClick={() => onChange(null)}
+            className="text-[10px] text-muted-foreground hover:text-foreground underline-offset-2 hover:underline shrink-0"
+          >
+            Clear
+          </button>
+        )}
+      </div>
+      <div className="flex flex-wrap gap-1.5">
+        {options.map((o) => {
+          const label = typeof o === "string" ? o : o.label;
+          const v = typeof o === "string" ? o : o.value;
+          return (
+            <Chip key={v} label={label} active={value === v} onClick={() => onChange(value === v ? null : v)} />
+          );
+        })}
       </div>
     </div>
   );
@@ -81,15 +123,19 @@ function ChipGroup({
 function PolishPanelPopover({
   shotNum, onApply,
 }: { shotNum: number; onApply: (intent: string) => void }) {
-  const [shot, setShot] = useState<string | null>(null);
+  const [framing, setFraming] = useState<string | null>(null);
+  const [angle, setAngle] = useState<string | null>(null);
   const [move, setMove] = useState<string | null>(null);
   const [light, setLight] = useState<string | null>(null);
   const [mood, setMood] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
 
+  const hasAny = !!(framing || angle || move || light || mood);
+
   const apply = () => {
     const overrides: string[] = [];
-    if (shot) overrides.push(`shot type → ${shot}`);
+    if (framing) overrides.push(`framing → ${framing}`);
+    if (angle) overrides.push(`camera angle → ${angle}`);
     if (move) overrides.push(`camera move → ${move}`);
     if (light) overrides.push(`lighting → ${light}`);
     if (mood) overrides.push(`mood → ${mood}`);
@@ -108,28 +154,71 @@ function PolishPanelPopover({
           type="button"
           onClick={(e) => e.stopPropagation()}
           className="absolute top-1 right-1 z-10 opacity-70 group-hover:opacity-100 focus-visible:opacity-100 [@media(pointer:coarse)]:opacity-100 transition-all bg-background/85 hover:bg-background text-foreground p-1.5 rounded"
-          title={`Polish panel ${shotNum}`}
-          aria-label={`Polish panel ${shotNum}`}
+          title={`Refine shot ${shotNum}`}
+          aria-label={`Refine shot ${shotNum}`}
         >
           <Wand2 className="h-3 w-3" />
         </button>
       </PopoverTrigger>
-      <PopoverContent side="top" align="end" className="w-80 space-y-3">
-        <div>
-          <div className="text-xs font-medium text-foreground">Polish panel {shotNum}</div>
-          <div className="text-[10.5px] text-muted-foreground/80">Override one or more dimensions, then re-render just this shot.</div>
+      <PopoverContent side="top" align="end" className="w-[22rem] max-h-[70vh] overflow-y-auto space-y-4">
+        <div className="space-y-1">
+          <div className="flex items-baseline justify-between gap-2">
+            <div className="text-sm font-semibold text-foreground">Refine this shot</div>
+            <div className="text-[10.5px] text-muted-foreground/70">· Panel {shotNum}</div>
+          </div>
+          <div className="text-[11px] text-muted-foreground/85 leading-snug">
+            Adjust any of these and I'll re-render just this panel. Leave a row untouched to keep it the same.
+          </div>
         </div>
-        <ChipGroup title="Shot type" options={SHOT_CHIPS} value={shot} onChange={setShot} />
-        <ChipGroup title="Camera move" options={MOVE_CHIPS} value={move} onChange={setMove} />
-        <ChipGroup title="Lighting" options={LIGHT_CHIPS} value={light} onChange={setLight} />
-        <ChipGroup title="Mood" options={MOOD_CHIPS} value={mood} onChange={setMood} />
-        <div className="flex justify-end gap-2 pt-1">
-          <Button type="button" size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setOpen(false)}>
-            Cancel
-          </Button>
-          <Button type="button" size="sm" className="h-7 text-xs" onClick={apply}>
-            Polish shot
-          </Button>
+
+        <ChipGroup
+          title="Framing"
+          hint="How tight is the camera on the subject?"
+          options={FRAMING_CHIPS}
+          value={framing}
+          onChange={setFraming}
+        />
+        <ChipGroup
+          title="Camera angle"
+          hint="Where is the camera looking from?"
+          options={ANGLE_CHIPS}
+          value={angle}
+          onChange={setAngle}
+        />
+        <ChipGroup
+          title="Camera move"
+          hint="How does the camera move during the shot?"
+          options={MOVE_CHIPS}
+          value={move}
+          onChange={setMove}
+        />
+        <ChipGroup
+          title="Lighting"
+          hint="What's the dominant light source and quality?"
+          options={LIGHT_CHIPS}
+          value={light}
+          onChange={setLight}
+        />
+        <ChipGroup
+          title="Mood"
+          hint="What should the shot feel like?"
+          options={MOOD_CHIPS}
+          value={mood}
+          onChange={setMood}
+        />
+
+        <div className="flex items-center justify-between gap-2 pt-2 border-t border-border/40">
+          <div className="text-[10.5px] text-muted-foreground/80 leading-snug">
+            {hasAny ? "Only this panel changes." : "Pick at least one change to continue."}
+          </div>
+          <div className="flex gap-2 shrink-0">
+            <Button type="button" size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="button" size="sm" className="h-7 text-xs" onClick={apply} disabled={!hasAny}>
+              Re-render this shot
+            </Button>
+          </div>
         </div>
       </PopoverContent>
     </Popover>
