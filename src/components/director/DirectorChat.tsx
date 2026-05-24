@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
+import ReactMarkdown from "react-markdown";
 import { RotateCcw, FileText, Music, Sparkles, MessageCircleMore, ArrowRight, Film, Megaphone, LayoutGrid, Wand2 } from "lucide-react";
 import { Message, MessageContent } from "@/components/ai-elements/message";
 import { QuestionCard } from "./QuestionCard";
