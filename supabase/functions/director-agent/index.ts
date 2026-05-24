@@ -908,12 +908,14 @@ Output via the \`storyboard_shots\` tool ONLY.`;
       attachmentBlock =
         "\n\n═══ ATTACHED REFERENCES ═══\n" +
         "(The user may refer to these by @N, where N is the number below. " +
-        "Resolve any @N token in the brief to the matching reference.)\n";
+        "Resolve any @N token in the brief to the matching reference. " +
+        "When you call generate_reference_image / generate_video and need to lock identity or scene to one of these uploads, " +
+        "you MUST copy its `url:` value verbatim into `reference_urls` — never paste the filename, the @N tag, or invent a URL.)\n";
       attachments.slice(0, 12).forEach((a, idx) => {
         const tag = `[@${idx + 1}]`;
         if ((a.kind === "image" || a.kind === "video_keyframes") && a.url) {
           imageUrls.push(a.url);
-          attachmentBlock += `${tag} ${a.kind === "image" ? "Image" : "Video keyframe"}: ${a.name}\n`;
+          attachmentBlock += `${tag} ${a.kind === "image" ? "Image" : "Video keyframe"}: ${a.name}\n  url: ${a.url}\n`;
         } else if (a.kind === "audio_transcript" && a.text) {
           attachmentBlock += `${tag} Voice brief transcript (${a.name}): "${a.text.slice(0, 1500)}"\n`;
         } else if (a.kind === "document" && a.text) {
