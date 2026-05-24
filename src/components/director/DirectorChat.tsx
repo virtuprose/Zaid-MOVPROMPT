@@ -2556,6 +2556,11 @@ function DirectorChatInner() {
       {pendingApproval && <BottomApprovalBar request={pendingApproval} />}
 
       <div className="max-w-3xl mx-auto w-full">
+        <FreeChatChips
+          active={chatMode === "free_chat" && !isEmpty}
+          chips={freeChatChips}
+          onChipClick={insertChipToken}
+        />
         <Composer
           value={input}
           onChange={setInput}
@@ -2577,6 +2582,7 @@ function DirectorChatInner() {
           imagePromptBusy={imagePromptBusy}
           mode={chatMode}
           onModeChange={handleModeChange}
+          focusSignal={composerFocusTick}
         />
       </div>
 
