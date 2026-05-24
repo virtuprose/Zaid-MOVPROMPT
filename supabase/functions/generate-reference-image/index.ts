@@ -294,17 +294,45 @@ serve(async (req) => {
     }
 
 
+    const quality: Quality = body.quality === "2K" || body.quality === "4K" ? body.quality : "1K";
+    const FAL_KEY = quality === "1K" ? null : Deno.env.get("FAL_KEY") || null;
+    if (quality !== "1K" && !FAL_KEY) {
+      // Upscaler unavailable — silently fall back to 1K rather than failing.
+      console.warn("FAL_KEY missing; falling back to 1K");
+    }
+    const effectiveQuality: Quality = quality !== "1K" && !FAL_KEY ? "1K" : quality;
+
     const perImage = await priceFor("image_generation", 5);
-    const totalCharge = perImage * prompts.length;
+    const upscalePrice4K = await priceFor("image_upscale_4k", UPSCALE_4K_FALLBACK_PRICE);
+    const upscaleSurcharge = effectiveQuality === "4K" ? upscalePrice4K * prompts.length : 0;
+    const totalCharge = perImage * prompts.length + upscaleSurcharge;
     try {
-      await chargeCredits({ userId, amount: totalCharge, reason: "image_generation", metadata: { count: prompts.length, mode } });
+      await chargeCredits({ userId, amount: totalCharge, reason: "image_generation", metadata: { count: prompts.length, mode, quality: effectiveQuality } });
     } catch (e) {
       if (e instanceof InsufficientCreditsError) return insufficientResponse(corsHeaders);
       throw e;
     }
 
     const runOne = async (p: string, i: number, refs: string[]) => {
-      const dataUrl = await generateOne(LOVABLE_API_KEY, p, refs, aspect);
+      let dataUrl = await generateOne(LOVABLE_API_KEY, p, refs, aspect);
+      let appliedQuality: Quality = "1K";
+      if (effectiveQuality !== "1K" && FAL_KEY) {
+        try {
+          const scale = effectiveQuality === "4K" ? 4 : 2;
+          dataUrl = await upscaleViaFal(FAL_KEY, dataUrl, scale);
+          appliedQuality = effectiveQuality;
+        } catch (e) {
+          console.error("upscale failed; falling back to 1K for panel", i + 1, e);
+          // refund 4K surcharge for this panel
+          if (effectiveQuality === "4K" && upscalePrice4K > 0) {
+            try {
+              await refundCredits({ userId, amount: upscalePrice4K, reason: "image_upscale_refund", metadata: { panel: i + 1, reason: "upscale_failed" } });
+            } catch (re) {
+              console.error("upscale refund failed", re);
+            }
+          }
+        }
+      }
       const { blob, mime } = dataUrlToBlob(dataUrl);
       const ext = mime.split("/")[1] || "png";
       const safeName = `${mode}-${Date.now()}-${i + 1}.${ext}`;
@@ -321,6 +349,7 @@ serve(async (req) => {
         url: signed.signedUrl,
         storage_path: path,
         shot_index: mode === "storyboard_panels" ? shotIndices[i] : undefined,
+        quality: appliedQuality,
       };
     };
 
