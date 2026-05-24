@@ -79,6 +79,7 @@ export type AgentResponse =
       lock_mode?: "character" | "scene" | "auto";
       directors_note?: string;
       scene_already_described?: boolean;
+      style_spec?: StyleSpec;
     }
   | {
       kind: "generate_story_bundle";
