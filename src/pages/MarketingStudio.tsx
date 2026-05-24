@@ -285,7 +285,7 @@ export default function MarketingStudio() {
     !!location.imagePath;
   const ready = !!(
     (formatId || customFormat.trim()) &&
-    (settingId || customSetting.trim() || location.place || location.imagePath)
+    (sceneLocked || settingId || customSetting.trim() || location.place || location.imagePath)
   );
 
   // Auto-write the describe box from the current Format/Hook/Setting + brand/avatar/location.
