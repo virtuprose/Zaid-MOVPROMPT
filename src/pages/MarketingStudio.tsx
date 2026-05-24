@@ -457,6 +457,13 @@ export default function MarketingStudio() {
         imageRefs,
         userNote: userNote.trim() || undefined,
         brandIdentity: brandIdentity ?? undefined,
+        overlay: {
+          mode: renderSettings.overlay_mode,
+          logo: renderSettings.overlay_logo,
+          headline: renderSettings.overlay_text?.headline?.trim() || undefined,
+          cta: renderSettings.overlay_text?.cta?.trim() || undefined,
+          price: renderSettings.overlay_text?.price?.trim() || undefined,
+        },
       });
       // Provider routing:
       //   0 refs → seedance-v1-pro (text-only, fast/cheap)
