@@ -335,3 +335,60 @@
 @media (prefers-reduced-motion: reduce) {
   .hero-kenburns { animation: none; }
 }
+
+/* ============ Director "Render Bay" animations ============ */
+@keyframes renderbay-drift {
+  0%   { background-position: 0% 50%, 100% 50%; }
+  50%  { background-position: 100% 50%, 0% 50%; }
+  100% { background-position: 0% 50%, 100% 50%; }
+}
+@keyframes renderbay-sprocket {
+  from { background-position: 0 0; }
+  to   { background-position: 32px 0; }
+}
+@keyframes renderbay-sweep {
+  0%   { transform: translateX(-120%); }
+  100% { transform: translateX(120%); }
+}
+@keyframes renderbay-spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes renderbay-progress {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(400%); }
+}
+@keyframes renderbay-rec {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.35; transform: scale(0.85); }
+}
+@keyframes renderbay-stage-in {
+  0%   { opacity: 0; transform: translateY(6px); filter: blur(2px); }
+  100% { opacity: 1; transform: translateY(0); filter: blur(0); }
+}
+
+.renderbay-backdrop {
+  background-image:
+    radial-gradient(60% 60% at 20% 30%, hsl(var(--primary) / 0.22), transparent 70%),
+    radial-gradient(50% 50% at 80% 70%, hsl(var(--accent) / 0.20), transparent 70%);
+  background-size: 200% 200%, 200% 200%;
+}
+.renderbay-scanlines {
+  background-image: repeating-linear-gradient(
+    to bottom,
+    hsl(var(--foreground) / 0.04) 0 1px,
+    transparent 1px 3px
+  );
+}
+.renderbay-sprocket {
+  background-image: radial-gradient(circle at 8px 50%, hsl(var(--foreground) / 0.22) 2.5px, transparent 3px);
+  background-size: 16px 100%;
+  background-repeat: repeat-x;
+}
+.renderbay-conic {
+  background: conic-gradient(from 0deg, hsl(var(--primary)) 0%, hsl(var(--accent)) 35%, transparent 55%, hsl(var(--primary) / 0.4) 100%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .renderbay-anim { animation: none !important; }
+}
+
