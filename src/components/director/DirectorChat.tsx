@@ -1347,6 +1347,7 @@ function DirectorChatInner() {
           shot_index: resp.shot_index,
           lock_mode: resp.lock_mode,
           directors_note: resp.directors_note,
+          style_spec: resp.style_spec,
         });
         return;
       } else if (resp.kind === "request_video_generation") {
