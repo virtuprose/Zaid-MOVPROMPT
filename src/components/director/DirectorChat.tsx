@@ -225,6 +225,7 @@ function DirectorChatInner() {
   const bubblesRef = useRef<Bubble[]>([]);
   const lastSendRef = useRef<{ text: string; attachments: Attachment[] } | null>(null);
   const hydratedRef = useRef<string | null>(null);
+  const chosenModelIdRef = useRef<string | null>(null);
   const localScope = routeSessionId ?? "new";
   const { request: requestApproval } = useApproval();
 
