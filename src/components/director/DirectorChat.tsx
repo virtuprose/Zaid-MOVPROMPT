@@ -1705,7 +1705,7 @@ function DirectorChatInner() {
     });
     setComposerFocusTick((t) => t + 1);
   }, []);
-  const freeChatActive = chatMode === "free_chat" && !isEmpty;
+  
 
   const firstName = (() => {
     const meta = (user as any)?.user_metadata?.full_name as string | undefined;
