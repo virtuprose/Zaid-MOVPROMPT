@@ -245,6 +245,13 @@ export default function MarketingStudio() {
     if (placeMode !== "preset") setPlaceMode("preset");
   }, [sceneLocked]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Elite preset is engineered for a 15s, 10-sequence runtime — auto-bump duration on pick.
+  useEffect(() => {
+    if (formatId === "elite-10seq") {
+      setRenderSettings((prev) => (prev.duration === 15 ? prev : { ...prev, duration: 15 }));
+    }
+  }, [formatId]);
+
   // ── Like-driven personalization ──────────────────────────────
   // Count likes per formatId / settingId from the user's own ads to rank presets,
   // and surface the top-liked prompts as style references for the scene writer.
