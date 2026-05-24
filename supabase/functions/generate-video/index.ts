@@ -655,7 +655,7 @@ serve(async (req) => {
     let submitData: Record<string, any> | null = null;
     try {
       submitData = await fal.queue.submit(model, {
-        input: buildFalPayload(provider, normalizedPrompt, options, refImages),
+        input: buildFalPayload(provider, normalizedPrompt, options, refImages, useI2V),
       }) as Record<string, any>;
     } catch (error) {
       console.error("fal submit error", error);
