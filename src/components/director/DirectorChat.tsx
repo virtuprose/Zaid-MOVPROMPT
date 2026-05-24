@@ -290,11 +290,11 @@ function DirectorChatInner() {
       // Re-sign storage-backed URLs before they hit the DOM.
       const remoteRefreshed = (await refreshBubbleSignedUrls(remote.slice())) as Bubble[];
       setBubbles((prev) => {
-        if (remote.length > prev.length) return remote;
-        if (remote.length === prev.length) {
+        if (remoteRefreshed.length > prev.length) return remoteRefreshed;
+        if (remoteRefreshed.length === prev.length) {
           // Merge fresher story_render acts from server (jobs that finished while away).
           return prev.map((b, i) => {
-            const r = remote[i];
+            const r = remoteRefreshed[i];
             if (b?.role === "story_render" && r?.role === "story_render") {
               const localDone = b.data.acts.filter(
                 (a) => a.status === "completed" || a.status === "failed",
