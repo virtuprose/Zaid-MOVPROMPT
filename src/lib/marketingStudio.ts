@@ -205,6 +205,7 @@ export const FORMATS: StudioPreset[] = [
     description: "Avatar On Mic",
     category: "avatar",
     image: u("photo-1494790108377-be9c29b29330"),
+    video: "/presets/talking-avatar.mp4",
     fragment:
       "Single avatar talking head, eye-line locked to camera, subtle natural gestures, lips synced to a confident sales line",
   },
