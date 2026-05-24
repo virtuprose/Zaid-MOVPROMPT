@@ -729,6 +729,7 @@ function DirectorChatInner() {
           ...(payload.aspect_ratio ? { aspectRatio: payload.aspect_ratio } : {}),
           ...(isSheet ? { subjectSheet: true as const, subjectKind: sheetKind } : {}),
           ...(failedIndices.length > 0 ? { failedIndices: [...failedIndices] } : {}),
+          inspector: inspectorCtx,
         },
       };
       const carrierBubble: Bubble = {
