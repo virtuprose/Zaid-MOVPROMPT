@@ -1692,6 +1692,21 @@ function DirectorChatInner() {
 
   const isEmpty = bubbles.length === 1 && bubbles[0].role === "assistant";
 
+  // Free-chat session-context chips (memoized off bubbles + title).
+  const freeChatChips = useMemo(() => {
+    const ctx = extractSessionContext(bubbles, null);
+    return buildContextChips(ctx);
+  }, [bubbles]);
+  const insertChipToken = useCallback((token: string) => {
+    setInput((prev) => {
+      const trimmed = prev.trimEnd();
+      const next = trimmed.length ? `${trimmed} ${token} ` : `${token} `;
+      return next;
+    });
+    setComposerFocusTick((t) => t + 1);
+  }, []);
+  const freeChatActive = chatMode === "free_chat" && !isEmpty;
+
   const firstName = (() => {
     const meta = (user as any)?.user_metadata?.full_name as string | undefined;
     if (meta) return meta.split(" ")[0];
