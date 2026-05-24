@@ -233,6 +233,17 @@ export default function MarketingStudio() {
   const format = find(FORMATS, formatId);
   const setting = find(SETTINGS, settingId);
   const needsAvatar = format?.category === "avatar" && characterActiveIds.length === 0;
+  const sceneLocked = !!format?.lockScene;
+
+  // When a scene-locked format is picked, clear any scene/location selection
+  // so it doesn't conflict with the baked-in scene from the format fragment.
+  useEffect(() => {
+    if (!sceneLocked) return;
+    if (settingId) setSettingId(undefined);
+    if (customSetting) setCustomSetting("");
+    if (location.place || location.imagePath || location.imageUrl) setLocation(EMPTY_LOCATION);
+    if (placeMode !== "preset") setPlaceMode("preset");
+  }, [sceneLocked]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Like-driven personalization ──────────────────────────────
   // Count likes per formatId / settingId from the user's own ads to rank presets,
