@@ -23,7 +23,7 @@ import { PromptResultCard } from "./PromptResultCard";
 import { ImagePromptCard } from "./ImagePromptCard";
 import { ModelChoiceCard } from "./ModelChoiceCard";
 import { GeneratedImageCard } from "./GeneratedImageCard";
-import { AspectChoiceCard, type AspectRatio } from "./AspectChoiceCard";
+import { AspectChoiceCard, type AspectRatio, type ImageQuality } from "./AspectChoiceCard";
 import { SubjectLockChoiceCard, type SubjectKind } from "./SubjectLockChoiceCard";
 import { LocationPickerCard, type StoryLocation } from "./LocationPickerCard";
 import { ActStrip, type ActTile } from "./ActStrip";
@@ -95,6 +95,7 @@ type Bubble =
         scene_already_described?: boolean;
       };
       chosen?: AspectRatio;
+      chosenQuality?: ImageQuality;
     }
   | {
       role: "subject_lock_choice";
@@ -535,6 +536,7 @@ function DirectorChatInner() {
       directors_note?: string;
       subject_kind?: "character" | "product";
       style_spec?: import("@/lib/director/api").StyleSpec;
+      quality?: ImageQuality;
     },
     options?: { subjectSheet?: boolean; subjectKind?: "character" | "product" },
   ) => {
@@ -555,7 +557,10 @@ function DirectorChatInner() {
           : (payload.per_shot_prompts?.length ?? Math.min(Math.max(payload.count ?? 9, 1), 9))
         : Math.min(Math.max(payload.count ?? 1, 1), 9);
     const PER_IMAGE_CREDITS = 5;
-    const approvalCost = imageCount * PER_IMAGE_CREDITS;
+    const UPSCALE_4K_PER_PANEL = 3;
+    const quality: ImageQuality = payload.quality || "1K";
+    const upscaleCost = quality === "4K" ? UPSCALE_4K_PER_PANEL * imageCount : 0;
+    const approvalCost = imageCount * PER_IMAGE_CREDITS + upscaleCost;
     const approvalLabel =
       payload.mode === "storyboard_panels"
         ? payload.shot_index
@@ -671,6 +676,7 @@ function DirectorChatInner() {
               per_shot_prompts: payload.per_shot_prompts,
               lock_mode: payload.lock_mode,
               subject_kind: payload.subject_kind,
+              quality,
             },
             (ev) => {
               if (ev.type === "panel" || ev.type === "panel_error") {
@@ -710,6 +716,7 @@ function DirectorChatInner() {
             shot_index: payload.shot_index,
             lock_mode: payload.lock_mode,
             subject_kind: payload.subject_kind,
+            quality,
           });
 
       const role: "character" | "storyboard" | "reference" | "key_frame" =
@@ -809,12 +816,12 @@ function DirectorChatInner() {
     }
   };
 
-  const handleAspectChoice = async (bubbleIndex: number, aspect: AspectRatio) => {
+  const handleAspectChoice = async (bubbleIndex: number, aspect: AspectRatio, quality: ImageQuality = "1K") => {
     if (busy) return;
     const target = bubbles[bubbleIndex];
     if (!target || target.role !== "aspect_choice" || target.chosen) return;
     const stamped: Bubble[] = bubbles.map((b, i) =>
-      i === bubbleIndex && b.role === "aspect_choice" ? { ...b, chosen: aspect } : b,
+      i === bubbleIndex && b.role === "aspect_choice" ? { ...b, chosen: aspect, chosenQuality: quality } : b,
     );
     setBubbles(stamped);
     setBusy(true);
@@ -822,6 +829,7 @@ function DirectorChatInner() {
       await runImageGeneration(stamped, {
         ...target.payload,
         aspect_ratio: aspect,
+        quality,
       });
     } finally {
       setBusy(false);
@@ -2336,7 +2344,7 @@ function DirectorChatInner() {
                     <AspectChoiceCard
                       chosen={b.chosen}
                       disabled={busy}
-                      onChoose={(aspect) => void handleAspectChoice(i, aspect)}
+                      onChoose={(aspect, quality) => void handleAspectChoice(i, aspect, quality)}
                     />
                   </div>
                 </div>

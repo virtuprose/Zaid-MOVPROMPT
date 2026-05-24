@@ -1,64 +1,52 @@
-# Director ↔ Free chat — Bridged Mode
+## Why images look low-res today
 
-Based on your answers:
-- **Shared scroll stays.** One timeline = one creative session.
-- **Pro user.** Keep the mode toggle visible; make hopping between modes effortless.
-- **Free chat becomes session-aware** — can reference panels, locked style, attachments.
+`generate-reference-image` calls Gemini `gemini-3.1-flash-image-preview` and stores the raw model output. That model returns ~1024px on the long edge — that's the "1K" feel the user is seeing. There's no resolution param on the model, so to deliver 2K / 4K we need an **upscaling step** after generation. FAL is already wired (`FAL_KEY` secret present), and FAL exposes fast image upscalers (e.g. `fal-ai/clarity-upscaler` or `fal-ai/esrgan`), which is the cleanest path.
 
-## What changes (UX)
+## Goal
 
-### 1. Free chat learns the session
-When in **Free chat** inside a Director session, every send silently prepends a compact "session context" block to the model:
-- Session title + phase
-- Locked `style_spec` (if any)
-- Latest `result` bubble summary (mode, panel count, model)
-- Per-panel index → caption + prompt excerpt (so "panel 3" resolves)
-- Last 2 user attachments (filename + signed url)
+Let the user pick output quality per generation:
 
-User types naturally ("explain the prompt for panel 3", "why Veo for shot 2?") and it just works. No UI noise.
+| Quality | Long edge | Pipeline | Cost |
+|---|---|---|---|
+| **1K** | ~1024px | Gemini only (current) | Free (existing image_generation price) |
+| **2K** | ~2048px | Gemini → FAL 2× upscale | Free (no extra credits) |
+| **4K** | ~4096px | Gemini → FAL 4× upscale | Extra credits per image |
 
-### 2. Quick-reference chips above the composer (Free chat only)
-A thin row appears above the input when there's session context:
-`@panel 1 · @panel 2 · @panel 3 · @style · @final-prompt`
-Click → insert the token. The agent resolves it from the context block.
+1K stays the default so nothing changes for users who don't care.
 
-### 3. Two handoff buttons (the "bridge")
-- **In Free chat assistant bubbles** → small "→ Send to Director" pill at the bottom-right. Click: switches mode to Director, pre-fills the composer with the suggested instruction (e.g. "rework panel 3 with a wider lens"). User just hits Send.
-- **In Director result bubbles / PromptInspector** → "Ask DP about this" pill next to existing actions. Click: switches mode to Free chat with composer pre-loaded (`"Explain the prompt for panel N: …"`).
+## UX
 
-### 4. One-line affordance on the mode toggle
-First time a user enters Free chat in an active session, a tiny dismissible hint:
-> "Free chat can see your panels, style, and attachments. Try: 'why panel 3?'"
-Stored in `localStorage`.
+1. New **Quality picker** rendered next to the existing aspect-ratio chooser in `DirectorChat.tsx` (the `aspect_choice` bubble flow at lines ~812–828, and the auto-aspect path that already passes `aspect_ratio`). Three pills: `1K · 2K · 4K (N cr)`.
+2. Quality is remembered on the bubble payload (`payload.quality`) and threaded through `runImageGeneration` → `api.generateReferenceImage{,Stream}` → edge function, alongside `aspect_ratio`.
+3. The "4K" pill shows the credit cost inline (pulled from a `priceFor("image_upscale_4k")` value surfaced via existing settings endpoint, or hardcoded constant mirrored client+server).
+4. In `GeneratedImageCard`, show a small "1K / 2K / 4K" badge so the user can tell what they got.
+5. PromptInspector / download stays unchanged — the stored asset is already the upscaled file.
 
-## What we are NOT doing
-- No split canvas (shared timeline is a feature).
-- No auto-routing — pros want explicit mode control.
-- No sidebar/drawer.
-- No DB schema changes. No new edge function.
+## Backend changes (`supabase/functions/generate-reference-image/index.ts`)
 
-## Technical notes
+1. Accept `quality?: "1K" | "2K" | "4K"` in the request body (default `"1K"`).
+2. After Gemini returns each panel's base64:
+   - `1K` → keep as-is (current behavior).
+   - `2K` / `4K` → POST to FAL upscaler with `scale: 2` or `4`, await the upscaled URL, fetch bytes, then continue with the existing upload-to-`generation-images` storage flow.
+3. Credits:
+   - Add `priceFor("image_upscale_4k", 3)` (tunable). 2K stays free.
+   - When `quality === "4K"`, charge `prompts.length * upscalePrice` **in addition** to the existing `image_generation` charge, in the same pre-charge step. Refund on failure (same `refundCredits` pattern already used).
+4. Store `quality` on the response object per image so the UI can render the badge: extend `GeneratedImage` with `quality?: "1K" | "2K" | "4K"`.
+5. Failure isolation: if the upscale step fails for a single panel, fall back to the 1K asset for that panel and emit a `panel_error`-style warning rather than failing the whole batch. Refund the 4K surcharge for any panel that fell back.
 
-**Files touched (frontend only):**
-- `src/components/director/DirectorChat.tsx`
-  - New helper `buildSessionContextBlock(bubbles, lockedSpec, sessionTitle)` returning compact markdown with stable panel indices.
-  - When `chatMode === "free_chat"`, prepend that block as a leading system/user context message in the history sent to `streamDirectorAgent`. Gate on "has any bubbles".
-  - Render chip row above Composer when in free chat **and** context block non-empty. Chip click → insert `@panel-3` token.
-  - Render "→ Send to Director" pill on free-chat assistant bubbles. Handler: `handleModeChange("director")` + `setInput(prefill)` + focus composer.
-  - Add dismissible hint banner above composer (first free-chat entry, localStorage flag).
-- `src/components/director/PromptResultCard.tsx` and/or `PromptInspector.tsx`
-  - Add "Ask DP about this" button. Per-panel variant in storyboard mode. Handler: switch to free chat + prefill.
-- `src/components/director/Composer.tsx`
-  - Accept optional `prefillNonce` prop to retrigger focus/caret-end when handoff fires.
-- `src/lib/director/api.ts` — no signature change; only enrich history we send.
+## Frontend touch list
 
-**Context block budget:** cap ~1.5k chars. Keep locked spec + last result + first N panel excerpts (truncate each prompt to ~180 chars).
+- `src/lib/director/api.ts` — add `quality` to `generateReferenceImage` input + `GeneratedImage` type.
+- `src/components/director/DirectorChat.tsx` — quality state on `aspect_choice` bubble, thread `quality` into all `runImageGeneration` / `generateReferenceImage*` call sites (lines 664, 703, 822, 1043, 1397, 1443).
+- New tiny component `QualityPicker.tsx` (or inline alongside the aspect chips) that renders the 3 pills + the live credit cost for 4K.
+- `src/components/director/GeneratedImageCard.tsx` — quality badge.
 
-**Stable panel ids:** use order from the latest `result` bubble's `per_shot_prompts`. Surfaces as `panel 1…N` everywhere.
+## Out of scope
 
-**No Director-mode regression:** behavior unchanged when `chatMode === "director"`. Context block injected only on free-chat sends.
+- Re-upscaling already-generated images from the library (can be a follow-up "Upgrade to 4K" action on the inspector).
+- Video resolution — already controlled separately.
+- Changing the base Gemini model.
 
-## Out of scope (future)
-- Mention-autocomplete for `@panel-N` inside Director composer.
-- Persisting "asked the DP about panel 3" as a thread anchor.
-- Piping a DP answer back into Director as guidance for the next generation.
+## Open question for the user
+
+Default credit cost for 4K — propose **3 credits per panel** (so a 6-panel storyboard 4K = 18 cr). OK, or different number?

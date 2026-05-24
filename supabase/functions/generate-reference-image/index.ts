@@ -24,6 +24,8 @@ type StyleSpec = {
   mood?: string;
 };
 
+type Quality = "1K" | "2K" | "4K";
+
 type Body = {
   mode?: Mode;
   prompt?: string;
@@ -35,7 +37,10 @@ type Body = {
   lock_mode?: LockMode; // "character" | "scene" (key-frame extension) | "auto" (default)
   subject_kind?: "character" | "product"; // shapes the character_sheet layout copy
   style_spec?: StyleSpec; // optional locked DP spec injected into every panel prompt
+  quality?: Quality; // 1K = native (~1024px), 2K = 2x upscale (free), 4K = 4x upscale (+credits)
 };
+
+const UPSCALE_4K_FALLBACK_PRICE = 3; // credits per panel upscaled to 4K
 
 const IDENTITY_LOCK =
   "Same character as the attached reference image. Maintain exact face, hair, skin tone, age, body proportions, and outfit. Do not redesign the character.";
@@ -118,6 +123,47 @@ async function generateOne(
     null;
   if (!img) throw new Error("no_image_returned");
   return img as string;
+}
+
+// Upscale a data URL (or http url) via FAL clarity-upscaler. Returns a data URL
+// to keep the rest of the pipeline (dataUrlToBlob) unchanged.
+async function upscaleViaFal(
+  falKey: string,
+  sourceUrl: string,
+  scale: 2 | 4,
+): Promise<string> {
+  const resp = await fetch("https://fal.run/fal-ai/clarity-upscaler", {
+    method: "POST",
+    headers: {
+      Authorization: `Key ${falKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      image_url: sourceUrl,
+      upscale_factor: scale,
+      creativity: 0.2,
+      resemblance: 1.5,
+      num_inference_steps: 18,
+    }),
+  });
+  if (!resp.ok) {
+    const txt = await resp.text();
+    const err: any = new Error(`fal_upscale_${resp.status}`);
+    err.status = resp.status;
+    err.detail = txt;
+    throw err;
+  }
+  const data = await resp.json();
+  const outUrl: string | undefined = data?.image?.url || data?.images?.[0]?.url;
+  if (!outUrl) throw new Error("fal_no_image");
+  // Fetch as bytes and re-encode as data URL so dataUrlToBlob works downstream.
+  const imgResp = await fetch(outUrl);
+  if (!imgResp.ok) throw new Error(`fal_fetch_${imgResp.status}`);
+  const buf = new Uint8Array(await imgResp.arrayBuffer());
+  const mime = imgResp.headers.get("content-type") || "image/png";
+  let bin = "";
+  for (let i = 0; i < buf.length; i++) bin += String.fromCharCode(buf[i]);
+  return `data:${mime};base64,${btoa(bin)}`;
 }
 
 serve(async (req) => {
@@ -248,17 +294,45 @@ serve(async (req) => {
     }
 
 
+    const quality: Quality = body.quality === "2K" || body.quality === "4K" ? body.quality : "1K";
+    const FAL_KEY = quality === "1K" ? null : Deno.env.get("FAL_KEY") || null;
+    if (quality !== "1K" && !FAL_KEY) {
+      // Upscaler unavailable — silently fall back to 1K rather than failing.
+      console.warn("FAL_KEY missing; falling back to 1K");
+    }
+    const effectiveQuality: Quality = quality !== "1K" && !FAL_KEY ? "1K" : quality;
+
     const perImage = await priceFor("image_generation", 5);
-    const totalCharge = perImage * prompts.length;
+    const upscalePrice4K = await priceFor("image_upscale_4k", UPSCALE_4K_FALLBACK_PRICE);
+    const upscaleSurcharge = effectiveQuality === "4K" ? upscalePrice4K * prompts.length : 0;
+    const totalCharge = perImage * prompts.length + upscaleSurcharge;
     try {
-      await chargeCredits({ userId, amount: totalCharge, reason: "image_generation", metadata: { count: prompts.length, mode } });
+      await chargeCredits({ userId, amount: totalCharge, reason: "image_generation", metadata: { count: prompts.length, mode, quality: effectiveQuality } });
     } catch (e) {
       if (e instanceof InsufficientCreditsError) return insufficientResponse(corsHeaders);
       throw e;
     }
 
     const runOne = async (p: string, i: number, refs: string[]) => {
-      const dataUrl = await generateOne(LOVABLE_API_KEY, p, refs, aspect);
+      let dataUrl = await generateOne(LOVABLE_API_KEY, p, refs, aspect);
+      let appliedQuality: Quality = "1K";
+      if (effectiveQuality !== "1K" && FAL_KEY) {
+        try {
+          const scale = effectiveQuality === "4K" ? 4 : 2;
+          dataUrl = await upscaleViaFal(FAL_KEY, dataUrl, scale);
+          appliedQuality = effectiveQuality;
+        } catch (e) {
+          console.error("upscale failed; falling back to 1K for panel", i + 1, e);
+          // refund 4K surcharge for this panel
+          if (effectiveQuality === "4K" && upscalePrice4K > 0) {
+            try {
+              await refundCredits({ userId, amount: upscalePrice4K, reason: "image_upscale_refund", metadata: { panel: i + 1, reason: "upscale_failed" } });
+            } catch (re) {
+              console.error("upscale refund failed", re);
+            }
+          }
+        }
+      }
       const { blob, mime } = dataUrlToBlob(dataUrl);
       const ext = mime.split("/")[1] || "png";
       const safeName = `${mode}-${Date.now()}-${i + 1}.${ext}`;
@@ -275,6 +349,7 @@ serve(async (req) => {
         url: signed.signedUrl,
         storage_path: path,
         shot_index: mode === "storyboard_panels" ? shotIndices[i] : undefined,
+        quality: appliedQuality,
       };
     };
 
@@ -346,11 +421,14 @@ serve(async (req) => {
           const missing = prompts.length - okCount;
           if (missing > 0) {
             try {
+              const refundAmount =
+                perImage * missing +
+                (effectiveQuality === "4K" ? upscalePrice4K * missing : 0);
               await refundCredits({
                 userId,
-                amount: perImage * missing,
+                amount: refundAmount,
                 reason: "image_generation_refund",
-                metadata: { missing, errCount, clientGone },
+                metadata: { missing, errCount, clientGone, quality: effectiveQuality },
               });
             } catch (e) {
               console.error("refund failed", e);
@@ -377,10 +455,10 @@ serve(async (req) => {
       });
     }
 
-    const results: Settled<{ url: string; storage_path: string; shot_index?: number }>[] =
+    const results: Settled<{ url: string; storage_path: string; shot_index?: number; quality?: Quality }>[] =
       await Promise.allSettled(prompts.map((p, i) => runOne(p, i, referenceUrls)));
 
-    const out: Array<{ url: string; storage_path: string; shot_index?: number }> = [];
+    const out: Array<{ url: string; storage_path: string; shot_index?: number; quality?: Quality }> = [];
     let firstError: unknown = null;
     for (const r of results) {
       if (r.status === "fulfilled") out.push(r.value);
@@ -388,7 +466,9 @@ serve(async (req) => {
     }
     const missing = prompts.length - out.length;
     if (missing > 0) {
-      await refundCredits({ userId, amount: perImage * missing, reason: "image_generation_refund", metadata: { missing } });
+      const refundAmount =
+        perImage * missing + (effectiveQuality === "4K" ? upscalePrice4K * missing : 0);
+      await refundCredits({ userId, amount: refundAmount, reason: "image_generation_refund", metadata: { missing, quality: effectiveQuality } });
     }
     if (out.length === 0 && firstError) throw firstError;
 
