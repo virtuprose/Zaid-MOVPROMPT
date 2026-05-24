@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { FileText, Copy, Check, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
