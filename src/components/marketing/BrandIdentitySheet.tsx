@@ -568,6 +568,7 @@ export function BrandIdentitySheet({
             size="sm"
             onClick={async () => {
               await clear();
+              await setBrandActiveIds([]);
               onOpenChange(false);
               toast.success("Brand kit cleared");
             }}
