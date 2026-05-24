@@ -184,10 +184,6 @@ export default function Director() {
         />
       </Helmet>
 
-      <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-primary/5 rounded-full blur-[120px] animate-pulse-glow" />
-        <div className="absolute bottom-0 right-0 w-[500px] h-[250px] bg-accent/5 rounded-full blur-[100px] animate-pulse-glow" style={{ animationDelay: "1.5s" }} />
-      </div>
 
       <TopNav />
 
