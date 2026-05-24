@@ -374,28 +374,32 @@ export function GeneratedImageCard({ data, onRegenerate, onUnpinSubject, onAnima
                 <PolishPanelPopover shotNum={shotNum} onApply={regen} />
               )}
               {data.mode === "storyboard_panels" && onAnimatePanel && (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    void handleAnimateOne({
-                      url: img.url,
-                      shot_index: shotNum,
-                      directorsNote: data.directorsNote,
-                      aspectRatio: data.aspectRatio,
-                    });
-                  }}
-                  disabled={animatingShots.has(shotNum)}
-                  className="absolute top-1 right-9 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity bg-background/85 hover:bg-background text-foreground p-1.5 rounded disabled:opacity-60"
-                  title={`Animate panel ${shotNum} · Kling 2.1 Master`}
-                  aria-label={`Animate panel ${shotNum}`}
-                >
-                  {animatingShots.has(shotNum) ? (
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                  ) : (
-                    <Play className="h-3 w-3" />
-                  )}
-                </button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        void handleAnimateOne({
+                          url: img.url,
+                          shot_index: shotNum,
+                          directorsNote: data.directorsNote,
+                          aspectRatio: data.aspectRatio,
+                        });
+                      }}
+                      disabled={animatingShots.has(shotNum)}
+                      className="absolute top-1 right-9 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-all bg-background/85 hover:bg-accent hover:text-accent-foreground text-foreground p-1.5 rounded disabled:opacity-60"
+                      aria-label={`Animate panel ${shotNum}`}
+                    >
+                      {animatingShots.has(shotNum) ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        <Play className="h-3 w-3" />
+                      )}
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>Animate panel {shotNum} · Kling 2.1 Master</TooltipContent>
+                </Tooltip>
               )}
               {data.inspector && (
                 <PromptInspector
@@ -408,40 +412,55 @@ export function GeneratedImageCard({ data, onRegenerate, onUnpinSubject, onAnima
                   }
                 />
               )}
-              <button
-                type="button"
-                onClick={() => setZoomIndex(i)}
-                className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity"
-                title="Expand"
-                aria-label="Expand image"
-              >
-                <span className="bg-background/85 hover:bg-background text-foreground p-2 rounded-full shadow-md">
-                  <Maximize2 className="h-5 w-5" />
-                </span>
-              </button>
-              <button
-                type="button"
-                onClick={(e) => { e.stopPropagation(); downloadImage(img.url, shotNum); }}
-                className="absolute bottom-1 left-1 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity bg-background/85 hover:bg-background text-foreground p-1.5 rounded"
-                title="Download"
-                aria-label="Download image"
-              >
-                <Download className="h-3 w-3" />
-              </button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    onClick={() => setZoomIndex(i)}
+                    className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity"
+                    aria-label="Expand image"
+                  >
+                    <span className="bg-background/85 hover:bg-primary hover:text-primary-foreground text-foreground p-2 rounded-full shadow-md transition-colors">
+                      <Maximize2 className="h-5 w-5" />
+                    </span>
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>Expand</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); downloadImage(img.url, shotNum); }}
+                    className="absolute bottom-1 left-1 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-all bg-background/85 hover:bg-emerald-500 hover:text-white text-foreground p-1.5 rounded"
+                    aria-label="Download image"
+                  >
+                    <Download className="h-3 w-3" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>Download</TooltipContent>
+              </Tooltip>
               {onRegenerate && (
-                <button
-                  type="button"
-                  onClick={() => regen(regenIntent)}
-                  className="absolute bottom-1 right-1 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity bg-background/85 hover:bg-background text-foreground text-[10px] font-medium px-2 py-1 rounded inline-flex items-center gap-1"
-                  title={
-                    data.mode === "storyboard_panels"
-                      ? `Regenerate panel ${shotNum}`
-                      : "Regenerate"
-                  }
-                >
-                  <RotateCcw className="h-3 w-3" />
-                  {data.mode === "storyboard_panels" ? `Redo ${shotNum}` : "Redo"}
-                </button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      onClick={() => regen(regenIntent)}
+                      className="absolute bottom-1 right-1 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-all bg-background/85 hover:bg-primary hover:text-primary-foreground text-foreground text-[10px] font-medium px-2 py-1 rounded inline-flex items-center gap-1"
+                      aria-label={
+                        data.mode === "storyboard_panels"
+                          ? `Regenerate panel ${shotNum}`
+                          : "Regenerate"
+                      }
+                    >
+                      <RotateCcw className="h-3 w-3" />
+                      {data.mode === "storyboard_panels" ? `Redo ${shotNum}` : "Redo"}
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {data.mode === "storyboard_panels" ? `Regenerate panel ${shotNum}` : "Regenerate"}
+                  </TooltipContent>
+                </Tooltip>
               )}
             </div>
           );
