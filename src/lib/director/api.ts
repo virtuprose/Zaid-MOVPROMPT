@@ -162,10 +162,13 @@ export async function submitStoryStitch(input: {
   return data as { job_id: string; video_url: string; status: string };
 }
 
+export type ImageQuality = "1K" | "2K" | "4K";
+
 export type GeneratedImage = {
   url: string;
   storage_path: string;
   shot_index?: number;
+  quality?: ImageQuality;
 };
 
 export async function generateReferenceImage(input: {
@@ -179,6 +182,7 @@ export async function generateReferenceImage(input: {
   lock_mode?: "character" | "scene" | "auto";
   subject_kind?: "character" | "product";
   style_spec?: StyleSpec;
+  quality?: ImageQuality;
 }): Promise<{ mode: string; images: GeneratedImage[] }> {
   const { data, error } = await supabase.functions.invoke("generate-reference-image", {
     body: input,
