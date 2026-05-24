@@ -154,7 +154,7 @@ Always return EXACTLY ONE id from the catalog as the recommendation plus 2 alter
       });
     }
     const args = JSON.parse(toolCall.function.arguments);
-    const rec = ELIGIBLE_IDS.includes(args.recommended_id) ? args.recommended_id : "kling-v2.1-master";
+    const rec = ELIGIBLE_IDS.includes(args.recommended_id) ? args.recommended_id : (mode === "all" ? "kling-omni" : "kling-v3-standard");
     const alts = Array.isArray(args.alternatives)
       ? args.alternatives.filter((id: string) => ELIGIBLE_IDS.includes(id) && id !== rec).slice(0, 3)
       : [];
