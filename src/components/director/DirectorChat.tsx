@@ -1126,6 +1126,12 @@ function DirectorChatInner() {
       // Serialize EVERY bubble (including result / questions / model_choice) into the
       // history so the agent remembers what it already asked, generated, and recommended.
       const history: DirectorMsg[] = [];
+      // In Free chat mode, ground the model with a compact session context so
+      // the user can reference panels/style/attachments by name.
+      if (chatMode === "free_chat") {
+        const ctxBlock = buildSessionContextBlock(next, sessionTitle);
+        if (ctxBlock) history.push({ role: "user", content: ctxBlock });
+      }
       for (const b of next) {
         if (b.role === "user") {
           const attachLine =
