@@ -645,15 +645,19 @@ export function GeneratedImageCard({ data, onRegenerate, onUnpinSubject, onAnima
           </div>
         )}
         {zoomIndex !== null && (
-          <button
-            type="button"
-            onClick={() => downloadImage(data.images[zoomIndex].url, data.images[zoomIndex].shot_index ?? zoomIndex + 1)}
-            className="absolute top-2 right-12 bg-background/80 hover:bg-background text-foreground p-1.5 rounded-md"
-            title="Download"
-            aria-label="Download image"
-          >
-            <Download className="h-4 w-4" />
-          </button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                onClick={() => downloadImage(data.images[zoomIndex].url, data.images[zoomIndex].shot_index ?? zoomIndex + 1)}
+                className="absolute top-2 right-12 bg-background/80 hover:bg-emerald-500 hover:text-white text-foreground p-1.5 rounded-md transition-colors"
+                aria-label="Download image"
+              >
+                <Download className="h-4 w-4" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>Download</TooltipContent>
+          </Tooltip>
         )}
         <DialogClose className="absolute top-2 right-2 bg-background/80 hover:bg-background p-1.5 rounded-md">
           <X className="h-4 w-4" />
