@@ -816,12 +816,12 @@ function DirectorChatInner() {
     }
   };
 
-  const handleAspectChoice = async (bubbleIndex: number, aspect: AspectRatio) => {
+  const handleAspectChoice = async (bubbleIndex: number, aspect: AspectRatio, quality: ImageQuality = "1K") => {
     if (busy) return;
     const target = bubbles[bubbleIndex];
     if (!target || target.role !== "aspect_choice" || target.chosen) return;
     const stamped: Bubble[] = bubbles.map((b, i) =>
-      i === bubbleIndex && b.role === "aspect_choice" ? { ...b, chosen: aspect } : b,
+      i === bubbleIndex && b.role === "aspect_choice" ? { ...b, chosen: aspect, chosenQuality: quality } : b,
     );
     setBubbles(stamped);
     setBusy(true);
@@ -829,6 +829,7 @@ function DirectorChatInner() {
       await runImageGeneration(stamped, {
         ...target.payload,
         aspect_ratio: aspect,
+        quality,
       });
     } finally {
       setBusy(false);
