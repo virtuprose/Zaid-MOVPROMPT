@@ -42,6 +42,7 @@ import {
 import { VideoBubble } from "./VideoBubble";
 import type { Attachment } from "@/lib/director/ingest";
 import * as localState from "@/lib/director/localState";
+import { findVideoModel } from "@/lib/director/videoModels";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import logoMark from "@/assets/logo-mark-white.svg";
