@@ -103,6 +103,7 @@ export const FORMATS: StudioPreset[] = [
     video: "/presets/cinematic-ai-director.mp4",
     fragment:
       "Hyper-realistic 3D product commercial, 8k, high-speed phantom camera at 1000fps slow-motion, cinematic studio lighting. Sequence 1 (Texture): extreme macro close-up panning over the product, hyper-detailed surface textures (condensation, finish, micro-detail). Sequence 2 (Kinetic Ingredients): zero-gravity explosion of raw ingredients and key props colliding mid-air in crisp photorealistic detail against a clean color backdrop. Sequence 3 (Fluid Dynamics): massive sweeping high-speed liquid splash erupts and spirals around the product, camera zooms rapidly through the center of the splash. Sequence 4 (The Reveal): wide hero shot of the product in its final packaging, perfectly lit, suspended center-frame, surrounded by slowly falling ingredients and props. Premium, vibrant, million-dollar production value",
+    lockScene: true,
   },
   {
     id: "realistic-3d",
