@@ -22,6 +22,7 @@ import {
   type Pacing,
   type LogoTreatment,
 } from "@/lib/marketing/brandIdentity";
+import { useBrandKit } from "@/lib/marketing/brandKit";
 
 const COLOR_PRESETS = [
   "#C8102E", "#E85D3A", "#F5A524", "#FFD23F",
@@ -140,6 +141,7 @@ export function BrandIdentitySheet({
   onOpenChange: (v: boolean) => void;
 }) {
   const { identity, save, uploadLogo, clear } = useBrandIdentity();
+  const { setActiveIds: setBrandActiveIds } = useBrandKit();
   const [draft, setDraft] = useState<BrandIdentity>(EMPTY_BRAND_IDENTITY);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -566,6 +568,7 @@ export function BrandIdentitySheet({
             size="sm"
             onClick={async () => {
               await clear();
+              await setBrandActiveIds([]);
               onOpenChange(false);
               toast.success("Brand kit cleared");
             }}
