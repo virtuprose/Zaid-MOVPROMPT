@@ -23,7 +23,7 @@ import { PromptResultCard } from "./PromptResultCard";
 import { ImagePromptCard } from "./ImagePromptCard";
 import { ModelChoiceCard } from "./ModelChoiceCard";
 import { GeneratedImageCard } from "./GeneratedImageCard";
-import { AspectChoiceCard, type AspectRatio } from "./AspectChoiceCard";
+import { AspectChoiceCard, type AspectRatio, type ImageQuality } from "./AspectChoiceCard";
 import { SubjectLockChoiceCard, type SubjectKind } from "./SubjectLockChoiceCard";
 import { LocationPickerCard, type StoryLocation } from "./LocationPickerCard";
 import { ActStrip, type ActTile } from "./ActStrip";
