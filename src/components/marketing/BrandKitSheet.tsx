@@ -629,7 +629,7 @@ function AnglesSection({
     <div className="space-y-4">
       <div>
         <div className="flex items-center justify-between">
-          <SectionLabel>Additional angles · optional</SectionLabel>
+          <SectionLabel>Reference photos · optional</SectionLabel>
           <span className="text-[10px] text-muted-foreground/70 tabular-nums">
             {angles.length}/{MAX_BRAND_ANGLES}
           </span>
