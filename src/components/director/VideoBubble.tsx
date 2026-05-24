@@ -101,29 +101,104 @@ export function VideoBubble({ data, onChange }: Props) {
   }
 
   if (data.status !== "completed" || !data.videoUrl) {
+    const providerLabel = findVideoModel(data.provider)?.label || data.provider;
+    const stageLabel =
+      data.status === "queued" ? "Standing by" : RENDER_STAGES[stageIdx];
     return (
-      <div className="rounded-2xl border border-border/40 bg-card/40 overflow-hidden">
-        <div className="relative aspect-video bg-gradient-to-br from-primary/10 via-muted/20 to-accent/10 flex items-center justify-center">
-          <div className="absolute inset-0 animate-pulse bg-[linear-gradient(110deg,transparent_30%,hsl(var(--primary)/0.08)_50%,transparent_70%)] bg-[length:200%_100%]" />
-          <div className="relative flex flex-col items-center gap-2 text-muted-foreground">
-            <Loader2 className="w-6 h-6 animate-spin text-primary" />
-            <span className="text-xs uppercase tracking-wider">
-              {data.status === "queued" ? "Queued" : "Rendering"}
-            </span>
+      <div className="rounded-2xl border border-primary/30 bg-card/40 overflow-hidden shadow-[0_0_0_1px_hsl(var(--primary)/0.08),0_20px_60px_-30px_hsl(var(--primary)/0.55)]">
+        <div className="relative aspect-video bg-background overflow-hidden">
+          {/* Layer 1 — drifting gradient backdrop */}
+          <div
+            className="absolute inset-0 renderbay-backdrop renderbay-anim"
+            style={{ animation: "renderbay-drift 8s ease-in-out infinite" }}
+          />
+          {/* Scanlines */}
+          <div className="absolute inset-0 renderbay-scanlines opacity-60" />
+
+          {/* Layer 2 — filmstrip sprockets top + bottom */}
+          <div
+            className="absolute inset-x-0 top-0 h-3 renderbay-sprocket renderbay-anim"
+            style={{ animation: "renderbay-sprocket 1.2s linear infinite" }}
+          />
+          <div
+            className="absolute inset-x-0 bottom-0 h-3 renderbay-sprocket renderbay-anim"
+            style={{ animation: "renderbay-sprocket 1.2s linear infinite reverse" }}
+          />
+
+          {/* Layer 3 — light sweeps */}
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            <div
+              className="absolute inset-y-0 -left-1/3 w-1/2 renderbay-anim"
+              style={{
+                background:
+                  "linear-gradient(110deg, transparent 0%, hsl(var(--primary) / 0.22) 50%, transparent 100%)",
+                animation: "renderbay-sweep 2.6s ease-in-out infinite",
+              }}
+            />
+            <div
+              className="absolute inset-y-0 -left-1/3 w-1/2 renderbay-anim"
+              style={{
+                background:
+                  "linear-gradient(110deg, transparent 0%, hsl(var(--accent) / 0.16) 50%, transparent 100%)",
+                animation: "renderbay-sweep 4.2s ease-in-out infinite",
+                animationDelay: "1.3s",
+              }}
+            />
+          </div>
+
+          {/* Layer 4 — center HUD */}
+          <div className="relative h-full flex flex-col items-center justify-center gap-3 px-6">
+            <div className="relative w-14 h-14 flex items-center justify-center">
+              <div
+                className="absolute inset-0 rounded-full renderbay-conic renderbay-anim"
+                style={{ animation: "renderbay-spin 4s linear infinite" }}
+              />
+              <div className="absolute inset-[3px] rounded-full bg-background/90 backdrop-blur" />
+              <Film className="relative w-5 h-5 text-primary" />
+            </div>
+
+            <div
+              key={stageLabel}
+              className="text-[13px] font-medium tracking-wide text-foreground renderbay-anim"
+              style={{ animation: "renderbay-stage-in 420ms ease-out both" }}
+            >
+              {stageLabel}
+              <span className="ml-0.5 inline-block w-1 animate-pulse text-primary">
+                _
+              </span>
+            </div>
+
+            <div className="w-40 h-[3px] rounded-full bg-foreground/10 overflow-hidden relative">
+              <div
+                className="absolute inset-y-0 w-1/3 rounded-full bg-gradient-to-r from-primary via-primary to-accent renderbay-anim"
+                style={{ animation: "renderbay-progress 1.8s ease-in-out infinite" }}
+              />
+            </div>
+
+            <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground/80">
+              {formatElapsed(elapsed)} · {providerLabel}
+            </div>
           </div>
         </div>
-        <div className="px-3 py-2 flex items-center justify-between gap-2 border-t border-border/30">
-          <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground truncate">
-            <Film className="w-3 h-3 shrink-0" />
-            <span className="truncate">{data.provider}</span>
+
+        {/* Footer chip row */}
+        <div className="px-3 py-2 flex items-center justify-between gap-2 border-t border-border/30 bg-background/40">
+          <div className="flex items-center gap-1.5 text-[11px] text-foreground/80 truncate">
+            <Film className="w-3 h-3 shrink-0 text-primary" />
+            <span className="truncate font-medium">{providerLabel}</span>
           </div>
-          <span className="text-[10px] text-muted-foreground/70 whitespace-nowrap">
-            It'll appear here when ready
-          </span>
+          <div className="flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-[0.18em] text-muted-foreground">
+            <span
+              className="inline-block w-1.5 h-1.5 rounded-full bg-destructive renderbay-anim"
+              style={{ animation: "renderbay-rec 1.2s ease-in-out infinite" }}
+            />
+            REC {formatElapsed(elapsed)}
+          </div>
         </div>
       </div>
     );
   }
+
 
   return (
     <div
