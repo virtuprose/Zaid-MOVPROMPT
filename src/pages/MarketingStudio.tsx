@@ -988,7 +988,7 @@ export default function MarketingStudio() {
             {ready && (
               <div className="mt-2 rounded-xl border border-border/30 bg-muted/10 px-3 py-2 text-[11px] text-muted-foreground">
                 <span className="text-foreground/80 font-medium">Renders as:</span>{" "}
-                {format?.label || "Custom format"} · {setting?.label || customSetting.trim() || location.place || "Reference image"} · {renderSettings.aspect_ratio} · {renderSettings.duration}s · {renderSettings.resolution} · audio on
+                {format?.label || "Custom format"} · {setting?.label || customSetting.trim() || location.place || "Reference image"} · {renderSettings.aspect_ratio} · {renderSettings.duration}s · {renderSettings.resolution} · {renderSettings.overlay_mode === "none" ? "clean (no overlay)" : `overlay: ${renderSettings.overlay_mode.replace("_", "-")}${renderSettings.overlay_logo ? " + logo" : ""}`} · audio on
               </div>
             )}
 
