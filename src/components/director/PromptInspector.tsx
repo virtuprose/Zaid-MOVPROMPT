@@ -89,16 +89,24 @@ export function PromptInspector({ ctx, shotIndex, triggerClassName, triggerTitle
 
   return (
     <Popover>
-      <PopoverTrigger asChild>
-        <button
-          type="button"
-          onClick={(e) => e.stopPropagation()}
-          className={
-            triggerClassName ??
-            "absolute top-1 right-[68px] opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity bg-background/85 hover:bg-background text-foreground p-1.5 rounded"
-          }
-          title={triggerTitle ?? "Inspect prompt"}
-          aria-label={triggerTitle ?? "Inspect prompt"}
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              onClick={(e) => e.stopPropagation()}
+              className={
+                triggerClassName ??
+                "absolute top-1 right-[68px] opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-all bg-background/85 hover:bg-primary hover:text-primary-foreground text-foreground p-1.5 rounded"
+              }
+              aria-label={triggerTitle ?? "Inspect prompt"}
+            >
+              <FileText className="h-3 w-3" />
+            </button>
+          </PopoverTrigger>
+        </TooltipTrigger>
+        <TooltipContent>{triggerTitle ?? "Inspect prompt"}</TooltipContent>
+      </Tooltip>
         >
           <FileText className="h-3 w-3" />
         </button>
