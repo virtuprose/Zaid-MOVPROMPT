@@ -996,6 +996,62 @@ function DirectorChatInner() {
     }
   };
 
+  const handleAnimatePanel = useCallback(async (panel: import("./GeneratedImageCard").AnimatePanelInput) => {
+    const { buildAnimateFromPanelPrompt } = await import("@/lib/director/animatePanelPrompt");
+    const provider = "kling-v2.1-master";
+    const prompt = buildAnimateFromPanelPrompt({
+      shotIndex: panel.shot_index,
+      directorsNote: panel.directorsNote,
+    });
+    const options = {
+      aspect_ratio: panel.aspectRatio || "16:9",
+      duration: 5,
+    } as any;
+    toast(`Animating panel ${panel.shot_index} on Kling 2.1 Master…`);
+    try {
+      const job = await submitVideoJob(
+        prompt,
+        provider,
+        sessionIdRef.current,
+        options,
+        [panel.url],
+        {
+          storyboard_session_id: sessionIdRef.current || undefined,
+          storyboard_shot_index: panel.shot_index,
+          metadata: { source: "animate_panel", panel_url: panel.url },
+        },
+      );
+      const videoBubble: Bubble = {
+        role: "video",
+        data: {
+          jobId: job.id,
+          prompt,
+          provider,
+          status: (job.status as any) || "queued",
+          videoUrl: job.video_url || undefined,
+        },
+      };
+      setBubbles((prev) => {
+        const next = [...prev, videoBubble];
+        void persist(next, null, null);
+        return next;
+      });
+    } catch (e: any) {
+      if (!(await notifyInsufficientCredits(e))) {
+        toast.error(e?.message || `Could not animate panel ${panel.shot_index}`);
+      }
+    }
+  }, []);
+
+  const handleAnimateAllPanels = useCallback(async (panels: import("./GeneratedImageCard").AnimatePanelInput[]) => {
+    for (const panel of panels) {
+      await handleAnimatePanel(panel);
+      await new Promise((r) => setTimeout(r, 500));
+    }
+    toast.success(`Queued ${panels.length} Kling 2.1 Master renders`);
+  }, [handleAnimatePanel]);
+
+
   const send = async (textOverride?: string, bubblesOverride?: Bubble[]) => {
     const text = (textOverride ?? input).trim();
     if (!text && attachments.length === 0) {
