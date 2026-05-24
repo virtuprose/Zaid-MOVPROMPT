@@ -2344,7 +2344,7 @@ function DirectorChatInner() {
                     <AspectChoiceCard
                       chosen={b.chosen}
                       disabled={busy}
-                      onChoose={(aspect) => void handleAspectChoice(i, aspect)}
+                      onChoose={(aspect, quality) => void handleAspectChoice(i, aspect, quality)}
                     />
                   </div>
                 </div>
