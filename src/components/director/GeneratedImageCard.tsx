@@ -24,6 +24,8 @@ export type AnimatePanelInput = {
   shot_index: number;
   directorsNote?: string;
   aspectRatio?: "1:1" | "16:9" | "9:16";
+  provider?: string;
+  duration?: 5 | 10;
 };
 
 type Props = {
