@@ -107,7 +107,7 @@ function PolishPanelPopover({
         <button
           type="button"
           onClick={(e) => e.stopPropagation()}
-          className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity bg-background/85 hover:bg-background text-foreground p-1.5 rounded"
+          className="absolute top-1 right-1 z-10 opacity-70 group-hover:opacity-100 focus-visible:opacity-100 [@media(pointer:coarse)]:opacity-100 transition-all bg-background/85 hover:bg-background text-foreground p-1.5 rounded"
           title={`Polish panel ${shotNum}`}
           aria-label={`Polish panel ${shotNum}`}
         >
@@ -365,8 +365,23 @@ export function GeneratedImageCard({ data, onRegenerate, onUnpinSubject, onAnima
                 className="w-full h-full object-cover"
                 loading="lazy"
               />
+              <Tooltip delayDuration={150}>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    onClick={() => setZoomIndex(i)}
+                    className="absolute inset-0 z-0 flex items-center justify-center opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity"
+                    aria-label="Expand image"
+                  >
+                    <span className="bg-background/85 hover:bg-primary hover:text-primary-foreground text-foreground p-2 rounded-full shadow-md transition-colors">
+                      <Maximize2 className="h-5 w-5" />
+                    </span>
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>Expand</TooltipContent>
+              </Tooltip>
               {data.mode === "storyboard_panels" && (
-                <div className="absolute top-1 left-1 text-[10px] font-medium bg-background/80 text-foreground px-1.5 py-0.5 rounded">
+                <div className="absolute top-1 left-1 z-10 text-[10px] font-medium bg-background/80 text-foreground px-1.5 py-0.5 rounded">
                   {shotNum}
                 </div>
               )}
@@ -388,7 +403,7 @@ export function GeneratedImageCard({ data, onRegenerate, onUnpinSubject, onAnima
                         });
                       }}
                       disabled={animatingShots.has(shotNum)}
-                      className="absolute top-1 right-9 opacity-70 group-hover:opacity-100 focus-visible:opacity-100 [@media(pointer:coarse)]:opacity-100 transition-all bg-accent/15 text-accent hover:bg-accent hover:text-accent-foreground p-1.5 rounded disabled:opacity-60"
+                      className="absolute top-1 right-9 z-10 opacity-70 group-hover:opacity-100 focus-visible:opacity-100 [@media(pointer:coarse)]:opacity-100 transition-all bg-accent/15 text-accent hover:bg-accent hover:text-accent-foreground p-1.5 rounded disabled:opacity-60"
                       aria-label={`Animate panel ${shotNum}`}
                     >
                       {animatingShots.has(shotNum) ? (
@@ -416,23 +431,8 @@ export function GeneratedImageCard({ data, onRegenerate, onUnpinSubject, onAnima
                 <TooltipTrigger asChild>
                   <button
                     type="button"
-                    onClick={() => setZoomIndex(i)}
-                    className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity"
-                    aria-label="Expand image"
-                  >
-                    <span className="bg-background/85 hover:bg-primary hover:text-primary-foreground text-foreground p-2 rounded-full shadow-md transition-colors">
-                      <Maximize2 className="h-5 w-5" />
-                    </span>
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent>Expand</TooltipContent>
-              </Tooltip>
-              <Tooltip delayDuration={150}>
-                <TooltipTrigger asChild>
-                  <button
-                    type="button"
                     onClick={(e) => { e.stopPropagation(); downloadImage(img.url, shotNum); }}
-                    className="absolute bottom-1 left-1 opacity-70 group-hover:opacity-100 focus-visible:opacity-100 [@media(pointer:coarse)]:opacity-100 transition-all bg-background/85 hover:bg-emerald-500 hover:text-white text-foreground p-1.5 rounded"
+                    className="absolute bottom-1 left-1 z-10 opacity-70 group-hover:opacity-100 focus-visible:opacity-100 [@media(pointer:coarse)]:opacity-100 transition-all bg-background/85 hover:bg-emerald-500 hover:text-white text-foreground p-1.5 rounded"
                     aria-label="Download image"
                   >
                     <Download className="h-3 w-3" />
@@ -446,7 +446,7 @@ export function GeneratedImageCard({ data, onRegenerate, onUnpinSubject, onAnima
                     <button
                       type="button"
                       onClick={() => regen(regenIntent)}
-                      className="absolute bottom-1 right-1 opacity-70 group-hover:opacity-100 focus-visible:opacity-100 [@media(pointer:coarse)]:opacity-100 transition-all bg-primary/15 text-primary hover:bg-primary hover:text-primary-foreground text-[10px] font-medium px-2 py-1 rounded inline-flex items-center gap-1"
+                      className="absolute bottom-1 right-1 z-10 opacity-70 group-hover:opacity-100 focus-visible:opacity-100 [@media(pointer:coarse)]:opacity-100 transition-all bg-primary/15 text-primary hover:bg-primary hover:text-primary-foreground text-[10px] font-medium px-2 py-1 rounded inline-flex items-center gap-1"
                       aria-label={
                         data.mode === "storyboard_panels"
                           ? `Regenerate panel ${shotNum}`

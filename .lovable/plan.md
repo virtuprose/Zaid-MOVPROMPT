@@ -1,33 +1,34 @@
-## What's already there
+# Fix: Animate & Polish buttons unclickable
 
-Looking at `GeneratedImageCard.tsx` and `PromptInspector.tsx`:
+## Root cause
 
-- **Animate** uses `hover:bg-accent hover:text-accent-foreground` (accent token = amber) → already amber on hover.
-- **Redo** uses `hover:bg-primary hover:text-primary-foreground` (primary = cyan) → already cyan on hover.
-- **Inspect** (`PromptInspector` trigger) also uses `hover:bg-primary hover:text-primary-foreground` → already cyan on hover.
-- Tooltip labels exist for each ("Animate panel N · Kling 2.1 Master", "Regenerate panel N", "Inspect prompt · Shot N").
-- `TooltipProvider` is mounted in `App.tsx`.
+In `src/components/director/GeneratedImageCard.tsx`, each panel renders these absolute-positioned children, in this DOM order:
 
-So the styling **is** in the code. Why the user feels nothing happened:
+1. Panel number badge (top-left)
+2. **Polish** button — `absolute top-1 right-1`
+3. **Animate** button — `absolute top-1 right-9`
+4. **Inspect** button — `absolute top-1 right-[68px]`
+5. **Expand** button — `absolute inset-0` (covers the WHOLE panel)
+6. Download (bottom-left)
+7. Redo (bottom-right)
 
-Every action button (Animate, Inspect, Redo, Expand, Download) has `opacity-0 group-hover:opacity-100`. They're completely invisible until you hover the panel, and only when the mouse lands directly on the small icon do you see the colored hover state — easy to miss, and on touch devices effectively dead.
+The Expand button (#5) is rendered **after** Polish/Animate/Inspect, so in stacking order it sits on top of them and swallows their clicks. That matches the session replay: hovering a panel only ever surfaces the "Expand", "Regenerate", and "Download" tooltips — never "Animate" or "Polish".
+
+Download and Redo still work because they're rendered **after** Expand in the DOM, so they paint above it.
 
 ## Fix
 
-Make the icons discoverable and unmistakably colored:
+In `GeneratedImageCard.tsx`, inside the panel `<div className="group relative …">` (around lines 358–465):
 
-1. **Always faintly visible** — replace `opacity-0 group-hover:opacity-100` with `opacity-70 group-hover:opacity-100` on the four corner-action buttons (Animate, Inspect, Redo, Download). The center Expand button stays hover-only (it's the whole image area).
-2. **Stronger color identity on idle**, not just on hover — tint each button's idle background slightly with its brand color so the user can tell them apart at a glance:
-   - **Animate** (top-right): `bg-accent/15 text-accent hover:bg-accent hover:text-accent-foreground` (amber).
-   - **Inspect** (top-right-ish): `bg-primary/15 text-primary hover:bg-primary hover:text-primary-foreground` (cyan).
-   - **Redo** (bottom-right): `bg-primary/15 text-primary hover:bg-primary hover:text-primary-foreground` (cyan) — keeps "Redo N" pill style.
-   - **Download** (bottom-left): keep current emerald hover; idle stays neutral `bg-background/85`.
-3. **Tooltip labels** — keep existing tooltips. Add `delayDuration={150}` on each so they actually appear quickly on hover instead of after the default delay.
-4. **Touch / coarse-pointer** — wrap the four corner buttons in a class that forces `opacity-100` under `@media (pointer: coarse)` (or `pointer-coarse:opacity-100` via a small Tailwind plugin already present, or fall back to inline media-query class). This means tablets/phones see the icons permanently.
+1. Move the **Expand** button block (lines 415–429) to render **first** inside the panel, immediately after the `<img>` — before the number badge, Polish, Animate, and Inspect. This puts the full-area Expand button at the bottom of the stack so the corner buttons sit above it and receive clicks.
+2. Add `z-10` to each of the corner buttons (Polish, Animate, Inspect trigger, Download, Redo) as a belt-and-braces guarantee, and `z-0` to the Expand button.
+3. No behavior change to Expand: clicking anywhere on the image (outside the small corner buttons) still opens the lightbox.
 
-## Files
+No other files change. No backend or logic change — purely DOM ordering + z-index inside one component.
 
-- `src/components/director/GeneratedImageCard.tsx` — the four button classNames (Animate, Expand, Download, Redo) + `delayDuration` on their Tooltips.
-- `src/components/director/PromptInspector.tsx` — the Inspect trigger className + `delayDuration`.
+## Verification
 
-No changes to functionality, props, or backend. Tooltip labels stay as they are today, only the visual prominence changes.
+- Hover panel 3 → "Animate panel 3" tooltip appears on the amber icon, click triggers `onAnimatePanel`.
+- Hover panel 3 → "Polish panel 3" tooltip appears on the wand icon, click opens the Polish popover.
+- Clicking the empty image area still opens the Expand lightbox.
+- Download and Redo continue to work.

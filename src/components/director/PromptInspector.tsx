@@ -98,7 +98,7 @@ export function PromptInspector({ ctx, shotIndex, triggerClassName, triggerTitle
               onClick={(e) => e.stopPropagation()}
               className={
                 triggerClassName ??
-                "absolute top-1 right-[68px] opacity-70 group-hover:opacity-100 focus-visible:opacity-100 [@media(pointer:coarse)]:opacity-100 transition-all bg-primary/15 text-primary hover:bg-primary hover:text-primary-foreground p-1.5 rounded"
+                "absolute top-1 right-[68px] z-10 opacity-70 group-hover:opacity-100 focus-visible:opacity-100 [@media(pointer:coarse)]:opacity-100 transition-all bg-primary/15 text-primary hover:bg-primary hover:text-primary-foreground p-1.5 rounded"
               }
               aria-label={triggerTitle ?? "Inspect prompt"}
             >
