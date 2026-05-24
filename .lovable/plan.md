@@ -1,70 +1,27 @@
-## Brand kit "On" badge doesn't appear after save
+## Add "Nokhadha" preset to Marketing Studio
 
-### Root cause
+Add a new format preset in `src/lib/marketingStudio.ts` inside the `FORMATS` array, under the `avatar` category (since it adapts to a user-uploaded avatar/face).
 
-`useBrandIdentity()` in `src/lib/marketing/brandIdentity.ts` is a hook with **local `useState`**. Every consumer that calls it (the chip in `MarketingStudio.tsx` and the form in `BrandIdentitySheet.tsx`) gets its own independent copy of `identity`. When the sheet calls `save()`, only the sheet's local copy reloads — the page's copy stays `null`, so the chip never flips to the amber "On" state until a hard refresh.
-
-### Fix
-
-Make `useBrandIdentity` share a single source of truth across all consumers, so saving in the sheet updates the chip in the same render.
-
-Convert `brandIdentity.ts` to a tiny module-level store + `useSyncExternalStore` subscription:
+### Entry
 
 ```ts
-// module-level state
-let currentIdentity: BrandIdentity | null = null;
-let currentLoading = true;
-let currentUserId: string | null = null;
-const listeners = new Set<() => void>();
-const emit = () => listeners.forEach((l) => l());
-
-async function loadFor(userId: string | null) {
-  currentUserId = userId;
-  currentLoading = true; emit();
-  if (!userId) { currentIdentity = null; currentLoading = false; emit(); return; }
-  const { data } = await supabase.from("brand_identities")...maybeSingle();
-  currentIdentity = data ? mapRow(data, await signLogo(data.logo_path)) : null;
-  currentLoading = false; emit();
-}
-
-export function useBrandIdentity() {
-  const { user } = useAuth();
-  const identity = useSyncExternalStore(
-    (cb) => { listeners.add(cb); return () => listeners.delete(cb); },
-    () => currentIdentity,
-    () => currentIdentity,
-  );
-  const loading = useSyncExternalStore(
-    (cb) => { listeners.add(cb); return () => listeners.delete(cb); },
-    () => currentLoading,
-    () => currentLoading,
-  );
-  useEffect(() => {
-    if ((user?.id ?? null) !== currentUserId) loadFor(user?.id ?? null);
-  }, [user?.id]);
-
-  const reload = useCallback(() => loadFor(user?.id ?? null), [user?.id]);
-  const save = useCallback(async (next) => { ...upsert; await reload(); }, [reload]);
-  const clear = useCallback(async () => { ...delete; await reload(); }, [reload]);
-  // uploadLogo unchanged
-
-  return { identity, loading, save, clear, uploadLogo, reload };
+{
+  id: "nokhadha",
+  label: "Nokhadha",
+  description: "Gulf Heritage Epic",
+  category: "avatar",
+  emoji: "⛵",
+  fragment:
+    "Cinematic historical realism, Gulf heritage epic, 9:16 vertical. Adapt only the avatar's face (and body if full-body reference) — keep the traditional Kuwaiti Nokhadha outfit and historical maritime atmosphere completely unaltered. A legendary Kuwaiti Nokhadha stands at the front of a massive traditional wooden dhow ship in the Arabian Gulf during golden sunset, strong facial features, sunburned skin from years at sea, traditional Gulf clothing moving aggressively with the wind, deep focused eyes toward the horizon, powerful calm leadership presence. Loyal crew works behind him preparing ropes and sails with disciplined teamwork. Cinematic waves crash, seagulls fly overhead. Sequence 1 [0–3s]: wide aerial cinematic shot of the dhow crossing the Arabian Gulf at sunset, huge realistic waves, dramatic sky, strong ocean wind, crew moving naturally, Nokhadha standing still like a fearless leader at the bow, drone slowly pushing forward. Sequence 2 [3–6s]: medium cinematic shots of the Nokhadha commanding his crew with confident hand gestures, crew pulling ropes, adjusting sails, rowing in sync, close-up of weathered hands gripping wooden ship controls, hyper-realistic cloth movement, strong diegetic sound of ropes, wind, waves and creaking wood. Sequence 3 [6–9s]: close-up hero shot of the Nokhadha's face, sweat and sea-salt texture, emotional determined eyes, camera slowly orbiting with sunlight raking one side of his face, crew watching with respect behind him. Sequence 4 [9–12s]: the dhow approaches a Kuwaiti coastal town at sunset, traditional mud houses and old Kuwaiti architecture in the distance, people gathering on the shore, children running excitedly, cinematic telephoto compression. Sequence 5 [12–15s]: epic final hero shot — the Nokhadha steps off the dhow onto the shore, crew follows carrying goods and pearl-diving equipment, townspeople watch with pride, slow-motion cinematic walk, warm sunset backlight, final frame holds briefly on the Nokhadha looking toward his town like a respected legendary leader. Camera: ARRI Alexa 65 look, anamorphic lens flares, 35mm + 85mm mix, handheld realism mixed with stabilized cinematic tracking, natural motion blur, shallow depth of field, cinematic contrast. Enhancement tags: cinematic realism, historical epic, arabian gulf heritage, ultra detailed, emotional storytelling, realistic water simulation, cinematic lighting, authentic kuwait heritage, filmic composition, dramatic atmosphere. Negative: modern buildings, modern boats, modern clothing, cartoon, low quality, blurry faces, extra fingers, AI glitches, oversaturated colors, futuristic elements, subtitles, watermark, text overlay, shaky camera, unrealistic ocean, fantasy armor, sci-fi elements, plastic skin, HDR look, bad anatomy, duplicated people.",
 }
 ```
 
-After save, `emit()` fires once and **every** consumer re-renders — the chip in the composer immediately gets `hasBrandIdentity(brandIdentity) === true` and renders the amber "On" pill.
+### Placement
 
-### Bonus polish (small)
+Insert near the other `category: "avatar"` entries (around the `talking-avatar` block ~line 175 in `src/lib/marketingStudio.ts`). No other files change.
 
-In `MarketingStudio.tsx` the current "On" pill is a 9px text label. Make it a touch more visible: keep the label and add a small filled dot or check icon (e.g. `<Check className="w-3 h-3 text-[#F5A524]" />` before "On"), so the saved state reads at a glance. No layout shift.
+### Notes
 
-### Files touched
-
-- `src/lib/marketing/brandIdentity.ts` — convert hook to shared module store with `useSyncExternalStore`. Public API (`identity`, `loading`, `save`, `clear`, `uploadLogo`, `reload`) unchanged so no other file needs edits.
-- `src/pages/MarketingStudio.tsx` — add a tiny `Check` icon next to the "On" label in the Brand kit chip (line ~946–948).
-
-### Out of scope
-
-- No DB changes.
-- No changes to `BrandIdentitySheet` — its save flow already calls `save()` then closes the sheet.
-- `useBrandKit` (separate hook for multi-product brand kits) is untouched.
+- Uses `emoji: "⛵"` as the thumbnail fallback (no image/video asset yet — can be added later by dropping `/presets/nokhadha.mp4` into `public/presets/`).
+- Aspect ratio (9:16) is encoded inside the fragment so it composes correctly with the existing prompt builder.
+- Negative-prompt and enhancement tags are embedded inline since `StudioPreset` only exposes a single `fragment` field.
