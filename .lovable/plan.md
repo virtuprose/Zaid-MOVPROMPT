@@ -1,42 +1,46 @@
-## Why this happens
+## Goal
 
-When you pick **kling-v3-pro** in the model chooser, the chooser sends `"Target model: kling-v3-pro"` back to the Director, and the Director writes a perfect Kling‑tuned prompt. But when it finally fires the render, the frontend **ignores the picked model** and chooses the provider purely from the reference‑image count:
+The current "Rendering" state in the AI Director is a flat spinner over a beige shimmer — it doesn't sell the moment. Make the in‑progress video bubble feel like a cinema render bay: alive, branded, and worth waiting for.
 
-`src/components/director/DirectorChat.tsx` (line 1350‑1351):
-```ts
-const provider =
-  refCount >= 2 ? "seedance-2.0-ref" : refCount === 1 ? "seedance-2.0" : "seedance-v1-pro";
-```
+Scope: only the loading/queued visual in `src/components/director/VideoBubble.tsx` (lines 69–92). The completed/failed states and all data flow stay untouched.
 
-So no matter what you pick, it always renders on Seedance. The Director tool schema for `request_video_generation` also only exposes a broad `provider_preference` ("seedance" | "veo" | "kling" | "any"), never the specific model id, so the picked id is lost on the way back.
+## New "Render Bay" loading state
 
-## Fix
+A single, layered composition inside the existing rounded card — no new files, no extra deps.
 
-Carry the user's pick all the way through to `submitVideoJob`.
+**Layer 1 — Cinematic backdrop**
+- Dark base (`bg-[hsl(var(--background))]`) with a slow radial cyan→amber gradient that drifts (CSS `@keyframes` on `background-position`, 8s).
+- Subtle 1px scanlines via `repeating-linear-gradient` at very low opacity for a "monitor" feel.
 
-### 1. Director tool schema — `supabase/functions/director-agent/index.ts`
+**Layer 2 — Filmstrip frame**
+- Top + bottom edges show sprocket‑hole strips (small rounded rectangles in `bg-foreground/10` repeated horizontally) that scroll slowly left→right via `@keyframes` on `background-position` (12s linear infinite). Reads instantly as "film rendering."
 
-In the `request_video_generation` tool, add an explicit `model_id` field (the exact playbook id, e.g. `kling-v3-pro`, `veo-3.1`, `seedance-v1-pro`). Update the instructions so that when the user has already picked a model via `ask_model_choice` or named one in their brief, the Director MUST echo that id back in `model_id`. Keep `provider_preference` as a soft fallback.
+**Layer 3 — Light sweep**
+- Diagonal highlight (`linear-gradient(110deg, transparent, hsl(var(--primary)/0.18), transparent)`) sweeping across every 2.4s — the existing shimmer, made bolder and on‑brand.
+- A second slower amber sweep at half opacity, offset by 1.2s, for depth.
 
-### 2. Director response type — `src/lib/director/api.ts`
+**Layer 4 — Center HUD**
+- Replace the plain `Loader2` with a stacked HUD:
+  - Pulsing circular badge containing a `Film` icon, ringed by a thin cyan→amber conic gradient that rotates (12s linear).
+  - Below: a kinetic status line that cycles through stages every ~2s using a local `useEffect` + `setInterval` driving an index into a labels array: `Warming up the lens` → `Blocking the shot` → `Lighting the scene` → `Rolling camera` → `Rendering frames` → `Final color pass`. Uses `motion-safe:animate-fade-up` style transition between labels.
+  - A thin indeterminate progress bar (`bg-primary/40` segment translating across a `bg-foreground/5` track via keyframes) — purely visual, no real progress number.
+  - Small monospace **elapsed timer** ("00:14") driven by a `useEffect` counting seconds since the bubble mounted, so the user feels time moving.
 
-Add `model_id?: string` to the `request_video_generation` variant of the response union.
+**Layer 5 — Footer chip row**
+- Replace the muted "It'll appear here when ready" with two tighter chips:
+  - Left chip: `Film` icon + provider label (use `findVideoModel(provider)?.label` for a friendly name).
+  - Right chip: a pulsing red dot + uppercase `REC` + the elapsed timer mirrored — pure showbiz.
 
-### 3. Frontend wiring — `src/components/director/DirectorChat.tsx`
+## Motion system
 
-- Add a `chosenModelIdRef` (useRef) that records the latest model id the user confirmed in `ModelChoiceCard.onConfirm` (line ~2062), in addition to the existing `send("Target model: …")` call.
-- In the `resp.kind === "request_video_generation"` branch (line ~1348), resolve the provider in this priority order:
-  1. `resp.model_id` if present and valid (lookup against the known video models registry).
-  2. `chosenModelIdRef.current` if set.
-  3. The current Seedance heuristic as a last‑resort fallback (only when neither the Director nor the user has picked anything).
-- Pass the resolved id as `provider` to `submitVideoJob` and to the video bubble.
-- Update the assistant status line to read `Sending this to the {resolvedModel.label} renderer…` instead of the raw provider slug.
+All new keyframes live alongside existing ones in `src/index.css` (filmstrip‑scroll, hud‑sweep, hud‑sweep‑slow, conic‑spin, progress‑indeterminate, dot‑pulse). Tailwind utilities reference them via inline `style={{ animation: '...' }}` to avoid touching `tailwind.config.ts`. Respect `prefers-reduced-motion`: wrap every animation in `motion-safe:` equivalents so reduced‑motion users see a static HUD with just the elapsed timer.
 
-### 4. Sanity
+## Tokens
 
-`FAL_MODELS` in `supabase/functions/generate-video/index.ts` already maps `kling-v3-pro` → `fal-ai/kling-video/v3/pro/text-to-video`, so once the frontend passes the right provider string the render goes to Kling end‑to‑end. No backend changes needed beyond the schema/prompt update.
+Only existing semantic tokens — `--primary` (cyan), `--accent` (amber), `--background`, `--foreground`, `--muted-foreground`, `--border`. No raw hex anywhere. Works in both dark and light mode.
 
-### Out of scope
+## Out of scope
 
-- No change to credit pricing logic (already keyed off model id).
-- No change to the storyboard render path (`request_story_render`), which already locks to Seedance 2.0 intentionally.
+- The completed video player, the failed state, the footer action buttons.
+- The "Queued" wording change is in‑scope (it'll read "Standing by" before render starts, then transition to the rotating stage labels once `status === "processing"`).
+- No real progress reporting — the backend doesn't expose frame‑level progress, so the bar stays indeterminate.
