@@ -76,6 +76,14 @@ function readLastModel(): string {
   }
 }
 
+function readLastAudioPlan(): AudioPlan {
+  try {
+    const v = localStorage.getItem(AUDIO_KEY);
+    if (v === "none" || v === "music" || v === "sfx" || v === "ambient") return v;
+  } catch {}
+  return "music";
+}
+
 export function AnimatePanelDialog({
   open,
   onOpenChange,
@@ -88,6 +96,7 @@ export function AnimatePanelDialog({
 }: Props) {
   const [selected, setSelected] = useState<string>(() => readLastModel());
   const [duration, setDuration] = useState<5 | 10>(5);
+  const [audioPlan, setAudioPlan] = useState<AudioPlan>(() => readLastAudioPlan());
   const [recommending, setRecommending] = useState(false);
   const [recommendedId, setRecommendedId] = useState<string | null>(null);
   const [alternatives, setAlternatives] = useState<string[]>([]);
@@ -127,7 +136,7 @@ export function AnimatePanelDialog({
       } catch (e) {
         // Silent fallback — keep last picked model.
         setRecommendedId(FALLBACK_MODEL);
-        setReason("Kling 2.1 Master is a reliable cinematic baseline for image-to-video.");
+        setReason("Kling 3.0 Standard animates the source frame with native audio and strong identity preservation.");
       } finally {
         if (!cancelled) setRecommending(false);
       }
@@ -155,17 +164,22 @@ export function AnimatePanelDialog({
     if (!selected) return;
     try {
       localStorage.setItem(STORAGE_KEY, selected);
+      localStorage.setItem(AUDIO_KEY, audioPlan);
     } catch {
       /* ignore */
     }
     setSubmitting(true);
     try {
-      await onConfirm({ provider: selected, duration });
+      await onConfirm({ provider: selected, duration, audioPlan });
       onOpenChange(false);
     } finally {
       setSubmitting(false);
     }
   };
+
+  const modelHasNativeAudio = !!selectedModel?.audio;
+  const swapTarget = AUDIO_SWAP[selected];
+  const wantsAudio = audioPlan !== "none";
 
   const title =
     mode === "all"
