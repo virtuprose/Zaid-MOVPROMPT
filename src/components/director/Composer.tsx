@@ -345,7 +345,7 @@ export function Composer({
                 if (!busy) onSend();
               }
             }}
-            placeholder="What are you making? Describe the mood, action, and setting — or drop your references. Type @ to reference a file."
+            placeholder={mode === "free_chat" ? "Ask anything — plain chat mode." : "What are you making? Describe the mood, action, and setting — or drop your references. Type @ to reference a file."}
             rows={2}
             disabled={busy}
             className="w-full resize-none bg-transparent px-4 pt-3 pb-2 text-sm leading-relaxed placeholder:text-muted-foreground focus:outline-none min-h-[64px]"
