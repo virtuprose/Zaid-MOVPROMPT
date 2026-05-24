@@ -224,6 +224,43 @@ export async function refreshSignedUrl(storage_path: string): Promise<string | n
   return data?.signedUrl || null;
 }
 
+// Walk hydrated bubbles and swap stale signed URLs for fresh ones.
+// Mutates a shallow-cloned bubble list. Safe to call with any bubble array shape.
+export async function refreshBubbleSignedUrls<T extends any[]>(bubbles: T): Promise<T> {
+  // Collect every (storage_path -> setters) pairing so we sign each path once.
+  const pathToSetters = new Map<string, Array<(url: string) => void>>();
+  const add = (p: string | undefined | null, set: (url: string) => void) => {
+    if (!p) return;
+    const arr = pathToSetters.get(p) ?? [];
+    arr.push(set);
+    pathToSetters.set(p, arr);
+  };
+
+  for (const b of bubbles as any[]) {
+    if (!b) continue;
+    if (b.role === "generated_images" && Array.isArray(b.data?.images)) {
+      for (const img of b.data.images) {
+        add(img?.storage_path, (url) => { img.url = url; });
+      }
+    }
+    if (b.role === "user" && Array.isArray(b.attachments)) {
+      for (const a of b.attachments) {
+        if (a?.kind === "image") add(a.storage_path, (url) => { a.url = url; });
+      }
+    }
+  }
+
+  if (pathToSetters.size === 0) return bubbles;
+
+  await Promise.all(
+    Array.from(pathToSetters.entries()).map(async ([path, setters]) => {
+      const fresh = await refreshSignedUrl(path);
+      if (fresh) setters.forEach((set) => set(fresh));
+    }),
+  );
+  return bubbles;
+}
+
 export function classifyFile(file: File): "image" | "video" | "audio" | "document" | "unknown" {
   const t = file.type;
   const ext = file.name.split(".").pop()?.toLowerCase() || "";
