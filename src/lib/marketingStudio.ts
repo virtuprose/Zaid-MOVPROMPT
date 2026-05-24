@@ -104,6 +104,15 @@ export const FORMATS: StudioPreset[] = [
       "Hyper-realistic 3D product commercial, 8k, high-speed phantom camera at 1000fps slow-motion, cinematic studio lighting. Sequence 1 (Texture): extreme macro close-up panning over the product, hyper-detailed surface textures (condensation, finish, micro-detail). Sequence 2 (Kinetic Ingredients): zero-gravity explosion of raw ingredients and key props colliding mid-air in crisp photorealistic detail against a clean color backdrop. Sequence 3 (Fluid Dynamics): massive sweeping high-speed liquid splash erupts and spirals around the product, camera zooms rapidly through the center of the splash. Sequence 4 (The Reveal): wide hero shot of the product in its final packaging, perfectly lit, suspended center-frame, surrounded by slowly falling ingredients and props. Premium, vibrant, million-dollar production value",
   },
   {
+    id: "realistic-3d",
+    label: "Realistic 3D",
+    description: "Phantom-Cam Hyperreal",
+    category: "commercial",
+    image: u("photo-1542291026-7eec264c27ff"),
+    fragment:
+      "Hyper-realistic 3D product commercial, 8k resolution, high-speed phantom camera at 1000fps slow-motion, cinematic studio lighting, macro cinematography. Adapt ingredients, textures, elements and colors to the specific product. Build exactly 6 sequences, always ending with The Reveal. Sequence 1 (Macro Texture): extreme macro close-up panning over the product, focus on hyper-detailed surface textures relevant to the product (icy condensation, matte chocolate, carbonated bubbles, glossy lacquer). Sequence 2 (Kinetic Ingredients): zero-gravity explosion of raw ingredients, primary ingredient and a secondary prop colliding mid-air in crisp photorealistic detail against a contrasting brand-color backdrop. Sequence 3 (Elemental Dynamics): dynamic sweeping simulation — a massive high-speed rush of a relevant element (glossy fluid, shattered ice, swirling smoke, liquid gold) erupts and spirals around the product, camera zooms rapidly through the center of the chaos. Sequence 4 (The Assembly): fast-paced time-reversed visual, raw ingredients/materials magnetically snap together in mid-air, rapidly morphing and solidifying into the perfect core shape of the product. Sequence 5 (Speed & Light): bullet-time camera rotation around the product, dramatic high-contrast studio lights sweep across metallic/glossy surfaces, sharp lens flares and deep shadows emphasize premium quality. Sequence 6 (The Reveal): wide hero shot of the product in its final packaging, perfectly lit and suspended in the center of the frame, surrounded by slowly falling ingredients and props. Premium, vibrant, million-dollar production value.",
+  },
+  {
     id: "tactile-stopmotion",
     label: "Tactile Stop-Motion",
     description: "Handcrafted Magic",

@@ -158,7 +158,6 @@ export const PRESETS: Preset[] = [
   p("portal", "Portal", "effects", CircleDot, "preset-pulse", "Glowing doorway opens to elsewhere.", "Sci-fi, fantasy"),
   p("teleport", "Teleport", "effects", Sparkles, "preset-burst", "Subject vanishes and reappears.", "Magic moments"),
   p("morph", "Morph", "effects", GitMerge, "preset-pulse", "Subject smoothly transforms shape.", "Transformations"),
-  p("realistic-3d", "Realistic 3D", "effects", Box, "preset-pulse", "Hyper-realistic 3D product commercial: 8K phantom-camera, 1000fps slow-mo, macro textures, zero-gravity ingredient explosions, elemental dynamics, bullet-time reveal — $1M production value.", "Premium product commercials"),
 
   // Catch the Pulse
   p("paparazzi", "Paparazzi", "pulse", Camera, "preset-flicker", "Camera flashes burst around subject.", "Celebrity moments"),
