@@ -986,20 +986,26 @@ Output via the \`storyboard_shots\` tool ONLY.`;
       }
     }
 
+    const isFreeChat = mode === "free_chat";
+
+    const FREE_CHAT_SYSTEM = `You are a helpful AI assistant for a filmmaker working on generative video prompts. Reply in clean, concise Markdown — short paragraphs, bullet lists, headings when useful, and fenced code blocks for any prompt text. You can see uploaded images and reference them naturally. Do NOT ask scripted step-by-step questions, do NOT pretend to generate images, videos or character sheets — you are in plain-chat mode. Just answer the user.`;
+
     const aiMessages = [
-      { role: "system", content: SYSTEM_PROMPT + tasteAddendum },
+      { role: "system", content: isFreeChat ? FREE_CHAT_SYSTEM : SYSTEM_PROMPT + tasteAddendum },
       ...prior.map((m) => ({ role: m.role, content: m.content })),
       { role: last.role, content: lastUserContent },
     ];
 
 
-    const requestBody = {
+    const requestBody: Record<string, unknown> = {
       model: "google/gemini-3.1-pro-preview",
       messages: aiMessages,
-      tools: TOOLS,
-      tool_choice: "auto" as const,
       stream: !!stream,
     };
+    if (!isFreeChat) {
+      requestBody.tools = TOOLS;
+      requestBody.tool_choice = "auto";
+    }
 
     // Director chat replies are free — credits are only charged on real
     // generations (generate-reference-image, generate-video).
