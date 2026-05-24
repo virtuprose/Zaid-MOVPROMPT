@@ -536,6 +536,7 @@ function DirectorChatInner() {
       directors_note?: string;
       subject_kind?: "character" | "product";
       style_spec?: import("@/lib/director/api").StyleSpec;
+      quality?: ImageQuality;
     },
     options?: { subjectSheet?: boolean; subjectKind?: "character" | "product" },
   ) => {
