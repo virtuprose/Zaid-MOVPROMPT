@@ -33,6 +33,8 @@ type Props = {
   imagePromptBusy?: boolean;
   mode?: "director" | "free_chat";
   onModeChange?: (mode: "director" | "free_chat") => void;
+  /** Bump to refocus the textarea (and place caret at end) — used by handoffs. */
+  focusSignal?: number;
 };
 
 export function Composer({
@@ -49,6 +51,7 @@ export function Composer({
   imagePromptBusy,
   mode = "director",
   onModeChange,
+  focusSignal,
 }: Props) {
   const { user } = useAuth();
   const inputRef = useRef<HTMLInputElement>(null);
