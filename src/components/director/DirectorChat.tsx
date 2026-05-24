@@ -1216,6 +1216,7 @@ function DirectorChatInner() {
             totalTimeoutMs: 120_000,
             onPhase: (p) => setPhase(p),
             tasteProfile,
+            mode: chatMode,
           });
           lastErr = null;
           break;
