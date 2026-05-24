@@ -28,7 +28,7 @@ export const FORMATS: StudioPreset[] = [
   {
     id: "ugc",
     label: "UGC",
-    description: "Phone-shot, talking-to-camera selfie",
+    description: "Raw & Real",
     category: "ugc",
     image: u("photo-1611162616305-c69b3fa7fbe0"),
     fragment:
@@ -37,7 +37,7 @@ export const FORMATS: StudioPreset[] = [
   {
     id: "tutorial",
     label: "Tutorial",
-    description: "Step-by-step product walkthrough",
+    description: "Show, Don't Tell",
     category: "ugc",
     image: u("photo-1556909114-f6e7ad7d3136"),
     fragment:
@@ -46,7 +46,7 @@ export const FORMATS: StudioPreset[] = [
   {
     id: "unboxing",
     label: "Unboxing",
-    description: "Top-down hands-on reveal",
+    description: "Hands-On Reveal",
     category: "ugc",
     image: u("photo-1607083206869-4c7672e72a8a"),
     fragment:
@@ -55,7 +55,7 @@ export const FORMATS: StudioPreset[] = [
   {
     id: "testimonial",
     label: "Testimonial",
-    description: "Customer talking head, candid",
+    description: "Real Voices",
     category: "ugc",
     image: u("photo-1573496359142-b8d87734a5a2"),
     fragment:
@@ -64,7 +64,7 @@ export const FORMATS: StudioPreset[] = [
   {
     id: "reaction",
     label: "Reaction",
-    description: "Real-time reaction to a reveal",
+    description: "Caught On Camera",
     category: "ugc",
     image: u("photo-1543610892-0b1f7e6d8ac1"),
     fragment:
@@ -73,7 +73,7 @@ export const FORMATS: StudioPreset[] = [
   {
     id: "pov",
     label: "POV",
-    description: "First-person point-of-view",
+    description: "Through Their Eyes",
     category: "ugc",
     image: u("photo-1502920917128-1aa500764cbd"),
     fragment:
@@ -84,7 +84,7 @@ export const FORMATS: StudioPreset[] = [
   {
     id: "hyper-motion",
     label: "Speed Reveal",
-    description: "FPV-velocity 4–6 sequence commercial ending in a sudden stop hero reveal",
+    description: "Full Throttle Reveal",
     category: "commercial",
     image: u("photo-1551582045-6ec9c11d8697"),
     video: "/presets/speed-reveal.mp4",
@@ -94,7 +94,7 @@ export const FORMATS: StudioPreset[] = [
   {
     id: "hype-motion",
     label: "Hype Motion",
-    description: "4-sequence high-budget commercial: texture, kinetic ingredients, fluid splash, reveal",
+    description: "Kinetic Hype Drop",
     category: "commercial",
     image: u("photo-1625772452859-1c03d5bf1137"),
     video: "/presets/cinematic-ai-director.mp4",
@@ -104,7 +104,7 @@ export const FORMATS: StudioPreset[] = [
   {
     id: "tactile-stopmotion",
     label: "Tactile Stop-Motion",
-    description: "Handcrafted claymation/papercraft diorama, 4–6 sequences ending in a reveal",
+    description: "Handcrafted Magic",
     category: "commercial",
     image: u("photo-1559191669-e1b3a2c0a3ab"),
     video: "/presets/tactile-stopmotion.mp4",
@@ -114,7 +114,7 @@ export const FORMATS: StudioPreset[] = [
   {
     id: "hero-shot",
     label: "Hero Shot",
-    description: "Single dramatic product reveal",
+    description: "The Big Reveal",
     category: "commercial",
     image: u("photo-1542291026-7eec264c27ff"),
     video: "/presets/hero-shot.mp4",
@@ -124,7 +124,7 @@ export const FORMATS: StudioPreset[] = [
   {
     id: "lifestyle",
     label: "Lifestyle",
-    description: "Product woven into daily life",
+    description: "Everyday Magic",
     category: "commercial",
     image: u("photo-1490481651871-ab68de25d43d"),
     video: "/presets/lifestyle.mp4",
@@ -134,7 +134,7 @@ export const FORMATS: StudioPreset[] = [
   {
     id: "fashion-dream",
     label: "Fashion Dream",
-    description: "6-sequence luxury fashion lifestyle: fantasy world, elite community, lifestyle hero",
+    description: "Fashion Fantasy",
     category: "commercial",
     image: u("photo-1490481651871-ab68de25d43d"),
     video: "/presets/fashion-dream.mp4",
@@ -144,7 +144,7 @@ export const FORMATS: StudioPreset[] = [
   {
     id: "cinematic-fashion",
     label: "Cinematic Fashion",
-    description: "6-sequence narrative-driven cinematic fashion film: Sony Venice, location-scouted, cinematic hero",
+    description: "Editorial Cinema",
     category: "commercial",
     image: u("photo-1483985988355-763728e1935b"),
     video: "/presets/cinematic-fashion.mp4",
@@ -154,7 +154,7 @@ export const FORMATS: StudioPreset[] = [
   {
     id: "before-after",
     label: "Before / After",
-    description: "Side-by-side transformation",
+    description: "Then vs. Now",
     category: "commercial",
     image: u("photo-1517694712202-14dd9538aa97"),
     video: "/presets/before-after.mp4",
@@ -164,7 +164,7 @@ export const FORMATS: StudioPreset[] = [
   {
     id: "day-in-life",
     label: "Day in the Life",
-    description: "Vlog-style routine featuring the product",
+    description: "A Day With It",
     category: "ugc",
     image: u("photo-1499951360447-b19be8fe80f5"),
     fragment:
@@ -175,7 +175,7 @@ export const FORMATS: StudioPreset[] = [
   {
     id: "talking-avatar",
     label: "Talking Avatar",
-    description: "Avatar speaks to camera",
+    description: "Avatar On Mic",
     category: "avatar",
     image: u("photo-1494790108377-be9c29b29330"),
     fragment:
@@ -184,7 +184,7 @@ export const FORMATS: StudioPreset[] = [
   {
     id: "animated-explainer",
     label: "Animated Explainer",
-    description: "Motion-graphic explainer",
+    description: "Motion & Meaning",
     category: "animated",
     image: u("photo-1620712943543-bcc4688e7485"),
     fragment:
@@ -197,7 +197,7 @@ export const HOOKS: StudioPreset[] = [
   {
     id: "product-hit",
     label: "Product Hit",
-    description: "Object flies into frame, beat reaction",
+    description: "Smash Cut In",
     category: "surprise",
     image: u("photo-1542291026-7eec264c27ff"),
     fragment:
@@ -206,7 +206,7 @@ export const HOOKS: StudioPreset[] = [
   {
     id: "random-object-mic",
     label: "Random Object Mic",
-    description: "Absurd object drops in as the 'mic'",
+    description: "Mic Drop Moment",
     category: "surprise",
     image: u("photo-1485579149621-3123dd979885"),
     fragment:
@@ -215,7 +215,7 @@ export const HOOKS: StudioPreset[] = [
   {
     id: "pattern-interrupt",
     label: "Pattern Interrupt",
-    description: "Unexpected visual jolt in frame 1",
+    description: "Pattern Break",
     category: "surprise",
     image: u("photo-1496111367193-b1c4cdfa6b39"),
     fragment:
@@ -226,7 +226,7 @@ export const HOOKS: StudioPreset[] = [
   {
     id: "spicy",
     label: "Mystery Macro",
-    description: "Extreme close-up that pulls out",
+    description: "Zoom & Reveal",
     category: "curiosity",
     image: u("photo-1556228720-195a672e8a03"),
     fragment:
@@ -235,7 +235,7 @@ export const HOOKS: StudioPreset[] = [
   {
     id: "pov-reveal",
     label: "POV Reveal",
-    description: "Open on POV, snap to product",
+    description: "POV Snap",
     category: "curiosity",
     image: u("photo-1502920917128-1aa500764cbd"),
     fragment:
@@ -244,7 +244,7 @@ export const HOOKS: StudioPreset[] = [
   {
     id: "question",
     label: "Open Question",
-    description: "Punchy question straight to camera",
+    description: "Hook Question",
     category: "curiosity",
     image: u("photo-1573497019940-1c28c88b4f3e"),
     fragment:
@@ -253,7 +253,7 @@ export const HOOKS: StudioPreset[] = [
   {
     id: "interview",
     label: "Street Interview",
-    description: "Stranger answers a sharp question",
+    description: "Street Take",
     category: "curiosity",
     image: u("photo-1521737604893-d14cc237f11d"),
     fragment:
@@ -264,7 +264,7 @@ export const HOOKS: StudioPreset[] = [
   {
     id: "first-line",
     label: "Bold First Line",
-    description: "Loud opening statement",
+    description: "Bold Statement",
     category: "bold-claim",
     image: u("photo-1535713875002-d1d0cf377fde"),
     fragment:
@@ -273,7 +273,7 @@ export const HOOKS: StudioPreset[] = [
   {
     id: "statistic-shock",
     label: "Statistic Shock",
-    description: "Surprising number on screen",
+    description: "Stat Slam",
     category: "bold-claim",
     image: u("photo-1551288049-bebda4e38f71"),
     fragment:
@@ -282,7 +282,7 @@ export const HOOKS: StudioPreset[] = [
   {
     id: "comparison",
     label: "Comparison",
-    description: "Us vs. them, instant contrast",
+    description: "Us vs. Them",
     category: "bold-claim",
     image: u("photo-1517694712202-14dd9538aa97"),
     fragment:
@@ -293,7 +293,7 @@ export const HOOKS: StudioPreset[] = [
   {
     id: "before-after-teaser",
     label: "Before/After Teaser",
-    description: "Tease the transformation up front",
+    description: "Tease The Glow-Up",
     category: "emotional",
     image: u("photo-1521572267360-ee0c2909d518"),
     fragment:
@@ -302,7 +302,7 @@ export const HOOKS: StudioPreset[] = [
   {
     id: "vulnerable-moment",
     label: "Vulnerable Moment",
-    description: "Quiet, honest confession",
+    description: "Quiet Confession",
     category: "emotional",
     image: u("photo-1488161628813-04466f872be2"),
     fragment:
@@ -315,7 +315,7 @@ export const SETTINGS: StudioPreset[] = [
   {
     id: "bedroom",
     label: "Bedroom",
-    description: "On bed or against pillows, soft window light",
+    description: "Cozy Bedroom",
     category: "realistic",
     image: u("photo-1505693416388-ac5ce068fe85"),
     fragment: "Setting: cozy bedroom, propped against pillows, soft window daylight, lived-in styling",
@@ -323,7 +323,7 @@ export const SETTINGS: StudioPreset[] = [
   {
     id: "kitchen",
     label: "Kitchen",
-    description: "Modern kitchen counter, morning light",
+    description: "Morning Kitchen",
     category: "realistic",
     image: u("photo-1556909114-f6e7ad7d3136"),
     fragment: "Setting: bright modern kitchen counter, morning sunlight, clean styled background",
@@ -331,7 +331,7 @@ export const SETTINGS: StudioPreset[] = [
   {
     id: "coffee-shop",
     label: "Coffee shop",
-    description: "Café table, warm pendant lighting",
+    description: "Café Glow",
     category: "realistic",
     image: u("photo-1453614512568-c4024d13c247"),
     fragment: "Setting: cozy café interior, warm pendant lights, latte and laptop on the table",
@@ -339,7 +339,7 @@ export const SETTINGS: StudioPreset[] = [
   {
     id: "restaurant",
     label: "Restaurant",
-    description: "Editorial restaurant interior",
+    description: "Editorial Dining",
     category: "realistic",
     image: u("photo-1517248135467-4c7edcad34c4"),
     fragment: "Setting: stylish restaurant interior, low warm light, plated food, intimate dinner mood",
@@ -347,7 +347,7 @@ export const SETTINGS: StudioPreset[] = [
   {
     id: "hotel-suite",
     label: "Hotel suite",
-    description: "Luxe hotel room with city view",
+    description: "Hotel Skyline",
     category: "realistic",
     image: u("photo-1611892440504-42a792e24d32"),
     fragment: "Setting: luxe hotel suite, floor-to-ceiling windows, city view, soft ambient light",
@@ -355,7 +355,7 @@ export const SETTINGS: StudioPreset[] = [
   {
     id: "office",
     label: "Office desk",
-    description: "Modern workspace, daylight",
+    description: "Daylit Studio",
     category: "realistic",
     image: u("photo-1497366216548-37526070297c"),
     fragment: "Setting: minimalist modern office desk, daylight from large window, focused workspace styling",
@@ -363,7 +363,7 @@ export const SETTINGS: StudioPreset[] = [
   {
     id: "indoor-minimalist",
     label: "Indoor minimalist",
-    description: "Bright neutral interior, clean lines",
+    description: "Quiet Minimalism",
     category: "realistic",
     image: u("photo-1505691938895-1758d7feb511"),
     fragment: "Setting: bright minimalist indoor space, neutral palette, clean architectural lines",
@@ -371,7 +371,7 @@ export const SETTINGS: StudioPreset[] = [
   {
     id: "industrial-loft",
     label: "Industrial loft",
-    description: "Concrete, brick, large windows",
+    description: "Loft Energy",
     category: "realistic",
     image: u("photo-1554995207-c18c203602cb"),
     fragment: "Setting: industrial loft, exposed concrete and brick, oversized windows, moody daylight",
@@ -379,7 +379,7 @@ export const SETTINGS: StudioPreset[] = [
   {
     id: "workshop",
     label: "Workshop",
-    description: "Maker workshop, tools and craft",
+    description: "Maker's Bench",
     category: "realistic",
     image: u("photo-1556139943-4bdca53adf1e"),
     fragment: "Setting: artisan workshop, tools laid out on wood bench, warm task lighting, hands-on craft mood",
@@ -387,7 +387,7 @@ export const SETTINGS: StudioPreset[] = [
   {
     id: "gym",
     label: "Gym / Studio",
-    description: "Training space, dramatic lighting",
+    description: "Training Floor",
     category: "realistic",
     image: u("photo-1534438327276-14e5300c3a48"),
     fragment: "Setting: modern gym, dramatic side light, polished floor, athletic energy",
@@ -395,7 +395,7 @@ export const SETTINGS: StudioPreset[] = [
   {
     id: "car-interior",
     label: "Car interior",
-    description: "Driver POV, dashboard, golden hour",
+    description: "Golden Hour Drive",
     category: "realistic",
     image: u("photo-1492144534655-ae79c964c9d7"),
     fragment: "Setting: car interior from passenger angle, golden hour spilling through windshield, road blur outside",
@@ -403,7 +403,7 @@ export const SETTINGS: StudioPreset[] = [
   {
     id: "street",
     label: "Street",
-    description: "Outdoor city street, foot traffic",
+    description: "City Streets",
     category: "realistic",
     image: u("photo-1502920917128-1aa500764cbd"),
     fragment: "Setting: busy urban street, golden hour light, candid passersby in soft background",
@@ -411,7 +411,7 @@ export const SETTINGS: StudioPreset[] = [
   {
     id: "beach",
     label: "Beach",
-    description: "Coastline, soft surf, warm sun",
+    description: "Sun & Surf",
     category: "realistic",
     image: u("photo-1507525428034-b723cf961d3e"),
     fragment: "Setting: sunlit beach, soft surf in background, warm directional sun, breezy textures",
@@ -419,7 +419,7 @@ export const SETTINGS: StudioPreset[] = [
   {
     id: "garden",
     label: "Garden / Patio",
-    description: "Lush greenery, sunlit patio",
+    description: "Sunlit Greens",
     category: "realistic",
     image: u("photo-1416879595882-3373a0480b5b"),
     fragment: "Setting: lush garden patio, dappled sunlight through leaves, organic textures",
@@ -427,7 +427,7 @@ export const SETTINGS: StudioPreset[] = [
   {
     id: "nature",
     label: "Nature",
-    description: "Outdoor trail, park, or open sky",
+    description: "Open Trail",
     category: "realistic",
     image: u("photo-1441974231531-c6227db76b6e"),
     fragment: "Setting: outdoors in nature, soft wind, dappled sunlight through leaves or open sky",
@@ -435,7 +435,7 @@ export const SETTINGS: StudioPreset[] = [
   {
     id: "outdoor-sunlit",
     label: "Outdoor sunlit",
-    description: "Open exterior, harsh editorial sun",
+    description: "Editorial Sun",
     category: "realistic",
     image: u("photo-1500964757637-c85e8a162699"),
     fragment: "Setting: open outdoor location, hard editorial sunlight, deep clean shadows",
@@ -443,7 +443,7 @@ export const SETTINGS: StudioPreset[] = [
   {
     id: "stadium",
     label: "Sports stadium",
-    description: "Arena, crowd, stage lighting",
+    description: "Stage Lights",
     category: "realistic",
     image: u("photo-1574629810360-7efbbe195018"),
     fragment: "Setting: large sports stadium, stage lighting on the field, crowd glow in background",
@@ -451,7 +451,7 @@ export const SETTINGS: StudioPreset[] = [
   {
     id: "studio",
     label: "Studio",
-    description: "Seamless backdrop, polished lighting",
+    description: "Studio Polish",
     category: "realistic",
     image: u("photo-1547499389-92d9b95a5c5f"),
     fragment: "Setting: seamless studio backdrop, two-light commercial setup, premium ad gloss",
@@ -461,7 +461,7 @@ export const SETTINGS: StudioPreset[] = [
   {
     id: "rooftop",
     label: "Rooftop",
-    description: "Skyscraper rooftop, city skyline",
+    description: "Rooftop Heights",
     category: "unrealistic",
     image: u("photo-1505968409348-bd000797c92e"),
     fragment: "Setting: skyscraper rooftop edge, city skyline, dramatic wind and depth",
@@ -469,7 +469,7 @@ export const SETTINGS: StudioPreset[] = [
   {
     id: "penthouse",
     label: "Penthouse",
-    description: "Luxe high-rise, glass walls, skyline",
+    description: "Penthouse View",
     category: "unrealistic",
     image: u("photo-1600585154340-be6161a56a0c"),
     fragment: "Setting: glass-walled penthouse, sweeping skyline, luxe styling, blue hour glow",
@@ -477,7 +477,7 @@ export const SETTINGS: StudioPreset[] = [
   {
     id: "pool",
     label: "Pool / Resort",
-    description: "Infinity pool, resort vibe",
+    description: "Resort Mode",
     category: "unrealistic",
     image: u("photo-1540541338287-41700207dee6"),
     fragment: "Setting: infinity pool at a luxury resort, turquoise water, palm shadows, golden hour",
@@ -485,7 +485,7 @@ export const SETTINGS: StudioPreset[] = [
   {
     id: "city-night",
     label: "City night",
-    description: "Neon-lit street, rain reflections",
+    description: "Neon & Rain",
     category: "unrealistic",
     image: u("photo-1480714378408-67cf0d13bc1b"),
     fragment: "Setting: neon-lit city street at night, wet asphalt reflections, cinematic anamorphic glow",
@@ -493,7 +493,7 @@ export const SETTINGS: StudioPreset[] = [
   {
     id: "airplane-wing",
     label: "Travel / Airplane",
-    description: "Above the clouds, surreal travel",
+    description: "Above The Clouds",
     category: "unrealistic",
     image: u("photo-1488646953014-85cb44e25828"),
     fragment: "Setting: surreal travel scene above the clouds, soft pastel light, dreamlike altitude",
@@ -501,7 +501,7 @@ export const SETTINGS: StudioPreset[] = [
   {
     id: "lava",
     label: "Volcano",
-    description: "Lava field, intense surreal heat",
+    description: "Lava Drama",
     category: "unrealistic",
     image: u("photo-1462332420958-a05d1e002413"),
     fragment: "Setting: surreal lava field with glowing ground, heat haze, cinematic peril",
