@@ -178,6 +178,7 @@ export async function generateReferenceImage(input: {
   shot_index?: number;
   lock_mode?: "character" | "scene" | "auto";
   subject_kind?: "character" | "product";
+  style_spec?: StyleSpec;
 }): Promise<{ mode: string; images: GeneratedImage[] }> {
   const { data, error } = await supabase.functions.invoke("generate-reference-image", {
     body: input,
