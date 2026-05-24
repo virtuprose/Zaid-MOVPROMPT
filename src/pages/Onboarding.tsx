@@ -62,10 +62,6 @@ const OnboardingInner = () => {
     <div className="min-h-screen bg-background relative overflow-hidden">
       <Seo title="Welcome — MovPrompt" description="Set up MovPrompt in 60 seconds." path="/onboarding" />
 
-      {/* Ambient glows */}
-      <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[700px] h-[300px] bg-primary/5 rounded-full blur-[140px]" />
-      </div>
 
       {/* Top bar */}
       <header className="relative z-10 flex items-center justify-between px-4 sm:px-6 py-4 max-w-5xl mx-auto">

@@ -819,9 +819,6 @@ const Library = () => {
         path="/library"
         noindex
       />
-      <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-primary/5 rounded-full blur-[120px] animate-pulse-glow" />
-      </div>
 
       <div className="relative z-10 container max-w-7xl mx-auto px-4 py-4 sm:py-6">
         {/* Page header */}

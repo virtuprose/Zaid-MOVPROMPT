@@ -16,9 +16,6 @@ const PrivacyPolicy = () => {
         description="How MovPrompt collects, uses, and protects your data."
         path="/privacy"
       />
-      <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-primary/5 rounded-full blur-[120px]" />
-      </div>
 
       <div className="relative z-10 container max-w-3xl mx-auto px-4 py-6 sm:py-12">
         <div className="flex items-center justify-between mb-8">
