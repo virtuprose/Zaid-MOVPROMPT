@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogClose } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { PromptInspector, type InspectorContext } from "./PromptInspector";
+import { AnimatePanelDialog, type AnimateDialogResult } from "./AnimatePanelDialog";
 
 export type GeneratedImageBubbleData = {
   mode: "character_sheet" | "storyboard_panels" | "single_panel";
