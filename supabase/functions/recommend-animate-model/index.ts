@@ -71,7 +71,7 @@ Deno.serve(async (req) => {
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
-      return new Response(JSON.stringify(fallback(aspectRatio)), {
+      return new Response(JSON.stringify(fallback(aspectRatio, mode)), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -132,7 +132,7 @@ Deno.serve(async (req) => {
 
     if (!aiResp.ok) {
       console.error("AI recommend failed", aiResp.status, await aiResp.text().catch(() => ""));
-      return new Response(JSON.stringify(fallback(aspectRatio)), {
+      return new Response(JSON.stringify(fallback(aspectRatio, mode)), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -140,7 +140,7 @@ Deno.serve(async (req) => {
     const data = await aiResp.json();
     const toolCall = data?.choices?.[0]?.message?.tool_calls?.[0];
     if (!toolCall?.function?.arguments) {
-      return new Response(JSON.stringify(fallback(aspectRatio)), {
+      return new Response(JSON.stringify(fallback(aspectRatio, mode)), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -159,7 +159,7 @@ Deno.serve(async (req) => {
     });
   } catch (e) {
     console.error("recommend-animate-model error", e);
-    return new Response(JSON.stringify(fallback(undefined)), {
+    return new Response(JSON.stringify(fallback(undefined, "single")), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
