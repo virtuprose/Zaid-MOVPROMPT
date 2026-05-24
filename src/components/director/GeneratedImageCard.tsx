@@ -107,7 +107,7 @@ function PolishPanelPopover({
         <button
           type="button"
           onClick={(e) => e.stopPropagation()}
-          className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity bg-background/85 hover:bg-background text-foreground p-1.5 rounded"
+          className="absolute top-1 right-1 z-10 opacity-70 group-hover:opacity-100 focus-visible:opacity-100 [@media(pointer:coarse)]:opacity-100 transition-all bg-background/85 hover:bg-background text-foreground p-1.5 rounded"
           title={`Polish panel ${shotNum}`}
           aria-label={`Polish panel ${shotNum}`}
         >
