@@ -40,7 +40,7 @@ import {
   type DirectorPhase,
 } from "@/lib/director/api";
 import { VideoBubble } from "./VideoBubble";
-import type { Attachment } from "@/lib/director/ingest";
+import { refreshBubbleSignedUrls, type Attachment } from "@/lib/director/ingest";
 import * as localState from "@/lib/director/localState";
 import { findVideoModel } from "@/lib/director/videoModels";
 import { supabase } from "@/integrations/supabase/client";
