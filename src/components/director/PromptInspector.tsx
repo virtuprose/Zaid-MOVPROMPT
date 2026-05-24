@@ -2,9 +2,10 @@ import { useMemo, useState } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
-import { FileText, Copy, Check, ExternalLink } from "lucide-react";
+import { FileText, Copy, Check, ExternalLink, MessageCircleQuestion } from "lucide-react";
 import { toast } from "sonner";
 import { composePromptPreview, referenceRole } from "@/lib/director/composePromptPreview";
+import { ASK_DP_EVENT, type AskDpDetail } from "@/lib/director/sessionContext";
 import type { StyleSpec } from "@/lib/director/api";
 
 export type InspectorContext = {
