@@ -140,6 +140,7 @@ export function BrandIdentitySheet({
   onOpenChange: (v: boolean) => void;
 }) {
   const { identity, save, uploadLogo, clear } = useBrandIdentity();
+  const { setActiveIds: setBrandActiveIds } = useBrandKit();
   const [draft, setDraft] = useState<BrandIdentity>(EMPTY_BRAND_IDENTITY);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
