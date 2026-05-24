@@ -374,7 +374,7 @@ export function GeneratedImageCard({ data, onRegenerate, onUnpinSubject, onAnima
                 <PolishPanelPopover shotNum={shotNum} onApply={regen} />
               )}
               {data.mode === "storyboard_panels" && onAnimatePanel && (
-                <Tooltip>
+                <Tooltip delayDuration={150}>
                   <TooltipTrigger asChild>
                     <button
                       type="button"
@@ -388,7 +388,7 @@ export function GeneratedImageCard({ data, onRegenerate, onUnpinSubject, onAnima
                         });
                       }}
                       disabled={animatingShots.has(shotNum)}
-                      className="absolute top-1 right-9 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-all bg-background/85 hover:bg-accent hover:text-accent-foreground text-foreground p-1.5 rounded disabled:opacity-60"
+                      className="absolute top-1 right-9 opacity-70 group-hover:opacity-100 focus-visible:opacity-100 [@media(pointer:coarse)]:opacity-100 transition-all bg-accent/15 text-accent hover:bg-accent hover:text-accent-foreground p-1.5 rounded disabled:opacity-60"
                       aria-label={`Animate panel ${shotNum}`}
                     >
                       {animatingShots.has(shotNum) ? (
