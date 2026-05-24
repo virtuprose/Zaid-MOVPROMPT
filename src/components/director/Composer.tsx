@@ -466,7 +466,45 @@ export function Composer({
           )}
 
           <div className="flex items-center justify-between gap-2 px-2 pb-2">
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 flex-wrap">
+              {onModeChange && (
+                <div
+                  role="tablist"
+                  aria-label="Director mode"
+                  className="inline-flex items-center rounded-full border border-border/50 bg-muted/30 p-0.5 mr-1"
+                >
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={mode === "director"}
+                    onClick={() => onModeChange("director")}
+                    disabled={busy}
+                    className={cn(
+                      "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors",
+                      mode === "director"
+                        ? "bg-accent/20 text-accent"
+                        : "text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    <Film className="w-3 h-3" /> Director
+                  </button>
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={mode === "free_chat"}
+                    onClick={() => onModeChange("free_chat")}
+                    disabled={busy}
+                    className={cn(
+                      "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors",
+                      mode === "free_chat"
+                        ? "bg-primary/20 text-primary"
+                        : "text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    <MessageCircle className="w-3 h-3" /> Free chat
+                  </button>
+                </div>
+              )}
               <Button
                 type="button"
                 size="icon"
