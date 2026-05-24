@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Loader2, AlertTriangle, Film, ExternalLink, Heart, Download } from "lucide-react";
+import { AlertTriangle, Film, ExternalLink, Heart, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
