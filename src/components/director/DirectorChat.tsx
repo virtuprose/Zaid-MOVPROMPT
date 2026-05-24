@@ -1627,6 +1627,18 @@ function DirectorChatInner() {
 
   const [activeCategory, setActiveCategory] = useState<string>("cinema");
   const [composerFocused, setComposerFocused] = useState(false);
+  const [chatMode, setChatMode] = useState<"director" | "free_chat">(() => {
+    if (typeof window === "undefined") return "director";
+    return (localStorage.getItem("director.mode") as "director" | "free_chat") || "director";
+  });
+  const handleModeChange = useCallback((next: "director" | "free_chat") => {
+    setChatMode(next);
+    try {
+      localStorage.setItem("director.mode", next);
+    } catch {
+      /* ignore */
+    }
+  }, []);
   const activeCat = CATEGORIES.find((c) => c.id === activeCategory) ?? CATEGORIES[0];
 
 
