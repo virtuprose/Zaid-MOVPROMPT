@@ -248,45 +248,91 @@ serve(async (req) => {
       // Stream NDJSON so the client can show panels as they finish.
       // referenceUrls convention: [subjectSheet?, sceneAnchor, ...extras].
       // If the caller only sent one ref it acts as both sticky + anchor.
+      // Panels run in PARALLEL (lock_mode:scene anchors continuity via the key
+      // frame) so wall-clock is ~T instead of N×T — keeps the single HTTP
+      // stream inside the gateway timeout for 6–8 panels.
       const sticky = referenceUrls[0];
       const sceneAnchor = referenceUrls[1] ?? sticky;
       const extras = referenceUrls.slice(2, 3);
+      const sharedRefs = Array.from(
+        new Set(
+          [
+            ...(sticky ? [sticky] : []),
+            ...(sceneAnchor && sceneAnchor !== sticky ? [sceneAnchor] : []),
+            ...extras,
+          ],
+        ),
+      ).slice(0, 4);
+
       const encoder = new TextEncoder();
+      let clientGone = false;
       const stream = new ReadableStream({
         async start(controller) {
-          const send = (obj: unknown) =>
-            controller.enqueue(encoder.encode(JSON.stringify(obj) + "\n"));
-          send({ type: "start", mode, total: prompts.length });
-          let prevPanelUrl: string | null = null;
-          let okCount = 0;
-          for (let i = 0; i < prompts.length; i++) {
-            const raw = [
-              ...(sticky ? [sticky] : []),
-              ...(sceneAnchor && sceneAnchor !== sticky ? [sceneAnchor] : []),
-              ...(prevPanelUrl ? [prevPanelUrl] : []),
-              ...extras,
-            ];
-            const refs = Array.from(new Set(raw)).slice(0, 4);
-            try {
-              const value = await runOne(prompts[i], i, refs);
-              okCount++;
-              prevPanelUrl = value.url;
-              send({ type: "panel", index: i + 1, value });
-            } catch (reason: any) {
-              console.error("panel error", i + 1, reason);
-              send({ type: "panel_error", index: i + 1, error: String(reason?.message || reason) });
+          const safeEnqueue = (obj: unknown): boolean => {
+            if (clientGone) return false;
+            if (controller.desiredSize === null) {
+              clientGone = true;
+              return false;
             }
-          }
+            try {
+              controller.enqueue(encoder.encode(JSON.stringify(obj) + "\n"));
+              return true;
+            } catch (_e) {
+              clientGone = true;
+              return false;
+            }
+          };
+
+          safeEnqueue({ type: "start", mode, total: prompts.length });
+
+          // Fire all panels in parallel and emit each as it settles.
+          let okCount = 0;
+          let errCount = 0;
+          const tasks = prompts.map((p, i) =>
+            runOne(p, i, sharedRefs)
+              .then((value) => {
+                okCount++;
+                safeEnqueue({ type: "panel", index: i + 1, value });
+              })
+              .catch((reason: any) => {
+                errCount++;
+                console.error("panel error", i + 1, reason);
+                safeEnqueue({
+                  type: "panel_error",
+                  index: i + 1,
+                  error: String(reason?.message || reason),
+                });
+              }),
+          );
+          await Promise.all(tasks);
+
           const missing = prompts.length - okCount;
           if (missing > 0) {
             try {
-              await refundCredits({ userId, amount: perImage * missing, reason: "image_generation_refund", metadata: { missing } });
+              await refundCredits({
+                userId,
+                amount: perImage * missing,
+                reason: "image_generation_refund",
+                metadata: { missing, errCount, clientGone },
+              });
             } catch (e) {
               console.error("refund failed", e);
             }
           }
-          send({ type: "done", mode, missing });
-          controller.close();
+          safeEnqueue({ type: "done", mode, missing });
+          if (!clientGone) {
+            try {
+              controller.close();
+            } catch (_e) {
+              /* already closed */
+            }
+          }
+        },
+        cancel() {
+          // Client disconnected — stop sending; in-flight generations finish
+          // and any refund happens in start()'s missing-count path because the
+          // not-yet-emitted panels stay uncounted in okCount.
+          clientGone = true;
         },
       });
       return new Response(stream, {
