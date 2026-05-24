@@ -912,6 +912,7 @@ export default function MarketingStudio() {
                 icon={<Globe2 className="w-3.5 h-3.5" />}
                 label="Scene"
                 value={(() => {
+                  if (sceneLocked) return "Baked into format";
                   if (placeMode === "image" && location.imagePath) return "Reference image";
                   if (placeMode === "city" && location.place) return location.place;
                   const sceneLabel =
@@ -927,7 +928,12 @@ export default function MarketingStudio() {
                   if (location.place) return location.place;
                   return undefined;
                 })()}
-                tooltip="Where the ad takes place — preset scene, real city, or reference image"
+                tooltip={
+                  sceneLocked
+                    ? `${format?.label} bakes in its own scene — no location pick needed`
+                    : "Where the ad takes place — preset scene, real city, or reference image"
+                }
+                disabled={sceneLocked}
                 onClick={() => {
                   // Pre-select mode based on current state
                   if (location.imagePath) setPlaceMode("image");
