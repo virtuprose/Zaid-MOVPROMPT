@@ -30,6 +30,14 @@ import { ActStrip, type ActTile } from "./ActStrip";
 import { submitStoryBundle, submitStoryRender, submitStoryStitch } from "@/lib/director/api";
 import { loadTasteProfile, EMPTY_TASTE_PROFILE, type TasteProfile } from "@/lib/director/tasteProfile";
 import { MessageFeedback } from "./MessageFeedback";
+import { FreeChatChips } from "./FreeChatChips";
+import {
+  buildSessionContextBlock,
+  buildContextChips,
+  extractSessionContext,
+  ASK_DP_EVENT,
+  type AskDpDetail,
+} from "@/lib/director/sessionContext";
 
 import {
   streamDirectorAgent,
