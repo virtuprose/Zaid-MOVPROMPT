@@ -13,6 +13,15 @@ export type LockedSpec = {
   style?: "photoreal" | "cinematic-film" | "stylized" | "anime";
 };
 
+export type StyleSpec = {
+  lens?: string;
+  lighting?: string;
+  palette?: string;
+  film_emulation?: string;
+  grade?: string;
+  mood?: string;
+};
+
 export type Breakdown = {
   subject?: string;
   action?: string;
