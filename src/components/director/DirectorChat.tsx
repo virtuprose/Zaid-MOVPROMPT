@@ -40,7 +40,7 @@ import {
   type DirectorPhase,
 } from "@/lib/director/api";
 import { VideoBubble } from "./VideoBubble";
-import type { Attachment } from "@/lib/director/ingest";
+import { refreshBubbleSignedUrls, type Attachment } from "@/lib/director/ingest";
 import * as localState from "@/lib/director/localState";
 import { findVideoModel } from "@/lib/director/videoModels";
 import { supabase } from "@/integrations/supabase/client";
@@ -249,7 +249,14 @@ function DirectorChatInner() {
     hydratedRef.current = hydrationKey;
     const cached = localState.load(userId, localScope);
     if (cached) {
-      if (cached.bubbles?.length) setBubbles(cached.bubbles as Bubble[]);
+      if (cached.bubbles?.length) {
+        const hydrated = cached.bubbles as Bubble[];
+        setBubbles(hydrated);
+        // Re-sign any storage-backed image URLs that may have expired since save.
+        void refreshBubbleSignedUrls(hydrated.slice()).then((refreshed) =>
+          setBubbles(refreshed as Bubble[]),
+        );
+      }
       if (typeof cached.input === "string") setInput(cached.input);
       if (Array.isArray(cached.attachments)) setAttachments(cached.attachments);
       if (cached.sessionId) sessionIdRef.current = cached.sessionId;
@@ -280,12 +287,14 @@ function DirectorChatInner() {
       sessionIdRef.current = data.id;
       const loaded = (data.messages as Bubble[]) || [WELCOME];
       const remote = loaded.length ? loaded : [WELCOME];
+      // Re-sign storage-backed URLs before they hit the DOM.
+      const remoteRefreshed = (await refreshBubbleSignedUrls(remote.slice())) as Bubble[];
       setBubbles((prev) => {
-        if (remote.length > prev.length) return remote;
-        if (remote.length === prev.length) {
+        if (remoteRefreshed.length > prev.length) return remoteRefreshed;
+        if (remoteRefreshed.length === prev.length) {
           // Merge fresher story_render acts from server (jobs that finished while away).
           return prev.map((b, i) => {
-            const r = remote[i];
+            const r = remoteRefreshed[i];
             if (b?.role === "story_render" && r?.role === "story_render") {
               const localDone = b.data.acts.filter(
                 (a) => a.status === "completed" || a.status === "failed",
