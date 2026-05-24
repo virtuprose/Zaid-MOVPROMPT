@@ -455,10 +455,10 @@ serve(async (req) => {
       });
     }
 
-    const results: Settled<{ url: string; storage_path: string; shot_index?: number }>[] =
+    const results: Settled<{ url: string; storage_path: string; shot_index?: number; quality?: Quality }>[] =
       await Promise.allSettled(prompts.map((p, i) => runOne(p, i, referenceUrls)));
 
-    const out: Array<{ url: string; storage_path: string; shot_index?: number }> = [];
+    const out: Array<{ url: string; storage_path: string; shot_index?: number; quality?: Quality }> = [];
     let firstError: unknown = null;
     for (const r of results) {
       if (r.status === "fulfilled") out.push(r.value);
@@ -466,7 +466,9 @@ serve(async (req) => {
     }
     const missing = prompts.length - out.length;
     if (missing > 0) {
-      await refundCredits({ userId, amount: perImage * missing, reason: "image_generation_refund", metadata: { missing } });
+      const refundAmount =
+        perImage * missing + (effectiveQuality === "4K" ? upscalePrice4K * missing : 0);
+      await refundCredits({ userId, amount: refundAmount, reason: "image_generation_refund", metadata: { missing, quality: effectiveQuality } });
     }
     if (out.length === 0 && firstError) throw firstError;
 
