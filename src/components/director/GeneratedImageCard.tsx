@@ -1,4 +1,4 @@
-import { RotateCcw, Film, Maximize2, X, ChevronLeft, ChevronRight, Download, Wand2, Lightbulb } from "lucide-react";
+import { RotateCcw, Film, Maximize2, X, ChevronLeft, ChevronRight, Download, Wand2, Lightbulb, Play, Loader2 } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -16,10 +16,19 @@ export type GeneratedImageBubbleData = {
   failedIndices?: number[];
 };
 
+export type AnimatePanelInput = {
+  url: string;
+  shot_index: number;
+  directorsNote?: string;
+  aspectRatio?: "1:1" | "16:9" | "9:16";
+};
+
 type Props = {
   data: GeneratedImageBubbleData;
   onRegenerate?: (intent: string) => void;
   onUnpinSubject?: () => void;
+  onAnimatePanel?: (panel: AnimatePanelInput) => void | Promise<void>;
+  onAnimateAllPanels?: (panels: AnimatePanelInput[]) => void | Promise<void>;
 };
 
 // ---- Layer 3 chip presets ----
@@ -175,8 +184,48 @@ function RelightSequencePopover({ onApply }: { onApply: (intent: string) => void
   );
 }
 
-export function GeneratedImageCard({ data, onRegenerate, onUnpinSubject }: Props) {
+export function GeneratedImageCard({ data, onRegenerate, onUnpinSubject, onAnimatePanel, onAnimateAllPanels }: Props) {
   const [zoomIndex, setZoomIndex] = useState<number | null>(null);
+  const [animatingShots, setAnimatingShots] = useState<Set<number>>(new Set());
+  const [animateAllOpen, setAnimateAllOpen] = useState(false);
+  const [animatingAll, setAnimatingAll] = useState(false);
+
+  const handleAnimateOne = useCallback(async (panel: AnimatePanelInput) => {
+    if (!onAnimatePanel) return;
+    if (animatingShots.has(panel.shot_index)) return;
+    setAnimatingShots((prev) => {
+      const next = new Set(prev);
+      next.add(panel.shot_index);
+      return next;
+    });
+    try {
+      await onAnimatePanel(panel);
+    } finally {
+      setAnimatingShots((prev) => {
+        const next = new Set(prev);
+        next.delete(panel.shot_index);
+        return next;
+      });
+    }
+  }, [onAnimatePanel, animatingShots]);
+
+  const handleAnimateAll = useCallback(async () => {
+    if (!onAnimateAllPanels) return;
+    setAnimateAllOpen(false);
+    setAnimatingAll(true);
+    try {
+      const panels: AnimatePanelInput[] = data.images.map((img, i) => ({
+        url: img.url,
+        shot_index: img.shot_index ?? i + 1,
+        directorsNote: data.directorsNote,
+        aspectRatio: data.aspectRatio,
+      }));
+      await onAnimateAllPanels(panels);
+    } finally {
+      setAnimatingAll(false);
+    }
+  }, [onAnimateAllPanels, data.images, data.directorsNote, data.aspectRatio]);
+
   const progress = data.progress;
   const inProgress = !!progress && progress.done < progress.total;
   const isGrid =
@@ -321,6 +370,30 @@ export function GeneratedImageCard({ data, onRegenerate, onUnpinSubject }: Props
               {data.mode === "storyboard_panels" && onRegenerate && (
                 <PolishPanelPopover shotNum={shotNum} onApply={regen} />
               )}
+              {data.mode === "storyboard_panels" && onAnimatePanel && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    void handleAnimateOne({
+                      url: img.url,
+                      shot_index: shotNum,
+                      directorsNote: data.directorsNote,
+                      aspectRatio: data.aspectRatio,
+                    });
+                  }}
+                  disabled={animatingShots.has(shotNum)}
+                  className="absolute top-1 right-9 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity bg-background/85 hover:bg-background text-foreground p-1.5 rounded disabled:opacity-60"
+                  title={`Animate panel ${shotNum} · Kling 2.1 Master`}
+                  aria-label={`Animate panel ${shotNum}`}
+                >
+                  {animatingShots.has(shotNum) ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <Play className="h-3 w-3" />
+                  )}
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => setZoomIndex(i)}
@@ -428,6 +501,42 @@ export function GeneratedImageCard({ data, onRegenerate, onUnpinSubject }: Props
           </Button>
           {data.mode === "storyboard_panels" && !inProgress && (data.failedIndices?.length ?? 0) === 0 && (
             <RelightSequencePopover onApply={regen} />
+          )}
+          {data.mode === "storyboard_panels" && !inProgress && (data.failedIndices?.length ?? 0) === 0 && onAnimateAllPanels && (
+            <Popover open={animateAllOpen} onOpenChange={setAnimateAllOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  className="h-7 text-xs"
+                  disabled={animatingAll}
+                >
+                  {animatingAll ? (
+                    <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                  ) : (
+                    <Play className="h-3 w-3 mr-1" />
+                  )}
+                  Animate all panels
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent side="top" align="start" className="w-72 space-y-3">
+                <div>
+                  <div className="text-xs font-medium text-foreground">Animate all panels</div>
+                  <div className="text-[10.5px] text-muted-foreground/80">
+                    Queues {data.images.length} Kling 2.1 Master renders — one per panel — using each frame as the starting image. Charges credits per clip.
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button type="button" size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setAnimateAllOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button type="button" size="sm" className="h-7 text-xs" onClick={() => void handleAnimateAll()}>
+                    Queue {data.images.length} renders
+                  </Button>
+                </div>
+              </PopoverContent>
+            </Popover>
           )}
           {data.mode === "storyboard_panels" && !inProgress && (data.failedIndices?.length ?? 0) === 0 && (
             <Button
