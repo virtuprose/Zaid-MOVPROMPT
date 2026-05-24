@@ -38,12 +38,21 @@ const ELIGIBLE_MODELS = [
 
 const ELIGIBLE_IDS = ELIGIBLE_MODELS.map((m) => m.id);
 
-function fallback(aspectRatio: string | undefined) {
-  // Sensible default if AI fails: Kling 2.1 Master is the current baseline.
+function fallback(aspectRatio: string | undefined, mode: string) {
+  // Sensible default if AI fails. For multi-panel storyboards prefer
+  // multi-reference Omni for identity lock. For singles prefer audio-capable
+  // Kling 3.0 Standard (cheaper than Pro, has native audio + image-to-video).
+  if (mode === "all") {
+    return {
+      recommended_id: "kling-omni",
+      alternatives: ["kling-v3-standard", "seedance-2.0-ref"],
+      reason: `Kling 3.0 Omni keeps the SAME character across all ${aspectRatio || "16:9"} panels via multi-reference identity lock, with native audio. Seedance 2.0 Ref is the closest alternative.`,
+    };
+  }
   return {
-    recommended_id: "kling-v2.1-master",
-    alternatives: ["veo-3.1", "seedance-2.0"],
-    reason: `Kling 2.1 Master is a reliable cinematic baseline for ${aspectRatio || "16:9"} image-to-video. Veo 3.1 if you want native audio; Seedance 2.0 for tighter identity lock.`,
+    recommended_id: "kling-v3-standard",
+    alternatives: ["veo-3.1-fast", "kling-v2.1-master"],
+    reason: `Kling 3.0 Standard animates the source frame ${aspectRatio || "16:9"} with native audio and strong identity preservation. Veo 3.1 Fast for sync dialogue; Kling 2.1 Master if you want the legacy cinematic look (silent).`,
   };
 }
 
