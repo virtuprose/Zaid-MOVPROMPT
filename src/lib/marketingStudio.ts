@@ -584,6 +584,16 @@ export type StudioBrief = {
   userNote?: string;
   /** Brand identity (palette, typography vibe, mood) applied to lighting/props/text. */
   brandIdentity?: BrandIdentityContext | null;
+  /** Overlay controls (end-card, logo, headline/CTA/price). */
+  overlay?: OverlayBrief;
+};
+
+export type OverlayBrief = {
+  mode: "none" | "endcard" | "lower_third" | "corner" | "center";
+  logo: boolean;
+  headline?: string;
+  cta?: string;
+  price?: string;
 };
 
 const find = (list: StudioPreset[], id?: string) =>
