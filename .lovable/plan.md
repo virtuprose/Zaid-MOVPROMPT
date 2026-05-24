@@ -1,16 +1,14 @@
-Logo wasn't appearing because the Fashion Dream and Cinematic Fashion preset templates never tell the video model when/where to render the brand logo. AI video models render a single continuous shot and won't auto-place a logo unless the prompt explicitly says so. Fix by baking an end-card hero beat into both presets.
+## Goal
+When the user clicks **Clear** in the Brand kit sheet (`BrandIdentitySheet`), fully turn the brand kit off — not just wipe the identity row, but also deselect any active brand kits so nothing brand-related feeds into the next generation.
 
-**Edits in `src/lib/marketingStudio.ts`:**
+## Today's behavior
+- `BrandIdentitySheet` footer has a **Clear** button (line 567–575) that calls `clear()` from `useBrandIdentity`, which deletes the `brand_identities` row.
+- Active brand kits selected via `useBrandKit` (`brand_kit_selections`) stay selected — so brands keep getting injected into prompts even though the user expected a clean slate.
 
-1. **Fashion Dream preset (`fashion-dream`)** — extend sequence 6 ("The Lifestyle Hero") to end on a clean brand stamp:
-   - Append: "…camera settles, then a final beat where the brand wordmark/logo (from the brand reference) fades in elegantly over the hero frame as an end-card — centered or lower-third, in the brand's typography vibe, held for ~1s before fade out."
+## Change
+In `src/components/marketing/BrandIdentitySheet.tsx`:
+1. Also pull `setActiveIds` from `useBrandKit()`.
+2. In the Clear button's onClick, after `await clear()`, call `await setActiveIds([])` to deselect every active brand.
+3. Keep the existing toast + sheet close.
 
-2. **Cinematic Fashion preset (`cinematic-fashion`)** — same treatment on sequence 6 ("The Cinematic Hero"):
-   - Append: "…ending on a tasteful brand end-card where the wordmark/logo from the brand reference fades in over the final hero frame (centered or lower-third in the brand's typography vibe, held briefly, then gentle fade out)."
-
-3. **Brand line helper (`brandLineAt`, ~line 628-633)** — strengthen the logo instruction so the model knows the logo MUST appear in the end-card beat when one exists, not just "may appear on packaging":
-   - Change the logo directive to: "Use {tag} as the brand wordmark/logo only — it MUST appear as the end-card stamp on the final hero shot (and on any packaging / screens / labels when the scene includes them). Do NOT use it as the product silhouette…" (keep the rest).
-
-These changes are prompt-only — no UI or backend changes. Future Fashion Dream / Cinematic Fashion renders will end on a visible logo beat.
-
-I'll skip the dress/video question for now since you didn't specify what was wrong — happy to dig in once you describe the issue (wrong color, distorted, not matching the uploaded reference, etc.).
+No backend, schema, or other UI changes. Generation logic already keys off `activeKits` + `hasBrandIdentity`, so emptying both makes the brand kit effectively off.
