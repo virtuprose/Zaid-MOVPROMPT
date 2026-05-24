@@ -618,10 +618,10 @@ function DirectorChatInner() {
       liveImageBubble ? [...baseBubbles, liveImageBubble] : [...baseBubbles, loadingBubble],
     );
 
+    const streamedImages: Array<{ url: string; storage_path: string; shot_index?: number }> = [];
+    const failedIndices: number[] = [];
     try {
       const api = await import("@/lib/director/api");
-      const streamedImages: Array<{ url: string; storage_path: string; shot_index?: number }> = [];
-      const failedIndices: number[] = [];
       const result = isStreamingStoryboard
         ? await api.generateReferenceImageStream(
             {
