@@ -5,9 +5,6 @@ import { motion } from "framer-motion";
 export const OfflineFallback = () => {
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-6">
-      <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[500px] h-[300px] bg-primary/5 rounded-full blur-[120px]" />
-      </div>
 
       <motion.div
         initial={{ opacity: 0, y: 20 }}
