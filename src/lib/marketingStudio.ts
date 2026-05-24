@@ -726,7 +726,7 @@ function characterLineAt(c: CharacterContext, refs: StudioBrief["imageRefs"], oc
 }
 
 
-export function brandIdentityLine(b?: BrandIdentityContext | null): string | null {
+export function brandIdentityLine(b?: BrandIdentityContext | null, overlayOff = false): string | null {
   if (!b) return null;
   const bits: string[] = [];
   if (b.primary_color) bits.push(`primary ${b.primary_color}`);
