@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Loader2, Sparkles, Play } from "lucide-react";
+import { Loader2, Sparkles, Play, Volume2, VolumeX, Music, AudioWaveform, Wind, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -31,11 +31,30 @@ import { cn } from "@/lib/utils";
 const EXCLUDE = new Set(["kling-omni-edit", "kling-motion-control"]);
 
 const STORAGE_KEY = "vp.animatePanel.lastModel";
-const FALLBACK_MODEL = "kling-v2.1-master";
+const AUDIO_KEY = "vp.animatePanel.lastAudioPlan";
+const FALLBACK_MODEL = "kling-v3-standard";
+
+// When the user picks an audio-less model and wants sound, suggest an
+// audio-capable sibling so they can swap with one click.
+const AUDIO_SWAP: Record<string, { id: string; label: string }> = {
+  "kling-v2.1-master": { id: "kling-v3-standard", label: "Kling 3.0 Standard" },
+  "kling-v2.5-turbo-pro": { id: "kling-v3-standard", label: "Kling 3.0 Standard" },
+  "kling-v2-master": { id: "kling-v3-standard", label: "Kling 3.0 Standard" },
+  "kling-v1.6-pro": { id: "kling-v3-standard", label: "Kling 3.0 Standard" },
+  "kling-v1.6-standard": { id: "kling-v3-standard", label: "Kling 3.0 Standard" },
+  "kling-v1.5-pro": { id: "kling-v3-standard", label: "Kling 3.0 Standard" },
+  "kling-v1-pro": { id: "kling-v3-standard", label: "Kling 3.0 Standard" },
+  "kling-v1-standard": { id: "kling-v3-standard", label: "Kling 3.0 Standard" },
+  "veo-2": { id: "veo-3.1-fast", label: "Veo 3.1 Fast" },
+  "runway-gen3-turbo": { id: "veo-3.1-fast", label: "Veo 3.1 Fast" },
+};
+
+export type AudioPlan = "none" | "music" | "sfx" | "ambient";
 
 export type AnimateDialogResult = {
   provider: string;
   duration: 5 | 10;
+  audioPlan: AudioPlan;
 };
 
 type Props = {
