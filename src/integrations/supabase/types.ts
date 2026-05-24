@@ -1253,7 +1253,24 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      preset_preview_meta_public: {
+        Row: {
+          generated_at: string | null
+          preset_id: string | null
+          preview_model: string | null
+        }
+        Insert: {
+          generated_at?: string | null
+          preset_id?: string | null
+          preview_model?: string | null
+        }
+        Update: {
+          generated_at?: string | null
+          preset_id?: string | null
+          preview_model?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       attribute_referral: { Args: { _code: string }; Returns: boolean }
