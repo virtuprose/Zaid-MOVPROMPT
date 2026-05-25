@@ -347,7 +347,7 @@ export const SETTINGS: StudioPreset[] = [
     label: "Bedroom",
     description: "Cozy Bedroom",
     category: "realistic",
-    image: u("photo-1505693416388-ac5ce068fe85"),
+    image: "/presets/bedroom.png",
     fragment: "Setting: cozy bedroom, propped against pillows, soft window daylight, lived-in styling",
   },
   {
