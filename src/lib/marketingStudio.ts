@@ -501,7 +501,7 @@ export const SETTINGS: StudioPreset[] = [
     label: "Penthouse",
     description: "Penthouse View",
     category: "unrealistic",
-    image: u("photo-1600585154340-be6161a56a0c"),
+    image: "/presets/penthouse.png",
     fragment: "Setting: glass-walled penthouse, sweeping skyline, luxe styling, blue hour glow",
   },
   {
