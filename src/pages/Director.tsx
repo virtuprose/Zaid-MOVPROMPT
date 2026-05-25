@@ -32,7 +32,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { trackPageVisit } from "@/lib/analytics";
 import { DirectorChat } from "@/components/director/DirectorChat";
-import { RightRail } from "@/components/director/RightRail";
+
 import { DirectorErrorBoundary } from "@/components/director/DirectorErrorBoundary";
 import { SendDebugReportButton } from "@/components/SendDebugReportButton";
 import { TopNav } from "@/components/TopNav";
@@ -189,7 +189,7 @@ export default function Director() {
       <TopNav />
 
       <div className="relative z-10 container max-w-[1600px] mx-auto px-4 py-4">
-        <div className="grid grid-cols-1 lg:grid-cols-[240px_1fr_340px] gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-[240px_1fr] gap-4">
           <aside className="hidden lg:flex flex-col gap-2 max-h-[calc(100vh-160px)]">
             <Button
               size="sm"
@@ -321,9 +321,8 @@ export default function Director() {
               <DirectorChat />
             </DirectorErrorBoundary>
           </div>
-
-          <RightRail sessionId={sessionId} />
         </div>
+
       </div>
 
       <Dialog open={!!renameTarget} onOpenChange={(o) => !o && setRenameTarget(null)}>
