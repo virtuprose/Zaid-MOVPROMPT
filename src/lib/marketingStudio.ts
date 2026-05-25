@@ -533,7 +533,7 @@ export const SETTINGS: StudioPreset[] = [
     label: "Volcano",
     description: "Lava Drama",
     category: "unrealistic",
-    image: u("photo-1462332420958-a05d1e002413"),
+    image: "/presets/volcano.png",
     fragment: "Setting: surreal lava field with glowing ground, heat haze, cinematic peril",
   },
 ];
