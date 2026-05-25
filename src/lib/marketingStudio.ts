@@ -395,7 +395,7 @@ export const SETTINGS: StudioPreset[] = [
     label: "Indoor minimalist",
     description: "Quiet Minimalism",
     category: "realistic",
-    image: u("photo-1505691938895-1758d7feb511"),
+    image: "/presets/indoor-minimalist.png",
     fragment: "Setting: bright minimalist indoor space, neutral palette, clean architectural lines",
   },
   {
