@@ -249,6 +249,17 @@
   background-color: hsl(var(--muted-foreground) / 0.5);
 }
 
+/* Director rail scrollbar */
+.custom-scrollbar::-webkit-scrollbar { width: 4px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: hsl(var(--brand) / 0.15);
+  border-radius: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--brand) / 0.35);
+}
+
 @keyframes preset-zoom-in { 0%,100% { transform: scale(0.85); } 50% { transform: scale(1.15); } }
 @keyframes preset-zoom-out { 0%,100% { transform: scale(1.15); } 50% { transform: scale(0.85); } }
 @keyframes preset-snap-zoom { 0%,40% { transform: scale(0.9); } 50%,100% { transform: scale(1.2); } }
