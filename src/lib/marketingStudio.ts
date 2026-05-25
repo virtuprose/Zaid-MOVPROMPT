@@ -522,7 +522,7 @@ export const SETTINGS: StudioPreset[] = [
   },
   {
     id: "airplane-wing",
-    label: "Travel / Airplane",
+    label: "Airplane",
     description: "Above The Clouds",
     category: "unrealistic",
     image: u("photo-1488646953014-85cb44e25828"),
