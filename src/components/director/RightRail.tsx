@@ -197,29 +197,35 @@ export function RightRail({ sessionId }: RightRailProps) {
     <>
       <aside
         className={cn(
-          "hidden lg:flex flex-col gap-2 transition-all duration-200 sticky top-4 self-start max-h-[calc(100vh-100px)]",
-          collapsed
-            ? "w-12 px-1 py-2 items-center border-l border-white/5 bg-card/30"
-            : "w-[360px] rounded-2xl border border-white/5 bg-[hsl(var(--background))] shadow-2xl shadow-[hsl(var(--brand)/0.05)] overflow-hidden",
+          "hidden lg:flex flex-col transition-all duration-200 sticky top-4 self-start max-h-[calc(100vh-100px)] rounded-2xl border border-white/5 bg-[hsl(var(--background))] shadow-2xl shadow-[hsl(var(--brand)/0.05)]",
+          collapsed ? "w-14 p-2 items-center justify-start" : "w-[360px] overflow-hidden",
         )}
       >
         <button
           type="button"
           onClick={toggleCollapsed}
           className={cn(
-            "inline-flex items-center justify-center w-8 h-8 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors",
-            collapsed ? "self-center" : "absolute top-3 right-3 z-10",
+            "inline-flex items-center justify-center rounded-lg text-muted-foreground hover:text-[hsl(var(--brand))] hover:bg-[hsl(var(--brand)/0.1)] transition-colors",
+            collapsed ? "w-10 h-10" : "absolute top-3 right-3 z-10 w-8 h-8",
           )}
           aria-label={collapsed ? "Expand rail" : "Collapse rail"}
+          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
           {collapsed ? <PanelRightOpen className="w-4 h-4" /> : <PanelRightClose className="w-4 h-4" />}
         </button>
+        {collapsed && (
+          <div className="flex flex-col items-center gap-3 mt-3">
+            <span className="w-2 h-2 rounded-full bg-[hsl(var(--brand))] animate-pulse" aria-hidden />
+            <span className="w-px h-16 bg-gradient-to-b from-[hsl(var(--brand)/0.4)] via-white/10 to-transparent" aria-hidden />
+          </div>
+        )}
         {!collapsed && (
           <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar px-5 py-5 w-full">
             <RailContent messages={messages} />
           </div>
         )}
       </aside>
+
 
 
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
