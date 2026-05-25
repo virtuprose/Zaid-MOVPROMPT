@@ -371,7 +371,7 @@ export const SETTINGS: StudioPreset[] = [
     label: "Restaurant",
     description: "Editorial Dining",
     category: "realistic",
-    image: u("photo-1517248135467-4c7edcad34c4"),
+    image: "/presets/restaurant.png",
     fragment: "Setting: stylish restaurant interior, low warm light, plated food, intimate dinner mood",
   },
   {
