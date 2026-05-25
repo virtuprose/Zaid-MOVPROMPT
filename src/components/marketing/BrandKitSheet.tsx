@@ -407,6 +407,25 @@ export function BrandKitSheet({
             />
           </Card>
 
+          {/* Card — Product basics */}
+          <Card title="Product basics" helper="The essentials shown on every ad.">
+            <Field
+              label="Name"
+              required
+              value={draft.name}
+              onChange={(v) => update("name", v)}
+              placeholder="Acme Sneakers"
+            />
+            <Field
+              label="Tagline"
+              value={draft.tagline ?? ""}
+              onChange={(v) => update("tagline", v || null)}
+              placeholder="Sleep smarter. Run faster."
+              max={60}
+            />
+          </Card>
+
+
           {/* Card 4 — AI fact sheet */}
           <ProductFactSheet
             draft={draft}
