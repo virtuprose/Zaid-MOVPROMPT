@@ -493,7 +493,7 @@ export const SETTINGS: StudioPreset[] = [
     label: "Rooftop",
     description: "Rooftop Heights",
     category: "unrealistic",
-    image: u("photo-1505968409348-bd000797c92e"),
+    image: "/presets/rooftop.png",
     fragment: "Setting: skyscraper rooftop edge, city skyline, dramatic wind and depth",
   },
   {
