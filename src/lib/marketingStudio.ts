@@ -416,7 +416,7 @@ export const SETTINGS: StudioPreset[] = [
   },
   {
     id: "gym",
-    label: "Gym / Studio",
+    label: "Gym",
     description: "Training Floor",
     category: "realistic",
     image: u("photo-1534438327276-14e5300c3a48"),
