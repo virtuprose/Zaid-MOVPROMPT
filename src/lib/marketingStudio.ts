@@ -363,7 +363,7 @@ export const SETTINGS: StudioPreset[] = [
     label: "Coffee shop",
     description: "Café Glow",
     category: "realistic",
-    image: u("photo-1453614512568-c4024d13c247"),
+    image: "/presets/coffee-shop.png",
     fragment: "Setting: cozy café interior, warm pendant lights, latte and laptop on the table",
   },
   {
