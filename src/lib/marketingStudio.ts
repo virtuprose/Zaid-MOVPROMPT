@@ -506,7 +506,7 @@ export const SETTINGS: StudioPreset[] = [
   },
   {
     id: "pool",
-    label: "Pool / Resort",
+    label: "Resort",
     description: "Resort Mode",
     category: "unrealistic",
     image: u("photo-1540541338287-41700207dee6"),
