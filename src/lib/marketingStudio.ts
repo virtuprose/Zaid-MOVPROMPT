@@ -427,7 +427,7 @@ export const SETTINGS: StudioPreset[] = [
     label: "Car interior",
     description: "Golden Hour Drive",
     category: "realistic",
-    image: u("photo-1492144534655-ae79c964c9d7"),
+    image: "/presets/car-interior.png",
     fragment: "Setting: car interior from passenger angle, golden hour spilling through windshield, road blur outside",
   },
   {
