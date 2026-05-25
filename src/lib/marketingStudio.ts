@@ -475,7 +475,7 @@ export const SETTINGS: StudioPreset[] = [
     label: "Sports stadium",
     description: "Stage Lights",
     category: "realistic",
-    image: u("photo-1574629810360-7efbbe195018"),
+    image: "/presets/stadium.png",
     fragment: "Setting: large sports stadium, stage lighting on the field, crowd glow in background",
   },
   {
