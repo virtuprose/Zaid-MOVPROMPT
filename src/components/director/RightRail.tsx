@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import { QuickActionsCard } from "./rail/QuickActionsCard";
 import { ReferenceTrayCard } from "./rail/ReferenceTrayCard";
 import { StoryboardOutlineCard, StoryboardPanel } from "./rail/StoryboardOutlineCard";
-import { SessionHealthCard } from "./rail/SessionHealthCard";
+
 
 interface RightRailProps {
   sessionId?: string;
@@ -118,7 +118,7 @@ function RailContent({ messages }: { messages: any[] }) {
       />
       <StoryboardOutlineCard panels={panels} />
       <ReferenceTrayCard assets={assets} />
-      <SessionHealthCard messages={messages} />
+      
     </div>
   );
 }
