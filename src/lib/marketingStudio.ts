@@ -355,7 +355,7 @@ export const SETTINGS: StudioPreset[] = [
     label: "Kitchen",
     description: "Morning Kitchen",
     category: "realistic",
-    image: u("photo-1556909114-f6e7ad7d3136"),
+    image: "/presets/kitchen.png",
     fragment: "Setting: bright modern kitchen counter, morning sunlight, clean styled background",
   },
   {
