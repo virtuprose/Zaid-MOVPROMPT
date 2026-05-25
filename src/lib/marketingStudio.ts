@@ -525,7 +525,7 @@ export const SETTINGS: StudioPreset[] = [
     label: "Airplane",
     description: "Above The Clouds",
     category: "unrealistic",
-    image: u("photo-1488646953014-85cb44e25828"),
+    image: "/presets/airplane.png",
     fragment: "Setting: surreal travel scene above the clouds, soft pastel light, dreamlike altitude",
   },
   {
