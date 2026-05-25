@@ -1,61 +1,30 @@
-## Problem
+## Redesign: Director Right Rail → "Luminous Focus"
 
-The "Pick the scene" dialog (`PresetPickerDialog`) currently stacks three mode toggles (Preset / Real city / Reference image), then category pills, then search, then a conflict warning, then optional inputs, then a 4‑col preset grid with hover overlays and a "Custom scene" card. Three issues:
+Restyle the `/director` right rail to match the selected prototype. Composition, hierarchy, and motion register copied verbatim; data sources, props, and behavior unchanged.
 
-1. **Confusing hierarchy** — three rows of pill toggles before the user sees a single scene. It's not obvious that "Preset / City / Image" are mutually exclusive ways to answer the same question.
-2. **Noisy cards** — heavy dark gradient bar, secondary description text, hover "Click to use" pill, and a corner check badge all fight for attention. Active state uses a hard amber ring that clashes with the cinematic palette.
-3. **Ugly thumbnails** — uneven aspect, low‑contrast fallbacks, autoplaying videos with no consistent treatment, gradient overlay too opaque.
+### Files to edit
 
-## Goal
+- `src/components/director/RightRail.tsx` — wrap rail in one rounded card with header pulse-dot, body sections, and footer stat bar. Drop the per-section card chrome (`RailSection`) inside the rail; rail becomes a single surface with subtle section labels.
+- `src/components/director/rail/QuickActionsCard.tsx` — 2-col grid of vertical icon tiles (icon chip on top, label below). Cyan-tinted chip for primary actions, amber-tinted chip for export.
+- `src/components/director/rail/StoryboardOutlineCard.tsx` — convert grid to vertical timeline: left rail gradient line, numbered circular nodes (cyan filled = active, ghost = pending, amber-ringed = attention/failed), right-side panel with title + status meta.
+- `src/components/director/rail/ReferenceTrayCard.tsx` — feature the first asset as a hero 16:9 card with stacked "shadow card" behind it, gradient overlay, label + sublabel bottom-left, small action chip top-right. Filter chips (All/Uploaded/Generated) move above the hero card as compact pills.
+- `src/components/director/rail/RailSection.tsx` — simplify to a flat label row (small color bar + uppercase title + chevron), no border/card; outer rail provides the container.
+- `src/index.css` — add `.custom-scrollbar` (4px, transparent track, cyan/10 thumb on hover) and a soft cyan shadow utility for the rail container.
 
-A calmer, more cinematic picker where the answer to "where does this ad take place?" is one decision, the mode choice fades into the background until needed, and the scene thumbnails carry the page.
+### Locked tokens (from selected direction)
 
-## Redesign approach (two-column layout)
+- Surface: `bg-[hsl(var(--background))]` (#0a0a0f), card surface `#141420`, border `border-white/5`.
+- Accents: cyan `hsl(190 90% 50%)` (primary) for active/live, amber `hsl(35 90% 55%)` for attention/export.
+- Typography: keep project's `font-display` (Space Grotesk) for headings — visually equivalent to Sora and avoids introducing a new font family. Body stays Inter.
+- Radii: rail `rounded-2xl`, inner cards `rounded-xl`.
+- Motion: 2s `animate-pulse` dot in header; 150ms color transitions on hover; no layout animation.
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│  PICK THE SCENE                              [search]    ✕  │
-│  Where does the ad take place?                              │
-├──────────────┬──────────────────────────────────────────────┤
-│              │                                              │
-│  ◉ Preset    │   [scene]  [scene]  [scene]  [scene]         │
-│  ○ Real city │   [scene]  [scene]  [scene]  [scene]         │
-│  ○ Reference │   [scene]  [scene]  [scene]  [+ custom]      │
-│              │                                              │
-│  ── Filter ──│                                              │
-│  All         │                                              │
-│  Real        │                                              │
-│  Stylized    │                                              │
-│              │                                              │
-├──────────────┴──────────────────────────────────────────────┤
-│                                       [Cancel]  [Use scene] │
-└─────────────────────────────────────────────────────────────┘
-```
+### Footer stat bar
 
-- **Left rail (sticky, ~200px)** — radio-style mode picker with a one-line helper under each, then category filter below a divider. Search moves to the header. Replaces the 3 stacked toggle rows.
-- **Right pane** — full bleed scene grid (3 cols at this width, 4 at ≥xl). City and Reference modes swap the grid for a single focused panel (large input + suggestions, or upload zone).
-- **Conflict banner** only appears when actually conflicting, inline above the right pane.
+Replaces the removed Session Health card. Pulls live values already in scope: scene count (from derived `panels.length`), runtime placeholder (sum of estimated shot durations if available, else hide), and a "Live" pill bound to session presence.
 
-## Card refresh (the "ugly" part)
+### Out of scope
 
-- Switch from 3:4 to **4:5** aspect — friendlier, less cramped text area.
-- Replace the harsh amber ring with a **soft amber inner border + subtle outer glow** matching the cinematic tokens already in `index.css`.
-- Drop the hover "Click to use" pill — replace with a quiet bottom-corner play/check icon.
-- Thumbnail treatment: consistent `object-cover`, lighter gradient (transparent → black/70 over bottom 40%), title in Space Grotesk, description hidden until hover/active to clear visual noise.
-- Video previews: only autoplay the **hovered** card (and the active one), all others show the poster image — kills the "12 videos playing at once" chaos.
-- Custom card visually distinct: dashed border, plus icon centered, no thumbnail.
-
-## Empty / no-match state
-
-Centered illustration + "No scenes match 'rooftop bar' — try a different word or pick a real city" with a one-click "Switch to Real city" CTA.
-
-## Files to touch
-
-- `src/components/marketing/PresetPickerDialog.tsx` — restructure into left rail + right pane, refresh card markup.
-- No changes to props / call sites in `src/pages/MarketingStudio.tsx`.
-
-## Open question
-
-Want me to (a) apply this same layout to the other picker that uses `PresetPickerDialog` (the formats dialog, which has no mode toggle and would just get the card refresh), or (b) keep the formats dialog as is and only redesign the scene one? Default if you don't answer: **(a)** — consistent picker across the studio.
-
-After approval I'll generate 3 rendered design directions for the new card + layout so you can pick the exact look before I implement.
+- No changes to data fetching (`useSessionMessages`), quick-action event dispatch, or storyboard panel derivation.
+- Mobile Sheet variant inherits the new `RailContent` automatically; no separate work.
+- Other pages and the cinematic hero are untouched.
