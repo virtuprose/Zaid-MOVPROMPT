@@ -49,7 +49,7 @@ export function buildShareUrl(slug: string): string {
 
 export async function fetchSharedPrompt(slug: string) {
   const { data, error } = await supabase
-    .from("shared_prompts")
+    .from("shared_prompts_public")
     .select("slug,title,workflow_type,target_model,agent_name,results,view_count,created_at,expires_at,featured")
     .eq("slug", slug)
     .maybeSingle();
