@@ -419,7 +419,7 @@ export const SETTINGS: StudioPreset[] = [
     label: "Gym",
     description: "Training Floor",
     category: "realistic",
-    image: u("photo-1534438327276-14e5300c3a48"),
+    image: "/presets/gym.png",
     fragment: "Setting: modern gym, dramatic side light, polished floor, athletic energy",
   },
   {
