@@ -411,7 +411,7 @@ export const SETTINGS: StudioPreset[] = [
     label: "Workshop",
     description: "Maker's Bench",
     category: "realistic",
-    image: u("photo-1556139943-4bdca53adf1e"),
+    image: "/presets/workshop.png",
     fragment: "Setting: artisan workshop, tools laid out on wood bench, warm task lighting, hands-on craft mood",
   },
   {
