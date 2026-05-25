@@ -379,7 +379,7 @@ export const SETTINGS: StudioPreset[] = [
     label: "Hotel suite",
     description: "Hotel Skyline",
     category: "realistic",
-    image: u("photo-1611892440504-42a792e24d32"),
+    image: "/presets/hotel-suite.png",
     fragment: "Setting: luxe hotel suite, floor-to-ceiling windows, city view, soft ambient light",
   },
   {
