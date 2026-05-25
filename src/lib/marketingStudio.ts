@@ -467,7 +467,7 @@ export const SETTINGS: StudioPreset[] = [
     label: "Outdoor sunlit",
     description: "Editorial Sun",
     category: "realistic",
-    image: u("photo-1500964757637-c85e8a162699"),
+    image: "/presets/outdoor-sunlit.png",
     fragment: "Setting: open outdoor location, hard editorial sunlight, deep clean shadows",
   },
   {
