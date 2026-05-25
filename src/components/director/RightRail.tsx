@@ -109,19 +109,53 @@ function RailContent({ messages }: { messages: any[] }) {
   const hasStoryboard = panels.length > 0;
 
   return (
-    <div className="flex flex-col gap-2">
-      <QuickActionsCard
-        hasMessages={hasMessages}
-        hasImages={hasImages}
-        hasStoryboard={hasStoryboard}
-        messages={messages}
-      />
-      <StoryboardOutlineCard panels={panels} />
-      <ReferenceTrayCard assets={assets} />
-      
+    <div className="flex flex-col h-full">
+      {/* Header */}
+      <div className="flex items-center justify-between pb-3 mb-1 border-b border-white/5">
+        <h2 className="text-[10px] tracking-[0.2em] text-[hsl(var(--brand))] font-bold uppercase">
+          Director Sidebar
+        </h2>
+        <div
+          className="h-2 w-2 rounded-full bg-[hsl(var(--brand))] animate-pulse"
+          aria-label="Session live"
+        />
+      </div>
+
+      {/* Sections */}
+      <div className="flex flex-col gap-6 py-3">
+        <QuickActionsCard
+          hasMessages={hasMessages}
+          hasImages={hasImages}
+          hasStoryboard={hasStoryboard}
+          messages={messages}
+        />
+        <StoryboardOutlineCard panels={panels} />
+        <ReferenceTrayCard assets={assets} />
+      </div>
+
+      {/* Footer stats */}
+      <div className="mt-auto pt-3 border-t border-white/5 flex items-center justify-between">
+        <div className="flex gap-4">
+          <div>
+            <p className="text-[10px] text-muted-foreground/60 uppercase tracking-wider">Shots</p>
+            <p className="text-xs font-bold text-foreground tabular-nums">{panels.length}</p>
+          </div>
+          <div>
+            <p className="text-[10px] text-muted-foreground/60 uppercase tracking-wider">Assets</p>
+            <p className="text-xs font-bold text-foreground tabular-nums">{assets.length}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[hsl(var(--brand)/0.1)] border border-[hsl(var(--brand)/0.2)]">
+          <span className="w-1.5 h-1.5 rounded-full bg-[hsl(var(--brand))] animate-pulse" />
+          <span className="text-[9px] font-bold text-[hsl(var(--brand))] uppercase tracking-wider">
+            Live
+          </span>
+        </div>
+      </div>
     </div>
   );
 }
+
 
 export function RightRail({ sessionId }: RightRailProps) {
   const messages = useSessionMessages(sessionId);
