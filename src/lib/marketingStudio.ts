@@ -403,7 +403,7 @@ export const SETTINGS: StudioPreset[] = [
     label: "Industrial loft",
     description: "Loft Energy",
     category: "realistic",
-    image: u("photo-1554995207-c18c203602cb"),
+    image: "/presets/industrial-loft.png",
     fragment: "Setting: industrial loft, exposed concrete and brick, oversized windows, moody daylight",
   },
   {
