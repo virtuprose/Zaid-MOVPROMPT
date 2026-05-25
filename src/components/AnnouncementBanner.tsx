@@ -29,9 +29,8 @@ const AnnouncementBanner = () => {
     const fetch = async () => {
       const now = new Date().toISOString();
       const { data } = await supabase
-        .from("announcements")
+        .from("announcements_public")
         .select("id, title, title_ar, message, message_ar, link_url, link_text, link_text_ar, type")
-        .eq("is_active", true)
         .or(`starts_at.is.null,starts_at.lte.${now}`)
         .or(`ends_at.is.null,ends_at.gte.${now}`)
         .order("created_at", { ascending: false });
