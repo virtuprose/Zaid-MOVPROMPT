@@ -435,7 +435,7 @@ export const SETTINGS: StudioPreset[] = [
     label: "Street",
     description: "City Streets",
     category: "realistic",
-    image: u("photo-1502920917128-1aa500764cbd"),
+    image: "/presets/street.png",
     fragment: "Setting: busy urban street, golden hour light, candid passersby in soft background",
   },
   {
