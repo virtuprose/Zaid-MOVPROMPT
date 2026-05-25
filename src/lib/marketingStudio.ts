@@ -451,7 +451,7 @@ export const SETTINGS: StudioPreset[] = [
     label: "Garden",
     description: "Sunlit Greens",
     category: "realistic",
-    image: u("photo-1416879595882-3373a0480b5b"),
+    image: "/presets/garden.png",
     fragment: "Setting: lush garden patio, dappled sunlight through leaves, organic textures",
   },
   {
