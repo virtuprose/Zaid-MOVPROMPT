@@ -1253,6 +1253,54 @@ export type Database = {
       }
     }
     Views: {
+      announcements_public: {
+        Row: {
+          created_at: string | null
+          ends_at: string | null
+          id: string | null
+          is_active: boolean | null
+          link_text: string | null
+          link_text_ar: string | null
+          link_url: string | null
+          message: string | null
+          message_ar: string | null
+          starts_at: string | null
+          title: string | null
+          title_ar: string | null
+          type: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          ends_at?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          link_text?: string | null
+          link_text_ar?: string | null
+          link_url?: string | null
+          message?: string | null
+          message_ar?: string | null
+          starts_at?: string | null
+          title?: string | null
+          title_ar?: string | null
+          type?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          ends_at?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          link_text?: string | null
+          link_text_ar?: string | null
+          link_url?: string | null
+          message?: string | null
+          message_ar?: string | null
+          starts_at?: string | null
+          title?: string | null
+          title_ar?: string | null
+          type?: string | null
+        }
+        Relationships: []
+      }
       preset_preview_meta_public: {
         Row: {
           generated_at: string | null
@@ -1268,6 +1316,90 @@ export type Database = {
           generated_at?: string | null
           preset_id?: string | null
           preview_model?: string | null
+        }
+        Relationships: []
+      }
+      shared_prompts_public: {
+        Row: {
+          agent_name: string | null
+          created_at: string | null
+          expires_at: string | null
+          featured: boolean | null
+          featured_at: string | null
+          results: Json | null
+          slug: string | null
+          target_model: string | null
+          title: string | null
+          view_count: number | null
+          workflow_type: string | null
+        }
+        Insert: {
+          agent_name?: string | null
+          created_at?: string | null
+          expires_at?: string | null
+          featured?: boolean | null
+          featured_at?: string | null
+          results?: Json | null
+          slug?: string | null
+          target_model?: string | null
+          title?: string | null
+          view_count?: number | null
+          workflow_type?: string | null
+        }
+        Update: {
+          agent_name?: string | null
+          created_at?: string | null
+          expires_at?: string | null
+          featured?: boolean | null
+          featured_at?: string | null
+          results?: Json | null
+          slug?: string | null
+          target_model?: string | null
+          title?: string | null
+          view_count?: number | null
+          workflow_type?: string | null
+        }
+        Relationships: []
+      }
+      welcome_popups_public: {
+        Row: {
+          created_at: string | null
+          id: string | null
+          image_url: string | null
+          is_active: boolean | null
+          link_text: string | null
+          link_text_ar: string | null
+          link_url: string | null
+          message: string | null
+          message_ar: string | null
+          title: string | null
+          title_ar: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string | null
+          image_url?: string | null
+          is_active?: boolean | null
+          link_text?: string | null
+          link_text_ar?: string | null
+          link_url?: string | null
+          message?: string | null
+          message_ar?: string | null
+          title?: string | null
+          title_ar?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string | null
+          image_url?: string | null
+          is_active?: boolean | null
+          link_text?: string | null
+          link_text_ar?: string | null
+          link_url?: string | null
+          message?: string | null
+          message_ar?: string | null
+          title?: string | null
+          title_ar?: string | null
         }
         Relationships: []
       }

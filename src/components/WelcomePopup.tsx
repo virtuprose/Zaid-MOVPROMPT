@@ -33,9 +33,8 @@ const WelcomePopup = () => {
     let cancelled = false;
     (async () => {
       const { data } = await supabase
-        .from("welcome_popups")
+        .from("welcome_popups_public")
         .select("*")
-        .eq("is_active", true)
         .limit(1)
         .maybeSingle();
       if (cancelled) return;
