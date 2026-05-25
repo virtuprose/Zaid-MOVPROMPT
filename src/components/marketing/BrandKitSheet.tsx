@@ -227,23 +227,6 @@ export function BrandKitSheet({
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
-          {/* Card 1 — Product basics */}
-          <Card title="Product basics" helper="The essentials shown on every ad.">
-            <Field
-              label="Name"
-              required
-              value={draft.name}
-              onChange={(v) => update("name", v)}
-              placeholder="Acme Sneakers"
-            />
-            <Field
-              label="Tagline"
-              value={draft.tagline ?? ""}
-              onChange={(v) => update("tagline", v || null)}
-              placeholder="Sleep smarter. Run faster."
-              max={60}
-            />
-          </Card>
 
           {/* Card 2 — Visuals */}
           <Card
