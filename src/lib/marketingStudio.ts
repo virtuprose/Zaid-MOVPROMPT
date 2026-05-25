@@ -387,7 +387,7 @@ export const SETTINGS: StudioPreset[] = [
     label: "Office desk",
     description: "Daylit Studio",
     category: "realistic",
-    image: u("photo-1497366216548-37526070297c"),
+    image: "/presets/office.png",
     fragment: "Setting: minimalist modern office desk, daylight from large window, focused workspace styling",
   },
   {
