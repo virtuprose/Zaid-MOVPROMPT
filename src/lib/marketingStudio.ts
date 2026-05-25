@@ -459,7 +459,7 @@ export const SETTINGS: StudioPreset[] = [
     label: "Nature",
     description: "Open Trail",
     category: "realistic",
-    image: u("photo-1441974231531-c6227db76b6e"),
+    image: "/presets/nature.png",
     fragment: "Setting: outdoors in nature, soft wind, dappled sunlight through leaves or open sky",
   },
   {
