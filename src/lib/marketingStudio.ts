@@ -517,7 +517,7 @@ export const SETTINGS: StudioPreset[] = [
     label: "City night",
     description: "Neon & Rain",
     category: "unrealistic",
-    image: u("photo-1480714378408-67cf0d13bc1b"),
+    image: "/presets/city-night.png",
     fragment: "Setting: neon-lit city street at night, wet asphalt reflections, cinematic anamorphic glow",
   },
   {
