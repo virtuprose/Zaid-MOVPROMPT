@@ -509,7 +509,7 @@ export const SETTINGS: StudioPreset[] = [
     label: "Resort",
     description: "Resort Mode",
     category: "unrealistic",
-    image: u("photo-1540541338287-41700207dee6"),
+    image: "/presets/resort.png",
     fragment: "Setting: infinity pool at a luxury resort, turquoise water, palm shadows, golden hour",
   },
   {
