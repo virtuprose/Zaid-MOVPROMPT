@@ -483,7 +483,7 @@ export const SETTINGS: StudioPreset[] = [
     label: "Studio",
     description: "Studio Polish",
     category: "realistic",
-    image: u("photo-1547499389-92d9b95a5c5f"),
+    image: "/presets/studio.png",
     fragment: "Setting: seamless studio backdrop, two-light commercial setup, premium ad gloss",
   },
 
