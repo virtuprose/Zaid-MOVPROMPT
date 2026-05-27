@@ -236,10 +236,16 @@ export const SceneMentionTextarea = forwardRef<SceneMentionTextareaHandle, Scene
             )}
           </PopoverContent>
 
-          {/* Bottom pill + helper text removed — autocomplete opens automatically when the user types '@'. */}
         </Popover>
+        {elements.length > 0 && (
+          <p className="text-[11px] text-muted-foreground leading-relaxed">
+            💡 Type <span className="font-mono text-primary">@</span> followed by an element number to reference it
+            {" "}(e.g. <span className="font-mono text-primary">@2</span> should turn toward camera).
+          </p>
+        )}
       </div>
     );
+
   },
 );
 
