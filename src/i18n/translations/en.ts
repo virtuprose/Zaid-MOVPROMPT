@@ -37,18 +37,18 @@ export const en = {
   "auth.continueApple": "Continue with Apple",
   "auth.or": "or",
   "auth.mobileBrand": "Sign in to save your prompts & unlock full access",
-  "auth.heroTitle": "Turn Stills Into",
-  "auth.heroCinema": "Cinema",
-  "auth.heroDesc": "Drop a frame. Pick a style. Get a cinematic prompt ready to paste into Kling, Seedance, Veo, or any AI video tool — in seconds.",
-  "auth.trusted": "Used by filmmakers, creators, and AI video artists worldwide",
+  "auth.heroTitle": "Where Frames",
+  "auth.heroCinema": "Become Films",
+  "auth.heroDesc": "A still is a beginning. Hand it to the Director — get a cinematic prompt, shot-listed and ready for Kling, Seedance, Veo, or any AI video model.",
+  "auth.trusted": "Trusted by filmmakers, creatives, and AI video artists worldwide.",
 
   // Auth features
-  "auth.feat.dop.title": "Your AI Cinematographer",
-  "auth.feat.dop.desc": "Drop any image — get a director-grade video prompt crafted for the model you choose.",
-  "auth.feat.workflows.title": "One Image, Three Workflows",
-  "auth.feat.workflows.desc": "Single shot, smooth transition, or full storyboard — every creative direction covered.",
-  "auth.feat.save.title": "Your Prompt Library",
-  "auth.feat.save.desc": "Every prompt saved automatically. Revisit, remix, and reuse your best cinematic ideas.",
+  "auth.feat.dop.title": "A Director on Call",
+  "auth.feat.dop.desc": "Every frame read like a cinematographer would read it — composition, light, lens, mood — translated into prompts built for your chosen model.",
+  "auth.feat.workflows.title": "Three Ways to Tell It",
+  "auth.feat.workflows.desc": "A single shot, a graceful transition, or a full storyboard. Choose the form your story wants to take.",
+  "auth.feat.save.title": "Your Cutting Room",
+  "auth.feat.save.desc": "Every prompt archived the moment it's written. Return, rework, and remix your best cinematic instincts.",
 
   // Auth toasts
   "toast.resetFailed": "Reset failed",
