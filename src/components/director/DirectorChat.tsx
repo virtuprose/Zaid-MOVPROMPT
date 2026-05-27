@@ -2641,7 +2641,8 @@ function DirectorChatInner() {
             }
             if (!isUser) return null;
             return (
-              <Message key={i} from="user" className="items-end">
+              <div key={i} className="group/userturn relative flex flex-col items-end gap-1">
+                <Message from="user" className="items-end">
                 <MessageContent
                   className={cn(
                     "rounded-2xl bg-muted/40 border border-border/40 px-4 py-2 text-sm",
