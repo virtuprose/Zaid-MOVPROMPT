@@ -1995,6 +1995,7 @@ function DirectorChatInner() {
   const typingTimer = useRef<number | null>(null);
   const idleTimer = useRef<number | null>(null);
   const idleNudgedRef = useRef(false);
+  const adSuggestedRef = useRef(false);
 
   // Rotate mood lines when idle
   useEffect(() => {
