@@ -300,7 +300,7 @@ function DirectorChatInner() {
     (async () => {
       const { data, error } = await supabase
         .from("director_sessions")
-        .select("id, messages")
+        .select("id, messages, title")
         .eq("id", routeSessionId)
         .maybeSingle();
       if (error || !data) {
@@ -311,6 +311,16 @@ function DirectorChatInner() {
       sessionIdRef.current = data.id;
       const loaded = (data.messages as Bubble[]) || [WELCOME];
       const remote = loaded.length ? loaded : [WELCOME];
+      // Backfill auto-title for legacy "Untitled brief" sessions.
+      if (!data.title || data.title === "Untitled brief") {
+        const auto = autoTitleFromBubbles(remote);
+        if (auto) {
+          void supabase
+            .from("director_sessions")
+            .update({ title: auto })
+            .eq("id", data.id);
+        }
+      }
       // Re-sign storage-backed URLs before they hit the DOM.
       const remoteRefreshed = (await refreshBubbleSignedUrls(remote.slice())) as Bubble[];
       setBubbles((prev) => {
@@ -501,15 +511,29 @@ function DirectorChatInner() {
     return () => window.clearTimeout(handle);
   }, [bubbles, input, attachments, busy, user?.id, localScope]);
 
+  const autoTitleFromBubbles = (list: Bubble[]): string | null => {
+    const firstUser = list.find((b) => b.role === "user") as
+      | { role: "user"; content: string }
+      | undefined;
+    if (!firstUser) return null;
+    const text = (firstUser.content || "")
+      .replace(/@\d+/g, "")
+      .replace(/\s+/g, " ")
+      .trim();
+    if (!text) return null;
+    return text.length > 60 ? `${text.slice(0, 57).trimEnd()}…` : text;
+  };
+
   const persist = async (next: Bubble[], finalPrompt: string | null, title: string | null) => {
     if (!user) return;
     try {
       if (!sessionIdRef.current) {
+        const resolvedTitle = title ?? autoTitleFromBubbles(next) ?? "Untitled brief";
         const { data, error } = await supabase
           .from("director_sessions")
           .insert({
             user_id: user.id,
-            title: title ?? "Untitled brief",
+            title: resolvedTitle,
             messages: next as any,
             final_prompt: finalPrompt,
             brief_context: { attachment_count: attachments.length },
@@ -535,6 +559,7 @@ function DirectorChatInner() {
       console.error("persist session failed", e);
     }
   };
+
 
   const runImageGeneration = async (
     baseBubbles: Bubble[],
