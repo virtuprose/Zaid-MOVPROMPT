@@ -1806,6 +1806,20 @@ function UserAdCard({
         )}
       </div>
       <div className="absolute top-2 right-2 flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+        {onReuse && !broken && (
+          <button
+            type="button"
+            onClick={stop(onReuse)}
+            aria-label="Reuse setup"
+            title="Reuse this setup in the composer"
+            className="h-8 px-2.5 rounded-full bg-black/55 backdrop-blur border border-white/10 grid place-items-center text-white hover:bg-black/75 hover:border-[hsl(35_90%_55%)]/60 hover:text-[hsl(35_90%_55%)] transition"
+          >
+            <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider">
+              <Copy className="h-3 w-3" />
+              Reuse
+            </span>
+          </button>
+        )}
         {onToggleLike && (
           <button
             type="button"
