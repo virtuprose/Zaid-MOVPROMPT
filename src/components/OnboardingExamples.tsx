@@ -45,8 +45,12 @@ export const OnboardingExamples = ({ onPick }: OnboardingExamplesProps) => {
               height={512}
               className="w-full h-full object-cover transition-transform group-hover:scale-110"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-background/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+            <div className="absolute inset-0 bg-gradient-to-t from-background/85 via-background/20 to-transparent" />
+            <span className="absolute inset-x-1.5 bottom-1.5 text-[11px] font-medium text-foreground/95 leading-tight text-left drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)]">
+              {ex.alt}
+            </span>
           </button>
+
         ))}
       </div>
       <p className="text-xs text-muted-foreground/80 leading-relaxed text-center px-1">
