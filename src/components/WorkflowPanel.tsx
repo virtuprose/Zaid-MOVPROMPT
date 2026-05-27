@@ -38,6 +38,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { getContract, deriveWorkflowType, supportsTimelinePrompting } from "@/lib/modelContracts";
 import { getModelControls } from "@/lib/director/videoModelControls";
+import { writeHandoff } from "@/lib/director/handoff";
+import { Clapperboard as ClapperboardIcon } from "lucide-react";
 import { MODEL_GROUPS, getModelLabel } from "@/lib/models";
 import { parseEdgeFnError, pickErrorKey } from "@/lib/edgeFnError";
 import { detectAllIntents } from "@/lib/sceneIntent";
