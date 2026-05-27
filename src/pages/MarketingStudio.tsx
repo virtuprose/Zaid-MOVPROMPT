@@ -21,6 +21,7 @@ import {
   Trash2,
   CheckCircle2,
   Lock,
+  Copy,
 } from "lucide-react";
 
 import {
