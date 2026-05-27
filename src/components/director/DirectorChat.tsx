@@ -2161,12 +2161,19 @@ function DirectorChatInner() {
         </div>
 
         <div className="text-center">
-          <button
-            onClick={() => navigate("/")}
-            className="text-xs text-muted-foreground hover:text-primary transition-colors"
-          >
-            Want more control? Switch to structured mode →
-          </button>
+          <Tooltip delayDuration={150}>
+            <TooltipTrigger asChild>
+              <button
+                onClick={() => navigate("/")}
+                className="text-xs text-muted-foreground hover:text-primary transition-colors"
+              >
+                Want more control? Switch to structured mode →
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="max-w-[280px] text-xs">
+              Form-based builder: pick subject, framing, lens, lighting, and grade from menus instead of chatting with the Director.
+            </TooltipContent>
+          </Tooltip>
         </div>
       </div>
     );
@@ -2773,12 +2780,19 @@ function DirectorChatInner() {
       </div>
 
       <div className="text-center">
-        <button
-          onClick={() => navigate("/")}
-          className="text-xs text-muted-foreground hover:text-primary transition-colors"
-        >
-          Want more control? Switch to structured mode →
-        </button>
+        <Tooltip delayDuration={150}>
+          <TooltipTrigger asChild>
+            <button
+              onClick={() => navigate("/")}
+              className="text-xs text-muted-foreground hover:text-primary transition-colors"
+            >
+              Want more control? Switch to structured mode →
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="top" className="max-w-[280px] text-xs">
+            Form-based builder: pick subject, framing, lens, lighting, and grade from menus instead of chatting with the Director.
+          </TooltipContent>
+        </Tooltip>
       </div>
 
       <AlertDialog open={resetOpen} onOpenChange={setResetOpen}>
