@@ -176,6 +176,15 @@ export default function MarketingStudio() {
   const [flashChips, setFlashChips] = useState(false);
   const composerRef = useRef<HTMLDivElement | null>(null);
   const galleryRef = useRef<HTMLElement | null>(null);
+  const userNoteRef = useRef<HTMLTextAreaElement | null>(null);
+  // Auto-resize the textarea when userNote changes programmatically
+  // (voice dictation, Reuse pre-fill, etc.) — typing is handled by onInput.
+  useEffect(() => {
+    const el = userNoteRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = Math.min(el.scrollHeight, 140) + "px";
+  }, [userNote]);
   const sessionJobIdsRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
