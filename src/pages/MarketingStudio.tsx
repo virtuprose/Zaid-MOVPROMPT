@@ -1219,8 +1219,7 @@ export default function MarketingStudio() {
                   <TooltipContent side="top" className="max-w-[260px] text-xs">
                     <div className="font-medium text-foreground">Estimated cost: {estimatedCost} credits</div>
                     <div className="text-muted-foreground mt-0.5">
-                      {renderSettings.duration}s · {renderSettings.resolution} ·{" "}
-                      {location.imagePath ? "Seedance 2.0 (with reference)" : "Seedance v1 Pro"}
+                      {renderSettings.duration}s · {renderSettings.resolution}
                     </div>
                     {creditBalance !== null && (
                       <div className={cn(
