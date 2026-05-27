@@ -1873,7 +1873,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
 
   return (
     <div className="w-full max-w-[720px] mx-auto">
-      <div className="space-y-6 pb-28">
+      <div className="space-y-6" style={{ paddingBottom: stickyBarHeight > 0 ? stickyBarHeight + 24 : 112 }}>
         <div className="flex items-center justify-center gap-2" aria-label={`Step ${stepInfo.n} of 3: ${stepInfo.label}`}>
           {[1, 2, 3].map((s) => {
             const active = stepInfo.n === s;
