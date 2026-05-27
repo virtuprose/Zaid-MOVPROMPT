@@ -425,6 +425,21 @@ export default function MarketingStudio() {
       toast.error("Pick a format and scene first.");
       return;
     }
+    // Pre-flight wallet check — avoid sending users through the rights modal
+    // only to bounce on insufficient credits at submit time.
+    if (creditBalance !== null && creditBalance < estimatedCost) {
+      toast.error(
+        `Not enough credits — you have ${creditBalance}, this render needs ${estimatedCost}.`,
+        {
+          action: {
+            label: "Top up",
+            onClick: () => navigate("/account/billing"),
+          },
+        }
+      );
+      void refreshCredits();
+      return;
+    }
     const risk = computeAccuracyRisk();
     const acked = sessionStorage.getItem(ACCURACY_ACK_KEY) === "1";
     if (!acked && (risk.level === "high" || risk.level === "medium") && risk.risks.length > 0) {
