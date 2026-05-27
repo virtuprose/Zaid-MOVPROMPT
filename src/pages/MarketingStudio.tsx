@@ -84,36 +84,12 @@ import { estimateVideoCost, usePricing } from "@/lib/credits/pricing";
 import { CostChip } from "@/components/credits/CostChip";
 import { notifyInsufficientCredits } from "@/lib/credits/insufficient";
 import { useCredits } from "@/hooks/useCredits";
-import loopKitchen from "@/assets/loop-kitchen.mp4.asset.json";
-import loopCyberpunk from "@/assets/loop-cyberpunk.mp4.asset.json";
-import loopDesert from "@/assets/loop-desert.mp4.asset.json";
-import loopPortrait from "@/assets/loop-portrait.mp4.asset.json";
-import loopTokyo from "@/assets/loop-tokyo.mp4.asset.json";
-import loopUnderwater from "@/assets/loop-underwater.mp4.asset.json";
 
 const RIGHTS_KEY = "vidoprompt:rights-ack";
 const ACCURACY_ACK_KEY = "vidoprompt:accuracy-ack";
 const find = (list: StudioPreset[], id?: string) =>
   id ? list.find((p) => p.id === id) : undefined;
 
-type FeaturedAd = {
-  url: string;
-  handle: string;
-  likes: number;
-  tag: "Product" | "App" | "UGC" | "Cinematic";
-  template: { formatId: string; hookId: string; settingId: string };
-};
-
-const FEATURED_ADS: FeaturedAd[] = [
-  { url: loopKitchen.url, handle: "@chefnova", likes: 1284, tag: "Product", template: { formatId: "product-hit", hookId: "first-line", settingId: "kitchen" } },
-  { url: loopCyberpunk.url, handle: "@neonlab", likes: 942, tag: "Cinematic", template: { formatId: "hyper-motion", hookId: "pov-reveal", settingId: "street" } },
-  { url: loopPortrait.url, handle: "@rae.studio", likes: 2103, tag: "UGC", template: { formatId: "ugc", hookId: "talking-avatar", settingId: "bedroom" } },
-  { url: loopTokyo.url, handle: "@tokyo.frame", likes: 765, tag: "Cinematic", template: { formatId: "hyper-motion", hookId: "pov-reveal", settingId: "rooftop" } },
-  { url: loopDesert.url, handle: "@wandr", likes: 1556, tag: "Product", template: { formatId: "before-after", hookId: "product-hit", settingId: "nature" } },
-  { url: loopUnderwater.url, handle: "@deepblue", likes: 689, tag: "App", template: { formatId: "tutorial", hookId: "spicy", settingId: "studio" } },
-];
-
-const FILTERS = ["All", "Product", "App", "UGC", "Cinematic"] as const;
 
 type UserAd = { id: string; video_url: string; created_at: string; liked: boolean; prompt?: string | null; metadata?: Record<string, any> | null };
 
@@ -146,7 +122,7 @@ export default function MarketingStudio() {
   const [settingId, setSettingId] = useState<string | undefined>();
   const [customSetting, setCustomSetting] = useState<string>("");
   const [location, setLocation] = useState<LocationInput>(EMPTY_LOCATION);
-  const [filter, setFilter] = useState<(typeof FILTERS)[number]>("All");
+  
 
   const [openPicker, setOpenPicker] = useState<"format" | "location" | null>(null);
   const [placeMode, setPlaceMode] = useState<"preset" | "city" | "image">("preset");
@@ -196,7 +172,7 @@ export default function MarketingStudio() {
   const [deleteAdId, setDeleteAdId] = useState<string | null>(null);
   const [previewAd, setPreviewAd] = useState<UserAd | null>(null);
   const [cancelJobId, setCancelJobId] = useState<string | null>(null);
-  const [showCommunity, setShowCommunity] = useState(false);
+  const [userAdsLoaded, setUserAdsLoaded] = useState(false);
   const [flashChips, setFlashChips] = useState(false);
   const composerRef = useRef<HTMLDivElement | null>(null);
   const galleryRef = useRef<HTMLElement | null>(null);
@@ -236,6 +212,7 @@ export default function MarketingStudio() {
       if (active && active.length > 0) {
         setPendingJobs(active as unknown as VideoJob[]);
       }
+      setUserAdsLoaded(true);
     })();
     return () => { cancelled = true; };
   }, [user]);
@@ -742,23 +719,11 @@ export default function MarketingStudio() {
     });
   };
 
-  const filteredAds = FEATURED_ADS.filter(
-    (a) => filter === "All" || a.tag === filter,
-  );
-
   const adCount = userAds.length;
   const totalCount = adCount + pendingJobs.length;
   const mode: "empty" | "mixed" | "full" =
     totalCount === 0 ? "empty" : totalCount < 10 ? "mixed" : "full";
 
-  const applyTemplate = (tpl: { formatId: string; hookId?: string; settingId: string }) => {
-    setFormatId(tpl.formatId);
-    setSettingId(tpl.settingId);
-    setFlashChips(true);
-    window.setTimeout(() => setFlashChips(false), 900);
-    composerRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    toast.success("Template loaded — tweak and generate.");
-  };
 
   const missingHint = !hasInputs
     ? needsProduct
@@ -1321,20 +1286,13 @@ export default function MarketingStudio() {
 
           {/* Ads gallery */}
           <section ref={galleryRef} className="mt-8 scroll-mt-20 max-w-5xl mx-auto">
-            {mode === "empty" && (
-              <>
-                <SectionHeader
-                  title="Ads made with Ads Studio"
-                  subtitle="New to Ads Studio? Click any template below to start."
-                  right={
-                    <FilterTabs value={filter} onChange={setFilter} />
-                  }
-                />
-                <CommunityGrid
-                  ads={filteredAds}
-                  onPick={(ad) => applyTemplate(ad.template)}
-                />
-              </>
+            {mode === "empty" && userAdsLoaded && (
+              <div className="rounded-2xl border border-dashed border-border/50 bg-secondary/20 px-6 py-10 text-center">
+                <h2 className="text-base font-semibold text-foreground">No ads yet</h2>
+                <p className="mt-1.5 text-sm text-muted-foreground">
+                  Attach a product or avatar above, pick a format, and hit Generate.
+                </p>
+              </div>
             )}
 
             {mode === "mixed" && (
@@ -1670,33 +1628,6 @@ function SectionHeader({
   );
 }
 
-function FilterTabs({
-  value,
-  onChange,
-}: {
-  value: (typeof FILTERS)[number];
-  onChange: (v: (typeof FILTERS)[number]) => void;
-}) {
-  return (
-    <div className="flex items-center gap-1 rounded-full bg-muted/30 p-1">
-      {FILTERS.map((f) => (
-        <button
-          key={f}
-          type="button"
-          onClick={() => onChange(f)}
-          className={cn(
-            "px-3 py-1 text-xs rounded-full transition-colors",
-            value === f
-              ? "bg-background text-foreground border border-border/60"
-              : "text-muted-foreground hover:text-foreground",
-          )}
-        >
-          {f}
-        </button>
-      ))}
-    </div>
-  );
-}
 
 function ToggleTab({
   active,
@@ -1723,56 +1654,6 @@ function ToggleTab({
   );
 }
 
-function CommunityCard({ ad, onClick }: { ad: FeaturedAd; onClick: () => void }) {
-  return (
-    <article
-      onClick={onClick}
-      className="group relative overflow-hidden rounded-2xl border border-border/40 bg-muted/10 cursor-pointer transition-all hover:border-[hsl(35_90%_55%)]/60 hover:shadow-[0_0_24px_hsl(35_90%_55%/0.25)]"
-    >
-      <div className="aspect-[3/4] overflow-hidden">
-        <video
-          src={ad.url}
-          autoPlay
-          muted
-          loop
-          playsInline
-          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-        />
-      </div>
-      <div className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-black/60 backdrop-blur text-[10px] uppercase tracking-wide text-white/90">
-        {ad.tag}
-      </div>
-      <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
-        <span className="px-3 py-1.5 rounded-full bg-[hsl(35_90%_55%)] text-black text-xs font-semibold">
-          Click to use as template
-        </span>
-      </div>
-      <div className="absolute bottom-0 inset-x-0 p-3 bg-gradient-to-t from-black/80 to-transparent flex items-center justify-between text-white">
-        <span className="text-sm font-medium">{ad.handle}</span>
-        <span className="inline-flex items-center gap-1 text-xs">
-          <Heart className="w-3.5 h-3.5 fill-current" />
-          {ad.likes.toLocaleString()}
-        </span>
-      </div>
-    </article>
-  );
-}
-
-function CommunityGrid({
-  ads,
-  onPick,
-}: {
-  ads: FeaturedAd[];
-  onPick: (ad: FeaturedAd) => void;
-}) {
-  return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-      {ads.map((ad) => (
-        <CommunityCard key={ad.url} ad={ad} onClick={() => onPick(ad)} />
-      ))}
-    </div>
-  );
-}
 
 function UserAdCard({
   ad,
