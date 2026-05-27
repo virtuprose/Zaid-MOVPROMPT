@@ -1050,11 +1050,23 @@ export default function MarketingStudio() {
                   const provider = location.imagePath ? "seedance-2.0" : "seedance-v1-pro";
                   const cost = estimateVideoCost(prices, provider, renderSettings.duration);
                   return (
-                    <CostChip
-                      amount={cost}
-                      prefix="≈"
-                      title={`Estimated ${cost} credits for ${renderSettings.duration}s render`}
-                    />
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="cursor-help">
+                          <CostChip amount={cost} prefix="≈" />
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="max-w-[260px] text-xs">
+                        <div className="font-medium text-foreground">Estimated cost: {cost} credits</div>
+                        <div className="text-muted-foreground mt-0.5">
+                          {renderSettings.duration}s · {renderSettings.resolution} ·{" "}
+                          {location.imagePath ? "Seedance 2.0 (with reference)" : "Seedance v1 Pro"}
+                        </div>
+                        <div className="text-muted-foreground/70 mt-1 text-[10px]">
+                          Final cost may vary slightly. Deducted only on successful render.
+                        </div>
+                      </TooltipContent>
+                    </Tooltip>
                   );
                 })()}
                 <Tooltip>
