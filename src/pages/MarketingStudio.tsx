@@ -1024,28 +1024,125 @@ export default function MarketingStudio() {
 
 
               <RenderSettingsPopover value={renderSettings} onChange={setRenderSettings} />
-              <button
-                type="button"
-                onClick={() => setBrandIdentityOpen(true)}
-                className={cn(
-                  "inline-flex items-center gap-1.5 h-9 px-3 rounded-full border text-xs transition-colors",
-                  hasBrandIdentity(brandIdentity)
-                    ? "border-[#F5A524]/50 bg-[#F5A524]/10 text-foreground"
-                    : "border-dashed border-border/60 bg-secondary/30 text-muted-foreground hover:text-foreground hover:border-[#F5A524]/50",
-                )}
-                title="Brand kit: logo, colors, typography, mood"
-              >
-                {brandIdentity?.primary_color && (
-                  <span className="w-3 h-3 rounded-full border border-border/40" style={{ background: brandIdentity.primary_color }} />
-                )}
-                <span>Brand kit</span>
-                {hasBrandIdentity(brandIdentity) && (
-                  <span className="inline-flex items-center gap-1 text-[9px] uppercase tracking-wider text-[#F5A524] font-semibold">
-                    <CheckCircle2 className="w-3 h-3" strokeWidth={2.5} />
-                    On
-                  </span>
-                )}
-              </button>
+              {(() => {
+                const applied = hasBrandIdentity(brandIdentity);
+                const swatches = [
+                  brandIdentity?.primary_color,
+                  ...(brandIdentity?.supporting_colors ?? []),
+                ].filter(Boolean).slice(0, 3) as string[];
+                const filledCount = applied
+                  ? [
+                      brandIdentity?.logo_path,
+                      brandIdentity?.primary_color,
+                      brandIdentity?.typography_vibe,
+                      brandIdentity?.tagline,
+                      brandIdentity?.mood_notes,
+                      brandIdentity?.lighting_style,
+                    ].filter(Boolean).length
+                  : 0;
+                const btn = (
+                  <button
+                    type="button"
+                    onClick={() => setBrandIdentityOpen(true)}
+                    className={cn(
+                      "inline-flex items-center gap-1.5 h-9 pl-1.5 pr-3 rounded-full border text-xs transition-colors",
+                      applied
+                        ? "border-[#F5A524]/50 bg-[#F5A524]/10 text-foreground"
+                        : "border-dashed border-border/60 bg-secondary/30 text-muted-foreground hover:text-foreground hover:border-[#F5A524]/50 pl-3",
+                    )}
+                  >
+                    {applied && brandIdentity?.logo_url ? (
+                      <span className="w-6 h-6 rounded-full bg-white/5 overflow-hidden flex items-center justify-center shrink-0 border border-border/40">
+                        <img src={brandIdentity.logo_url} alt="" className="w-full h-full object-cover" />
+                      </span>
+                    ) : applied && swatches.length > 0 ? (
+                      <span className="flex items-center -space-x-1">
+                        {swatches.map((c, i) => (
+                          <span
+                            key={i}
+                            className="w-3.5 h-3.5 rounded-full border border-border/60"
+                            style={{ background: c, zIndex: 10 - i }}
+                          />
+                        ))}
+                      </span>
+                    ) : null}
+                    <span className="font-medium">Brand kit</span>
+                    {applied ? (
+                      <span className="inline-flex items-center gap-1 text-[9px] uppercase tracking-wider text-[#F5A524] font-semibold">
+                        <CheckCircle2 className="w-3 h-3" strokeWidth={2.5} />
+                        {filledCount}/6
+                      </span>
+                    ) : (
+                      <Plus className="w-3 h-3 opacity-70" />
+                    )}
+                  </button>
+                );
+                if (!applied) {
+                  return (
+                    <Tooltip>
+                      <TooltipTrigger asChild>{btn}</TooltipTrigger>
+                      <TooltipContent side="top" className="max-w-[240px] text-xs">
+                        Add logo, colors, typography, and tone for on-brand renders.
+                      </TooltipContent>
+                    </Tooltip>
+                  );
+                }
+                return (
+                  <HoverCard openDelay={150} closeDelay={80}>
+                    <HoverCardTrigger asChild>{btn}</HoverCardTrigger>
+                    <HoverCardContent side="top" align="start" sideOffset={8} className="w-72 p-3">
+                      <div className="flex items-center gap-2 mb-2">
+                        {brandIdentity?.logo_url ? (
+                          <span className="w-10 h-10 rounded-md bg-black/40 overflow-hidden flex items-center justify-center shrink-0 border border-border/40">
+                            <img src={brandIdentity.logo_url} alt="" className="w-full h-full object-contain" />
+                          </span>
+                        ) : (
+                          <span className="w-10 h-10 rounded-md bg-muted/30 flex items-center justify-center shrink-0">
+                            <Building2 className="w-4 h-4 text-muted-foreground" />
+                          </span>
+                        )}
+                        <div className="min-w-0">
+                          <div className="text-xs font-semibold text-foreground">Brand kit applied</div>
+                          <div className="text-[10px] text-muted-foreground">{filledCount} of 6 fields set</div>
+                        </div>
+                      </div>
+                      {swatches.length > 0 && (
+                        <div className="flex items-center gap-1.5 mb-2">
+                          {swatches.map((c, i) => (
+                            <span key={i} className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                              <span className="w-3 h-3 rounded-full border border-border/40" style={{ background: c }} />
+                              <span className="font-mono">{c}</span>
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      {brandIdentity?.tagline && (
+                        <div className="text-[11px] text-foreground/90 italic line-clamp-2">"{brandIdentity.tagline}"</div>
+                      )}
+                      {(brandIdentity?.typography_vibe || brandIdentity?.lighting_style || brandIdentity?.finish_vibe) && (
+                        <div className="mt-2 flex flex-wrap gap-1">
+                          {brandIdentity?.typography_vibe && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-muted/30 text-muted-foreground">{brandIdentity.typography_vibe}</span>
+                          )}
+                          {brandIdentity?.lighting_style && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-muted/30 text-muted-foreground">{brandIdentity.lighting_style}</span>
+                          )}
+                          {brandIdentity?.finish_vibe && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-muted/30 text-muted-foreground">{brandIdentity.finish_vibe}</span>
+                          )}
+                        </div>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => setBrandIdentityOpen(true)}
+                        className="mt-3 w-full h-7 rounded-md border border-border/50 bg-muted/20 text-[11px] text-foreground/80 hover:text-foreground hover:border-[#F5A524]/50"
+                      >
+                        Edit brand kit
+                      </button>
+                    </HoverCardContent>
+                  </HoverCard>
+                );
+              })()}
 
               <div className="ml-auto flex items-center gap-2">
                 {(() => {
