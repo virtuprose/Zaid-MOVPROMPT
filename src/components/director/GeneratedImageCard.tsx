@@ -743,6 +743,10 @@ export function GeneratedImageCard({ data, onRegenerate, onUnpinSubject, onAnima
 
     <Dialog open={zoomIndex !== null} onOpenChange={(o) => !o && setZoomIndex(null)}>
       <DialogContent className="max-w-[95vw] w-fit p-0 bg-background/95 border-border/40">
+        <VisuallyHidden>
+          <DialogTitle>Image preview</DialogTitle>
+          <DialogDescription>Zoomed view of the generated image. Use arrow keys to navigate.</DialogDescription>
+        </VisuallyHidden>
         {zoomIndex !== null && (
           <div className="relative">
             <img
