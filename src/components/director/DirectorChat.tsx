@@ -2042,6 +2042,12 @@ function DirectorChatInner() {
   const idleNudgedRef = useRef(false);
   const adSuggestedRef = useRef(false);
 
+  // Reset one-shot per-session nudges whenever the user switches/creates a task.
+  useEffect(() => {
+    adSuggestedRef.current = false;
+    idleNudgedRef.current = false;
+  }, [routeSessionId]);
+
   // Rotate mood lines when idle
   useEffect(() => {
     const id = window.setInterval(() => setMoodIndex((n) => (n + 1) % MOOD_LINES.length), 4200);
