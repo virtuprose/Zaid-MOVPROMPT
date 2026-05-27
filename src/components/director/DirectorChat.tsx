@@ -249,6 +249,17 @@ function DirectorChatInner() {
       if (handoff.attachments?.length) {
         setAttachments(handoff.attachments as Attachment[]);
       }
+      setHandoffChip({
+        source: handoff.source,
+        model: handoff.settings?.model,
+        aspect: handoff.settings?.aspect,
+        duration: handoff.settings?.duration,
+      });
+      const sourceLabel = handoff.source === "movprompt" ? "MovPrompt" : "Marketing Studio";
+      toast.success(`Brief received from ${sourceLabel}`, {
+        description: "Your prompt, references, and settings are ready in the composer.",
+        duration: 4000,
+      });
       if (handoff.banner) {
         setBubbles((prev) => {
           // Replace the default welcome with the handoff banner so the entry is contextual.
