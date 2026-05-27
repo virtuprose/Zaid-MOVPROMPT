@@ -189,6 +189,29 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
     return localStorage.getItem(ONBOARDING_DONE_KEY) === "1";
   });
 
+  // Measure the sticky bottom CTA so the scroll container can reserve enough
+  // bottom padding — otherwise the last scene block hides under the bar and
+  // the page feels "locked" at the end.
+  const stickyBarRef = useRef<HTMLDivElement | null>(null);
+  const [stickyBarHeight, setStickyBarHeight] = useState(0);
+  useEffect(() => {
+    const el = stickyBarRef.current;
+    if (!el) {
+      setStickyBarHeight(0);
+      return;
+    }
+    const update = () => setStickyBarHeight(el.getBoundingClientRect().height);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    window.addEventListener("resize", update);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", update);
+    };
+  }, [phase, isLoading, isAnalyzing]);
+
+
   const handlePickExample = useCallback(async (example: OnboardingExample) => {
     try {
       const res = await fetch(example.src);
@@ -1671,8 +1694,9 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
   );
 
   const mobileStickyCta = (phase === "breakdown" || phase === "generate") && !isLoading && !isAnalyzing ? (
-    <div className="fixed inset-x-0 bottom-0 z-40 px-4 pt-3 pb-[calc(env(safe-area-inset-bottom)+12px)] bg-background/95 backdrop-blur-md border-t border-border/60">
-      <div className="max-w-[720px] mx-auto space-y-2">
+    <div ref={stickyBarRef} className="fixed inset-x-0 bottom-0 z-40 px-4 pt-3 pb-[calc(env(safe-area-inset-bottom)+12px)] bg-background/95 backdrop-blur-md border-t border-border/60">
+      <div className="max-w-[720px] mx-auto space-y-2.5">
+
       {(() => {
         const ars = modelControls.aspectRatios ?? [];
         const numericDurations = durationOptions.filter((d): d is number => typeof d === "number");
@@ -1712,11 +1736,11 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
         const activePct = activeIdx >= 0 ? pctFor(activeDurNumeric as number) : 0;
 
         return (
-          <div className="rounded-xl border border-border/60 bg-card/60 backdrop-blur-md p-3 shadow-inner flex flex-wrap items-center gap-x-6 gap-y-3">
+          <div className="rounded-xl border border-border/60 bg-card/60 backdrop-blur-md px-3 py-2 shadow-inner grid gap-x-5 gap-y-2 sm:grid-cols-[auto_1fr] items-center">
             {showAR && (
-              <div className="flex items-center gap-3">
-                <span className="text-[10px] font-bold tracking-[0.18em] uppercase text-muted-foreground font-display">Aspect</span>
-                <div className="flex gap-1 p-1 bg-background/60 rounded-lg border border-border/50" role="group" aria-label="Aspect ratio">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <span className="text-[10px] font-bold tracking-[0.14em] uppercase text-muted-foreground font-display shrink-0">Aspect</span>
+                <div className="flex gap-0.5 bg-background/60 rounded-lg border border-border/50 p-0.5" role="group" aria-label="Aspect ratio">
                   {ars.map((ar) => {
                     const active = targetAspectRatio === ar;
                     return (
@@ -1725,7 +1749,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
                         type="button"
                         onClick={() => setTargetAspectRatio(ar)}
                         aria-pressed={active}
-                        className={`group flex flex-col items-center justify-end gap-1 px-2.5 py-1.5 rounded-md border transition-all min-w-[44px] ${
+                        className={`group flex flex-col items-center justify-end gap-1 px-2 py-1.5 rounded-md border transition-all min-w-[38px] ${
                           active
                             ? "bg-accent/10 border-accent/50"
                             : "border-transparent hover:bg-foreground/5"
@@ -1741,9 +1765,9 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
             )}
 
             {showDur && (
-              <div className="flex-1 min-w-[240px] flex items-center gap-3">
-                <span className="text-[10px] font-bold tracking-[0.18em] uppercase text-muted-foreground font-display shrink-0">Duration</span>
-                <div className="relative flex-1">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <span className="text-[10px] font-bold tracking-[0.14em] uppercase text-muted-foreground font-display shrink-0">Duration</span>
+                <div className="relative flex-1 min-w-0">
                   <div className="relative h-12 w-full px-1">
                     {/* Track */}
                     <div className="absolute left-1 right-1 h-[2px] top-1/2 -translate-y-1/2 bg-border rounded-full overflow-hidden">
@@ -1805,17 +1829,10 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
                 )}
               </div>
             )}
-
-            <div className="ps-4 ms-auto border-s border-border/60 hidden sm:flex flex-col">
-              <span className="text-[9px] font-bold tracking-[0.18em] uppercase text-muted-foreground font-display">Selected</span>
-              <span className="text-base font-bold font-mono tracking-tight text-foreground leading-tight">
-                {showAR && <>{targetAspectRatio}{showDur && <span className="text-accent mx-1">/</span>}</>}
-                {showDur && (isAuto ? <span>Auto</span> : <span>{activeDurNumeric ?? durMin}s</span>)}
-              </span>
-            </div>
           </div>
         );
       })()}
+
       <Button
         size="lg"
         onClick={() => handleGenerate()}
@@ -1856,7 +1873,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
 
   return (
     <div className="w-full max-w-[720px] mx-auto">
-      <div className="space-y-6 pb-28">
+      <div className="space-y-6" style={{ paddingBottom: stickyBarHeight > 0 ? stickyBarHeight + 24 : 112 }}>
         <div className="flex items-center justify-center gap-2" aria-label={`Step ${stepInfo.n} of 3: ${stepInfo.label}`}>
           {[1, 2, 3].map((s) => {
             const active = stepInfo.n === s;
