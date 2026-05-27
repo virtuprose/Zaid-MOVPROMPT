@@ -254,6 +254,8 @@ function DirectorChatInner() {
       }
       if (result.status !== "ok") return;
       const handoff = result.handoff;
+      const { clearHandoff } = await import("@/lib/director/handoff");
+      clearHandoff();
       if (handoff.prompt) setInput(handoff.prompt);
       if (handoff.attachments?.length) {
         setAttachments(handoff.attachments as Attachment[]);
