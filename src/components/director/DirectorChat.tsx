@@ -5,6 +5,7 @@ import { Message, MessageContent } from "@/components/ai-elements/message";
 import { QuestionCard } from "./QuestionCard";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   AlertDialog,
@@ -1766,6 +1767,7 @@ function DirectorChatInner() {
     {
       id: "cinema",
       label: "Cinema",
+      tagline: "Cinematic live-action shots with lens, lighting, and grade.",
       icon: Film,
       prompts: [
         "Slow dolly-in on a neon-lit ramen bar at dusk, anamorphic flares",
@@ -1776,6 +1778,7 @@ function DirectorChatInner() {
     {
       id: "ugc",
       label: "UGC",
+      tagline: "Phone-shot creator content — selfie angles, natural light, product-forward.",
       icon: Megaphone,
       prompts: [
         "Selfie-style product review of my serum with a green-haired creator",
@@ -1786,6 +1789,7 @@ function DirectorChatInner() {
     {
       id: "storyboard",
       label: "Storyboard",
+      tagline: "Multi-shot sequence with locked style across panels.",
       icon: LayoutGrid,
       prompts: [
         "Three-shot intro: establishing wide, medium reveal, close-up emotion",
@@ -1796,6 +1800,7 @@ function DirectorChatInner() {
     {
       id: "animate",
       label: "Animate",
+      tagline: "Stylized animation — 2D, anime, cartoon, or 3D character looks.",
       icon: Wand2,
       prompts: [
         "Anime portrait, soft wind moving hair, 2D Ghibli palette",
@@ -2084,23 +2089,35 @@ function DirectorChatInner() {
               const Icon = c.icon;
               const active = c.id === activeCategory;
               return (
-                <button
-                  key={c.id}
-                  type="button"
-                  onClick={() => setActiveCategory(c.id)}
-                  className={cn(
-                    "inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm transition-all",
-                    active
-                      ? "border border-primary/60 bg-primary/10 text-foreground shadow-[0_0_24px_-8px_hsl(var(--primary)/0.6)]"
-                      : "border border-border/40 bg-muted/10 text-muted-foreground hover:border-border hover:text-foreground hover:-translate-y-0.5",
-                  )}
-                >
-                  <Icon className={cn("w-4 h-4", active ? "text-primary" : "text-muted-foreground")} />
-                  <span>{c.label}</span>
-                </button>
+                <Tooltip key={c.id} delayDuration={150}>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      onClick={() => setActiveCategory(c.id)}
+                      aria-label={`${c.label} — ${c.tagline}`}
+                      className={cn(
+                        "inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm transition-all",
+                        active
+                          ? "border border-primary/60 bg-primary/10 text-foreground shadow-[0_0_24px_-8px_hsl(var(--primary)/0.6)]"
+                          : "border border-border/40 bg-muted/10 text-muted-foreground hover:border-border hover:text-foreground hover:-translate-y-0.5",
+                      )}
+                    >
+                      <Icon className={cn("w-4 h-4", active ? "text-primary" : "text-muted-foreground")} />
+                      <span>{c.label}</span>
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="max-w-[240px] text-xs">
+                    {c.tagline}
+                  </TooltipContent>
+                </Tooltip>
               );
             })}
           </div>
+
+          <p className="text-xs text-muted-foreground/85 leading-snug -mt-1.5">
+            {activeCat.tagline}
+          </p>
+
 
           {/* Suggestions */}
           <div className="flex flex-col">
