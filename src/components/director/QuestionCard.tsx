@@ -198,37 +198,58 @@ export function QuestionCard({ reason, questions, disabled, collapsed, attachmen
                 </div>
               )}
 
-              {!isDuration && suggestion && (
-                <div className="flex flex-wrap gap-1.5">
-                  {suggestion.chips.map((chip) => {
-                    const isImagePromptChip = chip === IMAGE_PROMPT_CHIP;
-                    const active = !isImagePromptChip && isChipActive(value, chip);
-                    return (
+              {!isDuration && suggestion && (() => {
+                const regularChips = suggestion.chips.filter((c) => c !== IMAGE_PROMPT_CHIP);
+                const hasImagePromptChip = suggestion.chips.includes(IMAGE_PROMPT_CHIP);
+                return (
+                  <>
+                    {regularChips.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5">
+                        {regularChips.map((chip) => {
+                          const active = isChipActive(value, chip);
+                          return (
+                            <button
+                              key={chip}
+                              type="button"
+                              onClick={() => setAnswer(i, toggleChip(value, chip))}
+                              className={cn(
+                                "rounded-full px-3 py-1 text-xs border transition-colors",
+                                active
+                                  ? "bg-foreground/10 border-border/50 text-foreground"
+                                  : "bg-transparent border-border/30 text-muted-foreground hover:text-foreground hover:border-border/60",
+                              )}
+                            >
+                              {chip}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                    {hasImagePromptChip && onGenerateImagePrompt && (
+                      <div className="flex items-center gap-3 pt-1">
+                        <div className="h-px flex-1 bg-border/20" />
+                        <span className="text-[10px] uppercase tracking-wider text-muted-foreground/50">
+                          or
+                        </span>
+                        <div className="h-px flex-1 bg-border/20" />
+                      </div>
+                    )}
+                    {hasImagePromptChip && onGenerateImagePrompt && (
                       <button
-                        key={chip}
                         type="button"
-                        onClick={() => {
-                          if (isImagePromptChip && onGenerateImagePrompt) {
-                            onGenerateImagePrompt();
-                            return;
-                          }
-                          setAnswer(i, toggleChip(value, chip));
-                        }}
-                        className={cn(
-                          "rounded-full px-3 py-1 text-xs border transition-colors",
-                          isImagePromptChip
-                            ? "bg-primary/10 border-primary/40 text-foreground hover:bg-primary/20 hover:border-primary/60"
-                            : active
-                            ? "bg-foreground/10 border-border/50 text-foreground"
-                            : "bg-transparent border-border/30 text-muted-foreground hover:text-foreground hover:border-border/60",
-                        )}
+                        onClick={() => onGenerateImagePrompt()}
+                        className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-medium border border-primary/40 bg-primary/10 text-foreground hover:bg-primary/20 hover:border-primary/60 transition-colors"
                       >
-                        {chip}
+                        <Sparkles className="h-3.5 w-3.5 text-primary" />
+                        {IMAGE_PROMPT_CHIP}
+                        <span className="text-[10px] text-muted-foreground/70 font-normal">
+                          — branches to image prompt mode
+                        </span>
                       </button>
-                    );
-                  })}
-                </div>
-              )}
+                    )}
+                  </>
+                );
+              })()}
 
               {(!isDuration || showOther) && (
                 <input
