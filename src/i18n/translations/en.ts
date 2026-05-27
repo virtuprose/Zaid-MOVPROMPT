@@ -574,7 +574,7 @@ export const en = {
 
   // First-signup onboarding
   "onboarding.title": "Welcome to MovPrompt",
-  "onboarding.subtitle": "Three steps to your first cinematic prompt.",
+  "onboarding.subtitle": "A few quick steps to your first cinematic prompt.",
   "onboarding.step1.title": "Drop a frame",
   "onboarding.step1.desc": "Upload any still image — a photo, a screenshot, anything.",
   "onboarding.step2.title": "Let AI direct",
