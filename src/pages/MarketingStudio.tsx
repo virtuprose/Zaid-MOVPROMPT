@@ -154,6 +154,8 @@ export default function MarketingStudio() {
   const [brandEditId, setBrandEditId] = useState<string | null>(null);
   const [characterOpen, setCharacterOpen] = useState(false);
   const [characterEditId, setCharacterEditId] = useState<string | null>(null);
+  const [characterPickerOpen, setCharacterPickerOpen] = useState(false);
+  const autoPromptedFormatRef = useRef<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [accuracyOpen, setAccuracyOpen] = useState(false);
   const [accuracyResult, setAccuracyResult] = useState<AccuracyRiskResult | null>(null);
@@ -305,6 +307,27 @@ export default function MarketingStudio() {
     (formatId || customFormat.trim()) &&
     (sceneLocked || settingId || customSetting.trim() || location.place || location.imagePath)
   );
+
+  // Avatar-format auto-prompt: when the user picks an avatar-category format
+  // with no character attached, surface the picker (or jump straight to the
+  // character editor if they have no saved characters). Only fires once per
+  // format pick so we don't fight the user if they dismiss it.
+  useEffect(() => {
+    if (!formatId) {
+      autoPromptedFormatRef.current = null;
+      return;
+    }
+    if (format?.category !== "avatar") return;
+    if (characterActiveIds.length > 0) return;
+    if (autoPromptedFormatRef.current === formatId) return;
+    autoPromptedFormatRef.current = formatId;
+    if (characterKits.length === 0) {
+      setCharacterEditId(null);
+      setCharacterOpen(true);
+    } else {
+      setCharacterPickerOpen(true);
+    }
+  }, [formatId, format?.category, characterActiveIds.length, characterKits.length]);
 
   // Auto-write the describe box from the current Format/Hook/Setting + brand/avatar/location.
   // Re-runs on every trio change. Aborts in-flight requests when picks change again.
@@ -937,6 +960,8 @@ export default function MarketingStudio() {
                   kits={characterKits}
                   activeIds={characterActiveIds}
                   max={3}
+                  open={characterPickerOpen}
+                  onOpenChange={setCharacterPickerOpen}
                   onSelect={(id) => void toggleCharacterActive(id)}
                   onNew={() => { setCharacterEditId(null); setCharacterOpen(true); }}
                   onEdit={(id) => { setCharacterEditId(id); setCharacterOpen(true); }}
