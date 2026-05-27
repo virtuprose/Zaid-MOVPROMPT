@@ -963,6 +963,8 @@ export default function MarketingStudio() {
                     : "Where the ad takes place — preset scene, real city, or reference image"
                 }
                 disabled={sceneLocked}
+                locked={sceneLocked}
+                lockedReason={`${format?.label || "This format"} bakes in its own scene — no location pick needed.`}
                 onClick={() => {
                   // Pre-select mode based on current state
                   if (location.imagePath) setPlaceMode("image");
