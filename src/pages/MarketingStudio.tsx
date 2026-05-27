@@ -20,6 +20,7 @@ import {
   Download,
   Trash2,
   CheckCircle2,
+  Lock,
 } from "lucide-react";
 
 import {
