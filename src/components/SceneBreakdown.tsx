@@ -236,8 +236,18 @@ export const SceneBreakdown = ({
         </button>
       </div>
 
+      {/* Inline legend so users don't need a tooltip to learn Lock vs Move. */}
+      <p className="text-[11px] text-muted-foreground leading-relaxed -mt-1">
+        <Lock className="inline w-3 h-3 me-1 align-[-2px] text-primary" />
+        <span className="font-medium text-foreground/80">Lock</span> keeps an element identical across the shot.
+        <span className="mx-2 opacity-40">·</span>
+        <Waves className="inline w-3 h-3 me-1 align-[-2px] text-accent" />
+        <span className="font-medium text-foreground/80">Move</span> lets it animate, drift, or react.
+      </p>
+
       {/* @-mention hint moved next to the description textarea (SceneMentionTextarea)
           so users see it where the input actually lives. */}
+
 
 
       {frames.map((frame, frameIdx) => {
