@@ -117,12 +117,39 @@ async function readJsonResponse(resp: Response) {
   }
 }
 
+function stringifyFalDetail(detail: unknown): string | undefined {
+  if (!detail) return undefined;
+  if (typeof detail === "string") return detail;
+  if (Array.isArray(detail)) {
+    // FastAPI 422 shape: [{ loc: [...], msg, type, input }]
+    return detail
+      .map((d: any) => {
+        if (!d) return null;
+        if (typeof d === "string") return d;
+        const loc = Array.isArray(d.loc) ? d.loc.filter((x: any) => x !== "body").join(".") : "";
+        const msg = d.msg || d.message || d.detail;
+        return loc ? `${loc}: ${msg}` : msg;
+      })
+      .filter(Boolean)
+      .join("; ") || undefined;
+  }
+  if (typeof detail === "object") {
+    const d = detail as any;
+    return d.msg || d.message || d.error || JSON.stringify(d);
+  }
+  return String(detail);
+}
+
 function extractFalError(error: unknown): { status?: number; message: string } {
   if (error instanceof Error) {
-    const maybe = error as Error & { status?: number; body?: { detail?: string; error?: string; message?: string } };
+    const maybe = error as Error & { status?: number; body?: { detail?: unknown; error?: unknown; message?: unknown } };
+    const fromBody =
+      stringifyFalDetail(maybe.body?.detail) ||
+      stringifyFalDetail(maybe.body?.error) ||
+      stringifyFalDetail(maybe.body?.message);
     return {
       status: maybe.status,
-      message: maybe.body?.detail || maybe.body?.error || maybe.body?.message || maybe.message,
+      message: fromBody || maybe.message || "Unknown provider error",
     };
   }
   return { message: "Unknown provider error" };
