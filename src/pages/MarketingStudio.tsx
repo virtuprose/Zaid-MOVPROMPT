@@ -84,12 +84,6 @@ import { estimateVideoCost, usePricing } from "@/lib/credits/pricing";
 import { CostChip } from "@/components/credits/CostChip";
 import { notifyInsufficientCredits } from "@/lib/credits/insufficient";
 import { useCredits } from "@/hooks/useCredits";
-import loopKitchen from "@/assets/loop-kitchen.mp4.asset.json";
-import loopCyberpunk from "@/assets/loop-cyberpunk.mp4.asset.json";
-import loopDesert from "@/assets/loop-desert.mp4.asset.json";
-import loopPortrait from "@/assets/loop-portrait.mp4.asset.json";
-import loopTokyo from "@/assets/loop-tokyo.mp4.asset.json";
-import loopUnderwater from "@/assets/loop-underwater.mp4.asset.json";
 
 const RIGHTS_KEY = "vidoprompt:rights-ack";
 const ACCURACY_ACK_KEY = "vidoprompt:accuracy-ack";
