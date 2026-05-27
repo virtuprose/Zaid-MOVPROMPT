@@ -1671,7 +1671,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
 
   const mobileStickyCta = hasRequiredImages && phase === "upload" ? (
     <div className="fixed inset-x-0 bottom-0 z-40 px-4 pt-3 pb-[calc(env(safe-area-inset-bottom)+12px)] bg-background/95 backdrop-blur-md border-t border-border/60">
-      <div className="max-w-[720px] mx-auto">
+      <div className="max-w-[720px] mx-auto space-y-1.5">
       <Button
         size="lg"
         onClick={handleAnalyze}
@@ -1685,11 +1685,17 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
           <><Sparkles className="w-5 h-5 me-2" /> {t("wp.analyzeScene")}</>
         )}
       </Button>
+      <div className="text-center text-[11px] text-muted-foreground/80">
+        <span className="inline-flex items-center gap-1.5">
+          <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500" />
+          Free — no credits charged for prompt generation
+        </span>
+      </div>
       </div>
     </div>
   ) : (phase === "breakdown" || phase === "generate") && !isLoading && !isAnalyzing ? (
     <div className="fixed inset-x-0 bottom-0 z-40 px-4 pt-3 pb-[calc(env(safe-area-inset-bottom)+12px)] bg-background/95 backdrop-blur-md border-t border-border/60">
-      <div className="max-w-[720px] mx-auto">
+      <div className="max-w-[720px] mx-auto space-y-1.5">
       <Button
         size="lg"
         onClick={() => handleGenerate()}
@@ -1702,6 +1708,12 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
           <><Sparkles className="w-4 h-4 me-2" /> {t("wp.generatePrompt")}</>
         )}
       </Button>
+      <div className="text-center text-[11px] text-muted-foreground/80">
+        <span className="inline-flex items-center gap-1.5">
+          <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500" />
+          Free — no credits charged for prompt generation
+        </span>
+      </div>
       </div>
     </div>
   ) : null;
