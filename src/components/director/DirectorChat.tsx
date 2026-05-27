@@ -2253,22 +2253,64 @@ function DirectorChatInner() {
             );
           })()}
 
-          {!isEmpty && (
-            <div className="-mt-3 mb-1 mx-auto w-fit text-[10.5px] text-muted-foreground/80 inline-flex items-center gap-1.5">
-              <span className="inline-flex items-center gap-1">
-                <Sparkles className="h-3 w-3 text-accent/80" />
-                Estimated brief cost
-              </span>
-              <span className="text-foreground/70">
-                ~3–8 cr for frames · ~30–90 cr for final video
-              </span>
-              {pendingApproval && (
-                <span className="ml-1 rounded-full bg-primary/15 text-primary px-2 py-0.5">
-                  Next step: {pendingApproval.cost} cr
+          {!isEmpty && (() => {
+            // Surface the current video engine so the user always knows what will render.
+            let engine: string | null = null;
+            let engineState: "picked" | "recommended" = "recommended";
+            for (let k = bubbles.length - 1; k >= 0; k -= 1) {
+              const b = bubbles[k];
+              if (b.role === "model_choice") {
+                if ((b as any).chosen) {
+                  engine = (b as any).chosen;
+                  engineState = "picked";
+                } else {
+                  engine = b.recommended_model_id;
+                  engineState = "recommended";
+                }
+                break;
+              }
+            }
+            const prettyEngine = engine
+              ? engine
+                  .replace(/^video[-/]/, "")
+                  .replace(/[-_]/g, " ")
+                  .replace(/\b\w/g, (c) => c.toUpperCase())
+              : null;
+            return (
+              <div className="-mt-3 mb-1 mx-auto w-fit text-[10.5px] text-muted-foreground/80 inline-flex items-center gap-1.5 flex-wrap justify-center">
+                <span className="inline-flex items-center gap-1">
+                  <Sparkles className="h-3 w-3 text-accent/80" />
+                  Estimated brief cost
                 </span>
-              )}
-            </div>
-          )}
+                <span className="text-foreground/70">
+                  ~3–8 cr for frames · ~30–90 cr for final video
+                </span>
+                {prettyEngine && (
+                  <span
+                    className={cn(
+                      "ml-1 rounded-full px-2 py-0.5 inline-flex items-center gap-1",
+                      engineState === "picked"
+                        ? "bg-primary/15 text-primary"
+                        : "bg-muted/40 text-muted-foreground",
+                    )}
+                    title={
+                      engineState === "picked"
+                        ? "Selected video engine"
+                        : "Director's recommended video engine — you can change it"
+                    }
+                  >
+                    <Film className="h-3 w-3" />
+                    {engineState === "picked" ? "Engine" : "Likely engine"}: {prettyEngine}
+                  </span>
+                )}
+                {pendingApproval && (
+                  <span className="ml-1 rounded-full bg-primary/15 text-primary px-2 py-0.5">
+                    Next step: {pendingApproval.cost} cr
+                  </span>
+                )}
+              </div>
+            );
+          })()}
 
           {bubbles.map((b, i) => {
             if (firstUserIdx !== -1 && i < firstUserIdx && b.role === "assistant") {
