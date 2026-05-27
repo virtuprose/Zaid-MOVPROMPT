@@ -23,6 +23,8 @@ type Props = {
   reason: string;
   questions: string[];
   disabled?: boolean;
+  /** When true, render a compact read-only summary (no inputs, chips, or buttons). */
+  collapsed?: boolean;
   attachments?: Attachment[];
   onAttach?: (next: Attachment[]) => void;
   onContinue: (formatted: string) => void;
