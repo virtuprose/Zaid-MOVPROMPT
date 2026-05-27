@@ -680,10 +680,17 @@ export default function MarketingStudio() {
     toast.success("Template loaded — tweak and generate.");
   };
 
+  const missingHint = !hasInputs
+    ? needsProduct
+      ? "Attach a product or avatar to start"
+      : !formatId && !customFormat.trim()
+        ? "Pick a format to continue"
+        : "Add a scene or location"
+    : "";
   const btnLabel = submitting
     ? "Generating..."
     : !hasInputs
-      ? "Add inputs to generate"
+      ? missingHint
       : "Generate ad";
 
   return (
