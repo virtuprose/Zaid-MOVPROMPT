@@ -209,7 +209,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
       ro.disconnect();
       window.removeEventListener("resize", update);
     };
-  });
+  }, [phase, isLoading, isAnalyzing]);
 
 
   const handlePickExample = useCallback(async (example: OnboardingExample) => {
