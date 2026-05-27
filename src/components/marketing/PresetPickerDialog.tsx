@@ -96,7 +96,7 @@ export function PresetPickerDialog({
   const noMatch = q.trim().length > 0 && filtered.length === 0;
   const supportsCustom = !!onCustomChange;
   const showPresets = !hasPlaceModes || draftMode === "preset";
-  const showCityInput = hasPlaceModes && (draftMode === "city" || draftMode === "image");
+  const showCityInput = hasPlaceModes && draftMode === "city";
   const showImagePanel = hasPlaceModes ? draftMode === "image" : !!(locationValue && onLocationChange);
 
   // Detect conflicts: a preset is picked AND a city or image is also set.
@@ -116,6 +116,8 @@ export function PresetPickerDialog({
       setCustomOpen(false);
       if (m === "city") {
         setDraftLocation((prev) => ({ ...(prev ?? EMPTY_LOCATION), imagePath: null, imageUrl: null }));
+      } else if (m === "image") {
+        setDraftLocation((prev) => ({ ...(prev ?? EMPTY_LOCATION), place: "" }));
       }
     }
   };
@@ -424,7 +426,7 @@ export function PresetPickerDialog({
             )}
 
             {showImagePanel && draftLocation && (
-              <div className={cn(showCityInput && "mt-4")}>
+              <div>
                 <LocationPanel value={draftLocation} onChange={setDraftLocation} />
               </div>
             )}
