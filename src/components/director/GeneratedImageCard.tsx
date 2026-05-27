@@ -668,22 +668,74 @@ export function GeneratedImageCard({ data, onRegenerate, onUnpinSubject, onAnima
         </div>
       )}
 
-      {onRegenerate && isKeyFrame && (
+      {isKeyFrame && (
         <div className="pt-1 flex flex-wrap gap-2">
-          <Button
-            type="button"
-            size="sm"
-            variant="secondary"
-            className="h-8 text-xs"
-            onClick={() =>
-              regen(
-                "Extend this key frame into a sequence — propose 6 continuation beats that keep the same scene, lighting, lens, color grade, and composition (only action and framing change), then generate them as a scene-locked storyboard.",
-              )
-            }
-          >
-            <Film className="h-3 w-3 mr-1" />
-            Extend frame-by-frame
-          </Button>
+          {onAnimatePanel && data.images[0] && (
+            <Button
+              type="button"
+              size="sm"
+              variant="default"
+              className="h-8 text-xs"
+              onClick={() =>
+                void onAnimatePanel({
+                  url: data.images[0].url,
+                  shot_index: data.images[0].shot_index ?? 1,
+                  directorsNote: data.directorsNote,
+                  aspectRatio: data.aspectRatio,
+                })
+              }
+            >
+              <Play className="h-3 w-3 mr-1" />
+              Make video from this frame
+            </Button>
+          )}
+          {onRegenerate && (
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              className="h-8 text-xs"
+              onClick={() =>
+                regen(
+                  "Regenerate this key frame — keep the same scene, subject, lens, lighting, and color grade; just re-roll the render.",
+                )
+              }
+            >
+              <RotateCcw className="h-3 w-3 mr-1" />
+              Regenerate
+            </Button>
+          )}
+          {onRegenerate && (
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              className="h-8 text-xs"
+              onClick={() =>
+                regen(
+                  "Extend this key frame into a sequence — propose 6 continuation beats that keep the same scene, lighting, lens, color grade, and composition (only action and framing change), then generate them as a scene-locked storyboard.",
+                )
+              }
+            >
+              <Film className="h-3 w-3 mr-1" />
+              Extend frame-by-frame
+            </Button>
+          )}
+          {data.images[0] && (
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              className="h-8 text-xs"
+              onClick={() => downloadImage(data.images[0].url, data.images[0].shot_index ?? 1)}
+            >
+              <Download className="h-3 w-3 mr-1" />
+              Download
+            </Button>
+          )}
+          {data.inspector && (
+            <PromptInspector ctx={data.inspector} triggerTitle="Edit prompt" />
+          )}
         </div>
       )}
     </div>
