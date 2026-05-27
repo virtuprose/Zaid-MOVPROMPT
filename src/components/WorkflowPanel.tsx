@@ -1268,62 +1268,9 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
             );
           }
 
-          // Continuous vs discrete. Slider walks an index into numericDurations
-          // so discrete sets (e.g. [5, 10]) snap correctly.
-          const isAuto = targetDuration === "auto";
-          const currentIdx = (() => {
-            if (isAuto) return numericDurations.indexOf(typeof modelControls.defaults?.duration === "number" ? (modelControls.defaults!.duration as number) : numericDurations[Math.floor(numericDurations.length / 2)]);
-            const i = numericDurations.indexOf(targetDuration as number);
-            if (i >= 0) return i;
-            // nearest
-            return numericDurations.reduce((bestI, d, i) => Math.abs(d - (targetDuration as number)) < Math.abs(numericDurations[bestI] - (targetDuration as number)) ? i : bestI, 0);
-          })();
-          const currentValue = numericDurations[Math.max(0, currentIdx)] ?? min;
-
-          return (
-            <div className="w-full max-w-md space-y-2">
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-muted-foreground">{t("wp.videoDuration" as any)}</span>
-                <span className={`rounded-full border px-2.5 py-0.5 font-medium ${
-                  isAuto
-                    ? "border-border/60 bg-muted/40 text-muted-foreground"
-                    : "border-accent/40 bg-accent/10 text-accent"
-                }`}>
-                  {isAuto ? "Auto" : `${currentValue}s`}
-                </span>
-              </div>
-              <Slider
-                value={[currentIdx]}
-                min={0}
-                max={numericDurations.length - 1}
-                step={1}
-                disabled={isAuto}
-                onValueChange={(v) => {
-                  const idx = Math.max(0, Math.min(numericDurations.length - 1, v[0] ?? 0));
-                  setTargetDuration(numericDurations[idx]);
-                }}
-                className={isAuto ? "opacity-40" : undefined}
-              />
-              <div className="flex items-center justify-between text-[10px] text-muted-foreground/70">
-                <span>{min}s</span>
-                {supportsAuto && (
-                  <button
-                    type="button"
-                    onClick={() => setTargetDuration(isAuto ? (typeof modelControls.defaults?.duration === "number" ? (modelControls.defaults!.duration as number) : min) : "auto")}
-                    aria-pressed={isAuto}
-                    className={`rounded-full border px-2.5 py-0.5 text-[11px] font-medium transition-colors ${
-                      isAuto
-                        ? "border-accent/50 bg-accent/10 text-accent"
-                        : "border-border/60 bg-muted/40 text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    Auto
-                  </button>
-                )}
-                <span>{max}s</span>
-              </div>
-            </div>
-          );
+          // Range/auto durations are controlled by the cinema-console
+          // scrubber in the sticky bottom bar — no duplicate slider here.
+          return null;
         })()}
         {supportsTimeline && (
           <TooltipProvider delayDuration={200}>
