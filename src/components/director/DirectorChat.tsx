@@ -2651,7 +2651,12 @@ function DirectorChatInner() {
               <span>Awaiting your input</span>
             </div>
           )}
-          {pendingApproval && <AwaitingApprovalPill />}
+          {pendingApproval && (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground motion-safe:animate-fade-up">
+              <span className="inline-block h-px w-6 bg-border/60" />
+              <span>Review the action below to continue ↓</span>
+            </div>
+          )}
         </div>
       </div>
       {showJumpLatest && (
