@@ -1299,6 +1299,7 @@ export default function MarketingStudio() {
                       ad={ad}
                       onClick={() => setPreviewAd(ad)}
                       onDownload={() => handleDownloadAd(ad)}
+                      onReuse={() => handleReuseAd(ad)}
                       onToggleLike={() => handleToggleLike(ad)}
                       onDelete={() => setDeleteAdId(ad.id)}
                     />
@@ -1327,6 +1328,7 @@ export default function MarketingStudio() {
                       ad={ad}
                       onClick={() => setPreviewAd(ad)}
                       onDownload={() => handleDownloadAd(ad)}
+                      onReuse={() => handleReuseAd(ad)}
                       onToggleLike={() => handleToggleLike(ad)}
                       onDelete={() => setDeleteAdId(ad.id)}
                     />
