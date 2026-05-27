@@ -2379,7 +2379,11 @@ function DirectorChatInner() {
                         if (busy) return;
                         void send(intent);
                       }}
-                      onAnimatePanel={b.data.mode === "storyboard_panels" ? handleAnimatePanel : undefined}
+                      onAnimatePanel={
+                        b.data.mode === "storyboard_panels" || b.data.mode === "single_panel"
+                          ? handleAnimatePanel
+                          : undefined
+                      }
                       onAnimateAllPanels={b.data.mode === "storyboard_panels" ? handleAnimateAllPanels : undefined}
                       onUnpinSubject={
                         b.data.subjectSheet
