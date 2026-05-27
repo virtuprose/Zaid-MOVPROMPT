@@ -960,6 +960,8 @@ export default function MarketingStudio() {
                   kits={characterKits}
                   activeIds={characterActiveIds}
                   max={3}
+                  open={characterPickerOpen}
+                  onOpenChange={setCharacterPickerOpen}
                   onSelect={(id) => void toggleCharacterActive(id)}
                   onNew={() => { setCharacterEditId(null); setCharacterOpen(true); }}
                   onEdit={(id) => { setCharacterEditId(id); setCharacterOpen(true); }}
