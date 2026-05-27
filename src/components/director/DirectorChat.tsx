@@ -65,8 +65,9 @@ import { TypingIndicator } from "./TypingIndicator";
 import { TypewriterText } from "./TypewriterText";
 
 type Bubble =
-  | { role: "user"; content: string; attachments?: Attachment[] }
-  | { role: "assistant"; content: string; animate?: boolean; markdown?: boolean }
+  | { role: "user"; content: string; attachments?: Attachment[]; ts?: number }
+  | { role: "assistant"; content: string; animate?: boolean; markdown?: boolean; ts?: number }
+
   | {
       role: "result";
       data: Extract<AgentResponse, { kind: "generate_prompt" }>;
