@@ -211,12 +211,12 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
 
   // Flatten scene frames into a single 1-based indexed list (left-to-right, frame-by-frame).
   const flatSceneElements = useMemo(() => {
-    const out: { index: number; category: string; description: string; id: string }[] = [];
+    const out: { index: number; category: string; description: string; id: string; frameIndex: number }[] = [];
     let n = 0;
     for (const frame of sceneFrames) {
       for (const el of frame.elements) {
         n += 1;
-        out.push({ index: n, category: el.category, description: el.description, id: el.id });
+        out.push({ index: n, category: el.category, description: el.description, id: el.id, frameIndex: frame.frameIndex });
       }
     }
     return out;
