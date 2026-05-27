@@ -455,14 +455,6 @@ export const SETTINGS: StudioPreset[] = [
     fragment: "Setting: outdoors in nature, soft wind, dappled sunlight through leaves or open sky",
   },
   {
-    id: "outdoor-sunlit",
-    label: "Outdoor sunlit",
-    description: "Editorial Sun",
-    category: "realistic",
-    image: "/presets/outdoor-sunlit.png",
-    fragment: "Setting: open outdoor location, hard editorial sunlight, deep clean shadows",
-  },
-  {
     id: "stadium",
     label: "Sports stadium",
     description: "Stage Lights",
