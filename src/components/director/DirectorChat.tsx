@@ -1249,7 +1249,7 @@ function DirectorChatInner() {
           animate: true,
           markdown: true,
           content:
-            "Sounds like an **ad or commercial**. Want me to pull your brand kit, product facts, and ad copy from **[Marketing Studio](/marketing)** first? It'll make the render way more on-brand.",
+            "Sounds like an **ad or commercial**. If you already have a brand or product set up, I can pull your brand kit, product facts, and ad copy from **[Marketing Studio](/marketing)** to keep it on-brand. No kit yet? **Skip it** — just keep typing and I'll direct from scratch.",
         });
       }
     }
