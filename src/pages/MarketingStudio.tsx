@@ -811,7 +811,13 @@ export default function MarketingStudio() {
                   trigger={
                     <button
                       type="button"
-                      className="inline-flex items-center gap-1.5 h-9 px-3 rounded-full border border-dashed border-border/60 bg-secondary/30 text-xs text-muted-foreground hover:border-[#F5A524]/50 hover:text-foreground transition-colors"
+                      className={cn(
+                        "inline-flex items-center gap-1.5 h-9 px-3 rounded-full border text-xs transition-colors",
+                        needsProduct && !needsAvatar
+                          ? "border-[#F5A524] bg-[#F5A524]/15 text-foreground animate-pulse"
+                          : "border-dashed border-border/60 bg-secondary/30 text-muted-foreground hover:border-[#F5A524]/50 hover:text-foreground",
+                      )}
+                      title={needsProduct && !needsAvatar ? "Attach a product to anchor your ad" : undefined}
                     >
                       <Building2 className="w-3.5 h-3.5" />
                       <Plus className="w-3 h-3" />
