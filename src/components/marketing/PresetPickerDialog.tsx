@@ -96,7 +96,7 @@ export function PresetPickerDialog({
   const noMatch = q.trim().length > 0 && filtered.length === 0;
   const supportsCustom = !!onCustomChange;
   const showPresets = !hasPlaceModes || draftMode === "preset";
-  const showCityInput = hasPlaceModes && (draftMode === "city" || draftMode === "image");
+  const showCityInput = hasPlaceModes && draftMode === "city";
   const showImagePanel = hasPlaceModes ? draftMode === "image" : !!(locationValue && onLocationChange);
 
   // Detect conflicts: a preset is picked AND a city or image is also set.
