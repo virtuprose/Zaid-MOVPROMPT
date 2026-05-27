@@ -1582,7 +1582,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
                     className="rounded-full bg-accent text-accent-foreground hover:bg-accent/90 px-4 h-9 font-semibold text-xs gap-1.5 shrink-0"
                   >
                     <Clapperboard className="w-3.5 h-3.5" />
-                    {t("results.handoff.cta" as any) || "Open in AI Director"}
+                    Open in AI Director
                     <ArrowRight className="w-3.5 h-3.5" />
                   </Button>
                 </div>
