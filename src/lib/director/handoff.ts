@@ -39,20 +39,30 @@ export function writeHandoff(payload: Omit<DirectorHandoff, "createdAt">) {
   }
 }
 
-export function readHandoff(): DirectorHandoff | null {
+export type ReadHandoffResult =
+  | { status: "none" }
+  | { status: "expired"; source: HandoffSource }
+  | { status: "ok"; handoff: DirectorHandoff };
+
+export function readHandoffDetailed(): ReadHandoffResult {
   try {
     const raw = sessionStorage.getItem(HANDOFF_KEY);
-    if (!raw) return null;
+    if (!raw) return { status: "none" };
     const parsed = JSON.parse(raw) as DirectorHandoff;
-    if (!parsed || typeof parsed !== "object") return null;
+    if (!parsed || typeof parsed !== "object") return { status: "none" };
     if (!parsed.createdAt || Date.now() - parsed.createdAt > MAX_AGE_MS) {
       sessionStorage.removeItem(HANDOFF_KEY);
-      return null;
+      return { status: "expired", source: parsed.source };
     }
-    return parsed;
+    return { status: "ok", handoff: parsed };
   } catch {
-    return null;
+    return { status: "none" };
   }
+}
+
+export function readHandoff(): DirectorHandoff | null {
+  const r = readHandoffDetailed();
+  return r.status === "ok" ? r.handoff : null;
 }
 
 export function clearHandoff() {
