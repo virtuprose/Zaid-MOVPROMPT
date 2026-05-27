@@ -170,7 +170,7 @@ export function PresetPickerDialog({
         onKeyDown={handleKey}
       >
         {/* Header */}
-        <div className="px-6 sm:px-8 pt-6 pb-5 border-b border-border/40 flex items-start gap-6">
+        <div className="px-6 sm:px-8 pt-6 pb-5 pr-14 sm:pr-16 border-b border-border/40 flex items-start gap-8">
           <div className="flex-1 min-w-0">
             <DialogTitle className="font-display text-2xl sm:text-3xl tracking-tight uppercase">
               {title}
@@ -180,19 +180,19 @@ export function PresetPickerDialog({
             </DialogDescription>
           </div>
           {showPresets && (
-            <div className="relative w-64 shrink-0 hidden sm:block">
-              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <div className="relative w-72 shrink-0 hidden sm:block">
+              <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
               <Input
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
                 placeholder={searchPlaceholder}
-                className="pl-9 pr-8 rounded-full bg-muted/30 border-border/40 h-9"
+                className="pl-10 pr-9 rounded-xl bg-muted/30 border border-border/50 h-10 focus-visible:ring-1 focus-visible:ring-[#F5A524]/40 focus-visible:border-[#F5A524]/40"
               />
               {q && (
                 <button
                   type="button"
                   onClick={() => setQ("")}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
                   aria-label="Clear search"
                 >
                   <X className="w-3.5 h-3.5" />
