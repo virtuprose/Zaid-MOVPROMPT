@@ -1599,9 +1599,6 @@ export default function MarketingStudio() {
                             : "Re-cut of an existing ad from Marketing Studio.",
                           banner:
                             "Carried over from your rendered ad — tell me what to change (pacing, shot, mood) and I'll re-render.",
-                          attachments: previewAd.video_url
-                            ? [{ kind: "video", url: previewAd.video_url, name: "previous-ad.mp4" } as any]
-                            : undefined,
                         });
                         setPreviewAd(null);
                         navigate("/director?from=marketing");
