@@ -576,7 +576,7 @@ export const ar: Record<TranslationKey, string> = {
 
   // First-signup onboarding
   "onboarding.title": "مرحباً بك في MovPrompt",
-  "onboarding.subtitle": "ثلاث خطوات للوصول إلى أول برومبت سينمائي لك.",
+  "onboarding.subtitle": "بضع خطوات سريعة للوصول إلى أول برومبت سينمائي لك.",
   "onboarding.step1.title": "اختر لقطة",
   "onboarding.step1.desc": "ارفع أي صورة ثابتة — صورة شخصية أو لقطة شاشة أو أي شيء.",
   "onboarding.step2.title": "دع الذكاء الاصطناعي يخرج",
