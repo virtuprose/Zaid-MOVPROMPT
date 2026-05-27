@@ -1146,10 +1146,9 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
     </div>
   );
 
-  // Inline CTA — only rendered before the image is uploaded so the disabled
-  // "Upload an image to continue" affordance is visible. Once an image exists,
-  // the sticky bottom bar (mobileStickyCta) owns the Analyze + Skip actions
-  // to avoid the duplicate-button problem.
+  // Inline CTA — lives directly under the Upload + Model cards so the
+  // Analyze + Skip actions feel like the next step of the same flow,
+  // not a detached bar pinned to the bottom of the page.
   const ctaRowBlock = phase === "upload" && !contract.supportsElementReferences && !hasRequiredImages ? (
     <div className="pt-2 space-y-3">
       <Button
@@ -1173,6 +1172,60 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
       >
         Add an element reference to continue
       </Button>
+    </div>
+  ) : phase === "upload" && hasRequiredImages ? (
+    <div className="pt-4 mt-2 border-t border-border/60">
+      <div className="rounded-xl border border-border/60 bg-card/40 backdrop-blur-sm p-4 space-y-2">
+        <TooltipProvider delayDuration={200}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                data-tour="analyze-button"
+                size="lg"
+                onClick={handleAnalyze}
+                disabled={isAnalyzing}
+                aria-label={isAnalyzing ? t("wp.analyzingScene") : t("wp.analyzeScene")}
+                className="w-full font-display font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/25"
+              >
+                {isAnalyzing ? (
+                  <><Loader2 className="w-5 h-5 me-2 animate-spin" /> {t("wp.analyzingScene")}</>
+                ) : (
+                  <><Sparkles className="w-5 h-5 me-2" /> {t("wp.analyzeScene")}</>
+                )}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="max-w-xs text-xs leading-relaxed">
+              {t("wp.analyzeTooltip" as any)}
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+        <div className="text-center text-[11px] text-muted-foreground/80">
+          <span className="inline-flex items-center gap-1.5">
+            <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500" />
+            Free — no credits charged for prompt generation
+          </span>
+        </div>
+        <div className="flex justify-center pt-1">
+          <TooltipProvider delayDuration={200}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={() => { setSceneFrames([]); setPhase("breakdown"); }}
+                  disabled={isAnalyzing}
+                  aria-label="Skip & Generate Now"
+                  className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50 disabled:pointer-events-none focus:outline-none focus-visible:underline"
+                >
+                  Skip &amp; Generate Now <ArrowRight className="w-3 h-3 rtl:rotate-180" aria-hidden="true" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="max-w-xs text-xs leading-relaxed">
+                {t("wp.skipTooltip" as any)}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+      </div>
     </div>
   )
     : (phase === "breakdown" || phase === "generate") ? (
