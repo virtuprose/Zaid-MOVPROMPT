@@ -5,6 +5,7 @@ import { Message, MessageContent } from "@/components/ai-elements/message";
 import { QuestionCard } from "./QuestionCard";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   AlertDialog,
