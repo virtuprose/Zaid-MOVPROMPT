@@ -172,7 +172,7 @@ export default function MarketingStudio() {
   const [deleteAdId, setDeleteAdId] = useState<string | null>(null);
   const [previewAd, setPreviewAd] = useState<UserAd | null>(null);
   const [cancelJobId, setCancelJobId] = useState<string | null>(null);
-  const [showCommunity, setShowCommunity] = useState(false);
+  const [showCommunity, _setShowCommunity] = useState(false);
   const [flashChips, setFlashChips] = useState(false);
   const composerRef = useRef<HTMLDivElement | null>(null);
   const galleryRef = useRef<HTMLElement | null>(null);
