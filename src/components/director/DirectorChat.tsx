@@ -2224,6 +2224,7 @@ function DirectorChatInner() {
                     reason={b.reason}
                     questions={b.questions}
                     disabled={!isLatestQuestions || busy}
+                    collapsed={!isLatestQuestions}
                     attachments={attachments}
                     onAttach={setAttachments}
                     onContinue={(formatted) => void send(formatted)}
