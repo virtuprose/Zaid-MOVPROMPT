@@ -168,6 +168,9 @@ const MOOD_LINES = [
   "Let's make something cinematic.",
 ];
 
+const isProviderReadyImageUrl = (value?: string) =>
+  !!value && (/^https:\/\//i.test(value) || /^data:image\//i.test(value));
+
 
 export function DirectorChat() {
   return (
@@ -2051,7 +2054,7 @@ function DirectorChatInner() {
     const seen = new Set<string>();
     const push = (a: Attachment) => {
       const url = (a as any).url as string | undefined;
-      if (!url || seen.has(url)) return;
+      if (!url || !isProviderReadyImageUrl(url) || seen.has(url)) return;
       if ((a as any).kind && (a as any).kind !== "image") return;
       seen.add(url);
       urls.push(url);
