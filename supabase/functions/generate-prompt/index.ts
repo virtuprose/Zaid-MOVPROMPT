@@ -91,7 +91,7 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { images, workflowType, description, targetModel, sceneBreakdown, audioEnabled, references, elements, autoInjectElements, multiShotCount, elementMentions, compactMode, addendum, feedback, timelineEnabled, targetDuration } = body;
+    const { images, workflowType, description, targetModel, sceneBreakdown, audioEnabled, references, elements, autoInjectElements, multiShotCount, elementMentions, compactMode, addendum, feedback, timelineEnabled, targetDuration, targetAspectRatio } = body;
     const isCompact = compactMode === true;
     const refinementAddendum: string =
       typeof addendum === "string" ? addendum.trim().slice(0, 600) : "";
@@ -374,6 +374,11 @@ serve(async (req) => {
     } else if (targetDuration === "auto") {
       userText += `Target video duration: AUTO — pick the most cinematic duration for this scene.\n\n`;
     }
+
+    if (typeof targetAspectRatio === "string" && /^\d{1,2}:\d{1,2}$/.test(targetAspectRatio)) {
+      userText += `Target aspect ratio: ${targetAspectRatio} — set suggestedAspectRatio to "${targetAspectRatio}" and frame/compose the scene for this exact ratio.\n\n`;
+    }
+
 
 
     // Refinement guidance: from auto-fix chips, AI critique suggestions, or thumbs-down feedback.

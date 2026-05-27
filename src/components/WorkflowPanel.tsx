@@ -417,6 +417,33 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
   useEffect(() => {
     try { localStorage.setItem(`movprompt.targetDuration.${selectedModel}`, String(targetDuration)); } catch { /* ignore */ }
   }, [targetDuration, selectedModel]);
+
+  // Per-model target aspect ratio. Surfaced as chips near the Generate CTA so
+  // the user can override the AI-suggested framing before generation.
+  const [targetAspectRatio, setTargetAspectRatio] = useState<string>(() => {
+    const fallback = (modelControls.defaults?.aspect_ratio as string | undefined) ?? "16:9";
+    try {
+      const saved = localStorage.getItem(`movprompt.aspectRatio.${selectedModel}`);
+      if (saved && (modelControls.aspectRatios ?? []).includes(saved)) return saved;
+    } catch { /* ignore */ }
+    return fallback;
+  });
+  useEffect(() => {
+    const fallback = (modelControls.defaults?.aspect_ratio as string | undefined) ?? "16:9";
+    let next = fallback;
+    try {
+      const saved = localStorage.getItem(`movprompt.aspectRatio.${selectedModel}`);
+      if (saved && (modelControls.aspectRatios ?? []).includes(saved)) next = saved;
+    } catch { /* ignore */ }
+    const allowed = modelControls.aspectRatios ?? [fallback];
+    if (!allowed.includes(next)) next = fallback;
+    setTargetAspectRatio(next);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedModel]);
+  useEffect(() => {
+    try { localStorage.setItem(`movprompt.aspectRatio.${selectedModel}`, targetAspectRatio); } catch { /* ignore */ }
+  }, [targetAspectRatio, selectedModel]);
+
   const activeSlots = contract.supportsTwoFrameToggle && twoFrameMode ? 2 : contract.slots;
   const workflowType = deriveWorkflowType(selectedModel, activeSlots, contract.supportsMultiShotToggle && multiShotMode);
 
@@ -632,6 +659,8 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
             : undefined,
           timelineEnabled: supportsTimeline ? timelineEnabled : undefined,
           targetDuration,
+          targetAspectRatio,
+
           compactMode: opts?.compact === true ? true : undefined,
           addendum,
           feedback: feedbackPayload,
@@ -1695,7 +1724,83 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
     </div>
   ) : (phase === "breakdown" || phase === "generate") && !isLoading && !isAnalyzing ? (
     <div className="fixed inset-x-0 bottom-0 z-40 px-4 pt-3 pb-[calc(env(safe-area-inset-bottom)+12px)] bg-background/95 backdrop-blur-md border-t border-border/60">
-      <div className="max-w-[720px] mx-auto space-y-1.5">
+      <div className="max-w-[720px] mx-auto space-y-2">
+      {(() => {
+        const ars = modelControls.aspectRatios ?? [];
+        const numericDurations = durationOptions.filter((d): d is number => typeof d === "number");
+        const supportsAuto = modelControls.durationAuto === true;
+        const showAR = ars.length > 1;
+        const showDur = numericDurations.length > 1 || supportsAuto;
+        if (!showAR && !showDur) return null;
+        return (
+          <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 text-[11px]">
+            {showAR && (
+              <div className="flex items-center gap-1.5">
+                <span className="text-muted-foreground">Aspect</span>
+                <div className="flex items-center gap-1" role="group" aria-label="Aspect ratio">
+                  {ars.map((ar) => {
+                    const active = targetAspectRatio === ar;
+                    return (
+                      <button
+                        key={ar}
+                        type="button"
+                        onClick={() => setTargetAspectRatio(ar)}
+                        aria-pressed={active}
+                        className={`rounded-full border px-2 py-0.5 font-medium transition-colors ${
+                          active
+                            ? "border-accent/50 bg-accent/10 text-accent"
+                            : "border-border/60 bg-muted/40 text-muted-foreground hover:text-foreground"
+                        }`}
+                      >
+                        {ar}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+            {showDur && (
+              <div className="flex items-center gap-1.5">
+                <span className="text-muted-foreground">Duration</span>
+                <div className="flex items-center gap-1" role="group" aria-label="Duration">
+                  {numericDurations.map((d) => {
+                    const active = targetDuration === d;
+                    return (
+                      <button
+                        key={d}
+                        type="button"
+                        onClick={() => setTargetDuration(d)}
+                        aria-pressed={active}
+                        className={`rounded-full border px-2 py-0.5 font-medium transition-colors ${
+                          active
+                            ? "border-accent/50 bg-accent/10 text-accent"
+                            : "border-border/60 bg-muted/40 text-muted-foreground hover:text-foreground"
+                        }`}
+                      >
+                        {d}s
+                      </button>
+                    );
+                  })}
+                  {supportsAuto && (
+                    <button
+                      type="button"
+                      onClick={() => setTargetDuration("auto")}
+                      aria-pressed={targetDuration === "auto"}
+                      className={`rounded-full border px-2 py-0.5 font-medium transition-colors ${
+                        targetDuration === "auto"
+                          ? "border-accent/50 bg-accent/10 text-accent"
+                          : "border-border/60 bg-muted/40 text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      Auto
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })()}
       <Button
         size="lg"
         onClick={() => handleGenerate()}
@@ -1716,6 +1821,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
       </div>
       </div>
     </div>
+
   ) : null;
 
   // Show the right-side workspace card only when there's actually content
