@@ -70,6 +70,8 @@ export const en = {
   "wp.skipHint": "Faster but less control",
   "wp.firstUse.analyzeHint": "Recommended — we'll read your image first to write a richer, scene-aware prompt.",
   "wp.firstUse.skipHint": "Faster path — generates a prompt from your settings only, without analyzing the image.",
+  "wp.analyzeTooltip": "Sends your uploaded image to the AI Director, which breaks the scene down into shot, subject, lighting, lens and mood — then writes an editable cinematic prompt. Free, no credits used.",
+  "wp.skipTooltip": "Skip the scene analysis and jump straight to a prompt built from your model settings only. Best when you already know exactly what you want.",
   "wp.skipNoFramesHint": "You skipped scene analysis, so there are no frames to review. Your prompt is shown below — go Back to analyze the scene for finer control.",
   "wp.startOver": "Start Over",
   "wp.back": "Back",
