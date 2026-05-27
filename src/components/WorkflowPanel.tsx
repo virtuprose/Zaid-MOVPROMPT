@@ -1694,8 +1694,9 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
   );
 
   const mobileStickyCta = (phase === "breakdown" || phase === "generate") && !isLoading && !isAnalyzing ? (
-    <div className="fixed inset-x-0 bottom-0 z-40 px-4 pt-3 pb-[calc(env(safe-area-inset-bottom)+12px)] bg-background/95 backdrop-blur-md border-t border-border/60">
-      <div className="max-w-[720px] mx-auto space-y-2">
+    <div ref={stickyBarRef} className="fixed inset-x-0 bottom-0 z-40 px-4 pt-3 pb-[calc(env(safe-area-inset-bottom)+12px)] bg-background/95 backdrop-blur-md border-t border-border/60">
+      <div className="max-w-[720px] mx-auto space-y-2.5">
+
       {(() => {
         const ars = modelControls.aspectRatios ?? [];
         const numericDurations = durationOptions.filter((d): d is number => typeof d === "number");
