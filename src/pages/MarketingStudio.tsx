@@ -1628,33 +1628,6 @@ function SectionHeader({
   );
 }
 
-function FilterTabs({
-  value,
-  onChange,
-}: {
-  value: (typeof FILTERS)[number];
-  onChange: (v: (typeof FILTERS)[number]) => void;
-}) {
-  return (
-    <div className="flex items-center gap-1 rounded-full bg-muted/30 p-1">
-      {FILTERS.map((f) => (
-        <button
-          key={f}
-          type="button"
-          onClick={() => onChange(f)}
-          className={cn(
-            "px-3 py-1 text-xs rounded-full transition-colors",
-            value === f
-              ? "bg-background text-foreground border border-border/60"
-              : "text-muted-foreground hover:text-foreground",
-          )}
-        >
-          {f}
-        </button>
-      ))}
-    </div>
-  );
-}
 
 function ToggleTab({
   active,
