@@ -1699,6 +1699,8 @@ function UserAdCard({
     fn?.();
   };
   const videoRef = useRef<HTMLVideoElement>(null);
+  const [broken, setBroken] = useState(false);
+  const [loaded, setLoaded] = useState(false);
   const playVideo = () => {
     videoRef.current?.play().catch(() => {});
   };
@@ -1706,9 +1708,12 @@ function UserAdCard({
     const v = videoRef.current;
     if (v) {
       v.pause();
-      v.currentTime = 0;
+      v.currentTime = 0.1;
     }
   };
+  // `#t=0.1` nudges the browser to paint the first frame as a poster on metadata load.
+  const posterSrc = ad.video_url ? `${ad.video_url}${ad.video_url.includes("#") ? "" : "#t=0.1"}` : "";
+  const shortPrompt = (ad.prompt || "").trim().slice(0, 90);
   return (
     <article
       onClick={onClick}
@@ -1718,16 +1723,50 @@ function UserAdCard({
       onBlur={pauseVideo}
       className="group relative overflow-hidden rounded-2xl border border-border/40 bg-muted/10 cursor-pointer transition-all hover:border-[hsl(35_90%_55%)]/60 hover:shadow-[0_0_24px_hsl(35_90%_55%/0.25)]"
     >
-      <div className="aspect-[3/4] overflow-hidden">
-        <video
-          ref={videoRef}
-          src={ad.video_url}
-          muted
-          loop
-          playsInline
-          preload="metadata"
-          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-        />
+      <div className="aspect-[3/4] overflow-hidden relative bg-gradient-to-br from-[hsl(240_8%_10%)] via-[hsl(240_6%_7%)] to-[hsl(240_8%_10%)]">
+        {!broken ? (
+          <>
+            {!loaded && (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <Loader2 className="w-5 h-5 text-muted-foreground/40 animate-spin" />
+              </div>
+            )}
+            <video
+              ref={videoRef}
+              src={posterSrc}
+              muted
+              loop
+              playsInline
+              preload="metadata"
+              onLoadedMetadata={(e) => {
+                const v = e.currentTarget;
+                if (v.currentTime < 0.05) {
+                  try { v.currentTime = 0.1; } catch { /* noop */ }
+                }
+                setLoaded(true);
+              }}
+              onError={() => setBroken(true)}
+              className={cn(
+                "w-full h-full object-cover transition-all duration-500 group-hover:scale-105",
+                loaded ? "opacity-100" : "opacity-0",
+              )}
+            />
+          </>
+        ) : (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 p-4 text-center">
+            <div className="w-10 h-10 rounded-full bg-muted/30 flex items-center justify-center">
+              <Sparkles className="w-5 h-5 text-muted-foreground/60" />
+            </div>
+            <span className="text-[10px] uppercase tracking-wider text-muted-foreground/70 font-semibold">
+              Render unavailable
+            </span>
+            {shortPrompt && (
+              <span className="text-[11px] text-muted-foreground/80 line-clamp-3 leading-snug">
+                {shortPrompt}{ad.prompt && ad.prompt.length > 90 ? "…" : ""}
+              </span>
+            )}
+          </div>
+        )}
       </div>
       <div className="absolute top-2 right-2 flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
         {onToggleLike && (
