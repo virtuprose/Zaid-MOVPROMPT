@@ -161,6 +161,13 @@ export default function MarketingStudio() {
   const [drafting, setDrafting] = useState(false);
   const [renderSettings, setRenderSettings] = useState<RenderSettings>(RENDER_DEFAULTS);
 
+  // Live cost estimate + wallet balance — used for pre-flight low-credits warning.
+  const pricesTop = usePricing();
+  const { balance: creditBalance, refresh: refreshCredits } = useCredits();
+  const providerEstimate = location.imagePath ? "seedance-2.0" : "seedance-v1-pro";
+  const estimatedCost = estimateVideoCost(pricesTop, providerEstimate, renderSettings.duration);
+  const lowCredits = creditBalance !== null && creditBalance < estimatedCost;
+
   // Reset studio config when the last product is detached
   const prevBrandCountRef = useRef(brandActiveIds.length);
   useEffect(() => {
