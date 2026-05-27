@@ -2204,6 +2204,23 @@ function DirectorChatInner() {
             );
           })()}
 
+          {!isEmpty && (
+            <div className="-mt-3 mb-1 mx-auto w-fit text-[10.5px] text-muted-foreground/80 inline-flex items-center gap-1.5">
+              <span className="inline-flex items-center gap-1">
+                <Sparkles className="h-3 w-3 text-accent/80" />
+                Estimated brief cost
+              </span>
+              <span className="text-foreground/70">
+                ~3–8 cr for frames · ~30–90 cr for final video
+              </span>
+              {pendingApproval && (
+                <span className="ml-1 rounded-full bg-primary/15 text-primary px-2 py-0.5">
+                  Next step: {pendingApproval.cost} cr
+                </span>
+              )}
+            </div>
+          )}
+
           {bubbles.map((b, i) => {
             if (firstUserIdx !== -1 && i < firstUserIdx && b.role === "assistant") {
               return null;
