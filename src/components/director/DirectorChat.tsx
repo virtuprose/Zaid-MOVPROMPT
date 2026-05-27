@@ -2224,6 +2224,7 @@ function DirectorChatInner() {
                     reason={b.reason}
                     questions={b.questions}
                     disabled={!isLatestQuestions || busy}
+                    collapsed={!isLatestQuestions}
                     attachments={attachments}
                     onAttach={setAttachments}
                     onContinue={(formatted) => void send(formatted)}
@@ -2411,6 +2412,7 @@ function DirectorChatInner() {
                         "Anything to add about the scene? (setting, action, lighting, mood, time of day)",
                       ]}
                       disabled={busy || b.submitted}
+                      collapsed={!!b.submitted}
                       onContinue={(formatted) => {
                         // QuestionCard returns "1. <answer>"; strip the numbering.
                         const answer = formatted.replace(/^\s*1\.\s*/, "").trim();
