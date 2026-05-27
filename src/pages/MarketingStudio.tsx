@@ -718,23 +718,11 @@ export default function MarketingStudio() {
     });
   };
 
-  const filteredAds = FEATURED_ADS.filter(
-    (a) => filter === "All" || a.tag === filter,
-  );
-
   const adCount = userAds.length;
   const totalCount = adCount + pendingJobs.length;
   const mode: "empty" | "mixed" | "full" =
     totalCount === 0 ? "empty" : totalCount < 10 ? "mixed" : "full";
 
-  const applyTemplate = (tpl: { formatId: string; hookId?: string; settingId: string }) => {
-    setFormatId(tpl.formatId);
-    setSettingId(tpl.settingId);
-    setFlashChips(true);
-    window.setTimeout(() => setFlashChips(false), 900);
-    composerRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    toast.success("Template loaded — tweak and generate.");
-  };
 
   const missingHint = !hasInputs
     ? needsProduct
