@@ -391,14 +391,6 @@ export const SETTINGS: StudioPreset[] = [
     fragment: "Setting: minimalist modern office desk, daylight from large window, focused workspace styling",
   },
   {
-    id: "indoor-minimalist",
-    label: "Indoor minimalist",
-    description: "Quiet Minimalism",
-    category: "realistic",
-    image: "/presets/indoor-minimalist.png",
-    fragment: "Setting: bright minimalist indoor space, neutral palette, clean architectural lines",
-  },
-  {
     id: "industrial-loft",
     label: "Industrial loft",
     description: "Loft Energy",
@@ -463,14 +455,6 @@ export const SETTINGS: StudioPreset[] = [
     fragment: "Setting: outdoors in nature, soft wind, dappled sunlight through leaves or open sky",
   },
   {
-    id: "outdoor-sunlit",
-    label: "Outdoor sunlit",
-    description: "Editorial Sun",
-    category: "realistic",
-    image: "/presets/outdoor-sunlit.png",
-    fragment: "Setting: open outdoor location, hard editorial sunlight, deep clean shadows",
-  },
-  {
     id: "stadium",
     label: "Sports stadium",
     description: "Stage Lights",
@@ -495,14 +479,6 @@ export const SETTINGS: StudioPreset[] = [
     category: "unrealistic",
     image: "/presets/rooftop.png",
     fragment: "Setting: skyscraper rooftop edge, city skyline, dramatic wind and depth",
-  },
-  {
-    id: "penthouse",
-    label: "Penthouse",
-    description: "Penthouse View",
-    category: "unrealistic",
-    image: "/presets/penthouse.png",
-    fragment: "Setting: glass-walled penthouse, sweeping skyline, luxe styling, blue hour glow",
   },
   {
     id: "pool",
