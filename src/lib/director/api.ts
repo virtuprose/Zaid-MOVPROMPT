@@ -317,6 +317,13 @@ export type StreamOptions = {
   onPhase?: (phase: DirectorPhase) => void;
 };
 
+export type HandoffLockedSpec = {
+  source?: "movprompt" | "marketing";
+  model?: string;
+  aspect?: string;
+  duration?: number | "auto";
+};
+
 export async function streamDirectorAgent(
   messages: DirectorMsg[],
   attachments: Attachment[],
@@ -325,6 +332,7 @@ export async function streamDirectorAgent(
   options: StreamOptions & {
     tasteProfile?: TasteProfile | null;
     mode?: "director" | "free_chat";
+    lockedSpec?: HandoffLockedSpec | null;
   } = {},
 ): Promise<AgentResponse> {
   const idleTimeoutMs = options.idleTimeoutMs ?? 30_000;
@@ -332,6 +340,9 @@ export async function streamDirectorAgent(
   const onPhase = options.onPhase;
   const tasteProfile = options.tasteProfile ?? null;
   const mode = options.mode ?? "director";
+  const lockedSpec = options.lockedSpec ?? null;
+
+
 
 
   // Initial phase — analyzing image if any visual attachment is present.
@@ -401,7 +412,7 @@ export async function streamDirectorAgent(
         Authorization: `Bearer ${token}`,
         apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
       },
-      body: JSON.stringify({ messages, attachments, stream: true, tasteProfile, mode }),
+      body: JSON.stringify({ messages, attachments, stream: true, tasteProfile, mode, lockedSpec }),
       signal: controller.signal,
     });
   } catch (err: any) {
