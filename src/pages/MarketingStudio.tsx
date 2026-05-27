@@ -1285,20 +1285,13 @@ export default function MarketingStudio() {
 
           {/* Ads gallery */}
           <section ref={galleryRef} className="mt-8 scroll-mt-20 max-w-5xl mx-auto">
-            {mode === "empty" && (
-              <>
-                <SectionHeader
-                  title="Ads made with Ads Studio"
-                  subtitle="New to Ads Studio? Click any template below to start."
-                  right={
-                    <FilterTabs value={filter} onChange={setFilter} />
-                  }
-                />
-                <CommunityGrid
-                  ads={filteredAds}
-                  onPick={(ad) => applyTemplate(ad.template)}
-                />
-              </>
+            {mode === "empty" && userAdsLoaded && (
+              <div className="rounded-2xl border border-dashed border-border/50 bg-secondary/20 px-6 py-10 text-center">
+                <h2 className="text-base font-semibold text-foreground">No ads yet</h2>
+                <p className="mt-1.5 text-sm text-muted-foreground">
+                  Attach a product or avatar above, pick a format, and hit Generate.
+                </p>
+              </div>
             )}
 
             {mode === "mixed" && (
