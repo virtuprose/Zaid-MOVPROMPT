@@ -154,6 +154,8 @@ export default function MarketingStudio() {
   const [brandEditId, setBrandEditId] = useState<string | null>(null);
   const [characterOpen, setCharacterOpen] = useState(false);
   const [characterEditId, setCharacterEditId] = useState<string | null>(null);
+  const [characterPickerOpen, setCharacterPickerOpen] = useState(false);
+  const autoPromptedFormatRef = useRef<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [accuracyOpen, setAccuracyOpen] = useState(false);
   const [accuracyResult, setAccuracyResult] = useState<AccuracyRiskResult | null>(null);
