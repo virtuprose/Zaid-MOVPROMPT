@@ -1736,11 +1736,11 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
         const activePct = activeIdx >= 0 ? pctFor(activeDurNumeric as number) : 0;
 
         return (
-          <div className="rounded-xl border border-border/60 bg-card/60 backdrop-blur-md p-3 shadow-inner flex flex-wrap items-center gap-x-6 gap-y-3">
+          <div className="rounded-xl border border-border/60 bg-card/60 backdrop-blur-md px-3 py-2 shadow-inner grid gap-x-5 gap-y-2 sm:grid-cols-[auto_1fr] items-center">
             {showAR && (
-              <div className="flex items-center gap-3">
-                <span className="text-[10px] font-bold tracking-[0.18em] uppercase text-muted-foreground font-display">Aspect</span>
-                <div className="flex gap-1 p-1 bg-background/60 rounded-lg border border-border/50" role="group" aria-label="Aspect ratio">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <span className="text-[10px] font-bold tracking-[0.14em] uppercase text-muted-foreground font-display shrink-0">Aspect</span>
+                <div className="flex gap-0.5 bg-background/60 rounded-lg border border-border/50 p-0.5" role="group" aria-label="Aspect ratio">
                   {ars.map((ar) => {
                     const active = targetAspectRatio === ar;
                     return (
@@ -1749,7 +1749,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
                         type="button"
                         onClick={() => setTargetAspectRatio(ar)}
                         aria-pressed={active}
-                        className={`group flex flex-col items-center justify-end gap-1 px-2.5 py-1.5 rounded-md border transition-all min-w-[44px] ${
+                        className={`group flex flex-col items-center justify-end gap-1 px-2 py-1.5 rounded-md border transition-all min-w-[38px] ${
                           active
                             ? "bg-accent/10 border-accent/50"
                             : "border-transparent hover:bg-foreground/5"
@@ -1765,9 +1765,9 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
             )}
 
             {showDur && (
-              <div className="flex-1 min-w-[240px] flex items-center gap-3">
-                <span className="text-[10px] font-bold tracking-[0.18em] uppercase text-muted-foreground font-display shrink-0">Duration</span>
-                <div className="relative flex-1">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <span className="text-[10px] font-bold tracking-[0.14em] uppercase text-muted-foreground font-display shrink-0">Duration</span>
+                <div className="relative flex-1 min-w-0">
                   <div className="relative h-12 w-full px-1">
                     {/* Track */}
                     <div className="absolute left-1 right-1 h-[2px] top-1/2 -translate-y-1/2 bg-border rounded-full overflow-hidden">
@@ -1829,17 +1829,10 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
                 )}
               </div>
             )}
-
-            <div className="ps-4 ms-auto border-s border-border/60 hidden sm:flex flex-col">
-              <span className="text-[9px] font-bold tracking-[0.18em] uppercase text-muted-foreground font-display">Selected</span>
-              <span className="text-base font-bold font-mono tracking-tight text-foreground leading-tight">
-                {showAR && <>{targetAspectRatio}{showDur && <span className="text-accent mx-1">/</span>}</>}
-                {showDur && (isAuto ? <span>Auto</span> : <span>{activeDurNumeric ?? durMin}s</span>)}
-              </span>
-            </div>
           </div>
         );
       })()}
+
       <Button
         size="lg"
         onClick={() => handleGenerate()}
