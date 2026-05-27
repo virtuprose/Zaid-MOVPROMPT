@@ -735,24 +735,30 @@ export default function MarketingStudio() {
             {/* Subject sidebar */}
             <div className="flex sm:flex-col gap-1.5 shrink-0 sm:justify-center sm:self-stretch">
               {([
-                { id: "product", label: "Product", icon: Package },
-              ] as const).map(({ id, label, icon: Icon }) => {
+                { id: "product", label: "Product", icon: Package, tip: "Physical or packaged goods" },
+                { id: "app", label: "App", icon: AppWindow, tip: "Mobile or web product" },
+              ] as const).map(({ id, label, icon: Icon, tip }) => {
                 const active = subject === id;
                 return (
-                  <button
-                    key={id}
-                    type="button"
-                    onClick={() => setSubjectOverride(id)}
-                    className={cn(
-                      "flex-1 sm:flex-none w-full sm:w-16 h-11 sm:h-16 rounded-xl sm:rounded-2xl border flex flex-row sm:flex-col items-center justify-center gap-1.5 sm:gap-1 text-[11px] font-medium transition-all",
-                      active
-                        ? "border-[#F5A524]/50 bg-[#F5A524]/10 text-foreground"
-                        : "border-border/60 bg-secondary/40 text-muted-foreground hover:text-foreground hover:border-border",
-                    )}
-                  >
-                    <Icon className="w-4 h-4 sm:w-5 sm:h-5" />
-                    {label}
-                  </button>
+                  <Tooltip key={id}>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        onClick={() => setSubjectOverride(id)}
+                        aria-pressed={active}
+                        className={cn(
+                          "flex-1 sm:flex-none w-full sm:w-16 h-11 sm:h-16 rounded-xl sm:rounded-2xl border flex flex-row sm:flex-col items-center justify-center gap-1.5 sm:gap-1 text-[11px] font-medium transition-all",
+                          active
+                            ? "border-[#F5A524]/50 bg-[#F5A524]/10 text-foreground shadow-[0_0_18px_hsl(35_90%_55%/0.18)]"
+                            : "border-border/60 bg-secondary/40 text-muted-foreground hover:text-foreground hover:border-border",
+                        )}
+                      >
+                        <Icon className="w-4 h-4 sm:w-5 sm:h-5" />
+                        {label}
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="right" className="text-xs">{tip}</TooltipContent>
+                  </Tooltip>
                 );
               })}
             </div>
