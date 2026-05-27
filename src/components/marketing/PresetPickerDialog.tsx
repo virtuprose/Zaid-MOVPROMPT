@@ -426,7 +426,7 @@ export function PresetPickerDialog({
             )}
 
             {showImagePanel && draftLocation && (
-              <div className={cn(showCityInput && "mt-4")}>
+              <div>
                 <LocationPanel value={draftLocation} onChange={setDraftLocation} />
               </div>
             )}
