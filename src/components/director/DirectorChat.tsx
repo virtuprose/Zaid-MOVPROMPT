@@ -300,7 +300,7 @@ function DirectorChatInner() {
     (async () => {
       const { data, error } = await supabase
         .from("director_sessions")
-        .select("id, messages")
+        .select("id, messages, title")
         .eq("id", routeSessionId)
         .maybeSingle();
       if (error || !data) {
@@ -311,6 +311,16 @@ function DirectorChatInner() {
       sessionIdRef.current = data.id;
       const loaded = (data.messages as Bubble[]) || [WELCOME];
       const remote = loaded.length ? loaded : [WELCOME];
+      // Backfill auto-title for legacy "Untitled brief" sessions.
+      if (!data.title || data.title === "Untitled brief") {
+        const auto = autoTitleFromBubbles(remote);
+        if (auto) {
+          void supabase
+            .from("director_sessions")
+            .update({ title: auto })
+            .eq("id", data.id);
+        }
+      }
       // Re-sign storage-backed URLs before they hit the DOM.
       const remoteRefreshed = (await refreshBubbleSignedUrls(remote.slice())) as Bubble[];
       setBubbles((prev) => {
