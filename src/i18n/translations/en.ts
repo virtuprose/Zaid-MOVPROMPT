@@ -145,9 +145,10 @@ export const en = {
   "results.regenerate": "Regenerate",
   "results.copied": "Copied!",
   "library.shots": "shots",
-  "results.history.label": "History",
-  "results.history.title": "Recent versions",
-  "results.history.hint": "Restore any of the last 5 generations from this scene.",
+  "results.history.label": "Versions",
+  "results.history.title": "Recent versions (this scene)",
+  "results.history.hint": "Restore any of the last 5 prompt versions for this scene. Saved prompts live in Library.",
+
   "results.history.current": "Current",
   "results.history.version": "Version",
   "results.history.ago": "ago",
