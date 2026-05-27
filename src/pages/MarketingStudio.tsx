@@ -750,6 +750,8 @@ export default function MarketingStudio() {
       ? missingHint
       : "Generate ad";
 
+  if (shouldRenderNothing) return null;
+
   return (
     <TooltipProvider delayDuration={200}>
       <div className="min-h-screen bg-background">
