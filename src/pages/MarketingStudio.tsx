@@ -233,6 +233,7 @@ export default function MarketingStudio() {
   const format = find(FORMATS, formatId);
   const setting = find(SETTINGS, settingId);
   const needsAvatar = format?.category === "avatar" && characterActiveIds.length === 0;
+  const needsProduct = brandActiveIds.length === 0 && characterActiveIds.length === 0;
   const sceneLocked = !!format?.lockScene;
 
   // When a scene-locked format is picked, clear any scene/location selection
@@ -679,10 +680,17 @@ export default function MarketingStudio() {
     toast.success("Template loaded — tweak and generate.");
   };
 
+  const missingHint = !hasInputs
+    ? needsProduct
+      ? "Attach a product or avatar to start"
+      : !formatId && !customFormat.trim()
+        ? "Pick a format to continue"
+        : "Add a scene or location"
+    : "";
   const btnLabel = submitting
     ? "Generating..."
     : !hasInputs
-      ? "Add inputs to generate"
+      ? missingHint
       : "Generate ad";
 
   return (
@@ -803,7 +811,13 @@ export default function MarketingStudio() {
                   trigger={
                     <button
                       type="button"
-                      className="inline-flex items-center gap-1.5 h-9 px-3 rounded-full border border-dashed border-border/60 bg-secondary/30 text-xs text-muted-foreground hover:border-[#F5A524]/50 hover:text-foreground transition-colors"
+                      className={cn(
+                        "inline-flex items-center gap-1.5 h-9 px-3 rounded-full border text-xs transition-colors",
+                        needsProduct && !needsAvatar
+                          ? "border-[#F5A524] bg-[#F5A524]/15 text-foreground animate-pulse"
+                          : "border-dashed border-border/60 bg-secondary/30 text-muted-foreground hover:border-[#F5A524]/50 hover:text-foreground",
+                      )}
+                      title={needsProduct && !needsAvatar ? "Attach a product to anchor your ad" : undefined}
                     >
                       <Building2 className="w-3.5 h-3.5" />
                       <Plus className="w-3 h-3" />
@@ -999,24 +1013,35 @@ export default function MarketingStudio() {
                     />
                   );
                 })()}
-                <Button
-                  size="sm"
-                  disabled={!hasInputs || submitting || drafting}
-                  onClick={startGenerate}
-                  className={cn(
-                    "rounded-full px-4 h-9 font-semibold text-xs transition-all",
-                    hasInputs
-                      ? "bg-[#F5A524] text-black hover:bg-[#F5A524]/90 shadow-lg shadow-[#F5A524]/25"
-                      : "bg-muted text-muted-foreground hover:bg-muted",
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className={cn(!hasInputs && "cursor-help")}>
+                      <Button
+                        size="sm"
+                        disabled={!hasInputs || submitting || drafting}
+                        onClick={startGenerate}
+                        className={cn(
+                          "rounded-full px-4 h-9 font-semibold text-xs transition-all",
+                          hasInputs
+                            ? "bg-[#F5A524] text-black hover:bg-[#F5A524]/90 shadow-lg shadow-[#F5A524]/25"
+                            : "bg-muted text-muted-foreground hover:bg-muted pointer-events-none",
+                        )}
+                      >
+                        {submitting ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
+                        ) : hasInputs ? (
+                          <Wand2 className="w-3.5 h-3.5 mr-1.5" />
+                        ) : null}
+                        {btnLabel}
+                      </Button>
+                    </span>
+                  </TooltipTrigger>
+                  {!hasInputs && (
+                    <TooltipContent side="top" className="max-w-[240px] text-xs">
+                      {missingHint}. Then pick a format and scene to render.
+                    </TooltipContent>
                   )}
-                >
-                  {submitting ? (
-                    <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
-                  ) : hasInputs ? (
-                    <Wand2 className="w-3.5 h-3.5 mr-1.5" />
-                  ) : null}
-                  {btnLabel}
-                </Button>
+                </Tooltip>
               </div>
             </div>
 
