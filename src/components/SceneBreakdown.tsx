@@ -314,8 +314,6 @@ export const SceneBreakdown = ({
                     const isLocked = dir?.action === "lock";
                     const descExpanded = expandedDescriptions.has(el.id);
                     const fullText = el.details || el.description || "";
-                    const needsTruncate = fullText.length > 60;
-                    const visibleText = descExpanded ? fullText : truncate(fullText, 60);
                     const idx = globalIndexById.get(el.id) ?? 0;
 
                     return (
@@ -324,7 +322,7 @@ export const SceneBreakdown = ({
                         initial={{ opacity: 0, x: -12 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: frameIdx * 0.12 + gIdx * 0.06 + i * 0.04 }}
-                        className={`rounded-lg p-2.5 sm:p-3 transition-colors border ${
+                        className={`group/card rounded-lg p-2.5 sm:p-3 transition-colors border ${
                           isLocked
                             ? "border-border/60 bg-muted/40"
                             : "border-primary/30 bg-primary/[0.04]"
@@ -361,22 +359,19 @@ export const SceneBreakdown = ({
                               </span>
                             </div>
 
-                            <p className="text-xs text-muted-foreground leading-relaxed break-words">
-                              {visibleText}
-                              {needsTruncate && (
-                                <>
-                                  {" "}
-                                  <button
-                                    type="button"
-                                    onClick={() => toggleDescExpanded(el.id)}
-                                    className="font-medium hover:underline"
-                                    style={{ color: "#F5A524" }}
-                                  >
-                                    {descExpanded ? "Show less" : "Show more"}
-                                  </button>
-                                </>
-                              )}
-                            </p>
+                            {fullText && (
+                              <p
+                                onClick={() => toggleDescExpanded(el.id)}
+                                title={fullText}
+                                className={`text-xs text-muted-foreground leading-relaxed break-words cursor-text transition-[max-height] ${
+                                  descExpanded
+                                    ? ""
+                                    : "line-clamp-2 group-hover/card:line-clamp-none group-focus-within/card:line-clamp-none"
+                                }`}
+                              >
+                                {fullText}
+                              </p>
+                            )}
                           </div>
 
                           {/* Lock/Move segmented toggle */}
@@ -388,6 +383,7 @@ export const SceneBreakdown = ({
                                 border: "1px solid rgba(255,255,255,0.08)",
                               }}
                             >
+
                               {/* Sliding active background */}
                               <motion.div
                                 className="absolute top-0.5 bottom-0.5 rounded"
