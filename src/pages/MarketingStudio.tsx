@@ -726,7 +726,7 @@ export default function MarketingStudio() {
               <br /> into a video ad
             </h1>
             <p className="text-muted-foreground mt-3 max-w-lg mx-auto text-sm leading-snug">
-              Pick a format and a location. We compose the prompt and render your ad.
+              Attach a product or avatar, pick a format and scene. We compose the prompt and render your ad.
             </p>
           </div>
 
