@@ -233,6 +233,7 @@ export default function MarketingStudio() {
   const format = find(FORMATS, formatId);
   const setting = find(SETTINGS, settingId);
   const needsAvatar = format?.category === "avatar" && characterActiveIds.length === 0;
+  const needsProduct = brandActiveIds.length === 0 && characterActiveIds.length === 0;
   const sceneLocked = !!format?.lockScene;
 
   // When a scene-locked format is picked, clear any scene/location selection
