@@ -922,6 +922,47 @@ export default function MarketingStudio() {
               )}
             </div>
 
+            {!userNote.trim() && (() => {
+              const examples =
+                format?.category === "avatar" || characterActiveIds.length > 0
+                  ? [
+                      "POV trying it on for the first time",
+                      "Founder talking-head testimonial",
+                      "Reaction shot — eyes light up",
+                      "Voiceover walkthrough, casual tone",
+                    ]
+                  : subject === "app"
+                  ? [
+                      "Tap-through of the killer feature",
+                      "Before / after split screen",
+                      "Phone-in-hand demo, thumb scrolling",
+                      "UI close-up with caption pops",
+                    ]
+                  : [
+                      "Slow-mo unboxing on a clean surface",
+                      "360° hero spin with rim light",
+                      "Macro detail shot, shallow depth",
+                      "Product drops into frame, splash",
+                    ];
+              return (
+                <div className="flex flex-wrap items-center gap-1.5 -mt-1 pl-1">
+                  <span className="text-[10px] uppercase tracking-wider text-muted-foreground/60 font-medium pr-1">
+                    Try
+                  </span>
+                  {examples.map((ex) => (
+                    <button
+                      key={ex}
+                      type="button"
+                      onClick={() => setUserNote(ex)}
+                      className="text-[11px] px-2.5 h-7 rounded-full border border-border/40 bg-muted/15 text-muted-foreground hover:text-foreground hover:border-[hsl(190_90%_50%)]/50 hover:bg-[hsl(190_90%_50%)]/10 transition-colors"
+                    >
+                      {ex}
+                    </button>
+                  ))}
+                </div>
+              );
+            })()}
+
             <div className="flex flex-wrap items-center gap-2">
 
               <PresetChip
