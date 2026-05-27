@@ -455,7 +455,7 @@ export function PresetPickerDialog({
                             : "ring-border/30 hover:ring-[#F5A524]/50 hover:shadow-[0_8px_24px_-12px_hsl(35_90%_55%/0.35)]",
                         )}
                       >
-                        {p.image && (
+                        {p.image && !p.video && (
                           <img
                             src={p.image}
                             alt={p.label}
@@ -471,17 +471,13 @@ export function PresetPickerDialog({
                         )}
                         {p.video && (
                           <video
-                            src={shouldPlay ? p.video : undefined}
-                            poster={p.image}
+                            src={p.video}
                             muted
                             loop
-                            autoPlay={shouldPlay}
+                            autoPlay
                             playsInline
-                            preload="none"
-                            className={cn(
-                              "absolute inset-0 w-full h-full object-cover transition-opacity duration-300",
-                              shouldPlay ? "opacity-100" : "opacity-0",
-                            )}
+                            preload="metadata"
+                            className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.04]"
                           />
                         )}
                         <div
