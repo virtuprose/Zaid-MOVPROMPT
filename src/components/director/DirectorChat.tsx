@@ -190,6 +190,12 @@ function DirectorChatInner() {
   const [showJumpLatest, setShowJumpLatest] = useState(false);
   const [readyToStitch, setReadyToStitch] = useState<string | null>(null);
   const [tasteProfile, setTasteProfile] = useState<TasteProfile>(EMPTY_TASTE_PROFILE);
+  const [handoffChip, setHandoffChip] = useState<{
+    source: "movprompt" | "marketing";
+    model?: string;
+    aspect?: string;
+    duration?: number | "auto";
+  } | null>(null);
 
   // Load the user's taste profile once per mount (and refresh when user changes).
   useEffect(() => {
