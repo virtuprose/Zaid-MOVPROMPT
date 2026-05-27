@@ -413,7 +413,7 @@ export default function MarketingStudio() {
 
   const startGenerate = () => {
     if (!ready) {
-      toast.error("Pick a format and a location first.");
+      toast.error("Pick a format and scene first.");
       return;
     }
     const risk = computeAccuracyRisk();
