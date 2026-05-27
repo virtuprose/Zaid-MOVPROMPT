@@ -236,11 +236,9 @@ export const SceneBreakdown = ({
         </button>
       </div>
 
-      {/* Helper strip — replaces "Mention element" pill */}
-      <p className="text-[13px]" style={{ color: "#A1A1AA" }}>
-        💡 Type <span className="font-mono text-primary">@</span> followed by an element number to reference it
-        (e.g. <span className="font-mono text-primary">@2</span> should turn toward camera).
-      </p>
+      {/* @-mention hint moved next to the description textarea (SceneMentionTextarea)
+          so users see it where the input actually lives. */}
+
 
       {frames.map((frame, frameIdx) => {
         const label = frameLabels[frameIdx] || `Frame ${frameIdx + 1}`;
