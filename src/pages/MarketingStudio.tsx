@@ -212,6 +212,7 @@ export default function MarketingStudio() {
       if (active && active.length > 0) {
         setPendingJobs(active as unknown as VideoJob[]);
       }
+      setUserAdsLoaded(true);
     })();
     return () => { cancelled = true; };
   }, [user]);
