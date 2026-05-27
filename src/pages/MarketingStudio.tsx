@@ -1340,6 +1340,8 @@ function PresetChip({
   onClick,
   flash,
   disabled,
+  locked,
+  lockedReason,
 }: {
   icon: React.ReactNode;
   label: string;
@@ -1348,22 +1350,35 @@ function PresetChip({
   onClick: () => void;
   flash?: boolean;
   disabled?: boolean;
+  locked?: boolean;
+  lockedReason?: string;
 }) {
+  const handleClick = () => {
+    if (locked) {
+      toast(lockedReason || tooltip, { icon: "🔒", duration: 3500 });
+      return;
+    }
+    if (disabled) return;
+    onClick();
+  };
   return (
     <Tooltip>
       <TooltipTrigger asChild>
         <button
           type="button"
-          onClick={disabled ? undefined : onClick}
-          disabled={disabled}
+          onClick={handleClick}
+          disabled={disabled && !locked}
+          aria-disabled={locked || disabled}
           className={cn(
             "inline-flex items-center gap-1.5 rounded-full border px-3 h-9 text-xs transition-all duration-300",
-            disabled
+            locked
+              ? "border-[hsl(35_90%_55%)]/30 bg-[hsl(35_90%_55%)]/[0.06] text-foreground/70 cursor-help"
+              : disabled
               ? "border-border/30 bg-muted/10 text-muted-foreground/60 cursor-not-allowed opacity-70"
               : value
               ? "border-[hsl(0_72%_55%)]/50 bg-[hsl(0_72%_55%)]/10 text-foreground"
               : "border-border/40 bg-muted/20 text-muted-foreground hover:text-foreground hover:border-border",
-            !disabled && flash && value &&
+            !disabled && !locked && flash && value &&
               "border-[hsl(35_90%_55%)] bg-[hsl(35_90%_55%)]/20 text-foreground shadow-[0_0_18px_hsl(35_90%_55%/0.5)] scale-[1.04]",
           )}
         >
@@ -1371,10 +1386,14 @@ function PresetChip({
           <span className="font-medium">
             {value ? `${label}: ${value}` : label}
           </span>
-          {!disabled && <ChevronDown className="w-3.5 h-3.5 opacity-60" />}
+          {locked ? (
+            <Lock className="w-3 h-3 opacity-70 text-[hsl(35_90%_55%)]" />
+          ) : !disabled ? (
+            <ChevronDown className="w-3.5 h-3.5 opacity-60" />
+          ) : null}
         </button>
       </TooltipTrigger>
-      <TooltipContent>{tooltip}</TooltipContent>
+      <TooltipContent>{locked ? (lockedReason || tooltip) : tooltip}</TooltipContent>
     </Tooltip>
   );
 }
