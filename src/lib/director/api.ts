@@ -317,7 +317,7 @@ export type StreamOptions = {
   onPhase?: (phase: DirectorPhase) => void;
 };
 
-export type LockedSpec = {
+export type HandoffLockedSpec = {
   source?: "movprompt" | "marketing";
   model?: string;
   aspect?: string;
@@ -332,7 +332,7 @@ export async function streamDirectorAgent(
   options: StreamOptions & {
     tasteProfile?: TasteProfile | null;
     mode?: "director" | "free_chat";
-    lockedSpec?: LockedSpec | null;
+    lockedSpec?: HandoffLockedSpec | null;
   } = {},
 ): Promise<AgentResponse> {
   const idleTimeoutMs = options.idleTimeoutMs ?? 30_000;
@@ -341,6 +341,7 @@ export async function streamDirectorAgent(
   const tasteProfile = options.tasteProfile ?? null;
   const mode = options.mode ?? "director";
   const lockedSpec = options.lockedSpec ?? null;
+
 
 
 
