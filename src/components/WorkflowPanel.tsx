@@ -38,6 +38,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { getContract, deriveWorkflowType, supportsTimelinePrompting } from "@/lib/modelContracts";
 import { getModelControls } from "@/lib/director/videoModelControls";
+import { writeHandoff } from "@/lib/director/handoff";
 import { MODEL_GROUPS, getModelLabel } from "@/lib/models";
 import { parseEdgeFnError, pickErrorKey } from "@/lib/edgeFnError";
 import { detectAllIntents } from "@/lib/sceneIntent";
@@ -1538,6 +1539,56 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
               applyingAddendumByShot={applyingAddendumByShot}
               onShare={user ? () => setShareDialogOpen(true) : undefined}
             />
+            {results && results.length > 0 && (
+              <div className="mt-4 rounded-2xl border border-accent/30 bg-gradient-to-br from-accent/10 via-accent/5 to-transparent p-4 sm:p-5">
+                <div className="flex items-start gap-3 sm:gap-4 flex-wrap">
+                  <div className="hidden sm:flex shrink-0 size-10 rounded-xl bg-accent/20 text-accent items-center justify-center">
+                    <Clapperboard className="w-5 h-5" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-display text-sm sm:text-base font-semibold text-foreground">
+                      {t("results.handoff.title" as any) || "Generate the video with AI Director"}
+                    </div>
+                    <p className="mt-1 text-xs sm:text-[13px] text-muted-foreground leading-relaxed">
+                      {t("results.handoff.subtitle" as any) ||
+                        "Send this prompt and your references to the Director — confirm the model, aspect and duration, then render in one click."}
+                    </p>
+                  </div>
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      const first = results[0];
+                      const promptText = first?.mainPrompt ?? "";
+                      const attachments = images
+                        .filter(Boolean)
+                        .map((img, i) => ({
+                          kind: "image" as const,
+                          name: img.file?.name || `reference-${i + 1}.jpg`,
+                          url: img.preview,
+                        }));
+                      writeHandoff({
+                        source: "movprompt",
+                        prompt: promptText,
+                        banner:
+                          "Brought over from MovPrompt — your prompt and references are loaded. Tweak anything, then hit send to brief me, or say \"render now\" and I'll generate.",
+                        attachments,
+                        settings: {
+                          model: selectedModel,
+                          aspect: targetAspectRatio,
+                          duration: targetDuration as number | "auto" | undefined,
+                        },
+                      });
+                      navigate("/director?from=movprompt");
+                    }}
+                    className="rounded-full bg-accent text-accent-foreground hover:bg-accent/90 px-4 h-9 font-semibold text-xs gap-1.5 shrink-0"
+                  >
+                    <Clapperboard className="w-3.5 h-3.5" />
+                    {t("results.handoff.cta" as any) || "Open in AI Director"}
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </Button>
+                </div>
+              </div>
+            )}
             <ShareDialog
               open={shareDialogOpen}
               onOpenChange={setShareDialogOpen}

@@ -80,6 +80,8 @@ import {
 } from "@/components/marketing/RenderSettingsPopover";
 
 import { submitVideoJob, pollVideoJob, cancelVideoJob, writeAdScene, type VideoJob } from "@/lib/director/api";
+import { writeHandoff } from "@/lib/director/handoff";
+import { Clapperboard } from "lucide-react";
 import { estimateVideoCost, usePricing } from "@/lib/credits/pricing";
 import { CostChip } from "@/components/credits/CostChip";
 import { notifyInsufficientCredits } from "@/lib/credits/insufficient";
@@ -1244,37 +1246,76 @@ export default function MarketingStudio() {
                     Low credits — Top up
                   </button>
                 )}
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span className={cn(!hasInputs && "cursor-help")}>
-                      <Button
-                        size="sm"
-                        disabled={!hasInputs || submitting || drafting}
-                        onClick={startGenerate}
-                        className={cn(
-                          "rounded-full px-4 h-9 font-semibold text-xs transition-all",
-                          hasInputs
-                            ? "bg-[#F5A524] text-black hover:bg-[#F5A524]/90 shadow-lg shadow-[#F5A524]/25"
-                            : "bg-muted text-muted-foreground hover:bg-muted pointer-events-none",
-                        )}
-                      >
-                        {submitting ? (
-                          <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
-                        ) : hasInputs ? (
-                          <Wand2 className="w-3.5 h-3.5 mr-1.5" />
-                        ) : null}
-                        {btnLabel}
-                      </Button>
-                    </span>
-                  </TooltipTrigger>
-                  {!hasInputs && (
-                    <TooltipContent side="top" className="max-w-[240px] text-xs">
-                      {missingHint}. Then pick a format and scene to render.
-                    </TooltipContent>
-                  )}
-                </Tooltip>
-              </div>
-            </div>
+                 <Tooltip>
+                   <TooltipTrigger asChild>
+                     <span className={cn(!hasInputs && "cursor-help")}>
+                       <Button
+                         size="sm"
+                         disabled={!hasInputs || submitting || drafting}
+                         onClick={startGenerate}
+                         className={cn(
+                           "rounded-full px-4 h-9 font-semibold text-xs transition-all",
+                           hasInputs
+                             ? "bg-[#F5A524] text-black hover:bg-[#F5A524]/90 shadow-lg shadow-[#F5A524]/25"
+                             : "bg-muted text-muted-foreground hover:bg-muted pointer-events-none",
+                         )}
+                       >
+                         {submitting ? (
+                           <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
+                         ) : hasInputs ? (
+                           <Wand2 className="w-3.5 h-3.5 mr-1.5" />
+                         ) : null}
+                         {btnLabel}
+                       </Button>
+                     </span>
+                   </TooltipTrigger>
+                   {!hasInputs && (
+                     <TooltipContent side="top" className="max-w-[240px] text-xs">
+                       {missingHint}. Then pick a format and scene to render.
+                     </TooltipContent>
+                   )}
+                 </Tooltip>
+                 <Tooltip>
+                   <TooltipTrigger asChild>
+                     <Button
+                       size="sm"
+                       variant="outline"
+                       disabled={!master.trim()}
+                       onClick={() => {
+                         const brandLines = brandKits
+                           .map((b) => `Brand: ${b.name}${b.description ? ` — ${b.description}` : ""}`)
+                           .join("\n");
+                         const charLines = characterActiveKits
+                           .map((c) => `Character: ${c.name}${c.description ? ` — ${c.description}` : ""}`)
+                           .join("\n");
+                         const context = [brandLines, charLines].filter(Boolean).join("\n");
+                         const prompt = [context, master.trim()].filter(Boolean).join("\n\n");
+                         writeHandoff({
+                           source: "marketing",
+                           prompt,
+                           banner:
+                             "Brought over from Marketing Studio — I've got your brand and scene. Tell me how cinematic you want it, or say \"render now\" and I'll go.",
+                           settings: {
+                             aspect: renderSettings.aspect_ratio,
+                             duration: renderSettings.duration as number | "auto" | undefined,
+                           },
+                           brandKitId: brandKit?.id,
+                           characterKitId: characterKit?.id,
+                         });
+                         navigate("/director?from=marketing");
+                       }}
+                       className="rounded-full px-3 h-9 text-xs gap-1.5 border-accent/40 text-accent hover:bg-accent/10"
+                     >
+                       <Clapperboard className="w-3.5 h-3.5" />
+                       Plan with AI Director
+                     </Button>
+                   </TooltipTrigger>
+                   <TooltipContent side="top" className="max-w-[240px] text-xs">
+                     Hand your brief to the Director for cinematic shotlists or multi-shot stories.
+                   </TooltipContent>
+                 </Tooltip>
+               </div>
+             </div>
 
             {ready && (
               <div className="mt-2 rounded-xl border border-border/30 bg-muted/10 px-3 py-2 text-[11px] text-muted-foreground">

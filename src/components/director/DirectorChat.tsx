@@ -229,6 +229,38 @@ function DirectorChatInner() {
     return () => window.removeEventListener("director:quick-action", onAction);
   }, []);
 
+  // Cross-tool handoff (MovPrompt / Marketing Studio → Director).
+  // Consume once on mount when arriving on the fresh /director route.
+  useEffect(() => {
+    if (routeSessionId) return; // only seed brand-new sessions
+    let cancelled = false;
+    void (async () => {
+      const { readHandoff, clearHandoff } = await import("@/lib/director/handoff");
+      const handoff = readHandoff();
+      if (!handoff || cancelled) return;
+      clearHandoff();
+      if (handoff.prompt) setInput(handoff.prompt);
+      if (handoff.attachments?.length) {
+        setAttachments(handoff.attachments as Attachment[]);
+      }
+      if (handoff.banner) {
+        setBubbles((prev) => {
+          // Replace the default welcome with the handoff banner so the entry is contextual.
+          const rest = prev.length === 1 && prev[0]?.role === "assistant" && !("data" in prev[0]) ? [] : prev;
+          return [
+            ...rest,
+            { role: "assistant" as const, animate: true, content: handoff.banner! },
+          ];
+        });
+      }
+      setComposerFocusTick((t) => t + 1);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [routeSessionId]);
+
+
   const jumpToStitch = () => {
     if (!readyToStitch) return;
     const btn = document.querySelector<HTMLButtonElement>(
