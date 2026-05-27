@@ -152,6 +152,20 @@ function extractFalError(error: unknown): { status?: number; message: string } {
       message: fromBody || maybe.message || "Unknown provider error",
     };
   }
+  if (typeof error === "object" && error !== null) {
+    const maybe = error as { status?: number; detail?: unknown; error?: unknown; message?: unknown; body?: { detail?: unknown; error?: unknown; message?: unknown } };
+    const fromBody =
+      stringifyFalDetail(maybe.body?.detail) ||
+      stringifyFalDetail(maybe.body?.error) ||
+      stringifyFalDetail(maybe.body?.message) ||
+      stringifyFalDetail(maybe.detail) ||
+      stringifyFalDetail(maybe.error) ||
+      stringifyFalDetail(maybe.message);
+    return {
+      status: typeof maybe.status === "number" ? maybe.status : undefined,
+      message: fromBody || "Unknown provider error",
+    };
+  }
   return { message: "Unknown provider error" };
 }
 
@@ -685,14 +699,26 @@ serve(async (req) => {
         input: buildFalPayload(provider, normalizedPrompt, options, refImages, useI2V),
       }) as Record<string, any>;
     } catch (error) {
-      console.error("fal submit error", error);
+      const falError = extractFalError(error);
+      console.error("fal submit error", falError.status, falError.message, error);
       await admin
         .from("video_jobs")
-        .update({ status: "failed", error: "Provider error" })
+        .update({
+          status: "failed",
+          error:
+            typeof falError.status === "number" && falError.status >= 400 && falError.status < 500
+              ? `Provider rejected the job (${falError.status}): ${falError.message || "validation error"}`
+              : falError.message || "Provider error",
+        })
         .eq("id", job.id);
       await refundCredits({ userId: uid, amount: creditCost, reason: "video_render_refund", refId: job.id, metadata: { stage: "submit_error" } });
-      return new Response(JSON.stringify({ error: "Provider rejected request" }), {
-        status: 502,
+      return new Response(JSON.stringify({
+        error:
+          typeof falError.status === "number" && falError.status >= 400 && falError.status < 500
+            ? `Provider rejected the job (${falError.status}): ${falError.message || "validation error"}`
+            : falError.message || "Provider rejected request",
+      }), {
+        status: typeof falError.status === "number" && falError.status >= 400 && falError.status < 500 ? falError.status : 502,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
