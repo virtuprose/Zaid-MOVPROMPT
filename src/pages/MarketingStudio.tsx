@@ -122,7 +122,7 @@ export default function MarketingStudio() {
   const [settingId, setSettingId] = useState<string | undefined>();
   const [customSetting, setCustomSetting] = useState<string>("");
   const [location, setLocation] = useState<LocationInput>(EMPTY_LOCATION);
-  const [filter, setFilter] = useState<(typeof FILTERS)[number]>("All");
+  
 
   const [openPicker, setOpenPicker] = useState<"format" | "location" | null>(null);
   const [placeMode, setPlaceMode] = useState<"preset" | "city" | "image">("preset");
