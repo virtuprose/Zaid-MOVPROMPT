@@ -391,14 +391,6 @@ export const SETTINGS: StudioPreset[] = [
     fragment: "Setting: minimalist modern office desk, daylight from large window, focused workspace styling",
   },
   {
-    id: "indoor-minimalist",
-    label: "Indoor minimalist",
-    description: "Quiet Minimalism",
-    category: "realistic",
-    image: "/presets/indoor-minimalist.png",
-    fragment: "Setting: bright minimalist indoor space, neutral palette, clean architectural lines",
-  },
-  {
     id: "industrial-loft",
     label: "Industrial loft",
     description: "Loft Energy",

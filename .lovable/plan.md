@@ -1,15 +1,9 @@
-## Change
+## Remove 3 duplicate scene presets
 
-In `src/pages/MarketingStudio.tsx` line 1222–1223, drop the model name from the cost tooltip's meta line.
+In `src/lib/marketingStudio.ts`, delete these three entries from the `SETTINGS` array:
 
-Before:
-```
-{renderSettings.duration}s · {renderSettings.resolution} · {location.imagePath ? "Seedance 2.0 (with reference)" : "Seedance v1 Pro"}
-```
+1. **`indoor-minimalist`** (lines 393–400)
+2. **`outdoor-sunlit`** (lines 465–472)
+3. **`penthouse`** (lines 499–506)
 
-After:
-```
-{renderSettings.duration}s · {renderSettings.resolution}
-```
-
-Everything else in the tooltip (estimated cost, wallet balance, final-cost disclaimer) stays as-is. No other files affected.
+No other files reference these IDs (verified via ripgrep), so no follow-up cleanup is needed. The Scene picker will show 22 presets instead of 25.
