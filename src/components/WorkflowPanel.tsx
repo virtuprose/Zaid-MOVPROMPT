@@ -1840,9 +1840,42 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
     isAnalyzing ||
     ((phase === "breakdown" || phase === "generate") && sceneFrames.length > 0);
 
+  const stepInfo: { n: 1 | 2 | 3; label: string } = (() => {
+    if (phase === "upload") return { n: 1, label: "Upload" };
+    if (phase === "breakdown") return { n: 2, label: "Review scene" };
+    return { n: 3, label: results ? "Prompt ready" : "Generate prompt" };
+  })();
+
   return (
     <div className="w-full max-w-[720px] mx-auto">
       <div className="space-y-6 pb-28">
+        <div className="flex items-center justify-center gap-2" aria-label={`Step ${stepInfo.n} of 3: ${stepInfo.label}`}>
+          {[1, 2, 3].map((s) => {
+            const active = stepInfo.n === s;
+            const done = stepInfo.n > s;
+            return (
+              <div key={s} className="flex items-center gap-2">
+                <span
+                  className={`flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-display font-bold transition-colors ${
+                    active
+                      ? "bg-accent text-accent-foreground"
+                      : done
+                        ? "bg-accent/20 text-accent"
+                        : "bg-muted text-muted-foreground"
+                  }`}
+                >
+                  {done ? "✓" : s}
+                </span>
+                {active && (
+                  <span className="text-[11px] uppercase tracking-wider font-display font-medium text-foreground/90">
+                    {stepInfo.label}
+                  </span>
+                )}
+                {s < 3 && <span className="w-6 h-px bg-border" aria-hidden="true" />}
+              </div>
+            );
+          })}
+        </div>
         <div
           style={{
             opacity: isAnalyzing ? 0.7 : 1,
@@ -1851,6 +1884,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
         >
           {leftPanel}
         </div>
+
         {hasRightContent && (
           <div className="rounded-2xl border border-border bg-card/40 p-4 sm:p-6">
             {rightPanel}
