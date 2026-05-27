@@ -375,6 +375,11 @@ serve(async (req) => {
       userText += `Target video duration: AUTO — pick the most cinematic duration for this scene.\n\n`;
     }
 
+    if (typeof targetAspectRatio === "string" && /^\d{1,2}:\d{1,2}$/.test(targetAspectRatio)) {
+      userText += `Target aspect ratio: ${targetAspectRatio} — set suggestedAspectRatio to "${targetAspectRatio}" and frame/compose the scene for this exact ratio.\n\n`;
+    }
+
+
 
     // Refinement guidance: from auto-fix chips, AI critique suggestions, or thumbs-down feedback.
     // These are USER-DIRECTED corrections to the previous attempt. Honor them precisely without rewriting other parts.
