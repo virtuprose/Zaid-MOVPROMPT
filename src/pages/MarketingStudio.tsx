@@ -630,6 +630,38 @@ export default function MarketingStudio() {
       toast.error("Couldn't update like");
     }
   };
+  const handleReuseAd = (ad: UserAd) => {
+    const m = (ad.metadata || {}) as {
+      formatId?: string | null;
+      settingId?: string | null;
+      customFormat?: string | null;
+      customSetting?: string | null;
+      subject?: Subject;
+      place?: string | null;
+    };
+    if (!m.formatId && !m.customFormat && !m.settingId && !m.customSetting && !m.place) {
+      toast.error("This ad has no setup to reuse.");
+      return;
+    }
+    if (m.subject) setSubjectOverride(m.subject);
+    setFormatId(m.formatId ?? undefined);
+    setSettingId(m.settingId ?? undefined);
+    setCustomFormat(m.customFormat ?? "");
+    setCustomSetting(m.customSetting ?? "");
+    if (m.place) {
+      setLocation({ ...EMPTY_LOCATION, place: m.place });
+      setPlaceMode("city");
+    } else {
+      setLocation(EMPTY_LOCATION);
+      setPlaceMode("preset");
+    }
+    if (ad.prompt) setUserNote(ad.prompt.slice(0, 280));
+    setFlashChips(true);
+    window.setTimeout(() => setFlashChips(false), 900);
+    composerRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    toast.success("Setup loaded — tweak and regenerate.");
+  };
+
 
   const confirmDeleteAd = async () => {
     const adId = deleteAdId;
