@@ -211,12 +211,12 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
 
   // Flatten scene frames into a single 1-based indexed list (left-to-right, frame-by-frame).
   const flatSceneElements = useMemo(() => {
-    const out: { index: number; category: string; description: string; id: string }[] = [];
+    const out: { index: number; category: string; description: string; id: string; frameIndex: number }[] = [];
     let n = 0;
     for (const frame of sceneFrames) {
       for (const el of frame.elements) {
         n += 1;
-        out.push({ index: n, category: el.category, description: el.description, id: el.id });
+        out.push({ index: n, category: el.category, description: el.description, id: el.id, frameIndex: frame.frameIndex });
       }
     }
     return out;
@@ -642,7 +642,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
       ));
       const elementMentions = mentionedNumbers
         .map((n) => flatSceneElements.find((el) => el.index === n))
-        .filter((el): el is { index: number; category: string; description: string; id: string } => Boolean(el))
+        .filter((el): el is { index: number; category: string; description: string; id: string; frameIndex: number } => Boolean(el))
         .map(({ index, category, description }) => ({ index, category, description }));
 
       const { data, error } = await supabase.functions.invoke("generate-prompt", {
@@ -1139,7 +1139,13 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
           ref={sceneMentionRef}
           value={description}
           onChange={setDescription}
-          elements={flatSceneElements.map(({ index, category, description }) => ({ index, category, description }))}
+          elements={flatSceneElements.map(({ index, category, description, frameIndex }) => ({
+            index,
+            category,
+            description,
+            frameLabel: frameLabels[frameIndex] || `Frame ${frameIndex + 1}`,
+          }))}
+          showFrameBadges={frameLabels.length > 1}
           placeholder={contextPlaceholder}
         />
       ) : (

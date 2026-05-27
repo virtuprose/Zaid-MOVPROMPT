@@ -1,6 +1,6 @@
-import { useRef, useImperativeHandle, forwardRef, useEffect } from "react";
+import { useRef, useImperativeHandle, forwardRef, useEffect, useMemo } from "react";
 import { Textarea } from "@/components/ui/textarea";
-import { AtSign } from "lucide-react";
+import { AtSign, Info, AlertTriangle } from "lucide-react";
 import { useLanguage } from "@/i18n/LanguageContext";
 import {
   Popover,
@@ -8,12 +8,19 @@ import {
   PopoverTrigger,
   PopoverAnchor,
 } from "@/components/ui/popover";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useState } from "react";
 
 export interface SceneMentionElement {
   index: number; // 1-based
   category: string;
   description: string;
+  frameLabel?: string; // optional — which uploaded frame this element came from
 }
 
 interface SceneMentionTextareaProps {
@@ -21,6 +28,7 @@ interface SceneMentionTextareaProps {
   onChange: (v: string) => void;
   elements: SceneMentionElement[];
   placeholder?: string;
+  showFrameBadges?: boolean; // typically only meaningful when there are multiple frames
 }
 
 export interface SceneMentionTextareaHandle {
@@ -37,13 +45,15 @@ const categoryEmoji: Record<string, string> = {
 };
 
 export const SceneMentionTextarea = forwardRef<SceneMentionTextareaHandle, SceneMentionTextareaProps>(
-  ({ value, onChange, elements, placeholder }, fwdRef) => {
+  ({ value, onChange, elements, placeholder, showFrameBadges = false }, fwdRef) => {
     const { t } = useLanguage();
     const ref = useRef<HTMLTextAreaElement>(null);
     const overlayRef = useRef<HTMLDivElement>(null);
     const [open, setOpen] = useState(false);
     const triggerPosRef = useRef<number | null>(null);
     const lastCaretRef = useRef<{ start: number; end: number }>({ start: 0, end: 0 });
+
+    const maxIndex = elements.length;
 
     const recordCaret = (el: HTMLTextAreaElement | null) => {
       if (!el) return;
@@ -106,7 +116,6 @@ export const SceneMentionTextarea = forwardRef<SceneMentionTextareaHandle, Scene
         triggerPosRef.current = caret - 1;
         setOpen(true);
       } else if (triggerPosRef.current !== null) {
-        // Only clear trigger if user destroyed the @ or typed a digit after it
         const tp = triggerPosRef.current;
         if (next[tp] !== "@" || /\d/.test(next[tp + 1] ?? "")) {
           triggerPosRef.current = null;
@@ -125,13 +134,25 @@ export const SceneMentionTextarea = forwardRef<SceneMentionTextareaHandle, Scene
       overlayRef.current.scrollTop = ref.current.scrollTop;
     }, [value]);
 
+    // Collect any out-of-range @N tokens for the warning chip.
+    const invalidTokens = useMemo(() => {
+      const found = new Set<string>();
+      const re = /@(\d+)/g;
+      let m: RegExpExecArray | null;
+      while ((m = re.exec(value)) !== null) {
+        const n = parseInt(m[1], 10);
+        if (maxIndex === 0 || n < 1 || n > maxIndex) found.add(`@${n}`);
+      }
+      return Array.from(found);
+    }, [value, maxIndex]);
+
     const renderHighlighted = () => {
       const parts = value.split(/(@\d+)/g);
       return parts.map((part, i) => {
         const m = /^@(\d+)$/.exec(part);
         if (m) {
           const n = parseInt(m[1], 10);
-          if (n >= 1 && n <= elements.length) {
+          if (n >= 1 && n <= maxIndex) {
             return (
               <span
                 key={i}
@@ -141,9 +162,27 @@ export const SceneMentionTextarea = forwardRef<SceneMentionTextareaHandle, Scene
               </span>
             );
           }
+          return (
+            <span
+              key={i}
+              className="bg-destructive/20 text-destructive rounded px-0.5 -mx-0.5 underline decoration-destructive decoration-dashed underline-offset-2"
+            >
+              {part}
+            </span>
+          );
         }
         return <span key={i}>{part}</span>;
       });
+    };
+
+    const openPicker = () => {
+      const el = ref.current;
+      if (el) {
+        el.focus();
+        recordCaret(el);
+      }
+      triggerPosRef.current = null;
+      setOpen(true);
     };
 
     return (
@@ -179,8 +218,9 @@ export const SceneMentionTextarea = forwardRef<SceneMentionTextareaHandle, Scene
               }}
             />
           </div>
+          <PopoverAnchor className="absolute" />
           <PopoverContent
-            className="w-[min(20rem,calc(100vw-2rem))] p-1"
+            className="w-[min(22rem,calc(100vw-2rem))] p-1"
             align="start"
             side="bottom"
             onOpenAutoFocus={(e) => e.preventDefault()}
@@ -224,8 +264,13 @@ export const SceneMentionTextarea = forwardRef<SceneMentionTextareaHandle, Scene
                         @{el.index}
                       </span>
                       <div className="flex-1 min-w-0">
-                        <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                          {categoryEmoji[el.category] ?? ""} {el.category}
+                        <div className="text-[10px] uppercase tracking-wider text-muted-foreground flex items-center gap-1.5 flex-wrap">
+                          <span>{categoryEmoji[el.category] ?? ""} {el.category}</span>
+                          {showFrameBadges && el.frameLabel && (
+                            <span className="inline-flex items-center rounded-full border border-border/60 bg-muted/40 px-1.5 py-px text-[9px] font-medium text-muted-foreground normal-case tracking-normal">
+                              {el.frameLabel}
+                            </span>
+                          )}
                         </div>
                         <div className="text-xs text-foreground truncate">{el.description}</div>
                       </div>
@@ -235,17 +280,58 @@ export const SceneMentionTextarea = forwardRef<SceneMentionTextareaHandle, Scene
               </>
             )}
           </PopoverContent>
-
         </Popover>
-        {elements.length > 0 && (
-          <p className="text-[11px] text-muted-foreground leading-relaxed">
-            💡 Type <span className="font-mono text-primary">@</span> followed by an element number to reference it
-            {" "}(e.g. <span className="font-mono text-primary">@2</span> should turn toward camera).
+
+        {/* Validation chip — shown when description has invalid @N */}
+        {elements.length > 0 && invalidTokens.length > 0 && (
+          <div className="flex items-start gap-1.5 text-[11px] leading-relaxed rounded-md border border-destructive/40 bg-destructive/10 px-2.5 py-1.5">
+            <AlertTriangle className="w-3.5 h-3.5 text-destructive shrink-0 mt-px" aria-hidden="true" />
+            <p className="flex-1 text-destructive">
+              {t("scene.mentionHint.invalid" as any)
+                .replace("{tokens}", invalidTokens.join(", "))
+                .replace("{n}", String(maxIndex))}
+              {" "}
+              <button
+                type="button"
+                onClick={openPicker}
+                className="underline decoration-dotted underline-offset-2 hover:text-foreground"
+              >
+                {t("scene.mentionHint.pickFromList" as any)}
+              </button>
+            </p>
+          </div>
+        )}
+
+        {/* Contextual hint — only when no invalid tokens are present */}
+        {elements.length > 0 && invalidTokens.length === 0 && (
+          <p className="text-[11px] text-muted-foreground leading-relaxed flex items-start gap-1.5">
+            <span aria-hidden="true">💡</span>
+            <span className="flex-1">
+              {(maxIndex === 1
+                ? t("scene.mentionHint.single" as any)
+                : t("scene.mentionHint.range" as any).replace("{n}", String(maxIndex))
+              )}
+            </span>
+            <TooltipProvider delayDuration={150}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    aria-label="How @N works"
+                    className="text-muted-foreground/70 hover:text-foreground transition-colors shrink-0"
+                  >
+                    <Info className="w-3 h-3" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="max-w-xs text-xs leading-relaxed">
+                  {t("scene.mentionHint.info" as any)}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </p>
         )}
       </div>
     );
-
   },
 );
 
