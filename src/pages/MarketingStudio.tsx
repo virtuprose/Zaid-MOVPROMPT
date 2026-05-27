@@ -238,7 +238,7 @@ export default function MarketingStudio() {
     return () => { cancelled = true; };
   }, [user]);
 
-  if (!loading && !user) return null;
+  const shouldRenderNothing = !loading && !user;
 
   const format = find(FORMATS, formatId);
   const setting = find(SETTINGS, settingId);
