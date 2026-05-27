@@ -417,6 +417,33 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
   useEffect(() => {
     try { localStorage.setItem(`movprompt.targetDuration.${selectedModel}`, String(targetDuration)); } catch { /* ignore */ }
   }, [targetDuration, selectedModel]);
+
+  // Per-model target aspect ratio. Surfaced as chips near the Generate CTA so
+  // the user can override the AI-suggested framing before generation.
+  const [targetAspectRatio, setTargetAspectRatio] = useState<string>(() => {
+    const fallback = (modelControls.defaults?.aspect_ratio as string | undefined) ?? "16:9";
+    try {
+      const saved = localStorage.getItem(`movprompt.aspectRatio.${selectedModel}`);
+      if (saved && (modelControls.aspectRatios ?? []).includes(saved)) return saved;
+    } catch { /* ignore */ }
+    return fallback;
+  });
+  useEffect(() => {
+    const fallback = (modelControls.defaults?.aspect_ratio as string | undefined) ?? "16:9";
+    let next = fallback;
+    try {
+      const saved = localStorage.getItem(`movprompt.aspectRatio.${selectedModel}`);
+      if (saved && (modelControls.aspectRatios ?? []).includes(saved)) next = saved;
+    } catch { /* ignore */ }
+    const allowed = modelControls.aspectRatios ?? [fallback];
+    if (!allowed.includes(next)) next = fallback;
+    setTargetAspectRatio(next);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedModel]);
+  useEffect(() => {
+    try { localStorage.setItem(`movprompt.aspectRatio.${selectedModel}`, targetAspectRatio); } catch { /* ignore */ }
+  }, [targetAspectRatio, selectedModel]);
+
   const activeSlots = contract.supportsTwoFrameToggle && twoFrameMode ? 2 : contract.slots;
   const workflowType = deriveWorkflowType(selectedModel, activeSlots, contract.supportsMultiShotToggle && multiShotMode);
 
