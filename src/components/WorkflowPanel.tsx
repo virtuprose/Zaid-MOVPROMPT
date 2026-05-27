@@ -189,6 +189,29 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
     return localStorage.getItem(ONBOARDING_DONE_KEY) === "1";
   });
 
+  // Measure the sticky bottom CTA so the scroll container can reserve enough
+  // bottom padding — otherwise the last scene block hides under the bar and
+  // the page feels "locked" at the end.
+  const stickyBarRef = useRef<HTMLDivElement | null>(null);
+  const [stickyBarHeight, setStickyBarHeight] = useState(0);
+  useEffect(() => {
+    const el = stickyBarRef.current;
+    if (!el) {
+      setStickyBarHeight(0);
+      return;
+    }
+    const update = () => setStickyBarHeight(el.getBoundingClientRect().height);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    window.addEventListener("resize", update);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", update);
+    };
+  });
+
+
   const handlePickExample = useCallback(async (example: OnboardingExample) => {
     try {
       const res = await fetch(example.src);
