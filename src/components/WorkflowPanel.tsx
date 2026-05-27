@@ -1547,11 +1547,10 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="font-display text-sm sm:text-base font-semibold text-foreground">
-                      {t("results.handoff.title" as any) || "Generate the video with AI Director"}
+                      Generate the video with AI Director
                     </div>
                     <p className="mt-1 text-xs sm:text-[13px] text-muted-foreground leading-relaxed">
-                      {t("results.handoff.subtitle" as any) ||
-                        "Send this prompt and your references to the Director — confirm the model, aspect and duration, then render in one click."}
+                      Send this prompt and your references to the Director — confirm the model, aspect and duration, then render in one click.
                     </p>
                   </div>
                   <Button
