@@ -21,6 +21,7 @@ import {
   Trash2,
   CheckCircle2,
   Lock,
+  Copy,
 } from "lucide-react";
 
 import {
@@ -629,6 +630,38 @@ export default function MarketingStudio() {
       toast.error("Couldn't update like");
     }
   };
+  const handleReuseAd = (ad: UserAd) => {
+    const m = (ad.metadata || {}) as {
+      formatId?: string | null;
+      settingId?: string | null;
+      customFormat?: string | null;
+      customSetting?: string | null;
+      subject?: Subject;
+      place?: string | null;
+    };
+    if (!m.formatId && !m.customFormat && !m.settingId && !m.customSetting && !m.place) {
+      toast.error("This ad has no setup to reuse.");
+      return;
+    }
+    if (m.subject) setSubjectOverride(m.subject);
+    setFormatId(m.formatId ?? undefined);
+    setSettingId(m.settingId ?? undefined);
+    setCustomFormat(m.customFormat ?? "");
+    setCustomSetting(m.customSetting ?? "");
+    if (m.place) {
+      setLocation({ ...EMPTY_LOCATION, place: m.place });
+      setPlaceMode("city");
+    } else {
+      setLocation(EMPTY_LOCATION);
+      setPlaceMode("preset");
+    }
+    if (ad.prompt) setUserNote(ad.prompt.slice(0, 280));
+    setFlashChips(true);
+    window.setTimeout(() => setFlashChips(false), 900);
+    composerRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    toast.success("Setup loaded — tweak and regenerate.");
+  };
+
 
   const confirmDeleteAd = async () => {
     const adId = deleteAdId;
@@ -1266,6 +1299,7 @@ export default function MarketingStudio() {
                       ad={ad}
                       onClick={() => setPreviewAd(ad)}
                       onDownload={() => handleDownloadAd(ad)}
+                      onReuse={() => handleReuseAd(ad)}
                       onToggleLike={() => handleToggleLike(ad)}
                       onDelete={() => setDeleteAdId(ad.id)}
                     />
@@ -1294,6 +1328,7 @@ export default function MarketingStudio() {
                       ad={ad}
                       onClick={() => setPreviewAd(ad)}
                       onDownload={() => handleDownloadAd(ad)}
+                      onReuse={() => handleReuseAd(ad)}
                       onToggleLike={() => handleToggleLike(ad)}
                       onDelete={() => setDeleteAdId(ad.id)}
                     />
@@ -1685,12 +1720,14 @@ function UserAdCard({
   ad,
   onClick,
   onDownload,
+  onReuse,
   onToggleLike,
   onDelete,
 }: {
   ad: UserAd;
   onClick: () => void;
   onDownload?: () => void;
+  onReuse?: () => void;
   onToggleLike?: () => void;
   onDelete?: () => void;
 }) {
@@ -1769,6 +1806,20 @@ function UserAdCard({
         )}
       </div>
       <div className="absolute top-2 right-2 flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+        {onReuse && !broken && (
+          <button
+            type="button"
+            onClick={stop(onReuse)}
+            aria-label="Reuse setup"
+            title="Reuse this setup in the composer"
+            className="h-8 px-2.5 rounded-full bg-black/55 backdrop-blur border border-white/10 grid place-items-center text-white hover:bg-black/75 hover:border-[hsl(35_90%_55%)]/60 hover:text-[hsl(35_90%_55%)] transition"
+          >
+            <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider">
+              <Copy className="h-3 w-3" />
+              Reuse
+            </span>
+          </button>
+        )}
         {onToggleLike && (
           <button
             type="button"
