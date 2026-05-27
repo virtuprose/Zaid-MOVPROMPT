@@ -238,7 +238,7 @@ export default function MarketingStudio() {
     return () => { cancelled = true; };
   }, [user]);
 
-  if (!loading && !user) return null;
+  const shouldRenderNothing = !loading && !user;
 
   const format = find(FORMATS, formatId);
   const setting = find(SETTINGS, settingId);
@@ -749,6 +749,8 @@ export default function MarketingStudio() {
     : !hasInputs
       ? missingHint
       : "Generate ad";
+
+  if (shouldRenderNothing) return null;
 
   return (
     <TooltipProvider delayDuration={200}>
