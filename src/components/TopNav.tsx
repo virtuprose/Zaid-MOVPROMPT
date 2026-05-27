@@ -93,7 +93,7 @@ export function TopNav() {
           </div>
         </Link>
 
-        <div className="hidden lg:block h-6 w-px bg-border/60 mx-1" />
+        <div className="hidden lg:block w-2" />
 
         {/* Center nav */}
         <nav className="hidden lg:flex items-center h-10 p-1 rounded-xl border border-border/40 bg-card/60 backdrop-blur-xl">
