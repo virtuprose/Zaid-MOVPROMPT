@@ -1717,7 +1717,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
 
   return (
     <div className="w-full max-w-[720px] mx-auto">
-      <div className="space-y-6 pb-24 lg:pb-0">
+      <div className="space-y-6 pb-28">
         <div
           style={{
             opacity: isAnalyzing ? 0.7 : 1,
