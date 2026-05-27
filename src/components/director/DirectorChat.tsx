@@ -241,10 +241,19 @@ function DirectorChatInner() {
     if (routeSessionId) return; // only seed brand-new sessions
     let cancelled = false;
     void (async () => {
-      const { readHandoff, clearHandoff } = await import("@/lib/director/handoff");
-      const handoff = readHandoff();
-      if (!handoff || cancelled) return;
-      clearHandoff();
+      const { readHandoffDetailed } = await import("@/lib/director/handoff");
+      const result = readHandoffDetailed();
+      if (cancelled) return;
+      if (result.status === "expired") {
+        const sourceLabel = result.source === "movprompt" ? "MovPrompt" : "Marketing Studio";
+        toast.warning(`Brief from ${sourceLabel} expired`, {
+          description: "Handoffs are kept for 5 minutes. Head back and send it again.",
+          duration: 6000,
+        });
+        return;
+      }
+      if (result.status !== "ok") return;
+      const handoff = result.handoff;
       if (handoff.prompt) setInput(handoff.prompt);
       if (handoff.attachments?.length) {
         setAttachments(handoff.attachments as Attachment[]);
