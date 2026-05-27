@@ -284,7 +284,7 @@ export const en = {
   "loading.step4": "Optimizing for {model}…",
   "loading.step5": "Writing your cinematic prompt…",
   "loading.directorTitle": "Your AI Director is on set",
-  "loading.directorSubtitle": "Composing a cinematic prompt for {model}…",
+  "loading.directorSubtitle": "Composing a cinematic prompt tuned for {model}.",
   "loading.checklist.read": "Reading the scene…",
   "loading.checklist.block": "Blocking the subject…",
   "loading.checklist.light": "Setting up the key light…",
