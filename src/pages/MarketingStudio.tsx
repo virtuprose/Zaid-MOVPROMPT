@@ -953,27 +953,35 @@ export default function MarketingStudio() {
               )}
             </div>
 
-            <div className="flex items-center gap-1 h-11 w-full rounded-2xl border border-border/50 bg-background/40 px-3">
-              <input
-                type="text"
+            <div className="flex items-start gap-1 min-h-11 w-full rounded-2xl border border-border/50 bg-background/40 px-3 py-2">
+              <textarea
+                ref={userNoteRef}
                 value={userNote}
                 onChange={(e) => setUserNote(e.target.value.slice(0, 280))}
+                onInput={(e) => {
+                  const el = e.currentTarget;
+                  el.style.height = "auto";
+                  el.style.height = Math.min(el.scrollHeight, 140) + "px";
+                }}
                 placeholder="Describe your ad…"
                 maxLength={280}
+                rows={1}
                 aria-label="Describe your ad"
-                className="flex-1 h-full bg-transparent border-0 outline-none text-sm text-foreground placeholder:text-muted-foreground/70"
+                className="flex-1 bg-transparent border-0 outline-none text-sm text-foreground placeholder:text-muted-foreground/70 resize-none overflow-hidden leading-6 py-0.5"
               />
-              <DescribeAdMic value={userNote} onChange={setUserNote} maxLength={280} />
-              {userNote.trim() && (
-                <button
-                  type="button"
-                  onClick={() => setUserNote("")}
-                  className="w-6 h-6 rounded-full text-muted-foreground hover:text-foreground hover:bg-background/60 flex items-center justify-center shrink-0"
-                  aria-label="Clear description"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              )}
+              <div className="flex items-center gap-1 shrink-0 mt-0.5">
+                <DescribeAdMic value={userNote} onChange={setUserNote} maxLength={280} />
+                {userNote.trim() && (
+                  <button
+                    type="button"
+                    onClick={() => setUserNote("")}
+                    className="w-6 h-6 rounded-full text-muted-foreground hover:text-foreground hover:bg-background/60 flex items-center justify-center"
+                    aria-label="Clear description"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
             </div>
 
             {!userNote.trim() && (() => {

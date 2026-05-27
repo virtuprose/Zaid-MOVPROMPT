@@ -1,24 +1,20 @@
 ## Goal
 
-Remove the community/featured video grid entirely from `/marketing`. On refresh, your own ads load asynchronously, and during that brief gap the empty-state showed the community grid before flipping to "Your recent ads" — that's the flash. Deleting the grid removes the glitch and de-clutters the page.
+The "Describe your ad" box is currently a single-line `<input>` inside a fixed-height container (`h-11`), so as you type, the text scrolls horizontally on one line instead of wrapping. Convert it to a multi-line, auto-growing textarea so the box gets taller as you add lines.
 
-## Changes (single file: `src/pages/MarketingStudio.tsx`)
+## Change (single file: `src/pages/MarketingStudio.tsx`, lines 956–977)
 
-1. **Replace the `mode === "empty"` JSX block** (lines 1324–1338) with a small first-time empty-state card: a title, one-line subtitle ("Attach a product or avatar above, pick a format, and hit Generate."), and no video grid. While `userAds` is still loading on refresh, render nothing (or a lightweight skeleton) instead of the community grid so there is no flash.
+1. Replace the fixed-height wrapper (`h-11`) with a min-height container that grows with content. Drop `items-center` for `items-start` so the mic and clear buttons stay aligned at the top as the textarea grows.
 
-2. **Delete the now-unused code:**
-   - `loopKitchen / loopCyberpunk / loopDesert / loopPortrait / loopTokyo / loopUnderwater` imports (lines 87–92)
-   - `type FeaturedAd` (line 99) and `FEATURED_ADS` constant (lines 107–114)
-   - `FILTERS` constant + `filter` state + `FilterTabs` component (lines 116, 149, 1673+)
-   - `filteredAds` (line 745)
-   - `applyTemplate` (lines 754–760)
-   - `showCommunity` state (line 199)
-   - `CommunityCard` and `CommunityGrid` components (lines 1726, 1761+)
+2. Swap `<input type="text">` for `<textarea rows={1}>` with:
+   - Same value/onChange/maxLength/aria-label/placeholder.
+   - `resize-none` and `overflow-hidden` so the user never sees scrollbars.
+   - An `onInput` handler that auto-resizes: reset `height` to `auto`, then set it to `scrollHeight` (capped at ~140px so it doesn't grow forever).
+   - A small `useEffect` that runs the same resize when `userNote` is set programmatically (e.g., voice dictation via `DescribeAdMic`, "Reuse" pre-fill).
 
-3. **Track loading explicitly** so the empty-state card only appears once user ads have actually finished loading (e.g., a `userAdsLoaded` flag set after the initial fetch resolves). This is what prevents any flash during the refresh window.
+3. Keep mic + clear buttons inline on the right at the top edge (`mt-1.5` or similar so they sit on the first line).
 
 ## Out of scope
 
-- No backend changes.
-- No changes to the "Your recent ads" mixed/full views.
-- The 6 unused `loop-*.mp4.asset.json` files stay in `src/assets/` untouched in case other pages reference them.
+- No layout changes elsewhere on the page.
+- No change to the 280-char limit or the example chips below the box.
