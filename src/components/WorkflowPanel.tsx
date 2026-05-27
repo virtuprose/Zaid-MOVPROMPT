@@ -1139,7 +1139,13 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
           ref={sceneMentionRef}
           value={description}
           onChange={setDescription}
-          elements={flatSceneElements.map(({ index, category, description }) => ({ index, category, description }))}
+          elements={flatSceneElements.map(({ index, category, description, frameIndex }) => ({
+            index,
+            category,
+            description,
+            frameLabel: frameLabels[frameIndex] || `Frame ${frameIndex + 1}`,
+          }))}
+          showFrameBadges={frameLabels.length > 1}
           placeholder={contextPlaceholder}
         />
       ) : (
