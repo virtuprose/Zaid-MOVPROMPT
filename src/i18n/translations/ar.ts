@@ -147,9 +147,10 @@ export const ar: Record<TranslationKey, string> = {
   "results.regenerate": "إعادة التوليد",
   "results.copied": "تم النسخ!",
   "library.shots": "لقطات",
-  "results.history.label": "السجل",
-  "results.history.title": "النسخ الأخيرة",
-  "results.history.hint": "استعد أي من آخر 5 نتائج لهذا المشهد.",
+  "results.history.label": "النسخ",
+  "results.history.title": "النسخ الأخيرة (لهذا المشهد)",
+  "results.history.hint": "استعد أي من آخر 5 نسخ من البرومبت لهذا المشهد. البرومبتات المحفوظة تجدها في المكتبة.",
+
   "results.history.current": "الحالية",
   "results.history.version": "نسخة",
   "results.history.ago": "مضت",
