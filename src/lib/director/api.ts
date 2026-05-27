@@ -317,6 +317,13 @@ export type StreamOptions = {
   onPhase?: (phase: DirectorPhase) => void;
 };
 
+export type LockedSpec = {
+  source?: "movprompt" | "marketing";
+  model?: string;
+  aspect?: string;
+  duration?: number | "auto";
+};
+
 export async function streamDirectorAgent(
   messages: DirectorMsg[],
   attachments: Attachment[],
@@ -325,6 +332,7 @@ export async function streamDirectorAgent(
   options: StreamOptions & {
     tasteProfile?: TasteProfile | null;
     mode?: "director" | "free_chat";
+    lockedSpec?: LockedSpec | null;
   } = {},
 ): Promise<AgentResponse> {
   const idleTimeoutMs = options.idleTimeoutMs ?? 30_000;
@@ -332,6 +340,8 @@ export async function streamDirectorAgent(
   const onPhase = options.onPhase;
   const tasteProfile = options.tasteProfile ?? null;
   const mode = options.mode ?? "director";
+  const lockedSpec = options.lockedSpec ?? null;
+
 
 
   // Initial phase — analyzing image if any visual attachment is present.
