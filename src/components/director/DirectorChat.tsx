@@ -1244,12 +1244,14 @@ function DirectorChatInner() {
       const { detectAdIntent } = await import("@/lib/director/questionIntent");
       if (detectAdIntent(text)) {
         adSuggestedRef.current = true;
+        const isArabic = /[\u0600-\u06FF]/.test(text);
         next.push({
           role: "assistant",
           animate: true,
           markdown: true,
-          content:
-            "Sounds like an **ad or commercial**. If you already have a brand or product set up, I can pull your brand kit, product facts, and ad copy from **[Marketing Studio](/marketing)** to keep it on-brand. No kit yet? **Skip it** — just keep typing and I'll direct from scratch.",
+          content: isArabic
+            ? "يبدو أن هذا **إعلان تجاري**. إذا كان لديك علامة تجارية أو منتج جاهز، يمكنني سحب **هوية العلامة** و**بيانات المنتج** ونص الإعلان من **[استوديو التسويق](/marketing)** للحفاظ على اتساق الهوية. لا توجد علامة بعد؟ **تخطَّ ذلك** — تابع الكتابة وسأوجّه المشهد من الصفر."
+            : "Sounds like an **ad or commercial**. If you already have a brand or product set up, I can pull your brand kit, product facts, and ad copy from **[Marketing Studio](/marketing)** to keep it on-brand. No kit yet? **Skip it** — just keep typing and I'll direct from scratch.",
         });
       }
     }
