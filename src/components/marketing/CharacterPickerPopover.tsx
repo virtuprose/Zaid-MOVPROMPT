@@ -12,6 +12,8 @@ export function CharacterPickerPopover({
   onEdit,
   onDelete,
   trigger,
+  open,
+  onOpenChange,
 }: {
   kits: CharacterKit[];
   activeIds: string[];
@@ -21,10 +23,12 @@ export function CharacterPickerPopover({
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
   trigger: React.ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }) {
   const atCap = activeIds.length >= max;
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={onOpenChange}>
       <PopoverTrigger asChild>{trigger}</PopoverTrigger>
       <PopoverContent
         align="start"
