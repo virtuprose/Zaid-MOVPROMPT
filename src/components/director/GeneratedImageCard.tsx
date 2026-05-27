@@ -2,7 +2,8 @@ import { RotateCcw, Film, Maximize2, X, ChevronLeft, ChevronRight, Download, Wan
 import { useState, useEffect, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogClose } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogClose, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { PromptInspector, type InspectorContext } from "./PromptInspector";
@@ -742,6 +743,10 @@ export function GeneratedImageCard({ data, onRegenerate, onUnpinSubject, onAnima
 
     <Dialog open={zoomIndex !== null} onOpenChange={(o) => !o && setZoomIndex(null)}>
       <DialogContent className="max-w-[95vw] w-fit p-0 bg-background/95 border-border/40">
+        <VisuallyHidden>
+          <DialogTitle>Image preview</DialogTitle>
+          <DialogDescription>Zoomed view of the generated image. Use arrow keys to navigate.</DialogDescription>
+        </VisuallyHidden>
         {zoomIndex !== null && (
           <div className="relative">
             <img
