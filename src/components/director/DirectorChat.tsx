@@ -2821,6 +2821,15 @@ function DirectorChatInner() {
                         )}
                       </MessageContent>
                     </Message>
+                    {b.ts && (
+                      <time
+                        dateTime={new Date(b.ts).toISOString()}
+                        title={new Date(b.ts).toLocaleString()}
+                        className="block text-[10px] text-muted-foreground/60 mt-0.5"
+                      >
+                        {new Date(b.ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                      </time>
+                    )}
                     {i > 0 && (
                       <MessageFeedback
                         sessionId={sessionIdRef.current}
