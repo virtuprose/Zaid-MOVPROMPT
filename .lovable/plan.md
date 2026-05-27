@@ -1,31 +1,34 @@
-## Rewrite the auth hero copy — editorial & cinematic
+## Goal
 
-Scope: copy only. No layout, color, or component changes. Edits limited to `src/i18n/translations/en.ts` lines 40–51.
+Replace the flat text-only center nav links (MovPrompt / AI Director / Ads) in `src/components/TopNav.tsx` with the selected **Cinematic Viewfinder** treatment.
 
-### Before → After
+## What changes
 
-**Headline**
-- `auth.heroTitle`: "Turn Stills Into" → **"Where Frames"**
-- `auth.heroCinema`: "Cinema" → **"Become Films"**
+Scope is the three desktop center nav items only. Logo, search, Library, credits, avatar, and mobile sheet stay untouched.
 
-**Subhead**
-- `auth.heroDesc`: → **"A still is a beginning. Hand it to the Director — get a cinematic prompt, shot-listed and ready for Kling, Seedance, Veo, or any AI video model."**
+### Visual treatment
 
-**Trusted line**
-- `auth.trusted`: → **"Trusted by filmmakers, creatives, and AI video artists worldwide."**
+- Wrap the three `NavLink`s in a container pill-bar:  
+  `h-10 p-1 rounded-xl border border-border/40 bg-card/60 backdrop-blur-xl`
+- Each `NavLink`: `h-full px-4 gap-2.5 rounded-lg` with an icon + uppercase label  
+  Typography: `font-display text-[11.5px] font-bold uppercase tracking-[0.15em]`
+- **Active state** (amber accent — Ads keeps amber, all active items use amber for a unified viewfinder look):
+  - `bg-accent/5 border border-accent/20`
+  - Two viewfinder bracket corners absolutely positioned top-left and bottom-right (1.5×1.5, amber/60 borders)
+  - Text: `text-accent` + soft text-shadow glow
+  - Icon: `text-accent` with `drop-shadow` glow and a blurred amber halo behind it
+- **Inactive state**:
+  - Text/icon `text-muted-foreground/60`
+  - Hover: text → `text-foreground`, icon → `text-primary` with cyan drop-shadow glow
+  - 300ms transitions
 
-**Feature 1 — Cinematographer**
-- title: "Your AI Cinematographer" → **"A Director on Call"**
-- desc: → **"Every frame read like a cinematographer would read it — composition, light, lens, mood — translated into prompts built for your chosen model."**
+### Data model
 
-**Feature 2 — Workflows**
-- title: "One Image, Three Workflows" → **"Three Ways to Tell It"**
-- desc: → **"A single shot, a graceful transition, or a full storyboard. Choose the form your story wants to take."**
-
-**Feature 3 — Library**
-- title: "Your Prompt Library" → **"Your Cutting Room"**
-- desc: → **"Every prompt archived the moment it's written. Return, rework, and remix your best cinematic instincts."**
+Add an `icon` field to `NAV_ITEMS`: MovPrompt → `Sparkles`, AI Director → `Disc` (already imported), Ads → `Megaphone`. Render the per-item icon in both active and inactive states (the prototype shows icons throughout).
 
 ### Out of scope
-- Headline gold "Cinema" word now becomes "Become Films" — same two-line split, same accent treatment, no component edits required.
-- No changes to other locales, layout, icons, or design tokens.
+
+- Mobile sheet styling
+- Logo button
+- Right cluster (search, Library, credits, avatar)
+- Any routing or label changes

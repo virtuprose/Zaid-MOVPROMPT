@@ -41,12 +41,12 @@ import { CreditBadge } from "@/components/credits/CreditBadge";
 import logoMark from "@/assets/logo-mark.svg";
 import { cn } from "@/lib/utils";
 
-type NavItem = { to: string; label: string; badge?: string };
+type NavItem = { to: string; label: string; badge?: string; icon: typeof Sparkles };
 
 const NAV_ITEMS: NavItem[] = [
-  { to: "/", label: "MovPrompt" },
-  { to: "/director", label: "AI Director" },
-  { to: "/marketing", label: "Ads" },
+  { to: "/", label: "MovPrompt", icon: Sparkles },
+  { to: "/director", label: "AI Director", icon: Disc },
+  { to: "/marketing", label: "Ads", icon: Megaphone },
 ];
 
 
@@ -96,26 +96,47 @@ export function TopNav() {
         <div className="hidden lg:block h-6 w-px bg-border/60 mx-1" />
 
         {/* Center nav */}
-        <nav className="hidden lg:flex items-center gap-0.5">
+        <nav className="hidden lg:flex items-center h-10 p-1 rounded-xl border border-border/40 bg-card/60 backdrop-blur-xl">
           {NAV_ITEMS.map((item) => {
             const active = isActive(item.to);
-            const isAds = item.to === "/marketing";
+            const Icon = item.icon;
             return (
               <NavLink
                 key={item.to}
                 to={item.to}
                 className={cn(
-                  "inline-flex items-center gap-1.5 h-9 px-3 rounded-md text-[13px] font-medium transition-colors",
+                  "group relative inline-flex items-center gap-2.5 h-full px-4 rounded-lg font-display text-[11.5px] font-bold uppercase tracking-[0.15em] transition-all duration-300 overflow-hidden",
                   active
-                    ? "text-primary"
-                    : "text-muted-foreground hover:text-foreground",
+                    ? "bg-accent/5 border border-accent/20 text-accent"
+                    : "border border-transparent text-muted-foreground/60 hover:text-foreground hover:bg-foreground/[0.03]",
                 )}
+                style={active ? { textShadow: "0 0 8px hsl(var(--accent) / 0.4)" } : undefined}
               >
-                {active && !isAds && <Sparkles className="w-3.5 h-3.5" />}
-                {isAds && <Megaphone className={cn("w-3.5 h-3.5", active ? "text-accent" : "")} />}
-                <span>{item.label}</span>
+                {active && (
+                  <>
+                    <span className="absolute top-1 left-1 w-1.5 h-1.5 border-t border-l border-accent/60" />
+                    <span className="absolute bottom-1 right-1 w-1.5 h-1.5 border-b border-r border-accent/60" />
+                  </>
+                )}
+                <span className="relative flex items-center justify-center">
+                  {active && (
+                    <span
+                      className="absolute inset-0 blur-[6px] bg-accent opacity-30"
+                      aria-hidden
+                    />
+                  )}
+                  <Icon
+                    className={cn(
+                      "relative w-4 h-4 transition-all duration-300",
+                      active
+                        ? "text-accent drop-shadow-[0_0_5px_hsl(var(--accent)/0.7)]"
+                        : "text-muted-foreground/60 group-hover:text-primary group-hover:drop-shadow-[0_0_6px_hsl(var(--primary)/0.5)]",
+                    )}
+                  />
+                </span>
+                <span className="relative">{item.label}</span>
                 {item.badge && (
-                  <span className="ml-1 px-1.5 py-0.5 rounded-md bg-accent/15 text-accent text-[10px] font-semibold uppercase tracking-wider border border-accent/25">
+                  <span className="relative ml-1 px-1.5 py-0.5 rounded-md bg-accent/15 text-accent text-[10px] font-semibold uppercase tracking-wider border border-accent/25">
                     {item.badge}
                   </span>
                 )}
@@ -123,6 +144,7 @@ export function TopNav() {
             );
           })}
         </nav>
+
 
         <div className="flex-1" />
 
