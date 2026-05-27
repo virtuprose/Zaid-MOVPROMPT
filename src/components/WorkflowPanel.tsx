@@ -926,10 +926,17 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
           </button>
         )}
         {contract.supportsMultiShotToggle && (
-          <button onClick={() => setMode("multishot")} style={{ padding: "14px 24px" }} className={`${btn(currentMode === "multishot")} snap-start`}>
+          <button
+            onClick={() => setMode("multishot")}
+            style={{ padding: "14px 24px" }}
+            title={`Generates a ${multiCount}-shot storyboard with locked style across panels`}
+            aria-label={`Multi-shot — ${multiCount} shots`}
+            className={`${btn(currentMode === "multishot")} snap-start`}
+          >
             {multiLabel}
           </button>
         )}
+
       </div>
     );
   })();

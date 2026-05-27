@@ -551,7 +551,7 @@ export const en = {
   "contract.toggle.singleShot": "Single shot",
   "contract.toggle.multiShot3": "Multi-shot (5)",
   "contract.toggle.multiShot10": "Multi-shot (10)",
-  "contract.toggle.multiShotN": "Multi-shot ({count})",
+  "contract.toggle.multiShotN": "Multi-shot · {count} shots",
   "contract.hint.seedanceMultiShot": "Generates 5 connected shots designed to be stitched into one continuous video.",
   "contract.hint.klingMultiShot": "Generates 10 connected Kling 3.0 shots with locked subject, lighting, and color continuity — render each separately and stitch.",
   "contract.hint.anyModel": "Any Model picks the best specialist for your scene. Choose a workflow: a single shot, a start→end transition, or a 10-shot storyboard.",
