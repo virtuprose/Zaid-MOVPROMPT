@@ -1654,56 +1654,6 @@ function ToggleTab({
   );
 }
 
-function CommunityCard({ ad, onClick }: { ad: FeaturedAd; onClick: () => void }) {
-  return (
-    <article
-      onClick={onClick}
-      className="group relative overflow-hidden rounded-2xl border border-border/40 bg-muted/10 cursor-pointer transition-all hover:border-[hsl(35_90%_55%)]/60 hover:shadow-[0_0_24px_hsl(35_90%_55%/0.25)]"
-    >
-      <div className="aspect-[3/4] overflow-hidden">
-        <video
-          src={ad.url}
-          autoPlay
-          muted
-          loop
-          playsInline
-          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-        />
-      </div>
-      <div className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-black/60 backdrop-blur text-[10px] uppercase tracking-wide text-white/90">
-        {ad.tag}
-      </div>
-      <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
-        <span className="px-3 py-1.5 rounded-full bg-[hsl(35_90%_55%)] text-black text-xs font-semibold">
-          Click to use as template
-        </span>
-      </div>
-      <div className="absolute bottom-0 inset-x-0 p-3 bg-gradient-to-t from-black/80 to-transparent flex items-center justify-between text-white">
-        <span className="text-sm font-medium">{ad.handle}</span>
-        <span className="inline-flex items-center gap-1 text-xs">
-          <Heart className="w-3.5 h-3.5 fill-current" />
-          {ad.likes.toLocaleString()}
-        </span>
-      </div>
-    </article>
-  );
-}
-
-function CommunityGrid({
-  ads,
-  onPick,
-}: {
-  ads: FeaturedAd[];
-  onPick: (ad: FeaturedAd) => void;
-}) {
-  return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-      {ads.map((ad) => (
-        <CommunityCard key={ad.url} ad={ad} onClick={() => onPick(ad)} />
-      ))}
-    </div>
-  );
-}
 
 function UserAdCard({
   ad,
