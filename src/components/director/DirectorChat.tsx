@@ -65,8 +65,9 @@ import { TypingIndicator } from "./TypingIndicator";
 import { TypewriterText } from "./TypewriterText";
 
 type Bubble =
-  | { role: "user"; content: string; attachments?: Attachment[] }
-  | { role: "assistant"; content: string; animate?: boolean; markdown?: boolean }
+  | { role: "user"; content: string; attachments?: Attachment[]; ts?: number }
+  | { role: "assistant"; content: string; animate?: boolean; markdown?: boolean; ts?: number }
+
   | {
       role: "result";
       data: Extract<AgentResponse, { kind: "generate_prompt" }>;
@@ -234,6 +235,43 @@ function DirectorChatInner() {
     window.addEventListener("director:quick-action", onAction);
     return () => window.removeEventListener("director:quick-action", onAction);
   }, []);
+
+  // Auto-stamp newly-appended user/assistant bubbles with the current time.
+  // Skips the initial hydration burst so bubbles restored from localStorage
+  // stay un-timestamped (better than fake-now).
+  const seenBubbleLenRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (seenBubbleLenRef.current === null) {
+      seenBubbleLenRef.current = bubbles.length;
+      return;
+    }
+    if (bubbles.length <= seenBubbleLenRef.current) {
+      seenBubbleLenRef.current = bubbles.length;
+      return;
+    }
+    const startIdx = seenBubbleLenRef.current;
+    seenBubbleLenRef.current = bubbles.length;
+    let needsStamp = false;
+    for (let i = startIdx; i < bubbles.length; i += 1) {
+      const b = bubbles[i];
+      if ((b.role === "user" || b.role === "assistant") && (b as any).ts === undefined) {
+        needsStamp = true;
+        break;
+      }
+    }
+    if (!needsStamp) return;
+    const now = Date.now();
+    setBubbles((prev) =>
+      prev.map((b, i) => {
+        if (i < startIdx) return b;
+        if ((b.role === "user" || b.role === "assistant") && (b as any).ts === undefined) {
+          return { ...b, ts: now } as Bubble;
+        }
+        return b;
+      }),
+    );
+  }, [bubbles]);
+
 
   // Cross-tool handoff (MovPrompt / Marketing Studio → Director).
   // Consume once on mount when arriving on the fresh /director route.
@@ -2783,6 +2821,15 @@ function DirectorChatInner() {
                         )}
                       </MessageContent>
                     </Message>
+                    {b.ts && (
+                      <time
+                        dateTime={new Date(b.ts).toISOString()}
+                        title={new Date(b.ts).toLocaleString()}
+                        className="block text-[10px] text-muted-foreground/60 mt-0.5"
+                      >
+                        {new Date(b.ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                      </time>
+                    )}
                     {i > 0 && (
                       <MessageFeedback
                         sessionId={sessionIdRef.current}
@@ -2873,6 +2920,15 @@ function DirectorChatInner() {
                   </div>
                 )}
                 </Message>
+                {b.ts && (
+                  <time
+                    dateTime={new Date(b.ts).toISOString()}
+                    title={new Date(b.ts).toLocaleString()}
+                    className="block text-[10px] text-muted-foreground/60 -mt-0.5"
+                  >
+                    {new Date(b.ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                  </time>
+                )}
                 {!busy && i < bubbles.length - 1 && (
                   <button
                     type="button"
