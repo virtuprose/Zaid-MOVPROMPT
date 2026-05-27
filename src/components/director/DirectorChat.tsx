@@ -535,14 +535,13 @@ function DirectorChatInner() {
         localState.migrate(user.id, "new", data.id);
         navigate(`/director/${data.id}`, { replace: true });
       } else {
-        const updateTitle = title ?? autoTitleFromBubbles(next);
         await supabase
           .from("director_sessions")
           .update({
             messages: next as any,
             final_prompt: finalPrompt,
             updated_at: new Date().toISOString(),
-            ...(updateTitle ? { title: updateTitle } : {}),
+            ...(title ? { title } : {}),
           })
           .eq("id", sessionIdRef.current);
       }
