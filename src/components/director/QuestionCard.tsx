@@ -103,6 +103,26 @@ export function QuestionCard({ reason, questions, disabled, collapsed, attachmen
     onContinue(formatted);
   };
 
+  if (collapsed) {
+    return (
+      <div className="rounded-2xl border border-border/20 bg-muted/5 px-4 py-3 space-y-1.5">
+        {reason && (
+          <div className="text-[11px] uppercase tracking-wide text-muted-foreground/60">
+            Asked
+          </div>
+        )}
+        <ul className="space-y-1">
+          {questions.map((q, i) => (
+            <li key={i} className="text-xs text-muted-foreground/80 leading-relaxed">
+              <span className="text-muted-foreground/50 mr-1.5">{i + 1}.</span>
+              {q}
+            </li>
+          ))}
+        </ul>
+      </div>
+    );
+  }
+
   return (
     <div
       className={cn(
