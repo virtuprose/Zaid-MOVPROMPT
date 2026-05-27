@@ -893,7 +893,7 @@ Output via the \`storyboard_shots\` tool ONLY.`;
       );
     }
 
-    const { messages, attachments, stream, tasteProfile, mode } = body as {
+    const { messages, attachments, stream, tasteProfile, mode, lockedSpec } = body as {
       messages: Array<{ role: "user" | "assistant"; content: string }>;
       attachments?: Array<{
         kind: "image" | "video_keyframes" | "audio_transcript" | "document";
@@ -910,7 +910,14 @@ Output via the \`storyboard_shots\` tool ONLY.`;
         chipReliance?: "chips_first" | "mixed" | "freeform_friendly";
       } | null;
       mode?: "director" | "free_chat";
+      lockedSpec?: {
+        source?: "movprompt" | "marketing";
+        model?: string;
+        aspect?: string;
+        duration?: number | "auto";
+      } | null;
     };
+
 
     if (!Array.isArray(messages) || messages.length === 0) {
       return new Response(JSON.stringify({ error: "messages required" }), {
