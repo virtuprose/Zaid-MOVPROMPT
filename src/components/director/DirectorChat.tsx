@@ -1475,7 +1475,16 @@ function DirectorChatInner() {
             onPhase: (p) => setPhase(p),
             tasteProfile,
             mode: chatMode,
+            lockedSpec: handoffChip
+              ? {
+                  source: handoffChip.source,
+                  model: handoffChip.model,
+                  aspect: handoffChip.aspect,
+                  duration: handoffChip.duration,
+                }
+              : null,
           });
+
           lastErr = null;
           break;
         } catch (err: any) {
