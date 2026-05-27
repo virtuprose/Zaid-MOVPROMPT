@@ -642,7 +642,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
       ));
       const elementMentions = mentionedNumbers
         .map((n) => flatSceneElements.find((el) => el.index === n))
-        .filter((el): el is { index: number; category: string; description: string; id: string } => Boolean(el))
+        .filter((el): el is { index: number; category: string; description: string; id: string; frameIndex: number } => Boolean(el))
         .map(({ index, category, description }) => ({ index, category, description }));
 
       const { data, error } = await supabase.functions.invoke("generate-prompt", {
