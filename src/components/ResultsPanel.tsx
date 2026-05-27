@@ -235,11 +235,16 @@ const MainPromptHero = ({ value, result, modelLabel, modelValue, onSwitchModel, 
                   {t("results.directorPick")}: {getModelLabel(result.recommendedModel)}
                 </span>
               </div>
+              {modelValue === "any" && (
+                <p className="text-[11px] text-muted-foreground mb-1 italic">
+                  You picked Universal — this prompt works on any model. The Director suggests starting here for the best result.
+                </p>
+              )}
               {result.recommendedModelReason && (
                 <p className="text-xs text-foreground/85 leading-relaxed">{result.recommendedModelReason}</p>
               )}
             </div>
-            {onSwitchModel && (
+            {onSwitchModel && modelValue !== result.recommendedModel && (
               <Button
                 size="sm"
                 variant="outline"
@@ -255,6 +260,7 @@ const MainPromptHero = ({ value, result, modelLabel, modelValue, onSwitchModel, 
           </div>
         </div>
       )}
+
       <div className="flex items-center justify-between gap-2 mb-2">
         <span className="text-[11px] font-semibold uppercase tracking-[0.1em] text-primary flex items-center gap-1.5">
           <Sparkles className="w-3.5 h-3.5" /> {t("results.mainPrompt")}
