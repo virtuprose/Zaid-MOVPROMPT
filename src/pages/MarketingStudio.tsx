@@ -1720,12 +1720,14 @@ function UserAdCard({
   ad,
   onClick,
   onDownload,
+  onReuse,
   onToggleLike,
   onDelete,
 }: {
   ad: UserAd;
   onClick: () => void;
   onDownload?: () => void;
+  onReuse?: () => void;
   onToggleLike?: () => void;
   onDelete?: () => void;
 }) {
