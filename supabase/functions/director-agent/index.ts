@@ -1018,11 +1018,31 @@ Output via the \`storyboard_shots\` tool ONLY.`;
 
     const FREE_CHAT_SYSTEM = `You are a helpful AI assistant for a filmmaker working on generative video prompts. Reply in clean, concise Markdown — short paragraphs, bullet lists, headings when useful, and fenced code blocks for any prompt text. You can see uploaded images and reference them naturally. Do NOT ask scripted step-by-step questions, do NOT pretend to generate images, videos or character sheets — you are in plain-chat mode. Just answer the user.`;
 
+    // Handoff spec from MovPrompt / Marketing Studio — pre-answered routing axes.
+    let handoffAddendum = "";
+    if (lockedSpec && (lockedSpec.model || lockedSpec.aspect || lockedSpec.duration)) {
+      const sourceLabel = lockedSpec.source === "marketing" ? "Marketing Studio" : "MovPrompt";
+      const lines: string[] = [];
+      if (lockedSpec.model) lines.push(`- model: ${lockedSpec.model} → SKIP \`ask_model_choice\`; use this model verbatim.`);
+      if (lockedSpec.aspect) lines.push(`- aspect_ratio: ${lockedSpec.aspect} → do NOT ask aspect.`);
+      if (lockedSpec.duration !== undefined && lockedSpec.duration !== null) {
+        const d = lockedSpec.duration === "auto" ? "auto" : `${lockedSpec.duration}s`;
+        lines.push(`- duration: ${d} → do NOT ask duration.`);
+      }
+      handoffAddendum =
+        `\n\n═══ LOCKED HANDOFF SPEC (from ${sourceLabel} — treat as already answered) ═══\n` +
+        lines.join("\n") +
+        `\nOnly ask routing axes that are still genuinely missing (e.g. audio, resolution, style, input_mode). ` +
+        `If all six axes are covered between this handoff and the brief, skip \`ask_clarification\` for routing and go straight to \`ask_model_choice\` (or \`generate_prompt\` if model is locked above). ` +
+        `Echo these locked values in every \`locked_spec\` recap downstream.`;
+    }
+
     const aiMessages = [
-      { role: "system", content: isFreeChat ? FREE_CHAT_SYSTEM : SYSTEM_PROMPT + tasteAddendum },
+      { role: "system", content: isFreeChat ? FREE_CHAT_SYSTEM : SYSTEM_PROMPT + tasteAddendum + handoffAddendum },
       ...prior.map((m) => ({ role: m.role, content: m.content })),
       { role: last.role, content: lastUserContent },
     ];
+
 
 
     const requestBody: Record<string, unknown> = {
