@@ -481,6 +481,9 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
 
   const handleAnalyze = async () => {
     if (!hasRequiredImages) return;
+    // Always reset Timeline prompting to OFF when entering the breakdown phase —
+    // the user must opt back in each time.
+    setTimelineEnabled(false);
     // Element-only mode (no main frames): skip scene analysis and jump straight to breakdown phase.
     if (images.filter(Boolean).length === 0) {
       setSceneFrames([]);
@@ -1211,7 +1214,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
               <TooltipTrigger asChild>
                 <button
                   type="button"
-                  onClick={() => { setSceneFrames([]); setPhase("breakdown"); }}
+                  onClick={() => { setTimelineEnabled(false); setSceneFrames([]); setPhase("breakdown"); }}
                   disabled={isAnalyzing}
                   aria-label="Skip & Generate Now"
                   className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50 disabled:pointer-events-none focus:outline-none focus-visible:underline"
