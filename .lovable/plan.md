@@ -1,63 +1,33 @@
-## How `@N` actually works today
+## Goals
 
-After scene analysis, every analyzed element gets a number (`flatSceneElements` in `WorkflowPanel.tsx`). The count depends on what the AI found in your photo(s), **not on how many photos you uploaded**.
+1. The sticky bottom bar (Aspect chips + Duration scrubber + Generate + "Free" line) is taller than the page's bottom padding, so the last part of the scene content sits trapped under it — feels like scroll is locked.
+2. With 6 aspect ratios now showing, the console looks crowded; the right-side "SELECTED 16:9 / 15s" block duplicates what the chips and scrubber already say.
 
-- 1 image of a person on a street → maybe `@1 Subject, @2 Background, @3 Lighting, @4 Atmosphere` → valid range `@1–@4`.
-- 2 frames (Start + End) → elements are flattened across both, so you could end up with `@1–@8`, where some belong to Start Frame and others to End Frame (currently invisible to the user).
-- Pre-analysis or `ConfigPanel` fallback → no `@` system at all.
+## Changes (one file: `src/components/WorkflowPanel.tsx`)
 
-The current bug: `SceneMentionTextarea` highlights valid `@N` in primary color but **silently renders out-of-range `@5`, `@99` as plain text** — nothing tells the user it's invalid. The hint also doesn't say what `N` means or what the valid range is, so users assume `@N` = "photo number".
+### A. Fix the scroll lock
+- Attach a `ref` to the sticky `mobileStickyCta` wrapper (line 1674) and measure its height with a `ResizeObserver`.
+- Apply that height (+ a 24px breathing margin) as `paddingBottom` on the main scroll container (line 1859, currently hard-coded `pb-28`).
+- Result: no matter how tall the bar gets (6 aspect chips, duration scrubber, safe-area inset), the last scene block is always reachable.
 
-## Fixes
+### B. Cleaner cinema console
+Same bar, tightened:
+- **Drop the "SELECTED 16:9 / 15s" readout** on the right — the active chip is already amber-glowing and the scrubber handle already shows the value. Removing it reclaims ~140px and removes the redundancy you can see in the screenshot.
+- **Aspect chips**: shrink `min-w-[44px]` → `min-w-[38px]`, drop the inner `p-1` wrapper border, tighten gap to `gap-0.5`. Frame icons stay (they're the nicest part).
+- **Duration**: keep the scrubber, but move the "Auto" pill (when present) inline at the end of the tick row instead of as a separate flex item, so the scrubber gets full width.
+- **Bar chrome**: reduce outer padding `p-3` → `px-3 py-2`, swap `flex-wrap` for a 2-column grid on `sm+` (`grid sm:grid-cols-[auto_1fr]`) so Aspect and Duration align on one row at desktop and stack cleanly on mobile.
+- **Labels**: keep the uppercase "ASPECT" / "DURATION" micro-labels (they're on-brand) but reduce tracking from `0.18em` → `0.14em` so they breathe better next to the controls.
 
-All in `src/components/SceneMentionTextarea.tsx` (and one i18n addition):
-
-### 1. Bound and explain the hint
-
-Replace the static hint line with a contextual one:
-
-- When `elements.length === 1`: "Type `@1` to reference your scene's element."
-- When `elements.length > 1`: "Type `@1`–`@{N}` to reference an analyzed scene element (subject, lighting, etc.) — not a photo number."
-- Add a small info `(?)` tooltip with one sentence: "After we analyze your image, your scene is split into N labeled elements. `@N` points to one of them."
-
-### 2. Highlight invalid `@N` in red inline
-
-In `renderHighlighted`, when `n > elements.length` or `n < 1`, render with destructive token styling (red text + dashed red underline) instead of plain text. The user sees `@5` glow red the moment they type it past the valid range.
-
-### 3. Validation chip under the textarea
-
-When the description contains any out-of-range mentions, render a single small warning line below the textarea (replacing the standard hint):
-
-`⚠ "@5, @9" don't exist — only @1–@4 are available. [Pick from list]`
-
-The `[Pick from list]` link opens the existing mention picker. No toast, no blocking — informational only.
-
-### 4. Show which frame each element belongs to (multi-frame only)
-
-Thread `frameLabels` and `frame.frameIndex` into `SceneMentionTextarea` so the picker rows show a tiny frame badge:
-
-```
-@3  Start frame · 💡 Lighting    Soft window light from the left
-@4  End frame   · 🎯 Subject     Woman turns toward camera
-```
-
-For single-frame workflows the badge says "Your frame" or is hidden — so it's obvious `@N` is not "photo N".
-
-Requires passing `frameLabels` and per-element `frameIndex` from `WorkflowPanel.tsx` into `SceneMentionTextarea` (extend `SceneMentionElement` with optional `frameLabel`).
-
-### 5. i18n keys
-
-Add to `src/i18n/translations/en.ts` and `ar.ts`:
-
-- `scene.mentionHint.range` — "Type @1–@{n} to reference an analyzed scene element."
-- `scene.mentionHint.single` — "Type @1 to reference your scene's element."
-- `scene.mentionHint.info` — "After analysis, your scene is split into N labeled elements. @N points to one of them — it's not a photo number."
-- `scene.mentionHint.invalid` — "{tokens} don't exist — only @1–@{n} are available."
-- `scene.mentionHint.pickFromList` — "Pick from list"
+### C. Generate CTA
+- Slightly reduce vertical weight: `size="lg"` stays, but trim the wrapper `space-y-2` → `space-y-2.5` and add a thin 1px separator between the console and the button so the two zones read as distinct.
+- "Free — no credits charged" line stays, unchanged.
 
 ## Out of scope
+- No changes to aspect-ratio list, model controls, generation logic, or duration model.
+- No changes to translations or other components.
+- Light/dark theming untouched — still token-driven.
 
-- The element-reference `MentionTextarea` (workflows where `contract.supportsElementReferences` is true) — `@N` there points to uploaded element reference images and is already valid by construction.
-- Backend prompt assembly / `sceneIntent` parsing — no change.
-- Renaming the `@` syntax.
-- Auto-rewriting/removing invalid mentions on Generate — we warn, the user fixes.
+## Verification
+- Scroll the page on `/` after upload → bottom scene card should clear the sticky bar with ~24px of air.
+- Resize the window between mobile and desktop → bar should reflow to grid on sm+, stack on xs.
+- Switch models (Seedance → Veo) → bar height changes (6 vs 3 chips); the padding fix should adapt automatically via ResizeObserver.
