@@ -1766,6 +1766,7 @@ function DirectorChatInner() {
     {
       id: "cinema",
       label: "Cinema",
+      tagline: "Cinematic live-action shots with lens, lighting, and grade.",
       icon: Film,
       prompts: [
         "Slow dolly-in on a neon-lit ramen bar at dusk, anamorphic flares",
@@ -1776,6 +1777,7 @@ function DirectorChatInner() {
     {
       id: "ugc",
       label: "UGC",
+      tagline: "Phone-shot creator content — selfie angles, natural light, product-forward.",
       icon: Megaphone,
       prompts: [
         "Selfie-style product review of my serum with a green-haired creator",
@@ -1786,6 +1788,7 @@ function DirectorChatInner() {
     {
       id: "storyboard",
       label: "Storyboard",
+      tagline: "Multi-shot sequence with locked style across panels.",
       icon: LayoutGrid,
       prompts: [
         "Three-shot intro: establishing wide, medium reveal, close-up emotion",
@@ -1796,6 +1799,7 @@ function DirectorChatInner() {
     {
       id: "animate",
       label: "Animate",
+      tagline: "Stylized animation — 2D, anime, cartoon, or 3D character looks.",
       icon: Wand2,
       prompts: [
         "Anime portrait, soft wind moving hair, 2D Ghibli palette",
