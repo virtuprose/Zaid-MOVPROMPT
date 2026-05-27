@@ -170,7 +170,7 @@ export function PresetPickerDialog({
         onKeyDown={handleKey}
       >
         {/* Header */}
-        <div className="px-6 sm:px-8 pt-6 pb-5 border-b border-border/40 flex items-start gap-6">
+        <div className="px-6 sm:px-8 pt-6 pb-5 pr-14 sm:pr-16 border-b border-border/40 flex items-start gap-8">
           <div className="flex-1 min-w-0">
             <DialogTitle className="font-display text-2xl sm:text-3xl tracking-tight uppercase">
               {title}
@@ -180,19 +180,19 @@ export function PresetPickerDialog({
             </DialogDescription>
           </div>
           {showPresets && (
-            <div className="relative w-64 shrink-0 hidden sm:block">
-              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <div className="relative w-72 shrink-0 hidden sm:block">
+              <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
               <Input
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
                 placeholder={searchPlaceholder}
-                className="pl-9 pr-8 rounded-full bg-muted/30 border-border/40 h-9"
+                className="pl-10 pr-9 rounded-xl bg-muted/30 border border-border/50 h-10 focus-visible:ring-1 focus-visible:ring-[#F5A524]/40 focus-visible:border-[#F5A524]/40"
               />
               {q && (
                 <button
                   type="button"
                   onClick={() => setQ("")}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
                   aria-label="Clear search"
                 >
                   <X className="w-3.5 h-3.5" />
@@ -206,10 +206,10 @@ export function PresetPickerDialog({
         <div className="flex-1 flex min-h-0 overflow-hidden">
           {/* Left rail */}
           {(hasPlaceModes || (showPresets && categories && categories.length > 0)) && (
-            <aside className="w-[200px] shrink-0 border-r border-border/40 px-4 py-5 overflow-y-auto hidden md:flex md:flex-col gap-5">
+            <aside className="w-[220px] shrink-0 border-r border-border/40 px-5 py-6 overflow-y-auto hidden md:flex md:flex-col gap-7">
               {hasPlaceModes && (
                 <div>
-                  <div className="text-[10px] font-semibold tracking-[0.14em] uppercase text-muted-foreground/70 px-2 mb-2">
+                  <div className="text-[10px] font-semibold tracking-[0.14em] uppercase text-muted-foreground/70 px-2 pb-2 mb-2.5 border-b border-border/30">
                     Mode
                   </div>
                   <div className="space-y-1">
@@ -223,7 +223,7 @@ export function PresetPickerDialog({
                           type="button"
                           onClick={() => switchMode(m)}
                           className={cn(
-                            "w-full text-left rounded-xl px-2.5 py-2 transition-all flex items-start gap-2.5 group",
+                            "w-full text-left rounded-xl px-3 py-2 transition-all flex items-start gap-2.5 group",
                             active
                               ? "bg-[#F5A524]/10 text-foreground"
                               : "text-muted-foreground hover:text-foreground hover:bg-muted/20",
@@ -256,19 +256,19 @@ export function PresetPickerDialog({
 
               {showPresets && categories && categories.length > 0 && (
                 <div>
-                  <div className="text-[10px] font-semibold tracking-[0.14em] uppercase text-muted-foreground/70 px-2 mb-2">
+                  <div className="text-[10px] font-semibold tracking-[0.14em] uppercase text-muted-foreground/70 px-2 pb-2 mb-2.5 border-b border-border/30">
                     Filter
                   </div>
                   <TooltipProvider delayDuration={200}>
-                    <div className="space-y-0.5">
+                    <div className="space-y-1">
                       <button
                         type="button"
                         onClick={() => setTab("all")}
                         className={cn(
-                          "w-full text-left rounded-lg px-2.5 py-1.5 text-xs transition-colors",
+                          "w-full text-left rounded-lg px-3 py-2 text-xs transition-colors border-l-2",
                           tab === "all"
-                            ? "bg-muted/40 text-foreground font-medium"
-                            : "text-muted-foreground hover:text-foreground hover:bg-muted/20",
+                            ? "bg-muted/30 text-foreground font-medium border-[#F5A524]"
+                            : "text-muted-foreground hover:text-foreground hover:bg-muted/20 border-transparent",
                         )}
                       >
                         All
@@ -279,10 +279,10 @@ export function PresetPickerDialog({
                             type="button"
                             onClick={() => setTab(c.id)}
                             className={cn(
-                              "w-full text-left rounded-lg px-2.5 py-1.5 text-xs transition-colors capitalize",
+                              "w-full text-left rounded-lg px-3 py-2 text-xs transition-colors capitalize border-l-2",
                               tab === c.id
-                                ? "bg-muted/40 text-foreground font-medium"
-                                : "text-muted-foreground hover:text-foreground hover:bg-muted/20",
+                                ? "bg-muted/30 text-foreground font-medium border-[#F5A524]"
+                                : "text-muted-foreground hover:text-foreground hover:bg-muted/20 border-transparent",
                             )}
                           >
                             {c.label}
