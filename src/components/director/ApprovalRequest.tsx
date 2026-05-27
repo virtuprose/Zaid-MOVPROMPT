@@ -120,10 +120,14 @@ export function BottomApprovalBar({ request }: { request: ApprovalRequest }) {
     <div className="rounded-2xl border border-primary/30 bg-[hsl(240_5%_7%)] px-3 py-2.5 flex items-center gap-3 shadow-[0_0_30px_-15px_hsl(var(--primary)/0.5)]">
       <div className="flex items-center gap-2 min-w-0 flex-1">
         <Hand className="w-4 h-4 text-accent shrink-0" />
-        <span className="text-sm text-foreground/90 truncate">
-          <span className="text-muted-foreground">Needs approval to run </span>
-          <span className="font-medium">{request.label}</span>
-        </span>
+        <div className="min-w-0 flex flex-col leading-tight">
+          <span className="text-sm font-medium text-foreground/95 truncate">
+            {request.question || `Approve ${request.label.toLowerCase()}?`}
+          </span>
+          <span className="text-[11px] text-muted-foreground truncate">
+            {request.label} · {fmtCredits(request.cost)} cr
+          </span>
+        </div>
       </div>
 
       {request.alwaysAllowKey && (
