@@ -1683,8 +1683,20 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
           Free — no credits charged for prompt generation
         </span>
       </div>
+      <div className="flex justify-center">
+        <button
+          type="button"
+          onClick={() => { setSceneFrames([]); setPhase("breakdown"); }}
+          disabled={isAnalyzing}
+          aria-label="Skip & Generate Now"
+          className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50 disabled:pointer-events-none focus:outline-none focus-visible:underline"
+        >
+          Skip &amp; Generate Now <ArrowRight className="w-3 h-3 rtl:rotate-180" aria-hidden="true" />
+        </button>
+      </div>
       </div>
     </div>
+
   ) : (phase === "breakdown" || phase === "generate") && !isLoading && !isAnalyzing ? (
     <div className="fixed inset-x-0 bottom-0 z-40 px-4 pt-3 pb-[calc(env(safe-area-inset-bottom)+12px)] bg-background/95 backdrop-blur-md border-t border-border/60">
       <div className="max-w-[720px] mx-auto space-y-2">
