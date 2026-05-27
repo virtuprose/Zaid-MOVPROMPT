@@ -1727,12 +1727,43 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
         const showAR = ars.length > 1;
         const showDur = numericDurations.length > 1 || supportsAuto;
         if (!showAR && !showDur) return null;
+
+        // Aspect ratio frame icon — actual rectangle scaled to the ratio
+        const frameIcon = (ar: string, active: boolean) => {
+          const [wStr, hStr] = ar.split(":");
+          const w = Number(wStr) || 1;
+          const h = Number(hStr) || 1;
+          const max = 22;
+          const scale = max / Math.max(w, h);
+          const fw = Math.max(8, Math.round(w * scale));
+          const fh = Math.max(8, Math.round(h * scale));
+          return (
+            <span
+              aria-hidden="true"
+              className={`inline-block rounded-[2px] border-2 transition-colors ${
+                active
+                  ? "border-accent bg-accent/20 shadow-[0_0_8px_hsl(var(--accent)/0.35)]"
+                  : "border-muted-foreground/50 bg-muted/40 group-hover:border-muted-foreground"
+              }`}
+              style={{ width: `${fw}px`, height: `${fh}px` }}
+            />
+          );
+        };
+
+        const isAuto = targetDuration === "auto";
+        const durMin = numericDurations[0];
+        const activeDurNumeric = !isAuto && typeof targetDuration === "number" ? targetDuration : undefined;
+        const activeIdx = activeDurNumeric !== undefined ? numericDurations.indexOf(activeDurNumeric) : -1;
+        const pctFor = (val: number) =>
+          numericDurations.length <= 1 ? 50 : (numericDurations.indexOf(val) / (numericDurations.length - 1)) * 100;
+        const activePct = activeIdx >= 0 ? pctFor(activeDurNumeric as number) : 0;
+
         return (
-          <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 text-[11px]">
+          <div className="rounded-xl border border-border/60 bg-card/60 backdrop-blur-md p-3 shadow-inner flex flex-wrap items-center gap-x-6 gap-y-3">
             {showAR && (
-              <div className="flex items-center gap-1.5">
-                <span className="text-muted-foreground">Aspect</span>
-                <div className="flex items-center gap-1" role="group" aria-label="Aspect ratio">
+              <div className="flex items-center gap-3">
+                <span className="text-[10px] font-bold tracking-[0.18em] uppercase text-muted-foreground font-display">Aspect</span>
+                <div className="flex gap-1 p-1 bg-background/60 rounded-lg border border-border/50" role="group" aria-label="Aspect ratio">
                   {ars.map((ar) => {
                     const active = targetAspectRatio === ar;
                     return (
@@ -1741,58 +1772,94 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
                         type="button"
                         onClick={() => setTargetAspectRatio(ar)}
                         aria-pressed={active}
-                        className={`rounded-full border px-2 py-0.5 font-medium transition-colors ${
+                        className={`group flex flex-col items-center justify-end gap-1 px-2.5 py-1.5 rounded-md border transition-all min-w-[44px] ${
                           active
-                            ? "border-accent/50 bg-accent/10 text-accent"
-                            : "border-border/60 bg-muted/40 text-muted-foreground hover:text-foreground"
+                            ? "bg-accent/10 border-accent/50"
+                            : "border-transparent hover:bg-foreground/5"
                         }`}
                       >
-                        {ar}
+                        <span className="flex items-end justify-center h-[22px]">{frameIcon(ar, active)}</span>
+                        <span className={`text-[10px] font-bold font-mono tracking-tight ${active ? "text-accent" : "text-muted-foreground group-hover:text-foreground"}`}>{ar}</span>
                       </button>
                     );
                   })}
                 </div>
               </div>
             )}
+
             {showDur && (
-              <div className="flex items-center gap-1.5">
-                <span className="text-muted-foreground">Duration</span>
-                <div className="flex items-center gap-1" role="group" aria-label="Duration">
-                  {numericDurations.map((d) => {
-                    const active = targetDuration === d;
-                    return (
-                      <button
-                        key={d}
-                        type="button"
-                        onClick={() => setTargetDuration(d)}
-                        aria-pressed={active}
-                        className={`rounded-full border px-2 py-0.5 font-medium transition-colors ${
-                          active
-                            ? "border-accent/50 bg-accent/10 text-accent"
-                            : "border-border/60 bg-muted/40 text-muted-foreground hover:text-foreground"
-                        }`}
+              <div className="flex-1 min-w-[240px] flex items-center gap-3">
+                <span className="text-[10px] font-bold tracking-[0.18em] uppercase text-muted-foreground font-display shrink-0">Duration</span>
+                <div className="relative flex-1">
+                  <div className="relative h-12 w-full px-1">
+                    {/* Track */}
+                    <div className="absolute left-1 right-1 h-[2px] top-1/2 -translate-y-1/2 bg-border rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-border via-border to-accent transition-all"
+                        style={{ width: `${isAuto ? 100 : activePct}%` }}
+                      />
+                    </div>
+
+                    {/* Tick marks + clickable values */}
+                    <div className="absolute inset-x-1 inset-y-0 flex items-center justify-between">
+                      {numericDurations.map((d, i) => {
+                        const active = !isAuto && d === activeDurNumeric;
+                        const isEdge = i === 0 || i === numericDurations.length - 1;
+                        return (
+                          <button
+                            key={d}
+                            type="button"
+                            onClick={() => setTargetDuration(d)}
+                            aria-pressed={active}
+                            aria-label={`${d} seconds`}
+                            className="relative h-12 w-6 -mx-3 first:ml-0 last:mr-0 flex flex-col items-center justify-between py-1 group focus:outline-none"
+                          >
+                            <span className={`text-[9px] font-mono font-medium tabular-nums transition-colors ${
+                              active ? "text-accent" : isEdge ? "text-muted-foreground/80" : "text-muted-foreground/50 group-hover:text-foreground"
+                            }`}>{d}s</span>
+                            <span className={`w-px transition-all ${
+                              active ? "h-4 bg-accent shadow-[0_0_8px_hsl(var(--accent)/0.6)]" : isEdge ? "h-3 bg-muted-foreground/50" : "h-2 bg-border group-hover:bg-muted-foreground"
+                            }`} />
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Handle */}
+                    {!isAuto && activeIdx >= 0 && numericDurations.length > 1 && (
+                      <div
+                        className="absolute top-1/2 pointer-events-none"
+                        style={{ left: `calc(${activePct}% + 4px)`, transform: "translate(-50%, -50%)" }}
                       >
-                        {d}s
-                      </button>
-                    );
-                  })}
-                  {supportsAuto && (
-                    <button
-                      type="button"
-                      onClick={() => setTargetDuration("auto")}
-                      aria-pressed={targetDuration === "auto"}
-                      className={`rounded-full border px-2 py-0.5 font-medium transition-colors ${
-                        targetDuration === "auto"
-                          ? "border-accent/50 bg-accent/10 text-accent"
-                          : "border-border/60 bg-muted/40 text-muted-foreground hover:text-foreground"
-                      }`}
-                    >
-                      Auto
-                    </button>
-                  )}
+                        <div className="w-3 h-3 rounded-full bg-accent shadow-[0_0_12px_hsl(var(--accent)/0.7)] border-2 border-background" />
+                      </div>
+                    )}
+                  </div>
                 </div>
+                {supportsAuto && (
+                  <button
+                    type="button"
+                    onClick={() => setTargetDuration("auto")}
+                    aria-pressed={isAuto}
+                    className={`shrink-0 rounded-md border px-2.5 py-1 text-[10px] font-bold font-mono tracking-wide uppercase transition-colors ${
+                      isAuto
+                        ? "border-accent/50 bg-accent/10 text-accent"
+                        : "border-border/60 bg-background/60 text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    Auto
+                  </button>
+                )}
               </div>
             )}
+
+            <div className="ps-4 ms-auto border-s border-border/60 hidden sm:flex flex-col">
+              <span className="text-[9px] font-bold tracking-[0.18em] uppercase text-muted-foreground font-display">Selected</span>
+              <span className="text-base font-bold font-mono tracking-tight text-foreground leading-tight">
+                {showAR && <>{targetAspectRatio}{showDur && <span className="text-accent mx-1">/</span>}</>}
+                {showDur && (isAuto ? <span>Auto</span> : <span>{activeDurNumeric ?? durMin}s</span>)}
+              </span>
+            </div>
           </div>
         );
       })()}
