@@ -1013,24 +1013,35 @@ export default function MarketingStudio() {
                     />
                   );
                 })()}
-                <Button
-                  size="sm"
-                  disabled={!hasInputs || submitting || drafting}
-                  onClick={startGenerate}
-                  className={cn(
-                    "rounded-full px-4 h-9 font-semibold text-xs transition-all",
-                    hasInputs
-                      ? "bg-[#F5A524] text-black hover:bg-[#F5A524]/90 shadow-lg shadow-[#F5A524]/25"
-                      : "bg-muted text-muted-foreground hover:bg-muted",
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className={cn(!hasInputs && "cursor-help")}>
+                      <Button
+                        size="sm"
+                        disabled={!hasInputs || submitting || drafting}
+                        onClick={startGenerate}
+                        className={cn(
+                          "rounded-full px-4 h-9 font-semibold text-xs transition-all",
+                          hasInputs
+                            ? "bg-[#F5A524] text-black hover:bg-[#F5A524]/90 shadow-lg shadow-[#F5A524]/25"
+                            : "bg-muted text-muted-foreground hover:bg-muted pointer-events-none",
+                        )}
+                      >
+                        {submitting ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
+                        ) : hasInputs ? (
+                          <Wand2 className="w-3.5 h-3.5 mr-1.5" />
+                        ) : null}
+                        {btnLabel}
+                      </Button>
+                    </span>
+                  </TooltipTrigger>
+                  {!hasInputs && (
+                    <TooltipContent side="top" className="max-w-[240px] text-xs">
+                      {missingHint}. Then pick a format and scene to render.
+                    </TooltipContent>
                   )}
-                >
-                  {submitting ? (
-                    <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
-                  ) : hasInputs ? (
-                    <Wand2 className="w-3.5 h-3.5 mr-1.5" />
-                  ) : null}
-                  {btnLabel}
-                </Button>
+                </Tooltip>
               </div>
             </div>
 
