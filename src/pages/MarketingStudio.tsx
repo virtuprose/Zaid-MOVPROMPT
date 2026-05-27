@@ -83,6 +83,7 @@ import { submitVideoJob, pollVideoJob, cancelVideoJob, writeAdScene, type VideoJ
 import { estimateVideoCost, usePricing } from "@/lib/credits/pricing";
 import { CostChip } from "@/components/credits/CostChip";
 import { notifyInsufficientCredits } from "@/lib/credits/insufficient";
+import { useCredits } from "@/hooks/useCredits";
 import loopKitchen from "@/assets/loop-kitchen.mp4.asset.json";
 import loopCyberpunk from "@/assets/loop-cyberpunk.mp4.asset.json";
 import loopDesert from "@/assets/loop-desert.mp4.asset.json";
@@ -159,6 +160,13 @@ export default function MarketingStudio() {
   const [submitting, setSubmitting] = useState(false);
   const [drafting, setDrafting] = useState(false);
   const [renderSettings, setRenderSettings] = useState<RenderSettings>(RENDER_DEFAULTS);
+
+  // Live cost estimate + wallet balance — used for pre-flight low-credits warning.
+  const pricesTop = usePricing();
+  const { balance: creditBalance, refresh: refreshCredits } = useCredits();
+  const providerEstimate = location.imagePath ? "seedance-2.0" : "seedance-v1-pro";
+  const estimatedCost = estimateVideoCost(pricesTop, providerEstimate, renderSettings.duration);
+  const lowCredits = creditBalance !== null && creditBalance < estimatedCost;
 
   // Reset studio config when the last product is detached
   const prevBrandCountRef = useRef(brandActiveIds.length);
@@ -415,6 +423,21 @@ export default function MarketingStudio() {
   const startGenerate = () => {
     if (!ready) {
       toast.error("Pick a format and scene first.");
+      return;
+    }
+    // Pre-flight wallet check — avoid sending users through the rights modal
+    // only to bounce on insufficient credits at submit time.
+    if (creditBalance !== null && creditBalance < estimatedCost) {
+      toast.error(
+        `Not enough credits — you have ${creditBalance}, this render needs ${estimatedCost}.`,
+        {
+          action: {
+            label: "Top up",
+            onClick: () => navigate("/account/billing"),
+          },
+        }
+      );
+      void refreshCredits();
       return;
     }
     const risk = computeAccuracyRisk();
@@ -1178,33 +1201,41 @@ export default function MarketingStudio() {
               })()}
 
               <div className="ml-auto flex items-center gap-2">
-                {(() => {
-                  const prices = usePricing();
-                  // Same provider routing as doGenerate(): defaults assume
-                  // text-only seedance-v1-pro; if a location image is set we
-                  // upgrade to seedance-2.0 (single ref).
-                  const provider = location.imagePath ? "seedance-2.0" : "seedance-v1-pro";
-                  const cost = estimateVideoCost(prices, provider, renderSettings.duration);
-                  return (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <span className="cursor-help">
-                          <CostChip amount={cost} prefix="≈" />
-                        </span>
-                      </TooltipTrigger>
-                      <TooltipContent side="top" className="max-w-[260px] text-xs">
-                        <div className="font-medium text-foreground">Estimated cost: {cost} credits</div>
-                        <div className="text-muted-foreground mt-0.5">
-                          {renderSettings.duration}s · {renderSettings.resolution} ·{" "}
-                          {location.imagePath ? "Seedance 2.0 (with reference)" : "Seedance v1 Pro"}
-                        </div>
-                        <div className="text-muted-foreground/70 mt-1 text-[10px]">
-                          Final cost may vary slightly. Deducted only on successful render.
-                        </div>
-                      </TooltipContent>
-                    </Tooltip>
-                  );
-                })()}
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="cursor-help">
+                      <CostChip amount={estimatedCost} prefix="≈" />
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="max-w-[260px] text-xs">
+                    <div className="font-medium text-foreground">Estimated cost: {estimatedCost} credits</div>
+                    <div className="text-muted-foreground mt-0.5">
+                      {renderSettings.duration}s · {renderSettings.resolution} ·{" "}
+                      {location.imagePath ? "Seedance 2.0 (with reference)" : "Seedance v1 Pro"}
+                    </div>
+                    {creditBalance !== null && (
+                      <div className={cn(
+                        "mt-1 text-[10px]",
+                        lowCredits ? "text-[#F87171]" : "text-muted-foreground/70",
+                      )}>
+                        Wallet: {creditBalance} credits {lowCredits && "— top up to render"}
+                      </div>
+                    )}
+                    <div className="text-muted-foreground/70 mt-1 text-[10px]">
+                      Final cost may vary slightly. Deducted only on successful render.
+                    </div>
+                  </TooltipContent>
+                </Tooltip>
+                {lowCredits && (
+                  <button
+                    type="button"
+                    onClick={() => navigate("/account/billing")}
+                    className="inline-flex items-center gap-1 h-7 px-2.5 rounded-full border border-[#F87171]/50 bg-[#F87171]/10 text-[11px] text-[#F87171] hover:bg-[#F87171]/20 transition-colors"
+                    title={`You have ${creditBalance} credits, this render needs ${estimatedCost}`}
+                  >
+                    Low credits — Top up
+                  </button>
+                )}
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <span className={cn(!hasInputs && "cursor-help")}>
