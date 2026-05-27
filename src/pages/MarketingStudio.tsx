@@ -80,6 +80,8 @@ import {
 } from "@/components/marketing/RenderSettingsPopover";
 
 import { submitVideoJob, pollVideoJob, cancelVideoJob, writeAdScene, type VideoJob } from "@/lib/director/api";
+import { writeHandoff } from "@/lib/director/handoff";
+import { Clapperboard } from "lucide-react";
 import { estimateVideoCost, usePricing } from "@/lib/credits/pricing";
 import { CostChip } from "@/components/credits/CostChip";
 import { notifyInsufficientCredits } from "@/lib/credits/insufficient";
