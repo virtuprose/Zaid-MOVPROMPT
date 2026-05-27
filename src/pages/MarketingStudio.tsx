@@ -90,24 +90,6 @@ const ACCURACY_ACK_KEY = "vidoprompt:accuracy-ack";
 const find = (list: StudioPreset[], id?: string) =>
   id ? list.find((p) => p.id === id) : undefined;
 
-type FeaturedAd = {
-  url: string;
-  handle: string;
-  likes: number;
-  tag: "Product" | "App" | "UGC" | "Cinematic";
-  template: { formatId: string; hookId: string; settingId: string };
-};
-
-const FEATURED_ADS: FeaturedAd[] = [
-  { url: loopKitchen.url, handle: "@chefnova", likes: 1284, tag: "Product", template: { formatId: "product-hit", hookId: "first-line", settingId: "kitchen" } },
-  { url: loopCyberpunk.url, handle: "@neonlab", likes: 942, tag: "Cinematic", template: { formatId: "hyper-motion", hookId: "pov-reveal", settingId: "street" } },
-  { url: loopPortrait.url, handle: "@rae.studio", likes: 2103, tag: "UGC", template: { formatId: "ugc", hookId: "talking-avatar", settingId: "bedroom" } },
-  { url: loopTokyo.url, handle: "@tokyo.frame", likes: 765, tag: "Cinematic", template: { formatId: "hyper-motion", hookId: "pov-reveal", settingId: "rooftop" } },
-  { url: loopDesert.url, handle: "@wandr", likes: 1556, tag: "Product", template: { formatId: "before-after", hookId: "product-hit", settingId: "nature" } },
-  { url: loopUnderwater.url, handle: "@deepblue", likes: 689, tag: "App", template: { formatId: "tutorial", hookId: "spicy", settingId: "studio" } },
-];
-
-const FILTERS = ["All", "Product", "App", "UGC", "Cinematic"] as const;
 
 type UserAd = { id: string; video_url: string; created_at: string; liked: boolean; prompt?: string | null; metadata?: Record<string, any> | null };
 
