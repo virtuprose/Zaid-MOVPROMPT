@@ -481,14 +481,6 @@ export const SETTINGS: StudioPreset[] = [
     fragment: "Setting: skyscraper rooftop edge, city skyline, dramatic wind and depth",
   },
   {
-    id: "penthouse",
-    label: "Penthouse",
-    description: "Penthouse View",
-    category: "unrealistic",
-    image: "/presets/penthouse.png",
-    fragment: "Setting: glass-walled penthouse, sweeping skyline, luxe styling, blue hour glow",
-  },
-  {
     id: "pool",
     label: "Resort",
     description: "Resort Mode",
