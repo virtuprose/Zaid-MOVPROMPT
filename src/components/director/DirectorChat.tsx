@@ -2641,7 +2641,8 @@ function DirectorChatInner() {
             }
             if (!isUser) return null;
             return (
-              <Message key={i} from="user" className="items-end">
+              <div key={i} className="group/userturn relative flex flex-col items-end gap-1">
+                <Message from="user" className="items-end">
                 <MessageContent
                   className={cn(
                     "rounded-2xl bg-muted/40 border border-border/40 px-4 py-2 text-sm",
@@ -2698,7 +2699,24 @@ function DirectorChatInner() {
                     })}
                   </div>
                 )}
-              </Message>
+                </Message>
+                {!busy && i < bubbles.length - 1 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const trimmed = bubbles.slice(0, i);
+                      setBubbles(trimmed);
+                      void persist(trimmed, null, null);
+                      void send(b.content, trimmed);
+                    }}
+                    className="opacity-0 group-hover/userturn:opacity-100 focus-visible:opacity-100 transition-opacity inline-flex items-center gap-1 text-[10.5px] text-muted-foreground hover:text-primary px-2 py-0.5 rounded-full border border-border/30 bg-background/60"
+                    title="Discard everything after this turn and re-send"
+                  >
+                    <RotateCcw className="h-3 w-3" />
+                    Restart from here
+                  </button>
+                )}
+              </div>
             );
           })}
           {busy && (
