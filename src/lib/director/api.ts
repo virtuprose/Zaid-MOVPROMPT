@@ -573,6 +573,23 @@ export type VideoJob = {
 
 import type { VideoOptions } from "./videoModelControls";
 
+function isProviderReadyImageUrl(value: string): boolean {
+  const trimmed = value.trim();
+  return /^https:\/\//i.test(trimmed) || /^data:image\//i.test(trimmed);
+}
+
+function sanitizeReferenceImages(referenceImages?: string[]): string[] {
+  return Array.from(
+    new Set(
+      (referenceImages ?? [])
+        .filter((url): url is string => typeof url === "string")
+        .map((url) => url.trim())
+        .filter((url) => url.length > 0)
+        .filter(isProviderReadyImageUrl),
+    ),
+  );
+}
+
 export async function submitVideoJob(
   prompt: string,
   provider: string,
@@ -590,13 +607,18 @@ export async function submitVideoJob(
     throw new Error("Prompt is empty — generate or select a prompt first.");
   }
 
+  const safeReferenceImages = sanitizeReferenceImages(referenceImages);
+  if ((referenceImages?.length ?? 0) > 0 && safeReferenceImages.length === 0) {
+    throw new Error("The selected reference image is still local or invalid. Please use an uploaded image before rendering.");
+  }
+
   const { data, error } = await supabase.functions.invoke("generate-video", {
     body: {
       prompt: normalizedPrompt,
       provider,
       session_id: sessionId,
       options,
-      reference_image_urls: referenceImages && referenceImages.length > 0 ? referenceImages : undefined,
+      reference_image_urls: safeReferenceImages.length > 0 ? safeReferenceImages : undefined,
       storyboard_session_id: extras?.storyboard_session_id,
       storyboard_shot_index: extras?.storyboard_shot_index,
       metadata: extras?.metadata ?? undefined,
