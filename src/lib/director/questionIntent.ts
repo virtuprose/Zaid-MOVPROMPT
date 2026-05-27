@@ -69,3 +69,17 @@ export function acceptAttrFor(kinds: MediaKind[]): string {
   if (kinds.includes("document")) parts.push(".pdf,.docx,.txt,.md");
   return parts.join(",");
 }
+
+// ---------------------------------------------------------------------------
+// Bridge 3 — Ad / commercial intent detection (Director → Marketing Studio).
+// Heuristic only: triggers a one-time suggestion to open Marketing Studio.
+// ---------------------------------------------------------------------------
+
+const AD_RE_EN =
+  /\b(ad|ads|advert|advertisement|commercial|commercials|campaign|campaigns|brand|branding|product\s*launch|launch\s*video|promo|promotional|spot|tvc|marketing|sponsored|hero\s*video|product\s*video)\b/i;
+const AD_RE_AR = /(إعلان|إعلانات|حملة|تسويق|علامة\s*تجارية|منتج)/;
+
+export function detectAdIntent(text: string): boolean {
+  if (!text) return false;
+  return AD_RE_EN.test(text) || AD_RE_AR.test(text);
+}

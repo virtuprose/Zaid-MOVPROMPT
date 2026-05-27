@@ -1210,6 +1210,21 @@ function DirectorChatInner() {
     const cleaned = base.filter((b) => b.role !== "error");
     const next: Bubble[] = [...cleaned, userBubble];
     lastSendRef.current = { text: text || fallback, attachments: turnAttachments };
+    // Bridge 3 — if the user is clearly briefing an ad/commercial, suggest
+    // Marketing Studio once per session so they can lock brand + product first.
+    if (!adSuggestedRef.current && text) {
+      const { detectAdIntent } = await import("@/lib/director/questionIntent");
+      if (detectAdIntent(text)) {
+        adSuggestedRef.current = true;
+        next.push({
+          role: "assistant",
+          animate: true,
+          markdown: true,
+          content:
+            "Sounds like an **ad or commercial**. Want me to pull your brand kit, product facts, and ad copy from **[Marketing Studio](/marketing)** first? It'll make the render way more on-brand.",
+        });
+      }
+    }
     setBubbles(next);
     setInput("");
     if (idleTimer.current) window.clearTimeout(idleTimer.current);
@@ -1995,6 +2010,7 @@ function DirectorChatInner() {
   const typingTimer = useRef<number | null>(null);
   const idleTimer = useRef<number | null>(null);
   const idleNudgedRef = useRef(false);
+  const adSuggestedRef = useRef(false);
 
   // Rotate mood lines when idle
   useEffect(() => {
