@@ -116,6 +116,8 @@ export function PresetPickerDialog({
       setCustomOpen(false);
       if (m === "city") {
         setDraftLocation((prev) => ({ ...(prev ?? EMPTY_LOCATION), imagePath: null, imageUrl: null }));
+      } else if (m === "image") {
+        setDraftLocation((prev) => ({ ...(prev ?? EMPTY_LOCATION), place: "" }));
       }
     }
   };
