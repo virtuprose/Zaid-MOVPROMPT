@@ -83,6 +83,7 @@ import { submitVideoJob, pollVideoJob, cancelVideoJob, writeAdScene, type VideoJ
 import { estimateVideoCost, usePricing } from "@/lib/credits/pricing";
 import { CostChip } from "@/components/credits/CostChip";
 import { notifyInsufficientCredits } from "@/lib/credits/insufficient";
+import { useCredits } from "@/hooks/useCredits";
 import loopKitchen from "@/assets/loop-kitchen.mp4.asset.json";
 import loopCyberpunk from "@/assets/loop-cyberpunk.mp4.asset.json";
 import loopDesert from "@/assets/loop-desert.mp4.asset.json";
