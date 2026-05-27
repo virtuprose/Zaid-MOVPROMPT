@@ -36,17 +36,30 @@ type Props = {
 
 export function AspectChoiceCard({ chosen, disabled, onChoose }: Props) {
   const [quality, setQuality] = useState<ImageQuality>("1K");
-  const locked = !!chosen || disabled;
+  const locked = !!disabled;
+
+  const handleQuality = (q: ImageQuality) => {
+    setQuality(q);
+    // If aspect was already picked, re-commit so parent stays in sync.
+    if (chosen && !locked) onChoose(chosen, q);
+  };
 
   return (
     <div className="rounded-2xl bg-muted/15 p-4 sm:p-5 space-y-4 max-w-2xl">
-      <div className="space-y-1">
-        <div className="text-xs uppercase tracking-wide text-muted-foreground/80">
-          Frame & quality
+      <div className="space-y-1 flex items-start justify-between gap-3">
+        <div className="space-y-1">
+          <div className="text-xs uppercase tracking-wide text-muted-foreground/80">
+            Frame & quality
+          </div>
+          <div className="text-sm text-foreground/85 leading-snug">
+            Pick an aspect ratio (I'll lock it for any frame extension) and an output resolution.
+          </div>
         </div>
-        <div className="text-sm text-foreground/85 leading-snug">
-          Pick an aspect ratio (I'll lock it for any frame extension) and an output resolution.
-        </div>
+        {chosen && !locked && (
+          <span className="text-[10px] uppercase tracking-wide text-muted-foreground/70 shrink-0 mt-0.5">
+            Tap to change
+          </span>
+        )}
       </div>
 
       {/* Quality row */}
@@ -62,7 +75,7 @@ export function AspectChoiceCard({ chosen, disabled, onChoose }: Props) {
                 key={q.value}
                 type="button"
                 disabled={locked}
-                onClick={() => setQuality(q.value)}
+                onClick={() => handleQuality(q.value)}
                 className={cn(
                   "rounded-lg border px-3 py-1.5 text-left transition-colors",
                   "border-border/40 bg-background/40 hover:bg-background/70 hover:border-border/70",
@@ -94,13 +107,13 @@ export function AspectChoiceCard({ chosen, disabled, onChoose }: Props) {
               <button
                 key={opt.value}
                 type="button"
-                disabled={disabled || !!chosen}
+                disabled={locked}
                 onClick={() => onChoose(opt.value, quality)}
                 className={cn(
                   "group relative flex items-center gap-3 rounded-xl border px-3 py-2 text-left transition-colors",
                   "border-border/40 bg-background/40 hover:bg-background/70 hover:border-border/70",
                   isChosen && "border-primary/70 bg-primary/10 hover:bg-primary/10",
-                  (disabled || (!!chosen && !isChosen)) && "opacity-50",
+                  locked && "opacity-50",
                   "disabled:cursor-not-allowed",
                 )}
                 aria-pressed={isChosen}
