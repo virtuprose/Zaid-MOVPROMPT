@@ -61,6 +61,24 @@ export function Composer({
   const [ingesting, setIngesting] = useState(false);
   const [enhancing, setEnhancing] = useState(false);
 
+  // Short, rotating placeholders so the empty input doesn't truncate on mobile.
+  const PLACEHOLDER_HINTS = [
+    "Describe your shot…",
+    "A mood, an action, a setting…",
+    "Drop a reference or type @file",
+    "e.g. neon ramen bar, slow dolly-in",
+    "What are you making?",
+  ];
+  const [hintIdx, setHintIdx] = useState(() => Math.floor(Math.random() * PLACEHOLDER_HINTS.length));
+  useEffect(() => {
+    if (value) return; // freeze rotation while typing
+    const id = window.setInterval(() => {
+      setHintIdx((i) => (i + 1) % PLACEHOLDER_HINTS.length);
+    }, 4000);
+    return () => window.clearInterval(id);
+  }, [value]);
+  const rotatingPlaceholder = PLACEHOLDER_HINTS[hintIdx];
+
   // External handoffs (e.g. "Send to Director", "Ask DP about this") bump
   // focusSignal so we refocus the textarea and put the caret at the end.
   useEffect(() => {
