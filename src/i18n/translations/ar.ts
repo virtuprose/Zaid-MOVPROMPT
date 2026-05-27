@@ -286,7 +286,7 @@ export const ar: Record<TranslationKey, string> = {
   "loading.step4": "التحسين لـ {model}…",
   "loading.step5": "كتابة برومبت سينمائي لك…",
   "loading.directorTitle": "مخرجك الذكي على الموقع",
-  "loading.directorSubtitle": "نصيغ برومبت سينمائي لـ {model}…",
+  "loading.directorSubtitle": "نصيغ برومبت سينمائي مهيّأ لـ {model}.",
   "loading.checklist.read": "قراءة المشهد…",
   "loading.checklist.block": "تحديد موضع الشخصية…",
   "loading.checklist.light": "ضبط الإضاءة الرئيسية…",
