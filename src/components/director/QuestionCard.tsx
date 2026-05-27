@@ -37,7 +37,7 @@ type Props = {
 
 const IMAGE_PROMPT_CHIP = "Generate an image prompt";
 
-export function QuestionCard({ reason, questions, disabled, attachments = [], onAttach, onContinue, onSkip, agentSuggestions, onGenerateImagePrompt }: Props) {
+export function QuestionCard({ reason, questions, disabled, collapsed, attachments = [], onAttach, onContinue, onSkip, agentSuggestions, onGenerateImagePrompt }: Props) {
   const [answers, setAnswers] = useState<string[]>(() => questions.map(() => ""));
   const [otherOpen, setOtherOpen] = useState<Record<number, boolean>>({});
   const [slotCounts, setSlotCounts] = useState<Record<number, number>>({});
