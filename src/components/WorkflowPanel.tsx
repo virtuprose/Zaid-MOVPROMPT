@@ -659,6 +659,8 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
             : undefined,
           timelineEnabled: supportsTimeline ? timelineEnabled : undefined,
           targetDuration,
+          targetAspectRatio,
+
           compactMode: opts?.compact === true ? true : undefined,
           addendum,
           feedback: feedbackPayload,
