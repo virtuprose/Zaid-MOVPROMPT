@@ -641,12 +641,29 @@ export function PresetPickerDialog({
               Selection saves automatically — Cancel to discard.
             </span>
           </div>
-          <Button
-            onClick={apply}
-            className="bg-[#F5A524] text-black hover:bg-[#F5A524]/90 font-semibold px-5"
-          >
-            Done
-          </Button>
+          <div className="flex items-center gap-2">
+            {(hasPreset || hasCity || hasImage) && (
+              <button
+                type="button"
+                onClick={() => {
+                  setDraftId(undefined);
+                  setDraftCustom("");
+                  setCustomOpen(false);
+                  setDraftLocation(EMPTY_LOCATION);
+                }}
+                className="text-sm text-muted-foreground hover:text-foreground px-3 py-1.5 rounded-lg border border-border/50 hover:border-border hover:bg-muted/30 transition-colors inline-flex items-center gap-1.5"
+              >
+                <X className="w-3.5 h-3.5" />
+                Reset
+              </button>
+            )}
+            <Button
+              onClick={apply}
+              className="bg-[#F5A524] text-black hover:bg-[#F5A524]/90 font-semibold px-5"
+            >
+              Done
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
