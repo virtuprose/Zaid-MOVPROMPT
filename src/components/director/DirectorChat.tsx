@@ -2247,6 +2247,44 @@ function DirectorChatInner() {
   return (
     <div className="flex flex-col gap-2 h-[calc(100dvh-120px)] pb-[env(safe-area-inset-bottom)]">
 
+      {handoffChip && (
+        <div className="mx-auto w-full max-w-4xl px-3 sm:px-4 pt-2">
+          <div className="flex flex-wrap items-center gap-2 rounded-lg border border-accent/30 bg-accent/5 px-3 py-2 text-xs">
+            <span className="inline-flex items-center gap-1.5 font-semibold text-accent">
+              <span className="inline-block w-1.5 h-1.5 rounded-full bg-accent shadow-[0_0_8px_hsl(var(--accent))]" />
+              From {handoffChip.source === "movprompt" ? "MovPrompt" : "Marketing Studio"}
+            </span>
+            <span className="text-muted-foreground/60">·</span>
+            <span className="text-muted-foreground">Carried over:</span>
+            {handoffChip.model && (
+              <span className="rounded-md border border-border/60 bg-background/60 px-2 py-0.5 font-mono text-[10px] text-foreground/80">
+                {handoffChip.model}
+              </span>
+            )}
+            {handoffChip.aspect && (
+              <span className="rounded-md border border-border/60 bg-background/60 px-2 py-0.5 font-mono text-[10px] text-foreground/80">
+                {handoffChip.aspect}
+              </span>
+            )}
+            {handoffChip.duration && (
+              <span className="rounded-md border border-border/60 bg-background/60 px-2 py-0.5 font-mono text-[10px] text-foreground/80">
+                {handoffChip.duration === "auto" ? "auto" : `${handoffChip.duration}s`}
+              </span>
+            )}
+            <button
+              type="button"
+              onClick={() => setHandoffChip(null)}
+              className="ms-auto text-muted-foreground/60 hover:text-foreground transition-colors"
+              aria-label="Dismiss source banner"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+
+
+
 
       <div className="relative flex-1 min-h-0">
       <div
