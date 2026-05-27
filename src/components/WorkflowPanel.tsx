@@ -481,6 +481,9 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
 
   const handleAnalyze = async () => {
     if (!hasRequiredImages) return;
+    // Always reset Timeline prompting to OFF when entering the breakdown phase —
+    // the user must opt back in each time.
+    setTimelineEnabled(false);
     // Element-only mode (no main frames): skip scene analysis and jump straight to breakdown phase.
     if (images.filter(Boolean).length === 0) {
       setSceneFrames([]);
