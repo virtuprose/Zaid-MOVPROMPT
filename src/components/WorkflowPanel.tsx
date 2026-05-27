@@ -1146,81 +1146,37 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
     </div>
   );
 
-  const ctaRowBlock = phase === "upload" && !contract.supportsElementReferences ? (
+  // Inline CTA — only rendered before the image is uploaded so the disabled
+  // "Upload an image to continue" affordance is visible. Once an image exists,
+  // the sticky bottom bar (mobileStickyCta) owns the Analyze + Skip actions
+  // to avoid the duplicate-button problem.
+  const ctaRowBlock = phase === "upload" && !contract.supportsElementReferences && !hasRequiredImages ? (
     <div className="pt-2 space-y-3">
       <Button
         data-tour="analyze-button"
         size="lg"
-        onClick={handleAnalyze}
-        disabled={!hasRequiredImages || isAnalyzing}
-        aria-label={hasRequiredImages ? (isAnalyzing ? t("wp.analyzingScene") : t("wp.analyzeScene")) : "Upload an image to continue"}
-        aria-busy={isAnalyzing}
-        className={!hasRequiredImages
-          ? "w-full font-display font-medium bg-transparent border border-dashed border-border text-muted-foreground hover:bg-transparent hover:text-muted-foreground disabled:opacity-100"
-          : "w-full font-display font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-md shadow-primary/[0.15]"}
+        disabled
+        aria-label="Upload an image to continue"
+        className="w-full font-display font-medium bg-transparent border border-dashed border-border text-muted-foreground hover:bg-transparent hover:text-muted-foreground disabled:opacity-100"
       >
-        {!hasRequiredImages ? (
-          <>Upload an image to continue</>
-        ) : isAnalyzing ? (
-          <><Loader2 className="w-5 h-5 me-2 animate-spin" aria-hidden="true" /> {t("wp.analyzingScene")}</>
-        ) : (
-          <><Sparkles className="w-5 h-5 me-2" aria-hidden="true" /> {t("wp.analyzeScene")}</>
-        )}
+        Upload an image to continue
       </Button>
-      {!hasGeneratedBefore && hasRequiredImages && (
-        <p className="text-[12px] leading-snug text-muted-foreground text-center px-2 -mt-1">
-          {t("wp.firstUse.analyzeHint" as any)}
-        </p>
-      )}
-      <div className="flex flex-col items-center gap-1">
-        <button
-          type="button"
-          onClick={() => { setSceneFrames([]); setPhase("breakdown"); }}
-          disabled={isAnalyzing}
-          aria-label="Skip & Generate Now"
-          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50 disabled:pointer-events-none focus:outline-none focus-visible:underline"
-        >
-          Skip &amp; Generate Now <ArrowRight className="w-3.5 h-3.5 rtl:rotate-180" aria-hidden="true" />
-        </button>
-        {!hasGeneratedBefore && hasRequiredImages && (
-          <p className="text-[12px] leading-snug text-muted-foreground text-center px-2">
-            {t("wp.firstUse.skipHint" as any)}
-          </p>
-        )}
-      </div>
     </div>
-  ) : phase === "upload" && contract.supportsElementReferences ? (
+  ) : phase === "upload" && contract.supportsElementReferences && !hasRequiredImages ? (
     <div className="pt-2 space-y-3">
       <Button
         data-tour="analyze-button"
         size="lg"
-        onClick={handleAnalyze}
-        disabled={!hasRequiredImages || isAnalyzing}
-        aria-label={hasRequiredImages ? t("wp.analyzeScene") : "Add at least one element reference to continue"}
-        className={!hasRequiredImages
-          ? "w-full font-display font-medium bg-transparent border border-dashed border-border text-muted-foreground hover:bg-transparent hover:text-muted-foreground disabled:opacity-100"
-          : "w-full font-display font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-md shadow-primary/[0.15]"}
+        disabled
+        aria-label="Add at least one element reference to continue"
+        className="w-full font-display font-medium bg-transparent border border-dashed border-border text-muted-foreground hover:bg-transparent hover:text-muted-foreground disabled:opacity-100"
       >
-        {!hasRequiredImages ? (
-          <>Add an element reference to continue</>
-        ) : (
-          <><Sparkles className="w-5 h-5 me-2" aria-hidden="true" /> {t("wp.analyzeScene")}</>
-        )}
+        Add an element reference to continue
       </Button>
-      <div className="flex flex-col items-center gap-1">
-        <button
-          type="button"
-          onClick={() => { setSceneFrames([]); setPhase("breakdown"); }}
-          disabled={isAnalyzing || !hasRequiredImages}
-          aria-label="Skip & Generate Now"
-          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50 disabled:pointer-events-none focus:outline-none focus-visible:underline"
-        >
-          Skip &amp; Generate Now <ArrowRight className="w-3.5 h-3.5 rtl:rotate-180" aria-hidden="true" />
-        </button>
-      </div>
     </div>
   )
     : (phase === "breakdown" || phase === "generate") ? (
+
     results ? (
       <div className="pt-6 mt-6 border-t border-border/60 flex flex-col items-center gap-3">
         <button
@@ -1727,8 +1683,20 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
           Free — no credits charged for prompt generation
         </span>
       </div>
+      <div className="flex justify-center">
+        <button
+          type="button"
+          onClick={() => { setSceneFrames([]); setPhase("breakdown"); }}
+          disabled={isAnalyzing}
+          aria-label="Skip & Generate Now"
+          className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50 disabled:pointer-events-none focus:outline-none focus-visible:underline"
+        >
+          Skip &amp; Generate Now <ArrowRight className="w-3 h-3 rtl:rotate-180" aria-hidden="true" />
+        </button>
+      </div>
       </div>
     </div>
+
   ) : (phase === "breakdown" || phase === "generate") && !isLoading && !isAnalyzing ? (
     <div className="fixed inset-x-0 bottom-0 z-40 px-4 pt-3 pb-[calc(env(safe-area-inset-bottom)+12px)] bg-background/95 backdrop-blur-md border-t border-border/60">
       <div className="max-w-[720px] mx-auto space-y-2">
