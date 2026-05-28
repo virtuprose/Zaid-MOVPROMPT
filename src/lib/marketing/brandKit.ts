@@ -393,6 +393,7 @@ export function useBrandKit() {
     uploadLogo,
     uploadLocationImage,
     addReference,
+    addReferenceFromPath,
     updateReferenceLabel,
     removeReference,
     reload,
