@@ -307,79 +307,115 @@ export function TopNav() {
                       <Menu className="w-5 h-5" />
                     </Button>
                   </SheetTrigger>
-                  <SheetContent side="right" className="w-[280px] flex flex-col gap-1">
-                    <SheetHeader>
-                      <SheetTitle className="flex items-center gap-2">
-                        <Avatar className="w-7 h-7">
+                  <SheetContent side="right" className="w-[300px] flex flex-col gap-0 p-0">
+                    <SheetHeader className="px-5 pt-5 pb-4 border-b border-border/40">
+                      <SheetTitle className="flex items-center gap-3">
+                        <Avatar className="w-9 h-9 ring-2 ring-accent/30">
                           <AvatarImage src={user.user_metadata?.avatar_url} />
-                          <AvatarFallback className="text-[10px] bg-primary/20 text-primary">
+                          <AvatarFallback className="text-[11px] bg-primary/20 text-primary">
                             {initials}
                           </AvatarFallback>
                         </Avatar>
-                        <span className="truncate text-sm font-normal">
-                          {user.user_metadata?.full_name || user.email}
-                        </span>
+                        <div className="min-w-0 flex-1 text-left">
+                          <p className="truncate text-sm font-medium leading-tight">
+                            {user.user_metadata?.full_name || "Account"}
+                          </p>
+                          <p className="truncate text-[11px] text-muted-foreground leading-tight mt-0.5">
+                            {user.email}
+                          </p>
+                        </div>
                       </SheetTitle>
                     </SheetHeader>
-                    <div className="mt-4 flex flex-col">
-                      {NAV_ITEMS.map((item) => (
-                        <Button
-                          key={item.to}
-                          variant="ghost"
-                          className="justify-start"
-                          onClick={() => {
-                            setMobileOpen(false);
-                            navigate(item.to);
-                          }}
-                        >
-                          {item.label}
-                          {item.badge && (
-                            <span className="ml-auto text-[9px] uppercase tracking-wider text-accent">
-                              {item.badge}
-                            </span>
-                          )}
-                        </Button>
-                      ))}
+                    <div className="flex-1 overflow-y-auto px-3 py-3 flex flex-col gap-0.5">
+                      <p className="px-3 pb-1.5 text-[10px] font-display font-bold uppercase tracking-[0.16em] text-muted-foreground/70">
+                        Workspace
+                      </p>
+                      {NAV_ITEMS.map((item) => {
+                        const active = isActive(item.to);
+                        const Icon = item.icon;
+                        return (
+                          <Button
+                            key={item.to}
+                            variant="ghost"
+                            className={cn(
+                              "justify-start h-11 rounded-lg gap-3 px-3 text-[14px]",
+                              active && "bg-accent/10 text-accent hover:bg-accent/15 hover:text-accent",
+                            )}
+                            onClick={() => {
+                              setMobileOpen(false);
+                              navigate(item.to);
+                            }}
+                          >
+                            <Icon className={cn("w-4 h-4", active ? "text-accent" : "text-muted-foreground")} />
+                            <span className="flex-1 text-left">{item.label}</span>
+                            {item.badge && (
+                              <span className="text-[9px] uppercase tracking-wider text-accent">
+                                {item.badge}
+                              </span>
+                            )}
+                          </Button>
+                        );
+                      })}
+
+                      <div className="my-2 h-px bg-border/40" />
+                      <p className="px-3 pb-1.5 text-[10px] font-display font-bold uppercase tracking-[0.16em] text-muted-foreground/70">
+                        Account
+                      </p>
+                      <Button
+                        variant="ghost"
+                        className="justify-start h-11 rounded-lg gap-3 px-3 text-[14px]"
+                        onClick={() => { setMobileOpen(false); navigate("/account/billing"); }}
+                      >
+                        <Coins className="w-4 h-4 text-accent" /> Buy Credits
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        className="justify-start h-11 rounded-lg gap-3 px-3 text-[14px]"
+                        onClick={() => { setMobileOpen(false); navigate("/library"); }}
+                      >
+                        <FolderOpen className="w-4 h-4 text-muted-foreground" /> Library
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        className="justify-start h-11 rounded-lg gap-3 px-3 text-[14px]"
+                        onClick={() => { setMobileOpen(false); navigate("/learn"); }}
+                      >
+                        <GraduationCap className="w-4 h-4 text-muted-foreground" /> Learn
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        className="justify-start h-11 rounded-lg gap-3 px-3 text-[14px]"
+                        onClick={() => { setMobileOpen(false); navigate("/referrals"); }}
+                      >
+                        <Gift className="w-4 h-4 text-muted-foreground" /> Refer friends
+                      </Button>
+
                       <div className="my-2 h-px bg-border/40" />
                       <Button
                         variant="ghost"
-                        className="justify-start"
-                        onClick={() => {
-                          setMobileOpen(false);
-                          navigate("/account/billing");
-                        }}
+                        className="justify-start h-11 rounded-lg gap-3 px-3 text-[14px]"
+                        onSelect={undefined as any}
+                        onClick={toggleTheme}
                       >
-                        <Disc className="w-4 h-4 me-2 text-destructive" /> Buy Credits
+                        {theme === "dark" ? <Sun className="w-4 h-4 text-muted-foreground" /> : <Moon className="w-4 h-4 text-muted-foreground" />}
+                        {theme === "dark" ? "Light mode" : "Dark mode"}
                       </Button>
-                      <Button
-                        variant="ghost"
-                        className="justify-start"
-                        onClick={() => {
-                          setMobileOpen(false);
-                          navigate("/library");
-                        }}
-                      >
-                        <FolderOpen className="w-4 h-4 me-2" /> Library
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        className="justify-start"
-                        onClick={() => {
-                          setMobileOpen(false);
-                          navigate("/learn");
-                        }}
-                      >
-                        <GraduationCap className="w-4 h-4 me-2" /> Learn
-                      </Button>
-                      <div className="flex items-center justify-between px-3 py-2">
-                        <span className="text-xs text-muted-foreground">Language</span>
+                      <div className="flex items-center justify-between rounded-lg px-3 h-11">
+                        <span className="text-[13px] text-muted-foreground">Language</span>
                         <LanguageToggle />
                       </div>
-                      <Button variant="ghost" className="justify-start" onClick={signOut}>
-                        <LogOut className="w-4 h-4 me-2" /> {t("auth.signOut")}
+
+                      <div className="my-2 h-px bg-border/40" />
+                      <Button
+                        variant="ghost"
+                        className="justify-start h-11 rounded-lg gap-3 px-3 text-[14px] text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                        onClick={signOut}
+                      >
+                        <LogOut className="w-4 h-4" /> {t("auth.signOut")}
                       </Button>
                     </div>
                   </SheetContent>
+
                 </Sheet>
               </>
             ) : (
