@@ -130,27 +130,42 @@ export function BrandKitSheet({
     setAnalyzing(true);
     try {
       const res = await analyzeBrandImage({ ...input, subject: draft.subject });
-      setDraft((d) => ({
-        ...d,
-        name: d.name?.trim() ? d.name : res.name ?? d.name,
-        description: d.description?.trim() ? d.description : res.description ?? d.description,
-        tagline: d.tagline?.trim() ? d.tagline : res.tagline ?? d.tagline,
-        // Fact-sheet fields: always refresh from the latest analysis so the
-        // video model can lock onto the real product details.
-        category: res.category ?? d.category,
-        visual_parts: res.visual_parts ?? d.visual_parts,
-        materials: res.materials ?? d.materials,
-        hero_colors: res.hero_colors ?? d.hero_colors,
-        packaging: res.packaging ?? d.packaging,
-      }));
+      const filled: string[] = [];
+      setDraft((d) => {
+        const next = {
+          ...d,
+          name: d.name?.trim() ? d.name : res.name ?? d.name,
+          description: d.description?.trim() ? d.description : res.description ?? d.description,
+          tagline: d.tagline?.trim() ? d.tagline : res.tagline ?? d.tagline,
+          category: res.category ?? d.category,
+          visual_parts: res.visual_parts ?? d.visual_parts,
+          materials: res.materials ?? d.materials,
+          hero_colors: res.hero_colors ?? d.hero_colors,
+          packaging: res.packaging ?? d.packaging,
+        };
+        if (next.name && next.name !== d.name) filled.push("name");
+        if (next.category && next.category !== d.category) filled.push("category");
+        if (next.visual_parts && next.visual_parts !== d.visual_parts) filled.push("visual parts");
+        if (next.materials && next.materials !== d.materials) filled.push("materials");
+        if (next.hero_colors && next.hero_colors !== d.hero_colors) filled.push("hero colors");
+        if (next.packaging && next.packaging !== d.packaging) filled.push("packaging");
+        return next;
+      });
       setJustFilled(true);
       window.setTimeout(() => setJustFilled(false), 4000);
+      toast.success("Product fact sheet filled in", {
+        description: filled.length
+          ? `Auto-filled ${filled.length} field${filled.length === 1 ? "" : "s"}: ${filled.join(", ")}. Scroll down to review and edit.`
+          : "Scroll down to review and edit the details.",
+        duration: 6000,
+      });
     } catch (e: any) {
       toast.error("Couldn't auto-read the image — fill it in manually");
     } finally {
       setAnalyzing(false);
     }
   };
+
 
   const handleFile = async (file?: File | null) => {
     if (!file) return;
