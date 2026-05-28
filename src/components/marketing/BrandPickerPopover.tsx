@@ -34,6 +34,7 @@ export function BrandPickerPopover({
   trigger: React.ReactNode;
 }) {
   const atCap = activeIds.length >= max;
+  const [pendingDelete, setPendingDelete] = useState<{ id: string; name: string } | null>(null);
   return (
     <Popover>
       <PopoverTrigger asChild>{trigger}</PopoverTrigger>
