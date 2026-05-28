@@ -129,7 +129,7 @@ ${result.negativePrompt ? `=== NEGATIVE ===\n${truncate(result.negativePrompt, 6
         }),
       });
 
-    const PRIMARY = "google/gemini-3-flash-preview";
+    const PRIMARY = "google/gemini-3.5-flash";
     const FALLBACK = "google/gemini-2.5-flash";
     let aiResp = await callAi(PRIMARY);
     if ([429, 402, 500, 502, 503, 504].includes(aiResp.status)) {

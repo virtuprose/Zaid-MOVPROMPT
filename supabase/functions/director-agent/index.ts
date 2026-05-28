@@ -689,7 +689,7 @@ Rules:
 
       const rewriteResp = await callGatewayWithRetry(
         {
-          model: "google/gemini-3.1-pro-preview",
+          model: "google/gemini-3.5-flash",
           messages: [
             { role: "system", content: sys },
             { role: "user", content: `Original prompt:\n\n${orig}` },
@@ -804,7 +804,7 @@ Output via the \`storyboard_shots\` tool ONLY.`;
 
       const batchResp = await callGatewayWithRetry(
         {
-          model: "google/gemini-3.1-pro-preview",
+          model: "google/gemini-3.5-flash",
           messages: [
             { role: "system", content: sys },
             { role: "user", content: userParts },
@@ -1046,7 +1046,7 @@ Output via the \`storyboard_shots\` tool ONLY.`;
 
 
     const requestBody: Record<string, unknown> = {
-      model: "google/gemini-3.1-pro-preview",
+      model: "google/gemini-3.5-flash",
       messages: aiMessages,
       stream: !!stream,
     };
