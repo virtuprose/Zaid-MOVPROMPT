@@ -1552,28 +1552,6 @@ export default function MarketingStudio() {
                     >
                       <Download className="h-4 w-4" />
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const promptText = (previewAd.prompt || "").trim();
-                        writeHandoff({
-                          source: "marketing",
-                          prompt: promptText
-                            ? `Re-cut of an existing ad:\n\n${promptText}`
-                            : "Re-cut of an existing ad from Marketing Studio.",
-                          banner:
-                            "Carried over from your rendered ad — tell me what to change (pacing, shot, mood) and I'll re-render.",
-                        });
-                        setPreviewAd(null);
-                        navigate("/director?from=marketing");
-                      }}
-                      aria-label="Continue with Director"
-                      title="Re-cut or remix this ad with the AI Director"
-                      className="h-8 px-3 rounded-full bg-accent/90 hover:bg-accent text-accent-foreground text-xs inline-flex items-center gap-1.5 transition"
-                    >
-                      <Clapperboard className="h-3.5 w-3.5" />
-                      Continue with Director
-                    </button>
                   </div>
                 </div>
               </div>
