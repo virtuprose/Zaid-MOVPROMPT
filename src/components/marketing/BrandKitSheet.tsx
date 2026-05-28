@@ -208,10 +208,11 @@ export function BrandKitSheet({
         if (error || !data?.image_url) {
           throw error || new Error("no_image_found");
         }
-        update("logo_url", data.image_url);
-        // Pre-fill name/description if empty so the user has a head start.
+        // Pre-fill name/description if empty + persist scraped image as the logo.
         setDraft((d) => ({
           ...d,
+          logo_path: data.logo_path ?? d.logo_path ?? null,
+          logo_url: data.image_url ?? d.logo_url,
           name: d.name?.trim() ? d.name : (data.name ?? d.name),
           description: d.description?.trim() ? d.description : (data.description ?? d.description),
         }));
