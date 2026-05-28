@@ -365,11 +365,11 @@ export function BrandKitSheet({
                     <Input
                       value={draft.logo_url ?? ""}
                       onChange={(e) => handleUrlChange(e.target.value)}
-                      placeholder="https://example.com/logo.png"
+                      placeholder="Paste a product page (Amazon, Shopify…) or direct image link"
                       className="pl-9"
                     />
                   </div>
-                  <p className="text-xs text-muted-foreground">Paste a direct link to an image (PNG, JPG, WEBP)</p>
+                  <p className="text-xs text-muted-foreground">We'll grab the product photo + title automatically. Direct image links (PNG, JPG, WEBP) also work.</p>
                 </div>
               )}
 
