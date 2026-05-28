@@ -259,7 +259,7 @@ Deno.serve(async (req) => {
         }),
       });
 
-    const PRIMARY = "google/gemini-3-flash-preview";
+    const PRIMARY = "google/gemini-3.5-flash";
     const FALLBACK = "google/gemini-2.5-flash";
     const shouldFallback = (s: number) => s === 429 || s === 402 || s >= 500;
     let resp = await callAi(PRIMARY);

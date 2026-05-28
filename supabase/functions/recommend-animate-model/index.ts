@@ -108,7 +108,7 @@ Always return EXACTLY ONE id from the catalog as the recommendation plus 2 alter
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: "google/gemini-3.5-flash",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },

@@ -601,7 +601,7 @@ serve(async (req) => {
       body: buildAiBody(model),
     });
 
-    const PRIMARY_MODEL = "google/gemini-2.5-pro";
+    const PRIMARY_MODEL = "google/gemini-3.5-flash";
     const FALLBACK_MODEL = "google/gemini-2.5-flash";
     const SHOULD_FALLBACK = (s: number) => s === 429 || s === 402 || s === 500 || s === 502 || s === 503 || s === 504;
     let response = await callAi(PRIMARY_MODEL);
