@@ -174,11 +174,22 @@ export function BrandKitSheet({
     update("logo_path", null);
     update("logo_url", url || null);
     if (urlDebounce.current) window.clearTimeout(urlDebounce.current);
-    if (!url || !/^https?:\/\/.+\.(png|jpe?g|webp|gif|svg)(\?|$)/i.test(url)) return;
+    if (!url) return;
+    const trimmed = url.trim();
+    const isHttp = /^https?:\/\/\S+$/i.test(trimmed);
+    const isDirectImage = /\.(png|jpe?g|webp|gif|svg)(\?|#|$)/i.test(trimmed);
+    if (!isHttp) return; // still typing
+    if (!isDirectImage) {
+      toast.error(
+        "Paste a direct image link (ends in .png, .jpg or .webp) — product page URLs like Amazon aren't supported. Right-click the product photo → Copy image address.",
+      );
+      return;
+    }
     urlDebounce.current = window.setTimeout(() => {
-      runAnalyze({ imageUrl: url });
+      runAnalyze({ imageUrl: trimmed });
     }, 600);
   };
+
 
   const handleSave = async () => {
     if (!draft.name.trim()) {
