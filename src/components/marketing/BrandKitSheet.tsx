@@ -623,6 +623,16 @@ export function BrandKitSheet({
         </div>
       </DialogContent>
     </Dialog>
+
+    <ProductImagePickerDialog
+      open={pickerOpen}
+      onOpenChange={setPickerOpen}
+      images={pickerImages}
+      maxAngles={Math.max(0, MAX_BRAND_ANGLES - ((draft.references ?? []).filter((r) => r.kind === "angle").length))}
+      busy={pickerBusy}
+      onConfirm={handlePickerConfirm}
+    />
+    </>
   );
 }
 
