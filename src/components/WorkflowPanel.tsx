@@ -43,7 +43,7 @@ import { MODEL_GROUPS, getModelLabel } from "@/lib/models";
 import { parseEdgeFnError, pickErrorKey } from "@/lib/edgeFnError";
 import { detectAllIntents } from "@/lib/sceneIntent";
 import { ModelPicker } from "./ModelPicker";
-import { OnboardingExamples, type OnboardingExample } from "./OnboardingExamples";
+
 
 
 const ONBOARDING_DONE_KEY = "movprompt.firstGenerationDone";
