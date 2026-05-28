@@ -116,7 +116,10 @@ export function BrandPickerPopover({
                     </button>
                     <button
                       type="button"
-                      onClick={() => k.id && onDelete(k.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (k.id) setPendingDelete({ id: k.id, name: k.name || "Untitled" });
+                      }}
                       className="w-6 h-6 flex items-center justify-center text-muted-foreground hover:text-destructive"
                       aria-label="Delete"
                     >
