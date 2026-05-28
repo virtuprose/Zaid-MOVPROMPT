@@ -32,7 +32,7 @@ export const FORMATS: StudioPreset[] = [
     label: "UGC",
     description: "Raw & Real",
     category: "ugc",
-    image: u("photo-1611162616305-c69b3fa7fbe0"),
+    video: "/presets/ugc.mp4",
     fragment:
       "Handheld vertical UGC selfie style, natural daylight, casual presenter speaking directly to camera, authentic phone-shot look",
   },
