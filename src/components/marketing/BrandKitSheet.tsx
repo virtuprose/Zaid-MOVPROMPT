@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { useBrandKit, EMPTY_BRAND_KIT, analyzeBrandImage, MAX_BRAND_ANGLES, type BrandKit, type ProductReference } from "@/lib/marketing/brandKit";
+import { supabase } from "@/integrations/supabase/client";
 import type { Subject } from "@/lib/marketingStudio";
 import { ProductFactSheet } from "./ProductFactSheet";
 
@@ -176,19 +177,43 @@ export function BrandKitSheet({
     if (urlDebounce.current) window.clearTimeout(urlDebounce.current);
     if (!url) return;
     const trimmed = url.trim();
-    const isHttp = /^https?:\/\/\S+$/i.test(trimmed);
+    if (!/^https?:\/\/\S+$/i.test(trimmed)) return; // still typing
     const isDirectImage = /\.(png|jpe?g|webp|gif|svg)(\?|#|$)/i.test(trimmed);
-    if (!isHttp) return; // still typing
-    if (!isDirectImage) {
-      toast.error(
-        "Paste a direct image link (ends in .png, .jpg or .webp) — product page URLs like Amazon aren't supported. Right-click the product photo → Copy image address.",
-      );
-      return;
-    }
-    urlDebounce.current = window.setTimeout(() => {
-      runAnalyze({ imageUrl: trimmed });
+    urlDebounce.current = window.setTimeout(async () => {
+      if (isDirectImage) {
+        runAnalyze({ imageUrl: trimmed });
+        return;
+      }
+      // Product page URL → scrape hero image + title first, then analyze.
+      setAnalyzing(true);
+      try {
+        const { data, error } = await supabase.functions.invoke("scrape-product-url", {
+          body: { url: trimmed },
+        });
+        if (error || !data?.image_url) {
+          throw error || new Error("no_image_found");
+        }
+        update("logo_url", data.image_url);
+        // Pre-fill name/description if empty so the user has a head start.
+        setDraft((d) => ({
+          ...d,
+          name: d.name?.trim() ? d.name : (data.name ?? d.name),
+          description: d.description?.trim() ? d.description : (data.description ?? d.description),
+        }));
+        await runAnalyze({ imageUrl: data.image_url });
+      } catch (e: any) {
+        const code = e?.message || "";
+        toast.error(
+          code.includes("no_image_found")
+            ? "Couldn't find a product image on that page. Try right-click → Copy image address."
+            : "Couldn't read that page. Paste a direct image link instead.",
+        );
+      } finally {
+        setAnalyzing(false);
+      }
     }, 600);
   };
+
 
 
   const handleSave = async () => {
@@ -340,11 +365,11 @@ export function BrandKitSheet({
                     <Input
                       value={draft.logo_url ?? ""}
                       onChange={(e) => handleUrlChange(e.target.value)}
-                      placeholder="https://example.com/logo.png"
+                      placeholder="Paste a product page (Amazon, Shopify…) or direct image link"
                       className="pl-9"
                     />
                   </div>
-                  <p className="text-xs text-muted-foreground">Paste a direct link to an image (PNG, JPG, WEBP)</p>
+                  <p className="text-xs text-muted-foreground">We'll grab the product photo + title automatically. Direct image links (PNG, JPG, WEBP) also work.</p>
                 </div>
               )}
 
