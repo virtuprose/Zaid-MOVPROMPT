@@ -87,11 +87,12 @@ export function TopNav() {
     <header className="sticky top-0 z-40 border-b border-border/40 bg-background/80 backdrop-blur-md supports-[backdrop-filter]:bg-background/60">
       <div className="mx-auto flex h-14 max-w-[1500px] items-center gap-2 px-3 sm:px-5">
         {/* Logo */}
-        <Link to="/" className="flex items-center gap-2 shrink-0 group">
+        <Link to="/" className="flex items-center gap-2 shrink-0 group h-11 -ml-1 px-1 rounded-lg" aria-label="MovPrompt home">
           <div className="w-8 h-8 rounded-lg bg-muted border border-border/60 flex items-center justify-center group-hover:border-accent/40 transition-colors">
             <img src={logoMark} alt="MovPrompt" className="w-5 h-5" />
           </div>
         </Link>
+
 
         <div className="hidden lg:block w-2" />
 
