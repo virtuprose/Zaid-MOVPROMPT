@@ -30,7 +30,7 @@ export function BrandKitSheet({
   /** When set, edit this kit. When null/undefined, create a new one. */
   kitId?: string | null;
 }) {
-  const { kits, saveKit, deleteKit, uploadLogo, addReference, updateReferenceLabel, removeReference } = useBrandKit();
+  const { kits, saveKit, deleteKit, uploadLogo, addReference, addReferenceFromPath, updateReferenceLabel, removeReference } = useBrandKit();
   const [draft, setDraft] = useState<BrandKit>(EMPTY_BRAND_KIT);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -40,6 +40,12 @@ export function BrandKitSheet({
   const [dragOver, setDragOver] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const urlDebounce = useRef<number | null>(null);
+
+  // Image picker state for product-page URLs.
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerImages, setPickerImages] = useState<string[]>([]);
+  const [pickerMeta, setPickerMeta] = useState<{ name: string | null; description: string | null; sourceUrl: string } | null>(null);
+  const [pickerBusy, setPickerBusy] = useState(false);
 
   useEffect(() => {
     if (!open) return;
