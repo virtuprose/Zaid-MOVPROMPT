@@ -365,6 +365,7 @@ export function BrandKitSheet({
   const hasLogo = !!draft.logo_url;
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[520px] p-0 gap-0 max-h-[88vh] flex flex-col overflow-hidden">
         {/* Header */}
