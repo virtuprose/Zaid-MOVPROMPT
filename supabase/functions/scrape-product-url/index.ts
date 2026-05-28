@@ -171,7 +171,49 @@ Deno.serve(async (req) => {
       : null;
     const description = pickDescription(html)?.slice(0, 240) ?? null;
 
-    return json({ image_url, name, description, url: finalUrl });
+    // Download the hero image and mirror it into our storage so it persists
+    // as the brand logo (the original CDN URL often expires or is CORS-blocked).
+    let logo_path: string | null = null;
+    let signed_url: string | null = null;
+    try {
+      const imgRes = await fetch(image_url, {
+        headers: { "User-Agent": UA, Accept: "image/*,*/*;q=0.8", Referer: finalUrl },
+      });
+      if (imgRes.ok) {
+        const ct = imgRes.headers.get("content-type") || "image/jpeg";
+        const extMatch = ct.match(/image\/(png|jpe?g|webp|gif|svg\+xml)/i);
+        const ext = extMatch
+          ? extMatch[1].replace("jpeg", "jpg").replace("svg+xml", "svg")
+          : (image_url.match(/\.(png|jpe?g|webp|gif|svg)(\?|#|$)/i)?.[1] ?? "jpg").toLowerCase();
+        const bytes = new Uint8Array(await imgRes.arrayBuffer());
+        const path = `marketing/${userData.user.id}/brand/scraped-${Date.now()}.${ext}`;
+        const { error: upErr } = await supabase.storage
+          .from("director-uploads")
+          .upload(path, bytes, { upsert: true, contentType: ct });
+        if (!upErr) {
+          logo_path = path;
+          const { data: signed } = await supabase.storage
+            .from("director-uploads")
+            .createSignedUrl(path, 60 * 60);
+          signed_url = signed?.signedUrl ?? null;
+        } else {
+          console.warn("scrape-product-url: storage upload failed", upErr);
+        }
+      } else {
+        console.warn("scrape-product-url: image fetch not ok", imgRes.status);
+      }
+    } catch (e) {
+      console.warn("scrape-product-url: image mirror failed", e);
+    }
+
+    return json({
+      image_url: signed_url ?? image_url,
+      logo_path,
+      name,
+      description,
+      url: finalUrl,
+    });
+
   } catch (err) {
     console.error("scrape-product-url error", err);
     return json({ error: err instanceof Error ? err.message : "unknown" }, 500);
