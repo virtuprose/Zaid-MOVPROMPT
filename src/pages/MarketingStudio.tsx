@@ -271,9 +271,10 @@ export default function MarketingStudio() {
   }, [userAds]);
 
   const sortedCommercialFormats = useMemo(() => {
-    const list = FORMATS.filter((f) => f.category === "commercial" || f.category === "avatar");
+    const list = FORMATS.filter((f) => f.category === "commercial" || f.category === "avatar" || f.category === "ugc");
     return [...list].sort((a, b) => (likeSignal.formats[b.id] ?? 0) - (likeSignal.formats[a.id] ?? 0));
   }, [likeSignal.formats]);
+
 
   const sortedSettings = useMemo(() => {
     return [...SETTINGS].sort((a, b) => (likeSignal.settings[b.id] ?? 0) - (likeSignal.settings[a.id] ?? 0));
