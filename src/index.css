@@ -106,13 +106,18 @@
   body {
     @apply bg-background text-foreground font-sans;
     font-family: 'Inter', sans-serif;
-    font-size: 15px;
+    font-size: 14.5px;
     line-height: 1.5;
     font-weight: 400;
     overflow-x: hidden;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    -webkit-tap-highlight-color: transparent;
   }
+  @media (min-width: 768px) {
+    body { font-size: 15px; }
+  }
+
 
   h1, h2, h3, h4, h5, h6 {
     font-family: 'Inter Tight', 'Inter', sans-serif;
@@ -182,7 +187,25 @@
   button, a, input, textarea, select {
     @apply transition-all duration-200;
   }
+
+  /* Guarantee comfortable mobile tap targets (44px = Apple HIG min) */
+  .tap-target { min-height: 44px; min-width: 44px; }
+
+  /* Page shell padding — scales 16/24/32 across breakpoints */
+  .page-pad-x { padding-left: 16px; padding-right: 16px; }
+  @media (min-width: 640px) { .page-pad-x { padding-left: 24px; padding-right: 24px; } }
+  @media (min-width: 1024px) { .page-pad-x { padding-left: 32px; padding-right: 32px; } }
+
+  /* Soft fade mask above sticky bottom bars so content fades into them */
+  .sticky-fade-top::before {
+    content: "";
+    position: absolute;
+    left: 0; right: 0; top: -24px; height: 24px;
+    pointer-events: none;
+    background: linear-gradient(to top, hsl(var(--background) / 0.9), hsl(var(--background) / 0));
+  }
 }
+
 
 /* ====== Preset card icon animations ====== */
 @layer utilities {
