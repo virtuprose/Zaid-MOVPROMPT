@@ -1276,45 +1276,6 @@ export default function MarketingStudio() {
                      </TooltipContent>
                    )}
                  </Tooltip>
-                 <Tooltip>
-                   <TooltipTrigger asChild>
-                     <Button
-                       size="sm"
-                       variant="outline"
-                       disabled={!master.trim()}
-                       onClick={() => {
-                         const brandLines = brandKits
-                           .map((b) => `Brand: ${b.name}${b.description ? ` — ${b.description}` : ""}`)
-                           .join("\n");
-                         const charLines = characterActiveKits
-                           .map((c) => `Character: ${c.name}${c.description ? ` — ${c.description}` : ""}`)
-                           .join("\n");
-                         const context = [brandLines, charLines].filter(Boolean).join("\n");
-                         const prompt = [context, master.trim()].filter(Boolean).join("\n\n");
-                         writeHandoff({
-                           source: "marketing",
-                           prompt,
-                           banner:
-                             "Brought over from Marketing Studio — I've got your brand and scene. Tell me how cinematic you want it, or say \"render now\" and I'll go.",
-                           settings: {
-                             aspect: renderSettings.aspect_ratio,
-                             duration: renderSettings.duration as number | "auto" | undefined,
-                           },
-                           brandKitId: brandKit?.id,
-                           characterKitId: characterKit?.id,
-                         });
-                         navigate("/director?from=marketing");
-                       }}
-                       className="rounded-full px-3 h-9 text-xs gap-1.5 border-accent/40 text-accent hover:bg-accent/10"
-                     >
-                       <Clapperboard className="w-3.5 h-3.5" />
-                       Plan with AI Director
-                     </Button>
-                   </TooltipTrigger>
-                   <TooltipContent side="top" className="max-w-[240px] text-xs">
-                     Hand your brief to the Director for cinematic shotlists or multi-shot stories.
-                   </TooltipContent>
-                 </Tooltip>
                </div>
              </div>
 
