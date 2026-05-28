@@ -167,42 +167,6 @@ export function ProductFactSheet({
           max={60}
         />
       </div>
-      <div>
-        <Label className="text-[11px] font-medium text-muted-foreground">Hero colors</Label>
-        <div className="mt-1.5 flex flex-wrap gap-1.5">
-          {(draft.hero_colors ?? []).map((c, i) => (
-            <span
-              key={`${c}-${i}`}
-              className="inline-flex items-center gap-1.5 pl-1.5 pr-2 py-1 rounded-full bg-background border border-border/60 text-[11px]"
-            >
-              <span
-                className="w-3 h-3 rounded-full border border-border/60"
-                style={{ background: c }}
-              />
-              {c}
-              <button
-                type="button"
-                onClick={() =>
-                  update(
-                    "hero_colors",
-                    (draft.hero_colors ?? []).filter((_, j) => j !== i),
-                  )
-                }
-                className="ml-0.5 text-muted-foreground hover:text-foreground"
-                aria-label={`Remove ${c}`}
-              >
-                <X className="w-3 h-3" />
-              </button>
-            </span>
-          ))}
-          <ColorAdder
-            onAdd={(c) =>
-              update("hero_colors", [...(draft.hero_colors ?? []), c].slice(0, 5))
-            }
-            disabled={(draft.hero_colors?.length ?? 0) >= 5}
-          />
-        </div>
-      </div>
     </div>
   );
 }
