@@ -1428,8 +1428,10 @@ export default function MarketingStudio() {
           onCustomChange={setCustomFormat}
           categories={[
             { id: "commercial", label: "Commercial", tooltip: "Polished brand formats" },
+            { id: "ugc", label: "UGC", tooltip: "Raw, social-first formats — selfie, tutorial, day-to-night" },
             { id: "avatar", label: "Avatar", tooltip: "Avatar-driven formats — face-lock onto your uploaded character" },
           ]}
+
         />
         <PresetPickerDialog
           open={openPicker === "location"}
