@@ -1395,11 +1395,8 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
         {workflowHeaderBlock}
         {modeToggleBlock}
       </div>
-      {showOnboarding && (
-        <div className="hidden lg:block">
-          <OnboardingExamples onPick={handlePickExample} />
-        </div>
-      )}
+
+
       {modelBlock}
       <div>
         {uploadBlock}
