@@ -934,31 +934,30 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
       multiShotMode ? "multishot" : twoFrameMode ? "twoframe" : "single";
 
     const btn = (active: boolean) =>
-      `shrink-0 whitespace-nowrap rounded-full text-sm leading-none transition-colors ${
+      `flex-1 sm:flex-initial shrink-0 whitespace-nowrap rounded-full text-[13px] sm:text-sm leading-none transition-colors text-center ${
         active
-          ? "bg-accent text-accent-foreground font-semibold"
+          ? "bg-accent text-accent-foreground font-semibold shadow-[0_2px_10px_hsl(var(--accent)/0.25)]"
           : "bg-transparent text-muted-foreground hover:bg-accent/10 hover:text-foreground"
       }`;
 
     return (
-      <div className="flex flex-nowrap sm:flex-wrap sm:justify-center items-center gap-2 overflow-x-auto sm:overflow-visible -mx-1 px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden snap-x snap-mandatory" style={{ paddingTop: 2, paddingBottom: 2 }}>
-        <button onClick={() => setMode("single")} style={{ padding: "14px 24px" }} className={`${btn(currentMode === "single")} snap-start`}>
+      <div className="flex w-full sm:w-auto flex-nowrap sm:flex-wrap sm:justify-center items-stretch gap-1.5 sm:gap-2 rounded-full p-1 sm:p-0 bg-muted/40 sm:bg-transparent border sm:border-0 border-border/40">
+        <button onClick={() => setMode("single")} className={`${btn(currentMode === "single")} px-3 sm:px-6 py-2.5 sm:py-3.5`}>
           {contract.supportsMultiShotToggle && !contract.supportsTwoFrameToggle
             ? t("contract.toggle.singleShot" as any)
             : t("contract.toggle.single" as any)}
         </button>
         {contract.supportsTwoFrameToggle && (
-          <button onClick={() => setMode("twoframe")} style={{ padding: "14px 24px" }} className={`${btn(currentMode === "twoframe")} snap-start`}>
+          <button onClick={() => setMode("twoframe")} className={`${btn(currentMode === "twoframe")} px-3 sm:px-6 py-2.5 sm:py-3.5`}>
             {t("contract.toggle.startEnd" as any)}
           </button>
         )}
         {contract.supportsMultiShotToggle && (
           <button
             onClick={() => setMode("multishot")}
-            style={{ padding: "14px 24px" }}
             title={`Generates a ${multiCount}-shot storyboard with locked style across panels`}
             aria-label={`Multi-shot — ${multiCount} shots`}
-            className={`${btn(currentMode === "multishot")} snap-start`}
+            className={`${btn(currentMode === "multishot")} px-3 sm:px-6 py-2.5 sm:py-3.5`}
           >
             {multiLabel}
           </button>
@@ -967,6 +966,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
       </div>
     );
   })();
+
 
   const uploadBlock = !contract.supportsElementReferences ? (
     activeSlots === 2 ? (
