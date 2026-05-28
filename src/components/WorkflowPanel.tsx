@@ -43,7 +43,7 @@ import { MODEL_GROUPS, getModelLabel } from "@/lib/models";
 import { parseEdgeFnError, pickErrorKey } from "@/lib/edgeFnError";
 import { detectAllIntents } from "@/lib/sceneIntent";
 import { ModelPicker } from "./ModelPicker";
-import { OnboardingExamples, type OnboardingExample } from "./OnboardingExamples";
+
 
 
 const ONBOARDING_DONE_KEY = "movprompt.firstGenerationDone";
@@ -213,25 +213,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
   }, [phase, isLoading, isAnalyzing]);
 
 
-  const handlePickExample = useCallback(async (example: OnboardingExample) => {
-    try {
-      const res = await fetch(example.src);
-      const blob = await res.blob();
-      const file = new File([blob], `${example.alt.replace(/\s+/g, "-").toLowerCase()}.jpg`, { type: blob.type || "image/jpeg" });
-      // Reset modes to match the example's intended workflow
-      setMultiShotMode(example.workflow === "multishot");
-      setTwoFrameMode(example.workflow === "twoframe");
-      const preview = URL.createObjectURL(file);
-      setImages([{ file, preview }]);
-      setResults(null);
-      setHistory([]); setFeedbackByShot({}); setCritiqueByShot({});
-      setPhase("upload");
-      setSceneFrames([]);
-      setElementDirections({});
-    } catch (e) {
-      console.error("Failed to load example image", e);
-    }
-  }, []);
+
 
   // Flatten scene frames into a single 1-based indexed list (left-to-right, frame-by-frame).
   const flatSceneElements = useMemo(() => {
@@ -1342,11 +1324,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
     )
   ) : null;
 
-  const showOnboarding =
-    !hasGeneratedBefore &&
-    phase === "upload" &&
-    !contract.supportsElementReferences &&
-    images.filter(Boolean).length === 0;
+
 
   // On the breakdown/generate screen, collapse the model picker into a single-line strip.
   const isBreakdownLike = phase === "breakdown" || phase === "generate";
@@ -1395,11 +1373,8 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
         {workflowHeaderBlock}
         {modeToggleBlock}
       </div>
-      {showOnboarding && (
-        <div className="hidden lg:block">
-          <OnboardingExamples onPick={handlePickExample} />
-        </div>
-      )}
+
+
       {modelBlock}
       <div>
         {uploadBlock}
