@@ -1915,18 +1915,18 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
   })();
 
   return (
-    <div className="w-full max-w-[720px] mx-auto">
-      <div className="space-y-6" style={{ paddingBottom: stickyBarHeight > 0 ? stickyBarHeight + 24 : 112 }}>
-        <div className="flex items-center justify-center gap-2" aria-label={`Step ${stepInfo.n} of 3: ${stepInfo.label}`}>
+    <div className="w-full max-w-[720px] mx-auto px-4 sm:px-5 lg:px-0">
+      <div className="space-y-5 sm:space-y-6" style={{ paddingBottom: stickyBarHeight > 0 ? stickyBarHeight + 24 : 112 }}>
+        <div className="flex items-center justify-center gap-2 pt-1 sm:pt-2" aria-label={`Step ${stepInfo.n} of 3: ${stepInfo.label}`}>
           {[1, 2, 3].map((s) => {
             const active = stepInfo.n === s;
             const done = stepInfo.n > s;
             return (
               <div key={s} className="flex items-center gap-2">
                 <span
-                  className={`flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-display font-bold transition-colors ${
+                  className={`flex items-center justify-center w-5 h-5 sm:w-5 sm:h-5 rounded-full text-[10px] font-display font-bold transition-all ${
                     active
-                      ? "bg-accent text-accent-foreground"
+                      ? "bg-accent text-accent-foreground shadow-[0_0_12px_hsl(var(--accent)/0.45)]"
                       : done
                         ? "bg-accent/20 text-accent"
                         : "bg-muted text-muted-foreground"
@@ -1935,15 +1935,16 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
                   {done ? "✓" : s}
                 </span>
                 {active && (
-                  <span className="text-[11px] uppercase tracking-wider font-display font-medium text-foreground/90">
+                  <span className="text-[10.5px] sm:text-[11px] uppercase tracking-[0.14em] font-display font-semibold text-foreground/90">
                     {stepInfo.label}
                   </span>
                 )}
-                {s < 3 && <span className="w-6 h-px bg-border" aria-hidden="true" />}
+                {s < 3 && <span className="w-5 sm:w-6 h-px bg-border/80" aria-hidden="true" />}
               </div>
             );
           })}
         </div>
+
         <div
           style={{
             opacity: isAnalyzing ? 0.7 : 1,
