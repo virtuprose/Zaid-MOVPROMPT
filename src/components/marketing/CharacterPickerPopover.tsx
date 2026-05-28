@@ -38,7 +38,9 @@ export function CharacterPickerPopover({
   onOpenChange?: (open: boolean) => void;
 }) {
   const atCap = activeIds.length >= max;
+  const [pendingDelete, setPendingDelete] = useState<{ id: string; name: string } | null>(null);
   return (
+    <>
     <Popover open={open} onOpenChange={onOpenChange}>
       <PopoverTrigger asChild>{trigger}</PopoverTrigger>
       <PopoverContent
