@@ -213,25 +213,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
   }, [phase, isLoading, isAnalyzing]);
 
 
-  const handlePickExample = useCallback(async (example: OnboardingExample) => {
-    try {
-      const res = await fetch(example.src);
-      const blob = await res.blob();
-      const file = new File([blob], `${example.alt.replace(/\s+/g, "-").toLowerCase()}.jpg`, { type: blob.type || "image/jpeg" });
-      // Reset modes to match the example's intended workflow
-      setMultiShotMode(example.workflow === "multishot");
-      setTwoFrameMode(example.workflow === "twoframe");
-      const preview = URL.createObjectURL(file);
-      setImages([{ file, preview }]);
-      setResults(null);
-      setHistory([]); setFeedbackByShot({}); setCritiqueByShot({});
-      setPhase("upload");
-      setSceneFrames([]);
-      setElementDirections({});
-    } catch (e) {
-      console.error("Failed to load example image", e);
-    }
-  }, []);
+
 
   // Flatten scene frames into a single 1-based indexed list (left-to-right, frame-by-frame).
   const flatSceneElements = useMemo(() => {
