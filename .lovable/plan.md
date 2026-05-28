@@ -1,21 +1,30 @@
-## Goal
-When a user clicks the trash/delete icon next to a product in the product dropdown (BrandPickerPopover), show a confirmation dialog. Delete only happens after the user confirms.
+## Why it still appears
 
-## Changes
+The "Try an example" row is rendered by `OnboardingExamples` inside `WorkflowPanel.tsx` (line 1398). Its only gating condition (line 1345) is:
 
-**`src/components/marketing/BrandPickerPopover.tsx`**
-- Track which kit is pending deletion (`pendingDeleteId` state).
-- Change the trash button's `onClick` to set `pendingDeleteId` instead of calling `onDelete` directly.
-- Add a shadcn `AlertDialog` at the bottom of the popover:
-  - Title: "Delete this product?"
-  - Description: "This will permanently remove [product name] from your library. This can't be undone."
-  - Cancel + destructive Confirm buttons.
-  - On confirm: call `onDelete(pendingDeleteId)` then clear the state.
+- user has never generated before
+- current phase is `upload`
+- contract doesn't support element references
+- no images uploaded yet
 
-**`src/components/marketing/CharacterPickerPopover.tsx`** (apply the same pattern for consistency)
-- Same AlertDialog wrapping the avatar delete button, with copy adjusted to "Delete this avatar?".
+There is **no viewport/breakpoint check**, so it shows on every screen size — phone, iPad, and desktop. That's why it's still there on mobile/tablet.
 
-## Notes
-- No backend, hook, or data-layer changes — `deleteBrand` / `deleteCharacter` continue to be the underlying calls.
-- Uses the existing `@/components/ui/alert-dialog` component, matching the ad-delete confirmation pattern already used in `MarketingStudio.tsx`.
-- Stops click propagation on the trash button so opening the dialog doesn't also select the kit.
+## Fix
+
+Restrict the examples row to desktop only.
+
+**`src/components/WorkflowPanel.tsx` (line 1398)**
+
+Wrap the render with a `hidden lg:block` container so it only appears at the `lg` breakpoint and above (≥1024px), which excludes phones and iPads in portrait:
+
+```tsx
+{showOnboarding && (
+  <div className="hidden lg:block">
+    <OnboardingExamples onPick={handlePickExample} />
+  </div>
+)}
+```
+
+No other files change. Logic, data, and the desktop experience stay identical — the row simply doesn't render on phone or iPad.
+
+If you'd prefer the cutoff at the tablet breakpoint instead (show on iPad landscape, hide only on phones), swap `lg:block` for `md:block`. Tell me which you want and I'll apply it.
