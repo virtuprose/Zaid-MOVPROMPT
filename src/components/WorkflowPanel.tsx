@@ -1324,11 +1324,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
     )
   ) : null;
 
-  const showOnboarding =
-    !hasGeneratedBefore &&
-    phase === "upload" &&
-    !contract.supportsElementReferences &&
-    images.filter(Boolean).length === 0;
+
 
   // On the breakdown/generate screen, collapse the model picker into a single-line strip.
   const isBreakdownLike = phase === "breakdown" || phase === "generate";
