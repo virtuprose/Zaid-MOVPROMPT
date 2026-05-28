@@ -16,6 +16,7 @@ import { useBrandKit, EMPTY_BRAND_KIT, analyzeBrandImage, MAX_BRAND_ANGLES, type
 import { supabase } from "@/integrations/supabase/client";
 import type { Subject } from "@/lib/marketingStudio";
 import { ProductFactSheet } from "./ProductFactSheet";
+import { ProductImagePickerDialog, type ProductImagePickerResult } from "./ProductImagePickerDialog";
 
 export function BrandKitSheet({
   open,
@@ -29,7 +30,7 @@ export function BrandKitSheet({
   /** When set, edit this kit. When null/undefined, create a new one. */
   kitId?: string | null;
 }) {
-  const { kits, saveKit, deleteKit, uploadLogo, addReference, updateReferenceLabel, removeReference } = useBrandKit();
+  const { kits, saveKit, deleteKit, uploadLogo, addReference, addReferenceFromPath, updateReferenceLabel, removeReference } = useBrandKit();
   const [draft, setDraft] = useState<BrandKit>(EMPTY_BRAND_KIT);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -39,6 +40,12 @@ export function BrandKitSheet({
   const [dragOver, setDragOver] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const urlDebounce = useRef<number | null>(null);
+
+  // Image picker state for product-page URLs.
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerImages, setPickerImages] = useState<string[]>([]);
+  const [pickerMeta, setPickerMeta] = useState<{ name: string | null; description: string | null; sourceUrl: string } | null>(null);
+  const [pickerBusy, setPickerBusy] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -199,24 +206,28 @@ export function BrandKitSheet({
         runAnalyze({ imageUrl: trimmed });
         return;
       }
-      // Product page URL → scrape hero image + title first, then analyze.
+      // Product page URL → scan for all candidate images, then let user pick.
       setAnalyzing(true);
       try {
         const { data, error } = await supabase.functions.invoke("scrape-product-url", {
-          body: { url: trimmed },
+          body: { url: trimmed, action: "scan" },
         });
-        if (error || !data?.image_url) {
+        if (error || !Array.isArray(data?.images) || data.images.length === 0) {
           throw error || new Error("no_image_found");
         }
-        // Pre-fill name/description if empty + persist scraped image as the logo.
+        // Pre-fill name/description if empty.
         setDraft((d) => ({
           ...d,
-          logo_path: data.logo_path ?? d.logo_path ?? null,
-          logo_url: data.image_url ?? d.logo_url,
           name: d.name?.trim() ? d.name : (data.name ?? d.name),
           description: d.description?.trim() ? d.description : (data.description ?? d.description),
         }));
-        await runAnalyze({ imageUrl: data.image_url });
+        setPickerImages(data.images as string[]);
+        setPickerMeta({
+          name: data.name ?? null,
+          description: data.description ?? null,
+          sourceUrl: data.url ?? trimmed,
+        });
+        setPickerOpen(true);
       } catch (e: any) {
         const code = e?.message || "";
         toast.error(
@@ -229,6 +240,95 @@ export function BrandKitSheet({
       }
     }, 600);
   };
+
+  const handlePickerConfirm = async (result: ProductImagePickerResult) => {
+    if (!pickerMeta) return;
+    setPickerBusy(true);
+    try {
+      // 1. Mirror the chosen hero + angles into our storage via the edge function.
+      const { data, error } = await supabase.functions.invoke("scrape-product-url", {
+        body: {
+          action: "mirror",
+          hero_url: result.hero,
+          angle_urls: result.angles,
+          referer: pickerMeta.sourceUrl,
+        },
+      });
+      if (error || !data?.logo_path) {
+        throw error || new Error("mirror_failed");
+      }
+      const angleResults: { path: string; url: string | null; label: string | null }[] =
+        Array.isArray(data.angles) ? data.angles : [];
+
+      // 2. Apply the hero as the brand logo.
+      setDraft((d) => ({
+        ...d,
+        logo_path: data.logo_path,
+        logo_url: data.logo_url ?? result.hero,
+      }));
+
+      // 3. Close the picker before the long analyze step so the UI feels snappy.
+      setPickerOpen(false);
+
+      // 4. If we have angles, ensure the kit is saved, then attach them as references.
+      if (angleResults.length > 0) {
+        // We need to capture the latest draft *after* the logo_path update above.
+        // ensureSavedKit reads from `draft` state, which won't have the new logo_path
+        // until the next render — pass an explicit payload by saving inline.
+        let kitId = draft.id ?? null;
+        if (!kitId) {
+          if (!draft.name.trim()) {
+            // Fallback: name from scraped title if user hasn't typed one.
+            const fallbackName = pickerMeta.name?.trim() || "Untitled product";
+            try {
+              const saved = await saveKit({
+                ...draft,
+                name: fallbackName,
+                logo_path: data.logo_path,
+                logo_url: data.logo_url ?? result.hero,
+              });
+              kitId = saved.id ?? null;
+              setDraft((d) => ({ ...d, id: saved.id, updated_at: saved.updated_at, name: fallbackName }));
+            } catch (e: any) {
+              console.warn("save before angles failed", e);
+            }
+          } else {
+            kitId = await ensureSavedKit();
+          }
+        }
+        if (kitId) {
+          const existingAngles = (draft.references ?? []).filter((r) => r.kind === "angle").length;
+          const room = Math.max(0, MAX_BRAND_ANGLES - existingAngles);
+          for (const a of angleResults.slice(0, room)) {
+            try {
+              await addReferenceFromPath(kitId, a.path, "angle", a.label);
+            } catch (e) {
+              console.warn("attach angle failed", e);
+            }
+          }
+        }
+      }
+
+      toast.success(
+        angleResults.length > 0
+          ? `Saved hero + ${angleResults.length} angle photo${angleResults.length === 1 ? "" : "s"}`
+          : "Hero image saved",
+      );
+
+      // 5. Run the AI fact-sheet analysis on the hero.
+      await runAnalyze({ imageUrl: data.logo_url ?? result.hero });
+    } catch (e: any) {
+      const code = e?.message || "";
+      toast.error(
+        code.includes("hero_mirror_failed")
+          ? "Couldn't download the chosen image. Try a different one."
+          : "Couldn't save those images. Try again or upload manually.",
+      );
+    } finally {
+      setPickerBusy(false);
+    }
+  };
+
 
 
 
@@ -265,6 +365,7 @@ export function BrandKitSheet({
   const hasLogo = !!draft.logo_url;
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[520px] p-0 gap-0 max-h-[88vh] flex flex-col overflow-hidden">
         {/* Header */}
@@ -522,6 +623,16 @@ export function BrandKitSheet({
         </div>
       </DialogContent>
     </Dialog>
+
+    <ProductImagePickerDialog
+      open={pickerOpen}
+      onOpenChange={setPickerOpen}
+      images={pickerImages}
+      maxAngles={Math.max(0, MAX_BRAND_ANGLES - ((draft.references ?? []).filter((r) => r.kind === "angle").length))}
+      busy={pickerBusy}
+      onConfirm={handlePickerConfirm}
+    />
+    </>
   );
 }
 
