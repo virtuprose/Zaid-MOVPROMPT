@@ -16,6 +16,7 @@ import { useBrandKit, EMPTY_BRAND_KIT, analyzeBrandImage, MAX_BRAND_ANGLES, type
 import { supabase } from "@/integrations/supabase/client";
 import type { Subject } from "@/lib/marketingStudio";
 import { ProductFactSheet } from "./ProductFactSheet";
+import { ProductImagePickerDialog, type ProductImagePickerResult } from "./ProductImagePickerDialog";
 
 export function BrandKitSheet({
   open,
