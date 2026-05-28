@@ -320,6 +320,38 @@ export function useBrandKit() {
     [user, kits, reload],
   );
 
+  /** Persist an already-uploaded image as a brand reference (no re-upload). */
+  const addReferenceFromPath = useCallback(
+    async (
+      brand_kit_id: string,
+      image_path: string,
+      kind: ProductReferenceKind,
+      label: string | null,
+    ): Promise<ProductReference> => {
+      if (!user) throw new Error("Not signed in");
+      const existing = kits.find((k) => k.id === brand_kit_id)?.references ?? [];
+      const position = existing.length;
+      const { data, error } = await supabase
+        .from("product_references")
+        .insert({
+          brand_kit_id,
+          user_id: user.id,
+          kind,
+          image_path,
+          label,
+          position,
+        })
+        .select("id,brand_kit_id,kind,image_path,label,position")
+        .single();
+      if (error) throw error;
+      const ref = data as ProductReference;
+      ref.image_url = await signLogo(ref.image_path);
+      await reload();
+      return ref;
+    },
+    [user, kits, reload],
+  );
+
   const updateReferenceLabel = useCallback(
     async (id: string, label: string | null) => {
       if (!user) throw new Error("Not signed in");
