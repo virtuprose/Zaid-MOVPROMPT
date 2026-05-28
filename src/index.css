@@ -106,13 +106,18 @@
   body {
     @apply bg-background text-foreground font-sans;
     font-family: 'Inter', sans-serif;
-    font-size: 15px;
+    font-size: 14.5px;
     line-height: 1.5;
     font-weight: 400;
     overflow-x: hidden;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    -webkit-tap-highlight-color: transparent;
   }
+  @media (min-width: 768px) {
+    body { font-size: 15px; }
+  }
+
 
   h1, h2, h3, h4, h5, h6 {
     font-family: 'Inter Tight', 'Inter', sans-serif;
