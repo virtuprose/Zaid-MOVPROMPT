@@ -1,5 +1,16 @@
+import { useState } from "react";
 import { UserRound, Check, Pencil, Plus, Trash2 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import type { CharacterKit } from "@/lib/marketing/characterKit";
 
@@ -27,7 +38,9 @@ export function CharacterPickerPopover({
   onOpenChange?: (open: boolean) => void;
 }) {
   const atCap = activeIds.length >= max;
+  const [pendingDelete, setPendingDelete] = useState<{ id: string; name: string } | null>(null);
   return (
+    <>
     <Popover open={open} onOpenChange={onOpenChange}>
       <PopoverTrigger asChild>{trigger}</PopoverTrigger>
       <PopoverContent
@@ -108,7 +121,10 @@ export function CharacterPickerPopover({
                     </button>
                     <button
                       type="button"
-                      onClick={() => k.id && onDelete(k.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (k.id) setPendingDelete({ id: k.id, name: k.name || "Untitled" });
+                      }}
                       className="w-6 h-6 flex items-center justify-center text-muted-foreground hover:text-destructive"
                       aria-label="Delete"
                     >
@@ -135,5 +151,28 @@ export function CharacterPickerPopover({
         </div>
       </PopoverContent>
     </Popover>
+    <AlertDialog open={pendingDelete !== null} onOpenChange={(o) => !o && setPendingDelete(null)}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete this avatar?</AlertDialogTitle>
+          <AlertDialogDescription>
+            This will permanently remove <span className="font-medium text-foreground">{pendingDelete?.name}</span> from your character library. This can't be undone.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            onClick={() => {
+              if (pendingDelete) onDelete(pendingDelete.id);
+              setPendingDelete(null);
+            }}
+          >
+            Delete
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }
