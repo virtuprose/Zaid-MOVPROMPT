@@ -1,7 +1,14 @@
-// Scrape a product page URL for its hero image + basic metadata so the
-// Marketing Studio "Image URL" field can accept Amazon/Shopify/etc. links.
-// Returns { image_url, name, description, url } — the client then hands the
-// image_url back to analyze-brand-image as usual.
+// Scrape a product page URL for ALL candidate product images + basic metadata
+// so the Marketing Studio "Image URL" field can accept Amazon/Shopify/etc.
+// links and let the user pick which images to use as hero + angle references.
+//
+// Two actions (selected by `action` in the request body):
+//   - "scan"   (default): fetch the page, return { images, name, description, url }.
+//                          Nothing is uploaded to storage.
+//   - "mirror"          : body { hero_url, angle_urls?, referer? } — downloads
+//                          those URLs and uploads them under
+//                          marketing/{userId}/brand/. Returns
+//                          { logo_path, logo_url, angles: [{path, url, label}] }.
 
 import { createClient } from "npm:@supabase/supabase-js@2";
 
@@ -12,6 +19,9 @@ const corsHeaders = {
 
 const UA =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15";
+
+const MAX_IMAGES = 12;
+const MAX_ANGLES_MIRROR = 5;
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -31,14 +41,12 @@ function abs(base: string, maybe: string | null | undefined): string | null {
 
 function pickMeta(html: string, names: string[]): string | null {
   for (const n of names) {
-    // property="og:image" content="..."  OR  name="..." content="..."
     const re = new RegExp(
       `<meta[^>]+(?:property|name)\\s*=\\s*["']${n}["'][^>]*content\\s*=\\s*["']([^"']+)["']`,
       "i",
     );
     const m = html.match(re);
     if (m?.[1]) return decodeEntities(m[1].trim());
-    // content first
     const re2 = new RegExp(
       `<meta[^>]+content\\s*=\\s*["']([^"']+)["'][^>]+(?:property|name)\\s*=\\s*["']${n}["']`,
       "i",
@@ -55,7 +63,10 @@ function decodeEntities(s: string): string {
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
     .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">");
+    .replace(/&gt;/g, ">")
+    // JSON-embedded escapes for Amazon \u0026, \/ etc.
+    .replace(/\\u002F/gi, "/")
+    .replace(/\\\//g, "/");
 }
 
 function pickTitle(html: string): string | null {
@@ -69,40 +80,115 @@ function pickDescription(html: string): string | null {
   return pickMeta(html, ["og:description", "twitter:description", "description"]);
 }
 
-function pickHeroImage(html: string, base: string): string | null {
-  // 1) Open Graph / Twitter image
-  const meta = pickMeta(html, [
+/** Heuristic to skip sprites/icons/badges/avatars/etc. */
+function looksLikeProductImage(url: string): boolean {
+  const u = url.toLowerCase();
+  if (u.endsWith(".svg")) return false;
+  if (/sprite|icon|logo|badge|avatar|emoji|placeholder|loader|spinner|tracking|pixel|favicon/.test(u)) return false;
+  // Tiny dimension hints commonly baked into CDN URLs.
+  if (/[_-](\d{1,2})x(\d{1,2})\.(jpe?g|png|webp)/.test(u)) return false;
+  return true;
+}
+
+function pushUnique(list: string[], url: string | null) {
+  if (!url) return;
+  // Normalize trailing query-only differences for dedupe.
+  const key = url.split("?")[0].split("#")[0];
+  if (list.some((x) => x.split("?")[0].split("#")[0] === key)) return;
+  list.push(url);
+}
+
+function collectImages(html: string, base: string): string[] {
+  const out: string[] = [];
+
+  // 1) Open Graph / Twitter hero — usually the best single image.
+  const og = pickMeta(html, [
     "og:image:secure_url",
     "og:image",
     "twitter:image",
     "twitter:image:src",
   ]);
-  if (meta) {
-    const a = abs(base, meta);
-    if (a) return a;
+  if (og) pushUnique(out, abs(base, og));
+
+  // 2) Amazon-style image JSON blobs. Pull every hiRes/large/mainUrl URL.
+  // colorImages / imageGalleryData / ImageBlockATF all surface variants.
+  const amazonHiRes = html.matchAll(/"hiRes"\s*:\s*"([^"]+\.(?:jpe?g|png|webp)[^"]*)"/gi);
+  for (const m of amazonHiRes) pushUnique(out, decodeEntities(m[1]));
+  const amazonLarge = html.matchAll(/"large"\s*:\s*"([^"]+\.(?:jpe?g|png|webp)[^"]*)"/gi);
+  for (const m of amazonLarge) pushUnique(out, decodeEntities(m[1]));
+  const amazonMainUrl = html.matchAll(/"mainUrl"\s*:\s*"([^"]+\.(?:jpe?g|png|webp)[^"]*)"/gi);
+  for (const m of amazonMainUrl) pushUnique(out, decodeEntities(m[1]));
+
+  // 3) JSON-LD product images.
+  const ldImg = html.matchAll(/"image"\s*:\s*"([^"]+\.(?:jpe?g|png|webp)[^"]*)"/gi);
+  for (const m of ldImg) pushUnique(out, abs(base, decodeEntities(m[1])));
+  // image arrays: "image": ["https://...", "https://..."]
+  const ldImgArr = html.matchAll(/"image"\s*:\s*\[([^\]]+)\]/gi);
+  for (const m of ldImgArr) {
+    const inner = m[1];
+    const urls = inner.matchAll(/"([^"]+\.(?:jpe?g|png|webp)[^"]*)"/gi);
+    for (const u of urls) pushUnique(out, abs(base, decodeEntities(u[1])));
   }
-  // 2) Amazon hero (landingImage) JSON blob
-  const landing = html.match(/"hiRes"\s*:\s*"([^"]+\.(?:jpe?g|png|webp))"/i);
-  if (landing?.[1]) return decodeEntities(landing[1]);
-  const landing2 = html.match(/"large"\s*:\s*"([^"]+\.(?:jpe?g|png|webp))"/i);
-  if (landing2?.[1]) return decodeEntities(landing2[1]);
-  // 3) link rel="image_src"
+
+  // 4) <link rel="image_src">.
   const linkImg = html.match(
     /<link[^>]+rel\s*=\s*["']image_src["'][^>]*href\s*=\s*["']([^"']+)["']/i,
   );
-  if (linkImg?.[1]) {
-    const a = abs(base, decodeEntities(linkImg[1]));
-    if (a) return a;
-  }
-  // 4) First <img> with a real src that looks like jpg/png/webp
+  if (linkImg?.[1]) pushUnique(out, abs(base, decodeEntities(linkImg[1])));
+
+  // 5) <img> tags with real product-image attributes.
   const imgs = html.matchAll(
-    /<img[^>]+(?:src|data-src|data-old-hires|data-a-hires)\s*=\s*["']([^"']+\.(?:jpe?g|png|webp)[^"']*)["']/gi,
+    /<img[^>]+(?:src|data-src|data-old-hires|data-a-hires|data-zoom-image|data-image|srcset)\s*=\s*["']([^"']+)["']/gi,
   );
   for (const m of imgs) {
-    const a = abs(base, decodeEntities(m[1]));
-    if (a) return a;
+    // srcset has multiple urls "url 1x, url2 2x" — take the first.
+    const raw = decodeEntities(m[1]).split(/\s*,\s*/)[0].split(/\s+/)[0];
+    if (!/\.(jpe?g|png|webp)(\?|#|$)/i.test(raw)) continue;
+    const u = abs(base, raw);
+    if (u && looksLikeProductImage(u)) pushUnique(out, u);
   }
-  return null;
+
+  // Filter + cap.
+  return out.filter(looksLikeProductImage).slice(0, MAX_IMAGES);
+}
+
+async function mirrorOne(opts: {
+  imageUrl: string;
+  referer: string;
+  userId: string;
+  supabase: ReturnType<typeof createClient>;
+  filenamePrefix: string;
+}): Promise<{ path: string; url: string | null } | null> {
+  try {
+    const res = await fetch(opts.imageUrl, {
+      headers: { "User-Agent": UA, Accept: "image/*,*/*;q=0.8", Referer: opts.referer },
+    });
+    if (!res.ok) {
+      console.warn("mirrorOne: bad status", res.status, opts.imageUrl);
+      return null;
+    }
+    const ct = res.headers.get("content-type") || "image/jpeg";
+    const extMatch = ct.match(/image\/(png|jpe?g|webp|gif|svg\+xml)/i);
+    const ext = extMatch
+      ? extMatch[1].replace("jpeg", "jpg").replace("svg+xml", "svg")
+      : (opts.imageUrl.match(/\.(png|jpe?g|webp|gif|svg)(\?|#|$)/i)?.[1] ?? "jpg").toLowerCase();
+    const bytes = new Uint8Array(await res.arrayBuffer());
+    const path = `marketing/${opts.userId}/brand/${opts.filenamePrefix}-${Date.now()}-${Math.floor(Math.random() * 1e6)}.${ext}`;
+    const { error: upErr } = await opts.supabase.storage
+      .from("director-uploads")
+      .upload(path, bytes, { upsert: true, contentType: ct });
+    if (upErr) {
+      console.warn("mirrorOne: upload failed", upErr);
+      return null;
+    }
+    const { data: signed } = await opts.supabase.storage
+      .from("director-uploads")
+      .createSignedUrl(path, 60 * 60);
+    return { path, url: signed?.signedUrl ?? null };
+  } catch (e) {
+    console.warn("mirrorOne: error", e);
+    return null;
+  }
 }
 
 Deno.serve(async (req) => {
@@ -121,6 +207,48 @@ Deno.serve(async (req) => {
     if (!userData?.user) return json({ error: "unauthorized" }, 401);
 
     const body = await req.json().catch(() => ({}));
+    const action: string = (body?.action ?? "scan").toString();
+
+    // ─────────── MIRROR action ───────────
+    if (action === "mirror") {
+      const heroUrl: string | undefined = body?.hero_url;
+      const angleUrls: string[] = Array.isArray(body?.angle_urls) ? body.angle_urls.slice(0, MAX_ANGLES_MIRROR) : [];
+      const referer: string = (body?.referer ?? heroUrl ?? "").toString();
+      if (!heroUrl || !/^https?:\/\/\S+$/i.test(heroUrl)) {
+        return json({ error: "invalid_hero_url" }, 400);
+      }
+      const hero = await mirrorOne({
+        imageUrl: heroUrl,
+        referer,
+        userId: userData.user.id,
+        supabase,
+        filenamePrefix: "hero",
+      });
+      if (!hero) return json({ error: "hero_mirror_failed" }, 502);
+
+      const angles: { path: string; url: string | null; label: string | null }[] = [];
+      const labels = ["front", "back", "side", "top", "packaging"];
+      for (let i = 0; i < angleUrls.length; i++) {
+        const u = angleUrls[i];
+        if (!/^https?:\/\/\S+$/i.test(u)) continue;
+        const a = await mirrorOne({
+          imageUrl: u,
+          referer,
+          userId: userData.user.id,
+          supabase,
+          filenamePrefix: "angle",
+        });
+        if (a) angles.push({ ...a, label: labels[i] ?? null });
+      }
+
+      return json({
+        logo_path: hero.path,
+        logo_url: hero.url,
+        angles,
+      });
+    }
+
+    // ─────────── SCAN action (default) ───────────
     const rawUrl: string = (body?.url ?? "").toString().trim();
     if (!/^https?:\/\/\S+$/i.test(rawUrl)) {
       return json({ error: "invalid_url" }, 400);
@@ -149,71 +277,28 @@ Deno.serve(async (req) => {
     const finalUrl = pageRes.url || rawUrl;
     const contentType = pageRes.headers.get("content-type") || "";
 
-    // Direct image link → just return it.
+    // Direct image link → return as the only candidate.
     if (contentType.startsWith("image/")) {
-      return json({ image_url: finalUrl, name: null, description: null, url: finalUrl });
+      return json({ images: [finalUrl], name: null, description: null, url: finalUrl });
     }
     if (!contentType.includes("html")) {
       return json({ error: "not_html", contentType }, 415);
     }
 
-    const html = (await pageRes.text()).slice(0, 600_000); // cap to ~600KB
+    const html = (await pageRes.text()).slice(0, 800_000); // cap to ~800KB
 
-    const image_url = pickHeroImage(html, finalUrl);
-    if (!image_url) {
+    const images = collectImages(html, finalUrl);
+    if (images.length === 0) {
       return json({ error: "no_image_found" }, 404);
     }
 
     const rawName = pickTitle(html);
-    // Amazon titles are absurdly long; trim to first hyphen/pipe chunk.
     const name = rawName
       ? rawName.split(/[|–—]/)[0].trim().slice(0, 120)
       : null;
     const description = pickDescription(html)?.slice(0, 240) ?? null;
 
-    // Download the hero image and mirror it into our storage so it persists
-    // as the brand logo (the original CDN URL often expires or is CORS-blocked).
-    let logo_path: string | null = null;
-    let signed_url: string | null = null;
-    try {
-      const imgRes = await fetch(image_url, {
-        headers: { "User-Agent": UA, Accept: "image/*,*/*;q=0.8", Referer: finalUrl },
-      });
-      if (imgRes.ok) {
-        const ct = imgRes.headers.get("content-type") || "image/jpeg";
-        const extMatch = ct.match(/image\/(png|jpe?g|webp|gif|svg\+xml)/i);
-        const ext = extMatch
-          ? extMatch[1].replace("jpeg", "jpg").replace("svg+xml", "svg")
-          : (image_url.match(/\.(png|jpe?g|webp|gif|svg)(\?|#|$)/i)?.[1] ?? "jpg").toLowerCase();
-        const bytes = new Uint8Array(await imgRes.arrayBuffer());
-        const path = `marketing/${userData.user.id}/brand/scraped-${Date.now()}.${ext}`;
-        const { error: upErr } = await supabase.storage
-          .from("director-uploads")
-          .upload(path, bytes, { upsert: true, contentType: ct });
-        if (!upErr) {
-          logo_path = path;
-          const { data: signed } = await supabase.storage
-            .from("director-uploads")
-            .createSignedUrl(path, 60 * 60);
-          signed_url = signed?.signedUrl ?? null;
-        } else {
-          console.warn("scrape-product-url: storage upload failed", upErr);
-        }
-      } else {
-        console.warn("scrape-product-url: image fetch not ok", imgRes.status);
-      }
-    } catch (e) {
-      console.warn("scrape-product-url: image mirror failed", e);
-    }
-
-    return json({
-      image_url: signed_url ?? image_url,
-      logo_path,
-      name,
-      description,
-      url: finalUrl,
-    });
-
+    return json({ images, name, description, url: finalUrl });
   } catch (err) {
     console.error("scrape-product-url error", err);
     return json({ error: err instanceof Error ? err.message : "unknown" }, 500);
