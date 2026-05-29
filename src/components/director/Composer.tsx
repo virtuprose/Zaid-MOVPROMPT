@@ -331,6 +331,20 @@ export function Composer({
   return (
     <TooltipProvider>
       <div className="space-y-1.5">
+        {showHandoffHint && mode === "director" && (
+          <div className="flex items-center gap-2 rounded-lg border border-accent/30 bg-accent/5 px-3 py-1.5 text-[11px] text-accent/90">
+            <Film className="w-3 h-3 shrink-0" />
+            <span>Director will confirm model, aspect, duration, and audio before rendering.</span>
+            <button
+              type="button"
+              onClick={() => setShowHandoffHint(false)}
+              className="ml-auto text-accent/60 hover:text-accent"
+              aria-label="Dismiss"
+            >
+              <X className="w-3 h-3" />
+            </button>
+          </div>
+        )}
         <div
           onDragOver={(e) => {
             e.preventDefault();
