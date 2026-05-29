@@ -66,7 +66,7 @@ import { TypewriterText } from "./TypewriterText";
 
 type Bubble =
   | { role: "user"; content: string; attachments?: Attachment[]; ts?: number }
-  | { role: "assistant"; content: string; animate?: boolean; markdown?: boolean; ts?: number }
+  | { role: "assistant"; content: string; animate?: boolean; markdown?: boolean; freeChat?: boolean; ts?: number }
 
   | {
       role: "result";
