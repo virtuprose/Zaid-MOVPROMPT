@@ -14,8 +14,6 @@ const HEADLINE_LINES = [
 ];
 
 export const CinematicHero = () => {
-  useEffect(() => {
-export const CinematicHero = () => {
   const [videoReady, setVideoReady] = useState(false);
   useEffect(() => {
     const id = "fraunces-font";
