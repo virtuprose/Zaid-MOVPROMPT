@@ -40,11 +40,8 @@ export const CinematicHero = () => {
         onCanPlay={() => setVideoReady(true)}
         className={`absolute inset-0 w-full h-full object-cover scale-105 transition-opacity duration-500 ${videoReady ? "opacity-100" : "opacity-0"}`}
       />
-      {/* Color grade overlays — only after video is ready, otherwise they tint the black bg red */}
-      <div className={`absolute inset-0 transition-opacity duration-500 ${videoReady ? "opacity-100" : "opacity-0"}`}>
-        <div className="absolute inset-0 bg-gradient-to-b from-[#3a1a18]/40 via-[#6b2820]/25 to-[#1a0808]/70" />
-        <div className="absolute inset-0 bg-gradient-to-tr from-[#c44a2e]/20 via-transparent to-[#2a0e0c]/40" />
-      </div>
+      {/* Neutral dark overlay for text contrast without red tint */}
+      <div className={`absolute inset-0 bg-black/30 transition-opacity duration-500 ${videoReady ? "opacity-100" : "opacity-0"}`} />
       {/* Vignette */}
       <div
         className="absolute inset-0"
