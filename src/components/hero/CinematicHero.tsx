@@ -26,7 +26,6 @@ export const CinematicHero = () => {
     }
   }, []);
   return (
-    <section className="relative w-full h-screen min-h-[780px] overflow-hidden bg-[#1a0a08]">
     <section className="relative w-full h-screen min-h-[780px] overflow-hidden bg-black">
       {/* Background video */}
       <video
