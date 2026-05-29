@@ -682,6 +682,7 @@ export function Composer({
                   toast.message("Scanning attachments — one moment…");
                   return;
                 }
+                setShowHandoffHint(false);
                 onSend();
               };
               const tip = blocked
