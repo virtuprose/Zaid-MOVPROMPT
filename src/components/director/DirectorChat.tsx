@@ -1810,7 +1810,7 @@ function DirectorChatInner() {
           }
         }
       } else {
-        added = { role: "assistant", animate: chatMode !== "free_chat", content: (resp as any).content || "...", markdown: chatMode === "free_chat" };
+        added = { role: "assistant", animate: chatMode !== "free_chat", content: (resp as any).content || "...", markdown: chatMode === "free_chat", freeChat: chatMode === "free_chat" };
       }
 
 
