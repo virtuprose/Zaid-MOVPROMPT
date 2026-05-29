@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Play, ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -14,6 +14,9 @@ const HEADLINE_LINES = [
 ];
 
 export const CinematicHero = () => {
+  useEffect(() => {
+export const CinematicHero = () => {
+  const [videoReady, setVideoReady] = useState(false);
   useEffect(() => {
     const id = "fraunces-font";
     if (!document.getElementById(id)) {
@@ -35,14 +38,15 @@ export const CinematicHero = () => {
         loop
         playsInline
         preload="auto"
-        className="absolute inset-0 w-full h-full object-cover scale-105 hero-kenburns"
+        onLoadedData={() => setVideoReady(true)}
+        onCanPlay={() => setVideoReady(true)}
+        className={`absolute inset-0 w-full h-full object-cover scale-105 transition-opacity duration-500 ${videoReady ? "opacity-100" : "opacity-0"}`}
       />
-      <div className="absolute inset-0 bg-gradient-to-b from-[#3a1a18]/40 via-[#6b2820]/25 to-[#1a0808]/70" />
-      <div className="absolute inset-0 bg-gradient-to-tr from-[#c44a2e]/20 via-transparent to-[#2a0e0c]/40" />
-      {/* Vignette */}
-      <div
-        className="absolute inset-0"
-        style={{
+      {/* Color grade overlays — only after video is ready, otherwise they tint the black bg red */}
+      <div className={`absolute inset-0 transition-opacity duration-500 ${videoReady ? "opacity-100" : "opacity-0"}`}>
+        <div className="absolute inset-0 bg-gradient-to-b from-[#3a1a18]/40 via-[#6b2820]/25 to-[#1a0808]/70" />
+        <div className="absolute inset-0 bg-gradient-to-tr from-[#c44a2e]/20 via-transparent to-[#2a0e0c]/40" />
+      </div>
           background:
             "radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.55) 100%)",
         }}
