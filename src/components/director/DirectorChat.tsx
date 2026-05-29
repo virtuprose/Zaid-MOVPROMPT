@@ -1329,7 +1329,8 @@ function DirectorChatInner() {
           history.push({ role: "user", content: (b.content || "") + attachLine });
         } else if (b.role === "assistant") {
           if (b.content && b.content !== "…") {
-            history.push({ role: "assistant", content: b.content });
+            const prefix = b.freeChat ? "[Free-chat brainstorm — NOT a locked spec]\n" : "";
+            history.push({ role: "assistant", content: prefix + b.content });
           }
         } else if (b.role === "result") {
           const br: any = b.data.breakdown || {};
