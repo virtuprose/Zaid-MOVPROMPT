@@ -58,6 +58,14 @@ export function Composer({
   const taRef = useRef<HTMLTextAreaElement>(null);
   const [drag, setDrag] = useState(false);
   const [pageDrag, setPageDrag] = useState(false);
+  const prevModeRef = useRef(mode);
+  const [showHandoffHint, setShowHandoffHint] = useState(false);
+  useEffect(() => {
+    if (prevModeRef.current === "free_chat" && mode === "director") {
+      setShowHandoffHint(true);
+    }
+    prevModeRef.current = mode;
+  }, [mode]);
   const [ingesting, setIngesting] = useState(false);
   const [enhancing, setEnhancing] = useState(false);
 
