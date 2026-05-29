@@ -58,6 +58,14 @@ export function Composer({
   const taRef = useRef<HTMLTextAreaElement>(null);
   const [drag, setDrag] = useState(false);
   const [pageDrag, setPageDrag] = useState(false);
+  const prevModeRef = useRef(mode);
+  const [showHandoffHint, setShowHandoffHint] = useState(false);
+  useEffect(() => {
+    if (prevModeRef.current === "free_chat" && mode === "director") {
+      setShowHandoffHint(true);
+    }
+    prevModeRef.current = mode;
+  }, [mode]);
   const [ingesting, setIngesting] = useState(false);
   const [enhancing, setEnhancing] = useState(false);
 
@@ -323,6 +331,20 @@ export function Composer({
   return (
     <TooltipProvider>
       <div className="space-y-1.5">
+        {showHandoffHint && mode === "director" && (
+          <div className="flex items-center gap-2 rounded-lg border border-accent/30 bg-accent/5 px-3 py-1.5 text-[11px] text-accent/90">
+            <Film className="w-3 h-3 shrink-0" />
+            <span>Director will confirm model, aspect, duration, and audio before rendering.</span>
+            <button
+              type="button"
+              onClick={() => setShowHandoffHint(false)}
+              className="ml-auto text-accent/60 hover:text-accent"
+              aria-label="Dismiss"
+            >
+              <X className="w-3 h-3" />
+            </button>
+          </div>
+        )}
         <div
           onDragOver={(e) => {
             e.preventDefault();
@@ -381,7 +403,10 @@ export function Composer({
               }
               if (e.key === "Enter" && !e.shiftKey && !(e.nativeEvent as any).isComposing && e.keyCode !== 229) {
                 e.preventDefault();
-                if (!busy) onSend();
+                if (!busy) {
+                  setShowHandoffHint(false);
+                  onSend();
+                }
               }
             }}
             placeholder={mode === "free_chat" ? "Ask anything — plain chat mode." : rotatingPlaceholder}
@@ -671,6 +696,7 @@ export function Composer({
                   toast.message("Scanning attachments — one moment…");
                   return;
                 }
+                setShowHandoffHint(false);
                 onSend();
               };
               const tip = blocked

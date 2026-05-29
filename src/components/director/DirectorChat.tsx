@@ -66,7 +66,7 @@ import { TypewriterText } from "./TypewriterText";
 
 type Bubble =
   | { role: "user"; content: string; attachments?: Attachment[]; ts?: number }
-  | { role: "assistant"; content: string; animate?: boolean; markdown?: boolean; ts?: number }
+  | { role: "assistant"; content: string; animate?: boolean; markdown?: boolean; freeChat?: boolean; ts?: number }
 
   | {
       role: "result";
@@ -1329,7 +1329,8 @@ function DirectorChatInner() {
           history.push({ role: "user", content: (b.content || "") + attachLine });
         } else if (b.role === "assistant") {
           if (b.content && b.content !== "…") {
-            history.push({ role: "assistant", content: b.content });
+            const prefix = b.freeChat ? "[Free-chat brainstorm — NOT a locked spec]\n" : "";
+            history.push({ role: "assistant", content: prefix + b.content });
           }
         } else if (b.role === "result") {
           const br: any = b.data.breakdown || {};
@@ -1810,7 +1811,7 @@ function DirectorChatInner() {
           }
         }
       } else {
-        added = { role: "assistant", animate: chatMode !== "free_chat", content: (resp as any).content || "...", markdown: chatMode === "free_chat" };
+        added = { role: "assistant", animate: chatMode !== "free_chat", content: (resp as any).content || "...", markdown: chatMode === "free_chat", freeChat: chatMode === "free_chat" };
       }
 
 
