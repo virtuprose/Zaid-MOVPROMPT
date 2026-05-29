@@ -47,6 +47,10 @@ export const CinematicHero = () => {
         <div className="absolute inset-0 bg-gradient-to-b from-[#3a1a18]/40 via-[#6b2820]/25 to-[#1a0808]/70" />
         <div className="absolute inset-0 bg-gradient-to-tr from-[#c44a2e]/20 via-transparent to-[#2a0e0c]/40" />
       </div>
+      {/* Vignette */}
+      <div
+        className="absolute inset-0"
+        style={{
           background:
             "radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.55) 100%)",
         }}
