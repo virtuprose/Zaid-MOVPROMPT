@@ -26,7 +26,7 @@ export const CinematicHero = () => {
     }
   }, []);
   return (
-    <section className="relative w-full h-screen min-h-[780px] overflow-hidden bg-[#1a0a08]">
+    <section className="relative w-full h-screen min-h-[780px] overflow-hidden bg-black">
       {/* Background video */}
       <video
         src={VIDEO_URL}
@@ -34,10 +34,9 @@ export const CinematicHero = () => {
         muted
         loop
         playsInline
+        preload="auto"
         className="absolute inset-0 w-full h-full object-cover scale-105 hero-kenburns"
       />
-
-      {/* Warm color-grade overlay */}
       <div className="absolute inset-0 bg-gradient-to-b from-[#3a1a18]/40 via-[#6b2820]/25 to-[#1a0808]/70" />
       <div className="absolute inset-0 bg-gradient-to-tr from-[#c44a2e]/20 via-transparent to-[#2a0e0c]/40" />
       {/* Vignette */}
