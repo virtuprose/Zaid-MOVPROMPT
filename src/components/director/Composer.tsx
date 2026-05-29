@@ -389,7 +389,10 @@ export function Composer({
               }
               if (e.key === "Enter" && !e.shiftKey && !(e.nativeEvent as any).isComposing && e.keyCode !== 229) {
                 e.preventDefault();
-                if (!busy) onSend();
+                if (!busy) {
+                  setShowHandoffHint(false);
+                  onSend();
+                }
               }
             }}
             placeholder={mode === "free_chat" ? "Ask anything — plain chat mode." : rotatingPlaceholder}
