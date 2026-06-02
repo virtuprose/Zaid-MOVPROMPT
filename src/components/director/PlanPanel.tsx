@@ -496,6 +496,28 @@ export function PlanPanel({ sessionId }: Props) {
               <span className="tabular-nums opacity-70">{exportableCount}</span>
             </button>
           )}
+          {canStitch && (
+            <button
+              type="button"
+              onClick={stitchPlan}
+              disabled={stitching}
+              title={`Stitch ${stitchable.length} completed shots into one MP4`}
+              className={cn(
+                "ml-1 inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-md border transition-colors",
+                stitching
+                  ? "border-border/30 text-muted-foreground/60 cursor-wait"
+                  : "border-border/40 text-muted-foreground hover:text-foreground hover:border-border",
+              )}
+            >
+              {stitching ? (
+                <Loader2 className="w-3 h-3 animate-spin" />
+              ) : (
+                <Combine className="w-3 h-3" />
+              )}
+              Stitch
+              <span className="tabular-nums opacity-70">{stitchable.length}</span>
+            </button>
+          )}
           {saving && <span className="text-[10px] text-muted-foreground ml-1">Saving…</span>}
           <ChevronDown
             className={cn(
