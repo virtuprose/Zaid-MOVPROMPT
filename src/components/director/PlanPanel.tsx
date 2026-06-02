@@ -25,6 +25,7 @@ import {
   TRANSITION_LABELS,
   TRANSITION_DESCRIPTIONS,
   type StitchTransition,
+  type TransitionOverride,
 } from "@/lib/director/stitch";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
@@ -131,6 +132,12 @@ export function PlanPanel({ sessionId }: Props) {
   });
   useEffect(() => {
     if (typeof window !== "undefined") localStorage.setItem("director.stitchTransition", transition);
+  }, [transition]);
+  // Per-boundary override array dialed in by the TransitionPreview scrubber.
+  // Reset whenever the preset changes so we never ship stale offsets.
+  const [stitchOverrides, setStitchOverrides] = useState<TransitionOverride[]>([]);
+  useEffect(() => {
+    setStitchOverrides([]);
   }, [transition]);
   const [previewOpen, setPreviewOpen] = useState(false);
   const prices = usePricing();
@@ -376,6 +383,7 @@ export function PlanPanel({ sessionId }: Props) {
         durations: stitchable.map((s) => s.duration),
         title: (plan.globals as Record<string, unknown>).title as string | undefined,
         transition,
+        overrides: stitchOverrides.length === stitchable.length - 1 ? stitchOverrides : undefined,
       });
       if (stitchCancelRef.current || res?.status === "cancelled" || !res?.video_url) {
         // User cancelled — server-side cancel may have returned before this.
@@ -697,6 +705,7 @@ export function PlanPanel({ sessionId }: Props) {
               durations={stitchable.map((s) => s.duration)}
               transition={transition}
               onTransitionChange={setTransition}
+              onOverridesChange={setStitchOverrides}
             />
           ) : (
             <div className="text-sm text-muted-foreground py-6 text-center">
