@@ -14,6 +14,7 @@ import {
   Rows3,
   LayoutGrid,
   Combine,
+  X,
 } from "lucide-react";
 
 import { exportPlanToDrive } from "@/lib/director/driveExport";
