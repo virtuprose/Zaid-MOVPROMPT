@@ -887,3 +887,151 @@ function Chip({ icon, children }: { icon: React.ReactNode; children: React.React
     </span>
   );
 }
+
+type StitchPreviewState = {
+  status: "composing" | "done" | "failed";
+  startedAt: number;
+  clipUrls: string[];
+  totalDuration: number;
+  videoUrl?: string;
+  error?: string;
+};
+
+function StitchPreview({
+  preview,
+  nowTick,
+  onDismiss,
+  onRetry,
+}: {
+  preview: StitchPreviewState;
+  nowTick: number;
+  onDismiss: () => void;
+  onRetry: () => void;
+}) {
+  const elapsedMs = nowTick - preview.startedAt;
+  const elapsed = Math.max(0, Math.floor(elapsedMs / 1000));
+  const m = Math.floor(elapsed / 60);
+  const s = elapsed % 60;
+  const elapsedLabel = `${m}:${s.toString().padStart(2, "0")}`;
+  // Rough heuristic — fal compose typically ~3-6s per clip-second of source.
+  const estTotalSec = Math.max(20, Math.round(preview.totalDuration * 0.6) + 15);
+  const pct =
+    preview.status === "done"
+      ? 100
+      : preview.status === "failed"
+        ? 0
+        : Math.min(96, Math.round((elapsed / estTotalSec) * 100));
+
+  return (
+    <div className="border-t border-border/30 bg-muted/10 px-3 py-3 space-y-2.5 motion-safe:animate-fade-up">
+      <div className="flex items-center gap-2">
+        <Combine className="w-3.5 h-3.5 text-accent" />
+        <div className="text-xs font-medium text-foreground/95">
+          {preview.status === "composing" && "Stitching MP4…"}
+          {preview.status === "done" && "Stitched MP4 ready"}
+          {preview.status === "failed" && "Stitch failed"}
+        </div>
+        <div className="text-[10px] text-muted-foreground tabular-nums">
+          {preview.clipUrls.length} clips · {preview.totalDuration}s
+        </div>
+        <div className="ml-auto flex items-center gap-2">
+          {preview.status === "composing" && (
+            <span className="text-[10px] tabular-nums text-muted-foreground">
+              {elapsedLabel} / ~{Math.floor(estTotalSec / 60)}:
+              {(estTotalSec % 60).toString().padStart(2, "0")}
+            </span>
+          )}
+          {preview.status === "failed" && (
+            <button
+              type="button"
+              onClick={onRetry}
+              className="text-[10px] px-2 py-0.5 rounded-md border border-border/40 text-foreground/80 hover:bg-muted/40"
+            >
+              Retry
+            </button>
+          )}
+          {preview.status !== "composing" && (
+            <button
+              type="button"
+              onClick={onDismiss}
+              className="text-[10px] px-2 py-0.5 rounded-md text-muted-foreground hover:text-foreground"
+            >
+              Dismiss
+            </button>
+          )}
+        </div>
+      </div>
+
+      <div className="h-1 rounded-full bg-muted/40 overflow-hidden">
+        {preview.status === "composing" ? (
+          <div
+            className="h-full bg-gradient-to-r from-primary via-accent to-primary transition-all duration-700"
+            style={{
+              width: `${pct}%`,
+              backgroundSize: "200% 100%",
+              animation: "shimmer 2.2s linear infinite",
+            }}
+          />
+        ) : preview.status === "done" ? (
+          <div className="h-full w-full bg-emerald-500" />
+        ) : (
+          <div className="h-full w-full bg-destructive" />
+        )}
+      </div>
+
+      {preview.status === "done" && preview.videoUrl ? (
+        <div className="space-y-1.5">
+          <video
+            src={preview.videoUrl}
+            controls
+            autoPlay
+            muted
+            playsInline
+            className="w-full rounded-md border border-primary/30 bg-black aspect-video"
+          />
+          <a
+            href={preview.videoUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[11px] text-primary hover:underline"
+          >
+            Open MP4 in new tab
+          </a>
+        </div>
+      ) : (
+        <div className="flex gap-1.5 overflow-x-auto pb-1">
+          {preview.clipUrls.map((url, i) => (
+            <div
+              key={`${url}-${i}`}
+              className="relative shrink-0 w-24 aspect-video rounded overflow-hidden border border-border/40 bg-black/60"
+            >
+              <video
+                src={url}
+                className="absolute inset-0 w-full h-full object-cover opacity-80"
+                muted
+                playsInline
+                preload="metadata"
+              />
+              <span className="absolute top-0.5 left-0.5 text-[9px] tabular-nums bg-black/60 text-foreground/90 px-1 rounded">
+                {String(i + 1).padStart(2, "0")}
+              </span>
+              {preview.status === "composing" && (
+                <div className="absolute inset-x-0 bottom-0 h-0.5 bg-gradient-to-r from-primary via-accent to-primary animate-[shimmer_2.2s_linear_infinite]" />
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {preview.status === "failed" && preview.error && (
+        <div className="text-[11px] text-destructive">{preview.error}</div>
+      )}
+      {preview.status === "composing" && (
+        <div className="text-[10px] text-muted-foreground">
+          Composing on fal · ffmpeg. The preview will appear here as soon as
+          rendering completes.
+        </div>
+      )}
+    </div>
+  );
+}
