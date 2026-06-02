@@ -44,12 +44,6 @@ import { TopNav } from "@/components/TopNav";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
-import { DirectorErrorBoundary } from "@/components/director/DirectorErrorBoundary";
-import { SendDebugReportButton } from "@/components/SendDebugReportButton";
-import { TopNav } from "@/components/TopNav";
-import { supabase } from "@/integrations/supabase/client";
-import { cn } from "@/lib/utils";
-
 type SessionStatus = "completed" | "in_progress" | "draft";
 
 type SessionRow = {
