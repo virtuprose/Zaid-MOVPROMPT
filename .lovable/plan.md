@@ -1,56 +1,106 @@
-# Fix Free-Chat ↔ Director handoff + missing-info guard
+# Director → Orchestrator: evolution sketch
 
-Two related problems from the reported flow:
+A staged path from today's single-shot Director ("brief → one prompt → one model") to an orchestrator ("brief → plan → route each step to the best model → assemble → deliver"), without copying Hermes wholesale. Each stage ships value on its own.
 
-1. **Free Chat felt transactional** — it replied with a structured 15-shot "Seedance card", then the user moved to Director and the video rendered as 5s with no questions asked.
-2. **Director skipped routing axes** (duration, aspect ratio, audio) and went straight to `request_video_generation` because it treated the prior Free-Chat markdown as already-locked spec.
+## Where we are today
 
-## What to change
+```text
+user brief ──▶ Director (single agent) ──▶ one cinematic prompt ──▶ one video model ──▶ one clip
+```
 
-### 1. Free Chat persona (warm collaborator, not order-taker)
+What already smells orchestrator-shaped in the codebase:
 
-File: `supabase/functions/director-agent/index.ts` — rewrite `FREE_CHAT_SYSTEM`.
+- `generate-prompt/experts/registry.ts` — per-model expert agents (Kling, Seedance, Veo, generic). Model-specialist routing already exists at prompt-craft level.
+- `lib/director/modelRanking.ts` + `generic.ts` `recommendedModel` rubric — we already score "best model for this shot".
+- Free Chat → Director handoff (`.lovable/plan.md`) — a lightweight two-phase pattern (brainstorm → locked spec) is already in place.
+- `lib/director/tasteProfile.ts`, brand kits, character kits — memory primitives, just not unified.
+- `story-bundle` / `story-render` / `story-stitch` edge functions — multi-shot rendering scaffolding exists.
 
-New behavior:
-- Warm, conversational tone ("Love this idea — let's shape it together…"), acknowledge any attached refs by name and what's visible.
-- Brainstorm freely: discuss concepts, beats, references, model trade-offs.
-- **Never** fabricate structured "video generation cards", shot tables, or claim a render is queued. Markdown only, no fake JSON / card UI.
-- When the user asks to actually generate ("make the video", "render it", "use Seedance"), do NOT pretend to generate. Instead, summarize what's locked so far and say: *"Switch to **Director** (toggle in the composer) and I'll wire it up — you'll get to confirm the model, aspect, duration, and audio before it renders."*
-- Echo back any uploaded reference names so the user knows they carry over.
+So the gap to "orchestrator" is smaller than it looks: we have the parts, they aren't yet stitched into a single planning loop.
 
-### 2. Director: hard guard on missing routing axes
+## Target shape
 
-Same file, `SYSTEM_PROMPT` section that owns video generation.
+```text
+                       ┌──────────────────────────────────────┐
+brief + refs ──▶ PLAN ─┤ shot 1 → route → expert → model A   ├─▶ assemble ──▶ deliver
+                       │ shot 2 → route → expert → model B   │   (stitch /
+                       │ shot 3 → route → expert → model A   │    bundle /
+                       │ …                                    │    export)
+                       └──────────────────────────────────────┘
+                                  ▲          ▲
+                                  │          │
+                              memory     cost/latency
+                          (taste, brand,  budget policy
+                           character,
+                           project)
+```
 
-Add a **PRE-GENERATION CHECKLIST (HARD RULE)** before any `request_video_generation` / `request_story_render` call:
-- Required locked axes: `duration_seconds`, `aspect_ratio`, `audio`, plus `recommended_model_id`.
-- Source of truth: user's explicit answers in the **Director** turns, the handoff `lockedSpec`, or unambiguous brief signals ("vertical TikTok" → 9:16, "8-second clip" → 8s). 
-- **Prior Free-Chat assistant markdown is NOT authoritative.** Add an instruction that any assistant turn coming from Free Chat (marked, see #3) must be treated as brainstorming context only — never as a locked spec.
-- If any required axis is still missing, call `ask_clarification` with EXACTLY ONE question following the existing priority order (input mode → duration → audio → aspect → resolution → style). Loop one-per-turn until all are locked.
-- Only then call `ask_model_choice` (or skip if model is named) and finally `request_video_generation`.
+Key idea: the Director stops being "the thing that writes one prompt" and becomes "the thing that owns the plan and routes each step." Per-model experts stay — they become the workers the orchestrator calls.
 
-### 3. Tag Free-Chat turns in the serialized history
+## Staged rollout
 
-File: `src/components/director/DirectorChat.tsx` (where assistant bubbles are pushed into `history` for `streamDirectorAgent`).
+### Stage 1 — Make the plan a first-class object (no new models needed)
 
-When a bubble was produced in `free_chat` mode (we already store `markdown: true` on those), prefix its serialized content with `[Free-chat brainstorm — NOT a locked spec]\n` before sending. This lets the Director system rule above (#2) reliably distinguish it.
+Today the "plan" is implicit in chat markdown. Make it explicit.
 
-Add a small `freeChat?: boolean` flag on assistant bubbles created in `free_chat` mode and use it in the history serializer; this is cleaner than sniffing `markdown`.
+- New type `DirectorPlan = { shots: PlannedShot[], globals: {...}, memoryRefs: {...} }` in `src/lib/director/`.
+- `PlannedShot = { id, intent, locked: {duration, aspect, audio, model}, prompt?, status: 'draft'|'ready'|'rendering'|'done'|'failed', outputUrl? }`.
+- Persist on `director_sessions` alongside messages. UI gains a collapsible "Plan" panel in `DirectorChat` showing the shot list with status chips.
+- The existing pre-generation checklist (from `.lovable/plan.md`) now fills in `locked.*` per shot instead of per-session.
 
-### 4. Composer nudge when switching modes
+Ships: visible plan, per-shot status, foundation for everything below.
 
-File: `src/components/director/Composer.tsx`.
+### Stage 2 — Per-shot model routing (turn `recommendedModel` into a real router)
 
-When the user toggles from Free chat → Director and the session has any prior turns/attachments, show a one-line subtle hint above the composer: *"Director will confirm model, aspect, duration, and audio before rendering."* Auto-dismisses on first send. Pure presentation, no logic changes.
+- Extract a `routeShot(shot, budget, taste) → modelId` function from `generic.ts` + `modelRanking.ts`. Pure function, easy to test.
+- Director proposes the routed model per shot; user can override (chip on each shot row).
+- Add a `budget` axis to session settings: `quality | balanced | cheap` → biases routing toward Veo / mid-tier / Seedance-lite. Mirrors Hermes' "Orchestrator" layer without claiming parity.
 
-## Out of scope
+Ships: "we pick the model, you don't choose" as a real differentiator, not just per-prompt advice.
 
-- No changes to credits, video providers, or the actual `generate-video` edge function.
-- No changes to story-mode flow beyond the same pre-generation checklist applying.
+### Stage 3 — Executor loop (one brain, many workers)
 
-## Technical details
+- New edge function `director-orchestrate` that, given a `DirectorPlan`:
+  1. For each `ready` shot in parallel (bounded concurrency), calls the right expert agent in `generate-prompt/experts/` to craft the model-specific prompt.
+  2. Invokes `generate-video` with the routed model.
+  3. Streams per-shot status back via existing realtime channel.
+- Failures route to a retry policy (re-route to fallback model after N fails) — kept simple, no agent loop here.
+- `story-bundle` / `story-stitch` become the assembly step at the end.
 
-- `FREE_CHAT_SYSTEM` constant rewrite in `supabase/functions/director-agent/index.ts` (~line 1019).
-- New `PRE-GENERATION CHECKLIST` block inserted into `SYSTEM_PROMPT` near the existing "ONE QUESTION PER TURN" rules (~line 131).
-- `DirectorChat.tsx`: extend bubble type with `freeChat?: boolean`; set it when `chatMode === "free_chat"` at bubble-creation sites; in the history-serialization loop (~line 1320), prepend the tag when `b.freeChat`.
-- `Composer.tsx`: small `useState` for the hint, shown when `mode === "director"` and `prevMode === "free_chat"`, cleared on submit.
+Ships: one click on a multi-shot plan produces a finished cut. This is the moment Director feels like an orchestrator, not a prompt builder.
+
+### Stage 4 — Unify memory
+
+Three existing stores get a single read API:
+
+- `tasteProfile.ts` (project/user style)
+- brand kits (`lib/marketing/brandKit.ts`)
+- character kits (`lib/marketing/characterKit.ts`)
+
+New `lib/director/memory.ts` exposes `loadMemoryFor(sessionId) → { taste, brands, characters, recentShots }` and is injected into every expert call + the router. No new storage; just a façade. This is what Hermes markets as "3 memory layers" — we already have the data.
+
+### Stage 5 — Connectors (optional, only if users ask)
+
+The Hermes "ship to Slack/Drive/Figma" angle. Not core to MovPrompt's wedge. Defer until a real user asks. If we do it, do one connector well (Drive export of the assembled cut) rather than a matrix.
+
+## What we deliberately don't copy from Hermes
+
+- **Telegram / browser-agnostic surface** — not our wedge.
+- **40+ tools** — surface area trap; we'd dilute the "cinematic DP" identity.
+- **"Whole team is one agent" branding** — MovPrompt is sharper as *AI Director of Photography*, not *AI everything*. The orchestrator is a capability, not the headline.
+- **Multi-model LLM routing for the planner itself** — keep Director on `gemini-3.1-pro-preview` (per project memory) until we have evidence another model plans better.
+
+## Risks / open questions
+
+- **UX of an exposed plan**: shot tables can feel spreadsheety. Worth a design pass before shipping Stage 1 — could render as a vertical "storyboard rail" instead of a table.
+- **Cost surprise**: a one-click multi-shot render can rack up credits fast. Need a confirm-with-estimated-cost step in Stage 3 (we already have `lib/credits/pricing.ts`).
+- **When to plan vs. ask**: orchestrator must still respect the one-question-per-turn rule. Suggest: plan is drafted silently as soon as enough info exists; questions still come one at a time to fill `locked.*` gaps per shot.
+- **Story mode overlap**: there's existing `story-*` infra. Stage 3 should reuse it, not parallel-build. Need a short spike to confirm shape fits.
+
+## Suggested first PR (if you green-light Stage 1)
+
+1. Add `DirectorPlan` types + persistence column on `director_sessions`.
+2. Render a read-only Plan panel in `DirectorChat` populated from current session state (no behavior change yet).
+3. Migrate the pre-generation checklist to write into `plan.shots[0].locked` for single-shot sessions.
+
+Small, reversible, and unblocks Stages 2–4.
