@@ -5,8 +5,9 @@ import { supabase } from "@/integrations/supabase/client";
 
 export type StitchResult = {
   job_id: string;
-  video_url: string;
+  video_url?: string;
   status: string;
+  cancelled?: boolean;
 };
 
 export async function stitchPlanShots(args: {
@@ -24,8 +25,21 @@ export async function stitchPlanShots(args: {
     },
   });
   if (error) throw new Error(error.message || "Stitch failed");
-  if (!data || typeof (data as { video_url?: unknown }).video_url !== "string") {
-    throw new Error("Stitch returned no video");
-  }
+  if (!data) throw new Error("Stitch returned no data");
   return data as StitchResult;
 }
+
+// Server-side cancel — flips the stitch video_jobs row to 'cancelled' so the
+// running story-stitch poll loop bails out, calls fal.queue.cancel to actually
+// stop the ffmpeg compose request, and refunds credits.
+export async function cancelStitch(args: {
+  sessionId?: string;
+  jobId?: string;
+}): Promise<{ job_id: string; status: string; cancelled: boolean }> {
+  const { data, error } = await supabase.functions.invoke("story-stitch-cancel", {
+    body: { session_id: args.sessionId, job_id: args.jobId },
+  });
+  if (error) throw new Error(error.message || "Cancel failed");
+  return data as { job_id: string; status: string; cancelled: boolean };
+}
+

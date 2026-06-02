@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 
 import { exportPlanToDrive } from "@/lib/director/driveExport";
-import { stitchPlanShots } from "@/lib/director/stitch";
+import { stitchPlanShots, cancelStitch as cancelStitchOnServer } from "@/lib/director/stitch";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -351,8 +351,8 @@ export function PlanPanel({ sessionId }: Props) {
         durations: stitchable.map((s) => s.duration),
         title: (plan.globals as Record<string, unknown>).title as string | undefined,
       });
-      if (stitchCancelRef.current) {
-        // User cancelled — ignore server result.
+      if (stitchCancelRef.current || res?.status === "cancelled" || !res?.video_url) {
+        // User cancelled — server-side cancel may have returned before this.
         return;
       }
       setStitchPreview((p) =>
@@ -369,12 +369,23 @@ export function PlanPanel({ sessionId }: Props) {
     }
   };
 
-  const cancelStitch = () => {
+  const cancelStitch = async () => {
+    // Local ignore-flag so the in-flight stitchPlan promise won't update UI
+    // even if the server response races our cancel call.
     stitchCancelRef.current = true;
     setStitching(false);
     setStitchPreview(null);
-    toast.message("Stitch cancelled");
+    toast.message("Cancelling stitch…");
+    if (!sessionId) return;
+    try {
+      await cancelStitchOnServer({ sessionId });
+      toast.success("Stitch cancelled");
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Cancel failed";
+      toast.error(msg);
+    }
   };
+
 
 
 
