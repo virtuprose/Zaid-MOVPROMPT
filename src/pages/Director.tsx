@@ -32,6 +32,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { trackPageVisit } from "@/lib/analytics";
 import { DirectorChat } from "@/components/director/DirectorChat";
+import { PlanPanel } from "@/components/director/PlanPanel";
 
 import { DirectorErrorBoundary } from "@/components/director/DirectorErrorBoundary";
 import { SendDebugReportButton } from "@/components/SendDebugReportButton";
@@ -317,6 +318,7 @@ export default function Director() {
           </aside>
 
           <div className="w-full min-w-0">
+            <PlanPanel sessionId={sessionId} />
             <DirectorErrorBoundary key={sessionId || "new"} sessionId={sessionId}>
               <DirectorChat />
             </DirectorErrorBoundary>
