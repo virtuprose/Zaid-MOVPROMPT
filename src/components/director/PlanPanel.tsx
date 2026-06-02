@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ChevronDown,
   Film,
@@ -8,9 +8,12 @@ import {
   Sparkles,
   Wand2,
   Check,
+  Play,
+  Loader2,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import {
   Popover,
   PopoverContent,
@@ -27,6 +30,7 @@ import {
 } from "@/lib/director/plan";
 import { routeShot, type RouteDecision } from "@/lib/director/router";
 import { MODEL_CATALOG } from "@/lib/director/videoModelCatalog";
+import { orchestratePlan } from "@/lib/director/orchestrator";
 
 type Props = {
   sessionId: string | undefined;
