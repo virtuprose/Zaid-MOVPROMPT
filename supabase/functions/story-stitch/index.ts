@@ -1,6 +1,10 @@
 // story-stitch: concatenate completed act videos into a single MP4 via
 // fal.ai's ffmpeg-api compose endpoint. Verifies caller owns the render and
-// all 8 acts are completed before stitching.
+// all clips are completed before stitching.
+//
+// Uses fal's queue API (submit + poll) so the request_id is persisted to
+// video_jobs.metadata.fal_request_id, enabling server-side cancellation via
+// the `story-stitch-cancel` edge function.
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { fal } from "npm:@fal-ai/client";
@@ -17,6 +21,8 @@ const corsHeaders = {
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type",
 };
+
+const FAL_ENDPOINT = "fal-ai/ffmpeg-api/compose";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -68,10 +74,6 @@ serve(async (req) => {
         durations?: number[];
       };
 
-    // Two input modes:
-    //   A) story_render_id — original story-render flow (4-act Seedance bundle)
-    //   B) job_ids         — generic mode used by the Director orchestrator to
-    //                        stitch N already-completed video_jobs into one MP4
     if (!story_render_id && (!Array.isArray(job_ids) || job_ids.length === 0)) {
       return new Response(
         JSON.stringify({ error: "story_render_id or job_ids required" }),
@@ -128,7 +130,6 @@ serve(async (req) => {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      // Preserve client-supplied order.
       const byId = new Map(jobs.map((j) => [j.id, j]));
       actRows = ids
         .map((id) => byId.get(id))
@@ -146,7 +147,6 @@ serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-
 
     // Idempotency — only meaningful when stitching a tracked story_render.
     if (story_render_id) {
@@ -178,7 +178,6 @@ serve(async (req) => {
       throw e;
     }
 
-    // Insert stitched row up front so the client can see it as 'queued' immediately.
     const { data: stitchRow, error: stitchInsErr } = await admin
       .from("video_jobs")
       .insert({
@@ -200,37 +199,129 @@ serve(async (req) => {
       });
     }
 
+    // Build compose input.
+    const sorted = story_render_id
+      ? [...actRows].sort((a, b) => (a.act_index ?? 0) - (b.act_index ?? 0))
+      : actRows;
+    let cursor = 0;
+    const slots = sorted.map((a, i) => {
+      const dur = perActDurations[i] ?? 10;
+      const slot = { url: a.video_url!, timestamp: cursor, duration: dur };
+      cursor += dur;
+      return slot;
+    });
+    const composeInput = {
+      tracks: [
+        { id: "video-track", type: "video", keyframes: slots },
+        { id: "audio-track", type: "audio", keyframes: slots.map((s) => ({ ...s })) },
+      ],
+    };
 
-    // fal-ai/ffmpeg-api/compose accepts a list of tracks with keyframes. For a
-    // simple concat we feed each act as a video keyframe with cumulative timestamps.
-    // The endpoint stitches them at native resolution and re-encodes one MP4.
-    try {
-      // For story_render mode, sort by act_index; for generic job_ids mode,
-      // actRows already preserves caller-supplied order.
-      const sorted = story_render_id
-        ? [...actRows].sort((a, b) => (a.act_index ?? 0) - (b.act_index ?? 0))
-        : actRows;
-      // Build cumulative timestamps using each clip's own duration so
-      // variable-length Director shots concat without gaps or overlap.
-      let cursor = 0;
-      const slots = sorted.map((a, i) => {
-        const dur = perActDurations[i] ?? 10;
-        const slot = { url: a.video_url!, timestamp: cursor, duration: dur };
-        cursor += dur;
-        return slot;
+    // Helper: idempotent refund guarded by metadata.refunded flag on the row.
+    const refundOnce = async (stage: string) => {
+      const { data: row } = await admin
+        .from("video_jobs")
+        .select("metadata")
+        .eq("id", stitchRow.id)
+        .maybeSingle();
+      const meta = (row?.metadata as Record<string, unknown> | null) || {};
+      if (meta.refunded === true) return;
+      await refundCredits({
+        userId: uid,
+        amount: stitchCost,
+        reason: "story_stitch_refund",
+        refId: stitchRow.id,
+        metadata: { stage },
       });
-      const composeResp = (await fal.subscribe("fal-ai/ffmpeg-api/compose", {
-        input: {
-          tracks: [
-            { id: "video-track", type: "video", keyframes: slots },
-            { id: "audio-track", type: "audio", keyframes: slots.map((s) => ({ ...s })) },
-          ],
-        },
-      })) as Record<string, any>;
+      await admin
+        .from("video_jobs")
+        .update({ metadata: { ...meta, refunded: true } })
+        .eq("id", stitchRow.id);
+    };
 
-      const stitchedUrl: string | undefined =
-        composeResp?.video_url || composeResp?.video?.url || composeResp?.data?.video_url || composeResp?.data?.video?.url;
-      if (!stitchedUrl) throw new Error("compose returned no video_url");
+    try {
+      // Submit to fal queue so we get a request_id we can cancel.
+      const submitted = (await fal.queue.submit(FAL_ENDPOINT, {
+        input: composeInput,
+      })) as { request_id: string };
+      const requestId = submitted.request_id;
+
+      // Persist request_id so the cancel endpoint can target it.
+      {
+        const { data: row } = await admin
+          .from("video_jobs")
+          .select("metadata")
+          .eq("id", stitchRow.id)
+          .maybeSingle();
+        const meta = (row?.metadata as Record<string, unknown> | null) || {};
+        await admin
+          .from("video_jobs")
+          .update({
+            metadata: {
+              ...meta,
+              fal_request_id: requestId,
+              fal_endpoint: FAL_ENDPOINT,
+            },
+          })
+          .eq("id", stitchRow.id);
+      }
+
+      // Poll loop — check DB cancellation flag between fal status polls.
+      const MAX_WAIT_MS = 10 * 60 * 1000; // 10 min hard cap
+      const startedAt = Date.now();
+      let stitchedUrl: string | undefined;
+
+      while (true) {
+        if (Date.now() - startedAt > MAX_WAIT_MS) {
+          throw new Error("Stitch timed out after 10 minutes");
+        }
+        await new Promise((r) => setTimeout(r, 2500));
+
+        // Cancellation check — `story-stitch-cancel` sets status='cancelled'.
+        const { data: rowNow } = await admin
+          .from("video_jobs")
+          .select("status")
+          .eq("id", stitchRow.id)
+          .maybeSingle();
+        if (rowNow?.status === "cancelled") {
+          try {
+            await fal.queue.cancel(FAL_ENDPOINT, { requestId });
+          } catch (cancelErr) {
+            console.warn("fal.queue.cancel failed (likely already finished)", cancelErr);
+          }
+          await refundOnce("cancelled");
+          return new Response(
+            JSON.stringify({ job_id: stitchRow.id, status: "cancelled", cancelled: true }),
+            {
+              status: 200,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            },
+          );
+        }
+
+        const statusResp = (await fal.queue.status(FAL_ENDPOINT, {
+          requestId,
+        })) as { status?: string };
+        const s = statusResp?.status;
+        if (s === "COMPLETED") {
+          const result = (await fal.queue.result(FAL_ENDPOINT, {
+            requestId,
+          })) as Record<string, any>;
+          const data = result?.data ?? result;
+          stitchedUrl =
+            data?.video_url ||
+            data?.video?.url ||
+            result?.video_url ||
+            result?.video?.url;
+          if (!stitchedUrl) throw new Error("compose returned no video_url");
+          break;
+        }
+        // IN_QUEUE / IN_PROGRESS → keep polling. Anything else is an error.
+        if (s && s !== "IN_QUEUE" && s !== "IN_PROGRESS") {
+          throw new Error(`fal queue returned status ${s}`);
+        }
+      }
+
       await admin
         .from("video_jobs")
         .update({
@@ -239,20 +330,31 @@ serve(async (req) => {
           completed_at: new Date().toISOString(),
         })
         .eq("id", stitchRow.id);
-      return new Response(JSON.stringify({ job_id: stitchRow.id, video_url: stitchedUrl, status: "completed" }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({ job_id: stitchRow.id, video_url: stitchedUrl, status: "completed" }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     } catch (e: any) {
       console.error("story-stitch ffmpeg error", e);
-      await admin
+      // Don't clobber a 'cancelled' status with 'failed'.
+      const { data: rowNow } = await admin
         .from("video_jobs")
-        .update({
-          status: "failed",
-          error: e?.message || "Stitch failed",
-          completed_at: new Date().toISOString(),
-        })
-        .eq("id", stitchRow.id);
-      await refundCredits({ userId: uid, amount: stitchCost, reason: "story_stitch_refund", refId: stitchRow.id, metadata: { stage: "compose_failed" } });
+        .select("status")
+        .eq("id", stitchRow.id)
+        .maybeSingle();
+      if (rowNow?.status !== "cancelled") {
+        await admin
+          .from("video_jobs")
+          .update({
+            status: "failed",
+            error: e?.message || "Stitch failed",
+            completed_at: new Date().toISOString(),
+          })
+          .eq("id", stitchRow.id);
+        await refundOnce("compose_failed");
+      }
       return new Response(JSON.stringify({ error: e?.message || "Stitch failed" }), {
         status: 502,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
