@@ -1,33 +1,41 @@
-## Goal
+## What that corner artifact is
 
-Make the transition audition in `TransitionPreview` frame-accurate at 24 fps, with draggable per-transition markers that adjust both the cut point and the overlap length, and a scrubber that snaps to frame boundaries when Shift is held.
+In the screenshot, the dark crescent in the top-left of the composer is the **drag‑highlight overlay leaking through the rounded corner**.
 
-## What changes (UX)
+In `src/components/director/Composer.tsx` (lines 359–367) the dropzone wrapper is:
 
-- **Frame grid**: all timing rendered and snapped to 1/24 s (≈41.67 ms). Display time as `m:ss:ff` (frames) instead of `m:ss.t`.
-- **Per-transition overrides** (stored per-clip-boundary, reset when clips/transition preset change):
-  - `offsetFrames` — shifts the cut point earlier (−) or later (+) along clip A.
-  - `overlapFrames` — overrides the blend window length (defaults from preset: hard 0 / crossfade 12 / match 4).
-- **Markers**: each boundary shows a draggable diamond at the cut point and two handles framing the shaded overlap region. Tooltip shows local offset (e.g. `+3f` / `12f overlap`).
-- **Scrubber**: free by default; **hold Shift** to snap to nearest frame. Left/Right arrow keys step ±1 frame, Shift+Arrow steps ±1 second (always frame-aligned).
-- **Reset per-marker**: double-click a marker to clear its override back to the preset defaults.
-- **HUD**: timecode badge updated to `00:04:11` style; overlap badge shows `12f (500 ms)`.
+```tsx
+<div className={`relative rounded-2xl bg-card ${highlight ? "ring-2 ring-accent bg-accent/5" : ""}`}>
+  {highlight && (
+    <div className="pointer-events-none absolute inset-0 ... rounded-2xl bg-accent/10">
+      Drop here to attach
+    </div>
+  )}
+  <textarea ... />
+</div>
+```
 
-## What changes (logic)
+Two problems combine to make that dark notch:
 
-- Replace the constant `TRANSITION_CONFIG` overlap with `defaultOverlapFrames` per preset; convert to seconds via `FPS = 24`.
-- Recompute `starts[]` from per-transition overrides each time they change:
-  `start[i] = start[i-1] + dur[i-1] − overlap[i-1] + offset[i-1]` (clamped ≥ 0, and overlap clamped to `min(dur[i-1], dur[i]) − 1f`).
-- Blend `opacityB` uses the per-transition overlap; if overlap = 0 → hard snap regardless of preset.
-- Export recorder reuses the same overrides so the downloaded preview matches what was auditioned.
-- Scrubber `onValueChange` snaps to nearest frame when `event.shiftKey` is true; otherwise stays at ms precision.
+1. The parent `<div>` uses `rounded-2xl` but does **not** clip its children (`overflow-hidden` is missing). The textarea (and the `bg-accent/10` highlight panel) are rectangular, so their square corners poke past the rounded mask of the parent.
+2. The drag highlight is toggled by `dragenter` / `dragleave`. The session replay shows the user mousing over the composer (an attachment thumbnail/file got dragged), which flips `highlight` on briefly, then off — but the overlay's `bg-accent/10` against `bg-card` plus the square corner produces the visible darker arc in the top-left.
 
-## Where
+Even without the drag state, the same setup will show a faint square‑vs‑rounded mismatch any time the textarea has any background (focus ring, autofill, selection).
 
-- `src/components/director/TransitionPreview.tsx` — all changes live here. New helpers (frame ↔ seconds, `fmtTC`) and a small `overrides` state map keyed by boundary index. Drag handling via pointer events on the timeline track.
-- No backend / stitch endpoint changes — server-side stitch already accepts the chosen transition; per-marker overrides only affect the local audition + exported preview MP4 for now.
+## Fix
 
-## Out of scope
+Single-file, presentation-only change in `src/components/director/Composer.tsx` (the dropzone wrapper around line 359):
 
-- Persisting overrides to the database or applying them to the server-side ffmpeg stitch (can be a follow-up: pass `transitions[]` array to `story-stitch`).
-- Per-clip fps detection (using fixed 24 fps as requested).
+- Add `overflow-hidden` to the wrapper so every child is clipped to the `rounded-2xl` shape.
+- Keep `rounded-2xl` on the highlight overlay as a defensive belt-and-braces (already there).
+- No logic, no state, no other components touched.
+
+Result: the corner stays a clean rounded curve in idle, hover, focus, and drag states.
+
+## Verification
+
+1. Open `/director/<session>` at 1119px width.
+2. Confirm the composer's top corners are perfectly rounded with no dark crescent.
+3. Drag a file over the composer — the "Drop here to attach" overlay should fill the rounded shape exactly, no square corners.
+4. Focus the textarea and type — no square edge appears.
+5. Check at mobile width (375px) and RTL — corners stay clean.

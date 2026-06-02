@@ -356,7 +356,7 @@ export function Composer({
             setDrag(false);
             handleFiles(e.dataTransfer.files);
           }}
-          className={`relative rounded-2xl bg-card transition-colors ${
+          className={`relative overflow-hidden rounded-2xl bg-card transition-colors ${
             highlight ? "ring-2 ring-accent bg-accent/5" : ""
           }`}
         >
