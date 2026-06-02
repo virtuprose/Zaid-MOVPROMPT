@@ -3,6 +3,20 @@
 // concat N completed Director shots into one MP4 via fal's ffmpeg compose.
 import { supabase } from "@/integrations/supabase/client";
 
+export type StitchTransition = "hard_cut" | "crossfade" | "match_cut";
+
+export const TRANSITION_LABELS: Record<StitchTransition, string> = {
+  hard_cut: "Hard cut",
+  crossfade: "Crossfade",
+  match_cut: "Match cut",
+};
+
+export const TRANSITION_DESCRIPTIONS: Record<StitchTransition, string> = {
+  hard_cut: "Back-to-back, no blend (default)",
+  crossfade: "0.5s overlap between adjacent clips",
+  match_cut: "Tight cut — trim 0.15s tail for cinematic pacing",
+};
+
 export type StitchResult = {
   job_id: string;
   video_url?: string;
@@ -15,6 +29,7 @@ export async function stitchPlanShots(args: {
   jobIds: string[];
   durations: number[];
   title?: string;
+  transition?: StitchTransition;
 }): Promise<StitchResult> {
   const { data, error } = await supabase.functions.invoke("story-stitch", {
     body: {
@@ -22,6 +37,7 @@ export async function stitchPlanShots(args: {
       job_ids: args.jobIds,
       durations: args.durations,
       title: args.title,
+      transition: args.transition ?? "hard_cut",
     },
   });
   if (error) throw new Error(error.message || "Stitch failed");
@@ -42,4 +58,3 @@ export async function cancelStitch(args: {
   if (error) throw new Error(error.message || "Cancel failed");
   return data as { job_id: string; status: string; cancelled: boolean };
 }
-
