@@ -265,6 +265,34 @@ export function PlanPanel({ sessionId }: Props) {
               {b.label}
             </button>
           ))}
+          <button
+            type="button"
+            onClick={runPlan}
+            disabled={running || renderable.length === 0}
+            title={
+              renderable.length === 0
+                ? anyRendering
+                  ? "Render already in progress"
+                  : "No shots ready to render (need prompt + model)"
+                : `Render ${renderable.length} shot${renderable.length === 1 ? "" : "s"}`
+            }
+            className={cn(
+              "ml-1 inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-md border transition-colors",
+              renderable.length > 0 && !running
+                ? "bg-accent/15 border-accent/40 text-accent hover:bg-accent/25"
+                : "border-border/30 text-muted-foreground/60 cursor-not-allowed",
+            )}
+          >
+            {running ? (
+              <Loader2 className="w-3 h-3 animate-spin" />
+            ) : (
+              <Play className="w-3 h-3" />
+            )}
+            Render
+            {renderable.length > 0 && (
+              <span className="tabular-nums opacity-70">{renderable.length}</span>
+            )}
+          </button>
           {saving && <span className="text-[10px] text-muted-foreground ml-1">Saving…</span>}
           <ChevronDown
             className={cn(
