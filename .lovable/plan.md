@@ -1,36 +1,52 @@
 ## Goal
-Fix the Director so it clearly tracks what the user already said, asks more logical next questions, and makes the step-by-step flow understandable from the first turn.
+Add a dedicated right-side **Media panel** to the Director, similar to the reference screenshot, that stacks every generated frame and video for the active session in one place — with a type filter (All / Images / Videos) at the top, and a collapse toggle.
 
-## Plan
-1. **Tighten conversation grounding**
-   - Audit the serialized history sent to the Director and improve how prior answers, prior questions, generated frames, chosen models, and locked specs are represented.
-   - Make sure recent user answers outrank older brainstorming text so the Director stops re-asking or contradicting confirmed details.
+## Layout
+Update `src/pages/Director.tsx` grid from `[240px_1fr]` to `[240px_1fr_320px]` on `xl` and above. Below `xl`, the right rail collapses to a floating toggle button so chat keeps full width on smaller screens. The panel can be hidden/shown from a small chevron button anchored to its top-left edge (state persisted in `localStorage`).
 
-2. **Add question deduping + answer-awareness**
-   - Add a client/server guard so if a question was already answered or a spec is already locked, the Director won’t ask it again.
-   - Normalize common answers like duration, aspect ratio, audio, and “go straight to video / key frame first” so the next turn advances instead of looping.
+```
+┌──────────┬───────────────────────┬────────────┐
+│ Sidebar  │  PlanPanel + Chat     │ Media rail │
+│ (tasks)  │  (unchanged)          │ (new)      │
+└──────────┴───────────────────────┴────────────┘
+```
 
-3. **Make step 1 and step transitions explicit**
-   - Improve the first-step logic so the Director chooses the correct path more reliably: anchored image flow, key-frame-first flow, direct-to-video flow, or story flow.
-   - Ensure every clarification reason is visibly step-labeled and reads like progress, not random questioning.
+## New component: `MediaRailPanel`
+Location: `src/components/director/MediaRailPanel.tsx`.
 
-4. **Improve clarity in the Director panel**
-   - Refine the wording/rendering of question cards so the user can tell: what step they’re on, why this question is being asked, and what happens next.
-   - Keep the interaction one-question-at-a-time, but make the sequence feel coherent.
+Reads the same `director_sessions.messages` + `video_jobs` the chat already loads (passed in via props from `DirectorChat`, no new fetches). It walks the chat bubbles and produces a flat, deduped list of media items:
 
-5. **Validate with focused regression checks**
-   - Cover cases where the user already gave enough info, changed direction mid-flow, uploaded references first, or moved from key frame to storyboard/video.
-   - Verify the Director advances logically instead of repeating or asking off-topic questions.
+- **Images** — every `generated_images` bubble's `images[]` (key frames, reference frames, storyboard panels, subject sheets).
+- **Videos** — every `video` bubble + any `video_jobs` rows already merged into chat state.
+
+Each item is rendered as a card with:
+- Thumbnail (image preview, or video poster + play overlay).
+- Small badge for type (`IMG` / `MP4`) and label (e.g. "Panel 3", "Key frame", "final").
+- Click → opens existing `PromptInspector` for images or plays inline for videos (reuses `VideoBubble`'s player styles).
+
+Top of the panel:
+- Title "Media".
+- A segmented `All / Images / Videos` filter.
+- Collapse chevron.
+
+Empty state: small muted text "Generated frames and videos for this brief will appear here."
+
+## Wiring
+- `DirectorChat.tsx` already holds `bubbles` (chat) and reconciles `video_jobs`. Lift just enough to pass `bubbles` to a sibling rail, or expose via a small zustand-less context (`MediaRailContext`) created in `Director.tsx` and populated from `DirectorChat` via a ref-like callback. Keep changes minimal — no refactor of chat logic, only an effect that publishes `bubbles` to the context on change.
+- Inline `GeneratedImageCard` and `VideoBubble` in the chat stay as-is (user didn't ask to remove them). The rail is additive.
+
+## Styling
+Use existing tokens (`bg-background`, `border-border/40`, accent cyan ring on hover). Cards: rounded-xl, 1:1 or 16:9 aspect based on item ratio, subtle hover glow consistent with cinematic theme. Scroll container `max-h-[calc(100vh-160px)] overflow-y-auto`. Sticky filter header at top.
+
+## Out of scope
+- No backend / schema changes.
+- No changes to how media is generated.
+- No removal of existing inline previews in chat.
+- No download/share actions in this pass (can follow up if you want them).
 
 ## Technical details
-- Likely touchpoints:
-  - `src/components/director/DirectorChat.tsx`
-  - `src/lib/director/api.ts`
-  - `src/lib/director/sessionContext.ts`
-  - `supabase/functions/director-agent/index.ts`
-- Main implementation focus:
-  - Better history serialization
-  - Locked-spec precedence
-  - Repeated-question suppression
-  - Clearer step-state messaging
-  - Regression tests around routing/grounding behavior
+Touchpoints:
+- `src/pages/Director.tsx` — grid update, mount `MediaRailPanel`, provide context.
+- `src/components/director/MediaRailPanel.tsx` — new.
+- `src/components/director/DirectorChat.tsx` — publish `bubbles` to context (1 effect, no behavior change).
+- Reuse: `PromptInspector`, `VideoBubble` styling, design tokens from `index.css`.
