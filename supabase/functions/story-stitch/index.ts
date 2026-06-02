@@ -148,19 +148,21 @@ serve(async (req) => {
     }
 
 
-    // If a stitched row already exists for this render, return it (idempotent).
-    const { data: existing } = await admin
-      .from("video_jobs")
-      .select("id, video_url, status")
-      .eq("story_render_id", story_render_id)
-      .eq("user_id", uid)
-      .is("act_index", null)
-      .eq("provider", "stitch")
-      .maybeSingle();
-    if (existing?.video_url) {
-      return new Response(JSON.stringify({ job_id: existing.id, video_url: existing.video_url, status: existing.status }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    // Idempotency — only meaningful when stitching a tracked story_render.
+    if (story_render_id) {
+      const { data: existing } = await admin
+        .from("video_jobs")
+        .select("id, video_url, status")
+        .eq("story_render_id", story_render_id)
+        .eq("user_id", uid)
+        .is("act_index", null)
+        .eq("provider", "stitch")
+        .maybeSingle();
+      if (existing?.video_url) {
+        return new Response(JSON.stringify({ job_id: existing.id, video_url: existing.video_url, status: existing.status }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     }
 
     const stitchCost = await priceFor("story_stitch", 10);
@@ -169,7 +171,7 @@ serve(async (req) => {
         userId: uid,
         amount: stitchCost,
         reason: "story_stitch",
-        metadata: { story_render_id },
+        metadata: story_render_id ? { story_render_id } : { job_ids },
       });
     } catch (e) {
       if (e instanceof InsufficientCreditsError) return insufficientResponse(corsHeaders);
@@ -185,7 +187,8 @@ serve(async (req) => {
         provider: "stitch",
         prompt: title || "Stitched story",
         status: "processing",
-        story_render_id,
+        story_render_id: story_render_id ?? null,
+        metadata: story_render_id ? null : { stitched_job_ids: job_ids },
       })
       .select("*")
       .single();
@@ -196,6 +199,7 @@ serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
 
     // fal-ai/ffmpeg-api/compose accepts a list of tracks with keyframes. For a
     // simple concat we feed each act as a video keyframe with cumulative timestamps.
