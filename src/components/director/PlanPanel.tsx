@@ -545,10 +545,19 @@ export function PlanPanel({ sessionId }: Props) {
             className={cn(
               "w-4 h-4 text-muted-foreground transition-transform ml-1",
               open ? "" : "-rotate-90",
-            )}
-          />
         </div>
       </div>
+
+      {stitchPreview && (
+        <StitchPreview
+          preview={stitchPreview}
+          nowTick={nowTick}
+          onDismiss={() => setStitchPreview(null)}
+          onRetry={stitchPlan}
+        />
+      )}
+
+
 
       {open && view === "rail" && (
         <div className="border-t border-border/30 overflow-x-auto">
