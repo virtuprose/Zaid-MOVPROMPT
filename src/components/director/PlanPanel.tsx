@@ -238,6 +238,26 @@ export function PlanPanel({ sessionId }: Props) {
     (s) => s.status === "done" && !!s.outputUrl,
   ).length;
 
+  // Per-shot + total credit estimate for the confirm dialog.
+  const renderableEstimates = useMemo(
+    () =>
+      renderable.map((s, i) => {
+        const modelId = s.locked.model ?? "seedance-v1-pro";
+        const dur = s.locked.duration_seconds ?? 5;
+        return {
+          shotId: s.id,
+          index: plan.shots.findIndex((x) => x.id === s.id),
+          intent: s.intent || `Shot ${i + 1}`,
+          modelId,
+          durationSec: dur,
+          cost: estimateVideoCost(prices, modelId, dur),
+        };
+      }),
+    [renderable, prices, plan.shots],
+  );
+  const totalEstimate = renderableEstimates.reduce((a, b) => a + b.cost, 0);
+  const insufficient = balance != null && balance < totalEstimate;
+
   const exportToDrive = async () => {
     if (!sessionId || exportableCount === 0 || exporting) return;
     setExporting(true);
