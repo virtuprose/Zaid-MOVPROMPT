@@ -5,8 +5,9 @@ import { supabase } from "@/integrations/supabase/client";
 
 export type StitchResult = {
   job_id: string;
-  video_url: string;
+  video_url?: string;
   status: string;
+  cancelled?: boolean;
 };
 
 export async function stitchPlanShots(args: {
