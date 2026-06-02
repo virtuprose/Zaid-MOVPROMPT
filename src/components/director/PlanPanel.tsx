@@ -13,9 +13,11 @@ import {
   CloudUpload,
   Rows3,
   LayoutGrid,
+  Combine,
 } from "lucide-react";
 
 import { exportPlanToDrive } from "@/lib/director/driveExport";
+import { stitchPlanShots } from "@/lib/director/stitch";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -81,6 +83,7 @@ export function PlanPanel({ sessionId }: Props) {
   const [saving, setSaving] = useState(false);
   const [running, setRunning] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [stitching, setStitching] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [balance, setBalance] = useState<number | null>(null);
   const [view, setView] = useState<"table" | "rail">(() => {
@@ -249,6 +252,21 @@ export function PlanPanel({ sessionId }: Props) {
     (s) => s.status === "done" && !!s.outputUrl,
   ).length;
 
+  // Shots that can be stitched into one MP4 via the shared story-stitch infra.
+  // Needs at least 2 completed shots, each linked to a video_job row.
+  const stitchable = plan.shots
+    .filter(
+      (s): s is PlannedShot & { metadata: { video_job_id: string } } =>
+        s.status === "done" &&
+        !!s.outputUrl &&
+        typeof s.metadata?.video_job_id === "string",
+    )
+    .map((s) => ({
+      jobId: s.metadata.video_job_id,
+      duration: s.locked.duration_seconds ?? 5,
+    }));
+  const canStitch = stitchable.length >= 2;
+
   // Per-shot + total credit estimate for the confirm dialog.
   const renderableEstimates = useMemo(
     () =>
@@ -293,6 +311,31 @@ export function PlanPanel({ sessionId }: Props) {
       });
     } finally {
       setExporting(false);
+    }
+  };
+
+  const stitchPlan = async () => {
+    if (!sessionId || !canStitch || stitching) return;
+    setStitching(true);
+    const toastId = toast.loading(`Stitching ${stitchable.length} shots…`);
+    try {
+      const res = await stitchPlanShots({
+        sessionId,
+        jobIds: stitchable.map((s) => s.jobId),
+        durations: stitchable.map((s) => s.duration),
+        title: (plan.globals as Record<string, unknown>).title as string | undefined,
+      });
+      toast.success("Stitched into one MP4", {
+        id: toastId,
+        action: {
+          label: "Open",
+          onClick: () => window.open(res.video_url, "_blank", "noopener"),
+        },
+      });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Stitch failed", { id: toastId });
+    } finally {
+      setStitching(false);
     }
   };
 
@@ -451,6 +494,28 @@ export function PlanPanel({ sessionId }: Props) {
               )}
               Drive
               <span className="tabular-nums opacity-70">{exportableCount}</span>
+            </button>
+          )}
+          {canStitch && (
+            <button
+              type="button"
+              onClick={stitchPlan}
+              disabled={stitching}
+              title={`Stitch ${stitchable.length} completed shots into one MP4`}
+              className={cn(
+                "ml-1 inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-md border transition-colors",
+                stitching
+                  ? "border-border/30 text-muted-foreground/60 cursor-wait"
+                  : "border-border/40 text-muted-foreground hover:text-foreground hover:border-border",
+              )}
+            >
+              {stitching ? (
+                <Loader2 className="w-3 h-3 animate-spin" />
+              ) : (
+                <Combine className="w-3 h-3" />
+              )}
+              Stitch
+              <span className="tabular-nums opacity-70">{stitchable.length}</span>
             </button>
           )}
           {saving && <span className="text-[10px] text-muted-foreground ml-1">Saving…</span>}
