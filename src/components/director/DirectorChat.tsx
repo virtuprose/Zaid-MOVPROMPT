@@ -35,6 +35,7 @@ import { FreeChatChips } from "./FreeChatChips";
 import {
   buildSessionContextBlock,
   buildContextChips,
+  buildSessionStateRecap,
   extractSessionContext,
   ASK_DP_EVENT,
   type AskDpDetail,
