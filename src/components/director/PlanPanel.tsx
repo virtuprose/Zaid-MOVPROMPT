@@ -28,9 +28,10 @@ import {
   readPlan,
   statusLabel,
 } from "@/lib/director/plan";
-import { routeShot, type RouteDecision } from "@/lib/director/router";
+import { routeShot, type RouteDecision, type TasteSignals } from "@/lib/director/router";
 import { MODEL_CATALOG } from "@/lib/director/videoModelCatalog";
 import { orchestratePlan } from "@/lib/director/orchestrator";
+import { loadMemoryFor, tasteSignalsFor } from "@/lib/director/memory";
 
 type Props = {
   sessionId: string | undefined;
