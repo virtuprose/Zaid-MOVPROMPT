@@ -83,6 +83,11 @@ type Props = {
   durations: number[];
   transition: StitchTransition;
   onTransitionChange: (next: StitchTransition) => void;
+  // Emits the resolved override array (one entry per boundary, length =
+  // clips.length - 1) every time the user nudges a marker. Parent can pass
+  // this straight to stitchPlanShots so the server stitch matches the
+  // audition the user just heard/saw.
+  onOverridesChange?: (overrides: Override[]) => void;
 };
 
 // ───────────────────────── component ─────────────────────────
@@ -91,6 +96,7 @@ export function TransitionPreview({
   durations,
   transition,
   onTransitionChange,
+  onOverridesChange,
 }: Props) {
   const defaultOverlapFrames = DEFAULT_OVERLAP_FRAMES[transition];
   const numBoundaries = Math.max(0, clipUrls.length - 1);
@@ -100,6 +106,7 @@ export function TransitionPreview({
   useEffect(() => {
     setOverrides({});
   }, [clipUrls, transition]);
+
 
   // Resolve each boundary's effective offset/overlap in frames.
   const effective = useMemo(() => {
