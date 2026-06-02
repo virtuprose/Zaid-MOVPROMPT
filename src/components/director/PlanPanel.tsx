@@ -10,7 +10,9 @@ import {
   Check,
   Play,
   Loader2,
+  CloudUpload,
 } from "lucide-react";
+import { exportPlanToDrive } from "@/lib/director/driveExport";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -64,6 +66,7 @@ export function PlanPanel({ sessionId }: Props) {
   const [loaded, setLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
   const [running, setRunning] = useState(false);
+  const [exporting, setExporting] = useState(false);
   // Keep the latest plan in a ref so the realtime handler always patches the
   // freshest version without re-subscribing on every render.
   const planRef = useRef<DirectorPlan>(emptyPlan);
@@ -217,6 +220,36 @@ export function PlanPanel({ sessionId }: Props) {
       !!s.locked.model,
   );
   const anyRendering = plan.shots.some((s) => s.status === "rendering");
+  const exportableCount = plan.shots.filter(
+    (s) => s.status === "done" && !!s.outputUrl,
+  ).length;
+
+  const exportToDrive = async () => {
+    if (!sessionId || exportableCount === 0 || exporting) return;
+    setExporting(true);
+    const toastId = toast.loading(
+      `Exporting ${exportableCount} shot${exportableCount === 1 ? "" : "s"} to Drive…`,
+    );
+    try {
+      const res = await exportPlanToDrive(sessionId);
+      toast.success(
+        `Exported ${res.uploaded_count} to Drive${res.failed_count > 0 ? ` · ${res.failed_count} failed` : ""}`,
+        {
+          id: toastId,
+          action: {
+            label: "Open folder",
+            onClick: () => window.open(res.folder.url, "_blank", "noopener"),
+          },
+        },
+      );
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Drive export failed", {
+        id: toastId,
+      });
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const runPlan = async () => {
     if (!sessionId || renderable.length === 0 || running) return;
