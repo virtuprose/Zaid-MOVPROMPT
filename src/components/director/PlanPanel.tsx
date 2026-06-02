@@ -44,6 +44,14 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { TransitionPreview } from "@/components/director/TransitionPreview";
+import {
   type DirectorPlan,
   type PlannedShot,
   type RoutingBudget,
