@@ -202,17 +202,30 @@ serve(async (req) => {
       });
     }
 
-    // Build compose input.
+    // Build compose input — transition kind changes how adjacent clips overlap.
+    //   hard_cut  : clips placed back-to-back, no overlap (original behavior).
+    //   crossfade : 0.5s overlap between adjacent clips. fal compose will
+    //               concatenate audio with natural overlap; visual blending
+    //               depends on the compose endpoint's mixer.
+    //   match_cut : tight cut — trim 0.15s tail off each preceding clip so the
+    //               next clip starts earlier (cinematic pacing).
     const sorted = story_render_id
       ? [...actRows].sort((a, b) => (a.act_index ?? 0) - (b.act_index ?? 0))
       : actRows;
+    const overlapSec =
+      transitionKind === "crossfade" ? 0.5 : transitionKind === "match_cut" ? 0.15 : 0;
     let cursor = 0;
     const slots = sorted.map((a, i) => {
-      const dur = perActDurations[i] ?? 10;
-      const slot = { url: a.video_url!, timestamp: cursor, duration: dur };
-      cursor += dur;
+      const fullDur = perActDurations[i] ?? 10;
+      // For all but the first clip, advance the cursor backward by overlapSec.
+      const start = i === 0 ? 0 : cursor - overlapSec;
+      const slot = { url: a.video_url!, timestamp: Math.max(0, start), duration: fullDur };
+      cursor = start + fullDur;
       return slot;
     });
+    // For crossfade we also overlap the audio track so the previous clip's
+    // audio bleeds into the next. For match_cut the small overlap is enough
+    // to feel like a hard cut without an audible gap.
     const composeInput = {
       tracks: [
         { id: "video-track", type: "video", keyframes: slots },
