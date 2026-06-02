@@ -140,6 +140,94 @@ export function PlanPanel({ sessionId }: Props) {
     });
   };
 
+  // Stage 3: Realtime reconciliation. When a video_job linked to a shot
+  // completes or fails, patch the corresponding shot's status + outputUrl.
+  useEffect(() => {
+    if (!sessionId) return;
+    const trackedJobIds = plan.shots
+      .map((s) => s.metadata?.video_job_id)
+      .filter((id): id is string => typeof id === "string" && id.length > 0);
+    if (trackedJobIds.length === 0) return;
+
+    const channel = supabase
+      .channel(`director-plan-${sessionId}`)
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "video_jobs" },
+        (payload) => {
+          const row = payload.new as {
+            id?: string;
+            status?: string;
+            video_url?: string | null;
+            error?: string | null;
+          };
+          if (!row.id || !trackedJobIds.includes(row.id)) return;
+          if (row.status !== "completed" && row.status !== "failed") return;
+
+          const current = planRef.current;
+          const nextShots = current.shots.map((s) => {
+            if (s.metadata?.video_job_id !== row.id) return s;
+            if (row.status === "completed") {
+              return {
+                ...s,
+                status: "done" as const,
+                outputUrl: row.video_url ?? s.outputUrl,
+                error: undefined,
+              };
+            }
+            return {
+              ...s,
+              status: "failed" as const,
+              error: row.error ?? "Render failed",
+            };
+          });
+          void persist({ ...current, shots: nextShots });
+        },
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionId, plan.shots.map((s) => s.metadata?.video_job_id).join("|")]);
+
+  const renderable = plan.shots.filter(
+    (s) =>
+      s.status !== "rendering" &&
+      s.status !== "done" &&
+      !!s.prompt?.trim() &&
+      !!s.locked.model,
+  );
+  const anyRendering = plan.shots.some((s) => s.status === "rendering");
+
+  const runPlan = async () => {
+    if (!sessionId || renderable.length === 0 || running) return;
+    setRunning(true);
+    try {
+      const res = await orchestratePlan(sessionId);
+      // Optimistically mark targets as rendering — the function also persists,
+      // and our next load (or any future edit) will pick up the canonical state.
+      const targetIds = new Set(renderable.map((s) => s.id));
+      setPlan((p) => ({
+        ...p,
+        shots: p.shots.map((s) =>
+          targetIds.has(s.id) ? { ...s, status: "rendering" as const, error: undefined } : s,
+        ),
+      }));
+      if (res.failed > 0) {
+        toast.error(`${res.failed} shot${res.failed === 1 ? "" : "s"} failed to submit`);
+      }
+      if (res.submitted > 0) {
+        toast.success(`Rendering ${res.submitted} shot${res.submitted === 1 ? "" : "s"}`);
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to start render");
+    } finally {
+      setRunning(false);
+    }
+  };
+
   if (!loaded || !sessionId || plan.shots.length === 0) return null;
 
   return (
