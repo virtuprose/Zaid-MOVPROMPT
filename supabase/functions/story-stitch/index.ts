@@ -59,45 +59,94 @@ serve(async (req) => {
   );
 
   try {
-    const { story_render_id, title, session_id } = (await req.json()) as {
-      story_render_id?: string;
-      title?: string;
-      session_id?: string;
-    };
-    if (!story_render_id) {
-      return new Response(JSON.stringify({ error: "story_render_id required" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+    const { story_render_id, title, session_id, job_ids, durations } =
+      (await req.json()) as {
+        story_render_id?: string;
+        title?: string;
+        session_id?: string;
+        job_ids?: string[];
+        durations?: number[];
+      };
+
+    // Two input modes:
+    //   A) story_render_id — original story-render flow (4-act Seedance bundle)
+    //   B) job_ids         — generic mode used by the Director orchestrator to
+    //                        stitch N already-completed video_jobs into one MP4
+    if (!story_render_id && (!Array.isArray(job_ids) || job_ids.length === 0)) {
+      return new Response(
+        JSON.stringify({ error: "story_render_id or job_ids required" }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+
+    let actRows: Array<{
+      id: string;
+      status: string | null;
+      video_url: string | null;
+      act_index: number | null;
+      user_id: string;
+      provider: string | null;
+    }>;
+    let perActDurations: number[];
+
+    if (story_render_id) {
+      const { data: acts, error: actsErr } = await admin
+        .from("video_jobs")
+        .select("id, status, video_url, act_index, user_id, provider")
+        .eq("story_render_id", story_render_id)
+        .eq("user_id", uid)
+        .order("act_index", { ascending: true });
+      if (actsErr || !acts || acts.length === 0) {
+        return new Response(JSON.stringify({ error: "Story render not found" }), {
+          status: 404,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      actRows = acts.filter((a) => typeof a.act_index === "number");
+      if (actRows.length === 0) {
+        return new Response(JSON.stringify({ error: "No acts to stitch" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      perActDurations = actRows.map(() => 15);
+    } else {
+      const ids = (job_ids as string[]).filter(
+        (id) => typeof id === "string" && id.length > 0,
+      );
+      const { data: jobs, error: jobsErr } = await admin
+        .from("video_jobs")
+        .select("id, status, video_url, act_index, user_id, provider")
+        .in("id", ids)
+        .eq("user_id", uid);
+      if (jobsErr || !jobs || jobs.length === 0) {
+        return new Response(JSON.stringify({ error: "No matching jobs" }), {
+          status: 404,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      // Preserve client-supplied order.
+      const byId = new Map(jobs.map((j) => [j.id, j]));
+      actRows = ids
+        .map((id) => byId.get(id))
+        .filter((j): j is NonNullable<typeof j> => !!j);
+      perActDurations = ids.map((_, i) => {
+        const d = Array.isArray(durations) ? Number(durations[i]) : NaN;
+        return Number.isFinite(d) && d > 0 ? Math.round(d) : 10;
       });
     }
 
-    const { data: acts, error: actsErr } = await admin
-      .from("video_jobs")
-      .select("id, status, video_url, act_index, user_id, provider")
-      .eq("story_render_id", story_render_id)
-      .eq("user_id", uid)
-      .order("act_index", { ascending: true });
-    if (actsErr || !acts || acts.length === 0) {
-      return new Response(JSON.stringify({ error: "Story render not found" }), {
-        status: 404,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-    // Only consider real act jobs (skip prior stitched rows).
-    const actRows = acts.filter((a) => typeof a.act_index === "number");
-    if (actRows.length === 0) {
-      return new Response(JSON.stringify({ error: "No acts to stitch" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
     const incomplete = actRows.filter((a) => a.status !== "completed" || !a.video_url);
     if (incomplete.length > 0) {
-      return new Response(JSON.stringify({ error: `Cannot stitch — ${incomplete.length} act(s) not yet complete` }), {
+      return new Response(JSON.stringify({ error: `Cannot stitch — ${incomplete.length} clip(s) not yet complete` }), {
         status: 409,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
 
     // If a stitched row already exists for this render, return it (idempotent).
     const { data: existing } = await admin
