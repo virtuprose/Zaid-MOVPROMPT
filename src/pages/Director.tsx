@@ -195,7 +195,7 @@ export default function Director() {
 
       <MediaRailProvider>
       <div className="relative z-10 container max-w-[1760px] mx-auto px-4 py-4">
-        <div className="grid grid-cols-1 lg:grid-cols-[240px_1fr] xl:grid-cols-[240px_1fr_320px] gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-[240px_1fr] gap-4">
           <aside className="hidden lg:flex flex-col gap-2 max-h-[calc(100vh-160px)]">
             <Button
               size="sm"
