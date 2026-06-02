@@ -33,6 +33,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { trackPageVisit } from "@/lib/analytics";
 import { DirectorChat } from "@/components/director/DirectorChat";
 import { PlanPanel } from "@/components/director/PlanPanel";
+import { MediaRailProvider } from "@/components/director/MediaRailContext";
+import { MediaRailPanel } from "@/components/director/MediaRailPanel";
 
 import { DirectorErrorBoundary } from "@/components/director/DirectorErrorBoundary";
 import { SendDebugReportButton } from "@/components/SendDebugReportButton";
@@ -189,8 +191,9 @@ export default function Director() {
 
       <TopNav />
 
-      <div className="relative z-10 container max-w-[1600px] mx-auto px-4 py-4">
-        <div className="grid grid-cols-1 lg:grid-cols-[240px_1fr] gap-4">
+      <MediaRailProvider>
+      <div className="relative z-10 container max-w-[1760px] mx-auto px-4 py-4">
+        <div className="grid grid-cols-1 lg:grid-cols-[240px_1fr] xl:grid-cols-[240px_1fr_320px] gap-4">
           <aside className="hidden lg:flex flex-col gap-2 max-h-[calc(100vh-160px)]">
             <Button
               size="sm"
@@ -323,9 +326,13 @@ export default function Director() {
               <DirectorChat />
             </DirectorErrorBoundary>
           </div>
+
+          <MediaRailPanel />
         </div>
 
       </div>
+      </MediaRailProvider>
+
 
       <Dialog open={!!renameTarget} onOpenChange={(o) => !o && setRenameTarget(null)}>
         <DialogContent className="rounded-2xl border-border/60 bg-[hsl(240_5%_8%)] sm:max-w-md">
