@@ -294,6 +294,7 @@ export function PlanPanel({ sessionId }: Props) {
     .map((s) => ({
       jobId: s.metadata.video_job_id,
       duration: s.locked.duration_seconds ?? 5,
+      url: s.outputUrl as string,
     }));
   const canStitch = stitchable.length >= 2;
 
