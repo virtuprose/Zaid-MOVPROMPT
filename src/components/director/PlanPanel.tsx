@@ -364,6 +364,7 @@ export function PlanPanel({ sessionId }: Props) {
         jobIds: stitchable.map((s) => s.jobId),
         durations: stitchable.map((s) => s.duration),
         title: (plan.globals as Record<string, unknown>).title as string | undefined,
+        transition,
       });
       if (stitchCancelRef.current || res?.status === "cancelled" || !res?.video_url) {
         // User cancelled — server-side cancel may have returned before this.
