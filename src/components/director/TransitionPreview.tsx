@@ -12,13 +12,31 @@
 // The on-screen timeline shows each clip as a bar with transition markers,
 // and the scrubber lets the user seek any point in the virtual timeline.
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Play, Pause, RotateCcw } from "lucide-react";
+import { Play, Pause, RotateCcw, Download, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Slider } from "@/components/ui/slider";
+import { toast } from "sonner";
 import {
   TRANSITION_LABELS,
   type StitchTransition,
 } from "@/lib/director/stitch";
+
+// Pick the best MediaRecorder mime type the browser supports, falling back
+// from MP4/H.264 (Safari, recent Chrome) to WebM (Firefox, older Chrome).
+function pickRecorderMime(): { mime: string; ext: "mp4" | "webm" } | null {
+  if (typeof MediaRecorder === "undefined") return null;
+  const candidates: Array<{ mime: string; ext: "mp4" | "webm" }> = [
+    { mime: "video/mp4;codecs=avc1.42E01E", ext: "mp4" },
+    { mime: "video/mp4", ext: "mp4" },
+    { mime: "video/webm;codecs=vp9", ext: "webm" },
+    { mime: "video/webm;codecs=vp8", ext: "webm" },
+    { mime: "video/webm", ext: "webm" },
+  ];
+  for (const c of candidates) {
+    if (MediaRecorder.isTypeSupported(c.mime)) return c;
+  }
+  return null;
+}
 
 const TRANSITION_CONFIG: Record<
   StitchTransition,
