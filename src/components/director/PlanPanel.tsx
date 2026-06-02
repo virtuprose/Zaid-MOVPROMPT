@@ -84,6 +84,20 @@ export function PlanPanel({ sessionId }: Props) {
   const [running, setRunning] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [stitching, setStitching] = useState(false);
+  const [stitchPreview, setStitchPreview] = useState<{
+    status: "composing" | "done" | "failed";
+    startedAt: number;
+    clipUrls: string[];
+    totalDuration: number;
+    videoUrl?: string;
+    error?: string;
+  } | null>(null);
+  const [nowTick, setNowTick] = useState(Date.now());
+  useEffect(() => {
+    if (stitchPreview?.status !== "composing") return;
+    const h = window.setInterval(() => setNowTick(Date.now()), 1000);
+    return () => window.clearInterval(h);
+  }, [stitchPreview?.status]);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [balance, setBalance] = useState<number | null>(null);
   const [view, setView] = useState<"table" | "rail">(() => {
