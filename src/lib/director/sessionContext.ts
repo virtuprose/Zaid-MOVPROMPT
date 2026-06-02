@@ -180,3 +180,165 @@ export function buildContextChips(ctx: SessionContext): ContextChip[] {
 // Window event used by PromptInspector / PromptResultCard to ask the DP.
 export const ASK_DP_EVENT = "vidoprompt:ask-dp";
 export type AskDpDetail = { prefill: string };
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Session State Recap — derived ground truth injected right before the user's
+// latest turn so the Director stops re-asking answered questions.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export function buildSessionStateRecap(bubbles: AnyBubble[]): string | null {
+  if (!Array.isArray(bubbles) || bubbles.length === 0) return null;
+
+  const locked: Record<string, string> = {};
+  let pinnedSubject: { kind: string } | null = null;
+  let lastKeyFrameAspect: string | null = null;
+  let chosenModel: string | null = null;
+  let lastMode: string | null = null;
+  let pendingStep: string | null = null;
+  let lastQuestion: { reason: string; question: string } | null = null;
+  let lastAnswerToQuestion: string | null = null;
+  let pathHint: string | null = null;
+  let priorAttachments = 0;
+  let hasGeneratedPrompt = false;
+  let storyActive = false;
+
+  for (let i = 0; i < bubbles.length; i += 1) {
+    const b: any = bubbles[i];
+    if (!b) continue;
+
+    if (b.role === "user" && Array.isArray(b.attachments)) {
+      priorAttachments += b.attachments.length;
+    }
+    if (b.role === "model_choice") {
+      if (b.chosen) chosenModel = b.chosen;
+      pendingStep = b.chosen ? null : "awaiting_model_choice";
+    }
+    if (b.role === "aspect_choice") {
+      if (b.chosen) {
+        locked.aspect_ratio = b.chosen;
+        pendingStep = null;
+      } else {
+        pendingStep = "awaiting_aspect_choice";
+      }
+    }
+    if (b.role === "subject_lock_choice") {
+      pendingStep = b.chosen ? null : "awaiting_subject_lock_choice";
+    }
+    if (b.role === "scene_describe") {
+      pendingStep = b.submitted ? null : "awaiting_scene_description";
+    }
+    if (b.role === "questions") {
+      const q = (b.questions || [])[0];
+      if (q) lastQuestion = { reason: b.reason || "", question: q };
+      pendingStep = "awaiting_clarification_answer";
+      lastAnswerToQuestion = null;
+    }
+    if (
+      b.role === "user" &&
+      lastQuestion &&
+      pendingStep === "awaiting_clarification_answer"
+    ) {
+      const text = (b.content || "").trim();
+      if (text) {
+        lastAnswerToQuestion = text.slice(0, 200);
+        pendingStep = null;
+      }
+    }
+    if (b.role === "generated_images") {
+      lastMode = b.data?.mode || lastMode;
+      if (b.data?.subjectSheet) {
+        pinnedSubject = { kind: b.data.subjectKind || "character" };
+      }
+      if (b.data?.mode === "single_panel" && b.data?.aspectRatio) {
+        lastKeyFrameAspect = b.data.aspectRatio;
+        locked.aspect_ratio = b.data.aspectRatio;
+      }
+    }
+    if (b.role === "result") {
+      hasGeneratedPrompt = true;
+      const ls: any = b.data?.locked_spec || {};
+      for (const k of [
+        "input_mode",
+        "duration_seconds",
+        "aspect_ratio",
+        "audio",
+        "resolution",
+        "style",
+      ]) {
+        if (ls[k] !== undefined && ls[k] !== null && ls[k] !== "") {
+          locked[k] = String(ls[k]);
+        }
+      }
+      const br: any = b.data?.breakdown || {};
+      if (br.recommended_model_id) chosenModel = br.recommended_model_id;
+    }
+    if (b.role === "story_render" || b.role === "location_picker") {
+      storyActive = true;
+    }
+  }
+
+  if (storyActive) pathHint = "story";
+  else if (priorAttachments > 0 || pinnedSubject)
+    pathHint = "anchored (reference image / subject locked)";
+  else if (lastMode === "single_panel" || lastKeyFrameAspect)
+    pathHint = "key-frame-first";
+  else if (chosenModel || hasGeneratedPrompt) pathHint = "direct-to-video";
+
+  const lines: string[] = [];
+  lines.push(
+    "[SESSION STATE — derived ground truth. READ BEFORE asking anything. Never re-ask anything covered below.]",
+  );
+  if (pathHint) lines.push(`Active path: ${pathHint}`);
+  if (chosenModel)
+    lines.push(`Locked model: ${chosenModel} (do NOT call ask_model_choice again)`);
+  if (pinnedSubject)
+    lines.push(
+      `Pinned ${pinnedSubject.kind} sheet (do NOT re-ask the user to describe or upload the ${pinnedSubject.kind})`,
+    );
+
+  const order = [
+    "duration_seconds",
+    "aspect_ratio",
+    "resolution",
+    "audio",
+    "style",
+    "input_mode",
+  ];
+  const formatted = order
+    .filter((k) => locked[k])
+    .map((k) => `${k}=${locked[k]}`)
+    .join(" · ");
+  if (formatted) lines.push(`Locked spec axes (do NOT re-ask): ${formatted}`);
+
+  if (lastQuestion && lastAnswerToQuestion) {
+    lines.push(`Last clarification asked: "${lastQuestion.question}"`);
+    lines.push(
+      `User's answer: "${lastAnswerToQuestion}" — treat as locked. Advance to the NEXT step; do NOT re-ask or rephrase.`,
+    );
+  } else if (pendingStep) {
+    lines.push(
+      `Pending UI step the user currently sees: ${pendingStep}. Do not duplicate — the client already shows it.`,
+    );
+  }
+
+  if (priorAttachments > 0) {
+    lines.push(
+      `User attached ${priorAttachments} reference file(s) earlier — still in play. Do NOT ask them to re-upload.`,
+    );
+  }
+
+  const REQUIRED = ["duration_seconds", "aspect_ratio", "audio"] as const;
+  const missing = REQUIRED.filter((k) => !locked[k]);
+  if (missing.length && pathHint !== "story") {
+    lines.push(
+      `Still missing before generate_prompt: ${missing.join(", ")}. Ask ONE next (priority: duration → audio → aspect_ratio).`,
+    );
+  }
+
+  lines.push(
+    "[END SESSION STATE. If the user's latest message contradicts any locked value, prefer the latest message and call it out in directors_note.]",
+  );
+
+  if (lines.length <= 2) return null;
+  return lines.join("\n");
+}
