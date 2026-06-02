@@ -358,6 +358,35 @@ export function PlanPanel({ sessionId }: Props) {
         </button>
 
         <div className="ml-auto flex items-center gap-1">
+          <div className="mr-1 inline-flex items-center rounded-md border border-border/40 overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setView("table")}
+              title="Table view"
+              className={cn(
+                "p-1 transition-colors",
+                view === "table"
+                  ? "bg-primary/15 text-primary"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              <Rows3 className="w-3.5 h-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setView("rail")}
+              title="Storyboard rail"
+              className={cn(
+                "p-1 transition-colors border-l border-border/40",
+                view === "rail"
+                  ? "bg-primary/15 text-primary"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              <LayoutGrid className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
           {BUDGETS.map((b) => (
             <button
               key={b.id}
