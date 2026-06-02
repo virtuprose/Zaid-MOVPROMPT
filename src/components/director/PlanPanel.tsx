@@ -15,6 +15,7 @@ import {
   LayoutGrid,
   Combine,
   X,
+  Eye,
 } from "lucide-react";
 
 import { exportPlanToDrive } from "@/lib/director/driveExport";
@@ -43,6 +44,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { TransitionPreview } from "@/components/director/TransitionPreview";
 import {
   type DirectorPlan,
   type PlannedShot,
@@ -123,6 +132,7 @@ export function PlanPanel({ sessionId }: Props) {
   useEffect(() => {
     if (typeof window !== "undefined") localStorage.setItem("director.stitchTransition", transition);
   }, [transition]);
+  const [previewOpen, setPreviewOpen] = useState(false);
   const prices = usePricing();
 
   // Keep the latest plan in a ref so the realtime handler always patches the
@@ -294,6 +304,7 @@ export function PlanPanel({ sessionId }: Props) {
     .map((s) => ({
       jobId: s.metadata.video_job_id,
       duration: s.locked.duration_seconds ?? 5,
+      url: s.outputUrl as string,
     }));
   const canStitch = stitchable.length >= 2;
 
@@ -615,6 +626,21 @@ export function PlanPanel({ sessionId }: Props) {
               </Popover>
               <button
                 type="button"
+                onClick={() => setPreviewOpen(true)}
+                disabled={stitching}
+                title="Preview transition timing before stitching"
+                className={cn(
+                  "inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-md border transition-colors",
+                  stitching
+                    ? "border-border/30 text-muted-foreground/60 cursor-not-allowed"
+                    : "border-border/40 text-muted-foreground hover:text-foreground hover:border-border",
+                )}
+              >
+                <Eye className="w-3 h-3" />
+                Preview
+              </button>
+              <button
+                type="button"
                 onClick={stitchPlan}
                 disabled={stitching}
                 title={`Stitch ${stitchable.length} completed shots into one MP4 with ${TRANSITION_LABELS[transition].toLowerCase()}`}
@@ -654,6 +680,33 @@ export function PlanPanel({ sessionId }: Props) {
           onCancel={cancelStitch}
         />
       )}
+
+      <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+        <DialogContent className="max-w-2xl bg-[hsl(240_5%_8%)] border-border/60">
+          <DialogHeader>
+            <DialogTitle>Transition preview</DialogTitle>
+            <DialogDescription>
+              Audition hard cut, crossfade, and match cut timing across your{" "}
+              {stitchable.length} completed shots before paying to render the
+              stitched MP4.
+            </DialogDescription>
+          </DialogHeader>
+          {canStitch ? (
+            <TransitionPreview
+              clipUrls={stitchable.map((s) => s.url)}
+              durations={stitchable.map((s) => s.duration)}
+              transition={transition}
+              onTransitionChange={setTransition}
+            />
+          ) : (
+            <div className="text-sm text-muted-foreground py-6 text-center">
+              Need at least 2 completed shots to preview transitions.
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+
 
 
 
