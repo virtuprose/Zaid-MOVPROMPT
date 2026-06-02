@@ -1043,6 +1043,7 @@ export function PlanPanel({ sessionId }: Props) {
         </AlertDialogContent>
       </AlertDialog>
     </section>
+    </>
   );
 }
 
