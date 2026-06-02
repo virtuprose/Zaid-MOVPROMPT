@@ -78,6 +78,9 @@ export function PlanPanel({ sessionId }: Props) {
   const [saving, setSaving] = useState(false);
   const [running, setRunning] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [balance, setBalance] = useState<number | null>(null);
+  const prices = usePricing();
   // Keep the latest plan in a ref so the realtime handler always patches the
   // freshest version without re-subscribing on every render.
   const planRef = useRef<DirectorPlan>(emptyPlan);
