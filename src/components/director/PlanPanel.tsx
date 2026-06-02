@@ -62,12 +62,13 @@ export function PlanPanel({ sessionId }: Props) {
   const [open, setOpen] = useState(true);
   const [loaded, setLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
-
+  const [running, setRunning] = useState(false);
+  // Keep the latest plan in a ref so the realtime handler always patches the
+  // freshest version without re-subscribing on every render.
+  const planRef = useRef<DirectorPlan>(emptyPlan);
   useEffect(() => {
-    if (!sessionId) {
-      setPlan(emptyPlan);
-      setLoaded(true);
-      return;
+    planRef.current = plan;
+  }, [plan]);
     }
     let active = true;
     (async () => {
