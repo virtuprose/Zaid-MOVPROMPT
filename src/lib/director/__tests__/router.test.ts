@@ -11,11 +11,11 @@ const baseShot = (overrides: Partial<PlannedShot> = {}): PlannedShot => ({
 });
 
 describe("routeShot", () => {
-  it("returns a model id with reasons", () => {
+  it("returns a model id and alternatives", () => {
     const decision = routeShot(baseShot(), "balanced");
     expect(decision.modelId).toBeTruthy();
     expect(decision.source).toBe("ranking");
-    expect(decision.reasons.length).toBeGreaterThan(0);
+    expect(decision.alternatives.length).toBeGreaterThan(0);
   });
 
   it("respects explicit user override regardless of ranking", () => {
