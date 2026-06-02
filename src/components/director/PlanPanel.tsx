@@ -285,13 +285,27 @@ export function PlanPanel({ sessionId }: Props) {
     }
   };
 
-  const runPlan = async () => {
+  const openConfirm = async () => {
     if (!sessionId || renderable.length === 0 || running) return;
+    setConfirmOpen(true);
+    // Refresh balance each time the dialog opens.
+    const { data } = await supabase
+      .from("user_credits")
+      .select("balance")
+      .maybeSingle();
+    setBalance(
+      typeof (data as { balance?: number } | null)?.balance === "number"
+        ? (data as { balance: number }).balance
+        : null,
+    );
+  };
+
+  const confirmRender = async () => {
+    if (!sessionId || renderable.length === 0 || running) return;
+    setConfirmOpen(false);
     setRunning(true);
     try {
       const res = await orchestratePlan(sessionId);
-      // Optimistically mark targets as rendering — the function also persists,
-      // and our next load (or any future edit) will pick up the canonical state.
       const targetIds = new Set(renderable.map((s) => s.id));
       setPlan((p) => ({
         ...p,
