@@ -54,6 +54,7 @@ import {
 } from "@/components/ui/dialog";
 import { TransitionPreview } from "@/components/director/TransitionPreview";
 import { OrchestratorDebugPanel } from "@/components/director/OrchestratorDebugPanel";
+import { useDebugVisible } from "@/hooks/useDebugVisible";
 import {
   type DirectorPlan,
   type PlannedShot,
@@ -97,6 +98,7 @@ const BUDGETS: { id: RoutingBudget; label: string; hint: string }[] = [
 export function PlanPanel({ sessionId }: Props) {
   const [plan, setPlan] = useState<DirectorPlan>(emptyPlan);
   const [open, setOpen] = useState(true);
+  const debugVisible = useDebugVisible();
   const [loaded, setLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
   const [running, setRunning] = useState(false);
@@ -467,15 +469,14 @@ export function PlanPanel({ sessionId }: Props) {
 
   if (!loaded || !sessionId) return null;
 
-  // Orchestrator debug stays mounted even on empty plans — that's exactly
-  // when it's most useful for diagnosing "why nothing renders".
+  // Orchestrator debug is a developer/admin-only tool — hidden from end users.
   if (plan.shots.length === 0) {
-    return <OrchestratorDebugPanel sessionId={sessionId} />;
+    return debugVisible ? <OrchestratorDebugPanel sessionId={sessionId} /> : null;
   }
 
   return (
     <>
-    <OrchestratorDebugPanel sessionId={sessionId} />
+    {debugVisible && <OrchestratorDebugPanel sessionId={sessionId} />}
     <section
       aria-label="Shot plan"
       className="mb-3 rounded-xl border border-border/40 bg-[hsl(240_5%_8%)]/70 backdrop-blur-sm overflow-hidden"
