@@ -322,14 +322,7 @@ export default function Director() {
             )}
           </aside>
 
-          <div className="w-full min-w-0">
-            <PlanPanel sessionId={sessionId} />
-            <DirectorErrorBoundary key={sessionId || "new"} sessionId={sessionId}>
-              <DirectorChat />
-            </DirectorErrorBoundary>
-          </div>
-
-          <MediaRailPanel />
+          <DirectorWorkspace sessionId={sessionId} />
         </div>
 
       </div>
