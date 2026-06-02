@@ -331,7 +331,16 @@ export function PlanPanel({ sessionId }: Props) {
   const stitchPlan = async () => {
     if (!sessionId || !canStitch || stitching) return;
     setStitching(true);
-    const toastId = toast.loading(`Stitching ${stitchable.length} shots…`);
+    const sourceClips = plan.shots
+      .filter((s) => s.status === "done" && !!s.outputUrl)
+      .map((s) => s.outputUrl!) as string[];
+    const totalDuration = stitchable.reduce((a, b) => a + b.duration, 0);
+    setStitchPreview({
+      status: "composing",
+      startedAt: Date.now(),
+      clipUrls: sourceClips,
+      totalDuration,
+    });
     try {
       const res = await stitchPlanShots({
         sessionId,
@@ -339,15 +348,14 @@ export function PlanPanel({ sessionId }: Props) {
         durations: stitchable.map((s) => s.duration),
         title: (plan.globals as Record<string, unknown>).title as string | undefined,
       });
-      toast.success("Stitched into one MP4", {
-        id: toastId,
-        action: {
-          label: "Open",
-          onClick: () => window.open(res.video_url, "_blank", "noopener"),
-        },
-      });
+      setStitchPreview((p) =>
+        p ? { ...p, status: "done", videoUrl: res.video_url } : p,
+      );
+      toast.success("Stitched into one MP4");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Stitch failed", { id: toastId });
+      const msg = e instanceof Error ? e.message : "Stitch failed";
+      setStitchPreview((p) => (p ? { ...p, status: "failed", error: msg } : p));
+      toast.error(msg);
     } finally {
       setStitching(false);
     }
