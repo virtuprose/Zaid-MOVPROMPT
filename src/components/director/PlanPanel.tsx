@@ -28,9 +28,10 @@ import {
   readPlan,
   statusLabel,
 } from "@/lib/director/plan";
-import { routeShot, type RouteDecision } from "@/lib/director/router";
+import { routeShot, type RouteDecision, type TasteSignals } from "@/lib/director/router";
 import { MODEL_CATALOG } from "@/lib/director/videoModelCatalog";
 import { orchestratePlan } from "@/lib/director/orchestrator";
+import { loadMemoryFor, tasteSignalsFor } from "@/lib/director/memory";
 
 type Props = {
   sessionId: string | undefined;
@@ -94,10 +95,26 @@ export function PlanPanel({ sessionId }: Props) {
 
   const budget: RoutingBudget = plan.globals.budget ?? "balanced";
 
+  // Stage 4: unified memory. Loaded once per session; feeds taste signals
+  // into the router so previously-liked models get a small bump.
+  const [taste, setTaste] = useState<TasteSignals>({});
+  useEffect(() => {
+    if (!sessionId) return;
+    let active = true;
+    (async () => {
+      const memory = await loadMemoryFor(sessionId);
+      if (!active) return;
+      setTaste(tasteSignalsFor(memory));
+    })();
+    return () => {
+      active = false;
+    };
+  }, [sessionId]);
+
   // Precompute router decisions for each shot — cheap, pure function.
   const decisions = useMemo<RouteDecision[]>(
-    () => plan.shots.map((s) => routeShot(s, budget)),
-    [plan.shots, budget],
+    () => plan.shots.map((s) => routeShot(s, budget, taste)),
+    [plan.shots, budget, taste],
   );
 
   const persist = async (next: DirectorPlan) => {
