@@ -1432,7 +1432,10 @@ function DirectorChatInner() {
             role: "assistant",
             content: `[Launched 4 parallel Seedance 2.0 acts via request_story_render — title "${b.data.title}", aspect ${b.data.aspect}. Acts are rendering; the client will stitch them into one ~1-minute video when they finish.]`,
           });
+        }
       }
+
+
 
       // Director mode: inject a derived "session state recap" right before the
       // user's latest turn. Pure ground truth — locked spec, pinned subject,
