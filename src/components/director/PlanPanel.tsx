@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 
 import { exportPlanToDrive } from "@/lib/director/driveExport";
-import { stitchPlanShots } from "@/lib/director/stitch";
+import { stitchPlanShots, cancelStitch as cancelStitchOnServer } from "@/lib/director/stitch";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
