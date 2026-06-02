@@ -1,143 +1,47 @@
-import { useEffect, useMemo, useState } from "react";
-import { ChevronRight, ChevronLeft, ImageIcon, Film, Play, Download, ExternalLink } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { ImageIcon, Film, Play, Download, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useMediaRail } from "./MediaRailContext";
-
-type MediaItem =
-  | {
-      id: string;
-      kind: "image";
-      url: string;
-      label: string;
-      aspect?: "1:1" | "16:9" | "9:16";
-      order: number;
-    }
-  | {
-      id: string;
-      kind: "video";
-      url?: string;
-      label: string;
-      status: "queued" | "processing" | "completed" | "failed";
-      order: number;
-    };
+import { useMediaItems, type MediaItem } from "./MediaRailContext";
 
 type Filter = "all" | "images" | "videos";
 
-const LS_KEY = "vidoprompt.mediarail.collapsed";
-
-function extractItems(bubbles: any[]): MediaItem[] {
-  const items: MediaItem[] = [];
-  let order = 0;
-  for (const b of bubbles || []) {
-    if (!b || typeof b !== "object") continue;
-    order += 1;
-    if (b.role === "generated_images" && b.data?.images?.length) {
-      const mode = b.data.mode as string | undefined;
-      b.data.images.forEach((img: any, i: number) => {
-        if (!img?.url) return;
-        const baseLabel =
-          mode === "character_sheet"
-            ? "Subject sheet"
-            : mode === "storyboard_panels"
-              ? `Panel ${img.shot_index ?? i + 1}`
-              : "Key frame";
-        items.push({
-          id: `img-${order}-${i}-${img.storage_path || img.url}`,
-          kind: "image",
-          url: img.url,
-          label: b.data.images.length > 1 ? baseLabel : baseLabel,
-          aspect: b.data.aspectRatio,
-          order,
-        });
-      });
-    } else if (b.role === "video" && b.data) {
-      items.push({
-        id: `vid-${b.data.jobId || order}`,
-        kind: "video",
-        url: b.data.videoUrl,
-        label: (b.data.prompt || "Video").slice(0, 40),
-        status: b.data.status || "queued",
-        order,
-      });
-    } else if (b.role === "story_render" && b.data?.stitchedVideoUrl) {
-      items.push({
-        id: `story-${order}`,
-        kind: "video",
-        url: b.data.stitchedVideoUrl,
-        label: b.data.title || "Final cut",
-        status: "completed",
-        order,
-      });
-    }
-  }
-  // Dedupe by id and sort newest first
-  const seen = new Set<string>();
-  return items
-    .filter((it) => (seen.has(it.id) ? false : (seen.add(it.id), true)))
-    .sort((a, b) => b.order - a.order);
-}
-
 export function MediaRailPanel() {
-  const ctx = useMediaRail();
-  const [collapsed, setCollapsed] = useState<boolean>(() => {
-    try {
-      return localStorage.getItem(LS_KEY) === "1";
-    } catch {
-      return false;
-    }
-  });
+  const items = useMediaItems();
   const [filter, setFilter] = useState<Filter>("all");
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [wide, setWide] = useState(false);
 
   useEffect(() => {
-    try {
-      localStorage.setItem(LS_KEY, collapsed ? "1" : "0");
-    } catch {}
-  }, [collapsed]);
+    const el = containerRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver((entries) => {
+      const w = entries[0]?.contentRect.width ?? 0;
+      setWide(w >= 360);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
-  const items = useMemo(() => extractItems(ctx?.bubbles || []), [ctx?.bubbles]);
-  const filtered = useMemo(
-    () =>
-      items.filter((it) =>
-        filter === "all" ? true : filter === "images" ? it.kind === "image" : it.kind === "video",
-      ),
-    [items, filter],
+  if (items.length === 0) return null;
+
+  const filtered = items.filter((it) =>
+    filter === "all" ? true : filter === "images" ? it.kind === "image" : it.kind === "video",
   );
 
-  if (collapsed) {
-    return (
-      <button
-        type="button"
-        onClick={() => setCollapsed(false)}
-        className="hidden xl:flex sticky top-4 self-start ml-auto items-center gap-1.5 rounded-l-lg border border-r-0 border-border/50 bg-background/90 backdrop-blur px-2 py-3 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
-        title="Show media"
-      >
-        <ChevronLeft className="w-3.5 h-3.5" />
-        <Film className="w-3.5 h-3.5" />
-      </button>
-    );
-  }
-
   return (
-    <aside className="hidden xl:flex flex-col gap-2 max-h-[calc(100vh-160px)] sticky top-4">
-      <div className="flex items-center justify-between gap-2 px-1">
+    <aside
+      ref={containerRef}
+      className="flex flex-col gap-2 h-full w-full min-w-0 bg-background/40"
+    >
+      <div className="flex items-center justify-between gap-2 px-2 pt-1">
         <div className="flex items-center gap-1.5">
           <Film className="w-3.5 h-3.5 text-muted-foreground" />
           <h2 className="text-sm font-semibold tracking-tight">Media</h2>
-          {items.length > 0 && (
-            <span className="text-[10px] text-muted-foreground/70">({items.length})</span>
-          )}
+          <span className="text-[10px] text-muted-foreground/70">({items.length})</span>
         </div>
-        <button
-          type="button"
-          onClick={() => setCollapsed(true)}
-          className="size-6 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
-          title="Hide media"
-        >
-          <ChevronRight className="w-3.5 h-3.5" />
-        </button>
       </div>
 
-      <div className="grid grid-cols-3 gap-1 p-1 rounded-lg border border-border/40 bg-muted/20 text-[11px]">
+      <div className="mx-2 grid grid-cols-3 gap-1 p-1 rounded-lg border border-border/40 bg-muted/20 text-[11px]">
         {(["all", "images", "videos"] as Filter[]).map((f) => (
           <button
             key={f}
@@ -155,14 +59,12 @@ export function MediaRailPanel() {
         ))}
       </div>
 
-      <div className="flex-1 overflow-y-auto space-y-2 pr-1 -mr-1">
-        {filtered.length === 0 ? (
-          <div className="text-xs text-muted-foreground/70 px-2 py-8 text-center leading-relaxed">
-            Generated frames and videos for this brief will appear here.
-          </div>
-        ) : (
-          filtered.map((it) => <MediaCard key={it.id} item={it} />)
-        )}
+      <div className="flex-1 overflow-y-auto px-2 pb-2">
+        <div className={cn("grid gap-2", wide ? "grid-cols-2" : "grid-cols-1")}>
+          {filtered.map((it) => (
+            <MediaCard key={it.id} item={it} />
+          ))}
+        </div>
       </div>
     </aside>
   );
