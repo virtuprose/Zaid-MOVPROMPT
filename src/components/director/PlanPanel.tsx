@@ -626,6 +626,21 @@ export function PlanPanel({ sessionId }: Props) {
               </Popover>
               <button
                 type="button"
+                onClick={() => setPreviewOpen(true)}
+                disabled={stitching}
+                title="Preview transition timing before stitching"
+                className={cn(
+                  "inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-md border transition-colors",
+                  stitching
+                    ? "border-border/30 text-muted-foreground/60 cursor-not-allowed"
+                    : "border-border/40 text-muted-foreground hover:text-foreground hover:border-border",
+                )}
+              >
+                <Eye className="w-3 h-3" />
+                Preview
+              </button>
+              <button
+                type="button"
                 onClick={stitchPlan}
                 disabled={stitching}
                 title={`Stitch ${stitchable.length} completed shots into one MP4 with ${TRANSITION_LABELS[transition].toLowerCase()}`}
