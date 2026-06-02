@@ -891,7 +891,7 @@ function Chip({ icon, children }: { icon: React.ReactNode; children: React.React
 }
 
 type StitchPreviewState = {
-  status: "composing" | "done" | "failed";
+  status: "composing" | "done" | "failed" | "cancelled";
   startedAt: number;
   clipUrls: string[];
   totalDuration: number;
