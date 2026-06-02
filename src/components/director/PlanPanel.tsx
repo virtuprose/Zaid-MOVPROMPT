@@ -544,6 +544,69 @@ export function PlanPanel({ sessionId }: Props) {
           })}
         </ol>
       )}
+
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent className="bg-[hsl(240_5%_8%)] border-border/60">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-display tracking-tight">
+              Render {renderable.length} shot{renderable.length === 1 ? "" : "s"}?
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3 text-sm">
+                <div className="text-muted-foreground">
+                  Estimated cost across all shots. Each shot is charged when it
+                  starts; failed renders are refunded automatically.
+                </div>
+                <ul className="rounded-md border border-border/40 divide-y divide-border/30 max-h-64 overflow-y-auto">
+                  {renderableEstimates.map((e) => (
+                    <li
+                      key={e.shotId}
+                      className="flex items-center gap-2 px-3 py-1.5 text-xs"
+                    >
+                      <span className="w-6 text-muted-foreground tabular-nums">
+                        {String(e.index + 1).padStart(2, "0")}
+                      </span>
+                      <span className="flex-1 truncate text-foreground/90">
+                        {e.intent}
+                      </span>
+                      <span className="text-[10px] text-muted-foreground truncate max-w-[120px]">
+                        {e.modelId} · {e.durationSec}s
+                      </span>
+                      <span className="tabular-nums text-foreground/90 w-12 text-right">
+                        {e.cost}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+                <div className="flex items-center justify-between pt-1">
+                  <span className="text-muted-foreground">
+                    Balance: {balance == null ? "…" : `${balance} credits`}
+                  </span>
+                  <span className="font-display text-base text-foreground">
+                    Total ≈ <span className="text-accent">{totalEstimate}</span>{" "}
+                    credits
+                  </span>
+                </div>
+                {insufficient && (
+                  <div className="text-destructive text-xs">
+                    Not enough credits — top up before rendering.
+                  </div>
+                )}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmRender}
+              disabled={insufficient || renderable.length === 0}
+              className="bg-accent text-accent-foreground hover:bg-accent/90"
+            >
+              Render {renderable.length} · {totalEstimate} credits
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </section>
   );
 }
