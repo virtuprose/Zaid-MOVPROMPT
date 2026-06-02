@@ -383,6 +383,7 @@ export function PlanPanel({ sessionId }: Props) {
         durations: stitchable.map((s) => s.duration),
         title: (plan.globals as Record<string, unknown>).title as string | undefined,
         transition,
+        overrides: stitchOverrides.length === stitchable.length - 1 ? stitchOverrides : undefined,
       });
       if (stitchCancelRef.current || res?.status === "cancelled" || !res?.video_url) {
         // User cancelled — server-side cancel may have returned before this.
