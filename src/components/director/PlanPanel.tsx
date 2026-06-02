@@ -109,6 +109,14 @@ export function PlanPanel({ sessionId }: Props) {
   useEffect(() => {
     if (typeof window !== "undefined") localStorage.setItem("director.planView", view);
   }, [view]);
+  const [transition, setTransition] = useState<StitchTransition>(() => {
+    if (typeof window === "undefined") return "hard_cut";
+    const raw = localStorage.getItem("director.stitchTransition") as StitchTransition | null;
+    return raw === "crossfade" || raw === "match_cut" ? raw : "hard_cut";
+  });
+  useEffect(() => {
+    if (typeof window !== "undefined") localStorage.setItem("director.stitchTransition", transition);
+  }, [transition]);
   const prices = usePricing();
 
   // Keep the latest plan in a ref so the realtime handler always patches the
