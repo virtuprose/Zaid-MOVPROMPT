@@ -65,14 +65,17 @@ serve(async (req) => {
   );
 
   try {
-    const { story_render_id, title, session_id, job_ids, durations } =
+    const { story_render_id, title, session_id, job_ids, durations, transition } =
       (await req.json()) as {
         story_render_id?: string;
         title?: string;
         session_id?: string;
         job_ids?: string[];
         durations?: number[];
+        transition?: "hard_cut" | "crossfade" | "match_cut";
       };
+    const transitionKind: "hard_cut" | "crossfade" | "match_cut" =
+      transition === "crossfade" || transition === "match_cut" ? transition : "hard_cut";
 
     if (!story_render_id && (!Array.isArray(job_ids) || job_ids.length === 0)) {
       return new Response(
