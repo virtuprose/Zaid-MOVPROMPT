@@ -32,6 +32,7 @@ import {
   insufficientResponse,
   priceFor,
 } from "../_shared/credits.ts";
+import { pickSkill, skillAddendum } from "./skills/index.ts";
 
 const MODEL_IDS = MODEL_CATALOG.map((m) => m.id);
 
