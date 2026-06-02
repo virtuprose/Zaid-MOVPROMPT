@@ -83,6 +83,7 @@ export function PlanPanel({ sessionId }: Props) {
   const [saving, setSaving] = useState(false);
   const [running, setRunning] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [stitching, setStitching] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [balance, setBalance] = useState<number | null>(null);
   const [view, setView] = useState<"table" | "rail">(() => {
