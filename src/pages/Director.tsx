@@ -398,3 +398,43 @@ export default function Director() {
     </div>
   );
 }
+
+function DirectorWorkspace({ sessionId }: { sessionId?: string }) {
+  const items = useMediaItems();
+  const hasMedia = items.length > 0;
+
+  const chatBlock = (
+    <div className="w-full min-w-0 h-full">
+      <PlanPanel sessionId={sessionId} />
+      <DirectorErrorBoundary key={sessionId || "new"} sessionId={sessionId}>
+        <DirectorChat />
+      </DirectorErrorBoundary>
+    </div>
+  );
+
+  if (!hasMedia) return chatBlock;
+
+  return (
+    <div className="w-full min-w-0 h-[calc(100vh-140px)]">
+      <ResizablePanelGroup
+        direction="horizontal"
+        autoSaveId="director-media-split"
+        className="h-full w-full"
+      >
+        <ResizablePanel defaultSize={70} minSize={35}>
+          <div className="h-full overflow-hidden pr-1">{chatBlock}</div>
+        </ResizablePanel>
+        <ResizableHandle className="!w-2 bg-transparent hover:bg-transparent group">
+          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 flex h-9 w-5 items-center justify-center rounded-full border border-border/60 bg-background/90 backdrop-blur shadow-md group-hover:border-primary/50 group-hover:bg-background transition-colors">
+            <GripVertical className="h-3.5 w-3.5 text-muted-foreground group-hover:text-foreground" />
+          </div>
+        </ResizableHandle>
+        <ResizablePanel defaultSize={30} minSize={18}>
+          <div className="h-full pl-1">
+            <MediaRailPanel />
+          </div>
+        </ResizablePanel>
+      </ResizablePanelGroup>
+    </div>
+  );
+}
