@@ -1065,8 +1065,21 @@ Then stop. Don't ask follow-up questions yourself.`;
         `Echo these locked values in every \`locked_spec\` recap downstream.`;
     }
 
+    // Skill matcher — scan the last 3 user turns for trigger phrases and, if a
+    // skill matches, append its full SKILL.md body to the system prompt.
+    let skillBlock = "";
+    if (!isFreeChat) {
+      const recentUserText = messages
+        .filter((m) => m.role === "user")
+        .slice(-3)
+        .map((m) => m.content)
+        .join("\n");
+      const matched = pickSkill(recentUserText);
+      if (matched) skillBlock = skillAddendum(matched);
+    }
+
     const aiMessages = [
-      { role: "system", content: isFreeChat ? FREE_CHAT_SYSTEM : SYSTEM_PROMPT + tasteAddendum + handoffAddendum },
+      { role: "system", content: isFreeChat ? FREE_CHAT_SYSTEM : SYSTEM_PROMPT + tasteAddendum + handoffAddendum + skillBlock },
       ...prior.map((m) => ({ role: m.role, content: m.content })),
       { role: last.role, content: lastUserContent },
     ];
