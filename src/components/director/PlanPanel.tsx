@@ -314,6 +314,31 @@ export function PlanPanel({ sessionId }: Props) {
     }
   };
 
+  const stitchPlan = async () => {
+    if (!sessionId || !canStitch || stitching) return;
+    setStitching(true);
+    const toastId = toast.loading(`Stitching ${stitchable.length} shots…`);
+    try {
+      const res = await stitchPlanShots({
+        sessionId,
+        jobIds: stitchable.map((s) => s.jobId),
+        durations: stitchable.map((s) => s.duration),
+        title: plan.globals.title as string | undefined,
+      });
+      toast.success("Stitched into one MP4", {
+        id: toastId,
+        action: {
+          label: "Open",
+          onClick: () => window.open(res.video_url, "_blank", "noopener"),
+        },
+      });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Stitch failed", { id: toastId });
+    } finally {
+      setStitching(false);
+    }
+  };
+
   const openConfirm = async () => {
     if (!sessionId || renderable.length === 0 || running) return;
     setConfirmOpen(true);
