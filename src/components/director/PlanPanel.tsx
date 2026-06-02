@@ -463,7 +463,135 @@ export function PlanPanel({ sessionId }: Props) {
         </div>
       </div>
 
-      {open && (
+      {open && view === "rail" && (
+        <div className="border-t border-border/30 overflow-x-auto">
+          <ol className="flex gap-3 p-3 min-w-min">
+            {plan.shots.map((shot, idx) => {
+              const decision = decisions[idx];
+              const isOverride = decision.source === "override";
+              return (
+                <li
+                  key={shot.id}
+                  className="shrink-0 w-44 rounded-lg border border-border/40 bg-muted/20 overflow-hidden flex flex-col"
+                >
+                  <div className="relative aspect-video bg-black/60 flex items-center justify-center">
+                    {shot.outputUrl ? (
+                      <video
+                        src={shot.outputUrl}
+                        className="w-full h-full object-cover"
+                        muted
+                        playsInline
+                        preload="metadata"
+                        onMouseEnter={(e) => void (e.currentTarget as HTMLVideoElement).play().catch(() => {})}
+                        onMouseLeave={(e) => {
+                          const v = e.currentTarget as HTMLVideoElement;
+                          v.pause();
+                          v.currentTime = 0;
+                        }}
+                      />
+                    ) : shot.status === "rendering" ? (
+                      <Loader2 className="w-5 h-5 text-amber-400 animate-spin" />
+                    ) : (
+                      <Film className="w-5 h-5 text-muted-foreground/50" />
+                    )}
+                    <span
+                      className={cn(
+                        "absolute top-1.5 left-1.5 w-1.5 h-1.5 rounded-full",
+                        STATUS_DOT[shot.status],
+                      )}
+                      aria-label={statusLabel(shot.status)}
+                    />
+                    <span className="absolute top-1.5 right-1.5 text-[10px] tabular-nums text-foreground/80 bg-black/50 px-1 rounded">
+                      {String(idx + 1).padStart(2, "0")}
+                    </span>
+                  </div>
+                  <div className="p-2 flex flex-col gap-1 min-w-0">
+                    <div className="text-xs text-foreground/95 line-clamp-2 min-h-[2rem]">
+                      {shot.intent || "Untitled shot"}
+                    </div>
+                    <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                      {shot.locked.duration_seconds != null && (
+                        <span className="tabular-nums">{shot.locked.duration_seconds}s</span>
+                      )}
+                      {shot.locked.aspect_ratio && (
+                        <>
+                          <span>·</span>
+                          <span>{shot.locked.aspect_ratio}</span>
+                        </>
+                      )}
+                    </div>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <button
+                          type="button"
+                          className={cn(
+                            "mt-0.5 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md border text-[10px] transition-colors self-start max-w-full",
+                            isOverride
+                              ? "bg-accent/15 border-accent/40 text-accent hover:bg-accent/20"
+                              : "bg-muted/40 border-border/30 hover:bg-muted/60",
+                          )}
+                        >
+                          {isOverride ? (
+                            <Check className="w-2.5 h-2.5 shrink-0" />
+                          ) : (
+                            <Wand2 className="w-2.5 h-2.5 shrink-0" />
+                          )}
+                          <span className="truncate">{decision.model.label}</span>
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent
+                        align="start"
+                        className="w-64 p-2 bg-[hsl(240_5%_8%)] border-border/60"
+                      >
+                        <div className="px-1 pb-1.5 text-[11px] text-muted-foreground">
+                          {isOverride ? "Override" : `Routed (${budget})`} —{" "}
+                          {decision.reasons.slice(0, 2).join(" · ") || "best fit"}
+                        </div>
+                        <div className="max-h-64 overflow-y-auto space-y-0.5">
+                          {MODEL_CATALOG.map((m) => {
+                            const selected = m.id === decision.modelId;
+                            return (
+                              <button
+                                key={m.id}
+                                type="button"
+                                onClick={() => overrideModel(shot.id, m.id)}
+                                className={cn(
+                                  "w-full flex items-center gap-2 px-2 py-1.5 rounded text-xs text-left transition-colors",
+                                  selected
+                                    ? "bg-primary/10 text-primary"
+                                    : "hover:bg-muted/40 text-foreground/90",
+                                )}
+                              >
+                                <Sparkles className="w-3 h-3 shrink-0 opacity-60" />
+                                <span className="flex-1 truncate">{m.label}</span>
+                                <span className="text-[10px] text-muted-foreground capitalize">
+                                  {m.cost}
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                        {isOverride && (
+                          <button
+                            type="button"
+                            onClick={() => clearOverride(shot.id)}
+                            className="mt-2 w-full text-[11px] py-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                          >
+                            Clear override (use Director's pick)
+                          </button>
+                        )}
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
+        </div>
+      )}
+
+      {open && view === "table" && (
+
         <ol className="divide-y divide-border/30 border-t border-border/30">
           {plan.shots.map((shot, idx) => {
             const decision = decisions[idx];
