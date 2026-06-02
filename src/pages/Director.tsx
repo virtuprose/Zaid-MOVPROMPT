@@ -33,8 +33,10 @@ import { useAuth } from "@/hooks/useAuth";
 import { trackPageVisit } from "@/lib/analytics";
 import { DirectorChat } from "@/components/director/DirectorChat";
 import { PlanPanel } from "@/components/director/PlanPanel";
-import { MediaRailProvider } from "@/components/director/MediaRailContext";
+import { MediaRailProvider, useMediaItems } from "@/components/director/MediaRailContext";
 import { MediaRailPanel } from "@/components/director/MediaRailPanel";
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
+import { GripVertical } from "lucide-react";
 
 import { DirectorErrorBoundary } from "@/components/director/DirectorErrorBoundary";
 import { SendDebugReportButton } from "@/components/SendDebugReportButton";
@@ -193,7 +195,7 @@ export default function Director() {
 
       <MediaRailProvider>
       <div className="relative z-10 container max-w-[1760px] mx-auto px-4 py-4">
-        <div className="grid grid-cols-1 lg:grid-cols-[240px_1fr] xl:grid-cols-[240px_1fr_320px] gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-[240px_1fr] gap-4">
           <aside className="hidden lg:flex flex-col gap-2 max-h-[calc(100vh-160px)]">
             <Button
               size="sm"
@@ -320,14 +322,7 @@ export default function Director() {
             )}
           </aside>
 
-          <div className="w-full min-w-0">
-            <PlanPanel sessionId={sessionId} />
-            <DirectorErrorBoundary key={sessionId || "new"} sessionId={sessionId}>
-              <DirectorChat />
-            </DirectorErrorBoundary>
-          </div>
-
-          <MediaRailPanel />
+          <DirectorWorkspace sessionId={sessionId} />
         </div>
 
       </div>
@@ -400,6 +395,46 @@ export default function Director() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+function DirectorWorkspace({ sessionId }: { sessionId?: string }) {
+  const items = useMediaItems();
+  const hasMedia = items.length > 0;
+
+  const chatBlock = (
+    <div className="w-full min-w-0 h-full">
+      <PlanPanel sessionId={sessionId} />
+      <DirectorErrorBoundary key={sessionId || "new"} sessionId={sessionId}>
+        <DirectorChat />
+      </DirectorErrorBoundary>
+    </div>
+  );
+
+  if (!hasMedia) return chatBlock;
+
+  return (
+    <div className="w-full min-w-0 h-[calc(100vh-140px)]">
+      <ResizablePanelGroup
+        direction="horizontal"
+        autoSaveId="director-media-split"
+        className="h-full w-full"
+      >
+        <ResizablePanel defaultSize={70} minSize={35}>
+          <div className="h-full overflow-hidden pr-1">{chatBlock}</div>
+        </ResizablePanel>
+        <ResizableHandle className="!w-2 bg-transparent hover:bg-transparent group">
+          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 flex h-9 w-5 items-center justify-center rounded-full border border-border/60 bg-background/90 backdrop-blur shadow-md group-hover:border-primary/50 group-hover:bg-background transition-colors">
+            <GripVertical className="h-3.5 w-3.5 text-muted-foreground group-hover:text-foreground" />
+          </div>
+        </ResizableHandle>
+        <ResizablePanel defaultSize={30} minSize={18}>
+          <div className="h-full pl-1">
+            <MediaRailPanel />
+          </div>
+        </ResizablePanel>
+      </ResizablePanelGroup>
     </div>
   );
 }
