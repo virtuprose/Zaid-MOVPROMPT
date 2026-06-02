@@ -2396,13 +2396,6 @@ function DirectorChatInner() {
               : null;
             return (
               <div className="-mt-3 mb-1 mx-auto w-fit text-[10.5px] text-muted-foreground/80 inline-flex items-center gap-1.5 flex-wrap justify-center">
-                <span className="inline-flex items-center gap-1">
-                  <Sparkles className="h-3 w-3 text-accent/80" />
-                  Estimated brief cost
-                </span>
-                <span className="text-foreground/70">
-                  ~3–8 cr for frames · ~30–90 cr for final video
-                </span>
                 {prettyEngine && (
                   <span
                     className={cn(
