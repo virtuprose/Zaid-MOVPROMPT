@@ -132,6 +132,7 @@ export function PlanPanel({ sessionId }: Props) {
   useEffect(() => {
     if (typeof window !== "undefined") localStorage.setItem("director.stitchTransition", transition);
   }, [transition]);
+  const [previewOpen, setPreviewOpen] = useState(false);
   const prices = usePricing();
 
   // Keep the latest plan in a ref so the realtime handler always patches the
