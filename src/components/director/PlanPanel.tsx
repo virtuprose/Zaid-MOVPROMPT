@@ -83,7 +83,15 @@ export function PlanPanel({ sessionId }: Props) {
   const [exporting, setExporting] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [balance, setBalance] = useState<number | null>(null);
+  const [view, setView] = useState<"table" | "rail">(() => {
+    if (typeof window === "undefined") return "table";
+    return (localStorage.getItem("director.planView") as "table" | "rail") ?? "table";
+  });
+  useEffect(() => {
+    if (typeof window !== "undefined") localStorage.setItem("director.planView", view);
+  }, [view]);
   const prices = usePricing();
+
   // Keep the latest plan in a ref so the realtime handler always patches the
   // freshest version without re-subscribing on every render.
   const planRef = useRef<DirectorPlan>(emptyPlan);
