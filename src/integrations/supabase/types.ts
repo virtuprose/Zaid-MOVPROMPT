@@ -570,6 +570,7 @@ export type Database = {
           id: string
           messages: Json
           pinned: boolean
+          plan: Json
           title: string | null
           updated_at: string
           user_id: string
@@ -582,6 +583,7 @@ export type Database = {
           id?: string
           messages?: Json
           pinned?: boolean
+          plan?: Json
           title?: string | null
           updated_at?: string
           user_id: string
@@ -594,6 +596,7 @@ export type Database = {
           id?: string
           messages?: Json
           pinned?: boolean
+          plan?: Json
           title?: string | null
           updated_at?: string
           user_id?: string
