@@ -41,9 +41,9 @@ const BUDGET_COST_WEIGHT: Record<RoutingBudget, Record<ModelCapabilities["cost"]
 };
 
 const BUDGET_SPEED_WEIGHT: Record<RoutingBudget, Record<ModelCapabilities["speed"], number>> = {
-  quality: { slow: 0.5, medium: 0, fast: -0.5 },
-  balanced: { slow: 0, medium: 0, fast: 0 },
-  cheap: { slow: -1, medium: 0, fast: 1 },
+  quality: { slow: 0.5, balanced: 0, fast: -0.5 },
+  balanced: { slow: 0, balanced: 0, fast: 0 },
+  cheap: { slow: -1, balanced: 0, fast: 1 },
 };
 
 /** Convert a PlannedShot into the Breakdown shape that rankModels() expects. */
