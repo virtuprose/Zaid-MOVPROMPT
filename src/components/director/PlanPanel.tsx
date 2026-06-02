@@ -365,7 +365,7 @@ export function PlanPanel({ sessionId }: Props) {
           ))}
           <button
             type="button"
-            onClick={runPlan}
+            onClick={openConfirm}
             disabled={running || renderable.length === 0}
             title={
               renderable.length === 0
