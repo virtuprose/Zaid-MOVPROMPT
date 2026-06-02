@@ -234,6 +234,163 @@ export function TransitionPreview({
     seekTo(time);
   };
 
+  // ---- Export preview as MP4/WebM ------------------------------------------
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const [exportProgress, setExportProgress] = useState(0);
+  const exportCancelRef = useRef(false);
+
+  const runExport = useCallback(async () => {
+    if (exporting || clipUrls.length < 2) return;
+    const picked = pickRecorderMime();
+    if (!picked) {
+      toast.error("Your browser cannot record previews. Try Chrome or Safari.");
+      return;
+    }
+    const canvas = canvasRef.current;
+    const a = videoARef.current;
+    const b = videoBRef.current;
+    if (!canvas || !a || !b) return;
+
+    // Size canvas to the first video's native dimensions (capped to 1280w).
+    const baseW = a.videoWidth || 1280;
+    const baseH = a.videoHeight || 720;
+    const scale = Math.min(1, 1280 / baseW);
+    canvas.width = Math.round(baseW * scale);
+    canvas.height = Math.round(baseH * scale);
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    setExporting(true);
+    setExportProgress(0);
+    exportCancelRef.current = false;
+    setPlaying(false);
+    playheadRef.current = 0;
+    setT(0);
+    seekTo(0);
+    // Give the seek a moment to settle so frame 0 is ready.
+    await new Promise((r) => setTimeout(r, 120));
+
+    const stream = canvas.captureStream(30);
+    const recorder = new MediaRecorder(stream, {
+      mimeType: picked.mime,
+      videoBitsPerSecond: 6_000_000,
+    });
+    const chunks: BlobPart[] = [];
+    recorder.ondataavailable = (e) => {
+      if (e.data && e.data.size > 0) chunks.push(e.data);
+    };
+
+    const done = new Promise<void>((resolve) => {
+      recorder.onstop = () => resolve();
+    });
+    recorder.start(250);
+
+    void a.play().catch(() => {});
+    let raf = 0;
+    let lastNow: number | null = null;
+    let playhead = 0;
+    let bStarted = false;
+    let promotedFor = -1;
+
+    const tick = (now: number) => {
+      if (exportCancelRef.current) {
+        recorder.stop();
+        return;
+      }
+      const last = lastNow ?? now;
+      lastNow = now;
+      const dt = (now - last) / 1000;
+      playhead = Math.min(total, playhead + dt);
+
+      const i = indexAt(playhead);
+      const overlapStart = i + 1 < clipUrls.length ? starts[i + 1] : Infinity;
+      let opB = 0;
+      if (playhead >= overlapStart) {
+        if (!bStarted) {
+          void b.play().catch(() => {});
+          bStarted = true;
+        }
+        if (overlapSec > 0 && blendMs > 0) {
+          opB = Math.min(1, ((playhead - overlapStart) * 1000) / blendMs);
+        } else {
+          opB = 1;
+        }
+        const overlapEnd = overlapStart + overlapSec;
+        if (playhead >= overlapEnd && promotedFor !== i + 1) {
+          promotedFor = i + 1;
+          playheadRef.current = playhead;
+          setT(playhead);
+          seekTo(playhead);
+          bStarted = false;
+        }
+      }
+
+      // Composite to canvas: A under, B over with opB.
+      try {
+        ctx.fillStyle = "#000";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.globalAlpha = 1 - opB;
+        ctx.drawImage(a, 0, 0, canvas.width, canvas.height);
+        if (opB > 0) {
+          ctx.globalAlpha = opB;
+          ctx.drawImage(b, 0, 0, canvas.width, canvas.height);
+        }
+        ctx.globalAlpha = 1;
+      } catch {
+        /* video not ready yet — frame will catch up */
+      }
+
+      setT(playhead);
+      setExportProgress(playhead / total);
+
+      if (playhead >= total) {
+        recorder.stop();
+        return;
+      }
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+
+    await done;
+    cancelAnimationFrame(raf);
+    a.pause();
+    b.pause();
+
+    const wasCancelled = exportCancelRef.current;
+    setExporting(false);
+    setExportProgress(0);
+    playheadRef.current = 0;
+    setT(0);
+    seekTo(0);
+
+    if (wasCancelled) {
+      toast.info("Export cancelled");
+      return;
+    }
+
+    const blob = new Blob(chunks, { type: picked.mime });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `transition-preview-${transition}.${picked.ext}`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+    toast.success(`Preview exported (${picked.ext.toUpperCase()})`);
+  }, [
+    exporting,
+    clipUrls,
+    total,
+    starts,
+    overlapSec,
+    blendMs,
+    indexAt,
+    seekTo,
+    transition,
+  ]);
+
   return (
     <div className="space-y-3">
       {/* Transition switcher */}
