@@ -57,6 +57,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import logoMark from "@/assets/logo-mark-white.svg";
 import { ApprovalProvider, useApproval } from "./ApprovalContext";
+import { useMediaRail } from "./MediaRailContext";
 import {
   AwaitingApprovalPill,
   BottomApprovalBar,
