@@ -137,7 +137,23 @@ export function QuestionCard({ reason, questions, disabled, collapsed, attachmen
         }
       }}
     >
-      {reason && <div className="text-xs text-muted-foreground/80 italic">{reason}</div>}
+      {reason && (() => {
+        // Pull out a "Step X — …" or "Story step X of Y — …" prefix so we can
+        // render it as a clearer header chip, separate from the rationale.
+        const m = reason.match(/^((?:Story s|S)tep[^.—:]*[—:])\s*(.*)$/i);
+        const label = m?.[1]?.trim();
+        const rest = (m?.[2] || reason).trim();
+        return (
+          <div className="space-y-1.5">
+            {label && (
+              <div className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-[10px] uppercase tracking-wider text-primary border border-primary/20">
+                {label.replace(/[—:]$/, "").trim()}
+              </div>
+            )}
+            {rest && <div className="text-xs text-muted-foreground/80 italic">{rest}</div>}
+          </div>
+        );
+      })()}
 
       <div className="space-y-4">
         {questions.map((q, i) => {
