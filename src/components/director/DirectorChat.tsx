@@ -2370,61 +2370,6 @@ function DirectorChatInner() {
         <div className="flex flex-col gap-6 min-h-full max-w-4xl mx-auto w-full">
           <div className="flex-1" />
 
-          {!isEmpty && (() => {
-            const hasBrief = bubbles.some((b) => b.role === "user");
-            const hasFrame = bubbles.some(
-              (b) => b.role === "generated_images" || b.role === "result",
-            );
-            const hasVideo = bubbles.some((b) => b.role === "video");
-            const steps: { key: string; label: string; done: boolean; active: boolean }[] = [
-              { key: "brief", label: "Brief", done: hasBrief, active: hasBrief && !hasFrame },
-              { key: "frame", label: "Frame", done: hasFrame, active: hasFrame && !hasVideo },
-              { key: "video", label: "Video", done: hasVideo, active: hasVideo },
-            ];
-            return (
-              <div
-                className="sticky top-0 z-10 -mt-2 mb-1 flex items-center justify-center gap-1.5 rounded-full bg-background/70 px-2 py-1 backdrop-blur supports-[backdrop-filter]:bg-background/50 w-fit mx-auto"
-                aria-label="Director flow progress"
-              >
-                {steps.map((s, idx) => (
-                  <div key={s.key} className="flex items-center gap-1.5">
-                    <span
-                      className={cn(
-                        "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10.5px] font-medium uppercase tracking-wide transition-colors",
-                        s.done
-                          ? "bg-primary/15 text-primary"
-                          : s.active
-                            ? "bg-accent/15 text-accent"
-                            : "bg-muted/40 text-muted-foreground/70",
-                      )}
-                    >
-                      <span
-                        className={cn(
-                          "inline-flex h-3.5 w-3.5 items-center justify-center rounded-full text-[9px] font-bold",
-                          s.done
-                            ? "bg-primary text-primary-foreground"
-                            : s.active
-                              ? "bg-accent text-accent-foreground"
-                              : "bg-muted text-muted-foreground/70",
-                        )}
-                      >
-                        {idx + 1}
-                      </span>
-                      {s.label}
-                    </span>
-                    {idx < steps.length - 1 && (
-                      <span
-                        className={cn(
-                          "h-px w-3 transition-colors",
-                          s.done ? "bg-primary/40" : "bg-border/40",
-                        )}
-                      />
-                    )}
-                  </div>
-                ))}
-              </div>
-            );
-          })()}
 
           {!isEmpty && (() => {
             // Surface the current video engine so the user always knows what will render.
@@ -2451,13 +2396,6 @@ function DirectorChatInner() {
               : null;
             return (
               <div className="-mt-3 mb-1 mx-auto w-fit text-[10.5px] text-muted-foreground/80 inline-flex items-center gap-1.5 flex-wrap justify-center">
-                <span className="inline-flex items-center gap-1">
-                  <Sparkles className="h-3 w-3 text-accent/80" />
-                  Estimated brief cost
-                </span>
-                <span className="text-foreground/70">
-                  ~3–8 cr for frames · ~30–90 cr for final video
-                </span>
                 {prettyEngine && (
                   <span
                     className={cn(
