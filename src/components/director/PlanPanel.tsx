@@ -54,6 +54,7 @@ import {
 } from "@/components/ui/dialog";
 import { TransitionPreview } from "@/components/director/TransitionPreview";
 import { OrchestratorDebugPanel } from "@/components/director/OrchestratorDebugPanel";
+import { useDebugVisible } from "@/hooks/useDebugVisible";
 import {
   type DirectorPlan,
   type PlannedShot,
