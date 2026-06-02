@@ -343,6 +343,28 @@ export function PlanPanel({ sessionId }: Props) {
               <span className="tabular-nums opacity-70">{renderable.length}</span>
             )}
           </button>
+          {exportableCount > 0 && (
+            <button
+              type="button"
+              onClick={exportToDrive}
+              disabled={exporting}
+              title={`Export ${exportableCount} completed shot${exportableCount === 1 ? "" : "s"} to Google Drive`}
+              className={cn(
+                "ml-1 inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-md border transition-colors",
+                exporting
+                  ? "border-border/30 text-muted-foreground/60 cursor-wait"
+                  : "border-border/40 text-muted-foreground hover:text-foreground hover:border-border",
+              )}
+            >
+              {exporting ? (
+                <Loader2 className="w-3 h-3 animate-spin" />
+              ) : (
+                <CloudUpload className="w-3 h-3" />
+              )}
+              Drive
+              <span className="tabular-nums opacity-70">{exportableCount}</span>
+            </button>
+          )}
           {saving && <span className="text-[10px] text-muted-foreground ml-1">Saving…</span>}
           <ChevronDown
             className={cn(
