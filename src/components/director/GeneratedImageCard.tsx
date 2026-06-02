@@ -719,7 +719,7 @@ export function GeneratedImageCard({ data, onRegenerate, onUnpinSubject, onAnima
               }
             >
               <Film className="h-3 w-3 mr-1" />
-              Extend frame-by-frame
+              Storyboard 6 panels
             </Button>
           )}
           {data.images[0] && (
