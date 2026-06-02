@@ -323,7 +323,7 @@ export function PlanPanel({ sessionId }: Props) {
         sessionId,
         jobIds: stitchable.map((s) => s.jobId),
         durations: stitchable.map((s) => s.duration),
-        title: plan.globals.title as string | undefined,
+        title: (plan.globals as Record<string, unknown>).title as string | undefined,
       });
       toast.success("Stitched into one MP4", {
         id: toastId,
