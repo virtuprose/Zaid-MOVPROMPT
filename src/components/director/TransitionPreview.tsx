@@ -121,6 +121,13 @@ export function TransitionPreview({
     return arr;
   }, [overrides, numBoundaries, defaultOverlapFrames]);
 
+  // Bubble the resolved overrides up so the parent can ship them to the
+  // server stitch call. Fires on every clamp/drag/reset.
+  useEffect(() => {
+    onOverridesChange?.(effective);
+  }, [effective, onOverridesChange]);
+
+
   // Compute virtual-timeline starts[] for each clip from overrides.
   // start[i] = start[i-1] + dur[i-1] − overlap[i-1] + offset[i-1]
   const { starts, total } = useMemo(() => {
