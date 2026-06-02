@@ -705,6 +705,7 @@ export function PlanPanel({ sessionId }: Props) {
               durations={stitchable.map((s) => s.duration)}
               transition={transition}
               onTransitionChange={setTransition}
+              onOverridesChange={setStitchOverrides}
             />
           ) : (
             <div className="text-sm text-muted-foreground py-6 text-center">
