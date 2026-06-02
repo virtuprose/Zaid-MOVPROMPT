@@ -19,9 +19,9 @@
 //
 // Skills are server-side only — users never see SKILL.md, only better output.
 
-import cinematicAdVeo3 from "./skills/cinematic-ad-veo3.md" with { type: "text" };
-import productLaunchKling from "./skills/product-launch-kling.md" with { type: "text" };
-import socialHook3s from "./skills/social-hook-3s.md" with { type: "text" };
+import cinematicAdVeo3 from "./cinematic-ad-veo3.ts";
+import productLaunchKling from "./product-launch-kling.ts";
+import socialHook3s from "./social-hook-3s.ts";
 
 interface Skill {
   name: string;
