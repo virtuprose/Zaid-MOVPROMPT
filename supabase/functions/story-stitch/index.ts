@@ -196,8 +196,8 @@ serve(async (req) => {
         status: "processing",
         story_render_id: story_render_id ?? null,
         metadata: story_render_id
-          ? { transition: transitionKind }
-          : { stitched_job_ids: job_ids, transition: transitionKind },
+          ? { transition: transitionKind, fps: FPS }
+          : { stitched_job_ids: job_ids, transition: transitionKind, fps: FPS, overrides: overrides ?? null },
       })
       .select("*")
       .single();
@@ -209,36 +209,73 @@ serve(async (req) => {
       });
     }
 
-    // Build compose input — transition kind changes how adjacent clips overlap.
-    //   hard_cut  : clips placed back-to-back, no overlap (original behavior).
-    //   crossfade : 0.5s overlap between adjacent clips. fal compose will
-    //               concatenate audio with natural overlap; visual blending
-    //               depends on the compose endpoint's mixer.
-    //   match_cut : tight cut — trim 0.15s tail off each preceding clip so the
-    //               next clip starts earlier (cinematic pacing).
+    // Build compose input. Each boundary (between clip i and clip i+1) has an
+    // overlap window in seconds plus an optional offset that shifts the cut
+    // point earlier (-) or later (+). When the client doesn't send overrides
+    // we fall back to the transition preset's default overlap for every
+    // boundary, offset = 0.
+    //   hard_cut  : 0  frames overlap
+    //   crossfade : 12 frames @ 24fps (0.5s)
+    //   match_cut : 4  frames @ 24fps (~167ms)
     const sorted = story_render_id
       ? [...actRows].sort((a, b) => (a.act_index ?? 0) - (b.act_index ?? 0))
       : actRows;
-    const overlapSec =
-      transitionKind === "crossfade" ? 0.5 : transitionKind === "match_cut" ? 0.15 : 0;
+    const defaultOverlapFrames =
+      transitionKind === "crossfade" ? 12 : transitionKind === "match_cut" ? 4 : 0;
+
+    // Resolve per-boundary overlap/offset in seconds, clamped to the adjacent
+    // clip durations so we never request a negative-length slot.
+    const boundaries: Array<{ overlapSec: number; offsetSec: number }> = [];
+    for (let i = 0; i < sorted.length - 1; i++) {
+      const ov = Array.isArray(overrides) ? overrides[i] : undefined;
+      const overlapFrames =
+        ov && Number.isFinite(ov.overlapFrames)
+          ? Math.max(0, Math.round(ov.overlapFrames as number))
+          : defaultOverlapFrames;
+      const offsetFrames =
+        ov && Number.isFinite(ov.offsetFrames)
+          ? Math.round(ov.offsetFrames as number)
+          : 0;
+      const prevDur = perActDurations[i] ?? 10;
+      const nextDur = perActDurations[i + 1] ?? 10;
+      const maxOverlapF = Math.max(0, Math.floor(Math.min(prevDur, nextDur) * FPS) - 1);
+      const clampedOverlapF = Math.min(overlapFrames, maxOverlapF);
+      const overlapSec = clampedOverlapF * FRAME;
+      // Offset can shift the cut anywhere from "1 frame into A" to
+      // "1 frame before A ends after overlap is removed".
+      const offsetSlack = Math.max(0, prevDur - overlapSec - FRAME);
+      const minOffsetF = Math.ceil(-offsetSlack * FPS);
+      const maxOffsetF = Math.floor(offsetSlack * FPS);
+      const clampedOffsetF = Math.min(maxOffsetF, Math.max(minOffsetF, offsetFrames));
+      boundaries.push({
+        overlapSec,
+        offsetSec: clampedOffsetF * FRAME,
+      });
+    }
+
     let cursor = 0;
     const slots = sorted.map((a, i) => {
       const fullDur = perActDurations[i] ?? 10;
-      // For all but the first clip, advance the cursor backward by overlapSec.
-      const start = i === 0 ? 0 : cursor - overlapSec;
-      const slot = { url: a.video_url!, timestamp: Math.max(0, start), duration: fullDur };
+      let start: number;
+      if (i === 0) {
+        start = 0;
+      } else {
+        const b = boundaries[i - 1];
+        // Cursor is the end of the previous clip; pull back by overlap and
+        // then shift by the user-tuned offset for this boundary.
+        start = Math.max(0, cursor - b.overlapSec + b.offsetSec);
+      }
+      const slot = { url: a.video_url!, timestamp: start, duration: fullDur };
       cursor = start + fullDur;
       return slot;
     });
-    // For crossfade we also overlap the audio track so the previous clip's
-    // audio bleeds into the next. For match_cut the small overlap is enough
-    // to feel like a hard cut without an audible gap.
     const composeInput = {
       tracks: [
         { id: "video-track", type: "video", keyframes: slots },
         { id: "audio-track", type: "audio", keyframes: slots.map((s) => ({ ...s })) },
       ],
     };
+
 
     // Helper: idempotent refund guarded by metadata.refunded flag on the row.
     const refundOnce = async (stage: string) => {
