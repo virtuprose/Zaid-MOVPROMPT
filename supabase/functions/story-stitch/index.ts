@@ -205,35 +205,29 @@ serve(async (req) => {
     // simple concat we feed each act as a video keyframe with cumulative timestamps.
     // The endpoint stitches them at native resolution and re-encodes one MP4.
     try {
-      const sorted = [...actRows].sort((a, b) => (a.act_index ?? 0) - (b.act_index ?? 0));
-      // Best-effort concat via fal's ffmpeg-api/compose. Each video occupies a
-      // slot on a single video track; cumulative offsets keep the order.
-      const PER_ACT_SEC = 15;
-      const keyframes = sorted.map((a, i) => ({
-        url: a.video_url!,
-        timestamp: i * PER_ACT_SEC,
-        duration: PER_ACT_SEC,
-      }));
+      // For story_render mode, sort by act_index; for generic job_ids mode,
+      // actRows already preserves caller-supplied order.
+      const sorted = story_render_id
+        ? [...actRows].sort((a, b) => (a.act_index ?? 0) - (b.act_index ?? 0))
+        : actRows;
+      // Build cumulative timestamps using each clip's own duration so
+      // variable-length Director shots concat without gaps or overlap.
+      let cursor = 0;
+      const slots = sorted.map((a, i) => {
+        const dur = perActDurations[i] ?? 10;
+        const slot = { url: a.video_url!, timestamp: cursor, duration: dur };
+        cursor += dur;
+        return slot;
+      });
       const composeResp = (await fal.subscribe("fal-ai/ffmpeg-api/compose", {
         input: {
           tracks: [
-            {
-              id: "video-track",
-              type: "video",
-              keyframes,
-            },
-            {
-              id: "audio-track",
-              type: "audio",
-              keyframes: sorted.map((a, i) => ({
-                url: a.video_url!,
-                timestamp: i * PER_ACT_SEC,
-                duration: PER_ACT_SEC,
-              })),
-            },
+            { id: "video-track", type: "video", keyframes: slots },
+            { id: "audio-track", type: "audio", keyframes: slots.map((s) => ({ ...s })) },
           ],
         },
       })) as Record<string, any>;
+
       const stitchedUrl: string | undefined =
         composeResp?.video_url || composeResp?.video?.url || composeResp?.data?.video_url || composeResp?.data?.video?.url;
       if (!stitchedUrl) throw new Error("compose returned no video_url");
