@@ -190,7 +190,9 @@ serve(async (req) => {
         prompt: title || "Stitched story",
         status: "processing",
         story_render_id: story_render_id ?? null,
-        metadata: story_render_id ? null : { stitched_job_ids: job_ids },
+        metadata: story_render_id
+          ? { transition: transitionKind }
+          : { stitched_job_ids: job_ids, transition: transitionKind },
       })
       .select("*")
       .single();
