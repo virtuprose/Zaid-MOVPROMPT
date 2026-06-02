@@ -96,7 +96,7 @@ export function PlanPanel({ sessionId }: Props) {
     try {
       await supabase
         .from("director_sessions")
-        .update({ plan: next as unknown as object })
+        .update({ plan: next as never })
         .eq("id", sessionId);
     } finally {
       setSaving(false);
