@@ -522,15 +522,49 @@ export function TransitionPreview({
         <button
           type="button"
           onClick={reset}
-          className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-md text-muted-foreground hover:text-foreground transition-colors"
+          disabled={exporting}
+          className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-md text-muted-foreground hover:text-foreground transition-colors disabled:opacity-40"
         >
           <RotateCcw className="w-3.5 h-3.5" />
           Reset
         </button>
-        <span className="ml-auto text-[10px] text-muted-foreground">
-          Audio is muted in preview — final stitch will include each clip's audio.
-        </span>
+        <button
+          type="button"
+          onClick={() => {
+            if (exporting) {
+              exportCancelRef.current = true;
+            } else {
+              void runExport();
+            }
+          }}
+          disabled={clipUrls.length < 2}
+          className={cn(
+            "ml-auto inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md border transition-colors",
+            exporting
+              ? "border-destructive/50 text-destructive hover:bg-destructive/10"
+              : "border-primary/50 text-primary hover:bg-primary/10",
+            "disabled:opacity-40 disabled:hover:bg-transparent",
+          )}
+          title="Record this audition to a downloadable file"
+        >
+          {exporting ? (
+            <>
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              Exporting {Math.round(exportProgress * 100)}% · Cancel
+            </>
+          ) : (
+            <>
+              <Download className="w-3.5 h-3.5" />
+              Export preview
+            </>
+          )}
+        </button>
       </div>
+      <p className="text-[10px] text-muted-foreground">
+        Audio is muted in preview — final stitch will include each clip's audio.
+      </p>
+      {/* Hidden compositing canvas for MediaRecorder */}
+      <canvas ref={canvasRef} className="hidden" />
     </div>
   );
 }
