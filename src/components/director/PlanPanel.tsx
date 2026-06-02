@@ -681,6 +681,33 @@ export function PlanPanel({ sessionId }: Props) {
         />
       )}
 
+      <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+        <DialogContent className="max-w-2xl bg-[hsl(240_5%_8%)] border-border/60">
+          <DialogHeader>
+            <DialogTitle>Transition preview</DialogTitle>
+            <DialogDescription>
+              Audition hard cut, crossfade, and match cut timing across your{" "}
+              {stitchable.length} completed shots before paying to render the
+              stitched MP4.
+            </DialogDescription>
+          </DialogHeader>
+          {canStitch ? (
+            <TransitionPreview
+              clipUrls={stitchable.map((s) => s.url)}
+              durations={stitchable.map((s) => s.duration)}
+              transition={transition}
+              onTransitionChange={setTransition}
+            />
+          ) : (
+            <div className="text-sm text-muted-foreground py-6 text-center">
+              Need at least 2 completed shots to preview transitions.
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+
+
 
 
 
