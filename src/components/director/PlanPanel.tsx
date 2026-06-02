@@ -22,6 +22,16 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   type DirectorPlan,
   type PlannedShot,
   type RoutingBudget,
@@ -34,6 +44,7 @@ import { routeShot, type RouteDecision, type TasteSignals } from "@/lib/director
 import { MODEL_CATALOG } from "@/lib/director/videoModelCatalog";
 import { orchestratePlan } from "@/lib/director/orchestrator";
 import { loadMemoryFor, tasteSignalsFor } from "@/lib/director/memory";
+import { usePricing, estimateVideoCost } from "@/lib/credits/pricing";
 
 type Props = {
   sessionId: string | undefined;
@@ -67,6 +78,9 @@ export function PlanPanel({ sessionId }: Props) {
   const [saving, setSaving] = useState(false);
   const [running, setRunning] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [balance, setBalance] = useState<number | null>(null);
+  const prices = usePricing();
   // Keep the latest plan in a ref so the realtime handler always patches the
   // freshest version without re-subscribing on every render.
   const planRef = useRef<DirectorPlan>(emptyPlan);
@@ -224,6 +238,26 @@ export function PlanPanel({ sessionId }: Props) {
     (s) => s.status === "done" && !!s.outputUrl,
   ).length;
 
+  // Per-shot + total credit estimate for the confirm dialog.
+  const renderableEstimates = useMemo(
+    () =>
+      renderable.map((s, i) => {
+        const modelId = s.locked.model ?? "seedance-v1-pro";
+        const dur = s.locked.duration_seconds ?? 5;
+        return {
+          shotId: s.id,
+          index: plan.shots.findIndex((x) => x.id === s.id),
+          intent: s.intent || `Shot ${i + 1}`,
+          modelId,
+          durationSec: dur,
+          cost: estimateVideoCost(prices, modelId, dur),
+        };
+      }),
+    [renderable, prices, plan.shots],
+  );
+  const totalEstimate = renderableEstimates.reduce((a, b) => a + b.cost, 0);
+  const insufficient = balance != null && balance < totalEstimate;
+
   const exportToDrive = async () => {
     if (!sessionId || exportableCount === 0 || exporting) return;
     setExporting(true);
@@ -251,13 +285,27 @@ export function PlanPanel({ sessionId }: Props) {
     }
   };
 
-  const runPlan = async () => {
+  const openConfirm = async () => {
     if (!sessionId || renderable.length === 0 || running) return;
+    setConfirmOpen(true);
+    // Refresh balance each time the dialog opens.
+    const { data } = await supabase
+      .from("user_credits")
+      .select("balance")
+      .maybeSingle();
+    setBalance(
+      typeof (data as { balance?: number } | null)?.balance === "number"
+        ? (data as { balance: number }).balance
+        : null,
+    );
+  };
+
+  const confirmRender = async () => {
+    if (!sessionId || renderable.length === 0 || running) return;
+    setConfirmOpen(false);
     setRunning(true);
     try {
       const res = await orchestratePlan(sessionId);
-      // Optimistically mark targets as rendering — the function also persists,
-      // and our next load (or any future edit) will pick up the canonical state.
       const targetIds = new Set(renderable.map((s) => s.id));
       setPlan((p) => ({
         ...p,
@@ -317,7 +365,7 @@ export function PlanPanel({ sessionId }: Props) {
           ))}
           <button
             type="button"
-            onClick={runPlan}
+            onClick={openConfirm}
             disabled={running || renderable.length === 0}
             title={
               renderable.length === 0
@@ -496,6 +544,69 @@ export function PlanPanel({ sessionId }: Props) {
           })}
         </ol>
       )}
+
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent className="bg-[hsl(240_5%_8%)] border-border/60">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-display tracking-tight">
+              Render {renderable.length} shot{renderable.length === 1 ? "" : "s"}?
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3 text-sm">
+                <div className="text-muted-foreground">
+                  Estimated cost across all shots. Each shot is charged when it
+                  starts; failed renders are refunded automatically.
+                </div>
+                <ul className="rounded-md border border-border/40 divide-y divide-border/30 max-h-64 overflow-y-auto">
+                  {renderableEstimates.map((e) => (
+                    <li
+                      key={e.shotId}
+                      className="flex items-center gap-2 px-3 py-1.5 text-xs"
+                    >
+                      <span className="w-6 text-muted-foreground tabular-nums">
+                        {String(e.index + 1).padStart(2, "0")}
+                      </span>
+                      <span className="flex-1 truncate text-foreground/90">
+                        {e.intent}
+                      </span>
+                      <span className="text-[10px] text-muted-foreground truncate max-w-[120px]">
+                        {e.modelId} · {e.durationSec}s
+                      </span>
+                      <span className="tabular-nums text-foreground/90 w-12 text-right">
+                        {e.cost}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+                <div className="flex items-center justify-between pt-1">
+                  <span className="text-muted-foreground">
+                    Balance: {balance == null ? "…" : `${balance} credits`}
+                  </span>
+                  <span className="font-display text-base text-foreground">
+                    Total ≈ <span className="text-accent">{totalEstimate}</span>{" "}
+                    credits
+                  </span>
+                </div>
+                {insufficient && (
+                  <div className="text-destructive text-xs">
+                    Not enough credits — top up before rendering.
+                  </div>
+                )}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmRender}
+              disabled={insufficient || renderable.length === 0}
+              className="bg-accent text-accent-foreground hover:bg-accent/90"
+            >
+              Render {renderable.length} · {totalEstimate} credits
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </section>
   );
 }
