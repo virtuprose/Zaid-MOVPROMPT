@@ -326,9 +326,13 @@ export default function Director() {
               <DirectorChat />
             </DirectorErrorBoundary>
           </div>
+
+          <MediaRailPanel />
         </div>
 
       </div>
+      </MediaRailProvider>
+
 
       <Dialog open={!!renameTarget} onOpenChange={(o) => !o && setRenameTarget(null)}>
         <DialogContent className="rounded-2xl border-border/60 bg-[hsl(240_5%_8%)] sm:max-w-md">
