@@ -25,6 +25,7 @@ import {
   TRANSITION_LABELS,
   TRANSITION_DESCRIPTIONS,
   type StitchTransition,
+  type TransitionOverride,
 } from "@/lib/director/stitch";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
