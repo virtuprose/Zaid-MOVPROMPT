@@ -85,8 +85,9 @@ export function PlanPanel({ sessionId }: Props) {
   const [running, setRunning] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [stitching, setStitching] = useState(false);
+  const stitchCancelRef = useRef(false);
   const [stitchPreview, setStitchPreview] = useState<{
-    status: "composing" | "done" | "failed";
+    status: "composing" | "done" | "failed" | "cancelled";
     startedAt: number;
     clipUrls: string[];
     totalDuration: number;
