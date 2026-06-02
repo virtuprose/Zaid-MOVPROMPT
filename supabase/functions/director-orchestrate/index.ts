@@ -10,6 +10,13 @@
 // video_jobs back into the plan via realtime/polling on video_jobs. This
 // keeps the function call short and the per-shot status flow consistent
 // with single-shot Director renders.
+//
+// Debug mode (debug: true in body): every validation/auth/ownership/filter
+// step is recorded in a `trace` array and returned to the caller. When debug
+// is on we ALWAYS return 200 and we NEVER submit renders or mutate the plan
+// — the orchestrator becomes a read-only inspector that reports the exact
+// short-circuit reason (if any) plus the resolved render targets it would
+// have submitted, so the UI can show why no credits were charged.
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
@@ -48,6 +55,14 @@ interface DirectorPlan {
   globals: Record<string, unknown>;
 }
 
+type TraceStep = {
+  step: string;
+  ok: boolean;
+  detail?: string;
+  data?: Record<string, unknown>;
+  durationMs?: number;
+};
+
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -76,9 +91,49 @@ async function withConcurrency<T, R>(
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
-  const auth = req.headers.get("Authorization");
-  if (!auth?.startsWith("Bearer ")) return json({ error: "Unauthorized" }, 401);
+  const startedAt = Date.now();
+  const trace: TraceStep[] = [];
+  let debug = false;
+  const tick = () => Date.now() - startedAt;
+  const record = (s: TraceStep) => {
+    trace.push({ durationMs: tick(), ...s });
+  };
 
+  // Short-circuit helper: when debug=true the orchestrator never errors out —
+  // it always returns 200 with the trace so the UI can show every step.
+  const shortCircuit = (
+    step: string,
+    detail: string,
+    status: number,
+    extra: Record<string, unknown> = {},
+  ) => {
+    record({ step, ok: false, detail });
+    if (debug) {
+      return json(
+        {
+          dryRun: true,
+          shortCircuitedAt: step,
+          reason: detail,
+          wouldReturnStatus: status,
+          creditsCharged: 0,
+          trace,
+          ...extra,
+        },
+        200,
+      );
+    }
+    return json({ error: detail, trace }, status);
+  };
+
+  // 1. Auth header present
+  const auth = req.headers.get("Authorization");
+  if (!auth?.startsWith("Bearer ")) {
+    record({ step: "auth.header", ok: false, detail: "Missing Bearer token" });
+    return json({ error: "Unauthorized", trace }, 401);
+  }
+  record({ step: "auth.header", ok: true });
+
+  // 2. JWT validation
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
   const userClient = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_ANON_KEY")!, {
     global: { headers: { Authorization: auth } },
@@ -86,52 +141,146 @@ serve(async (req) => {
   const { data: claims, error: claimsErr } = await userClient.auth.getClaims(
     auth.replace("Bearer ", ""),
   );
-  if (claimsErr || !claims?.claims) return json({ error: "Unauthorized" }, 401);
+  if (claimsErr || !claims?.claims) {
+    record({ step: "auth.jwt", ok: false, detail: claimsErr?.message ?? "Invalid token" });
+    return json({ error: "Unauthorized", trace }, 401);
+  }
   const uid = claims.claims.sub as string;
+  record({ step: "auth.jwt", ok: true, data: { uid } });
 
   const admin = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
-  let body: { sessionId?: string; shotIds?: string[] } = {};
+  // 3. Body parse
+  let body: { sessionId?: string; shotIds?: string[]; debug?: boolean } = {};
   try {
     const txt = await req.text();
     body = txt ? JSON.parse(txt) : {};
   } catch (_e) {
-    return json({ error: "Invalid JSON" }, 400);
+    record({ step: "body.parse", ok: false, detail: "Invalid JSON" });
+    return json({ error: "Invalid JSON", trace }, 400);
   }
+  debug = body.debug === true;
+  record({
+    step: "body.parse",
+    ok: true,
+    data: { hasSessionId: !!body.sessionId, shotIds: body.shotIds ?? null, debug },
+  });
+
+  // 4. sessionId required
   const sessionId = body.sessionId;
   if (!sessionId || typeof sessionId !== "string") {
-    return json({ error: "sessionId required" }, 400);
+    return shortCircuit("validate.sessionId", "sessionId required", 400);
   }
+  record({ step: "validate.sessionId", ok: true, data: { sessionId } });
 
+  // 5. Session exists
   const { data: session, error: sessErr } = await admin
     .from("director_sessions")
     .select("id, user_id, plan")
     .eq("id", sessionId)
     .maybeSingle();
-  if (sessErr || !session) return json({ error: "Session not found" }, 404);
-  if (session.user_id !== uid) return json({ error: "Forbidden" }, 403);
+  if (sessErr || !session) {
+    return shortCircuit(
+      "session.lookup",
+      sessErr?.message ?? "Session not found",
+      404,
+    );
+  }
+  record({ step: "session.lookup", ok: true, data: { sessionId: session.id } });
 
+  // 6. Ownership
+  if (session.user_id !== uid) {
+    return shortCircuit("session.ownership", "Forbidden", 403, {
+      data: { sessionOwner: session.user_id, caller: uid },
+    });
+  }
+  record({ step: "session.ownership", ok: true });
+
+  // 7. Plan has shots
   const plan: DirectorPlan = (session.plan as DirectorPlan | null) ?? { shots: [], globals: {} };
   if (!Array.isArray(plan.shots) || plan.shots.length === 0) {
-    return json({ error: "Plan has no shots" }, 400);
+    return shortCircuit("plan.hasShots", "Plan has no shots", 400, {
+      data: { shotCount: 0 },
+    });
   }
+  record({
+    step: "plan.hasShots",
+    ok: true,
+    data: {
+      shotCount: plan.shots.length,
+      byStatus: plan.shots.reduce<Record<string, number>>((acc, s) => {
+        acc[s.status] = (acc[s.status] ?? 0) + 1;
+        return acc;
+      }, {}),
+    },
+  });
 
-  // Eligible: not already rendering or done, has a prompt and a routed model.
+  // 8. Resolve renderable targets and report why each shot was excluded.
   const filterIds = Array.isArray(body.shotIds) ? new Set(body.shotIds) : null;
+  const excluded: Array<{ shotId: string; reason: string }> = [];
   const targets = plan.shots.filter((s) => {
-    if (filterIds && !filterIds.has(s.id)) return false;
-    if (s.status === "rendering" || s.status === "done") return false;
-    if (!s.prompt || !s.prompt.trim()) return false;
-    if (!s.locked.model) return false;
+    if (filterIds && !filterIds.has(s.id)) {
+      excluded.push({ shotId: s.id, reason: "not in shotIds filter" });
+      return false;
+    }
+    if (s.status === "rendering" || s.status === "done") {
+      excluded.push({ shotId: s.id, reason: `status=${s.status}` });
+      return false;
+    }
+    if (!s.prompt || !s.prompt.trim()) {
+      excluded.push({ shotId: s.id, reason: "no prompt" });
+      return false;
+    }
+    if (!s.locked.model) {
+      excluded.push({ shotId: s.id, reason: "no locked model" });
+      return false;
+    }
     return true;
+  });
+  record({
+    step: "filter.renderable",
+    ok: targets.length > 0,
+    data: {
+      eligible: targets.length,
+      excluded,
+      targets: targets.map((t) => ({
+        id: t.id,
+        model: t.locked.model,
+        durationSec: t.locked.duration_seconds,
+      })),
+    },
   });
 
   if (targets.length === 0) {
-    return json({ error: "No renderable shots (need prompt + model, not already rendering/done)" }, 400);
+    return shortCircuit(
+      "filter.renderable",
+      "No renderable shots (need prompt + model, not already rendering/done)",
+      400,
+    );
   }
 
-  // Submit each shot via generate-video. We call it as an HTTP endpoint and
-  // forward the user's Authorization so credits/RLS are scoped correctly.
+  // Debug mode stops here — we don't submit renders or mutate the plan.
+  if (debug) {
+    record({
+      step: "debug.dryRun",
+      ok: true,
+      detail: "Would submit renders — stopping (debug mode)",
+      data: { wouldSubmit: targets.length },
+    });
+    return json({
+      dryRun: true,
+      wouldSubmit: targets.length,
+      creditsCharged: 0,
+      targets: targets.map((t) => ({
+        id: t.id,
+        model: t.locked.model,
+        durationSec: t.locked.duration_seconds,
+      })),
+      trace,
+    });
+  }
+
+  // 9. Submit each shot via generate-video.
   const genVideoUrl = `${SUPABASE_URL}/functions/v1/generate-video`;
   const results = await withConcurrency(targets, CONCURRENCY, async (shot) => {
     try {
@@ -180,6 +329,14 @@ serve(async (req) => {
       };
     }
   });
+  record({
+    step: "submit.renders",
+    ok: results.some((r) => r.ok),
+    data: {
+      submitted: results.filter((r) => r.ok).length,
+      failed: results.filter((r) => !r.ok).length,
+    },
+  });
 
   // Patch the plan with rendering / failed status + linked job ids.
   const updatedShots = plan.shots.map((s) => {
@@ -201,10 +358,12 @@ serve(async (req) => {
     .update({ plan: { ...plan, shots: updatedShots }, updated_at: new Date().toISOString() })
     .eq("id", sessionId);
   if (updErr) console.error("director-orchestrate plan update failed", updErr);
+  record({ step: "plan.update", ok: !updErr, detail: updErr?.message });
 
   return json({
     submitted: results.filter((r) => r.ok).length,
     failed: results.filter((r) => !r.ok).length,
     results,
+    trace,
   });
 });
