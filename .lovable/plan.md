@@ -1,106 +1,33 @@
-# Director → Orchestrator: evolution sketch
+## Goal
 
-A staged path from today's single-shot Director ("brief → one prompt → one model") to an orchestrator ("brief → plan → route each step to the best model → assemble → deliver"), without copying Hermes wholesale. Each stage ships value on its own.
+Make the transition audition in `TransitionPreview` frame-accurate at 24 fps, with draggable per-transition markers that adjust both the cut point and the overlap length, and a scrubber that snaps to frame boundaries when Shift is held.
 
-## Where we are today
+## What changes (UX)
 
-```text
-user brief ──▶ Director (single agent) ──▶ one cinematic prompt ──▶ one video model ──▶ one clip
-```
+- **Frame grid**: all timing rendered and snapped to 1/24 s (≈41.67 ms). Display time as `m:ss:ff` (frames) instead of `m:ss.t`.
+- **Per-transition overrides** (stored per-clip-boundary, reset when clips/transition preset change):
+  - `offsetFrames` — shifts the cut point earlier (−) or later (+) along clip A.
+  - `overlapFrames` — overrides the blend window length (defaults from preset: hard 0 / crossfade 12 / match 4).
+- **Markers**: each boundary shows a draggable diamond at the cut point and two handles framing the shaded overlap region. Tooltip shows local offset (e.g. `+3f` / `12f overlap`).
+- **Scrubber**: free by default; **hold Shift** to snap to nearest frame. Left/Right arrow keys step ±1 frame, Shift+Arrow steps ±1 second (always frame-aligned).
+- **Reset per-marker**: double-click a marker to clear its override back to the preset defaults.
+- **HUD**: timecode badge updated to `00:04:11` style; overlap badge shows `12f (500 ms)`.
 
-What already smells orchestrator-shaped in the codebase:
+## What changes (logic)
 
-- `generate-prompt/experts/registry.ts` — per-model expert agents (Kling, Seedance, Veo, generic). Model-specialist routing already exists at prompt-craft level.
-- `lib/director/modelRanking.ts` + `generic.ts` `recommendedModel` rubric — we already score "best model for this shot".
-- Free Chat → Director handoff (`.lovable/plan.md`) — a lightweight two-phase pattern (brainstorm → locked spec) is already in place.
-- `lib/director/tasteProfile.ts`, brand kits, character kits — memory primitives, just not unified.
-- `story-bundle` / `story-render` / `story-stitch` edge functions — multi-shot rendering scaffolding exists.
+- Replace the constant `TRANSITION_CONFIG` overlap with `defaultOverlapFrames` per preset; convert to seconds via `FPS = 24`.
+- Recompute `starts[]` from per-transition overrides each time they change:
+  `start[i] = start[i-1] + dur[i-1] − overlap[i-1] + offset[i-1]` (clamped ≥ 0, and overlap clamped to `min(dur[i-1], dur[i]) − 1f`).
+- Blend `opacityB` uses the per-transition overlap; if overlap = 0 → hard snap regardless of preset.
+- Export recorder reuses the same overrides so the downloaded preview matches what was auditioned.
+- Scrubber `onValueChange` snaps to nearest frame when `event.shiftKey` is true; otherwise stays at ms precision.
 
-So the gap to "orchestrator" is smaller than it looks: we have the parts, they aren't yet stitched into a single planning loop.
+## Where
 
-## Target shape
+- `src/components/director/TransitionPreview.tsx` — all changes live here. New helpers (frame ↔ seconds, `fmtTC`) and a small `overrides` state map keyed by boundary index. Drag handling via pointer events on the timeline track.
+- No backend / stitch endpoint changes — server-side stitch already accepts the chosen transition; per-marker overrides only affect the local audition + exported preview MP4 for now.
 
-```text
-                       ┌──────────────────────────────────────┐
-brief + refs ──▶ PLAN ─┤ shot 1 → route → expert → model A   ├─▶ assemble ──▶ deliver
-                       │ shot 2 → route → expert → model B   │   (stitch /
-                       │ shot 3 → route → expert → model A   │    bundle /
-                       │ …                                    │    export)
-                       └──────────────────────────────────────┘
-                                  ▲          ▲
-                                  │          │
-                              memory     cost/latency
-                          (taste, brand,  budget policy
-                           character,
-                           project)
-```
+## Out of scope
 
-Key idea: the Director stops being "the thing that writes one prompt" and becomes "the thing that owns the plan and routes each step." Per-model experts stay — they become the workers the orchestrator calls.
-
-## Staged rollout
-
-### Stage 1 — Make the plan a first-class object (no new models needed)
-
-Today the "plan" is implicit in chat markdown. Make it explicit.
-
-- New type `DirectorPlan = { shots: PlannedShot[], globals: {...}, memoryRefs: {...} }` in `src/lib/director/`.
-- `PlannedShot = { id, intent, locked: {duration, aspect, audio, model}, prompt?, status: 'draft'|'ready'|'rendering'|'done'|'failed', outputUrl? }`.
-- Persist on `director_sessions` alongside messages. UI gains a collapsible "Plan" panel in `DirectorChat` showing the shot list with status chips.
-- The existing pre-generation checklist (from `.lovable/plan.md`) now fills in `locked.*` per shot instead of per-session.
-
-Ships: visible plan, per-shot status, foundation for everything below.
-
-### Stage 2 — Per-shot model routing (turn `recommendedModel` into a real router)
-
-- Extract a `routeShot(shot, budget, taste) → modelId` function from `generic.ts` + `modelRanking.ts`. Pure function, easy to test.
-- Director proposes the routed model per shot; user can override (chip on each shot row).
-- Add a `budget` axis to session settings: `quality | balanced | cheap` → biases routing toward Veo / mid-tier / Seedance-lite. Mirrors Hermes' "Orchestrator" layer without claiming parity.
-
-Ships: "we pick the model, you don't choose" as a real differentiator, not just per-prompt advice.
-
-### Stage 3 — Executor loop (one brain, many workers)
-
-- New edge function `director-orchestrate` that, given a `DirectorPlan`:
-  1. For each `ready` shot in parallel (bounded concurrency), calls the right expert agent in `generate-prompt/experts/` to craft the model-specific prompt.
-  2. Invokes `generate-video` with the routed model.
-  3. Streams per-shot status back via existing realtime channel.
-- Failures route to a retry policy (re-route to fallback model after N fails) — kept simple, no agent loop here.
-- `story-bundle` / `story-stitch` become the assembly step at the end.
-
-Ships: one click on a multi-shot plan produces a finished cut. This is the moment Director feels like an orchestrator, not a prompt builder.
-
-### Stage 4 — Unify memory
-
-Three existing stores get a single read API:
-
-- `tasteProfile.ts` (project/user style)
-- brand kits (`lib/marketing/brandKit.ts`)
-- character kits (`lib/marketing/characterKit.ts`)
-
-New `lib/director/memory.ts` exposes `loadMemoryFor(sessionId) → { taste, brands, characters, recentShots }` and is injected into every expert call + the router. No new storage; just a façade. This is what Hermes markets as "3 memory layers" — we already have the data.
-
-### Stage 5 — Connectors (optional, only if users ask)
-
-The Hermes "ship to Slack/Drive/Figma" angle. Not core to MovPrompt's wedge. Defer until a real user asks. If we do it, do one connector well (Drive export of the assembled cut) rather than a matrix.
-
-## What we deliberately don't copy from Hermes
-
-- **Telegram / browser-agnostic surface** — not our wedge.
-- **40+ tools** — surface area trap; we'd dilute the "cinematic DP" identity.
-- **"Whole team is one agent" branding** — MovPrompt is sharper as *AI Director of Photography*, not *AI everything*. The orchestrator is a capability, not the headline.
-- **Multi-model LLM routing for the planner itself** — keep Director on `gemini-3.1-pro-preview` (per project memory) until we have evidence another model plans better.
-
-## Risks / open questions
-
-- **UX of an exposed plan**: shot tables can feel spreadsheety. Worth a design pass before shipping Stage 1 — could render as a vertical "storyboard rail" instead of a table.
-- **Cost surprise**: a one-click multi-shot render can rack up credits fast. Need a confirm-with-estimated-cost step in Stage 3 (we already have `lib/credits/pricing.ts`).
-- **When to plan vs. ask**: orchestrator must still respect the one-question-per-turn rule. Suggest: plan is drafted silently as soon as enough info exists; questions still come one at a time to fill `locked.*` gaps per shot.
-- **Story mode overlap**: there's existing `story-*` infra. Stage 3 should reuse it, not parallel-build. Need a short spike to confirm shape fits.
-
-## Suggested first PR (if you green-light Stage 1)
-
-1. Add `DirectorPlan` types + persistence column on `director_sessions`.
-2. Render a read-only Plan panel in `DirectorChat` populated from current session state (no behavior change yet).
-3. Migrate the pre-generation checklist to write into `plan.shots[0].locked` for single-shot sessions.
-
-Small, reversible, and unblocks Stages 2–4.
+- Persisting overrides to the database or applying them to the server-side ffmpeg stitch (can be a follow-up: pass `transitions[]` array to `story-stitch`).
+- Per-clip fps detection (using fixed 24 fps as requested).
