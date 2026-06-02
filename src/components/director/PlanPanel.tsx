@@ -920,11 +920,13 @@ function StitchPreview({
   nowTick,
   onDismiss,
   onRetry,
+  onCancel,
 }: {
   preview: StitchPreviewState;
   nowTick: number;
   onDismiss: () => void;
   onRetry: () => void;
+  onCancel: () => void;
 }) {
   const elapsedMs = nowTick - preview.startedAt;
   const elapsed = Math.max(0, Math.floor(elapsedMs / 1000));
