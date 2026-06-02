@@ -13,6 +13,11 @@ export type LockedAxes = {
   resolution?: string;
 };
 
+export type ShotMetadata = {
+  /** ID of the video_jobs row spawned by the orchestrator for this shot. */
+  video_job_id?: string;
+} & Record<string, unknown>;
+
 export type PlannedShot = {
   id: string;
   intent: string;
@@ -23,6 +28,7 @@ export type PlannedShot = {
   status: ShotStatus;
   outputUrl?: string;
   error?: string;
+  metadata?: ShotMetadata;
 };
 
 export type RoutingBudget = "quality" | "balanced" | "cheap";

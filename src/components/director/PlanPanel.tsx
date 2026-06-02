@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ChevronDown,
   Film,
@@ -8,9 +8,12 @@ import {
   Sparkles,
   Wand2,
   Check,
+  Play,
+  Loader2,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import {
   Popover,
   PopoverContent,
@@ -27,6 +30,7 @@ import {
 } from "@/lib/director/plan";
 import { routeShot, type RouteDecision } from "@/lib/director/router";
 import { MODEL_CATALOG } from "@/lib/director/videoModelCatalog";
+import { orchestratePlan } from "@/lib/director/orchestrator";
 
 type Props = {
   sessionId: string | undefined;
@@ -58,6 +62,13 @@ export function PlanPanel({ sessionId }: Props) {
   const [open, setOpen] = useState(true);
   const [loaded, setLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [running, setRunning] = useState(false);
+  // Keep the latest plan in a ref so the realtime handler always patches the
+  // freshest version without re-subscribing on every render.
+  const planRef = useRef<DirectorPlan>(emptyPlan);
+  useEffect(() => {
+    planRef.current = plan;
+  }, [plan]);
 
   useEffect(() => {
     if (!sessionId) {
@@ -129,6 +140,94 @@ export function PlanPanel({ sessionId }: Props) {
     });
   };
 
+  // Stage 3: Realtime reconciliation. When a video_job linked to a shot
+  // completes or fails, patch the corresponding shot's status + outputUrl.
+  useEffect(() => {
+    if (!sessionId) return;
+    const trackedJobIds = plan.shots
+      .map((s) => s.metadata?.video_job_id)
+      .filter((id): id is string => typeof id === "string" && id.length > 0);
+    if (trackedJobIds.length === 0) return;
+
+    const channel = supabase
+      .channel(`director-plan-${sessionId}`)
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "video_jobs" },
+        (payload) => {
+          const row = payload.new as {
+            id?: string;
+            status?: string;
+            video_url?: string | null;
+            error?: string | null;
+          };
+          if (!row.id || !trackedJobIds.includes(row.id)) return;
+          if (row.status !== "completed" && row.status !== "failed") return;
+
+          const current = planRef.current;
+          const nextShots = current.shots.map((s) => {
+            if (s.metadata?.video_job_id !== row.id) return s;
+            if (row.status === "completed") {
+              return {
+                ...s,
+                status: "done" as const,
+                outputUrl: row.video_url ?? s.outputUrl,
+                error: undefined,
+              };
+            }
+            return {
+              ...s,
+              status: "failed" as const,
+              error: row.error ?? "Render failed",
+            };
+          });
+          void persist({ ...current, shots: nextShots });
+        },
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionId, plan.shots.map((s) => s.metadata?.video_job_id).join("|")]);
+
+  const renderable = plan.shots.filter(
+    (s) =>
+      s.status !== "rendering" &&
+      s.status !== "done" &&
+      !!s.prompt?.trim() &&
+      !!s.locked.model,
+  );
+  const anyRendering = plan.shots.some((s) => s.status === "rendering");
+
+  const runPlan = async () => {
+    if (!sessionId || renderable.length === 0 || running) return;
+    setRunning(true);
+    try {
+      const res = await orchestratePlan(sessionId);
+      // Optimistically mark targets as rendering — the function also persists,
+      // and our next load (or any future edit) will pick up the canonical state.
+      const targetIds = new Set(renderable.map((s) => s.id));
+      setPlan((p) => ({
+        ...p,
+        shots: p.shots.map((s) =>
+          targetIds.has(s.id) ? { ...s, status: "rendering" as const, error: undefined } : s,
+        ),
+      }));
+      if (res.failed > 0) {
+        toast.error(`${res.failed} shot${res.failed === 1 ? "" : "s"} failed to submit`);
+      }
+      if (res.submitted > 0) {
+        toast.success(`Rendering ${res.submitted} shot${res.submitted === 1 ? "" : "s"}`);
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to start render");
+    } finally {
+      setRunning(false);
+    }
+  };
+
   if (!loaded || !sessionId || plan.shots.length === 0) return null;
 
   return (
@@ -166,6 +265,34 @@ export function PlanPanel({ sessionId }: Props) {
               {b.label}
             </button>
           ))}
+          <button
+            type="button"
+            onClick={runPlan}
+            disabled={running || renderable.length === 0}
+            title={
+              renderable.length === 0
+                ? anyRendering
+                  ? "Render already in progress"
+                  : "No shots ready to render (need prompt + model)"
+                : `Render ${renderable.length} shot${renderable.length === 1 ? "" : "s"}`
+            }
+            className={cn(
+              "ml-1 inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-md border transition-colors",
+              renderable.length > 0 && !running
+                ? "bg-accent/15 border-accent/40 text-accent hover:bg-accent/25"
+                : "border-border/30 text-muted-foreground/60 cursor-not-allowed",
+            )}
+          >
+            {running ? (
+              <Loader2 className="w-3 h-3 animate-spin" />
+            ) : (
+              <Play className="w-3 h-3" />
+            )}
+            Render
+            {renderable.length > 0 && (
+              <span className="tabular-nums opacity-70">{renderable.length}</span>
+            )}
+          </button>
           {saving && <span className="text-[10px] text-muted-foreground ml-1">Saving…</span>}
           <ChevronDown
             className={cn(
