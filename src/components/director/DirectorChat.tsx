@@ -2748,11 +2748,13 @@ function DirectorChatInner() {
               return (
                 <div key={i} className="flex items-start gap-2 motion-safe:animate-fade-up">
                   <AssistantAvatar size="sm" state="idle" className="mt-1" />
-                  <div className="flex-1">
+                  <div className="flex-1 min-w-0">
                     <Message from="assistant">
                       <MessageContent className={cn(
                         "leading-relaxed text-foreground/90",
-                        b.markdown ? "prose prose-invert prose-sm max-w-none" : "whitespace-pre-wrap",
+                        b.markdown
+                          ? "prose prose-invert prose-sm max-w-none break-words [&_pre]:whitespace-pre-wrap [&_pre]:break-words [&_pre]:overflow-x-hidden [&_code]:whitespace-pre-wrap [&_code]:break-words"
+                          : "whitespace-pre-wrap",
                       )}>
                         {b.markdown ? (
                           <ReactMarkdown>{b.content}</ReactMarkdown>

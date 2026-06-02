@@ -1,41 +1,44 @@
-## What that corner artifact is
+## Problem
 
-In the screenshot, the dark crescent in the top-left of the composer is the **drag‑highlight overlay leaking through the rounded corner**.
+When the AI Director replies with a long prompt, the output renders inside a markdown code block (```), and the browser default for `<pre><code>` — reinforced by Tailwind Typography (`prose`) — is `white-space: pre; overflow-x: auto`. Result: the reader has to horizontally scroll a single line for several screens before reading the next one (visible in the earlier screenshot).
 
-In `src/components/director/Composer.tsx` (lines 359–367) the dropzone wrapper is:
-
-```tsx
-<div className={`relative rounded-2xl bg-card ${highlight ? "ring-2 ring-accent bg-accent/5" : ""}`}>
-  {highlight && (
-    <div className="pointer-events-none absolute inset-0 ... rounded-2xl bg-accent/10">
-      Drop here to attach
-    </div>
-  )}
-  <textarea ... />
-</div>
-```
-
-Two problems combine to make that dark notch:
-
-1. The parent `<div>` uses `rounded-2xl` but does **not** clip its children (`overflow-hidden` is missing). The textarea (and the `bg-accent/10` highlight panel) are rectangular, so their square corners poke past the rounded mask of the parent.
-2. The drag highlight is toggled by `dragenter` / `dragleave`. The session replay shows the user mousing over the composer (an attachment thumbnail/file got dragged), which flips `highlight` on briefly, then off — but the overlay's `bg-accent/10` against `bg-card` plus the square corner produces the visible darker arc in the top-left.
-
-Even without the drag state, the same setup will show a faint square‑vs‑rounded mismatch any time the textarea has any background (focus ring, autofill, selection).
+The user bubble already uses `whitespace-pre-wrap`, so the issue is isolated to the **assistant markdown branch** in `DirectorChat.tsx` (around line 2755) which renders `<ReactMarkdown>` inside `prose prose-invert`.
 
 ## Fix
 
-Single-file, presentation-only change in `src/components/director/Composer.tsx` (the dropzone wrapper around line 359):
+Force code blocks and inline code rendered by ReactMarkdown to wrap and break long tokens, keeping the monospace look.
 
-- Add `overflow-hidden` to the wrapper so every child is clipped to the `rounded-2xl` shape.
-- Keep `rounded-2xl` on the highlight overlay as a defensive belt-and-braces (already there).
-- No logic, no state, no other components touched.
+### File: `src/components/director/DirectorChat.tsx`
 
-Result: the corner stays a clean rounded curve in idle, hover, focus, and drag states.
+In the assistant markdown branch only, update the `MessageContent` className:
+
+```tsx
+b.markdown
+  ? "prose prose-invert prose-sm max-w-none break-words [&_pre]:whitespace-pre-wrap [&_pre]:break-words [&_pre]:overflow-x-hidden [&_code]:whitespace-pre-wrap [&_code]:break-words"
+  : "whitespace-pre-wrap"
+```
+
+Also add `min-w-0` to the assistant row's `flex-1` wrapper (line ~2751) so the prose container can shrink inside the flex parent:
+
+```tsx
+<div className="flex-1 min-w-0">
+```
+
+Rationale:
+- `whitespace-pre-wrap` on `<pre>` preserves newlines but wraps long lines.
+- `break-words` handles single tokens longer than the container (URLs, dense prompts).
+- `overflow-x-hidden` removes the residual scrollbar inside the bubble.
+- `min-w-0` lets the flex child collapse to the available width on narrow viewports.
+
+## Scope
+
+- Frontend / presentation only.
+- Single file: `src/components/director/DirectorChat.tsx`.
+- No changes to the Director agent, skills, user bubbles, or other components.
 
 ## Verification
 
-1. Open `/director/<session>` at 1119px width.
-2. Confirm the composer's top corners are perfectly rounded with no dark crescent.
-3. Drag a file over the composer — the "Drop here to attach" overlay should fill the rounded shape exactly, no square corners.
-4. Focus the textarea and type — no square edge appears.
-5. Check at mobile width (375px) and RTL — corners stay clean.
+1. Open `/director/<existing session>` where the Director returned a long prompt.
+2. Confirm the prompt text wraps within the chat column on desktop (1119px), tablet, and mobile widths — no horizontal scrollbar inside the assistant bubble.
+3. Confirm the "Send to Director" button still appears below the wrapped block.
+4. Confirm monospace formatting and model-emitted line breaks are preserved.
