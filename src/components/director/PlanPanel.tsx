@@ -22,6 +22,16 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   type DirectorPlan,
   type PlannedShot,
   type RoutingBudget,
@@ -34,6 +44,7 @@ import { routeShot, type RouteDecision, type TasteSignals } from "@/lib/director
 import { MODEL_CATALOG } from "@/lib/director/videoModelCatalog";
 import { orchestratePlan } from "@/lib/director/orchestrator";
 import { loadMemoryFor, tasteSignalsFor } from "@/lib/director/memory";
+import { usePricing, estimateVideoCost } from "@/lib/credits/pricing";
 
 type Props = {
   sessionId: string | undefined;
