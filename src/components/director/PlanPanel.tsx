@@ -573,6 +573,7 @@ export function PlanPanel({ sessionId }: Props) {
           nowTick={nowTick}
           onDismiss={() => setStitchPreview(null)}
           onRetry={stitchPlan}
+          onCancel={cancelStitch}
         />
       )}
 
