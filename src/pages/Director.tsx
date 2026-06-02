@@ -32,6 +32,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { trackPageVisit } from "@/lib/analytics";
 import { DirectorChat } from "@/components/director/DirectorChat";
+import { PlanPanel } from "@/components/director/PlanPanel";
 
 import { DirectorErrorBoundary } from "@/components/director/DirectorErrorBoundary";
 import { SendDebugReportButton } from "@/components/SendDebugReportButton";
