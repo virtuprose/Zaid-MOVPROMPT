@@ -11,7 +11,10 @@ import {
   Play,
   Loader2,
   CloudUpload,
+  Rows3,
+  LayoutGrid,
 } from "lucide-react";
+
 import { exportPlanToDrive } from "@/lib/director/driveExport";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
