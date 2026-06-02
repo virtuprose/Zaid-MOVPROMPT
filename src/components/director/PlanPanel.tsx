@@ -252,6 +252,21 @@ export function PlanPanel({ sessionId }: Props) {
     (s) => s.status === "done" && !!s.outputUrl,
   ).length;
 
+  // Shots that can be stitched into one MP4 via the shared story-stitch infra.
+  // Needs at least 2 completed shots, each linked to a video_job row.
+  const stitchable = plan.shots
+    .filter(
+      (s): s is PlannedShot & { metadata: { video_job_id: string } } =>
+        s.status === "done" &&
+        !!s.outputUrl &&
+        typeof s.metadata?.video_job_id === "string",
+    )
+    .map((s) => ({
+      jobId: s.metadata.video_job_id,
+      duration: s.locked.duration_seconds ?? 5,
+    }));
+  const canStitch = stitchable.length >= 2;
+
   // Per-shot + total credit estimate for the confirm dialog.
   const renderableEstimates = useMemo(
     () =>
