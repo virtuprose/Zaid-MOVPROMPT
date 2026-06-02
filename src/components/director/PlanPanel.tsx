@@ -133,6 +133,12 @@ export function PlanPanel({ sessionId }: Props) {
   useEffect(() => {
     if (typeof window !== "undefined") localStorage.setItem("director.stitchTransition", transition);
   }, [transition]);
+  // Per-boundary override array dialed in by the TransitionPreview scrubber.
+  // Reset whenever the preset changes so we never ship stale offsets.
+  const [stitchOverrides, setStitchOverrides] = useState<TransitionOverride[]>([]);
+  useEffect(() => {
+    setStitchOverrides([]);
+  }, [transition]);
   const [previewOpen, setPreviewOpen] = useState(false);
   const prices = usePricing();
 
