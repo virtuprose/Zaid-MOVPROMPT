@@ -1432,9 +1432,21 @@ function DirectorChatInner() {
             role: "assistant",
             content: `[Launched 4 parallel Seedance 2.0 acts via request_story_render — title "${b.data.title}", aspect ${b.data.aspect}. Acts are rendering; the client will stitch them into one ~1-minute video when they finish.]`,
           });
-        }
-
       }
+
+      // Director mode: inject a derived "session state recap" right before the
+      // user's latest turn. Pure ground truth — locked spec, pinned subject,
+      // last clarification + answer, pending UI step — so the agent stops
+      // re-asking answered questions.
+      if (chatMode !== "free_chat") {
+        const recap = buildSessionStateRecap(next);
+        if (recap && history.length > 0) {
+          // Last entry in history corresponds to the user's just-sent turn.
+          // Insert recap immediately before it.
+          history.splice(history.length - 1, 0, { role: "user", content: recap });
+        }
+      }
+
 
       // Aggregate attachments from EVERY prior user bubble + current ones, deduped,
       // most-recent first, capped at 12 (edge function further limits images to 8).
