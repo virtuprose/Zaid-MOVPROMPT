@@ -69,6 +69,12 @@ export function PlanPanel({ sessionId }: Props) {
   useEffect(() => {
     planRef.current = plan;
   }, [plan]);
+
+  useEffect(() => {
+    if (!sessionId) {
+      setPlan(emptyPlan);
+      setLoaded(true);
+      return;
     }
     let active = true;
     (async () => {
