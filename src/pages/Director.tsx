@@ -33,8 +33,16 @@ import { useAuth } from "@/hooks/useAuth";
 import { trackPageVisit } from "@/lib/analytics";
 import { DirectorChat } from "@/components/director/DirectorChat";
 import { PlanPanel } from "@/components/director/PlanPanel";
-import { MediaRailProvider } from "@/components/director/MediaRailContext";
+import { MediaRailProvider, useMediaItems } from "@/components/director/MediaRailContext";
 import { MediaRailPanel } from "@/components/director/MediaRailPanel";
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
+import { GripVertical } from "lucide-react";
+
+import { DirectorErrorBoundary } from "@/components/director/DirectorErrorBoundary";
+import { SendDebugReportButton } from "@/components/SendDebugReportButton";
+import { TopNav } from "@/components/TopNav";
+import { supabase } from "@/integrations/supabase/client";
+import { cn } from "@/lib/utils";
 
 import { DirectorErrorBoundary } from "@/components/director/DirectorErrorBoundary";
 import { SendDebugReportButton } from "@/components/SendDebugReportButton";
