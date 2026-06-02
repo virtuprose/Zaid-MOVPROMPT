@@ -187,6 +187,10 @@ function DirectorChatInner() {
   const navigate = useNavigate();
   const { sessionId: routeSessionId } = useParams<{ sessionId?: string }>();
   const [bubbles, setBubbles] = useState<Bubble[]>([WELCOME]);
+  const mediaRail = useMediaRail();
+  useEffect(() => {
+    mediaRail?.setBubbles(bubbles as any);
+  }, [bubbles, mediaRail]);
   const [input, setInput] = useState("");
   const [composerFocusTick, setComposerFocusTick] = useState(0);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
