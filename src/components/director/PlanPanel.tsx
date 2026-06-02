@@ -15,6 +15,7 @@ import {
   LayoutGrid,
   Combine,
   X,
+  Eye,
 } from "lucide-react";
 
 import { exportPlanToDrive } from "@/lib/director/driveExport";
