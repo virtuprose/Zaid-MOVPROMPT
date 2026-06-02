@@ -53,6 +53,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { TransitionPreview } from "@/components/director/TransitionPreview";
+import { OrchestratorDebugPanel } from "@/components/director/OrchestratorDebugPanel";
 import {
   type DirectorPlan,
   type PlannedShot,
