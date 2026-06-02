@@ -468,15 +468,14 @@ export function PlanPanel({ sessionId }: Props) {
 
   if (!loaded || !sessionId) return null;
 
-  // Orchestrator debug stays mounted even on empty plans — that's exactly
-  // when it's most useful for diagnosing "why nothing renders".
+  // Orchestrator debug is a developer/admin-only tool — hidden from end users.
   if (plan.shots.length === 0) {
-    return <OrchestratorDebugPanel sessionId={sessionId} />;
+    return debugVisible ? <OrchestratorDebugPanel sessionId={sessionId} /> : null;
   }
 
   return (
     <>
-    <OrchestratorDebugPanel sessionId={sessionId} />
+    {debugVisible && <OrchestratorDebugPanel sessionId={sessionId} />}
     <section
       aria-label="Shot plan"
       className="mb-3 rounded-xl border border-border/40 bg-[hsl(240_5%_8%)]/70 backdrop-blur-sm overflow-hidden"
