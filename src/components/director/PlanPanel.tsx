@@ -545,6 +545,8 @@ export function PlanPanel({ sessionId }: Props) {
             className={cn(
               "w-4 h-4 text-muted-foreground transition-transform ml-1",
               open ? "" : "-rotate-90",
+            )}
+          />
         </div>
       </div>
 
@@ -556,6 +558,8 @@ export function PlanPanel({ sessionId }: Props) {
           onRetry={stitchPlan}
         />
       )}
+
+
 
 
 
