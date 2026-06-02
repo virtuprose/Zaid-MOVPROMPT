@@ -562,26 +562,78 @@ export function PlanPanel({ sessionId }: Props) {
             </button>
           )}
           {canStitch && (
-            <button
-              type="button"
-              onClick={stitchPlan}
-              disabled={stitching}
-              title={`Stitch ${stitchable.length} completed shots into one MP4`}
-              className={cn(
-                "ml-1 inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-md border transition-colors",
-                stitching
-                  ? "border-border/30 text-muted-foreground/60 cursor-wait"
-                  : "border-border/40 text-muted-foreground hover:text-foreground hover:border-border",
-              )}
-            >
-              {stitching ? (
-                <Loader2 className="w-3 h-3 animate-spin" />
-              ) : (
-                <Combine className="w-3 h-3" />
-              )}
-              Stitch
-              <span className="tabular-nums opacity-70">{stitchable.length}</span>
-            </button>
+            <>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button
+                    type="button"
+                    disabled={stitching}
+                    title={`Transition: ${TRANSITION_LABELS[transition]}`}
+                    className={cn(
+                      "ml-1 inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-md border transition-colors",
+                      stitching
+                        ? "border-border/30 text-muted-foreground/60 cursor-not-allowed"
+                        : "border-border/40 text-muted-foreground hover:text-foreground hover:border-border",
+                    )}
+                  >
+                    <span className="opacity-70">Transition</span>
+                    <span className="text-foreground/90">{TRANSITION_LABELS[transition]}</span>
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent
+                  align="end"
+                  className="w-64 p-1.5 bg-[hsl(240_5%_8%)] border-border/60"
+                >
+                  <div className="px-1.5 pb-1 text-[10px] uppercase tracking-wide text-muted-foreground/70">
+                    Stitch transition
+                  </div>
+                  {(Object.keys(TRANSITION_LABELS) as StitchTransition[]).map((t) => {
+                    const selected = t === transition;
+                    return (
+                      <button
+                        key={t}
+                        type="button"
+                        onClick={() => setTransition(t)}
+                        className={cn(
+                          "w-full flex flex-col items-start gap-0.5 px-2 py-1.5 rounded text-left transition-colors",
+                          selected
+                            ? "bg-primary/10 text-primary"
+                            : "hover:bg-muted/40 text-foreground/90",
+                        )}
+                      >
+                        <span className="text-xs font-medium flex items-center gap-1.5">
+                          {selected && <Check className="w-3 h-3" />}
+                          {TRANSITION_LABELS[t]}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground">
+                          {TRANSITION_DESCRIPTIONS[t]}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </PopoverContent>
+              </Popover>
+              <button
+                type="button"
+                onClick={stitchPlan}
+                disabled={stitching}
+                title={`Stitch ${stitchable.length} completed shots into one MP4 with ${TRANSITION_LABELS[transition].toLowerCase()}`}
+                className={cn(
+                  "inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-md border transition-colors",
+                  stitching
+                    ? "border-border/30 text-muted-foreground/60 cursor-wait"
+                    : "border-border/40 text-muted-foreground hover:text-foreground hover:border-border",
+                )}
+              >
+                {stitching ? (
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                ) : (
+                  <Combine className="w-3 h-3" />
+                )}
+                Stitch
+                <span className="tabular-nums opacity-70">{stitchable.length}</span>
+              </button>
+            </>
           )}
           {saving && <span className="text-[10px] text-muted-foreground ml-1">Saving…</span>}
           <ChevronDown
