@@ -332,6 +332,7 @@ export function PlanPanel({ sessionId }: Props) {
 
   const stitchPlan = async () => {
     if (!sessionId || !canStitch || stitching) return;
+    stitchCancelRef.current = false;
     setStitching(true);
     const sourceClips = plan.shots
       .filter((s) => s.status === "done" && !!s.outputUrl)
@@ -350,11 +351,16 @@ export function PlanPanel({ sessionId }: Props) {
         durations: stitchable.map((s) => s.duration),
         title: (plan.globals as Record<string, unknown>).title as string | undefined,
       });
+      if (stitchCancelRef.current) {
+        // User cancelled — ignore server result.
+        return;
+      }
       setStitchPreview((p) =>
         p ? { ...p, status: "done", videoUrl: res.video_url } : p,
       );
       toast.success("Stitched into one MP4");
     } catch (e) {
+      if (stitchCancelRef.current) return;
       const msg = e instanceof Error ? e.message : "Stitch failed";
       setStitchPreview((p) => (p ? { ...p, status: "failed", error: msg } : p));
       toast.error(msg);
@@ -362,6 +368,15 @@ export function PlanPanel({ sessionId }: Props) {
       setStitching(false);
     }
   };
+
+  const cancelStitch = () => {
+    stitchCancelRef.current = true;
+    setStitching(false);
+    setStitchPreview(null);
+    toast.message("Stitch cancelled");
+  };
+
+
 
   const openConfirm = async () => {
     if (!sessionId || renderable.length === 0 || running) return;
