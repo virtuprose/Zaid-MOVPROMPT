@@ -10,7 +10,7 @@ import {
   Check,
   Play,
   Loader2,
-  CloudUpload,
+  
   Rows3,
   LayoutGrid,
   Combine,
@@ -18,7 +18,7 @@ import {
   Eye,
 } from "lucide-react";
 
-import { exportPlanToDrive } from "@/lib/director/driveExport";
+
 import {
   stitchPlanShots,
   cancelStitch as cancelStitchOnServer,
@@ -102,7 +102,7 @@ export function PlanPanel({ sessionId }: Props) {
   const [loaded, setLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
   const [running, setRunning] = useState(false);
-  const [exporting, setExporting] = useState(false);
+  
   const [stitching, setStitching] = useState(false);
   const stitchCancelRef = useRef(false);
   const [stitchPreview, setStitchPreview] = useState<{
@@ -298,9 +298,6 @@ export function PlanPanel({ sessionId }: Props) {
       !!s.locked.model,
   );
   const anyRendering = plan.shots.some((s) => s.status === "rendering");
-  const exportableCount = plan.shots.filter(
-    (s) => s.status === "done" && !!s.outputUrl,
-  ).length;
 
   // Shots that can be stitched into one MP4 via the shared story-stitch infra.
   // Needs at least 2 completed shots, each linked to a video_job row.
@@ -338,32 +335,6 @@ export function PlanPanel({ sessionId }: Props) {
   const totalEstimate = renderableEstimates.reduce((a, b) => a + b.cost, 0);
   const insufficient = balance != null && balance < totalEstimate;
 
-  const exportToDrive = async () => {
-    if (!sessionId || exportableCount === 0 || exporting) return;
-    setExporting(true);
-    const toastId = toast.loading(
-      `Exporting ${exportableCount} shot${exportableCount === 1 ? "" : "s"} to Drive…`,
-    );
-    try {
-      const res = await exportPlanToDrive(sessionId);
-      toast.success(
-        `Exported ${res.uploaded_count} to Drive${res.failed_count > 0 ? ` · ${res.failed_count} failed` : ""}`,
-        {
-          id: toastId,
-          action: {
-            label: "Open folder",
-            onClick: () => window.open(res.folder.url, "_blank", "noopener"),
-          },
-        },
-      );
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Drive export failed", {
-        id: toastId,
-      });
-    } finally {
-      setExporting(false);
-    }
-  };
 
   const stitchPlan = async () => {
     if (!sessionId || !canStitch || stitching) return;
@@ -568,28 +539,6 @@ export function PlanPanel({ sessionId }: Props) {
               <span className="tabular-nums opacity-70">{renderable.length}</span>
             )}
           </button>
-          {exportableCount > 0 && (
-            <button
-              type="button"
-              onClick={exportToDrive}
-              disabled={exporting}
-              title={`Export ${exportableCount} completed shot${exportableCount === 1 ? "" : "s"} to Google Drive`}
-              className={cn(
-                "ml-1 inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-md border transition-colors",
-                exporting
-                  ? "border-border/30 text-muted-foreground/60 cursor-wait"
-                  : "border-border/40 text-muted-foreground hover:text-foreground hover:border-border",
-              )}
-            >
-              {exporting ? (
-                <Loader2 className="w-3 h-3 animate-spin" />
-              ) : (
-                <CloudUpload className="w-3 h-3" />
-              )}
-              Drive
-              <span className="tabular-nums opacity-70">{exportableCount}</span>
-            </button>
-          )}
           {canStitch && (
             <>
               <Popover>
