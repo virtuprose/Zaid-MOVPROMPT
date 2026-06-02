@@ -98,6 +98,7 @@ const BUDGETS: { id: RoutingBudget; label: string; hint: string }[] = [
 export function PlanPanel({ sessionId }: Props) {
   const [plan, setPlan] = useState<DirectorPlan>(emptyPlan);
   const [open, setOpen] = useState(true);
+  const debugVisible = useDebugVisible();
   const [loaded, setLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
   const [running, setRunning] = useState(false);
