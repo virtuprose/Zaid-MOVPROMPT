@@ -426,6 +426,7 @@ export function TransitionPreview({
           muted
           playsInline
           preload="auto"
+          crossOrigin="anonymous"
           style={{ opacity: 1 - opacityB }}
         />
         <video
@@ -434,6 +435,7 @@ export function TransitionPreview({
           muted
           playsInline
           preload="auto"
+          crossOrigin="anonymous"
           style={{
             opacity: opacityB,
             transition:
