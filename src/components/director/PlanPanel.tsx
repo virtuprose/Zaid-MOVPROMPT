@@ -956,10 +956,21 @@ function StitchPreview({
         </div>
         <div className="ml-auto flex items-center gap-2">
           {preview.status === "composing" && (
-            <span className="text-[10px] tabular-nums text-muted-foreground">
-              {elapsedLabel} / ~{Math.floor(estTotalSec / 60)}:
-              {(estTotalSec % 60).toString().padStart(2, "0")}
-            </span>
+            <>
+              <span className="text-[10px] tabular-nums text-muted-foreground">
+                {elapsedLabel} / ~{Math.floor(estTotalSec / 60)}:
+                {(estTotalSec % 60).toString().padStart(2, "0")}
+              </span>
+              <button
+                type="button"
+                onClick={onCancel}
+                className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-md border border-border/40 text-foreground/80 hover:bg-destructive/15 hover:text-destructive hover:border-destructive/40 transition-colors"
+                title="Cancel stitch"
+              >
+                <X className="w-3 h-3" />
+                Cancel
+              </button>
+            </>
           )}
           {preview.status === "failed" && (
             <button
