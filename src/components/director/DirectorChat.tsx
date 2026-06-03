@@ -65,6 +65,7 @@ import {
 import { AssistantAvatar, type AvatarState } from "./AssistantAvatar";
 import { TypingIndicator } from "./TypingIndicator";
 import { TypewriterText } from "./TypewriterText";
+import { DirectorActivityFeed, type ActivityStep } from "./DirectorActivityFeed";
 
 type Bubble =
   | { role: "user"; content: string; attachments?: Attachment[]; ts?: number }
@@ -220,6 +221,7 @@ function DirectorChatInner() {
 
   const [busy, setBusy] = useState(false);
   const [phase, setPhase] = useState<DirectorPhase>("thinking");
+  const [activitySteps, setActivitySteps] = useState<ActivityStep[]>([]);
   const [resetOpen, setResetOpen] = useState(false);
   const [showJumpLatest, setShowJumpLatest] = useState(false);
   const [readyToStitch, setReadyToStitch] = useState<string | null>(null);
@@ -1340,6 +1342,7 @@ function DirectorChatInner() {
     if (idleTimer.current) window.clearTimeout(idleTimer.current);
 
     setBusy(true);
+    setActivitySteps([]);
     setPhase(
       attachments.some((a) => a.kind === "image" || a.kind === "video_keyframes")
         ? "analyzing_image"
@@ -1531,9 +1534,39 @@ function DirectorChatInner() {
         });
       };
 
+      const seenToolKinds = new Set<string>();
+      const pushClientStep = (step: ActivityStep) => {
+        setActivitySteps((prev) => {
+          // Mark any "running" step of the same id as done, then upsert.
+          const next = prev.map((s) =>
+            s.id === step.id ? { ...s, ...step } : s.status === "running" ? { ...s, status: "done" as const } : s,
+          );
+          if (!next.some((s) => s.id === step.id)) next.push(step);
+          return next;
+        });
+      };
+
       const handlePartial = (partial: AgentResponse) => {
         lastKind = partial.kind;
         notifySkill((partial as any).activeSkill);
+        const kind = partial.kind;
+        if (kind && !seenToolKinds.has(kind)) {
+          seenToolKinds.add(kind);
+          const ts = Date.now();
+          if (kind === "ask_clarification") {
+            pushClientStep({ id: "tool-ask", kind: "thinking", label: "Drafting clarifying questions", status: "done", ts });
+          } else if (kind === "ask_model_choice") {
+            pushClientStep({ id: "tool-model", kind: "model", label: "Picking the right model", status: "done", ts });
+          } else if (kind === "generate_prompt") {
+            pushClientStep({ id: "tool-prompt", kind: "prompt", label: "Composing the cinematic prompt", status: "running", ts });
+          } else if (kind === "generate_reference_image") {
+            pushClientStep({ id: "tool-ref", kind: "reference", label: "Drafting a reference key frame", status: "done", ts });
+          } else if (kind === "generate_story_bundle") {
+            pushClientStep({ id: "tool-bundle", kind: "reference", label: "Building the story asset bundle", status: "done", ts });
+          } else if (kind === "request_video_generation" || kind === "request_story_render") {
+            pushClientStep({ id: "tool-render", kind: "prompt", label: "Handing off to the renderer", status: "done", ts });
+          }
+        }
         setBubbles((prev) => {
           const copy = [...prev];
           if (partial.kind === "generate_prompt") {
@@ -1587,6 +1620,22 @@ function DirectorChatInner() {
             idleTimeoutMs: 30_000,
             totalTimeoutMs: 120_000,
             onPhase: (p) => setPhase(p),
+            onStep: (s) =>
+              setActivitySteps((prev) => {
+                const idx = prev.findIndex((x) => x.id === s.id);
+                const next = [...prev];
+                const entry: ActivityStep = {
+                  id: s.id,
+                  kind: s.kind as ActivityStep["kind"],
+                  label: s.label,
+                  status: s.status,
+                  detail: s.detail,
+                  ts: Date.now(),
+                };
+                if (idx >= 0) next[idx] = { ...next[idx], ...entry };
+                else next.push(entry);
+                return next;
+              }),
             tasteProfile,
             mode: chatMode,
             lockedSpec: handoffChip
@@ -2973,6 +3022,9 @@ function DirectorChatInner() {
               </div>
             );
           })}
+          {(busy || activitySteps.length > 0) && activitySteps.length > 0 && (
+            <DirectorActivityFeed steps={activitySteps} collapsedDefault={!busy} />
+          )}
           {busy && (
             <TypingIndicator
               phase={phase}

@@ -56,22 +56,22 @@ On EVERY turn — but especially turn 1 — before you decide what tool to call:
 
 1. PARSE the user's brief + every prior turn + free-chat history + attached references. Build a mental list of what's already known across the six routing axes: { subject_or_character, action_or_intent, mood_or_style, duration_seconds, aspect_ratio, audio_mode, resolution, model_id }. Also note: brief_type (commercial / cinematic / character-driven / story / vague), references attached (yes/no, kind), and any explicit creative direction the user gave (lens, lighting, grade, location).
 
-2. ACKNOWLEDGE BEFORE ASKING. The FIRST sentence of every `reason` (and the `directors_note` on every image/prompt call) MUST be a one-line recap of what you heard from the user, in their own vocabulary. Examples:
+2. ACKNOWLEDGE BEFORE ASKING. The FIRST sentence of every \`reason\` (and the \`directors_note\` on every image/prompt call) MUST be a one-line recap of what you heard from the user, in their own vocabulary. Examples:
    - "Heard: neon ramen bar at night, slow dolly-in, photoreal cinematic."
    - "Got the product (the watch you uploaded) and the 'luxury, 9:16, 8s' brief."
    - "Reading you: 30-second commercial spot for the brand, no character, focus on the bottle."
    Never open with a bare question. The user just typed — they need to feel read first.
 
-3. AXIS PRE-FLIGHT (run silently before ANY `ask_clarification`). For each of the six routing axes, mark it KNOWN if any of these gave you a value: the current brief, a prior Director turn, the LOCKED HANDOFF SPEC, the free-chat history (see FREE-CHAT MINING rule below), or unambiguous reference signals. If five or six axes are KNOWN, SKIP `ask_clarification` for routing entirely and go straight to `ask_model_choice` (or `generate_prompt` if model is also locked). Only ask the single highest-priority axis that is genuinely UNKNOWN.
+3. AXIS PRE-FLIGHT (run silently before ANY \`ask_clarification\`). For each of the six routing axes, mark it KNOWN if any of these gave you a value: the current brief, a prior Director turn, the LOCKED HANDOFF SPEC, the free-chat history (see FREE-CHAT MINING rule below), or unambiguous reference signals. If five or six axes are KNOWN, SKIP \`ask_clarification\` for routing entirely and go straight to \`ask_model_choice\` (or \`generate_prompt\` if model is also locked). Only ask the single highest-priority axis that is genuinely UNKNOWN.
 
-4. ADAPTIVE LABELS (no fake step counters in single-shot flows). When you do ask a question, prefix `reason` with a label that describes WHAT IS HAPPENING, not a numeric counter:
+4. ADAPTIVE LABELS (no fake step counters in single-shot flows). When you do ask a question, prefix \`reason\` with a label that describes WHAT IS HAPPENING, not a numeric counter:
    - "Locking the look" / "Locking the subject" / "Picking the model" / "One last routing detail" / "Final check before render"
    - If only one axis remains unknown, drop the label entirely and just ask the question with the recap.
    - The ONLY flows that may use "Step N of M" counters are STORY MODE (fixed 5-step pipeline) and the SEEDANCE shot-count question. Single-shot, unanchored, and anchored paths must use adaptive labels — NEVER "Step 1 of 4", "Step 2 of 3", etc.
 
 5. BRIEF-TYPE ROUTER (replaces the old one-size-fits-all "key frame first or video?" fork on turn 1):
-   - COMMERCIAL / AD brief (mentions: product, brand, "spot", "ad", "commercial", "30s ad", CTA, packshot): if a product image is attached, run Anchored Step 1 (subject sheet). Otherwise skip the key-frame fork — go straight to `ask_model_choice` (or `generate_prompt` if all axes are locked).
-   - CINEMATIC / NARRATIVE brief (describes a scene, lighting, lens, mood, character action): if the scene is well-described (subject + setting + at least one of: lens/lighting/mood), propose a key frame immediately via `generate_reference_image` mode `single_panel` with the recap in `directors_note`. Do NOT ask the fork. Only ask if the scene is genuinely vague.
+   - COMMERCIAL / AD brief (mentions: product, brand, "spot", "ad", "commercial", "30s ad", CTA, packshot): if a product image is attached, run Anchored Step 1 (subject sheet). Otherwise skip the key-frame fork — go straight to \`ask_model_choice\` (or \`generate_prompt\` if all axes are locked).
+   - CINEMATIC / NARRATIVE brief (describes a scene, lighting, lens, mood, character action): if the scene is well-described (subject + setting + at least one of: lens/lighting/mood), propose a key frame immediately via \`generate_reference_image\` mode \`single_panel\` with the recap in \`directors_note\`. Do NOT ask the fork. Only ask if the scene is genuinely vague.
    - CHARACTER-DRIVEN brief (names a character, "make him/her do X"): if an image is attached, run Anchored Step 1. If no image, ask ONE freeform question — "Describe the character or drop a reference image" — and skip the fork.
    - STORY brief: enter STORY MODE (existing 5-step flow).
    - VAGUE brief ("make me a video", no specifics): THEN show the existing "key frame first or video?" fork. This is the only case where it actually helps.
@@ -1204,9 +1204,104 @@ Then stop. Don't ask follow-up questions yourself.`;
       });
     }
 
-    // Streaming: pipe through
+    // Streaming: prepend custom Director "step" events, then pipe AI body.
     if (stream) {
-      return new Response(aiResp.body, {
+      const encoder = new TextEncoder();
+      const sseStep = (step: {
+        id: string;
+        kind: string;
+        label: string;
+        status: "running" | "done" | "failed";
+        detail?: string;
+      }) => encoder.encode(`data: ${JSON.stringify({ _step: step })}\n\n`);
+
+      // Build a quick recap of what we already know from the user's brief +
+      // free-chat content, to power the "reading the brief" / "listening to free chat" rows.
+      const lastBriefText = (last?.content || "").slice(0, 280);
+      const freeChatPreview = prior
+        .filter((m) => m.role === "user")
+        .slice(-2)
+        .map((m) => m.content)
+        .join("\n")
+        .slice(0, 280);
+
+      const steps: Array<Parameters<typeof sseStep>[0]> = [];
+      steps.push({
+        id: "read-brief",
+        kind: "reading",
+        label: "Reading the brief",
+        status: "done",
+        detail: lastBriefText || undefined,
+      });
+      if (freeChatPreview) {
+        steps.push({
+          id: "mine-freechat",
+          kind: "mining",
+          label: "Mining free chat for known axes",
+          status: "done",
+          detail: freeChatPreview,
+        });
+      }
+      if (activeSkillName) {
+        steps.push({
+          id: `skill-${activeSkillName}`,
+          kind: "skill",
+          label: `Loaded skill: ${activeSkillName}`,
+          status: "done",
+        });
+      }
+      steps.push({
+        id: "preflight",
+        kind: "preflight",
+        label: "Axis pre-flight",
+        status: "done",
+        detail: "Checking duration, aspect, audio, style, model, subject before asking.",
+      });
+      steps.push({
+        id: "thinking",
+        kind: "thinking",
+        label: "Thinking it through",
+        status: "running",
+      });
+
+      const wrapped = new ReadableStream({
+        async start(controller) {
+          for (const s of steps) controller.enqueue(sseStep(s));
+          // Mark "thinking" as done as soon as model bytes start arriving.
+          let thinkingClosed = false;
+          const closeThinking = () => {
+            if (thinkingClosed) return;
+            thinkingClosed = true;
+            controller.enqueue(
+              sseStep({ id: "thinking", kind: "thinking", label: "Thinking it through", status: "done" }),
+            );
+          };
+          const reader = aiResp.body!.getReader();
+          try {
+            while (true) {
+              const { value, done } = await reader.read();
+              if (done) break;
+              closeThinking();
+              controller.enqueue(value);
+            }
+          } catch (err) {
+            controller.enqueue(
+              sseStep({
+                id: "stream-error",
+                kind: "error",
+                label: "Stream interrupted",
+                status: "failed",
+                detail: err instanceof Error ? err.message : String(err),
+              }),
+            );
+          } finally {
+            closeThinking();
+            controller.close();
+          }
+        },
+      });
+
+      return new Response(wrapped, {
         headers: { ...corsHeaders, ...skillHeader, "Content-Type": "text/event-stream" },
       });
     }

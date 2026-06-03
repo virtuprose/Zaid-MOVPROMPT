@@ -268,6 +268,25 @@ export type DirectorPhase =
   | "choosing_model"
   | "writing_prompt";
 
+export type DirectorStepKind =
+  | "reading"
+  | "mining"
+  | "skill"
+  | "preflight"
+  | "thinking"
+  | "reference"
+  | "model"
+  | "prompt"
+  | "error";
+
+export type DirectorStepEvent = {
+  id: string;
+  kind: DirectorStepKind;
+  label: string;
+  status: "running" | "done" | "failed";
+  detail?: string;
+};
+
 const ENDPOINT = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/director-agent`;
 
 export async function callDirectorAgent(
@@ -316,6 +335,8 @@ export type StreamOptions = {
   totalTimeoutMs?: number;
   /** Called when the director enters a new phase (drives the typing indicator). */
   onPhase?: (phase: DirectorPhase) => void;
+  /** Called with structured Director activity steps as they arrive from the backend. */
+  onStep?: (step: DirectorStepEvent) => void;
 };
 
 export type HandoffLockedSpec = {
@@ -339,6 +360,7 @@ export async function streamDirectorAgent(
   const idleTimeoutMs = options.idleTimeoutMs ?? 30_000;
   const totalTimeoutMs = options.totalTimeoutMs ?? 120_000;
   const onPhase = options.onPhase;
+  const onStep = options.onStep;
   const tasteProfile = options.tasteProfile ?? null;
   const mode = options.mode ?? "director";
   const lockedSpec = options.lockedSpec ?? null;
@@ -502,6 +524,11 @@ export async function streamDirectorAgent(
         }
         try {
           const j = JSON.parse(payload);
+          // Custom Director step event (injected by edge function before the AI body).
+          if (j && j._step && onStep) {
+            try { onStep(j._step as DirectorStepEvent); } catch { /* ignore */ }
+            continue;
+          }
           const delta = j.choices?.[0]?.delta;
           if (!delta) continue;
           if (delta.tool_calls?.[0]) {
