@@ -213,6 +213,7 @@ function MediaCard({
   onPickNewFolder: () => void;
 }) {
   const rail = useMediaRail();
+  const [menuOpen, setMenuOpen] = useState(false);
   const isFav = rail?.favorites.has(item.id) ?? false;
   const folders = rail?.folders ?? [];
 
