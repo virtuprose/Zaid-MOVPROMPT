@@ -368,8 +368,11 @@ serve(async (req) => {
         : `Audio: DISABLED — produce a SILENT video. Do not include any audio direction. Set audioBlock to "Silent — no audio".\n\n`;
     }
 
-    if (timelineEnabled === true) {
-      userText += `Timeline Prompting: ENABLED — every mainPrompt MUST follow the TIMELINE / EFFECTS INVENTORY / DENSITY MAP / ENERGY ARC structure defined in the system prompt. Clock-pinned beats are required.\n\n`;
+    if (timelineActive) {
+      const reason = isSeedance && timelineEnabled !== true
+        ? `Timeline Prompting: ENABLED (auto — Seedance always uses Timeline structure). Every mainPrompt MUST follow the TIMELINE / EFFECTS INVENTORY / DENSITY MAP / ENERGY ARC structure defined in the system prompt. Clock-pinned beats are required.\n\n`
+        : `Timeline Prompting: ENABLED — every mainPrompt MUST follow the TIMELINE / EFFECTS INVENTORY / DENSITY MAP / ENERGY ARC structure defined in the system prompt. Clock-pinned beats are required.\n\n`;
+      userText += reason;
     }
 
     if (typeof targetDuration === "number" && targetDuration > 0) {
