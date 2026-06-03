@@ -2637,9 +2637,8 @@ function DirectorChatInner() {
             }
             if (b.role === "generated_images") {
               return (
-                <div key={i} className="flex items-start gap-2 motion-safe:animate-fade-up">
-                  <AssistantAvatar size="sm" state="idle" className="mt-1" />
-                  <div className="flex-1">
+                <div key={i} className="motion-safe:animate-fade-up">
+                  <div>
                     <GeneratedImageCard
                       data={b.data}
                       onRegenerate={(intent) => {
@@ -2701,9 +2700,8 @@ function DirectorChatInner() {
             }
             if (b.role === "aspect_choice") {
               return (
-                <div key={i} className="flex items-start gap-2 motion-safe:animate-fade-up">
-                  <AssistantAvatar size="sm" state="idle" className="mt-1" />
-                  <div className="flex-1">
+                <div key={i} className="motion-safe:animate-fade-up">
+                  <div>
                     <AspectChoiceCard
                       chosen={b.chosen}
                       disabled={busy}
@@ -2715,9 +2713,8 @@ function DirectorChatInner() {
             }
             if (b.role === "subject_lock_choice") {
               return (
-                <div key={i} className="flex items-start gap-2 motion-safe:animate-fade-up">
-                  <AssistantAvatar size="sm" state="idle" className="mt-1" />
-                  <div className="flex-1">
+                <div key={i} className="motion-safe:animate-fade-up">
+                  <div>
                     <SubjectLockChoiceCard
                       chosen={b.chosen}
                       disabled={busy}
@@ -2729,9 +2726,8 @@ function DirectorChatInner() {
             }
             if (b.role === "scene_describe") {
               return (
-                <div key={i} className="flex items-start gap-2 motion-safe:animate-fade-up">
-                  <AssistantAvatar size="sm" state="idle" className="mt-1" />
-                  <div className="flex-1">
+                <div key={i} className="motion-safe:animate-fade-up">
+                  <div>
                     <QuestionCard
                       reason="Optional — add more detail for the key frame, or skip to pick an aspect ratio."
                       questions={[
@@ -2752,9 +2748,8 @@ function DirectorChatInner() {
             }
             if (b.role === "location_picker") {
               return (
-                <div key={i} className="flex items-start gap-2 motion-safe:animate-fade-up">
-                  <AssistantAvatar size="sm" state="idle" className="mt-1" />
-                  <div className="flex-1">
+                <div key={i} className="motion-safe:animate-fade-up">
+                  <div>
                     <LocationPickerCard
                       locations={b.payload.locations}
                       characterUrl={b.payload.characterUrl}
@@ -2770,9 +2765,8 @@ function DirectorChatInner() {
             }
             if (b.role === "story_render") {
               return (
-                <div key={i} className="flex items-start gap-2 motion-safe:animate-fade-up">
-                  <AssistantAvatar size="sm" state="idle" className="mt-1" />
-                  <div className="flex-1">
+                <div key={i} className="motion-safe:animate-fade-up">
+                  <div>
                     <ActStrip
                       storyRenderId={b.data.storyRenderId}
                       title={b.data.title}
@@ -2794,9 +2788,8 @@ function DirectorChatInner() {
               if (b.content === "…" || b.content === "") return null;
               const animate = b.animate === true;
               return (
-                <div key={i} className="flex items-start gap-2 motion-safe:animate-fade-up">
-                  <AssistantAvatar size="sm" state="idle" className="mt-1" />
-                  <div className="flex-1 min-w-0">
+                <div key={i} className="motion-safe:animate-fade-up">
+                  <div className="min-w-0">
                     <Message from="assistant">
                       <MessageContent className={cn(
                         "leading-relaxed text-foreground/90",
@@ -2857,8 +2850,8 @@ function DirectorChatInner() {
                 <Message from="user" className="items-end">
                 <MessageContent
                   className={cn(
-                    "rounded-2xl bg-muted/40 border border-border/40 px-4 py-2 text-sm",
-                    "group-[.is-user]:bg-muted/40 group-[.is-user]:rounded-2xl group-[.is-user]:px-4 group-[.is-user]:py-2",
+                    "rounded-2xl bg-muted/30 px-4 py-3 text-sm max-w-[80%]",
+                    "group-[.is-user]:bg-muted/30 group-[.is-user]:rounded-2xl group-[.is-user]:px-4 group-[.is-user]:py-3",
                   )}
                 >
                   <div className="whitespace-pre-wrap leading-relaxed">
