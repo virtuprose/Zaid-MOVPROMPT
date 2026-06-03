@@ -39,7 +39,7 @@ import { ConfirmRightsDialog } from "./ConfirmRightsDialog";
 import type { VideoOptions } from "@/lib/director/videoModelControls";
 import { useApproval } from "./ApprovalContext";
 
-const RIGHTS_ACK_KEY = "vidoprompt:rights-ack";
+const RIGHTS_ACK_KEY = "movprompt:rights-ack";
 
 type PendingRender = {
   model: VideoModel;

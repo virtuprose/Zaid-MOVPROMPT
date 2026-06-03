@@ -52,7 +52,7 @@ export function ActStrip({ storyRenderId, title, acts, stitchStatus, stitchedVid
     if (allDone && !stitchedVideoUrl && !firedReadyRef.current) {
       firedReadyRef.current = true;
       window.dispatchEvent(
-        new CustomEvent("vidoprompt:acts-ready", { detail: { storyRenderId } }),
+        new CustomEvent("movprompt:acts-ready", { detail: { storyRenderId } }),
       );
     }
     if (!allDone) firedReadyRef.current = false;

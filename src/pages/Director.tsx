@@ -73,13 +73,13 @@ export default function Director() {
   const [tasksOpen, setTasksOpen] = useState(true);
   const [navCollapsed, setNavCollapsed] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
-    return localStorage.getItem("vidoprompt.tasks-sidebar-collapsed") === "1";
+    return localStorage.getItem("movprompt.tasks-sidebar-collapsed") === "1";
   });
   const toggleNav = () => {
     setNavCollapsed((v) => {
       const next = !v;
       try {
-        localStorage.setItem("vidoprompt.tasks-sidebar-collapsed", next ? "1" : "0");
+        localStorage.setItem("movprompt.tasks-sidebar-collapsed", next ? "1" : "0");
       } catch {}
       return next;
     });

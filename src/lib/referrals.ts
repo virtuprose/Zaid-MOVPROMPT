@@ -1,6 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 
-const REF_STORAGE_KEY = "vidoprompt_ref_code";
+const REF_STORAGE_KEY = "movprompt_ref_code";
 const REF_TTL_DAYS = 30;
 
 interface StoredRef { code: string; ts: number; }

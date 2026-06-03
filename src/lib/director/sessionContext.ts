@@ -178,7 +178,7 @@ export function buildContextChips(ctx: SessionContext): ContextChip[] {
 }
 
 // Window event used by PromptInspector / PromptResultCard to ask the DP.
-export const ASK_DP_EVENT = "vidoprompt:ask-dp";
+export const ASK_DP_EVENT = "movprompt:ask-dp";
 export type AskDpDetail = { prefill: string };
 
 // ─────────────────────────────────────────────────────────────────────────────
