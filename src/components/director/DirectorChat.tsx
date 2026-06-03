@@ -1614,6 +1614,7 @@ function DirectorChatInner() {
       }
 
       if (!resp) throw lastErr ?? new Error("Director didn't respond.");
+      notifySkill((resp as any).activeSkill);
 
       let added: Bubble;
       let finalPrompt: string | null = null;
