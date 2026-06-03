@@ -47,7 +47,7 @@ export type AgentSuggestion = {
   allow_other?: boolean;
 };
 
-export type AgentResponse =
+export type AgentResponse = (
   | {
       kind: "ask_clarification";
       questions: string[];
@@ -108,7 +108,8 @@ export type AgentResponse =
       act_prompts: string[];
       directors_note?: string;
     }
-  | { kind: "message"; content: string };
+  | { kind: "message"; content: string }
+) & { activeSkill?: string };
 
 export type StoryAsset = { url: string; storage_path: string } | null;
 export type StoryBundleResponse = {
