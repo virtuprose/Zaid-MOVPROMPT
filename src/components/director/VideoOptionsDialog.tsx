@@ -375,7 +375,7 @@ export function VideoOptionsDialog({ open, model, prompt, initialOptions, onCanc
           onClick={runConfirm}
           className="gap-1.5 bg-primary/15 text-primary border border-primary/30 hover:bg-primary/25"
         >
-          <Film className="w-4 h-4" /> Render with {model.label}
+          <Film className="w-4 h-4" /> Save & render
         </Button>
       </div>
     </div>
