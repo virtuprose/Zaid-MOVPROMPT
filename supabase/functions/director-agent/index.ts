@@ -1204,9 +1204,104 @@ Then stop. Don't ask follow-up questions yourself.`;
       });
     }
 
-    // Streaming: pipe through
+    // Streaming: prepend custom Director "step" events, then pipe AI body.
     if (stream) {
-      return new Response(aiResp.body, {
+      const encoder = new TextEncoder();
+      const sseStep = (step: {
+        id: string;
+        kind: string;
+        label: string;
+        status: "running" | "done" | "failed";
+        detail?: string;
+      }) => encoder.encode(`data: ${JSON.stringify({ _step: step })}\n\n`);
+
+      // Build a quick recap of what we already know from the user's brief +
+      // free-chat content, to power the "reading the brief" / "listening to free chat" rows.
+      const lastBriefText = (last?.content || "").slice(0, 280);
+      const freeChatPreview = prior
+        .filter((m) => m.role === "user")
+        .slice(-2)
+        .map((m) => m.content)
+        .join("\n")
+        .slice(0, 280);
+
+      const steps: Array<Parameters<typeof sseStep>[0]> = [];
+      steps.push({
+        id: "read-brief",
+        kind: "reading",
+        label: "Reading the brief",
+        status: "done",
+        detail: lastBriefText || undefined,
+      });
+      if (freeChatPreview) {
+        steps.push({
+          id: "mine-freechat",
+          kind: "mining",
+          label: "Mining free chat for known axes",
+          status: "done",
+          detail: freeChatPreview,
+        });
+      }
+      if (activeSkillName) {
+        steps.push({
+          id: `skill-${activeSkillName}`,
+          kind: "skill",
+          label: `Loaded skill: ${activeSkillName}`,
+          status: "done",
+        });
+      }
+      steps.push({
+        id: "preflight",
+        kind: "preflight",
+        label: "Axis pre-flight",
+        status: "done",
+        detail: "Checking duration, aspect, audio, style, model, subject before asking.",
+      });
+      steps.push({
+        id: "thinking",
+        kind: "thinking",
+        label: "Thinking it through",
+        status: "running",
+      });
+
+      const wrapped = new ReadableStream({
+        async start(controller) {
+          for (const s of steps) controller.enqueue(sseStep(s));
+          // Mark "thinking" as done as soon as model bytes start arriving.
+          let thinkingClosed = false;
+          const closeThinking = () => {
+            if (thinkingClosed) return;
+            thinkingClosed = true;
+            controller.enqueue(
+              sseStep({ id: "thinking", kind: "thinking", label: "Thinking it through", status: "done" }),
+            );
+          };
+          const reader = aiResp.body!.getReader();
+          try {
+            while (true) {
+              const { value, done } = await reader.read();
+              if (done) break;
+              closeThinking();
+              controller.enqueue(value);
+            }
+          } catch (err) {
+            controller.enqueue(
+              sseStep({
+                id: "stream-error",
+                kind: "error",
+                label: "Stream interrupted",
+                status: "failed",
+                detail: err instanceof Error ? err.message : String(err),
+              }),
+            );
+          } finally {
+            closeThinking();
+            controller.close();
+          }
+        },
+      });
+
+      return new Response(wrapped, {
         headers: { ...corsHeaders, ...skillHeader, "Content-Type": "text/event-stream" },
       });
     }
