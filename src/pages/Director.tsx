@@ -224,19 +224,6 @@ export default function Director() {
                     <TooltipTrigger asChild>
                       <button
                         type="button"
-                        onClick={toggleNav}
-                        className="size-9 inline-flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
-                        aria-label="Expand tasks sidebar"
-                      >
-                        <PanelLeft className="w-4 h-4" />
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent side="right">Expand sidebar</TooltipContent>
-                  </Tooltip>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <button
-                        type="button"
                         onClick={() => navigate("/director")}
                         className="size-9 inline-flex items-center justify-center rounded-lg border border-border/50 text-foreground/80 hover:text-foreground hover:bg-muted/40 transition-colors"
                         aria-label="New task"
