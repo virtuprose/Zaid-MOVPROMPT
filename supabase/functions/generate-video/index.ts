@@ -722,23 +722,16 @@ serve(async (req) => {
     } catch (error) {
       const falError = extractFalError(error);
       console.error("fal submit error", falError.status, falError.message, error);
+      const friendlySubmit =
+        typeof falError.status === "number" && falError.status >= 400 && falError.status < 500
+          ? friendlyFalError(falError.status, falError.message)
+          : (falError.message || "Provider error");
       await admin
         .from("video_jobs")
-        .update({
-          status: "failed",
-          error:
-            typeof falError.status === "number" && falError.status >= 400 && falError.status < 500
-              ? `Provider rejected the job (${falError.status}): ${falError.message || "validation error"}`
-              : falError.message || "Provider error",
-        })
+        .update({ status: "failed", error: friendlySubmit })
         .eq("id", job.id);
       await refundCredits({ userId: uid, amount: creditCost, reason: "video_render_refund", refId: job.id, metadata: { stage: "submit_error" } });
-      return new Response(JSON.stringify({
-        error:
-          typeof falError.status === "number" && falError.status >= 400 && falError.status < 500
-            ? `Provider rejected the job (${falError.status}): ${falError.message || "validation error"}`
-            : falError.message || "Provider rejected request",
-      }), {
+      return new Response(JSON.stringify({ error: friendlySubmit }), {
         status: typeof falError.status === "number" && falError.status >= 400 && falError.status < 500 ? falError.status : 502,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
