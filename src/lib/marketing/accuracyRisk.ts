@@ -1,4 +1,4 @@
-// Pure helper that inspects the current Marketing Studio inputs and decides
+// Pure helper that inspects the current Ads Studio inputs and decides
 // whether to nudge the user to add more references before generating an ad.
 //
 // Goal: keep all generation paths working, but warn upfront when the model is

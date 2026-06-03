@@ -306,7 +306,7 @@ function DirectorChatInner() {
   }, [bubbles]);
 
 
-  // Cross-tool handoff (MovPrompt / Marketing Studio → Director).
+  // Cross-tool handoff (MovPrompt / Ads Studio → Director).
   // Consume once on mount when arriving on the fresh /director route.
   useEffect(() => {
     if (routeSessionId) return; // only seed brand-new sessions
@@ -316,7 +316,7 @@ function DirectorChatInner() {
       const result = readHandoffDetailed();
       if (cancelled) return;
       if (result.status === "expired") {
-        const sourceLabel = result.source === "movprompt" ? "MovPrompt" : "Marketing Studio";
+        const sourceLabel = result.source === "movprompt" ? "MovPrompt" : "Ads Studio";
         toast.warning(`Brief from ${sourceLabel} expired`, {
           description: "Handoffs are kept for 5 minutes. Head back and send it again.",
           duration: 6000,
@@ -337,7 +337,7 @@ function DirectorChatInner() {
         aspect: handoff.settings?.aspect,
         duration: handoff.settings?.duration,
       });
-      const sourceLabel = handoff.source === "movprompt" ? "MovPrompt" : "Marketing Studio";
+      const sourceLabel = handoff.source === "movprompt" ? "MovPrompt" : "Ads Studio";
       toast.success(`Brief received from ${sourceLabel}`, {
         description: "Your prompt, references, and settings are ready in the composer.",
         duration: 4000,
@@ -1319,7 +1319,7 @@ function DirectorChatInner() {
     const next: Bubble[] = [...cleaned, userBubble];
     lastSendRef.current = { text: text || fallback, attachments: turnAttachments };
     // Bridge 3 — if the user is clearly briefing an ad/commercial, suggest
-    // Marketing Studio once per session so they can lock brand + product first.
+    // Ads Studio once per session so they can lock brand + product first.
     if (!adSuggestedRef.current && text) {
       const { detectAdIntent } = await import("@/lib/director/questionIntent");
       if (detectAdIntent(text)) {
@@ -1331,7 +1331,7 @@ function DirectorChatInner() {
           markdown: true,
           content: isArabic
             ? "يبدو أن هذا **إعلان تجاري**. إذا كان لديك علامة تجارية أو منتج جاهز، يمكنني سحب **هوية العلامة** و**بيانات المنتج** ونص الإعلان من **[استوديو التسويق](/marketing)** للحفاظ على اتساق الهوية. لا توجد علامة بعد؟ **تخطَّ ذلك** — تابع الكتابة وسأوجّه المشهد من الصفر."
-            : "Sounds like an **ad or commercial**. If you already have a brand or product set up, I can pull your brand kit, product facts, and ad copy from **[Marketing Studio](/marketing)** to keep it on-brand. No kit yet? **Skip it** — just keep typing and I'll direct from scratch.",
+            : "Sounds like an **ad or commercial**. If you already have a brand or product set up, I can pull your brand kit, product facts, and ad copy from **[Ads Studio](/marketing)** to keep it on-brand. No kit yet? **Skip it** — just keep typing and I'll direct from scratch.",
         });
       }
     }
@@ -2377,7 +2377,7 @@ function DirectorChatInner() {
           <div className="flex flex-wrap items-center gap-2 rounded-lg border border-accent/30 bg-accent/5 px-3 py-2 text-xs">
             <span className="inline-flex items-center gap-1.5 font-semibold text-accent">
               <span className="inline-block w-1.5 h-1.5 rounded-full bg-accent shadow-[0_0_8px_hsl(var(--accent))]" />
-              From {handoffChip.source === "movprompt" ? "MovPrompt" : "Marketing Studio"}
+              From {handoffChip.source === "movprompt" ? "MovPrompt" : "Ads Studio"}
             </span>
             <span className="text-muted-foreground/60">·</span>
             <span className="text-muted-foreground">Carried over:</span>

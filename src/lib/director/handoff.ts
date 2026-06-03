@@ -1,4 +1,4 @@
-// Cross-tool handoff payload: MovPrompt → AI Director, Marketing Studio → AI Director.
+// Cross-tool handoff payload: MovPrompt → AI Director, Ads Studio → AI Director.
 // Stored briefly in sessionStorage so the receiving page can seed its state.
 
 import type { Attachment } from "./ingest";

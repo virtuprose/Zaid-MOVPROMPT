@@ -1,4 +1,4 @@
-// Curated catalogs powering the Marketing Studio (Higgsfield-inspired).
+// Curated catalogs powering the Ads Studio (Higgsfield-inspired).
 // Each entry contributes a prompt fragment that the studio composes into a
 // final Seedance 2.0 prompt. Keep fragments short, directive, and audio-aware.
 
