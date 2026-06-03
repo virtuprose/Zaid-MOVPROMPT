@@ -65,6 +65,7 @@ import {
 import { AssistantAvatar, type AvatarState } from "./AssistantAvatar";
 import { TypingIndicator } from "./TypingIndicator";
 import { TypewriterText } from "./TypewriterText";
+import { DirectorActivityFeed, type ActivityStep } from "./DirectorActivityFeed";
 
 type Bubble =
   | { role: "user"; content: string; attachments?: Attachment[]; ts?: number }
