@@ -2785,8 +2785,9 @@ function DirectorChatInner() {
             const isUser = b.role === "user";
             if (b.role === "assistant") {
               // Hide the streaming placeholder bubble; TypingIndicator covers it.
-              if (b.content === "…" || b.content === "") return null;
+              if (b.content === "…" || b.content === "" || b.content === "(no response)") return null;
               const animate = b.animate === true;
+              const isAdSuggestion = b.markdown === true && /\(\/marketing\)/.test(b.content);
               return (
                 <div key={i} className="motion-safe:animate-fade-up">
                   <div className="min-w-0">
