@@ -289,15 +289,8 @@ function MediaCard({
   // Top-right pill column + bottom-right "Add to task" pill, all rendered as overlays.
   const Overlays = (
     <>
-      {/* Top-left badge */}
-      <span
-        className={cn(
-          "absolute top-1.5 left-1.5 text-[9px] font-semibold tracking-wider px-1.5 py-0.5 rounded backdrop-blur",
-          item.kind === "image" ? "bg-black/60 text-white/90" : "bg-accent/90 text-accent-foreground",
-        )}
-      >
-        {item.kind === "image" ? "IMG" : "MP4"}
-      </span>
+      {/* Top-left badge removed for a cleaner full-image look */}
+
 
       {/* Top-right action column */}
       <div className="absolute top-1.5 right-1.5 flex flex-col gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
@@ -410,7 +403,7 @@ function MediaCard({
 
   if (item.kind === "image") {
     return (
-      <div className="group block rounded-xl overflow-hidden border border-border/40 bg-muted/20 hover:border-primary/40 hover:ring-1 hover:ring-primary/30 transition-all">
+      <div className="group relative block rounded-xl overflow-hidden border border-border/30 bg-muted/10 hover:border-primary/40 hover:ring-1 hover:ring-primary/30 transition-all">
         <div className={cn("relative w-full bg-black/40", ratioClass)}>
           <img
             src={item.url}
@@ -420,16 +413,13 @@ function MediaCard({
           />
           {Overlays}
         </div>
-        <div className="px-2 py-1.5 flex items-center gap-1.5">
-          <ImageIcon className="w-3 h-3 text-muted-foreground shrink-0" />
-          <span className="text-[11px] text-foreground/80 truncate">{item.label}</span>
-        </div>
       </div>
     );
   }
 
+
   return (
-    <div className="group block rounded-xl overflow-hidden border border-border/40 bg-muted/20 hover:border-primary/40 hover:ring-1 hover:ring-primary/30 transition-all">
+    <div className="group relative block rounded-xl overflow-hidden border border-border/30 bg-muted/10 hover:border-primary/40 hover:ring-1 hover:ring-primary/30 transition-all">
       <div className={cn("relative w-full bg-black/60", ratioClass)}>
         {isVideoReady ? (
           <video
@@ -455,10 +445,7 @@ function MediaCard({
         )}
         {Overlays}
       </div>
-      <div className="px-2 py-1.5 flex items-center gap-1.5">
-        <Film className="w-3 h-3 text-muted-foreground shrink-0" />
-        <span className="text-[11px] text-foreground/80 truncate flex-1">{item.label}</span>
-      </div>
     </div>
   );
 }
+
