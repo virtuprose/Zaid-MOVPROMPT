@@ -240,24 +240,6 @@ export default function Director() {
                     </TooltipTrigger>
                     <TooltipContent side="right">New task</TooltipContent>
                   </Tooltip>
-                  <div
-                    className="flex-1 w-full flex flex-col items-stretch gap-0 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-                    style={{
-                      maskImage:
-                        "linear-gradient(to bottom, transparent 0, black 12px, black calc(100% - 12px), transparent 100%)",
-                      WebkitMaskImage:
-                        "linear-gradient(to bottom, transparent 0, black 12px, black calc(100% - 12px), transparent 100%)",
-                    }}
-                  >
-                    {sessions.map((s) => (
-                      <TaskTile
-                        key={s.id}
-                        session={s}
-                        active={s.id === sessionId}
-                        onClick={() => navigate(`/director/${s.id}`)}
-                      />
-                    ))}
-                  </div>
                 </div>
               </TooltipProvider>
             ) : (
