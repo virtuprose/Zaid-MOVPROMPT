@@ -744,6 +744,16 @@ export function PromptResultCard({ title, prompt, breakdown, directorsNote, onRe
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
+          {settingsReady && (
+            <button
+              type="button"
+              onClick={() => openOptionsFor(preferredModel.id)}
+              disabled={generating || (!!job && job.status !== "completed" && job.status !== "failed")}
+              className="text-[11px] text-muted-foreground hover:text-foreground underline-offset-2 hover:underline disabled:opacity-50"
+            >
+              Adjust render settings
+            </button>
+          )}
         </div>
       </div>
 
