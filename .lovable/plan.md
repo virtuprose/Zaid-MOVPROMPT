@@ -1,13 +1,21 @@
-# Fix: Action buttons disappear when More menu opens
+## Goal
+Fix the collapsed **Tasks** sidebar so image tiles render cleanly instead of showing broken-image placeholders or white-filled thumbnails.
 
-## Problem
-On the media panel, the top-right action column (Favorite, Download, More) is shown via `opacity-0 group-hover:opacity-100`. When the user clicks More, the dropdown renders in a portal outside the card, so the cursor leaves the card → `:hover` is lost → the whole column (including the More button itself) fades out, leaving only the floating menu.
+## What I’ll change
+1. Update the collapsed task item thumbnail renderer in `src/pages/Director.tsx`.
+2. Add the same image error/fallback behavior already used in the expanded Tasks list.
+3. Keep the compact visual style from the reference screenshot: clean rounded tiles, proper active state, and no broken browser image icon.
+4. Verify the collapsed sidebar still shows:
+   - image thumbnails when valid
+   - the message icon fallback when no valid thumbnail exists
+   - correct active-item highlighting
 
-## Fix
-In `src/components/director/MediaRailPanel.tsx` (`MediaCard`):
+## Expected result
+- Broken or blocked thumbnail URLs will no longer show the default browser missing-image icon.
+- Empty/invalid thumbnails will gracefully fall back to the chat/message glyph.
+- The collapsed Tasks rail will look consistent with the intended clean icon-based design.
 
-1. Add local state `const [menuOpen, setMenuOpen] = useState(false)` and pass `open={menuOpen} onOpenChange={setMenuOpen}` to the More `DropdownMenu`.
-2. Force the top-right action column and the bottom-right "Add to task" pill to stay visible while `menuOpen` is true — e.g. change the wrapper classes from `opacity-0 group-hover:opacity-100 focus-within:opacity-100` to a `cn(...)` that adds `opacity-100` when `menuOpen`.
-3. No other behavior changes.
-
-This keeps Favorite / Download / More visible the entire time the dropdown is open, matching expected behavior.
+## Technical details
+- Reuse the existing `onError` image fallback pattern already present in the expanded session list.
+- Apply it to the collapsed sidebar button markup without changing navigation, layout, or session loading behavior.
+- If needed, slightly tighten the thumbnail container styling so fallback and image states share the same rounded, centered appearance.
