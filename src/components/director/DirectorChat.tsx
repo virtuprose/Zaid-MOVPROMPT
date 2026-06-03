@@ -252,8 +252,8 @@ function DirectorChatInner() {
       const id = (e as CustomEvent<{ storyRenderId: string }>).detail?.storyRenderId;
       if (id) setReadyToStitch(id);
     };
-    window.addEventListener("vidoprompt:acts-ready", onReady);
-    return () => window.removeEventListener("vidoprompt:acts-ready", onReady);
+    window.addEventListener("movprompt:acts-ready", onReady);
+    return () => window.removeEventListener("movprompt:acts-ready", onReady);
   }, []);
 
   // Quick-action prefill from RightRail

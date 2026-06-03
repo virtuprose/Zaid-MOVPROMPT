@@ -8,7 +8,7 @@ Inter Tight + Space Grotesk for display/headings (Space Grotesk leads on Landing
 Wedge mark: asymmetric triangle, top-right edge horizontal at half-width, sharp point at lower-left. Amber (`#E89B3C` / `hsl(var(--accent))`) for app/favicon/PWA; white variant inside dark UI that already glows (Director hero, AssistantAvatar).
 Lovable Cloud backend with Lovable AI (gemini-3.1-pro-preview for Director vision + reasoning).
 Always help the user reach their goal — when the Director asks open-ended questions, provide examples, chips, or upload affordances so the user is never stuck on a blank input.
-User-facing product name is always "MovPrompt" — do not reintroduce stale names (VidoPrompt, Apertural).
+User-facing product name is always "MovPrompt" — do not reintroduce stale names (MovPrompt, Apertural).
 
 ## Memories
 - [Design tokens](mem://design/tokens) — Full dark cinematic palette, fonts, glow animations

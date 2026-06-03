@@ -85,8 +85,8 @@ import { CostChip } from "@/components/credits/CostChip";
 import { notifyInsufficientCredits } from "@/lib/credits/insufficient";
 import { useCredits } from "@/hooks/useCredits";
 
-const RIGHTS_KEY = "vidoprompt:rights-ack";
-const ACCURACY_ACK_KEY = "vidoprompt:accuracy-ack";
+const RIGHTS_KEY = "movprompt:rights-ack";
+const ACCURACY_ACK_KEY = "movprompt:accuracy-ack";
 const find = (list: StudioPreset[], id?: string) =>
   id ? list.find((p) => p.id === id) : undefined;
 

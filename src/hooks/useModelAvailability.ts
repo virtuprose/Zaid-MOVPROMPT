@@ -11,8 +11,8 @@ type Row = {
 
 export type AvailabilityMap = Record<string, { available: boolean; firstAvailableAt: string | null; displayName: string }>;
 
-const CACHE_KEY = "vidoprompt:model-availability:v1";
-const SEEN_KEY = "vidoprompt:model-availability:seen:v1";
+const CACHE_KEY = "movprompt:model-availability:v1";
+const SEEN_KEY = "movprompt:model-availability:seen:v1";
 
 function readCache(): AvailabilityMap {
   try {
