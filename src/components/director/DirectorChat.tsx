@@ -798,7 +798,9 @@ function DirectorChatInner() {
         payload.mode === "storyboard_panels"
           ? "Generating storyboard panels…"
           : payload.mode === "character_sheet"
-            ? "Designing a character sheet…"
+            ? options?.subjectKind === "product"
+              ? "Designing a product sheet…"
+              : "Designing a character sheet…"
             : "Generating a reference frame…",
     };
 
