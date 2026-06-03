@@ -1112,6 +1112,7 @@ Then stop. Don't ask follow-up questions yourself.`;
     // Skill matcher — scan the last 3 user turns for trigger phrases and, if a
     // skill matches, append its full SKILL.md body to the system prompt.
     let skillBlock = "";
+    let activeSkillName = "";
     if (!isFreeChat) {
       const recentUserText = messages
         .filter((m) => m.role === "user")
@@ -1119,8 +1120,14 @@ Then stop. Don't ask follow-up questions yourself.`;
         .map((m) => m.content)
         .join("\n");
       const matched = pickSkill(recentUserText);
-      if (matched) skillBlock = skillAddendum(matched);
+      if (matched) {
+        skillBlock = skillAddendum(matched);
+        activeSkillName = matched.name;
+      }
     }
+    const skillHeader: Record<string, string> = activeSkillName
+      ? { "x-active-skill": activeSkillName }
+      : {};
 
     const aiMessages = [
       { role: "system", content: isFreeChat ? FREE_CHAT_SYSTEM : SYSTEM_PROMPT + tasteAddendum + handoffAddendum + skillBlock },
