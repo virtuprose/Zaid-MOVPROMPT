@@ -221,6 +221,7 @@ function DirectorChatInner() {
 
   const [busy, setBusy] = useState(false);
   const [phase, setPhase] = useState<DirectorPhase>("thinking");
+  const [activitySteps, setActivitySteps] = useState<ActivityStep[]>([]);
   const [resetOpen, setResetOpen] = useState(false);
   const [showJumpLatest, setShowJumpLatest] = useState(false);
   const [readyToStitch, setReadyToStitch] = useState<string | null>(null);
