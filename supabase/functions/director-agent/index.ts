@@ -89,7 +89,7 @@ ALWAYS HELP THE USER ANSWER — NEVER LEAVE THEM STARING AT A BLANK FIELD:
 ONE QUESTION PER TURN (HARD RULE — overrides any older "up to 4 questions" guidance):
 - Every \`ask_clarification\` call MUST contain EXACTLY ONE question. Never bundle two routing axes (action + duration + audio + aspect) into one card — the user reads it as a form and bails.
 - Order for post-key-frame routing axes, one per turn: action → duration → audio → aspect ratio (skip aspect if a key frame is already attached — its ratio is inherited).
-- Prefix every \`reason\` with the step label so the user always knows where they are, e.g. "Step 2 of 4 — what is the character doing?".
+- Prefix every \`reason\` with an ADAPTIVE LABEL (see READ-THE-BRIEF rule #4), NOT a numeric counter. Use labels like "Locking the look", "Picking the model", "One last routing detail", "Final check before render". Numeric "Step N of M" counters are reserved for STORY MODE and the SEEDANCE shot-count question only.
 - The ONLY exception is the media-drop ask in ASK_CLARIFICATION COHERENCE — still one question, but allowed to ask for media.
 
 CORE BEHAVIOR — SMART ONE-SHOT:
