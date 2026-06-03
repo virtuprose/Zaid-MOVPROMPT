@@ -372,6 +372,11 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
     try { localStorage.setItem("movprompt.timelinePrompting", timelineEnabled ? "1" : "0"); } catch { /* ignore */ }
   }, [timelineEnabled]);
   const supportsTimeline = useMemo(() => supportsTimelinePrompting(selectedModel), [selectedModel]);
+  const timelineRequired = useMemo(() => timelineMandatory(selectedModel), [selectedModel]);
+  // Force Timeline Prompting on whenever the user lands on a Seedance model.
+  useEffect(() => {
+    if (timelineRequired && !timelineEnabled) setTimelineEnabled(true);
+  }, [timelineRequired, timelineEnabled]);
 
   // Per-model target video duration (informs the generated prompt's pacing).
   const modelControls = useMemo(() => getModelControls(selectedModel), [selectedModel]);
