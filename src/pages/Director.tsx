@@ -405,9 +405,12 @@ export default function Director() {
                 })}
               </div>
             )}
+              </>
+            )}
           </aside>
 
-          <DirectorWorkspace sessionId={sessionId} />
+          <DirectorWorkspace sessionId={sessionId} navCollapsed={navCollapsed} onToggleNav={toggleNav} />
+
         </div>
 
       </div>
