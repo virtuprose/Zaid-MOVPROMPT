@@ -1176,7 +1176,7 @@ Then stop. Don't ask follow-up questions yourself.`;
     // Streaming: pipe through
     if (stream) {
       return new Response(aiResp.body, {
-        headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
+        headers: { ...corsHeaders, ...skillHeader, "Content-Type": "text/event-stream" },
       });
     }
 
@@ -1193,14 +1193,14 @@ Then stop. Don't ask follow-up questions yourself.`;
       } catch {
         args = {};
       }
-      return new Response(JSON.stringify({ kind: fnName, ...args }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      return new Response(JSON.stringify({ kind: fnName, activeSkill: activeSkillName || undefined, ...args }), {
+        headers: { ...corsHeaders, ...skillHeader, "Content-Type": "application/json" },
       });
     }
 
     return new Response(
-      JSON.stringify({ kind: "message", content: choice?.content || "..." }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      JSON.stringify({ kind: "message", activeSkill: activeSkillName || undefined, content: choice?.content || "..." }),
+      { headers: { ...corsHeaders, ...skillHeader, "Content-Type": "application/json" } },
     );
   } catch (e) {
     console.error("director-agent error", e);
