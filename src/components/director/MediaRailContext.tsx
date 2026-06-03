@@ -1,4 +1,15 @@
-import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import type { Attachment } from "@/lib/director/ingest";
 
 export type RailBubble = any;
 
@@ -19,6 +30,8 @@ export type MediaItem =
       status: "queued" | "processing" | "completed" | "failed";
       order: number;
     };
+
+export type MediaFolder = { id: string; name: string };
 
 export function extractMediaItems(bubbles: any[]): MediaItem[] {
   const items: MediaItem[] = [];
@@ -74,13 +87,226 @@ export function extractMediaItems(bubbles: any[]): MediaItem[] {
 type Ctx = {
   bubbles: RailBubble[];
   setBubbles: (b: RailBubble[]) => void;
+  sessionId?: string;
+  setSessionId: (id?: string) => void;
+
+  hiddenKeys: Set<string>;
+  favorites: Set<string>;
+  folders: MediaFolder[];
+  pendingAttachments: Attachment[];
+
+  toggleFavorite: (item: MediaItem) => Promise<void>;
+  hideItem: (item: MediaItem) => Promise<void>;
+  unhideItem: (key: string) => Promise<void>;
+  createFolder: (name: string) => Promise<MediaFolder | null>;
+  addToFolder: (item: MediaItem, folderId: string) => Promise<void>;
+  enqueueAttachment: (a: Attachment) => void;
+  consumeAttachments: () => Attachment[];
 };
 
 const MediaRailCtx = createContext<Ctx | null>(null);
 
 export function MediaRailProvider({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
   const [bubbles, setBubbles] = useState<RailBubble[]>([]);
-  const value = useMemo(() => ({ bubbles, setBubbles }), [bubbles]);
+  const [sessionId, setSessionId] = useState<string | undefined>(undefined);
+  const [hiddenKeys, setHiddenKeys] = useState<Set<string>>(new Set());
+  const [favorites, setFavorites] = useState<Set<string>>(new Set());
+  const [folders, setFolders] = useState<MediaFolder[]>([]);
+  const [pendingAttachments, setPendingAttachments] = useState<Attachment[]>([]);
+
+  // Load favorites + folders once per user
+  useEffect(() => {
+    if (!user) {
+      setFavorites(new Set());
+      setFolders([]);
+      return;
+    }
+    let alive = true;
+    (async () => {
+      const [fav, fld] = await Promise.all([
+        supabase.from("media_favorites").select("media_key").eq("user_id", user.id),
+        supabase
+          .from("media_folders")
+          .select("id, name")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: true }),
+      ]);
+      if (!alive) return;
+      if (fav.data) setFavorites(new Set(fav.data.map((r: any) => r.media_key)));
+      if (fld.data) setFolders(fld.data as MediaFolder[]);
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [user?.id]);
+
+  // Hidden items scoped per session (so a delete on one task doesn't leak).
+  useEffect(() => {
+    if (!user || !sessionId) {
+      setHiddenKeys(new Set());
+      return;
+    }
+    let alive = true;
+    (async () => {
+      const { data } = await supabase
+        .from("media_hidden")
+        .select("media_key")
+        .eq("user_id", user.id)
+        .eq("session_id", sessionId);
+      if (!alive) return;
+      setHiddenKeys(new Set((data || []).map((r: any) => r.media_key)));
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [user?.id, sessionId]);
+
+  const toggleFavorite = useCallback(
+    async (item: MediaItem) => {
+      if (!user) return;
+      const key = item.id;
+      const isFav = favorites.has(key);
+      const next = new Set(favorites);
+      if (isFav) next.delete(key);
+      else next.add(key);
+      setFavorites(next);
+      if (isFav) {
+        await supabase
+          .from("media_favorites")
+          .delete()
+          .eq("user_id", user.id)
+          .eq("media_key", key);
+      } else {
+        await supabase.from("media_favorites").insert({
+          user_id: user.id,
+          media_key: key,
+          kind: item.kind,
+          url: item.url || "",
+          label: item.label,
+          session_id: sessionId ?? null,
+        });
+      }
+    },
+    [user, favorites, sessionId],
+  );
+
+  const hideItem = useCallback(
+    async (item: MediaItem) => {
+      if (!user) return;
+      const key = item.id;
+      setHiddenKeys((prev) => new Set(prev).add(key));
+      await supabase.from("media_hidden").upsert(
+        {
+          user_id: user.id,
+          media_key: key,
+          session_id: sessionId ?? null,
+        },
+        { onConflict: "user_id,media_key" },
+      );
+    },
+    [user, sessionId],
+  );
+
+  const unhideItem = useCallback(
+    async (key: string) => {
+      if (!user) return;
+      setHiddenKeys((prev) => {
+        const next = new Set(prev);
+        next.delete(key);
+        return next;
+      });
+      await supabase
+        .from("media_hidden")
+        .delete()
+        .eq("user_id", user.id)
+        .eq("media_key", key);
+    },
+    [user],
+  );
+
+  const createFolder = useCallback(
+    async (name: string) => {
+      if (!user || !name.trim()) return null;
+      const { data, error } = await supabase
+        .from("media_folders")
+        .insert({ user_id: user.id, name: name.trim().slice(0, 80) })
+        .select("id, name")
+        .single();
+      if (error || !data) return null;
+      const folder = data as MediaFolder;
+      setFolders((prev) => [...prev, folder]);
+      return folder;
+    },
+    [user],
+  );
+
+  const addToFolder = useCallback(
+    async (item: MediaItem, folderId: string) => {
+      if (!user) return;
+      await supabase
+        .from("media_folder_items")
+        .upsert(
+          {
+            folder_id: folderId,
+            user_id: user.id,
+            media_key: item.id,
+            kind: item.kind,
+            url: item.url || "",
+            label: item.label,
+            session_id: sessionId ?? null,
+          },
+          { onConflict: "folder_id,media_key" },
+        );
+    },
+    [user, sessionId],
+  );
+
+  const enqueueAttachment = useCallback((a: Attachment) => {
+    setPendingAttachments((prev) => [...prev, a]);
+  }, []);
+
+  const consumeAttachments = useCallback(() => {
+    const drained = pendingAttachments;
+    setPendingAttachments([]);
+    return drained;
+  }, [pendingAttachments]);
+
+  const value = useMemo<Ctx>(
+    () => ({
+      bubbles,
+      setBubbles,
+      sessionId,
+      setSessionId,
+      hiddenKeys,
+      favorites,
+      folders,
+      pendingAttachments,
+      toggleFavorite,
+      hideItem,
+      unhideItem,
+      createFolder,
+      addToFolder,
+      enqueueAttachment,
+      consumeAttachments,
+    }),
+    [
+      bubbles,
+      sessionId,
+      hiddenKeys,
+      favorites,
+      folders,
+      pendingAttachments,
+      toggleFavorite,
+      hideItem,
+      unhideItem,
+      createFolder,
+      addToFolder,
+      enqueueAttachment,
+      consumeAttachments,
+    ],
+  );
+
   return <MediaRailCtx.Provider value={value}>{children}</MediaRailCtx.Provider>;
 }
 
@@ -90,5 +316,10 @@ export function useMediaRail() {
 
 export function useMediaItems(): MediaItem[] {
   const ctx = useContext(MediaRailCtx);
-  return useMemo(() => extractMediaItems(ctx?.bubbles || []), [ctx?.bubbles]);
+  return useMemo(() => {
+    const items = extractMediaItems(ctx?.bubbles || []);
+    const hidden = ctx?.hiddenKeys;
+    if (!hidden || hidden.size === 0) return items;
+    return items.filter((it) => !hidden.has(it.id));
+  }, [ctx?.bubbles, ctx?.hiddenKeys]);
 }
