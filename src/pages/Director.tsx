@@ -286,12 +286,6 @@ export default function Director() {
                 )}
                 {sessions.map((s) => {
                   const active = s.id === sessionId;
-                  const dotColor =
-                    s.status === "completed"
-                      ? "bg-emerald-500"
-                      : s.status === "in_progress"
-                        ? "bg-amber-500 animate-pulse"
-                        : "bg-muted-foreground/40";
                   const ts = new Date(s.updated_at);
                   const tsLabel = ts.toLocaleString(undefined, {
                     month: "short",
@@ -318,29 +312,13 @@ export default function Director() {
                             src={s.thumbnail}
                             alt=""
                             className="w-full h-full object-cover"
-                            onError={(e) => {
-                              const img = e.currentTarget;
-                              img.style.display = "none";
-                              const fallback = img.nextElementSibling as HTMLElement | null;
-                              if (fallback) fallback.style.display = "flex";
-                            }}
                           />
                         ) : null}
-                        <span
-                          className="w-full h-full items-center justify-center"
-                          style={{ display: s.thumbnail && !s.thumbnail.startsWith("blob:") ? "none" : "flex" }}
-                        >
-                          <MessageSquare className="w-3 h-3 text-muted-foreground/60" />
-                        </span>
                       </div>
-                      {/* Status dot */}
-                      <span
-                        className={cn("shrink-0 w-1.5 h-1.5 rounded-full", dotColor)}
-                        aria-label={s.status}
-                      />
                       {s.pinned && (
                         <Pin className="w-3 h-3 shrink-0 text-accent fill-current -rotate-45" />
                       )}
+
                       <span className="truncate flex-1">{s.title || "Untitled brief"}</span>
                       <span className="hidden group-hover:inline shrink-0 text-[10px] text-muted-foreground/70 whitespace-nowrap">
                         {tsLabel}
