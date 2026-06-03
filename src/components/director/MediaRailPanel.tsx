@@ -72,9 +72,15 @@ export function MediaRailPanel() {
 
   if (items.length === 0) return null;
 
-  const filtered = items.filter((it) =>
-    filter === "all" ? true : filter === "images" ? it.kind === "image" : it.kind === "video",
-  );
+  const filtered = items.filter((it) => {
+    if (filter === "all") return true;
+    if (filter === "images") return it.kind === "image";
+    if (filter === "videos") return it.kind === "video";
+    return false; // audios/files — not tracked yet
+  });
+
+  const active = FILTERS.find((f) => f.id === filter) ?? FILTERS[0];
+  const ActiveIcon = active.Icon;
 
   const handleCreateFolder = async () => {
     const item = newFolderFor;
