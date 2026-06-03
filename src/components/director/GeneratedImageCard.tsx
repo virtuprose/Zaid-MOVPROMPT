@@ -336,7 +336,7 @@ export function GeneratedImageCard({ data, onRegenerate, onUnpinSubject, onAnima
   const label = data.subjectSheet
     ? `${subjectLabel} sheet · pinned`
     : data.mode === "character_sheet"
-      ? "Character sheet · 3 views"
+      ? `${subjectLabel} sheet · 3 views`
       : data.mode === "storyboard_panels"
         ? `Storyboard · ${data.images.length} panels`
         : "Key frame · hero shot";
