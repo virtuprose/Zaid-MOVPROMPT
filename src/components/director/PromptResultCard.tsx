@@ -347,6 +347,11 @@ export function PromptResultCard({ title, prompt, breakdown, directorsNote, onRe
     initialOptions.audio = lockedSpec.audio !== "silent";
   }
 
+  // "Render now" fast-path: when the Director already locked aspect + duration
+  // in chat, skip the settings dialog and render directly with those values.
+  const settingsReady =
+    !!initialOptions.aspect_ratio && typeof initialOptions.duration === "number";
+
   const fullText = [
     `# ${title}`,
     "",
@@ -420,6 +425,41 @@ export function PromptResultCard({ title, prompt, breakdown, directorsNote, onRe
     const m = findVideoModel(modelId);
     if (!m) return;
     setPendingModel(m);
+  };
+
+  /**
+   * One-click render path. When the Director already collected aspect + duration
+   * during the chat, we skip the VideoOptionsDialog entirely and go straight
+   * to the approval modal → render. The user can still click
+   * "Adjust render settings" to tweak before rendering.
+   */
+  const directRender = (model: VideoModel) => {
+    if (!user) {
+      toast.error("Sign in to generate videos");
+      return;
+    }
+    const proceed = () => {
+      requestApproval({
+        action: "video",
+        label: `Render with ${model.label}`,
+        question: "Approve render?",
+        items: [prompt.slice(0, 140) + (prompt.length > 140 ? "…" : "")],
+        cost: 2.125,
+        alwaysAllowKey: `approval:video:${model.id}`,
+        onConfirm: () =>
+          generateVideo(model, initialOptions, prompt, { rewritten: false }),
+      });
+    };
+    if (typeof window !== "undefined" && sessionStorage.getItem(RIGHTS_ACK_KEY) === "1") {
+      proceed();
+    } else {
+      setPendingRender({
+        model,
+        opts: initialOptions,
+        finalPrompt: prompt,
+        meta: { rewritten: false },
+      });
+    }
   };
 
   const generateVideo = async (
@@ -643,7 +683,9 @@ export function PromptResultCard({ title, prompt, breakdown, directorsNote, onRe
           <div className="inline-flex items-stretch rounded-md border border-primary/30 bg-primary/15 overflow-hidden">
             <Button
               size="sm"
-              onClick={() => openOptionsFor(preferredModel.id)}
+              onClick={() =>
+                settingsReady ? directRender(preferredModel) : openOptionsFor(preferredModel.id)
+              }
               disabled={generating || (!!job && job.status !== "completed" && job.status !== "failed")}
               className="gap-1.5 rounded-none bg-transparent text-primary hover:bg-primary/25 border-0 shadow-none"
             >
@@ -652,8 +694,9 @@ export function PromptResultCard({ title, prompt, breakdown, directorsNote, onRe
               ) : (
                 <Film className="w-4 h-4" />
               )}
-              Generate with {preferredModel.label}
+              {settingsReady ? `Render now · ${preferredModel.label}` : `Generate with ${preferredModel.label}`}
             </Button>
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
@@ -701,6 +744,16 @@ export function PromptResultCard({ title, prompt, breakdown, directorsNote, onRe
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
+          {settingsReady && (
+            <button
+              type="button"
+              onClick={() => openOptionsFor(preferredModel.id)}
+              disabled={generating || (!!job && job.status !== "completed" && job.status !== "failed")}
+              className="text-[11px] text-muted-foreground hover:text-foreground underline-offset-2 hover:underline disabled:opacity-50"
+            >
+              Adjust render settings
+            </button>
+          )}
         </div>
       </div>
 

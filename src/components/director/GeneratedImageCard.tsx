@@ -336,7 +336,7 @@ export function GeneratedImageCard({ data, onRegenerate, onUnpinSubject, onAnima
   const label = data.subjectSheet
     ? `${subjectLabel} sheet · pinned`
     : data.mode === "character_sheet"
-      ? "Character sheet · 3 views"
+      ? `${subjectLabel} sheet · 3 views`
       : data.mode === "storyboard_panels"
         ? `Storyboard · ${data.images.length} panels`
         : "Key frame · hero shot";
@@ -450,7 +450,7 @@ export function GeneratedImageCard({ data, onRegenerate, onUnpinSubject, onAnima
             data.mode === "storyboard_panels"
               ? `Regenerate panel ${shotNum} — keep the same anchor reference and locked style, just re-roll this one shot.`
               : data.mode === "character_sheet"
-                ? "Regenerate the character sheet — same brief, give me another take on the design."
+                ? `Regenerate the ${subjectLabel.toLowerCase()} sheet — same brief, give me another take on the design.`
                 : "Regenerate this key frame — same brief, another take on the composition.";
           return (
             <div

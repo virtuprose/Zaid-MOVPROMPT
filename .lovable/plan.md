@@ -1,62 +1,54 @@
-# Seedance: shot-count question + mandatory Timeline Prompting
+# Sheet naming + one-button render path
 
-## What's broken today
+Two fixes from the watch-commercial session.
 
-The black-titanium watch brief picked **Seedance** at **15s**, but the Director:
-1. Never asked **how many shots** to split those 15s into — it silently produced one shot.
-2. Returned a flat single-paragraph `mainPrompt` instead of the clock-pinned **TIMELINE / EFFECTS INVENTORY / DENSITY MAP / ENERGY ARC** structure that Seedance reads best.
+## 1) Sheet label follows the upload (Product vs Character)
 
-Root cause: the timeline structure exists in `supabase/functions/generate-prompt/experts/_base.ts` (`timelineAddendum`) but it is only wired to a legacy toggle in `src/components/WorkflowPanel.tsx`. The chat-based **Director agent** (`supabase/functions/director-agent/index.ts`) never sets `timelineEnabled` and has no rule to ask about shot count for Seedance.
+**Bug:** You uploaded the Apple Watch and the Director generated a "Character sheet · 3 views". The plumbing for `subject_kind: "character" | "product"` is already in place end-to-end, but two things failed:
 
-## Goal
+- The agent picked `subject_kind: "character"` even though the upload is clearly a product.
+- `GeneratedImageCard.tsx` line 339 hardcodes `"Character sheet · 3 views"` instead of using the existing `subjectLabel`.
 
-Whenever the resolved model family is **Seedance** (`seedance-*`, including `seedance-2.0`, `seedance-v1-pro`, `seedance-2.0-ref`, `seedance-pro`, etc.):
+**Changes:**
 
-- **Always** ask the user how many shots to use for any duration ≥ 8s, before writing the prompt.
-- **Always** render the final `mainPrompt`(s) using Timeline Prompting structure — clock-pinned beats, per-shot when multishot.
+- **`supabase/functions/director-agent/index.ts`** — tighten the ANCHORED PATH rule (around line 99) into a hard auto-detection clause:
+  - "If the uploaded image is a human, animal-as-character, mascot, or anthropomorphic figure → `subject_kind: 'character'`. Otherwise (watch, phone, shoe, bottle, car, jewelry, food, packaging, any inanimate hero object) → `subject_kind: 'product'`. Never default to 'character' — always look at the image first."
+  - Mirror the same rule in `directors_note` wording so the user sees "locking your product" vs "locking your character".
+- **`src/components/director/GeneratedImageCard.tsx`** — replace the hardcoded title with `` `${subjectLabel} sheet · 3 views` ``. Same fix for the regen intent text on line 453 ("Regenerate the {subjectLabel.toLowerCase()} sheet …").
+- **`src/components/director/CinematicLoader.tsx`** — accept the subject kind so the loading messages say "Designing the product sheet…" / "Locking the product turnaround…" when applicable.
 
-This becomes a hard Seedance rule, not a user toggle.
+## 2) One Generate button at the end — not three
 
-## Changes
+**Bug:** After locking aspect + audio you see:
+1. A "Generate with Seedance" CTA from the chat (chip / suggestion).
+2. Click it → prompt card appears → another **"Generate with Seedance"** button at the bottom of the prompt card.
+3. Click that → settings dialog opens → another **"Render with Seedance"** button at the bottom of the dialog.
 
-### 1. `supabase/functions/director-agent/index.ts` — system prompt rules
+Three buttons for one action. The dialog is also redundant because aspect, audio, and duration were already collected in the chat.
 
-Add a dedicated **"Seedance protocol"** block to the system prompt (near the existing model-ranking / story-mode rules):
+**Changes:**
 
-- After model is resolved to any `seedance-*` id AND `duration_seconds >= 8`, the next agent turn MUST be `ask_clarification` with the question "How many shots should I split these {N}s into?" and chips: `1 shot (one continuous take)`, `2 shots`, `3 shots`, `4–5 shots`, `Let the Director decide`. Skip this question only if the user already named a shot count in the brief (e.g. "3-shot ad", "single take") or it's Story mode (already locked to 4).
-- Persist the chosen count in the plan as `shot_count` so the orchestrator and multi-shot pipeline use it.
-- Every Seedance prompt the agent emits (single shot or per-shot in a storyboard) MUST be authored in **Timeline Prompting** structure: `TIMELINE` (clock-pinned beats), `EFFECTS INVENTORY`, `DENSITY MAP`, `ENERGY ARC` — same shape as `timelineAddendum()` in `_base.ts`. Inline the structure rules so the agent can produce it directly instead of relying on the toggle in `generate-prompt`.
-- Negative-prompt + signature-moment guidance copied from the existing addendum.
+- **`src/components/director/PromptResultCard.tsx`** — when the resolved settings from chat already cover everything the dialog would ask for (model + duration + aspect + audio all locked in `session.plan.globals` / chat answers), the primary CTA becomes **"Render now"** and goes straight to the approval + render with those values — no dialog. A secondary text link "Adjust render settings" still opens `VideoOptionsDialog` for power users. If any axis is missing, fall back to today's behavior (open dialog).
+- **`src/components/director/VideoOptionsDialog.tsx`** — when invoked as "Adjust render settings", rename the confirm button to **"Save & render"** so it reads as "tweak then go", not "this is a different render".
+- **`src/components/director/DirectorChat.tsx`** — remove the pre-prompt "Generate with X" `next_suggestions` chip when the agent is about to call `generate_prompt` on the very next turn (i.e. all routing axes are locked). The flow becomes: last routing answer → prompt card appears automatically → single "Render now" button.
+- **`supabase/functions/director-agent/index.ts`** — update the post-routing rule so once the last axis is locked, the next turn MUST call `generate_prompt` directly instead of emitting a `Render` chip. The chip is only for cases where the user is still browsing.
 
-### 2. `supabase/functions/generate-prompt/index.ts` — auto-enable for Seedance
+## End-state user flow
 
-When the agent (or any caller) hits `generate-prompt` with `targetModel` starting with `seedance`, force `timelineEnabled = true` regardless of what the body sends. This guarantees the structured output even on legacy code paths.
+1. Upload Apple Watch → Director locks "Product sheet · 3 views".
+2. Director asks the routing questions one by one (duration → audio → aspect → shot count for Seedance).
+3. After the last answer, the prompt card appears with a single **Render now** button.
+4. Click → approval modal → render kicks off. Done.
 
-### 3. `src/lib/modelContracts.ts` — make Seedance "timeline-mandatory"
-
-Add a sibling helper `timelineMandatory(model)` (Seedance-only for now). Update `src/components/WorkflowPanel.tsx` so when the model is Seedance the timeline toggle is **forced on, disabled, and labeled "Required for Seedance"** instead of being optional — keeps the legacy panel consistent with the new Director rule.
-
-### 4. `src/lib/director/plan.ts` (+ types) — store `shot_count`
-
-Add `shot_count?: number` to the plan schema so the answer from step 1 is captured and visible in the Shots strip and in `OrchestratorDebugPanel` (so the same dry-run check you saw will report `plan.shotCount`).
-
-### 5. Tests
-
-- Add a director-agent unit/integration test: given a Seedance pick + 15s, the next turn is `ask_clarification` with shot-count chips.
-- Add a `generate-prompt` test: Seedance + no `timelineEnabled` → response still includes `TIMELINE` / `EFFECTS INVENTORY` headers.
-
-## Out of scope
-
-- No changes to Veo/Kling prompt structure (they still use Timeline only when the user opts in).
-- No changes to billing/credit math; shot count already feeds existing cost estimator.
-- Story mode stays locked at 4 acts; the new question is skipped there.
+Power users can still click "Adjust render settings" to tweak before render.
 
 ## Files touched
 
-- `supabase/functions/director-agent/index.ts` (system prompt + new rule block)
-- `supabase/functions/generate-prompt/index.ts` (force timeline for Seedance)
-- `supabase/functions/generate-prompt/experts/_base.ts` (export the rule text so director-agent can import it — single source of truth)
-- `src/lib/modelContracts.ts` (`timelineMandatory` helper)
-- `src/components/WorkflowPanel.tsx` (forced-on UI state)
-- `src/lib/director/plan.ts` + `src/components/director/OrchestratorDebugPanel.tsx` (surface `shot_count`)
-- Tests under `supabase/functions/**/__tests__` and `src/lib/director/__tests__`
+- `supabase/functions/director-agent/index.ts`
+- `src/components/director/GeneratedImageCard.tsx`
+- `src/components/director/CinematicLoader.tsx`
+- `src/components/director/PromptResultCard.tsx`
+- `src/components/director/VideoOptionsDialog.tsx`
+- `src/components/director/DirectorChat.tsx`
+
+No backend schema or migration changes.
