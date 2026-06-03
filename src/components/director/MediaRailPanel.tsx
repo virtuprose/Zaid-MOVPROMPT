@@ -12,6 +12,10 @@ import {
   Share2,
   Trash2,
   Check,
+  Layers,
+  Music,
+  FileText,
+  ChevronDown,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
