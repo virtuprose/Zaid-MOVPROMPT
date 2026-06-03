@@ -289,15 +289,8 @@ function MediaCard({
   // Top-right pill column + bottom-right "Add to task" pill, all rendered as overlays.
   const Overlays = (
     <>
-      {/* Top-left badge */}
-      <span
-        className={cn(
-          "absolute top-1.5 left-1.5 text-[9px] font-semibold tracking-wider px-1.5 py-0.5 rounded backdrop-blur",
-          item.kind === "image" ? "bg-black/60 text-white/90" : "bg-accent/90 text-accent-foreground",
-        )}
-      >
-        {item.kind === "image" ? "IMG" : "MP4"}
-      </span>
+      {/* Top-left badge removed for a cleaner full-image look */}
+
 
       {/* Top-right action column */}
       <div className="absolute top-1.5 right-1.5 flex flex-col gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
