@@ -524,30 +524,6 @@ function DirectorWorkspace({
   );
 }
 
-const TILE_GRADIENTS = [
-  "from-indigo-600/40 to-purple-900/40 text-indigo-200",
-  "from-rose-900/40 to-orange-600/40 text-rose-200",
-  "from-cyan-600/30 to-teal-900/40 text-cyan-200",
-  "from-amber-700/30 to-zinc-900/50 text-amber-200",
-  "from-emerald-700/30 to-slate-900/50 text-emerald-200",
-  "from-fuchsia-700/30 to-slate-900/50 text-fuchsia-200",
-  "from-sky-700/30 to-indigo-950/50 text-sky-200",
-];
-
-function hashString(s: string): number {
-  let h = 0;
-  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
-  return Math.abs(h);
-}
-
-function monogramFor(title: string | null): string {
-  const t = (title || "").trim();
-  if (!t) return "··";
-  const parts = t.split(/\s+/).filter(Boolean);
-  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
-  return t.slice(0, 2).toUpperCase();
-}
-
 function TaskTile({
   session,
   active,
@@ -557,50 +533,31 @@ function TaskTile({
   active: boolean;
   onClick: () => void;
 }) {
-  const hasThumb = !!session.thumbnail && !session.thumbnail.startsWith("blob:");
-  const gradient = TILE_GRADIENTS[hashString(session.id) % TILE_GRADIENTS.length];
-  const mono = monogramFor(session.title);
-
+  const label = session.title || "Untitled";
   return (
     <Tooltip>
       <TooltipTrigger asChild>
         <button
           type="button"
           onClick={onClick}
-          aria-label={session.title || "Untitled brief"}
-          className="group relative shrink-0"
+          aria-label={label}
+          className={cn(
+            "group w-full text-left px-1.5 py-1.5 rounded-md text-[10px] leading-tight break-words transition-colors",
+            active
+              ? "text-accent font-semibold border-l-2 border-accent bg-accent/5 pl-1"
+              : "text-foreground/65 hover:text-foreground hover:bg-white/5 border-l-2 border-transparent pl-1",
+          )}
+          style={{
+            display: "-webkit-box",
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: "vertical",
+            overflow: "hidden",
+          }}
         >
-          <div
-            className={cn(
-              "w-9 h-9 rounded-lg overflow-hidden flex items-center justify-center border transition-all duration-200 group-hover:scale-[1.04]",
-              active
-                ? "ring-2 ring-accent ring-offset-2 ring-offset-background border-transparent shadow-[0_0_15px_hsl(35_90%_55%/0.25)]"
-                : "border-white/10 group-hover:border-white/30",
-              !hasThumb && `bg-gradient-to-br ${gradient}`,
-            )}
-          >
-            {hasThumb ? (
-              <img src={session.thumbnail!} alt="" className="w-full h-full object-cover" />
-            ) : (
-              <span className="text-[10px] font-bold tracking-tighter">{mono}</span>
-            )}
-          </div>
-
-          {session.pinned && (
-            <span className="absolute -top-1.5 -right-1.5">
-              <Pin className="w-3 h-3 text-accent fill-current -rotate-45 drop-shadow-[0_0_4px_hsl(35_90%_55%/0.6)]" />
-            </span>
-          )}
-
-          {session.status === "in_progress" && (
-            <span className="absolute -bottom-1 -right-1 w-2.5 h-2.5 rounded-full bg-primary border-2 border-background shadow-[0_0_8px_hsl(190_90%_50%/0.7)] animate-pulse" />
-          )}
-          {session.status === "completed" && (
-            <span className="absolute -bottom-1 -right-1 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-background" />
-          )}
+          {label}
         </button>
       </TooltipTrigger>
-      <TooltipContent side="right">{session.title || "Untitled brief"}</TooltipContent>
+      <TooltipContent side="right">{label}</TooltipContent>
     </Tooltip>
   );
 }
