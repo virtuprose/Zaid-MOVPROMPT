@@ -1,46 +1,35 @@
 ## Goal
 
-Replace the dull, repetitive collapsed Tasks sidebar (56px rail) on `/director` with the cinematic "Signature rail" direction: per-task identity tiles, status pips, pin notch, amber active ring, no generic chat-icon repetition.
+Make the **expanded** tasks sidebar match the clean collapsed-rail look: just task titles as a text list, with an amber left-bar accent on the active task. Strip thumbnails, status dots, pin icons, timestamps, and the per-row "…" action button from the default view.
 
-## File
+## Changes — `src/pages/Director.tsx` (expanded `<aside>` branch, ~lines 282-383)
 
-`src/pages/Director.tsx` — only the `navCollapsed` branch of the `<aside>` (the `TooltipProvider` block around lines 188–245). Expanded sidebar, workspace, and dialogs stay untouched.
+Replace each task row (currently a bordered card with thumbnail + dot + pin + title + timestamp + dropdown) with a minimal text item:
 
-## Changes
+- Wrapper: `<button>` (not `<div>`) → `w-full text-left px-3 py-1.5 text-xs leading-snug transition-colors`
+- Inactive: `text-foreground/65 hover:text-foreground hover:bg-muted/20 border-l-2 border-transparent`
+- Active: `text-accent font-semibold bg-accent/5 border-l-2 border-accent`
+- Content: just `{s.title || "Untitled brief"}` with `line-clamp-2 break-words`
+- Remove: thumbnail block, status dot, `Pin` icon, timestamp span, `DropdownMenu` (rename/pin/delete).
 
-1. **Rail container** — keep 56px width; add subtle inner styling (`bg-[hsl(240_6%_6%)]`, `border border-white/5`, `rounded-2xl`, `py-4`, vertical gap-5). Add a thin divider between the New-task button and the task stack, and one above any future bottom slot.
+Keep:
+- The "Tasks" collapsible header + chevron.
+- "New Task" button at top.
+- Empty state message.
+- `onClick → navigate(/director/{id})`.
 
-2. **New Task button** — swap the outline button for a 40×40 squircle with cyan token tint: `bg-primary/10 border border-primary/20 hover:border-primary/50`, soft cyan blur halo on hover, cyan `Plus` icon. Keeps existing `navigate("/director")` + tooltip.
+## Trade-off: where do edit / pin / delete go?
 
-3. **Task tile (new helper, local to file)** `TaskTile({ session, active })`:
-   - 36×36 rounded-lg.
-   - If `thumbnail` and not `blob:` → render image, `object-cover`.
-   - Else → deterministic gradient fallback derived from a small hash of `session.id` picking from a curated palette set (indigo/purple, rose/orange, slate, teal/cyan, amber/zinc) + monogram (first 1–2 letters of title, uppercased; fallback "··"), font `text-[10px] font-bold tracking-tighter`.
-   - Active state: `ring-2 ring-accent ring-offset-2 ring-offset-background` + soft amber `shadow-[0_0_15px_hsl(35_90%_55%/0.25)]`.
-   - Status pip bottom-right (2.5×2.5, 2px bg-background border):
-     - `completed` → emerald-500
-     - `in_progress` → cyan primary + soft glow + `animate-pulse`
-     - `draft` → no pip (keeps tile clean)
-   - If `pinned` → tiny rotated amber pin glyph at top-right (`-top-1.5 -right-1.5`, `w-3 h-3 text-accent`).
-   - Wrap in existing `Tooltip` showing `title || "Untitled brief"`.
-   - Hover: `group-hover:scale-[1.04] transition-transform`.
+The current expanded list exposes rename, pin, and delete via a hover "…" menu. Removing it to match the clean aesthetic means losing that entry point.
 
-4. **Scroll stack** — `flex-1 flex flex-col items-center gap-3 overflow-y-auto`, hide scrollbar via existing `scrollbar-none` / inline style; add subtle top/bottom fade masks (`mask-image` linear-gradient) so tiles fade at the edges.
+Two options:
+1. **Right-click context menu** on each task title (clean look preserved, actions still reachable). Recommended.
+2. **Drop the actions entirely** from the sidebar — user manages tasks from inside the open session only.
 
-5. **Cleanup** — remove the inline `MessageSquare` fallback from the collapsed branch (now handled by monogram). Expanded branch is unchanged.
-
-## Design tokens
-
-Use existing semantic tokens (`primary`, `accent`, `background`, `border`, `muted`) — no new colors hardcoded. Gradient palette set lives as a small local const array of token-friendly Tailwind class strings.
+I'll go with option 1 unless you say otherwise — wraps the button in a `ContextMenu` so right-click reveals Edit / Pin / Delete.
 
 ## Out of scope
 
-- Expanded sidebar list, workspace toggle button, dialogs.
-- No data model changes; `SessionRow` already exposes `status`, `pinned`, `thumbnail`, `title`.
-- No new dependencies.
-
-## Verification
-
-- Visit `/director` collapsed: tiles show varied gradients + monograms, active task has amber ring + glow, in-progress pip pulses, pinned task shows amber pin notch.
-- Toggle expand/collapse — expanded view unchanged.
-- Tooltip still shows full task title on hover.
+- Collapsed rail (already done).
+- Chat panel, composer, media rail.
+- Sidebar header, "New Task" button styling, "Tasks" toggle.
