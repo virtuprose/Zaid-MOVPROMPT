@@ -487,7 +487,15 @@ export default function Director() {
   );
 }
 
-function DirectorWorkspace({ sessionId }: { sessionId?: string }) {
+function DirectorWorkspace({
+  sessionId,
+  navCollapsed,
+  onToggleNav,
+}: {
+  sessionId?: string;
+  navCollapsed?: boolean;
+  onToggleNav?: () => void;
+}) {
   const items = useMediaItems();
   const hasMedia = items.length > 0;
 
@@ -496,20 +504,31 @@ function DirectorWorkspace({ sessionId }: { sessionId?: string }) {
   // unmounts/remounts DirectorChat, which restarts hydration and causes the
   // session view to flash back to the empty "new task" view.
   return (
-    <div className="w-full min-w-0 h-[calc(100vh-140px)]">
+    <div className="relative w-full min-w-0 h-[calc(100vh-140px)]">
+      {onToggleNav && (
+        <button
+          type="button"
+          onClick={onToggleNav}
+          aria-label={navCollapsed ? "Expand tasks sidebar" : "Collapse tasks sidebar"}
+          className="hidden lg:inline-flex absolute top-2 left-2 z-20 size-8 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
+        >
+          <PanelLeft className="w-4 h-4" />
+        </button>
+      )}
       <ResizablePanelGroup
         direction="horizontal"
         autoSaveId="director-media-split"
         className="h-full w-full"
       >
         <ResizablePanel defaultSize={hasMedia ? 70 : 100} minSize={35}>
-          <div className="h-full overflow-auto pr-1">
+          <div className="h-full overflow-auto pr-1 pl-10">
             <PlanPanel sessionId={sessionId} />
             <DirectorErrorBoundary key={sessionId || "new"} sessionId={sessionId}>
               <DirectorChat />
             </DirectorErrorBoundary>
           </div>
         </ResizablePanel>
+
         {hasMedia && (
           <>
             <ResizableHandle className="group relative !w-px bg-border/70 hover:bg-primary/60 data-[resize-handle-state=drag]:bg-primary cursor-col-resize transition-colors after:absolute after:inset-y-0 after:left-1/2 after:w-2 after:-translate-x-1/2 after:content-['']">
