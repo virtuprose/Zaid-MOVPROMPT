@@ -552,12 +552,12 @@ export async function streamDirectorAgent(
   if (toolName) {
     try {
       const parsed = JSON.parse(toolArgs || "{}");
-      return { kind: toolName as any, ...parsed };
+      return { kind: toolName as any, activeSkill, ...parsed };
     } catch {
-      return { kind: "message", content: textContent };
+      return { kind: "message", content: textContent, activeSkill };
     }
   }
-  return { kind: "message", content: textContent };
+  return { kind: "message", content: textContent, activeSkill };
 }
 
 export type VideoJob = {
