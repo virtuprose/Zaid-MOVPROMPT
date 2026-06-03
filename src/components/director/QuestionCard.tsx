@@ -106,7 +106,7 @@ export function QuestionCard({ reason, questions, disabled, collapsed, attachmen
 
   if (collapsed) {
     return (
-      <div className="rounded-2xl border border-border/20 bg-muted/5 px-4 py-3 space-y-1.5">
+      <div className="space-y-1.5">
         {reason && (
           <div className="text-[11px] uppercase tracking-wide text-muted-foreground/60">
             Asked
@@ -127,7 +127,7 @@ export function QuestionCard({ reason, questions, disabled, collapsed, attachmen
   return (
     <div
       className={cn(
-        "rounded-2xl bg-muted/15 p-5 sm:p-6 space-y-5",
+        "space-y-4",
         disabled && "opacity-60 pointer-events-none",
       )}
       onKeyDown={(e) => {
