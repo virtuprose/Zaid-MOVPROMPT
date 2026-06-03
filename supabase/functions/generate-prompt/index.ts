@@ -317,8 +317,11 @@ serve(async (req) => {
 
     // Timeline Prompting addendum — appended when the user enables the toggle.
     // Duration sourced from user-selected targetDuration; defaults to 10s.
+    // HARD RULE: Seedance always uses Timeline Prompting structure regardless of caller flag.
     const resolvedDuration = typeof targetDuration === "number" && targetDuration > 0 ? targetDuration : 10;
-    const timelineBlock = timelineEnabled === true
+    const isSeedance = typeof targetModel === "string" && targetModel.startsWith("seedance");
+    const timelineActive = timelineEnabled === true || isSeedance;
+    const timelineBlock = timelineActive
       ? timelineAddendum({ defaultDuration: resolvedDuration, perShot: workflowType === "multishot" })
       : "";
 
