@@ -347,6 +347,11 @@ export function PromptResultCard({ title, prompt, breakdown, directorsNote, onRe
     initialOptions.audio = lockedSpec.audio !== "silent";
   }
 
+  // "Render now" fast-path: when the Director already locked aspect + duration
+  // in chat, skip the settings dialog and render directly with those values.
+  const settingsReady =
+    !!initialOptions.aspect_ratio && typeof initialOptions.duration === "number";
+
   const fullText = [
     `# ${title}`,
     "",
