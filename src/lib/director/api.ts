@@ -524,6 +524,11 @@ export async function streamDirectorAgent(
         }
         try {
           const j = JSON.parse(payload);
+          // Custom Director step event (injected by edge function before the AI body).
+          if (j && j._step && onStep) {
+            try { onStep(j._step as DirectorStepEvent); } catch { /* ignore */ }
+            continue;
+          }
           const delta = j.choices?.[0]?.delta;
           if (!delta) continue;
           if (delta.tool_calls?.[0]) {
