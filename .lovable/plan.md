@@ -1,21 +1,18 @@
-## Goal
-Fix the collapsed **Tasks** sidebar so image tiles render cleanly instead of showing broken-image placeholders or white-filled thumbnails.
+## Issue
+Two PanelLeft toggle buttons appear at the top of the left side when the Tasks sidebar is collapsed:
+- One inside the collapsed sidebar rail (`src/pages/Director.tsx` ~line 231)
+- One absolutely-positioned over the workspace area (`src/pages/Director.tsx` ~line 522)
 
-## What I’ll change
-1. Update the collapsed task item thumbnail renderer in `src/pages/Director.tsx`.
-2. Add the same image error/fallback behavior already used in the expanded Tasks list.
-3. Keep the compact visual style from the reference screenshot: clean rounded tiles, proper active state, and no broken browser image icon.
-4. Verify the collapsed sidebar still shows:
-   - image thumbnails when valid
-   - the message icon fallback when no valid thumbnail exists
-   - correct active-item highlighting
+Both call the same `toggleNav` handler, so they're duplicates.
 
-## Expected result
-- Broken or blocked thumbnail URLs will no longer show the default browser missing-image icon.
-- Empty/invalid thumbnails will gracefully fall back to the chat/message glyph.
-- The collapsed Tasks rail will look consistent with the intended clean icon-based design.
+## Fix
+Keep a single toggle and remove the duplicate. The cleaner option is to keep the **workspace toggle** (line 522) because:
+- It stays in the same spot whether the sidebar is collapsed or expanded (so users always know where to find it).
+- The expanded sidebar currently has no toggle at all — the workspace button already serves both states.
+- Removing the in-rail toggle in the collapsed view eliminates the visual duplication shown in the screenshot.
 
-## Technical details
-- Reuse the existing `onError` image fallback pattern already present in the expanded session list.
-- Apply it to the collapsed sidebar button markup without changing navigation, layout, or session loading behavior.
-- If needed, slightly tighten the thumbnail container styling so fallback and image states share the same rounded, centered appearance.
+### Change
+In `src/pages/Director.tsx`, remove the collapsed-rail `PanelLeft` toggle (the Tooltip + button wrapping `toggleNav` with aria-label "Expand tasks sidebar") so only the workspace-level toggle remains. The "+" New task button and task thumbnails below it stay unchanged.
+
+## Result
+One single sidebar toggle pinned at the workspace's top-left, working consistently in both collapsed and expanded states.
