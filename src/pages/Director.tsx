@@ -210,8 +210,78 @@ export default function Director() {
 
       <MediaRailProvider>
       <div className="relative z-10 container max-w-[1760px] mx-auto px-4 py-4">
-        <div className="grid grid-cols-1 lg:grid-cols-[240px_1fr] gap-4">
-          <aside className="hidden lg:flex flex-col gap-2 max-h-[calc(100vh-160px)]">
+        <div
+          className={cn(
+            "grid grid-cols-1 gap-4 transition-[grid-template-columns] duration-300 ease-out",
+            navCollapsed ? "lg:grid-cols-[56px_1fr]" : "lg:grid-cols-[240px_1fr]",
+          )}
+        >
+          <aside className="hidden lg:flex flex-col gap-2 max-h-[calc(100vh-160px)] min-w-0 overflow-hidden">
+            {navCollapsed ? (
+              <TooltipProvider delayDuration={150}>
+                <div className="flex flex-col items-center gap-1.5 pt-1">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        onClick={toggleNav}
+                        className="size-9 inline-flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
+                        aria-label="Expand tasks sidebar"
+                      >
+                        <PanelLeft className="w-4 h-4" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="right">Expand sidebar</TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        onClick={() => navigate("/director")}
+                        className="size-9 inline-flex items-center justify-center rounded-lg border border-border/50 text-foreground/80 hover:text-foreground hover:bg-muted/40 transition-colors"
+                        aria-label="New task"
+                      >
+                        <Plus className="w-4 h-4" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="right">New task</TooltipContent>
+                  </Tooltip>
+                  <div className="mt-1 flex-1 overflow-y-auto w-full flex flex-col items-center gap-1.5 px-0.5">
+                    {sessions.map((s) => {
+                      const active = s.id === sessionId;
+                      return (
+                        <Tooltip key={s.id}>
+                          <TooltipTrigger asChild>
+                            <button
+                              type="button"
+                              onClick={() => navigate(`/director/${s.id}`)}
+                              className={cn(
+                                "shrink-0 size-9 rounded-lg overflow-hidden border flex items-center justify-center bg-muted/30 transition-colors",
+                                active
+                                  ? "border-accent ring-1 ring-accent/60"
+                                  : "border-border/40 hover:border-border",
+                              )}
+                              aria-label={s.title || "Untitled brief"}
+                            >
+                              {s.thumbnail && !s.thumbnail.startsWith("blob:") ? (
+                                <img src={s.thumbnail} alt="" className="w-full h-full object-cover" />
+                              ) : (
+                                <MessageSquare className="w-3.5 h-3.5 text-muted-foreground/70" />
+                              )}
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent side="right">
+                            {s.title || "Untitled brief"}
+                          </TooltipContent>
+                        </Tooltip>
+                      );
+                    })}
+                  </div>
+                </div>
+              </TooltipProvider>
+            ) : (
+              <>
+
             <Button
               size="sm"
               variant="outline"
