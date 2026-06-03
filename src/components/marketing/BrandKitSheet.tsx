@@ -784,6 +784,8 @@ function AnglesSection({
   onPickSpec,
   onRelabel,
   onRemove,
+  onDropAngles,
+  onDropSpec,
 }: {
   references: ProductReference[];
   uploading: boolean;
@@ -792,10 +794,38 @@ function AnglesSection({
   onPickSpec: () => void;
   onRelabel: (id: string, label: string | null) => Promise<void>;
   onRemove: (id: string) => Promise<void>;
+  onDropAngles: (files: File[]) => void | Promise<void>;
+  onDropSpec: (file: File) => void | Promise<void>;
 }) {
   const angles = references.filter((r) => r.kind === "angle");
   const spec = references.find((r) => r.kind === "spec_sheet");
   const canAdd = angles.length < MAX_BRAND_ANGLES;
+
+  const [angleDrag, setAngleDrag] = useState(false);
+  const [specDrag, setSpecDrag] = useState(false);
+
+  const handleAnglesDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setAngleDrag(false);
+    const files = Array.from(e.dataTransfer.files).filter((f) => f.type.startsWith("image/"));
+    if (!files.length) return;
+    const remaining = Math.max(0, MAX_BRAND_ANGLES - angles.length);
+    if (remaining <= 0) {
+      toast.error(`Up to ${MAX_BRAND_ANGLES} angle photos`);
+      return;
+    }
+    onDropAngles(files.slice(0, remaining));
+  };
+
+  const handleSpecDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setSpecDrag(false);
+    const file = Array.from(e.dataTransfer.files).find(
+      (f) => f.type.startsWith("image/") || f.type === "application/pdf",
+    );
+    if (!file) return;
+    onDropSpec(file);
+  };
 
   return (
     <div className="space-y-4">
@@ -806,7 +836,18 @@ function AnglesSection({
             {angles.length}/{MAX_BRAND_ANGLES}
           </span>
         </div>
-        <div className="mt-2 grid grid-cols-3 sm:grid-cols-4 gap-2">
+        <div
+          onDragOver={(e) => {
+            e.preventDefault();
+            setAngleDrag(true);
+          }}
+          onDragLeave={() => setAngleDrag(false)}
+          onDrop={handleAnglesDrop}
+          className={cn(
+            "mt-2 grid grid-cols-3 sm:grid-cols-4 gap-2 rounded-lg p-1 transition-colors",
+            angleDrag && "bg-accent/5 ring-2 ring-accent/40",
+          )}
+        >
           {angles.map((r) => (
             <div key={r.id} className="relative group rounded-lg overflow-hidden border border-border/60 bg-muted/30 aspect-square">
               {r.image_url ? (
@@ -844,14 +885,24 @@ function AnglesSection({
           )}
         </div>
         <p className="mt-1.5 text-[11px] text-muted-foreground">
-          Angles, packaging, lifestyle — anything that shows the product. More references = stronger 3D lock so it looks identical across every shot.
+          Drag &amp; drop photos here, or click to upload. Angles, packaging, lifestyle — more references = stronger 3D lock so it looks identical across every shot.
         </p>
       </div>
 
-      <div>
+      <div
+        onDragOver={(e) => {
+          e.preventDefault();
+          setSpecDrag(true);
+        }}
+        onDragLeave={() => setSpecDrag(false)}
+        onDrop={handleSpecDrop}
+      >
         <SectionLabel>Product spec sheet · optional</SectionLabel>
         {spec ? (
-          <div className="mt-2 flex items-center gap-3 p-2.5 rounded-lg border border-border/60 bg-secondary/20">
+          <div className={cn(
+            "mt-2 flex items-center gap-3 p-2.5 rounded-lg border border-border/60 bg-secondary/20 transition-colors",
+            specDrag && "border-accent/60 bg-accent/5 ring-2 ring-accent/40",
+          )}>
             <div className="w-10 h-10 rounded-md bg-muted/40 inline-flex items-center justify-center text-[10px] font-semibold text-muted-foreground">
               {/\.pdf$/i.test(spec.image_path) ? "PDF" : "IMG"}
             </div>
@@ -869,10 +920,13 @@ function AnglesSection({
             type="button"
             onClick={onPickSpec}
             disabled={specUploading}
-            className="mt-2 w-full h-[72px] rounded-lg border border-dashed border-border hover:border-accent/60 hover:bg-secondary/20 bg-secondary/10 flex flex-col items-center justify-center gap-1 text-muted-foreground transition"
+            className={cn(
+              "mt-2 w-full h-[72px] rounded-lg border border-dashed border-border hover:border-accent/60 hover:bg-secondary/20 bg-secondary/10 flex flex-col items-center justify-center gap-1 text-muted-foreground transition",
+              specDrag && "border-accent/60 bg-accent/5 ring-2 ring-accent/40",
+            )}
           >
             {specUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-            <span className="text-xs font-medium">Upload PDF or image</span>
+            <span className="text-xs font-medium">Drop or click to upload PDF or image</span>
           </button>
         )}
         <p className="mt-1.5 text-[11px] text-muted-foreground">
