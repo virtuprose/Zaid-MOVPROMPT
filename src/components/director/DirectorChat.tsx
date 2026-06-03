@@ -1620,6 +1620,22 @@ function DirectorChatInner() {
             idleTimeoutMs: 30_000,
             totalTimeoutMs: 120_000,
             onPhase: (p) => setPhase(p),
+            onStep: (s) =>
+              setActivitySteps((prev) => {
+                const idx = prev.findIndex((x) => x.id === s.id);
+                const next = [...prev];
+                const entry: ActivityStep = {
+                  id: s.id,
+                  kind: s.kind as ActivityStep["kind"],
+                  label: s.label,
+                  status: s.status,
+                  detail: s.detail,
+                  ts: Date.now(),
+                };
+                if (idx >= 0) next[idx] = { ...next[idx], ...entry };
+                else next.push(entry);
+                return next;
+              }),
             tasteProfile,
             mode: chatMode,
             lockedSpec: handoffChip
