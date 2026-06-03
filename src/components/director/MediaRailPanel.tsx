@@ -446,11 +446,6 @@ function MediaCard({
         {Overlays}
       </div>
     </div>
-
-      <div className="px-2 py-1.5 flex items-center gap-1.5">
-        <Film className="w-3 h-3 text-muted-foreground shrink-0" />
-        <span className="text-[11px] text-foreground/80 truncate flex-1">{item.label}</span>
-      </div>
-    </div>
   );
 }
+
