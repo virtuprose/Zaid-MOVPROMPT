@@ -36,7 +36,7 @@ import { useToast } from "@/hooks/use-toast";
 import { trackGeneration } from "@/lib/analytics";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/i18n/LanguageContext";
-import { getContract, deriveWorkflowType, supportsTimelinePrompting } from "@/lib/modelContracts";
+import { getContract, deriveWorkflowType, supportsTimelinePrompting, timelineMandatory } from "@/lib/modelContracts";
 import { getModelControls } from "@/lib/director/videoModelControls";
 import { writeHandoff } from "@/lib/director/handoff";
 import { MODEL_GROUPS, getModelLabel } from "@/lib/models";
