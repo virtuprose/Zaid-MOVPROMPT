@@ -1534,9 +1534,39 @@ function DirectorChatInner() {
         });
       };
 
+      const seenToolKinds = new Set<string>();
+      const pushClientStep = (step: ActivityStep) => {
+        setActivitySteps((prev) => {
+          // Mark any "running" step of the same id as done, then upsert.
+          const next = prev.map((s) =>
+            s.id === step.id ? { ...s, ...step } : s.status === "running" ? { ...s, status: "done" as const } : s,
+          );
+          if (!next.some((s) => s.id === step.id)) next.push(step);
+          return next;
+        });
+      };
+
       const handlePartial = (partial: AgentResponse) => {
         lastKind = partial.kind;
         notifySkill((partial as any).activeSkill);
+        const kind = partial.kind;
+        if (kind && !seenToolKinds.has(kind)) {
+          seenToolKinds.add(kind);
+          const ts = Date.now();
+          if (kind === "ask_clarification") {
+            pushClientStep({ id: "tool-ask", kind: "thinking", label: "Drafting clarifying questions", status: "done", ts });
+          } else if (kind === "ask_model_choice") {
+            pushClientStep({ id: "tool-model", kind: "model", label: "Picking the right model", status: "done", ts });
+          } else if (kind === "generate_prompt") {
+            pushClientStep({ id: "tool-prompt", kind: "prompt", label: "Composing the cinematic prompt", status: "running", ts });
+          } else if (kind === "generate_reference_image") {
+            pushClientStep({ id: "tool-ref", kind: "reference", label: "Drafting a reference key frame", status: "done", ts });
+          } else if (kind === "generate_story_bundle") {
+            pushClientStep({ id: "tool-bundle", kind: "reference", label: "Building the story asset bundle", status: "done", ts });
+          } else if (kind === "request_video_generation" || kind === "request_story_render") {
+            pushClientStep({ id: "tool-render", kind: "prompt", label: "Handing off to the renderer", status: "done", ts });
+          }
+        }
         setBubbles((prev) => {
           const copy = [...prev];
           if (partial.kind === "generate_prompt") {
