@@ -447,6 +447,7 @@ const TOOLS = [
               audio: { type: "string", enum: ["silent", "sfx", "music", "dialogue", "full"] },
               resolution: { type: "string", enum: ["720p", "1080p", "4k"] },
               style: { type: "string", enum: ["photoreal", "cinematic-film", "stylized", "anime"] },
+              shot_count: { type: "integer", minimum: 1, maximum: 12 },
             },
             additionalProperties: false,
           },
