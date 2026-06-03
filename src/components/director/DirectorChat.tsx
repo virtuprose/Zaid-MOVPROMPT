@@ -1342,6 +1342,7 @@ function DirectorChatInner() {
     if (idleTimer.current) window.clearTimeout(idleTimer.current);
 
     setBusy(true);
+    setActivitySteps([]);
     setPhase(
       attachments.some((a) => a.kind === "image" || a.kind === "video_keyframes")
         ? "analyzing_image"
