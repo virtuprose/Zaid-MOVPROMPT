@@ -1415,15 +1415,16 @@ function DirectorChatInner() {
             history.push({ role: "user", content: `Target model: ${b.chosen}` });
           }
         } else if (b.role === "generated_images") {
+          const sheetKind = b.data.subjectKind === "product" ? "product" : "character";
           const tag =
             b.data.mode === "character_sheet"
-              ? "character sheet"
+              ? `${sheetKind} sheet`
               : b.data.mode === "storyboard_panels"
                 ? `${b.data.images.length} storyboard panels (shot ${b.data.images.map((i) => i.shot_index ?? "?").join(", ")})`
                 : "key frame (hero / establishing shot)";
           const roleTag =
             b.data.mode === "character_sheet"
-              ? "character"
+              ? sheetKind
               : b.data.mode === "storyboard_panels"
                 ? "storyboard"
                 : "key_frame";
