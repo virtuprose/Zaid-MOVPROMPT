@@ -1,54 +1,29 @@
-# Sheet naming + one-button render path
+## Goal
 
-Two fixes from the watch-commercial session.
+Eliminate the faint cyan/teal rim that appears on the inside top edge of the "Describe your ad" box on `/marketing`.
 
-## 1) Sheet label follows the upload (Product vs Character)
+## Root cause
 
-**Bug:** You uploaded the Apple Watch and the Director generated a "Character sheet · 3 views". The plumbing for `subject_kind: "character" | "product"` is already in place end-to-end, but two things failed:
+The composer and the describe-input use translucent backgrounds (`/70`, `/40`) plus `backdrop-blur` on the outer card. They sit on top of a fixed amber radial glow and the dark, slightly blue‑tinted page background. The blurred bleed through the rounded corners reads as a thin cyan rim — most visible along the top edge where the amber blur sits.
 
-- The agent picked `subject_kind: "character"` even though the upload is clearly a product.
-- `GeneratedImageCard.tsx` line 339 hardcodes `"Character sheet · 3 views"` instead of using the existing `subjectLabel`.
+## Changes (visual only, `src/pages/MarketingStudio.tsx`)
 
-**Changes:**
+1. **Outer composer card** (line 822)
+   - Replace `bg-[hsl(240_5%_8%)]/70 backdrop-blur` with a fully opaque surface, e.g. `bg-[hsl(240_5%_8%)]` and drop `backdrop-blur`.
+   - This stops the page glow + body hue from bleeding into the card and producing the rim.
 
-- **`supabase/functions/director-agent/index.ts`** — tighten the ANCHORED PATH rule (around line 99) into a hard auto-detection clause:
-  - "If the uploaded image is a human, animal-as-character, mascot, or anthropomorphic figure → `subject_kind: 'character'`. Otherwise (watch, phone, shoe, bottle, car, jewelry, food, packaging, any inanimate hero object) → `subject_kind: 'product'`. Never default to 'character' — always look at the image first."
-  - Mirror the same rule in `directors_note` wording so the user sees "locking your product" vs "locking your character".
-- **`src/components/director/GeneratedImageCard.tsx`** — replace the hardcoded title with `` `${subjectLabel} sheet · 3 views` ``. Same fix for the regen intent text on line 453 ("Regenerate the {subjectLabel.toLowerCase()} sheet …").
-- **`src/components/director/CinematicLoader.tsx`** — accept the subject kind so the loading messages say "Designing the product sheet…" / "Locking the product turnaround…" when applicable.
+2. **Describe-your-ad inner wrapper** (line 966)
+   - Replace `bg-background/40` with `bg-background/80` (or a fixed `bg-[hsl(240_5%_6%)]`) so the inner box doesn't pick up the cyan bleed from the outer card either.
+   - Keep `border-border/50` — that border is neutral and not the problem.
 
-## 2) One Generate button at the end — not three
+3. **Leave alone**
+   - The amber ambient blob (line 765) — it's desired atmosphere outside the card.
+   - All borders, focus rings, and the mic button styling.
 
-**Bug:** After locking aspect + audio you see:
-1. A "Generate with Seedance" CTA from the chat (chip / suggestion).
-2. Click it → prompt card appears → another **"Generate with Seedance"** button at the bottom of the prompt card.
-3. Click that → settings dialog opens → another **"Render with Seedance"** button at the bottom of the dialog.
+## Verification
 
-Three buttons for one action. The dialog is also redundant because aspect, audio, and duration were already collected in the chat.
+- Reload `/marketing`, zoom into the top-left and top-right corners of the describe-your-ad box, and confirm the inner edge is a uniform neutral border with no coloured rim.
+- Check the rest of the composer still reads as a layered dark card (no flat / muddy look).
+- Quickly check the page on a wide viewport (the user is at 1113 CSS px) and a narrow one to make sure removing `backdrop-blur` doesn't change perceived depth in a bad way; if it does, we can keep `backdrop-blur` but use a fully opaque background colour, which alone is enough to kill the rim.
 
-**Changes:**
-
-- **`src/components/director/PromptResultCard.tsx`** — when the resolved settings from chat already cover everything the dialog would ask for (model + duration + aspect + audio all locked in `session.plan.globals` / chat answers), the primary CTA becomes **"Render now"** and goes straight to the approval + render with those values — no dialog. A secondary text link "Adjust render settings" still opens `VideoOptionsDialog` for power users. If any axis is missing, fall back to today's behavior (open dialog).
-- **`src/components/director/VideoOptionsDialog.tsx`** — when invoked as "Adjust render settings", rename the confirm button to **"Save & render"** so it reads as "tweak then go", not "this is a different render".
-- **`src/components/director/DirectorChat.tsx`** — remove the pre-prompt "Generate with X" `next_suggestions` chip when the agent is about to call `generate_prompt` on the very next turn (i.e. all routing axes are locked). The flow becomes: last routing answer → prompt card appears automatically → single "Render now" button.
-- **`supabase/functions/director-agent/index.ts`** — update the post-routing rule so once the last axis is locked, the next turn MUST call `generate_prompt` directly instead of emitting a `Render` chip. The chip is only for cases where the user is still browsing.
-
-## End-state user flow
-
-1. Upload Apple Watch → Director locks "Product sheet · 3 views".
-2. Director asks the routing questions one by one (duration → audio → aspect → shot count for Seedance).
-3. After the last answer, the prompt card appears with a single **Render now** button.
-4. Click → approval modal → render kicks off. Done.
-
-Power users can still click "Adjust render settings" to tweak before render.
-
-## Files touched
-
-- `supabase/functions/director-agent/index.ts`
-- `src/components/director/GeneratedImageCard.tsx`
-- `src/components/director/CinematicLoader.tsx`
-- `src/components/director/PromptResultCard.tsx`
-- `src/components/director/VideoOptionsDialog.tsx`
-- `src/components/director/DirectorChat.tsx`
-
-No backend schema or migration changes.
+No backend, no logic, no token changes.

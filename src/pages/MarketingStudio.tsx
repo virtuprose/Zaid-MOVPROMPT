@@ -819,7 +819,7 @@ export default function MarketingStudio() {
               })}
             </div>
 
-          <div ref={composerRef} className="flex-1 min-w-0 rounded-3xl border border-border/60 bg-[hsl(240_5%_8%)]/70 backdrop-blur p-3 sm:p-4 scroll-mt-20 flex flex-col gap-3">
+          <div ref={composerRef} className="flex-1 min-w-0 rounded-3xl border border-border/60 bg-[hsl(240_5%_8%)] p-3 sm:p-4 scroll-mt-20 flex flex-col gap-3">
             <div className="flex flex-wrap items-center gap-2">
               {brandKits.map((bk, i) => (
                 <HoverCard key={bk.id} openDelay={150} closeDelay={80}>
@@ -963,7 +963,7 @@ export default function MarketingStudio() {
               )}
             </div>
 
-            <div className="flex items-start gap-1 min-h-11 w-full rounded-2xl border border-border/50 bg-background/40 px-3 py-2">
+            <div className="flex items-start gap-1 min-h-11 w-full rounded-2xl border border-border/50 bg-[hsl(240_5%_6%)] px-3 py-2">
               <textarea
                 ref={userNoteRef}
                 value={userNote}
