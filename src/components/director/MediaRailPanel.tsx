@@ -419,7 +419,7 @@ function MediaCard({
 
 
   return (
-    <div className="group block rounded-xl overflow-hidden border border-border/40 bg-muted/20 hover:border-primary/40 hover:ring-1 hover:ring-primary/30 transition-all">
+    <div className="group relative block rounded-xl overflow-hidden border border-border/30 bg-muted/10 hover:border-primary/40 hover:ring-1 hover:ring-primary/30 transition-all">
       <div className={cn("relative w-full bg-black/60", ratioClass)}>
         {isVideoReady ? (
           <video
@@ -445,6 +445,8 @@ function MediaCard({
         )}
         {Overlays}
       </div>
+    </div>
+
       <div className="px-2 py-1.5 flex items-center gap-1.5">
         <Film className="w-3 h-3 text-muted-foreground shrink-0" />
         <span className="text-[11px] text-foreground/80 truncate flex-1">{item.label}</span>
