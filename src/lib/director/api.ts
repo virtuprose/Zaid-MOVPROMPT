@@ -360,6 +360,7 @@ export async function streamDirectorAgent(
   const idleTimeoutMs = options.idleTimeoutMs ?? 30_000;
   const totalTimeoutMs = options.totalTimeoutMs ?? 120_000;
   const onPhase = options.onPhase;
+  const onStep = options.onStep;
   const tasteProfile = options.tasteProfile ?? null;
   const mode = options.mode ?? "director";
   const lockedSpec = options.lockedSpec ?? null;
