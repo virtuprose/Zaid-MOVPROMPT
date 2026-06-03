@@ -141,8 +141,15 @@ export function QuestionCard({ reason, questions, disabled, collapsed, attachmen
         // Pull out a "Step X — …" or "Story step X of Y — …" prefix so we can
         // render it as a clearer header chip, separate from the rationale.
         const m = reason.match(/^((?:Story s|S)tep[^.—:]*[—:])\s*(.*)$/i);
-        const label = m?.[1]?.trim();
-        const rest = (m?.[2] || reason).trim();
+        let label = m?.[1]?.trim();
+        let rest = (m?.[2] || reason).trim();
+        // Defensive: in single-shot flows the Director should use adaptive
+        // labels, not numeric "Step N of M" counters. If we still see one
+        // (and it's not a real Story step), drop the chip and keep the body.
+        if (label && !/^Story\s+step/i.test(label) && /\bof\s+\d+/i.test(label)) {
+          rest = reason.replace(/^S?tep[^—:]*[—:]\s*/i, "").trim();
+          label = undefined;
+        }
         return (
           <div className="space-y-1.5">
             {label && (
