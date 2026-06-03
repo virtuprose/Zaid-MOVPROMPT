@@ -169,6 +169,33 @@ function extractFalError(error: unknown): { status?: number; message: string } {
   return { message: "Unknown provider error" };
 }
 
+// Map raw fal/provider errors to a user-friendly message.
+// Catches audio/visual moderation rejections so the UI can guide the user
+// (e.g. retry with audio off) instead of showing the opaque
+// `Provider rejected the job (422): ...` string.
+function friendlyFalError(status: number | undefined, message: string): string {
+  const raw = (message || "").toLowerCase();
+  const isAudioModeration =
+    raw.includes("output audio has sensitive content") ||
+    raw.includes("audio has sensitive content") ||
+    (raw.includes("audio") && raw.includes("sensitive"));
+  if (isAudioModeration) {
+    return "The provider's safety filter flagged the generated audio. Re-render with audio set to Off (or Music only) — your video frames will be unchanged.";
+  }
+  const isVisualModeration =
+    raw.includes("sensitive content") ||
+    raw.includes("safety") ||
+    raw.includes("nsfw") ||
+    raw.includes("content policy");
+  if (isVisualModeration) {
+    return "The provider's safety filter flagged this render. Try softening references to people, brands, or sensitive imagery and retry.";
+  }
+  if (status === 404) {
+    return "The provider completed the render but did not return the video result. Please retry with the same prompt.";
+  }
+  return `Provider rejected the job (${status ?? "error"}): ${message || "validation error"}`;
+}
+
 function normalizeFalQueueUrl(
   url: string | null | undefined,
   kind: "status" | "response" | "cancel",
