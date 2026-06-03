@@ -367,6 +367,7 @@ export function Composer({
           )}
           <textarea
             ref={taRef}
+            data-director-composer="true"
             value={value}
             onChange={handleTextChange}
             onKeyUp={(e) => {

@@ -551,10 +551,10 @@ export async function streamDirectorAgent(
       const parsed = JSON.parse(toolArgs || "{}");
       return { kind: toolName as any, ...parsed };
     } catch {
-      return { kind: "message", content: textContent || "(no response)" };
+      return { kind: "message", content: textContent };
     }
   }
-  return { kind: "message", content: textContent || "(no response)" };
+  return { kind: "message", content: textContent };
 }
 
 export type VideoJob = {

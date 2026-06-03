@@ -2785,8 +2785,9 @@ function DirectorChatInner() {
             const isUser = b.role === "user";
             if (b.role === "assistant") {
               // Hide the streaming placeholder bubble; TypingIndicator covers it.
-              if (b.content === "…" || b.content === "") return null;
+              if (b.content === "…" || b.content === "" || b.content === "(no response)") return null;
               const animate = b.animate === true;
+              const isAdSuggestion = b.markdown === true && /\(\/marketing\)/.test(b.content);
               return (
                 <div key={i} className="motion-safe:animate-fade-up">
                   <div className="min-w-0">
@@ -2824,7 +2825,25 @@ function DirectorChatInner() {
                       />
                     )}
                     {b.markdown && b.content && (
-                      <div className="mt-1.5 flex justify-end">
+                      <div className="mt-1.5 flex justify-end gap-1.5">
+                        {isAdSuggestion && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setBubbles((prev) => prev.filter((_, k) => k !== i));
+                              window.setTimeout(() => {
+                                const el = document.querySelector<HTMLTextAreaElement>(
+                                  'textarea[data-director-composer]',
+                                );
+                                el?.focus();
+                              }, 0);
+                            }}
+                            className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-muted/30 px-2.5 py-1 text-[11px] text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors"
+                            title="Skip and keep typing"
+                          >
+                            Skip
+                          </button>
+                        )}
                         <button
                           type="button"
                           onClick={() =>
