@@ -495,17 +495,11 @@ function TaskTile({
           onClick={onClick}
           aria-label={label}
           className={cn(
-            "group w-full text-left pl-2 pr-1 py-1 text-[11px] leading-tight font-normal break-words transition-colors border-l",
+            "group w-full text-left pl-2 pr-1 py-2 text-[11px] leading-tight font-normal truncate transition-colors border-l",
             active
               ? "text-accent border-accent/70"
               : "text-foreground/55 hover:text-foreground hover:bg-white/5 border-transparent",
           )}
-          style={{
-            display: "-webkit-box",
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: "vertical",
-            overflow: "hidden",
-          }}
         >
           {label}
         </button>
