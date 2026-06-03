@@ -394,7 +394,7 @@ function MediaCard({
             e.stopPropagation();
             handleAddToTask();
           }}
-          className="absolute bottom-1.5 right-1.5 inline-flex items-center gap-1 rounded-full bg-black/65 backdrop-blur px-2.5 py-1 text-[10px] font-medium text-white/95 border border-white/10 hover:bg-black/85 hover:border-primary/50 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-all"
+          className={cn("absolute bottom-1.5 right-1.5 inline-flex items-center gap-1 rounded-full bg-black/65 backdrop-blur px-2.5 py-1 text-[10px] font-medium text-white/95 border border-white/10 hover:bg-black/85 hover:border-primary/50 transition-all", menuOpen ? "opacity-100" : "opacity-0 group-hover:opacity-100 focus-within:opacity-100")}
         >
           <Plus className="w-3 h-3" /> Add to task
         </button>
