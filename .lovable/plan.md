@@ -1,35 +1,25 @@
 ## Goal
 
-Make the **expanded** tasks sidebar match the clean collapsed-rail look: just task titles as a text list, with an amber left-bar accent on the active task. Strip thumbnails, status dots, pin icons, timestamps, and the per-row "…" action button from the default view.
+Lighten the collapsed rail. From the screenshot, the active task feels heavy (filled amber pill + bold weight + thick left bar) and uneven gaps between items make the list look noisy.
 
-## Changes — `src/pages/Director.tsx` (expanded `<aside>` branch, ~lines 282-383)
+## Changes — `src/pages/Director.tsx`
 
-Replace each task row (currently a bordered card with thumbnail + dot + pin + title + timestamp + dropdown) with a minimal text item:
+### `TaskTile` (collapsed rail, ~lines 482-518)
+- **Active state**: drop `bg-accent/5`, drop `font-semibold`, drop `border-l-2 border-accent`. Replace with just `text-accent` (color only) and a 1px left bar `border-l border-accent/70`.
+- **Inactive**: `text-foreground/55` (slightly dimmer), keep `hover:text-foreground hover:bg-white/5`, `border-l border-transparent` (1px instead of 2px so alignment doesn't shift).
+- **Typography**: bump from `text-[10px]` to `text-[11px]` for legibility, keep `leading-tight`, `font-normal` everywhere.
+- **Padding**: `py-1` (was `py-1.5`) so items feel like a tight text list, `pl-2 pr-1`.
 
-- Wrapper: `<button>` (not `<div>`) → `w-full text-left px-3 py-1.5 text-xs leading-snug transition-colors`
-- Inactive: `text-foreground/65 hover:text-foreground hover:bg-muted/20 border-l-2 border-transparent`
-- Active: `text-accent font-semibold bg-accent/5 border-l-2 border-accent`
-- Content: just `{s.title || "Untitled brief"}` with `line-clamp-2 break-words`
-- Remove: thumbnail block, status dot, `Pin` icon, timestamp span, `DropdownMenu` (rename/pin/delete).
+### Collapsed rail container (line ~222)
+- Drop the heavy `bg-[hsl(240_6%_6%)] border border-white/5 shadow-2xl` rounded card. Make it transparent: `bg-transparent border-0 shadow-none` so the rail blends into the page (the items themselves become the list, not a card-within-a-card).
+- Reduce `py-3` to `py-2`, `gap-3` to `gap-2`.
+- The `New task` "+" button: drop `bg-primary/10 border border-primary/20`; use ghost style `text-muted-foreground hover:text-primary hover:bg-white/5` so the heavy amber plus square is gone.
+- Drop the `w-6 h-px bg-white/5` separator — unnecessary with the lighter look.
 
-Keep:
-- The "Tasks" collapsible header + chevron.
-- "New Task" button at top.
-- Empty state message.
-- `onClick → navigate(/director/{id})`.
-
-## Trade-off: where do edit / pin / delete go?
-
-The current expanded list exposes rename, pin, and delete via a hover "…" menu. Removing it to match the clean aesthetic means losing that entry point.
-
-Two options:
-1. **Right-click context menu** on each task title (clean look preserved, actions still reachable). Recommended.
-2. **Drop the actions entirely** from the sidebar — user manages tasks from inside the open session only.
-
-I'll go with option 1 unless you say otherwise — wraps the button in a `ContextMenu` so right-click reveals Edit / Pin / Delete.
+### Item gap
+- Change rail items container from `gap-1` to `gap-0` (a true text list, no gaps between rows).
 
 ## Out of scope
-
-- Collapsed rail (already done).
-- Chat panel, composer, media rail.
-- Sidebar header, "New Task" button styling, "Tasks" toggle.
+- Expanded sidebar (already light).
+- Chat / composer / media rail.
+- Tooltips (kept as-is).
