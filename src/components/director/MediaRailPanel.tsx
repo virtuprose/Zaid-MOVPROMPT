@@ -294,7 +294,7 @@ function MediaCard({
 
 
       {/* Top-right action column */}
-      <div className="absolute top-1.5 right-1.5 flex flex-col gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+      <div className={cn("absolute top-1.5 right-1.5 flex flex-col gap-1 transition-opacity", menuOpen ? "opacity-100" : "opacity-0 group-hover:opacity-100 focus-within:opacity-100")}>
         <button
           type="button"
           onClick={(e) => {
