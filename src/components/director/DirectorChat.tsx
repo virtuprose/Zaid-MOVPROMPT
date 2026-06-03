@@ -410,7 +410,14 @@ function DirectorChatInner() {
         .select("id, messages, title")
         .eq("id", routeSessionId)
         .maybeSingle();
-      if (error || !data) {
+      if (error) {
+        // Transient network/auth-lock errors should NOT bounce the user back
+        // to /director (that creates a redirect loop when the page is loaded
+        // in multiple tabs and the auth lock is being stolen).
+        console.warn("Failed to load session, will retry on next render", error);
+        return;
+      }
+      if (!data) {
         toast.error("Could not load that session");
         navigate("/director", { replace: true });
         return;
