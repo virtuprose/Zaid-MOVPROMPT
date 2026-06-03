@@ -219,64 +219,39 @@ export default function Director() {
           <aside className="hidden lg:flex flex-col gap-2 max-h-[calc(100vh-160px)] min-w-0 overflow-hidden">
             {navCollapsed ? (
               <TooltipProvider delayDuration={150}>
-                <div className="flex flex-col items-center gap-1.5 pt-1">
+                <div className="flex flex-col items-center gap-3 py-3 rounded-2xl bg-[hsl(240_6%_6%)] border border-white/5 shadow-2xl">
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <button
                         type="button"
                         onClick={() => navigate("/director")}
-                        className="size-9 inline-flex items-center justify-center rounded-lg border border-border/50 text-foreground/80 hover:text-foreground hover:bg-muted/40 transition-colors"
+                        className="group relative size-10 inline-flex items-center justify-center rounded-xl bg-primary/10 border border-primary/20 hover:border-primary/50 transition-all"
                         aria-label="New task"
                       >
-                        <Plus className="w-4 h-4" />
+                        <span className="absolute inset-0 rounded-xl bg-primary/10 blur-md opacity-0 group-hover:opacity-100 transition-opacity" />
+                        <Plus className="w-5 h-5 text-primary relative" strokeWidth={2.5} />
                       </button>
                     </TooltipTrigger>
                     <TooltipContent side="right">New task</TooltipContent>
                   </Tooltip>
-                  <div className="mt-1 flex-1 overflow-y-auto w-full flex flex-col items-center gap-1.5 px-0.5">
-                    {sessions.map((s) => {
-                      const active = s.id === sessionId;
-                      return (
-                        <Tooltip key={s.id}>
-                          <TooltipTrigger asChild>
-                            <button
-                              type="button"
-                              onClick={() => navigate(`/director/${s.id}`)}
-                              className={cn(
-                                "shrink-0 size-9 rounded-lg overflow-hidden border flex items-center justify-center bg-muted/30 transition-colors",
-                                active
-                                  ? "border-accent ring-1 ring-accent/60"
-                                  : "border-border/40 hover:border-border",
-                              )}
-                              aria-label={s.title || "Untitled brief"}
-                            >
-                              {s.thumbnail && !s.thumbnail.startsWith("blob:") ? (
-                                <img
-                                  src={s.thumbnail}
-                                  alt=""
-                                  className="w-full h-full object-cover"
-                                  onError={(e) => {
-                                    const img = e.currentTarget;
-                                    img.style.display = "none";
-                                    const fallback = img.nextElementSibling as HTMLElement | null;
-                                    if (fallback) fallback.style.display = "flex";
-                                  }}
-                                />
-                              ) : null}
-                              <span
-                                className="w-full h-full items-center justify-center"
-                                style={{ display: s.thumbnail && !s.thumbnail.startsWith("blob:") ? "none" : "flex" }}
-                              >
-                                <MessageSquare className="w-3.5 h-3.5 text-muted-foreground/70" />
-                              </span>
-                            </button>
-                          </TooltipTrigger>
-                          <TooltipContent side="right">
-                            {s.title || "Untitled brief"}
-                          </TooltipContent>
-                        </Tooltip>
-                      );
-                    })}
+                  <div className="w-6 h-px bg-white/5" />
+                  <div
+                    className="flex-1 w-full flex flex-col items-center gap-3 overflow-y-auto px-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                    style={{
+                      maskImage:
+                        "linear-gradient(to bottom, transparent 0, black 12px, black calc(100% - 12px), transparent 100%)",
+                      WebkitMaskImage:
+                        "linear-gradient(to bottom, transparent 0, black 12px, black calc(100% - 12px), transparent 100%)",
+                    }}
+                  >
+                    {sessions.map((s) => (
+                      <TaskTile
+                        key={s.id}
+                        session={s}
+                        active={s.id === sessionId}
+                        onClick={() => navigate(`/director/${s.id}`)}
+                      />
+                    ))}
                   </div>
                 </div>
               </TooltipProvider>
