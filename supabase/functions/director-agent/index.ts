@@ -369,6 +369,7 @@ const TOOLS = [
               audio: { type: "string", enum: ["silent", "sfx", "music", "dialogue", "full"], description: "'silent' | 'sfx' (ambient/SFX only) | 'music' | 'dialogue' (lip-sync) | 'full' (dialogue + music + SFX)." },
               resolution: { type: "string", enum: ["720p", "1080p", "4k"] },
               style: { type: "string", enum: ["photoreal", "cinematic-film", "stylized", "anime"], description: "Visual style — heavy driver of model pick." },
+              shot_count: { type: "integer", minimum: 1, maximum: 12, description: "Number of shots to split the clip into. REQUIRED for Seedance when duration_seconds >= 8 (see SEEDANCE PROTOCOL)." },
             },
             additionalProperties: false,
           },
