@@ -268,6 +268,25 @@ export type DirectorPhase =
   | "choosing_model"
   | "writing_prompt";
 
+export type DirectorStepKind =
+  | "reading"
+  | "mining"
+  | "skill"
+  | "preflight"
+  | "thinking"
+  | "reference"
+  | "model"
+  | "prompt"
+  | "error";
+
+export type DirectorStepEvent = {
+  id: string;
+  kind: DirectorStepKind;
+  label: string;
+  status: "running" | "done" | "failed";
+  detail?: string;
+};
+
 const ENDPOINT = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/director-agent`;
 
 export async function callDirectorAgent(
