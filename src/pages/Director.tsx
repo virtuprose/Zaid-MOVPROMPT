@@ -226,24 +226,22 @@ export default function Director() {
           <aside className="hidden lg:flex flex-col gap-2 max-h-[calc(100vh-160px)] min-w-0 overflow-hidden">
             {navCollapsed ? (
               <TooltipProvider delayDuration={150}>
-                <div className="flex flex-col items-center gap-3 py-3 rounded-2xl bg-[hsl(240_6%_6%)] border border-white/5 shadow-2xl">
+                <div className="flex flex-col items-stretch gap-2 py-2">
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <button
                         type="button"
                         onClick={() => navigate("/director")}
-                        className="group relative size-10 inline-flex items-center justify-center rounded-xl bg-primary/10 border border-primary/20 hover:border-primary/50 transition-all"
+                        className="self-center size-8 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-primary hover:bg-white/5 transition-colors"
                         aria-label="New task"
                       >
-                        <span className="absolute inset-0 rounded-xl bg-primary/10 blur-md opacity-0 group-hover:opacity-100 transition-opacity" />
-                        <Plus className="w-5 h-5 text-primary relative" strokeWidth={2.5} />
+                        <Plus className="w-4 h-4" strokeWidth={2} />
                       </button>
                     </TooltipTrigger>
                     <TooltipContent side="right">New task</TooltipContent>
                   </Tooltip>
-                  <div className="w-6 h-px bg-white/5" />
                   <div
-                    className="flex-1 w-full flex flex-col items-stretch gap-1 overflow-y-auto px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                    className="flex-1 w-full flex flex-col items-stretch gap-0 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
                     style={{
                       maskImage:
                         "linear-gradient(to bottom, transparent 0, black 12px, black calc(100% - 12px), transparent 100%)",
@@ -497,10 +495,10 @@ function TaskTile({
           onClick={onClick}
           aria-label={label}
           className={cn(
-            "group w-full text-left px-1.5 py-1.5 rounded-md text-[10px] leading-tight break-words transition-colors",
+            "group w-full text-left pl-2 pr-1 py-1 text-[11px] leading-tight font-normal break-words transition-colors border-l",
             active
-              ? "text-accent font-semibold border-l-2 border-accent bg-accent/5 pl-1"
-              : "text-foreground/65 hover:text-foreground hover:bg-white/5 border-l-2 border-transparent pl-1",
+              ? "text-accent border-accent/70"
+              : "text-foreground/55 hover:text-foreground hover:bg-white/5 border-transparent",
           )}
           style={{
             display: "-webkit-box",
