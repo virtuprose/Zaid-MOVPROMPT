@@ -12,6 +12,10 @@ import {
   Share2,
   Trash2,
   Check,
+  Layers,
+  Music,
+  FileText,
+  ChevronDown,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -36,7 +40,15 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useMediaItems, useMediaRail, type MediaItem } from "./MediaRailContext";
 
-type Filter = "all" | "images" | "videos";
+type Filter = "all" | "images" | "videos" | "audios" | "files";
+
+const FILTERS: { id: Filter; label: string; Icon: typeof Layers }[] = [
+  { id: "all", label: "All Types", Icon: Layers },
+  { id: "images", label: "Images", Icon: ImageIcon },
+  { id: "videos", label: "Videos", Icon: Film },
+  { id: "audios", label: "Audios", Icon: Music },
+  { id: "files", label: "Files", Icon: FileText },
+];
 
 export function MediaRailPanel() {
   const items = useMediaItems();
@@ -60,9 +72,15 @@ export function MediaRailPanel() {
 
   if (items.length === 0) return null;
 
-  const filtered = items.filter((it) =>
-    filter === "all" ? true : filter === "images" ? it.kind === "image" : it.kind === "video",
-  );
+  const filtered = items.filter((it) => {
+    if (filter === "all") return true;
+    if (filter === "images") return it.kind === "image";
+    if (filter === "videos") return it.kind === "video";
+    return false; // audios/files — not tracked yet
+  });
+
+  const active = FILTERS.find((f) => f.id === filter) ?? FILTERS[0];
+  const ActiveIcon = active.Icon;
 
   const handleCreateFolder = async () => {
     const item = newFolderFor;
@@ -85,30 +103,38 @@ export function MediaRailPanel() {
       className="flex flex-col gap-2 h-full w-full min-w-0 bg-background/40"
     >
       <div className="flex items-center justify-between gap-2 px-2 pt-1">
-        <div className="flex items-center gap-1.5">
-          <Film className="w-3.5 h-3.5 text-muted-foreground" />
-          <h2 className="text-sm font-semibold tracking-tight">Media</h2>
-          <span className="text-[10px] text-muted-foreground/70">({items.length})</span>
-        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              className="group inline-flex items-center gap-2 pl-2.5 pr-2 py-1.5 rounded-full border border-border/50 bg-muted/30 hover:bg-muted/50 text-sm font-medium text-foreground transition-colors"
+              aria-label="Filter media"
+            >
+              <ActiveIcon className="w-4 h-4 text-muted-foreground" />
+              <span className="leading-none">{active.label}</span>
+              <ChevronDown className="w-3.5 h-3.5 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="min-w-[200px] rounded-2xl p-1.5">
+            {FILTERS.map(({ id, label, Icon }) => {
+              const selected = filter === id;
+              return (
+                <DropdownMenuItem
+                  key={id}
+                  onSelect={() => setFilter(id)}
+                  className="flex items-center gap-2.5 rounded-xl py-2 px-2.5 cursor-pointer"
+                >
+                  <Icon className="w-4 h-4 text-muted-foreground" />
+                  <span className="flex-1 text-sm">{label}</span>
+                  {selected && <Check className="w-4 h-4 text-foreground" />}
+                </DropdownMenuItem>
+              );
+            })}
+          </DropdownMenuContent>
+        </DropdownMenu>
+        <span className="text-[10px] text-muted-foreground/70">{items.length} items</span>
       </div>
 
-      <div className="mx-2 grid grid-cols-3 gap-1 p-1 rounded-lg border border-border/40 bg-muted/20 text-[11px]">
-        {(["all", "images", "videos"] as Filter[]).map((f) => (
-          <button
-            key={f}
-            type="button"
-            onClick={() => setFilter(f)}
-            className={cn(
-              "py-1 rounded-md capitalize transition-colors",
-              filter === f
-                ? "bg-background text-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground",
-            )}
-          >
-            {f}
-          </button>
-        ))}
-      </div>
 
       <div className="flex-1 overflow-y-auto px-2 pb-2">
         <div className={cn("grid gap-2", wide ? "grid-cols-2" : "grid-cols-1")}>
