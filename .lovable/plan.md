@@ -1,29 +1,54 @@
-## Goal
+## The problem you spotted
 
-Eliminate the faint cyan/teal rim that appears on the inside top edge of the "Describe your ad" box on `/marketing`.
+You're right — and it's traceable to three rules in the Director's system prompt:
 
-## Root cause
+1. **"Step N of M" is hard-coded.** Every flow (Story 5/5, Anchored 3/3, Unanchored 4/4) forces the Director to prefix `reason` with `"Step 2 of 4 — …"`. So every brief, no matter how rich, looks like the same 4-card form.
+2. **Free chat is downgraded to "inspiration only".** Line 163 literally says: *"Free-chat brainstorm turns appear tagged `[Free-chat brainstorm — NOT a locked spec]`. Treat them as INSPIRATION ONLY. Numbers, model names, or shot lists mentioned there are NOT user-confirmed answers."* That's why everything gets re-asked.
+3. **The opening fork is identical for every UNANCHORED brief.** The first turn is always *"Want me to generate a key frame first, or go straight to the video?"* — even when you already described the scene, mood, character, and intent. So "key frame about what?" is exactly the right complaint.
 
-The composer and the describe-input use translucent backgrounds (`/70`, `/40`) plus `backdrop-blur` on the outer card. They sit on top of a fixed amber radial glow and the dark, slightly blue‑tinted page background. The blurred bleed through the rounded corners reads as a thin cyan rim — most visible along the top edge where the amber blur sits.
+The result: a smart brief gets the same dumb intake form as an empty one.
 
-## Changes (visual only, `src/pages/MarketingStudio.tsx`)
+## What I'll change
 
-1. **Outer composer card** (line 822)
-   - Replace `bg-[hsl(240_5%_8%)]/70 backdrop-blur` with a fully opaque surface, e.g. `bg-[hsl(240_5%_8%)]` and drop `backdrop-blur`.
-   - This stops the page glow + body hue from bleeding into the card and producing the rim.
+### 1. Read the brief, then recap — never lead with a question
+Every first Director turn must start with a one-line **"Heard:"** recap that names the subject, vibe, and any axes the user already implied (duration, aspect, style, audio, model, character/product). Only AFTER the recap can a question follow — and only if something material is still missing.
 
-2. **Describe-your-ad inner wrapper** (line 966)
-   - Replace `bg-background/40` with `bg-background/80` (or a fixed `bg-[hsl(240_5%_6%)]`) so the inner box doesn't pick up the cyan bleed from the outer card either.
-   - Keep `border-border/50` — that border is neutral and not the problem.
+### 2. Kill the "Step N of M" prefix; use adaptive labels
+Replace the rigid counter with what's actually happening at that moment:
+- *"Locking the look"* / *"Locking the subject"* / *"Picking the model"* / *"One more routing detail"* / *"Final check"*
+- If only one question remains, drop the label entirely.
+- Story mode keeps a counter (it's a real fixed pipeline), but single-shot loses it.
 
-3. **Leave alone**
-   - The amber ambient blob (line 765) — it's desired atmosphere outside the card.
-   - All borders, focus rings, and the mic button styling.
+### 3. Promote free-chat content to actionable signal
+Free-chat turns will still be tagged, but the rule flips: **mine them for already-answered axes** (duration, aspect, audio, style, model, subject kind, mood, action) and add those to a new `[INFERRED FROM FREE CHAT]` block alongside the existing `[LOCKED HANDOFF SPEC]`. The Director must not re-ask anything inferred there unless it's genuinely ambiguous (in which case it asks *"You mentioned X — confirm 9:16 vertical?"*, not a blank chip list).
 
-## Verification
+### 4. Adaptive opening by brief type
+Replace the one-size-fits-all *"key frame first or video?"* fork with a brief-type router:
+- **Commercial / ad brief** (product, brand, CTA, "spot", "30s ad") → skip the key-frame fork, go straight to model routing + missing axes; if a product image is attached, lock subject sheet first.
+- **Cinematic / narrative brief** (scene, story, character action, lighting/lens vocab) → if the scene is well-described, propose a key frame immediately with a 1-line note; only ask if scene is vague.
+- **Character-driven brief** (named character, "make him do X") → if image attached, run subject sheet; if no image, ask ONE freeform "Describe the character or drop a reference" and skip the fork.
+- **Vague brief** ("make me a video", no specifics) → THEN show the existing fork — that's the one case it actually helps.
 
-- Reload `/marketing`, zoom into the top-left and top-right corners of the describe-your-ad box, and confirm the inner edge is a uniform neutral border with no coloured rim.
-- Check the rest of the composer still reads as a layered dark card (no flat / muddy look).
-- Quickly check the page on a wide viewport (the user is at 1113 CSS px) and a narrow one to make sure removing `backdrop-blur` doesn't change perceived depth in a bad way; if it does, we can keep `backdrop-blur` but use a fully opaque background colour, which alone is enough to kill the rim.
+### 5. Acknowledge before asking — every clarification
+Every `ask_clarification` `reason` field will be required to start with one short clause that quotes/paraphrases what the user already gave, e.g.:
+- *"Got the neon ramen bar and slow dolly-in — just need the duration."*
+- *"Locked your product. Want the opener cinematic or commercial?"*
 
-No backend, no logic, no token changes.
+This is the structural fix that makes the Director feel like it actually read the brief.
+
+### 6. Skip questions for any axis already covered (enforce harder)
+The rule "Do NOT ask a routing question whose answer is already implied" exists but is weakly enforced. I'll add a pre-flight check block: before emitting `ask_clarification`, the Director must list every axis it considers known (from brief + free-chat + handoff) and only ask the highest-priority axis NOT in that list. If all six are covered, jump straight to `ask_model_choice` (or `generate_prompt` if model is named).
+
+## Where the edits land
+
+All changes are to the system prompt inside `supabase/functions/director-agent/index.ts` (the `SYSTEM_PROMPT` constant, lines ~41–270). No schema changes, no UI changes, no new tools. The chat UI already renders whatever `reason` text the Director writes — so swapping "Step 2 of 4" for "Locking the look" is a prompt-only fix.
+
+Optionally, a tiny client tweak in `DirectorChat.tsx` to strip any leftover `Step \d+ of \d+ — ` prefix defensively, in case the model regresses.
+
+## Out of scope (ask if you want them too)
+
+- Adding a "skill chip" picker in the composer that pre-tags the brief as commercial / cinematic / character / story (would make the brief-type router deterministic instead of inferred).
+- Persisting the recap as a visible pinned card at the top of the thread so you can edit assumptions before answering.
+- Letting the user say "stop asking, just generate" mid-flow to bypass remaining questions.
+
+Want me to ship #1–6 as one prompt rewrite, or pull any of the optional items in too?
