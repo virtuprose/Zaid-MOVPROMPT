@@ -785,7 +785,7 @@ export function GeneratedImageCard({ data, onRegenerate, onUnpinSubject, onAnima
               <button
                 type="button"
                 onClick={() => downloadImage(data.images[zoomIndex].url, data.images[zoomIndex].shot_index ?? zoomIndex + 1)}
-                className="absolute top-2 right-12 bg-background/80 hover:bg-emerald-500 hover:text-white text-foreground p-1.5 rounded-md transition-colors"
+                className="absolute top-2 right-12 bg-background/80 hover:bg-background/95 text-foreground p-1.5 rounded-md transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-white/20"
                 aria-label="Download image"
               >
                 <Download className="h-4 w-4" />
@@ -794,7 +794,7 @@ export function GeneratedImageCard({ data, onRegenerate, onUnpinSubject, onAnima
             <TooltipContent>Download</TooltipContent>
           </Tooltip>
         )}
-        <DialogClose className="absolute top-2 right-2 bg-background/80 hover:bg-background p-1.5 rounded-md">
+        <DialogClose className="absolute top-2 right-2 bg-background/80 hover:bg-background/95 text-foreground p-1.5 rounded-md transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-white/20">
           <X className="h-4 w-4" />
         </DialogClose>
       </DialogContent>

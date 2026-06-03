@@ -1,25 +1,24 @@
-## Goal
+## Fix the two buttons in the image preview dialog
 
-Lighten the collapsed rail. From the screenshot, the active task feels heavy (filled amber pill + bold weight + thick left bar) and uneven gaps between items make the list look noisy.
+Both buttons live in `src/components/director/GeneratedImageCard.tsx` (the zoomed image dialog) — Download at line 785-792 and the `DialogClose` (X) at line 797-799.
 
-## Changes — `src/pages/Director.tsx`
+### Issue 1 — Blue focus ring on Download button
+After clicking, the browser's default focus state shows a bright blue ring (visible in the screenshot). It doesn't match the dark cinematic theme and looks like a stuck state.
 
-### `TaskTile` (collapsed rail, ~lines 482-518)
-- **Active state**: drop `bg-accent/5`, drop `font-semibold`, drop `border-l-2 border-accent`. Replace with just `text-accent` (color only) and a 1px left bar `border-l border-accent/70`.
-- **Inactive**: `text-foreground/55` (slightly dimmer), keep `hover:text-foreground hover:bg-white/5`, `border-l border-transparent` (1px instead of 2px so alignment doesn't shift).
-- **Typography**: bump from `text-[10px]` to `text-[11px]` for legibility, keep `leading-tight`, `font-normal` everywhere.
-- **Padding**: `py-1` (was `py-1.5`) so items feel like a tight text list, `pl-2 pr-1`.
+**Fix:** add `focus:outline-none focus-visible:ring-1 focus-visible:ring-white/20` to the Download button so the focus indicator is subtle and on‑theme. Apply the same to the X button for consistency.
 
-### Collapsed rail container (line ~222)
-- Drop the heavy `bg-[hsl(240_6%_6%)] border border-white/5 shadow-2xl` rounded card. Make it transparent: `bg-transparent border-0 shadow-none` so the rail blends into the page (the items themselves become the list, not a card-within-a-card).
-- Reduce `py-3` to `py-2`, `gap-3` to `gap-2`.
-- The `New task` "+" button: drop `bg-primary/10 border border-primary/20`; use ghost style `text-muted-foreground hover:text-primary hover:bg-white/5` so the heavy amber plus square is gone.
-- Drop the `w-6 h-px bg-white/5` separator — unnecessary with the lighter look.
+### Issue 2 — X close button doesn't match the Download button
+Today the two buttons drift visually:
+- Download: `bg-background/80 hover:bg-emerald-500 hover:text-white` — green hover that makes it pop and look larger.
+- Close (X): `bg-background/80 hover:bg-background` — bland, no clear hover accent, no `transition-colors`.
 
-### Item gap
-- Change rail items container from `gap-1` to `gap-0` (a true text list, no gaps between rows).
+**Fix:** unify both buttons to the same size/shape/treatment (matching what the rest of the app uses for icon chips):
+- Same classes: `bg-background/80 hover:bg-background/95 text-foreground p-1.5 rounded-md transition-colors`
+- Same focus styling from Issue 1
+- Drop the emerald hover on Download so the two buttons read as a matched pair, and the green/blue combo from the screenshot goes away
 
-## Out of scope
-- Expanded sidebar (already light).
-- Chat / composer / media rail.
-- Tooltips (kept as-is).
+Result: two identical neutral icon buttons (Download on the left, X on the right) with a subtle on‑theme focus ring.
+
+### Out of scope
+- Other Download buttons elsewhere (MediaRailPanel, VideoBubble, PromptResultCard) — keep as‑is unless you ask.
+- No logic, no a11y label changes, no layout changes.
