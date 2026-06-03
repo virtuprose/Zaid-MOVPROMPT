@@ -132,7 +132,7 @@ const Analytics = () => {
             </TabsTrigger>
             <TabsTrigger value="marketing" className="gap-2">
               <Megaphone className="w-4 h-4" />
-              Marketing
+              Ads
             </TabsTrigger>
             <TabsTrigger value="previews" className="gap-2">
               <Film className="w-4 h-4" />
