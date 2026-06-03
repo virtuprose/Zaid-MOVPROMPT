@@ -283,6 +283,24 @@
   background: hsl(var(--brand) / 0.35);
 }
 
+/* Global dark scrollbar — matches cinematic theme */
+html { scrollbar-color: hsl(240 4% 22%) transparent; scrollbar-width: thin; }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: hsl(240 4% 22%);
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(240 4% 32%);
+  background-clip: padding-box;
+  border: 2px solid transparent;
+}
+::-webkit-scrollbar-corner { background: transparent; }
+
+
 @keyframes preset-zoom-in { 0%,100% { transform: scale(0.85); } 50% { transform: scale(1.15); } }
 @keyframes preset-zoom-out { 0%,100% { transform: scale(1.15); } 50% { transform: scale(0.85); } }
 @keyframes preset-snap-zoom { 0%,40% { transform: scale(0.9); } 50%,100% { transform: scale(1.2); } }
