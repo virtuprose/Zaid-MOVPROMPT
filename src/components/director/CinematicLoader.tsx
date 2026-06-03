@@ -184,6 +184,7 @@ function Dot({ delay }: { delay: string }) {
 export type LoadingStage =
   | "panels"
   | "character_sheet"
+  | "product_sheet"
   | "reference"
   | "story_bundle"
   | "story_render"
@@ -203,6 +204,12 @@ export const STAGE_CAPTIONS: Record<Exclude<LoadingStage, "custom">, string[]> =
     "Locking the wardrobe…",
     "Studying the angles…",
     "Pinning the look…",
+  ],
+  product_sheet: [
+    "Studying the product…",
+    "Locking the materials…",
+    "Spinning the turnaround…",
+    "Pinning the hero look…",
   ],
   reference: [
     "Framing the reference…",
