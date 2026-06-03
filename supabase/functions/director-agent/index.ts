@@ -1089,10 +1089,10 @@ Do NOT pretend to generate. Instead, in 2–4 short sentences:
 3. Tell them: *"Flip the composer to **Director** mode (toggle next to the input) — your refs and this whole chat come with you. Director will lock the last few details and kick off the actual render."*
 Then stop. Don't ask follow-up questions yourself.`;
 
-    // Handoff spec from MovPrompt / Marketing Studio — pre-answered routing axes.
+    // Handoff spec from MovPrompt / Ads Studio — pre-answered routing axes.
     let handoffAddendum = "";
     if (lockedSpec && (lockedSpec.model || lockedSpec.aspect || lockedSpec.duration)) {
-      const sourceLabel = lockedSpec.source === "marketing" ? "Marketing Studio" : "MovPrompt";
+      const sourceLabel = lockedSpec.source === "marketing" ? "Ads Studio" : "MovPrompt";
       const lines: string[] = [];
       if (lockedSpec.model) lines.push(`- model: ${lockedSpec.model} → SKIP \`ask_model_choice\`; use this model verbatim.`);
       if (lockedSpec.aspect) lines.push(`- aspect_ratio: ${lockedSpec.aspect} → do NOT ask aspect.`);

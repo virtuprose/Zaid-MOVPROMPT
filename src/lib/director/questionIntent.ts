@@ -71,8 +71,8 @@ export function acceptAttrFor(kinds: MediaKind[]): string {
 }
 
 // ---------------------------------------------------------------------------
-// Bridge 3 — Ad / commercial intent detection (Director → Marketing Studio).
-// Heuristic only: triggers a one-time suggestion to open Marketing Studio.
+// Bridge 3 — Ad / commercial intent detection (Director → Ads Studio).
+// Heuristic only: triggers a one-time suggestion to open Ads Studio.
 // ---------------------------------------------------------------------------
 
 const AD_RE_EN =

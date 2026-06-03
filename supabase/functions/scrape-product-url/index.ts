@@ -1,5 +1,5 @@
 // Scrape a product page URL for ALL candidate product images + basic metadata
-// so the Marketing Studio "Image URL" field can accept Amazon/Shopify/etc.
+// so the Ads Studio "Image URL" field can accept Amazon/Shopify/etc.
 // links and let the user pick which images to use as hero + angle references.
 //
 // Two actions (selected by `action` in the request body):
