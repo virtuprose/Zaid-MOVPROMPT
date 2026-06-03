@@ -28,7 +28,9 @@ import {
   Trash2,
   MessageSquare,
   Megaphone,
+  PanelLeft,
 } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
 import { trackPageVisit } from "@/lib/analytics";
 import { DirectorChat } from "@/components/director/DirectorChat";
