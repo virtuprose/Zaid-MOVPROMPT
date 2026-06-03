@@ -219,64 +219,39 @@ export default function Director() {
           <aside className="hidden lg:flex flex-col gap-2 max-h-[calc(100vh-160px)] min-w-0 overflow-hidden">
             {navCollapsed ? (
               <TooltipProvider delayDuration={150}>
-                <div className="flex flex-col items-center gap-1.5 pt-1">
+                <div className="flex flex-col items-center gap-3 py-3 rounded-2xl bg-[hsl(240_6%_6%)] border border-white/5 shadow-2xl">
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <button
                         type="button"
                         onClick={() => navigate("/director")}
-                        className="size-9 inline-flex items-center justify-center rounded-lg border border-border/50 text-foreground/80 hover:text-foreground hover:bg-muted/40 transition-colors"
+                        className="group relative size-10 inline-flex items-center justify-center rounded-xl bg-primary/10 border border-primary/20 hover:border-primary/50 transition-all"
                         aria-label="New task"
                       >
-                        <Plus className="w-4 h-4" />
+                        <span className="absolute inset-0 rounded-xl bg-primary/10 blur-md opacity-0 group-hover:opacity-100 transition-opacity" />
+                        <Plus className="w-5 h-5 text-primary relative" strokeWidth={2.5} />
                       </button>
                     </TooltipTrigger>
                     <TooltipContent side="right">New task</TooltipContent>
                   </Tooltip>
-                  <div className="mt-1 flex-1 overflow-y-auto w-full flex flex-col items-center gap-1.5 px-0.5">
-                    {sessions.map((s) => {
-                      const active = s.id === sessionId;
-                      return (
-                        <Tooltip key={s.id}>
-                          <TooltipTrigger asChild>
-                            <button
-                              type="button"
-                              onClick={() => navigate(`/director/${s.id}`)}
-                              className={cn(
-                                "shrink-0 size-9 rounded-lg overflow-hidden border flex items-center justify-center bg-muted/30 transition-colors",
-                                active
-                                  ? "border-accent ring-1 ring-accent/60"
-                                  : "border-border/40 hover:border-border",
-                              )}
-                              aria-label={s.title || "Untitled brief"}
-                            >
-                              {s.thumbnail && !s.thumbnail.startsWith("blob:") ? (
-                                <img
-                                  src={s.thumbnail}
-                                  alt=""
-                                  className="w-full h-full object-cover"
-                                  onError={(e) => {
-                                    const img = e.currentTarget;
-                                    img.style.display = "none";
-                                    const fallback = img.nextElementSibling as HTMLElement | null;
-                                    if (fallback) fallback.style.display = "flex";
-                                  }}
-                                />
-                              ) : null}
-                              <span
-                                className="w-full h-full items-center justify-center"
-                                style={{ display: s.thumbnail && !s.thumbnail.startsWith("blob:") ? "none" : "flex" }}
-                              >
-                                <MessageSquare className="w-3.5 h-3.5 text-muted-foreground/70" />
-                              </span>
-                            </button>
-                          </TooltipTrigger>
-                          <TooltipContent side="right">
-                            {s.title || "Untitled brief"}
-                          </TooltipContent>
-                        </Tooltip>
-                      );
-                    })}
+                  <div className="w-6 h-px bg-white/5" />
+                  <div
+                    className="flex-1 w-full flex flex-col items-center gap-3 overflow-y-auto px-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                    style={{
+                      maskImage:
+                        "linear-gradient(to bottom, transparent 0, black 12px, black calc(100% - 12px), transparent 100%)",
+                      WebkitMaskImage:
+                        "linear-gradient(to bottom, transparent 0, black 12px, black calc(100% - 12px), transparent 100%)",
+                    }}
+                  >
+                    {sessions.map((s) => (
+                      <TaskTile
+                        key={s.id}
+                        session={s}
+                        active={s.id === sessionId}
+                        onClick={() => navigate(`/director/${s.id}`)}
+                      />
+                    ))}
                   </div>
                 </div>
               </TooltipProvider>
@@ -546,5 +521,86 @@ function DirectorWorkspace({
         )}
       </ResizablePanelGroup>
     </div>
+  );
+}
+
+const TILE_GRADIENTS = [
+  "from-indigo-600/40 to-purple-900/40 text-indigo-200",
+  "from-rose-900/40 to-orange-600/40 text-rose-200",
+  "from-cyan-600/30 to-teal-900/40 text-cyan-200",
+  "from-amber-700/30 to-zinc-900/50 text-amber-200",
+  "from-emerald-700/30 to-slate-900/50 text-emerald-200",
+  "from-fuchsia-700/30 to-slate-900/50 text-fuchsia-200",
+  "from-sky-700/30 to-indigo-950/50 text-sky-200",
+];
+
+function hashString(s: string): number {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+  return Math.abs(h);
+}
+
+function monogramFor(title: string | null): string {
+  const t = (title || "").trim();
+  if (!t) return "··";
+  const parts = t.split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+  return t.slice(0, 2).toUpperCase();
+}
+
+function TaskTile({
+  session,
+  active,
+  onClick,
+}: {
+  session: SessionRow;
+  active: boolean;
+  onClick: () => void;
+}) {
+  const hasThumb = !!session.thumbnail && !session.thumbnail.startsWith("blob:");
+  const gradient = TILE_GRADIENTS[hashString(session.id) % TILE_GRADIENTS.length];
+  const mono = monogramFor(session.title);
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          onClick={onClick}
+          aria-label={session.title || "Untitled brief"}
+          className="group relative shrink-0"
+        >
+          <div
+            className={cn(
+              "w-9 h-9 rounded-lg overflow-hidden flex items-center justify-center border transition-all duration-200 group-hover:scale-[1.04]",
+              active
+                ? "ring-2 ring-accent ring-offset-2 ring-offset-background border-transparent shadow-[0_0_15px_hsl(35_90%_55%/0.25)]"
+                : "border-white/10 group-hover:border-white/30",
+              !hasThumb && `bg-gradient-to-br ${gradient}`,
+            )}
+          >
+            {hasThumb ? (
+              <img src={session.thumbnail!} alt="" className="w-full h-full object-cover" />
+            ) : (
+              <span className="text-[10px] font-bold tracking-tighter">{mono}</span>
+            )}
+          </div>
+
+          {session.pinned && (
+            <span className="absolute -top-1.5 -right-1.5">
+              <Pin className="w-3 h-3 text-accent fill-current -rotate-45 drop-shadow-[0_0_4px_hsl(35_90%_55%/0.6)]" />
+            </span>
+          )}
+
+          {session.status === "in_progress" && (
+            <span className="absolute -bottom-1 -right-1 w-2.5 h-2.5 rounded-full bg-primary border-2 border-background shadow-[0_0_8px_hsl(190_90%_50%/0.7)] animate-pulse" />
+          )}
+          {session.status === "completed" && (
+            <span className="absolute -bottom-1 -right-1 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-background" />
+          )}
+        </button>
+      </TooltipTrigger>
+      <TooltipContent side="right">{session.title || "Untitled brief"}</TooltipContent>
+    </Tooltip>
   );
 }
