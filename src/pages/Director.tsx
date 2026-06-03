@@ -231,14 +231,14 @@ export default function Director() {
                     <TooltipTrigger asChild>
                       <button
                         type="button"
-                        onClick={() => navigate("/director")}
-                        className="self-center size-8 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-primary hover:bg-white/5 transition-colors"
-                        aria-label="New task"
+                        onClick={toggleNav}
+                        className="self-center size-8 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors"
+                        aria-label="Expand sidebar"
                       >
-                        <Plus className="w-4 h-4" strokeWidth={2} />
+                        <PanelLeft className="w-4 h-4" />
                       </button>
                     </TooltipTrigger>
-                    <TooltipContent side="right">New task</TooltipContent>
+                    <TooltipContent side="right">Expand sidebar</TooltipContent>
                   </Tooltip>
                 </div>
               </TooltipProvider>
@@ -416,11 +416,11 @@ function DirectorWorkspace({
   // session view to flash back to the empty "new task" view.
   return (
     <div className="relative w-full min-w-0 h-[calc(100vh-140px)]">
-      {onToggleNav && (
+      {onToggleNav && !navCollapsed && (
         <button
           type="button"
           onClick={onToggleNav}
-          aria-label={navCollapsed ? "Expand tasks sidebar" : "Collapse tasks sidebar"}
+          aria-label="Collapse tasks sidebar"
           className="hidden lg:inline-flex absolute top-2 left-2 z-20 size-8 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
         >
           <PanelLeft className="w-4 h-4" />
