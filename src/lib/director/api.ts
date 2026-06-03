@@ -446,6 +446,8 @@ export async function streamDirectorAgent(
     throw new DirectorHttpError(resp.status, msg, resp.status >= 500);
   }
 
+  const activeSkill = resp.headers.get("x-active-skill") || undefined;
+
 
   const reader = resp.body.getReader();
   const decoder = new TextDecoder();
