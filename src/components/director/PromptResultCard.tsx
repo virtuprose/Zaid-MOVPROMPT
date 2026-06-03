@@ -683,7 +683,9 @@ export function PromptResultCard({ title, prompt, breakdown, directorsNote, onRe
           <div className="inline-flex items-stretch rounded-md border border-primary/30 bg-primary/15 overflow-hidden">
             <Button
               size="sm"
-              onClick={() => openOptionsFor(preferredModel.id)}
+              onClick={() =>
+                settingsReady ? directRender(preferredModel) : openOptionsFor(preferredModel.id)
+              }
               disabled={generating || (!!job && job.status !== "completed" && job.status !== "failed")}
               className="gap-1.5 rounded-none bg-transparent text-primary hover:bg-primary/25 border-0 shadow-none"
             >
@@ -692,8 +694,9 @@ export function PromptResultCard({ title, prompt, breakdown, directorsNote, onRe
               ) : (
                 <Film className="w-4 h-4" />
               )}
-              Generate with {preferredModel.label}
+              {settingsReady ? `Render now · ${preferredModel.label}` : `Generate with ${preferredModel.label}`}
             </Button>
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
