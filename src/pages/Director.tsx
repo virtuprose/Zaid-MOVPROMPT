@@ -264,10 +264,24 @@ export default function Director() {
                               aria-label={s.title || "Untitled brief"}
                             >
                               {s.thumbnail && !s.thumbnail.startsWith("blob:") ? (
-                                <img src={s.thumbnail} alt="" className="w-full h-full object-cover" />
-                              ) : (
+                                <img
+                                  src={s.thumbnail}
+                                  alt=""
+                                  className="w-full h-full object-cover"
+                                  onError={(e) => {
+                                    const img = e.currentTarget;
+                                    img.style.display = "none";
+                                    const fallback = img.nextElementSibling as HTMLElement | null;
+                                    if (fallback) fallback.style.display = "flex";
+                                  }}
+                                />
+                              ) : null}
+                              <span
+                                className="w-full h-full items-center justify-center"
+                                style={{ display: s.thumbnail && !s.thumbnail.startsWith("blob:") ? "none" : "flex" }}
+                              >
                                 <MessageSquare className="w-3.5 h-3.5 text-muted-foreground/70" />
-                              )}
+                              </span>
                             </button>
                           </TooltipTrigger>
                           <TooltipContent side="right">
