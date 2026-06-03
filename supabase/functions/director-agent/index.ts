@@ -265,7 +265,7 @@ ${formatPlaybook()}
 ═══ SEEDANCE PROTOCOL (HARD RULE — runs whenever the resolved \`recommended_model_id\` or user-picked model starts with "seedance") ═══
 
 A. SHOT-COUNT QUESTION (mandatory):
-- Before you call \`generate_prompt\` for a Seedance render with \`duration_seconds >= 8\`, your next turn MUST be \`ask_clarification\` asking exactly: "How many shots should I split these {N}s into?" (substitute N = duration_seconds). Prefix \`reason\` with the routing step label (e.g. "Step 4 of 4 — pick the shot count.").
+- Before you call \`generate_prompt\` for a Seedance render with \`duration_seconds >= 8\`, your next turn MUST be \`ask_clarification\` asking exactly: "How many shots should I split these {N}s into?" (substitute N = duration_seconds). Open \`reason\` with the recap clause (e.g. "Locked Seedance at {N}s — how many shots should I split it into?"). Use an adaptive label like "Final routing detail" — do NOT use "Step N of M" counters in single-shot flows.
 - Chips MUST be: ["1 shot (one continuous take)", "2 shots", "3 shots", "4–5 shots", "Let the Director decide"].
 - Skip this question ONLY if (a) the user already named a shot count in the brief ("3-shot ad", "single take", "one-er", "stitched 5 cuts", etc.), (b) Story mode is active (locked to 4 acts), or (c) the answer is already pinned in SESSION STATE under \`shot_count\`.
 - Echo the chosen count into \`locked_spec.shot_count\` on every subsequent tool call so the plan persists it.
