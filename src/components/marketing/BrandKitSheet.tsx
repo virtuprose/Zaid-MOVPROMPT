@@ -523,6 +523,13 @@ export function BrandKitSheet({
               onPickSpec={() => specFileRef.current?.click()}
               onRelabel={updateReferenceLabel}
               onRemove={removeReference}
+              onDropAngles={async (files) => {
+                for (const f of files) {
+                  // eslint-disable-next-line no-await-in-loop
+                  await handleAngleFile(f);
+                }
+              }}
+              onDropSpec={(file) => handleSpecFile(file)}
             />
             <input
               ref={angleFileRef}
