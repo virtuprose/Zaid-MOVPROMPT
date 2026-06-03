@@ -963,7 +963,7 @@ export default function MarketingStudio() {
               )}
             </div>
 
-            <div className="flex items-start gap-1 min-h-11 w-full rounded-2xl border border-border/50 bg-background/40 px-3 py-2">
+            <div className="flex items-start gap-1 min-h-11 w-full rounded-2xl border border-border/50 bg-[hsl(240_5%_6%)] px-3 py-2">
               <textarea
                 ref={userNoteRef}
                 value={userNote}
