@@ -169,6 +169,33 @@ function extractFalError(error: unknown): { status?: number; message: string } {
   return { message: "Unknown provider error" };
 }
 
+// Map raw fal/provider errors to a user-friendly message.
+// Catches audio/visual moderation rejections so the UI can guide the user
+// (e.g. retry with audio off) instead of showing the opaque
+// `Provider rejected the job (422): ...` string.
+function friendlyFalError(status: number | undefined, message: string): string {
+  const raw = (message || "").toLowerCase();
+  const isAudioModeration =
+    raw.includes("output audio has sensitive content") ||
+    raw.includes("audio has sensitive content") ||
+    (raw.includes("audio") && raw.includes("sensitive"));
+  if (isAudioModeration) {
+    return "The provider's safety filter flagged the generated audio. Re-render with audio set to Off (or Music only) — your video frames will be unchanged.";
+  }
+  const isVisualModeration =
+    raw.includes("sensitive content") ||
+    raw.includes("safety") ||
+    raw.includes("nsfw") ||
+    raw.includes("content policy");
+  if (isVisualModeration) {
+    return "The provider's safety filter flagged this render. Try softening references to people, brands, or sensitive imagery and retry.";
+  }
+  if (status === 404) {
+    return "The provider completed the render but did not return the video result. Please retry with the same prompt.";
+  }
+  return `Provider rejected the job (${status ?? "error"}): ${message || "validation error"}`;
+}
+
 function normalizeFalQueueUrl(
   url: string | null | undefined,
   kind: "status" | "response" | "cancel",
@@ -407,10 +434,7 @@ serve(async (req) => {
           falError.status !== 408 &&
           falError.status !== 429;
         if (isTerminal4xx) {
-          const friendly =
-            falError.status === 404
-              ? "The provider completed the render but did not return the video result. Please retry with the same prompt."
-              : `Provider rejected the job (${falError.status}): ${falError.message || "validation error"}`;
+          const friendly = friendlyFalError(falError.status, falError.message);
           await admin
             .from("video_jobs")
             .update({
@@ -448,10 +472,7 @@ serve(async (req) => {
             falError.status !== 408 &&
             falError.status !== 429;
           if (isTerminal4xx) {
-            const friendly =
-              falError.status === 404
-                ? "The provider completed the render but did not return the video result. Please retry with the same prompt."
-                : `Provider rejected the job (${falError.status}): ${falError.message || "validation error"}`;
+            const friendly = friendlyFalError(falError.status, falError.message);
             await admin
               .from("video_jobs")
               .update({
@@ -701,23 +722,16 @@ serve(async (req) => {
     } catch (error) {
       const falError = extractFalError(error);
       console.error("fal submit error", falError.status, falError.message, error);
+      const friendlySubmit =
+        typeof falError.status === "number" && falError.status >= 400 && falError.status < 500
+          ? friendlyFalError(falError.status, falError.message)
+          : (falError.message || "Provider error");
       await admin
         .from("video_jobs")
-        .update({
-          status: "failed",
-          error:
-            typeof falError.status === "number" && falError.status >= 400 && falError.status < 500
-              ? `Provider rejected the job (${falError.status}): ${falError.message || "validation error"}`
-              : falError.message || "Provider error",
-        })
+        .update({ status: "failed", error: friendlySubmit })
         .eq("id", job.id);
       await refundCredits({ userId: uid, amount: creditCost, reason: "video_render_refund", refId: job.id, metadata: { stage: "submit_error" } });
-      return new Response(JSON.stringify({
-        error:
-          typeof falError.status === "number" && falError.status >= 400 && falError.status < 500
-            ? `Provider rejected the job (${falError.status}): ${falError.message || "validation error"}`
-            : falError.message || "Provider rejected request",
-      }), {
+      return new Response(JSON.stringify({ error: friendlySubmit }), {
         status: typeof falError.status === "number" && falError.status >= 400 && falError.status < 500 ? falError.status : 502,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
