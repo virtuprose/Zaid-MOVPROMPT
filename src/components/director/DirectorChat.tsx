@@ -2613,29 +2613,25 @@ function DirectorChatInner() {
             }
             if (b.role === "error") {
               return (
-                <div key={i} className="flex items-start gap-2 motion-safe:animate-fade-up">
-                  <AssistantAvatar size="sm" state="idle" className="mt-1" />
-                  <div className="flex-1 rounded-2xl border border-destructive/40 bg-destructive/5 px-4 py-3 text-sm">
-                    <div className="font-medium text-foreground">{b.message}</div>
-                    {b.detail && (
-                      <div className="mt-1 text-[12px] text-muted-foreground whitespace-pre-wrap">
-                        {b.detail}
-                      </div>
-                    )}
-                    {b.retryable && (
-                      <div className="mt-3 flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="rounded-full h-7 text-xs"
-                          onClick={() => void retryLast()}
-                          disabled={busy}
-                        >
-                          <RotateCcw className="w-3 h-3 mr-1" /> Retry
-                        </Button>
-                      </div>
-                    )}
-                  </div>
+                <div key={i} className="motion-safe:animate-fade-up text-sm">
+                  <div className="text-destructive font-medium">{b.message}</div>
+                  {b.detail && (
+                    <div className="mt-1 text-[12px] text-muted-foreground whitespace-pre-wrap">
+                      {b.detail}
+                    </div>
+                  )}
+                  {b.retryable && (
+                    <div className="mt-2">
+                      <button
+                        type="button"
+                        onClick={() => void retryLast()}
+                        disabled={busy}
+                        className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        <RotateCcw className="w-3 h-3" /> Retry
+                      </button>
+                    </div>
+                  )}
                 </div>
               );
             }
