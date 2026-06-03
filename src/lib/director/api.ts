@@ -335,6 +335,8 @@ export type StreamOptions = {
   totalTimeoutMs?: number;
   /** Called when the director enters a new phase (drives the typing indicator). */
   onPhase?: (phase: DirectorPhase) => void;
+  /** Called with structured Director activity steps as they arrive from the backend. */
+  onStep?: (step: DirectorStepEvent) => void;
 };
 
 export type HandoffLockedSpec = {
