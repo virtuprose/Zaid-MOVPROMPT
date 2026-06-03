@@ -317,8 +317,11 @@ serve(async (req) => {
 
     // Timeline Prompting addendum — appended when the user enables the toggle.
     // Duration sourced from user-selected targetDuration; defaults to 10s.
+    // HARD RULE: Seedance always uses Timeline Prompting structure regardless of caller flag.
     const resolvedDuration = typeof targetDuration === "number" && targetDuration > 0 ? targetDuration : 10;
-    const timelineBlock = timelineEnabled === true
+    const isSeedance = typeof targetModel === "string" && targetModel.startsWith("seedance");
+    const timelineActive = timelineEnabled === true || isSeedance;
+    const timelineBlock = timelineActive
       ? timelineAddendum({ defaultDuration: resolvedDuration, perShot: workflowType === "multishot" })
       : "";
 
@@ -365,8 +368,11 @@ serve(async (req) => {
         : `Audio: DISABLED — produce a SILENT video. Do not include any audio direction. Set audioBlock to "Silent — no audio".\n\n`;
     }
 
-    if (timelineEnabled === true) {
-      userText += `Timeline Prompting: ENABLED — every mainPrompt MUST follow the TIMELINE / EFFECTS INVENTORY / DENSITY MAP / ENERGY ARC structure defined in the system prompt. Clock-pinned beats are required.\n\n`;
+    if (timelineActive) {
+      const reason = isSeedance && timelineEnabled !== true
+        ? `Timeline Prompting: ENABLED (auto — Seedance always uses Timeline structure). Every mainPrompt MUST follow the TIMELINE / EFFECTS INVENTORY / DENSITY MAP / ENERGY ARC structure defined in the system prompt. Clock-pinned beats are required.\n\n`
+        : `Timeline Prompting: ENABLED — every mainPrompt MUST follow the TIMELINE / EFFECTS INVENTORY / DENSITY MAP / ENERGY ARC structure defined in the system prompt. Clock-pinned beats are required.\n\n`;
+      userText += reason;
     }
 
     if (typeof targetDuration === "number" && targetDuration > 0) {

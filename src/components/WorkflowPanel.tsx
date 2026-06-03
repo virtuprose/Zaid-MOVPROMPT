@@ -36,7 +36,7 @@ import { useToast } from "@/hooks/use-toast";
 import { trackGeneration } from "@/lib/analytics";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/i18n/LanguageContext";
-import { getContract, deriveWorkflowType, supportsTimelinePrompting } from "@/lib/modelContracts";
+import { getContract, deriveWorkflowType, supportsTimelinePrompting, timelineMandatory } from "@/lib/modelContracts";
 import { getModelControls } from "@/lib/director/videoModelControls";
 import { writeHandoff } from "@/lib/director/handoff";
 import { MODEL_GROUPS, getModelLabel } from "@/lib/models";
@@ -372,6 +372,11 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
     try { localStorage.setItem("movprompt.timelinePrompting", timelineEnabled ? "1" : "0"); } catch { /* ignore */ }
   }, [timelineEnabled]);
   const supportsTimeline = useMemo(() => supportsTimelinePrompting(selectedModel), [selectedModel]);
+  const timelineRequired = useMemo(() => timelineMandatory(selectedModel), [selectedModel]);
+  // Force Timeline Prompting on whenever the user lands on a Seedance model.
+  useEffect(() => {
+    if (timelineRequired && !timelineEnabled) setTimelineEnabled(true);
+  }, [timelineRequired, timelineEnabled]);
 
   // Per-model target video duration (informs the generated prompt's pacing).
   const modelControls = useMemo(() => getModelControls(selectedModel), [selectedModel]);
@@ -1290,16 +1295,17 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
               <TooltipTrigger asChild>
                 <button
                   type="button"
-                  onClick={() => setTimelineEnabled((v) => !v)}
+                  onClick={() => { if (!timelineRequired) setTimelineEnabled((v) => !v); }}
                   aria-pressed={timelineEnabled}
+                  disabled={timelineRequired}
                   className={`group inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
                     timelineEnabled
                       ? "border-accent/50 bg-accent/10 text-accent"
                       : "border-border/60 bg-muted/40 text-muted-foreground hover:text-foreground"
-                  }`}
+                  } ${timelineRequired ? "cursor-not-allowed opacity-90" : ""}`}
                 >
                   <Clock className="w-3.5 h-3.5" />
-                  <span>Timeline prompting</span>
+                  <span>{timelineRequired ? "Timeline prompting · Required for Seedance" : "Timeline prompting"}</span>
                   <span
                     className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${
                       timelineEnabled ? "bg-accent" : "bg-muted"
@@ -1314,7 +1320,9 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
                 </button>
               </TooltipTrigger>
               <TooltipContent side="top" className="max-w-[280px] text-xs leading-relaxed">
-                Break the scene into clock-pinned beats with camera, light, and audio per timestamp. Best for Seedance, Kling, and Veo.
+                {timelineRequired
+                  ? "Seedance always uses clock-pinned beats — Timeline Prompting is baked in and can't be turned off."
+                  : "Break the scene into clock-pinned beats with camera, light, and audio per timestamp. Best for Seedance, Kling, and Veo."}
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>

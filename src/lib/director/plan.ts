@@ -11,6 +11,8 @@ export type LockedAxes = {
   /** True when the user explicitly chose the model (overrides router). */
   model_user_override?: boolean;
   resolution?: string;
+  /** Number of shots to split the clip into (Seedance mandatory when duration ≥ 8s). */
+  shot_count?: number;
 };
 
 export type ShotMetadata = {
@@ -38,6 +40,8 @@ export type PlanGlobals = {
   duration_seconds?: number;
   style_notes?: string;
   budget?: RoutingBudget;
+  /** Director-chosen split for the next Seedance render (1 = one continuous take). */
+  shot_count?: number;
 };
 
 export type DirectorPlan = {

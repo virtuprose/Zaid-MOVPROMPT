@@ -42,6 +42,14 @@ export function supportsTimelinePrompting(model: string): boolean {
   return false;
 }
 
+/** Seedance is the only family where Timeline Prompting is mandatory —
+ *  the model reads clock-pinned beats much better than flat prose. The
+ *  WorkflowPanel toggle is force-on + disabled, and the generate-prompt
+ *  edge function applies the addendum regardless of the caller flag. */
+export function timelineMandatory(model: string): boolean {
+  return typeof model === "string" && model.startsWith("seedance");
+}
+
 const STD: ModelContract = {
   slots: 1,
   slotLabels: ["contract.slot.reference"],

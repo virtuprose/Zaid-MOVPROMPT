@@ -230,6 +230,38 @@ WHEN YOU GENERATE A PROMPT:
 ═══ MODEL PLAYBOOK — what each model does, what it needs, when to pick it ═══
 ${formatPlaybook()}
 
+═══ SEEDANCE PROTOCOL (HARD RULE — runs whenever the resolved \`recommended_model_id\` or user-picked model starts with "seedance") ═══
+
+A. SHOT-COUNT QUESTION (mandatory):
+- Before you call \`generate_prompt\` for a Seedance render with \`duration_seconds >= 8\`, your next turn MUST be \`ask_clarification\` asking exactly: "How many shots should I split these {N}s into?" (substitute N = duration_seconds). Prefix \`reason\` with the routing step label (e.g. "Step 4 of 4 — pick the shot count.").
+- Chips MUST be: ["1 shot (one continuous take)", "2 shots", "3 shots", "4–5 shots", "Let the Director decide"].
+- Skip this question ONLY if (a) the user already named a shot count in the brief ("3-shot ad", "single take", "one-er", "stitched 5 cuts", etc.), (b) Story mode is active (locked to 4 acts), or (c) the answer is already pinned in SESSION STATE under \`shot_count\`.
+- Echo the chosen count into \`locked_spec.shot_count\` on every subsequent tool call so the plan persists it.
+
+B. TIMELINE PROMPTING (mandatory, always — single shot or multi-shot):
+- Every Seedance \`mainPrompt\` / \`prompt\` you emit MUST be written in TIMELINE PROMPTING structure. Plain prose is not acceptable — Seedance reads clock-pinned beats far better than a single paragraph.
+- The structure is four sections, in this order, inside the prompt body:
+  1. TIMELINE — break the full duration into 1–4s beats on a running clock. Each beat:
+     [00:00–00:0X] — [beat name]
+       - ACTION: what the subject does
+       - CAMERA: angle, movement, lens behavior, speed (real mm + f-stop)
+       - LIGHT + ATMOSPHERE: source, direction, Kelvin, particles, weather
+       - AUDIO: diegetic sound for this beat (omit only if audio is OFF)
+       - TRANSITION OUT: how it hands off to the next beat
+  2. EFFECTS INVENTORY — numbered list of every distinct technique (speed ramp, rack focus, dolly-in, etc.), which beats it appears in, and its role.
+  3. DENSITY MAP — split the clock into 2–4s chunks; rate each HIGH / MEDIUM / LOW and list the effects in that window.
+  4. ENERGY ARC — describe the emotional + kinetic shape in 2–4 acts and name the ONE SIGNATURE MOMENT.
+- Beat-writing rules: name effects precisely ("speed ramp (deceleration)" not "slow-mo"; "dolly-in on a 35mm" not "zoom"). Alternate HIGH/LOW density so the signature beat lands harder. The final beat resolves — never a fade because time ran out.
+- When the resolved \`shot_count\` is > 1, apply the TIMELINE / EFFECTS INVENTORY / DENSITY MAP / ENERGY ARC structure INDEPENDENTLY to EACH shot, scaled to that shot's duration (total duration / shot_count, rounded to whole seconds).
+- ALWAYS append these to \`breakdown.negative_prompt\` for Seedance: "temporal artifacts, scene drift, sudden lighting change, jump cut, hard cut, audio-video desync".
+
+C. SIGNAL THE STRUCTURE:
+- In \`directors_note\`, briefly tell the user this prompt was authored as a Seedance Timeline (e.g. "Authored as a Seedance Timeline: 3 shots × ~5s, signature beat at 00:08 on the rack focus.") so they know what to expect in the output.
+
+═══ END SEEDANCE PROTOCOL ═══
+
+
+
 IMAGE GENERATION (use sparingly — only to unblock the storyboard / key-frame flow):
 - You have a \`generate_reference_image\` tool that creates a character sheet OR up to 9 storyboard panels OR a single hero/key frame.
 - Use it ONLY when:
@@ -337,6 +369,7 @@ const TOOLS = [
               audio: { type: "string", enum: ["silent", "sfx", "music", "dialogue", "full"], description: "'silent' | 'sfx' (ambient/SFX only) | 'music' | 'dialogue' (lip-sync) | 'full' (dialogue + music + SFX)." },
               resolution: { type: "string", enum: ["720p", "1080p", "4k"] },
               style: { type: "string", enum: ["photoreal", "cinematic-film", "stylized", "anime"], description: "Visual style — heavy driver of model pick." },
+              shot_count: { type: "integer", minimum: 1, maximum: 12, description: "Number of shots to split the clip into. REQUIRED for Seedance when duration_seconds >= 8 (see SEEDANCE PROTOCOL)." },
             },
             additionalProperties: false,
           },
@@ -414,6 +447,7 @@ const TOOLS = [
               audio: { type: "string", enum: ["silent", "sfx", "music", "dialogue", "full"] },
               resolution: { type: "string", enum: ["720p", "1080p", "4k"] },
               style: { type: "string", enum: ["photoreal", "cinematic-film", "stylized", "anime"] },
+              shot_count: { type: "integer", minimum: 1, maximum: 12 },
             },
             additionalProperties: false,
           },
