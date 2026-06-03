@@ -514,17 +514,6 @@ export function GeneratedImageCard({ data, onRegenerate, onUnpinSubject, onAnima
                   <TooltipContent>Animate panel {shotNum}…</TooltipContent>
                 </Tooltip>
               )}
-              {data.inspector && (
-                <PromptInspector
-                  ctx={data.inspector}
-                  shotIndex={data.mode === "storyboard_panels" ? shotNum : undefined}
-                  triggerTitle={
-                    data.mode === "storyboard_panels"
-                      ? `Inspect prompt · Shot ${shotNum}`
-                      : "Inspect prompt"
-                  }
-                />
-              )}
               <Tooltip delayDuration={150}>
                 <TooltipTrigger asChild>
                   <button
