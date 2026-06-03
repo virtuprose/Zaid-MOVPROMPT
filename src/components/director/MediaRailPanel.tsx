@@ -40,7 +40,15 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useMediaItems, useMediaRail, type MediaItem } from "./MediaRailContext";
 
-type Filter = "all" | "images" | "videos";
+type Filter = "all" | "images" | "videos" | "audios" | "files";
+
+const FILTERS: { id: Filter; label: string; Icon: typeof Layers }[] = [
+  { id: "all", label: "All Types", Icon: Layers },
+  { id: "images", label: "Images", Icon: ImageIcon },
+  { id: "videos", label: "Videos", Icon: Film },
+  { id: "audios", label: "Audios", Icon: Music },
+  { id: "files", label: "Files", Icon: FileText },
+];
 
 export function MediaRailPanel() {
   const items = useMediaItems();
