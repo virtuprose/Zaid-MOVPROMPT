@@ -472,10 +472,7 @@ serve(async (req) => {
             falError.status !== 408 &&
             falError.status !== 429;
           if (isTerminal4xx) {
-            const friendly =
-              falError.status === 404
-                ? "The provider completed the render but did not return the video result. Please retry with the same prompt."
-                : `Provider rejected the job (${falError.status}): ${falError.message || "validation error"}`;
+            const friendly = friendlyFalError(falError.status, falError.message);
             await admin
               .from("video_jobs")
               .update({
