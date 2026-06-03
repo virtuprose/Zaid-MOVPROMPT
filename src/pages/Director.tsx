@@ -236,7 +236,7 @@ export default function Director() {
                   </Tooltip>
                   <div className="w-6 h-px bg-white/5" />
                   <div
-                    className="flex-1 w-full flex flex-col items-center gap-3 overflow-y-auto px-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                    className="flex-1 w-full flex flex-col items-stretch gap-1 overflow-y-auto px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
                     style={{
                       maskImage:
                         "linear-gradient(to bottom, transparent 0, black 12px, black calc(100% - 12px), transparent 100%)",
