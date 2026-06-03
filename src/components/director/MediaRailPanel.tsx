@@ -213,6 +213,7 @@ function MediaCard({
   onPickNewFolder: () => void;
 }) {
   const rail = useMediaRail();
+  const [menuOpen, setMenuOpen] = useState(false);
   const isFav = rail?.favorites.has(item.id) ?? false;
   const folders = rail?.folders ?? [];
 
@@ -293,7 +294,7 @@ function MediaCard({
 
 
       {/* Top-right action column */}
-      <div className="absolute top-1.5 right-1.5 flex flex-col gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+      <div className={cn("absolute top-1.5 right-1.5 flex flex-col gap-1 transition-opacity", menuOpen ? "opacity-100" : "opacity-0 group-hover:opacity-100 focus-within:opacity-100")}>
         <button
           type="button"
           onClick={(e) => {
@@ -324,7 +325,7 @@ function MediaCard({
         >
           <Download className="w-3.5 h-3.5" />
         </button>
-        <DropdownMenu>
+        <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
           <DropdownMenuTrigger asChild>
             <button
               type="button"
@@ -393,7 +394,7 @@ function MediaCard({
             e.stopPropagation();
             handleAddToTask();
           }}
-          className="absolute bottom-1.5 right-1.5 inline-flex items-center gap-1 rounded-full bg-black/65 backdrop-blur px-2.5 py-1 text-[10px] font-medium text-white/95 border border-white/10 hover:bg-black/85 hover:border-primary/50 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-all"
+          className={cn("absolute bottom-1.5 right-1.5 inline-flex items-center gap-1 rounded-full bg-black/65 backdrop-blur px-2.5 py-1 text-[10px] font-medium text-white/95 border border-white/10 hover:bg-black/85 hover:border-primary/50 transition-all", menuOpen ? "opacity-100" : "opacity-0 group-hover:opacity-100 focus-within:opacity-100")}
         >
           <Plus className="w-3 h-3" /> Add to task
         </button>
