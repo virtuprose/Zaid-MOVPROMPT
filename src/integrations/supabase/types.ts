@@ -718,6 +718,125 @@ export type Database = {
         }
         Relationships: []
       }
+      media_favorites: {
+        Row: {
+          created_at: string
+          id: string
+          kind: string
+          label: string | null
+          media_key: string
+          session_id: string | null
+          url: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          kind: string
+          label?: string | null
+          media_key: string
+          session_id?: string | null
+          url: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          kind?: string
+          label?: string | null
+          media_key?: string
+          session_id?: string | null
+          url?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      media_folder_items: {
+        Row: {
+          created_at: string
+          folder_id: string
+          id: string
+          kind: string
+          label: string | null
+          media_key: string
+          session_id: string | null
+          url: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          folder_id: string
+          id?: string
+          kind: string
+          label?: string | null
+          media_key: string
+          session_id?: string | null
+          url: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          folder_id?: string
+          id?: string
+          kind?: string
+          label?: string | null
+          media_key?: string
+          session_id?: string | null
+          url?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "media_folder_items_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "media_folders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      media_folders: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      media_hidden: {
+        Row: {
+          created_at: string
+          media_key: string
+          session_id: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          media_key: string
+          session_id?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          media_key?: string
+          session_id?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       model_availability: {
         Row: {
           available: boolean
