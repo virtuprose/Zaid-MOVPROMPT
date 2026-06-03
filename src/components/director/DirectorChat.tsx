@@ -3022,6 +3022,9 @@ function DirectorChatInner() {
               </div>
             );
           })}
+          {(busy || activitySteps.length > 0) && activitySteps.length > 0 && (
+            <DirectorActivityFeed steps={activitySteps} collapsedDefault={!busy} />
+          )}
           {busy && (
             <TypingIndicator
               phase={phase}
