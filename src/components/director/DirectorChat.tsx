@@ -191,9 +191,33 @@ function DirectorChatInner() {
   useEffect(() => {
     mediaRail?.setBubbles(bubbles as any);
   }, [bubbles, mediaRail]);
+  useEffect(() => {
+    mediaRail?.setSessionId(routeSessionId);
+  }, [routeSessionId, mediaRail]);
   const [input, setInput] = useState("");
   const [composerFocusTick, setComposerFocusTick] = useState(0);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
+
+  // Pick up attachments enqueued from the Media panel (Recreate / +Add to task).
+  useEffect(() => {
+    if (!mediaRail || mediaRail.pendingAttachments.length === 0) return;
+    const queued = mediaRail.consumeAttachments();
+    if (queued.length === 0) return;
+    setAttachments((prev) => {
+      const seen = new Set(prev.map((a: any) => a.url || a.name));
+      const merged = [...prev];
+      for (const a of queued) {
+        const key = (a as any).url || a.name;
+        if (!seen.has(key)) {
+          merged.push(a);
+          seen.add(key);
+        }
+      }
+      return merged;
+    });
+    setComposerFocusTick((t) => t + 1);
+  }, [mediaRail?.pendingAttachments, mediaRail]);
+
   const [busy, setBusy] = useState(false);
   const [phase, setPhase] = useState<DirectorPhase>("thinking");
   const [resetOpen, setResetOpen] = useState(false);
