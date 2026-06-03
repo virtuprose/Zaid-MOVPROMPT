@@ -424,9 +424,9 @@ function DirectorWorkspace({ sessionId }: { sessionId?: string }) {
         </ResizablePanel>
         {hasMedia && (
           <>
-            <ResizableHandle className="!w-2 bg-transparent hover:bg-transparent group">
-              <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 flex h-9 w-5 items-center justify-center rounded-full border border-border/60 bg-background/90 backdrop-blur shadow-md group-hover:border-primary/50 group-hover:bg-background transition-colors">
-                <GripVertical className="h-3.5 w-3.5 text-muted-foreground group-hover:text-foreground" />
+            <ResizableHandle className="group relative !w-px bg-border/70 hover:bg-primary/60 data-[resize-handle-state=drag]:bg-primary cursor-col-resize transition-colors after:absolute after:inset-y-0 after:left-1/2 after:w-2 after:-translate-x-1/2 after:content-['']">
+              <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 flex h-9 w-5 items-center justify-center rounded-full border border-border/60 bg-background/95 backdrop-blur shadow-md group-hover:border-primary/60 group-hover:bg-background group-data-[resize-handle-state=drag]:border-primary group-data-[resize-handle-state=drag]:bg-background transition-colors">
+                <GripVertical className="h-3.5 w-3.5 text-muted-foreground group-hover:text-foreground group-data-[resize-handle-state=drag]:text-primary" />
               </div>
             </ResizableHandle>
             <ResizablePanel defaultSize={30} minSize={18}>
