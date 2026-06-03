@@ -475,7 +475,7 @@ export async function streamDirectorAgent(
     if (depth !== 0) return;
     try {
       const parsed = JSON.parse(toolArgs);
-      onPartial({ kind: toolName as any, ...parsed });
+      onPartial({ kind: toolName as any, activeSkill, ...parsed });
     } catch {
       /* ignore */
     }
