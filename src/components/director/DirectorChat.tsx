@@ -1514,9 +1514,26 @@ function DirectorChatInner() {
       // Insert a placeholder bubble that we'll progressively fill
       const placeholderIndex = next.length;
       let lastKind: AgentResponse["kind"] | null = null;
+      let skillToastShown = false;
+
+      const notifySkill = (name?: string) => {
+        if (!name || skillToastShown) return;
+        skillToastShown = true;
+        const labels: Record<string, string> = {
+          "cinematic-ad-veo3": "Cinematic Ad (Veo 3)",
+          "product-launch-kling": "Product Launch (Kling)",
+          "social-hook-3s": "Social Hook 3s",
+        };
+        const label = labels[name] ?? name;
+        toast.success(`Skill active: ${label}`, {
+          description: "The Director is using a specialized playbook for this brief.",
+          duration: 4000,
+        });
+      };
 
       const handlePartial = (partial: AgentResponse) => {
         lastKind = partial.kind;
+        notifySkill((partial as any).activeSkill);
         setBubbles((prev) => {
           const copy = [...prev];
           if (partial.kind === "generate_prompt") {
@@ -1597,6 +1614,7 @@ function DirectorChatInner() {
       }
 
       if (!resp) throw lastErr ?? new Error("Director didn't respond.");
+      notifySkill((resp as any).activeSkill);
 
       let added: Bubble;
       let finalPrompt: string | null = null;

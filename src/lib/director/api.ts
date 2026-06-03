@@ -47,7 +47,7 @@ export type AgentSuggestion = {
   allow_other?: boolean;
 };
 
-export type AgentResponse =
+export type AgentResponse = (
   | {
       kind: "ask_clarification";
       questions: string[];
@@ -108,7 +108,8 @@ export type AgentResponse =
       act_prompts: string[];
       directors_note?: string;
     }
-  | { kind: "message"; content: string };
+  | { kind: "message"; content: string }
+) & { activeSkill?: string };
 
 export type StoryAsset = { url: string; storage_path: string } | null;
 export type StoryBundleResponse = {
@@ -445,6 +446,8 @@ export async function streamDirectorAgent(
     throw new DirectorHttpError(resp.status, msg, resp.status >= 500);
   }
 
+  const activeSkill = resp.headers.get("x-active-skill") || undefined;
+
 
   const reader = resp.body.getReader();
   const decoder = new TextDecoder();
@@ -472,7 +475,7 @@ export async function streamDirectorAgent(
     if (depth !== 0) return;
     try {
       const parsed = JSON.parse(toolArgs);
-      onPartial({ kind: toolName as any, ...parsed });
+      onPartial({ kind: toolName as any, activeSkill, ...parsed });
     } catch {
       /* ignore */
     }
@@ -549,12 +552,12 @@ export async function streamDirectorAgent(
   if (toolName) {
     try {
       const parsed = JSON.parse(toolArgs || "{}");
-      return { kind: toolName as any, ...parsed };
+      return { kind: toolName as any, activeSkill, ...parsed };
     } catch {
-      return { kind: "message", content: textContent };
+      return { kind: "message", content: textContent, activeSkill };
     }
   }
-  return { kind: "message", content: textContent };
+  return { kind: "message", content: textContent, activeSkill };
 }
 
 export type VideoJob = {

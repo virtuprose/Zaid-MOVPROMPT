@@ -5,6 +5,7 @@ const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+  "Access-Control-Expose-Headers": "x-active-skill",
 };
 
 // Best-effort in-memory throttle (per-instance only — see plan note)
@@ -1111,6 +1112,7 @@ Then stop. Don't ask follow-up questions yourself.`;
     // Skill matcher — scan the last 3 user turns for trigger phrases and, if a
     // skill matches, append its full SKILL.md body to the system prompt.
     let skillBlock = "";
+    let activeSkillName = "";
     if (!isFreeChat) {
       const recentUserText = messages
         .filter((m) => m.role === "user")
@@ -1118,8 +1120,14 @@ Then stop. Don't ask follow-up questions yourself.`;
         .map((m) => m.content)
         .join("\n");
       const matched = pickSkill(recentUserText);
-      if (matched) skillBlock = skillAddendum(matched);
+      if (matched) {
+        skillBlock = skillAddendum(matched);
+        activeSkillName = matched.name;
+      }
     }
+    const skillHeader: Record<string, string> = activeSkillName
+      ? { "x-active-skill": activeSkillName }
+      : {};
 
     const aiMessages = [
       { role: "system", content: isFreeChat ? FREE_CHAT_SYSTEM : SYSTEM_PROMPT + tasteAddendum + handoffAddendum + skillBlock },
@@ -1168,7 +1176,7 @@ Then stop. Don't ask follow-up questions yourself.`;
     // Streaming: pipe through
     if (stream) {
       return new Response(aiResp.body, {
-        headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
+        headers: { ...corsHeaders, ...skillHeader, "Content-Type": "text/event-stream" },
       });
     }
 
@@ -1185,14 +1193,14 @@ Then stop. Don't ask follow-up questions yourself.`;
       } catch {
         args = {};
       }
-      return new Response(JSON.stringify({ kind: fnName, ...args }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      return new Response(JSON.stringify({ kind: fnName, activeSkill: activeSkillName || undefined, ...args }), {
+        headers: { ...corsHeaders, ...skillHeader, "Content-Type": "application/json" },
       });
     }
 
     return new Response(
-      JSON.stringify({ kind: "message", content: choice?.content || "..." }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      JSON.stringify({ kind: "message", activeSkill: activeSkillName || undefined, content: choice?.content || "..." }),
+      { headers: { ...corsHeaders, ...skillHeader, "Content-Type": "application/json" } },
     );
   } catch (e) {
     console.error("director-agent error", e);
