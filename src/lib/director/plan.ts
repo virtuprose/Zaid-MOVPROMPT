@@ -40,6 +40,8 @@ export type PlanGlobals = {
   duration_seconds?: number;
   style_notes?: string;
   budget?: RoutingBudget;
+  /** Director-chosen split for the next Seedance render (1 = one continuous take). */
+  shot_count?: number;
 };
 
 export type DirectorPlan = {
