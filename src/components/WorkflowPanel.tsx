@@ -1295,16 +1295,17 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
               <TooltipTrigger asChild>
                 <button
                   type="button"
-                  onClick={() => setTimelineEnabled((v) => !v)}
+                  onClick={() => { if (!timelineRequired) setTimelineEnabled((v) => !v); }}
                   aria-pressed={timelineEnabled}
+                  disabled={timelineRequired}
                   className={`group inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
                     timelineEnabled
                       ? "border-accent/50 bg-accent/10 text-accent"
                       : "border-border/60 bg-muted/40 text-muted-foreground hover:text-foreground"
-                  }`}
+                  } ${timelineRequired ? "cursor-not-allowed opacity-90" : ""}`}
                 >
                   <Clock className="w-3.5 h-3.5" />
-                  <span>Timeline prompting</span>
+                  <span>{timelineRequired ? "Timeline prompting · Required for Seedance" : "Timeline prompting"}</span>
                   <span
                     className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${
                       timelineEnabled ? "bg-accent" : "bg-muted"
@@ -1319,7 +1320,9 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
                 </button>
               </TooltipTrigger>
               <TooltipContent side="top" className="max-w-[280px] text-xs leading-relaxed">
-                Break the scene into clock-pinned beats with camera, light, and audio per timestamp. Best for Seedance, Kling, and Veo.
+                {timelineRequired
+                  ? "Seedance always uses clock-pinned beats — Timeline Prompting is baked in and can't be turned off."
+                  : "Break the scene into clock-pinned beats with camera, light, and audio per timestamp. Best for Seedance, Kling, and Veo."}
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
