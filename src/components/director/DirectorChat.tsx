@@ -1030,26 +1030,6 @@ function DirectorChatInner() {
     }
   };
 
-  const handleAspectChoice = async (bubbleIndex: number, aspect: AspectRatio, quality: ImageQuality = "1K") => {
-    if (busy) return;
-    const target = bubbles[bubbleIndex];
-    if (!target || target.role !== "aspect_choice" || target.chosen) return;
-    const stamped: Bubble[] = bubbles.map((b, i) =>
-      i === bubbleIndex && b.role === "aspect_choice" ? { ...b, chosen: aspect, chosenQuality: quality } : b,
-    );
-    setBubbles(stamped);
-    setBusy(true);
-    try {
-      await runImageGeneration(stamped, {
-        ...target.payload,
-        aspect_ratio: aspect,
-        quality,
-      });
-    } finally {
-      setBusy(false);
-    }
-  };
-
   // Find the most recent pinned subject sheet in the chat (latest wins, unless unpinned).
   const pinnedSubject = useMemo(() => {
     for (let i = bubbles.length - 1; i >= 0; i -= 1) {
@@ -1064,6 +1044,49 @@ function DirectorChatInner() {
     }
     return null;
   }, [bubbles]);
+
+  // Find the most recent locked location (from a completed location_step).
+  const locationAnchor = useMemo(() => {
+    for (let i = bubbles.length - 1; i >= 0; i -= 1) {
+      const b = bubbles[i];
+      if (b.role === "location_step" && b.stepMode === "done") {
+        const url = b.chosenUrl ?? b.uploadedUrl;
+        const storage_path = b.chosenStoragePath ?? b.uploadedStoragePath;
+        if (url) return { url, storage_path, description: b.description };
+      }
+    }
+    return null;
+  }, [bubbles]);
+
+  const handleAspectChoice = async (bubbleIndex: number, aspect: AspectRatio, quality: ImageQuality = "1K") => {
+    if (busy) return;
+    const target = bubbles[bubbleIndex];
+    if (!target || target.role !== "aspect_choice" || target.chosen) return;
+    const stamped: Bubble[] = bubbles.map((b, i) =>
+      i === bubbleIndex && b.role === "aspect_choice" ? { ...b, chosen: aspect, chosenQuality: quality } : b,
+    );
+    setBubbles(stamped);
+    setBusy(true);
+    try {
+      // Build explicit refs so the "fresh single_panel skip auto-attach" guard
+      // doesn't drop the character or location anchor.
+      const explicitRefs: string[] = [];
+      if (pinnedSubject) explicitRefs.push(pinnedSubject.url);
+      if (locationAnchor) explicitRefs.push(locationAnchor.url);
+      const composedPrompt = locationAnchor
+        ? `Composite the locked ${pinnedSubject?.kind === "product" ? "product" : "character"} into the locked location. ${pinnedSubject?.kind === "product" ? "The product" : "The character"} must match the reference sheet exactly (form, color, ${pinnedSubject?.kind === "product" ? "materials" : "face, wardrobe, hair"}). The environment must match the location plate exactly (architecture, lighting direction, color palette, time of day). Place ${pinnedSubject?.kind === "product" ? "the product" : "the subject"} naturally in the scene with believable shadow contact and color spill.\n\n${target.payload.prompt}`
+        : target.payload.prompt;
+      await runImageGeneration(stamped, {
+        ...target.payload,
+        prompt: composedPrompt,
+        aspect_ratio: aspect,
+        quality,
+        ...(explicitRefs.length > 0 ? { reference_urls: explicitRefs } : {}),
+      });
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const handleSubjectLockChoice = async (bubbleIndex: number, kind: SubjectKind) => {
     if (busy) return;
