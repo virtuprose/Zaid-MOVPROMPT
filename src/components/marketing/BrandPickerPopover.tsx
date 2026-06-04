@@ -35,9 +35,10 @@ export function BrandPickerPopover({
 }) {
   const atCap = activeIds.length >= max;
   const [pendingDelete, setPendingDelete] = useState<{ id: string; name: string } | null>(null);
+  const [open, setOpen] = useState(false);
   return (
     <>
-    <Popover>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>{trigger}</PopoverTrigger>
       <PopoverContent
         align="start"
@@ -68,7 +69,7 @@ export function BrandPickerPopover({
                 <li key={k.id} className="group relative">
                   <button
                     type="button"
-                    onClick={() => k.id && !disabled && onSelect(k.id)}
+                    onClick={() => k.id && !disabled && (setOpen(false), onSelect(k.id))}
                     disabled={disabled}
                     title={disabled ? `Up to ${max} products per ad` : undefined}
                     className={cn(
@@ -109,7 +110,7 @@ export function BrandPickerPopover({
                   <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity bg-[hsl(240_6%_9%)] rounded-md border border-border/50 px-0.5">
                     <button
                       type="button"
-                      onClick={() => k.id && onEdit(k.id)}
+                      onClick={() => { if (k.id) { setOpen(false); onEdit(k.id); } }}
                       className="w-6 h-6 flex items-center justify-center text-muted-foreground hover:text-foreground"
                       aria-label="Edit"
                     >
@@ -136,7 +137,7 @@ export function BrandPickerPopover({
         <div className="mt-1 p-1.5 border-t border-border/40">
           <button
             type="button"
-            onClick={onNew}
+            onClick={() => { setOpen(false); onNew(); }}
             className="w-full flex items-center gap-2 px-2.5 py-2 rounded-xl text-sm hover:bg-white/[0.04] text-foreground transition-colors"
           >
             <span className="w-9 h-9 rounded-lg border border-dashed border-border/60 flex items-center justify-center text-muted-foreground">
