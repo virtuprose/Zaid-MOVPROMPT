@@ -467,30 +467,49 @@ export function Composer({
 
           {mention && filteredMentions.length > 0 && (
             <div className="absolute left-3 right-3 z-20 -translate-y-full mt-[-6px] top-0 max-h-56 overflow-auto rounded-lg border border-border bg-popover shadow-lg">
-              <div className="px-2 py-1 text-[10px] uppercase tracking-wider text-muted-foreground">
-                Reference files
-              </div>
-              {filteredMentions.map(({ a, i }, fi) => (
-                <button
-                  key={i}
-                  type="button"
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    insertMention(i);
-                  }}
-                  className={`flex w-full items-center gap-2 px-2 py-1.5 text-left text-sm ${
-                    fi === mention.index ? "bg-accent/15 text-accent" : "hover:bg-muted"
-                  }`}
-                >
-                  <span className="inline-flex h-5 min-w-[20px] items-center justify-center rounded bg-accent/20 px-1 text-[11px] font-semibold text-accent">
-                    @{i + 1}
-                  </span>
-                  {isImageLike(a) && "url" in a && (
-                    <img src={(a as any).url} alt="" className="h-6 w-6 rounded object-cover" />
-                  )}
-                  <span className="truncate">{a.name}</span>
-                </button>
-              ))}
+              {filteredMentions.some((m) => m.kind === "ref") && (
+                <div className="px-2 py-1 text-[10px] uppercase tracking-wider text-muted-foreground border-b border-border/50">
+                  Pinned references
+                </div>
+              )}
+              {filteredMentions.map((m, fi) => {
+                const isRef = m.kind === "ref";
+                const showHeader =
+                  !isRef &&
+                  fi > 0 &&
+                  filteredMentions[fi - 1].kind === "ref";
+                return (
+                  <div key={isRef ? `ref-${m.name}` : `att-${m.index}`}>
+                    {showHeader && (
+                      <div className="px-2 py-1 text-[10px] uppercase tracking-wider text-muted-foreground border-b border-t border-border/50">
+                        This message
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        insertMentionItem(m);
+                      }}
+                      className={`flex w-full items-center gap-2 px-2 py-1.5 text-left text-sm ${
+                        fi === mention.index ? "bg-accent/15 text-accent" : "hover:bg-muted"
+                      }`}
+                    >
+                      <span className="inline-flex h-5 min-w-[20px] items-center justify-center rounded bg-accent/20 px-1 text-[11px] font-mono font-semibold text-accent">
+                        @{isRef ? m.name : m.index + 1}
+                      </span>
+                      {m.url && (
+                        <img
+                          src={m.url}
+                          alt=""
+                          className="h-6 w-6 rounded object-cover"
+                        />
+                      )}
+                      <span className="truncate text-muted-foreground">{m.label}</span>
+                    </button>
+                  </div>
+                );
+              })}
             </div>
           )}
 
