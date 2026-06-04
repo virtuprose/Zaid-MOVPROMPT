@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Upload, Sparkles, MapPin, Check, Loader2, X } from "lucide-react";
+import { Upload, Sparkles, MapPin, Check, Loader2, X, RefreshCw } from "lucide-react";
 
 export type LocationOption = { url: string; storage_path: string; index: number };
 export type LocationStepMode = "ask" | "generating" | "picking" | "done";
