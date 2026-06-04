@@ -1,67 +1,115 @@
 ## Goal
 
-Whenever the user asks the Director to generate a **new character, product, or hero item** with a new description, the Director must render that new identity — never reuse or re-pose the previously pinned subject.
+Insert a dedicated **Location step** between the character sheet and the key-frame render. The user either uploads a reference photo of the location, or describes it and picks from 3 generated options (location-only, no character). The chosen location is then pinned and composited with the character sheet on the key frame and on any downstream video.
 
-## What's already fixed (last turn)
+## Why
 
-- `runImageGeneration` in `DirectorChat.tsx` now skips auto-attaching the pinned subject when `mode === "character_sheet"`.
-- System prompt in `director-agent/index.ts` updated to allow additional character sheets for new/different characters and to forbid passing the existing character's image in `reference_urls`.
+Today the user only gets to add freeform "scene" text after the character sheet. The result is unpredictable backgrounds — fine for portraits, weak for ads/short films that need a specific place (showroom, kitchen, beach at sunset, neon alley). The Story-Render pipeline already proves that a 3-option location picker dramatically raises satisfaction; we just need to expose the same affordance in the everyday key-frame flow.
 
-## What still leaks the old identity
+## Scope
 
-Two remaining paths can clone the previous subject when the user describes something new:
-
-1. **`mode: "single_panel"` (hero/product/key-frame)** — `runImageGeneration` still auto-injects `pinnedSubject.url` into `reference_urls`. If the user says "now generate a different product — a red sneaker", the function silently attaches the previously pinned bottle/character, and `generate-reference-image` applies an identity-lock-equivalent prompt for scene/character continuity. Result: same product, new background.
-2. **System prompt — product/item parity** — the soften-the-rule edit only mentions characters. The agent still treats product sheets as one-per-session and tends to reuse the locked product.
+ONLY the post-character-sheet / pre-key-frame path in `DirectorChat`. The Story-Render 4-acts flow already has its own location picker — unchanged. Storyboard panels and scene-extensions — unchanged. The video generation pipeline already accepts a reference image, so wiring the location through it is a small add.
 
 ## Changes
 
-### 1. `src/components/director/DirectorChat.tsx` — extend the no-auto-attach guard
+### 1. New bubble role: `location_step`
 
-Currently:
-```ts
-const isSheetMode = payload.mode === "character_sheet";
-if (!isSheetMode && !options?.subjectSheet && pinnedSubject) { ... }
-```
-
-Add a "fresh subject" signal coming from the agent. When the agent explicitly omits `reference_urls` AND calls `single_panel` or `character_sheet` after the user described a new subject, do not silently re-inject the pinned one.
-
-Concretely:
-- For `mode: "character_sheet"`: already skipped (keep).
-- For `mode: "single_panel"`: skip auto-attach when the agent passed `reference_urls: []` or omitted it entirely. The agent is now responsible for opting INTO the pinned subject by passing its URL itself when continuity is wanted. (Storyboard panels still auto-attach — they need continuity by definition.)
+Add to `Bubble` types in `DirectorChat.tsx`:
 
 ```ts
-const isSheetMode = payload.mode === "character_sheet";
-const isFreshSinglePanel =
-  payload.mode === "single_panel" &&
-  (!payload.reference_urls || payload.reference_urls.length === 0);
-const skipAutoAttach = isSheetMode || isFreshSinglePanel || options?.subjectSheet;
-if (!skipAutoAttach && pinnedSubject) { ... }
+| { role: "location_step";
+    payload: ScenePayload;   // same payload passed from character_sheet → scene_describe
+    mode?: "ask" | "generating" | "picking" | "done";
+    referenceUrl?: string;       // if user uploaded
+    options?: { url: string; storage_path: string; index: number }[];
+    chosenIndex?: number;
+    chosenUrl?: string;
+    chosenStoragePath?: string;
+  }
 ```
 
-### 2. `supabase/functions/director-agent/index.ts` — broaden the rule + nudge agent to re-read intent
+Replace today's `scene_describe` step with `location_step`. (Keep `scene_describe` type for backward-compatible session restore, but stop producing it for new flows.)
 
-Two small prompt edits:
+### 2. New component: `LocationStepCard.tsx`
 
-a. **Generalize the "new subject" rule** (currently character-only) to characters AND products/items/hero objects:
+Small card with three states:
 
-> "Generate additional `character_sheet` calls when the user asks for a NEW or DIFFERENT subject — character (co-star, antagonist, sidekick) OR product/item (a second product, different SKU, alternate hero object). When doing so, DO NOT pass the previous subject's image in `reference_urls`; only attach a reference if the user uploaded a new photo for the new subject. The new sheet must establish a fresh identity, not re-pose / re-render the previous one. Avoid regenerating the same subject on a whim."
+- **ask** — two CTAs:
+  - "Upload a reference photo" (file picker / drag-drop)
+  - "Describe a location" (textarea + chips: "Modern studio", "Sunlit kitchen", "Neon alley", "Beach at golden hour", "Cozy bedroom", "Industrial loft")
+  - Plus a small "Skip — surprise me" link
+- **generating** — cinematic loader, "Designing 3 location options…"
+- **picking** — reuses the existing `LocationPickerCard` styling for 3 tiles (no drop-slot needed; tap to pick). Numbered 1–3. Confirm button.
+- **done** — collapsed summary chip: thumbnail + "Location locked".
 
-b. **Add a READ-INTENT pre-check** near the top of the IMAGE GENERATION section:
+The card emits:
+- `onUpload(file)` → upload to `director-uploads` bucket, then call back with URL
+- `onDescribe(text)` → triggers the 3-option generation
+- `onChoose(index)` → confirms selection
+- `onSkip()` → proceeds straight to aspect with no location anchor
 
-> "BEFORE calling `generate_reference_image`, re-read the user's latest message. If they describe a NEW subject (new character, new product, new item, new look) — even subtly ("now generate X", "another one with…", "different…", "second character", "swap to…", any non-matching description) — treat it as a fresh subject: clear `reference_urls` of any previous subject, and base the prompt only on the new description. NEVER copy details from the previously pinned subject into the new prompt."
+### 3. Generation: 3 location options (character-free)
 
-c. **Same rule for `mode: "single_panel"`**: if the user described a new product/hero, do not pass the previously pinned subject as `reference_urls`. Pass refs only when the user explicitly says "the same X, but…" / "use the bottle from before".
+Reuse the existing `generate-reference-image` edge function with `mode: "single_panel"`, `count: 3`, and CRUCIALLY `reference_urls: []` (no character — the new auto-attach guard from the previous turn already covers this for fresh single-panels). Per-image prompt template:
+
+```
+{styleHeader}
+Location plate — empty environment. NO people, NO characters, NO products in the frame.
+{userDescription}
+Cinematic wide establishing shot, photoreal, deep depth of field on the background, even lighting, no text or watermarks.
+```
+
+We generate 3 in parallel using the existing streaming endpoint, surfaced through the same `runImageGeneration` plumbing but with a new option `{ locationBatch: true }` so the bubble renders as 3 swappable options inside `LocationStepCard` instead of a normal image bubble.
+
+### 4. New handler: `handleLocationChosen`
+
+When the user picks (or uploads):
+
+1. Pin the chosen image as the `locationAnchor` in chat-level state (mirror of `pinnedSubject`).
+2. Attach the URL+storage_path to the message thread as an `Attachment` with `role: "location"`.
+3. Advance the flow: push an `aspect_choice` bubble (same as today).
+4. When `handleAspectChoice` fires, the resulting `runImageGeneration({ mode: "single_panel" })` call now passes BOTH the character URL and the location URL in `reference_urls` (location first, character second), plus a prompt prefix like:
+
+```
+Composite the locked character into the locked location. The character must match the
+reference sheet exactly (face, wardrobe, hair). The environment must match the location
+plate exactly (architecture, lighting direction, color palette, time of day). Place the
+character naturally in the scene with believable shadow contact and color spill.
+```
+
+Add the new attachment role to `Attachment` type. Update the system prompt in `director-agent/index.ts` to mention `role: "location"` references and tell the agent to treat them as scene anchors.
+
+### 5. Wiring point
+
+In `handleSceneDescribeSubmit`'s caller (the post-sheet branch around line 1086 in `DirectorChat.tsx`), replace `{ role: "scene_describe", payload }` with `{ role: "location_step", payload, mode: "ask" }`. Skip path goes directly to `aspect_choice` with no location ref (same as today).
+
+### 6. Persistence
+
+Add `location_step` to the bubble persistence whitelist and ledger summarization so the assistant context (around line 1463) reports something like:
+
+> "[Asked the user for a location — they can upload a reference or pick from 3 generated options. Waiting.]"
+
+so the agent doesn't try to pre-empt with its own location.
+
+### 7. Skipping logic
+
+If the original user brief already includes a specific location reference image (e.g. they uploaded an interior photo on turn 1), skip the location_step entirely — pin that upload as `locationAnchor` and jump to `aspect_choice`. We already track uploaded references on the brief; reuse that flag.
+
+### 8. Video stage
+
+`generate-video` already accepts `reference_image_urls`. When the user advances from the key frame to video generation, pass `[locationAnchor.url, characterAnchor.url]` automatically (no UI change needed — it's a one-line tweak in `runVideoGeneration` to include the location anchor alongside the character).
 
 ## Out of scope
 
-- Multi-subject pinning / a UI picker for which subject to lock to (future feature).
-- Backend prompt changes in `generate-reference-image` — the lock branch is correct; the bug is what the client/agent feeds it.
-- Storyboard continuity — unchanged. Storyboards must keep locking to the active subject.
+- Multi-location library / picker UI. One location pinned at a time, same model as the subject pin.
+- Editing or re-rolling the chosen location after lock-in (user can always re-pick from the same bubble while `mode !== "done"`).
+- Per-shot location swaps inside a storyboard — storyboards still inherit a single locked scene anchor.
 
 ## Verification
 
-1. Generate character A, then ask: "now create a different character, a young woman with red hair". → New identity, not A.
-2. Generate a bottle product sheet, then ask: "now generate a sneaker, red and white". → New product, not the bottle.
-3. Generate a hero key frame for product X, then ask: "make a hero shot of a different watch". → New watch, not X.
-4. Regression: with subject A pinned, ask "give me a storyboard of A walking". → Still locks to A across panels.
+1. New flow: character sheet → "Describe a location: a rooftop bar at golden hour" → 3 options render → pick #2 → aspect → key frame shows the character in option #2.
+2. Upload path: upload a kitchen photo as the location → aspect → key frame shows the character in that exact kitchen.
+3. Skip path: skip location → key frame renders as today (character + freeform setting from the original brief).
+4. Pre-uploaded location: original brief contained a beach reference photo → location step is silently skipped, character is composited onto that beach.
+5. Video stage: after key-frame approval, video generation receives BOTH the character and the location URLs as reference images.
+6. Regression: Story-Render 4-acts flow is untouched and still uses its own 7-tile location picker.

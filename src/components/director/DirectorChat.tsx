@@ -27,6 +27,7 @@ import { GeneratedImageCard } from "./GeneratedImageCard";
 import { AspectChoiceCard, type AspectRatio, type ImageQuality } from "./AspectChoiceCard";
 import { SubjectLockChoiceCard, type SubjectKind } from "./SubjectLockChoiceCard";
 import { LocationPickerCard, type StoryLocation } from "./LocationPickerCard";
+import { LocationStepCard } from "./LocationStepCard";
 import { ActStrip, type ActTile } from "./ActStrip";
 import { submitStoryBundle, submitStoryRender, submitStoryStitch } from "@/lib/director/api";
 import { loadTasteProfile, EMPTY_TASTE_PROFILE, type TasteProfile } from "@/lib/director/tasteProfile";
@@ -155,7 +156,29 @@ type Bubble =
       };
     }
   | { role: "video"; data: import("./VideoBubble").VideoBubbleData }
-  | { role: "image_prompt_result"; data: import("./ImagePromptCard").ImagePromptData };
+  | { role: "image_prompt_result"; data: import("./ImagePromptCard").ImagePromptData }
+  | {
+      role: "location_step";
+      payload: {
+        mode: "single_panel";
+        prompt: string;
+        reference_urls?: string[];
+        count?: number;
+        per_shot_prompts?: string[];
+        shot_index?: number;
+        lock_mode?: "character" | "scene" | "auto";
+        directors_note?: string;
+        scene_already_described?: boolean;
+      };
+      stepMode: "ask" | "generating" | "picking" | "done";
+      description?: string;
+      options?: { url: string; storage_path: string; index: number }[];
+      chosenIndex?: number;
+      chosenUrl?: string;
+      chosenStoragePath?: string;
+      uploadedUrl?: string;
+      uploadedStoragePath?: string;
+    };
 
 const WELCOME: Bubble = {
   role: "assistant",
@@ -1007,26 +1030,6 @@ function DirectorChatInner() {
     }
   };
 
-  const handleAspectChoice = async (bubbleIndex: number, aspect: AspectRatio, quality: ImageQuality = "1K") => {
-    if (busy) return;
-    const target = bubbles[bubbleIndex];
-    if (!target || target.role !== "aspect_choice" || target.chosen) return;
-    const stamped: Bubble[] = bubbles.map((b, i) =>
-      i === bubbleIndex && b.role === "aspect_choice" ? { ...b, chosen: aspect, chosenQuality: quality } : b,
-    );
-    setBubbles(stamped);
-    setBusy(true);
-    try {
-      await runImageGeneration(stamped, {
-        ...target.payload,
-        aspect_ratio: aspect,
-        quality,
-      });
-    } finally {
-      setBusy(false);
-    }
-  };
-
   // Find the most recent pinned subject sheet in the chat (latest wins, unless unpinned).
   const pinnedSubject = useMemo(() => {
     for (let i = bubbles.length - 1; i >= 0; i -= 1) {
@@ -1041,6 +1044,49 @@ function DirectorChatInner() {
     }
     return null;
   }, [bubbles]);
+
+  // Find the most recent locked location (from a completed location_step).
+  const locationAnchor = useMemo(() => {
+    for (let i = bubbles.length - 1; i >= 0; i -= 1) {
+      const b = bubbles[i];
+      if (b.role === "location_step" && b.stepMode === "done") {
+        const url = b.chosenUrl ?? b.uploadedUrl;
+        const storage_path = b.chosenStoragePath ?? b.uploadedStoragePath;
+        if (url) return { url, storage_path, description: b.description };
+      }
+    }
+    return null;
+  }, [bubbles]);
+
+  const handleAspectChoice = async (bubbleIndex: number, aspect: AspectRatio, quality: ImageQuality = "1K") => {
+    if (busy) return;
+    const target = bubbles[bubbleIndex];
+    if (!target || target.role !== "aspect_choice" || target.chosen) return;
+    const stamped: Bubble[] = bubbles.map((b, i) =>
+      i === bubbleIndex && b.role === "aspect_choice" ? { ...b, chosen: aspect, chosenQuality: quality } : b,
+    );
+    setBubbles(stamped);
+    setBusy(true);
+    try {
+      // Build explicit refs so the "fresh single_panel skip auto-attach" guard
+      // doesn't drop the character or location anchor.
+      const explicitRefs: string[] = [];
+      if (pinnedSubject) explicitRefs.push(pinnedSubject.url);
+      if (locationAnchor) explicitRefs.push(locationAnchor.url);
+      const composedPrompt = locationAnchor
+        ? `Composite the locked ${pinnedSubject?.kind === "product" ? "product" : "character"} into the locked location. ${pinnedSubject?.kind === "product" ? "The product" : "The character"} must match the reference sheet exactly (form, color, ${pinnedSubject?.kind === "product" ? "materials" : "face, wardrobe, hair"}). The environment must match the location plate exactly (architecture, lighting direction, color palette, time of day). Place ${pinnedSubject?.kind === "product" ? "the product" : "the subject"} naturally in the scene with believable shadow contact and color spill.\n\n${target.payload.prompt}`
+        : target.payload.prompt;
+      await runImageGeneration(stamped, {
+        ...target.payload,
+        prompt: composedPrompt,
+        aspect_ratio: aspect,
+        quality,
+        ...(explicitRefs.length > 0 ? { reference_urls: explicitRefs } : {}),
+      });
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const handleSubjectLockChoice = async (bubbleIndex: number, kind: SubjectKind) => {
     if (busy) return;
@@ -1085,10 +1131,15 @@ function DirectorChatInner() {
         subject_kind: kind === "product" ? "product" : "character",
       }, { subjectSheet: true, subjectKind: kind === "product" ? "product" : "character" });
 
-      // After the sheet returns, always offer an OPTIONAL scene-detail step. The
-      // user can add more detail for the key frame or skip straight to aspect ratio.
+      // After the sheet returns, ask the user to lock a LOCATION for the scene.
+      // They can upload a reference photo or describe one (we'll generate 3
+      // options to pick from). Skipping jumps straight to aspect.
       setBubbles((prev) => {
-        const nextBubble: Bubble = { role: "scene_describe", payload: target.payload };
+        const nextBubble: Bubble = {
+          role: "location_step",
+          payload: target.payload,
+          stepMode: "ask",
+        };
         const withNext = [...prev, nextBubble];
         void persist(withNext, null, null);
         return withNext;
@@ -1133,6 +1184,159 @@ function DirectorChatInner() {
     setBubbles(updated);
     void send(`Location chosen: ${index}`, updated);
   };
+
+  // ===== Location step (post-character-sheet, pre-key-frame) =====
+
+  const updateLocationBubble = (
+    bubbleIndex: number,
+    patch: Partial<Extract<Bubble, { role: "location_step" }>>,
+  ) => {
+    setBubbles((prev) => {
+      const copy = [...prev];
+      const cur = copy[bubbleIndex];
+      if (cur?.role !== "location_step") return prev;
+      copy[bubbleIndex] = { ...cur, ...patch };
+      void persist(copy, null, null);
+      return copy;
+    });
+  };
+
+  const advanceFromLocation = (bubbleIndex: number) => {
+    setBubbles((prev) => {
+      const cur = prev[bubbleIndex];
+      if (cur?.role !== "location_step") return prev;
+      const aspectBubble: Bubble = { role: "aspect_choice", payload: cur.payload };
+      const next = [...prev, aspectBubble];
+      void persist(next, null, null);
+      return next;
+    });
+  };
+
+  const handleLocationUpload = async (bubbleIndex: number, file: File) => {
+    if (busy) return;
+    const target = bubbles[bubbleIndex];
+    if (!target || target.role !== "location_step" || target.stepMode === "done") return;
+    setBusy(true);
+    try {
+      const { ingestImage } = await import("@/lib/director/ingest");
+      const att = await ingestImage(file);
+      if (att.kind !== "image") throw new Error("Upload failed");
+      const locAtt: Attachment = {
+        ...att,
+        name: "location.png",
+        role: "location",
+      };
+      setAttachments((prev) => [...prev, locAtt]);
+      updateLocationBubble(bubbleIndex, {
+        stepMode: "done",
+        uploadedUrl: att.url,
+        uploadedStoragePath: att.storage_path,
+      });
+      // Echo for the agent context.
+      setBubbles((prev) => {
+        const next = [...prev, { role: "user", content: "(Uploaded a location reference photo.)", attachments: [locAtt] } as Bubble];
+        void persist(next, null, null);
+        return next;
+      });
+      // Hop to aspect chooser.
+      setTimeout(() => advanceFromLocation(bubbleIndex), 0);
+      toast.success("Location locked");
+    } catch (e: any) {
+      toast.error(e?.message || "Could not upload location");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleLocationDescribe = async (bubbleIndex: number, text: string) => {
+    if (busy) return;
+    const target = bubbles[bubbleIndex];
+    if (!target || target.role !== "location_step" || target.stepMode === "done") return;
+    const trimmed = text.trim();
+    if (!trimmed) return;
+
+    // Confirm credits (3 images × 5 credits = 15).
+    const PER_IMAGE_CREDITS = 5;
+    const cost = 3 * PER_IMAGE_CREDITS;
+    const confirmed = await new Promise<boolean>((resolve) => {
+      requestApproval({
+        action: "image",
+        label: "3 location options",
+        question: `Use ${cost} credits to design 3 location options?`,
+        items: [trimmed.length > 90 ? trimmed.slice(0, 89) + "…" : trimmed],
+        cost,
+        alwaysAllowKey: "approval:image:location_options",
+        onConfirm: () => resolve(true),
+        onCancel: () => resolve(false),
+      });
+    });
+    if (!confirmed) return;
+
+    updateLocationBubble(bubbleIndex, { stepMode: "generating", description: trimmed });
+    setBusy(true);
+    try {
+      const api = await import("@/lib/director/api");
+      const prompt = `Location plate — empty environment. NO people, NO characters, NO products in the frame. ${trimmed}. Cinematic wide establishing shot, photoreal, deep depth of field on the background, even natural lighting, no text, no watermarks, no logos.`;
+      const result = await api.generateReferenceImage({
+        mode: "single_panel",
+        prompt,
+        reference_urls: [],
+        count: 3,
+      });
+      const options = result.images.map((img, i) => ({
+        url: img.url,
+        storage_path: img.storage_path,
+        index: i + 1,
+      }));
+      if (options.length === 0) throw new Error("No options returned");
+      updateLocationBubble(bubbleIndex, { stepMode: "picking", options });
+    } catch (e: any) {
+      const handled = await notifyInsufficientCredits(e);
+      if (!handled) toast.error(e?.message || "Could not generate location options");
+      updateLocationBubble(bubbleIndex, { stepMode: "ask" });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleLocationChosen = (bubbleIndex: number, index: number) => {
+    if (busy) return;
+    const target = bubbles[bubbleIndex];
+    if (!target || target.role !== "location_step" || target.stepMode === "done") return;
+    const opt = target.options?.find((o) => o.index === index);
+    if (!opt) return;
+    const locAtt: Attachment = {
+      kind: "image",
+      name: "location.png",
+      url: opt.url,
+      storage_path: opt.storage_path,
+      role: "location",
+    };
+    setAttachments((prev) => [...prev, locAtt]);
+    updateLocationBubble(bubbleIndex, {
+      stepMode: "done",
+      chosenIndex: index,
+      chosenUrl: opt.url,
+      chosenStoragePath: opt.storage_path,
+    });
+    setBubbles((prev) => {
+      const next = [...prev, { role: "user", content: `Location chosen: option ${index}.`, attachments: [locAtt] } as Bubble];
+      void persist(next, null, null);
+      return next;
+    });
+    setTimeout(() => advanceFromLocation(bubbleIndex), 0);
+    toast.success("Location locked");
+  };
+
+  const handleLocationSkip = (bubbleIndex: number) => {
+    if (busy) return;
+    const target = bubbles[bubbleIndex];
+    if (!target || target.role !== "location_step" || target.stepMode === "done") return;
+    updateLocationBubble(bubbleIndex, { stepMode: "done" });
+    setTimeout(() => advanceFromLocation(bubbleIndex), 0);
+  };
+
+
 
   const handleActsUpdate = (bubbleIndex: number, nextActs: ActTile[]) => {
     setBubbles((prev) => {
@@ -1477,6 +1681,23 @@ function DirectorChatInner() {
             history.push({
               role: "assistant",
               content: `[Generated the story asset bundle (1 character + 1 prop + ${b.payload.locations.length} locations) via generate_story_bundle. Waiting for the user to pick one location.]`,
+            });
+          }
+        } else if (b.role === "location_step") {
+          if (b.stepMode === "done") {
+            const detail = b.uploadedUrl
+              ? "uploaded a reference photo"
+              : b.chosenIndex
+                ? `picked option ${b.chosenIndex} of 3 generated locations${b.description ? ` (described as: ${b.description})` : ""}`
+                : "skipped — no location anchor";
+            history.push({
+              role: "user",
+              content: `Location step: ${detail}. The chosen location is now pinned as a 'location' attachment and will be composited with the locked subject on the next key frame.`,
+            });
+          } else {
+            history.push({
+              role: "assistant",
+              content: `[Asked the user to lock a location before the key frame — they can upload a reference photo or describe one (we'll generate 3 options to pick from). Do NOT call generate_reference_image or generate-video until they finish this step.]`,
             });
           }
         } else if (b.role === "story_render") {
@@ -2840,6 +3061,25 @@ function DirectorChatInner() {
                       onChoose={(index) => handleLocationChoice(i, index)}
                     />
                   </div>
+                </div>
+              );
+            }
+            if (b.role === "location_step") {
+              return (
+                <div key={i} className="motion-safe:animate-fade-up">
+                  <LocationStepCard
+                    mode={b.stepMode}
+                    description={b.description}
+                    options={b.options}
+                    chosenIndex={b.chosenIndex}
+                    chosenUrl={b.chosenUrl}
+                    uploadedUrl={b.uploadedUrl}
+                    disabled={busy || b.stepMode === "done"}
+                    onUpload={(file) => void handleLocationUpload(i, file)}
+                    onDescribe={(text) => void handleLocationDescribe(i, text)}
+                    onChoose={(index) => handleLocationChosen(i, index)}
+                    onSkip={() => handleLocationSkip(i)}
+                  />
                 </div>
               );
             }
