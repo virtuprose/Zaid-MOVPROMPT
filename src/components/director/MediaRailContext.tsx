@@ -119,6 +119,8 @@ type Ctx = {
   favorites: Set<string>;
   folders: MediaFolder[];
   pendingAttachments: Attachment[];
+  labels: MediaLabel[];
+  labelByKey: Map<string, string>; // media_key -> name
 
   toggleFavorite: (item: MediaItem) => Promise<void>;
   hideItem: (item: MediaItem) => Promise<void>;
@@ -127,6 +129,8 @@ type Ctx = {
   addToFolder: (item: MediaItem, folderId: string) => Promise<void>;
   enqueueAttachment: (a: Attachment) => void;
   consumeAttachments: () => Attachment[];
+  renameItem: (item: MediaItem, name: string) => Promise<{ ok: boolean; error?: string }>;
+  unnameItem: (mediaKey: string) => Promise<void>;
 };
 
 const MediaRailCtx = createContext<Ctx | null>(null);
