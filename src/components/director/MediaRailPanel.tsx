@@ -340,14 +340,17 @@ function safeFilename(label: string, ext: string) {
 function MediaCard({
   item,
   onPickNewFolder,
+  onRename,
 }: {
   item: MediaItem;
   onPickNewFolder: () => void;
+  onRename: () => void;
 }) {
   const rail = useMediaRail();
   const [menuOpen, setMenuOpen] = useState(false);
   const isFav = rail?.favorites.has(item.id) ?? false;
   const folders = rail?.folders ?? [];
+  const refName = rail?.labelByKey.get(item.id);
 
   const ratioClass =
     item.kind === "image"
