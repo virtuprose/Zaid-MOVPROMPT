@@ -131,6 +131,7 @@ export const ar: Record<TranslationKey, string> = {
   "config.charsCount": "{n} حرف",
   "config.record": "تسجيل الوصف",
   "config.stopRecording": "إيقاف التسجيل",
+  "config.cancelRecording": "إلغاء التسجيل",
   "config.transcribing": "جارٍ التفريغ…",
   "config.recordError": "تعذّر تسجيل الصوت.",
   "config.targetModel": "نموذج الذكاء الاصطناعي المستهدف",

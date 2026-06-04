@@ -129,6 +129,7 @@ export const en = {
   "config.charsCount": "{n} chars",
   "config.record": "Record description",
   "config.stopRecording": "Stop recording",
+  "config.cancelRecording": "Cancel recording",
   "config.transcribing": "Transcribing…",
   "config.recordError": "Could not record audio.",
   "config.targetModel": "Target AI Model",

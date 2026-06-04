@@ -1,10 +1,28 @@
-## Goal
-Make each task row in the sidebar render on a single line (no wrapping), truncating overflow with an ellipsis.
+# Add cancel button to voice recording
 
-## Plan
-1. In `src/pages/Director.tsx`, change the task row button from the current 2-line clamp to a single-line layout: remove the `-webkit-box` / `WebkitLineClamp: 2` styles and use `truncate` (white-space: nowrap + overflow hidden + text-ellipsis).
-2. Keep the kebab spacing (`pr-9`) and active/hover styles intact so the menu trigger stays visible.
+When recording is active, show an X (cancel) button next to the stop button so users can discard the recording without transcribing — matching the Lovable composer mic UX.
 
-## Technical details
-- Replace the inline `style` (line-clamp) on the row button with Tailwind `truncate`, and drop `break-words` and `leading-snug` since the row is now one line.
-- No other behavior or styling changes.
+The `useVoiceCapture` hook already exposes a `cancel()` function that stops the recorder and resets state to idle without uploading or transcribing. We just need to surface it in the UI.
+
+## Changes
+
+### `src/components/ConfigPanel.tsx`
+- While `isRecording`, render a small ghost X button next to the mic stop button.
+- onClick → `cancel()` from `useVoiceCapture`.
+- Pull `cancel` from the hook destructure (currently unused).
+- aria-label / title: "Cancel recording" (with translation key `config.cancelRecording`).
+
+### `src/components/marketing/DescribeAdMic.tsx`
+- Same treatment: when `isRecording`, render an X button beside the stop button calling `cancel()`.
+- Pull `cancel` from the hook.
+
+### Layout
+- X button sits to the left of the mic stop button (after the elapsed timer in DescribeAdMic, before the mic in ConfigPanel).
+- Styled as a small circular ghost button (`w-7 h-7` / `w-8 h-8` to match each context), muted foreground, hover → foreground. No destructive color so it doesn't compete with the red stop button.
+
+### i18n
+- Add `config.cancelRecording` → "Cancel recording" (en) and Arabic equivalent in `src/i18n/translations/{en,ar}.ts`.
+
+## Out of scope
+- No changes to the hook itself (cancel already exists).
+- No changes to transcribing state — cancel only shows during `recording`.
