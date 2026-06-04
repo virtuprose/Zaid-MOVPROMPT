@@ -309,6 +309,78 @@ export function MediaRailProvider({ children }: { children: ReactNode }) {
     return drained;
   }, [pendingAttachments]);
 
+  const labelByKey = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const l of labels) m.set(l.media_key, l.name);
+    return m;
+  }, [labels]);
+
+  const renameItem = useCallback(
+    async (item: MediaItem, rawName: string): Promise<{ ok: boolean; error?: string }> => {
+      if (!user) return { ok: false, error: "Not signed in" };
+      const name = normalizeRefName(rawName);
+      if (!isValidRefName(name)) {
+        return { ok: false, error: "Use lowercase letters, numbers and dashes (max 32)." };
+      }
+      // Optimistic: drop any previous label for this media_key OR this name, then add the new one.
+      setLabels((prev) => {
+        const filtered = prev.filter(
+          (l) => l.media_key !== item.id && l.name !== name,
+        );
+        return [
+          ...filtered,
+          { name, media_key: item.id, kind: item.kind, url: item.url || "", label: item.label },
+        ].sort((a, b) => a.name.localeCompare(b.name));
+      });
+      // Remove any prior label on this same media_key
+      await supabase
+        .from("media_labels")
+        .delete()
+        .eq("user_id", user.id)
+        .eq("media_key", item.id);
+      // Upsert by (user_id, name) so renaming a different item to the same name replaces it
+      const { error } = await supabase
+        .from("media_labels")
+        .upsert(
+          {
+            user_id: user.id,
+            name,
+            media_key: item.id,
+            kind: item.kind,
+            url: item.url || "",
+            label: item.label,
+            session_id: sessionId ?? null,
+          },
+          { onConflict: "user_id,name" },
+        );
+      if (error) {
+        // Roll back by reloading
+        const { data } = await supabase
+          .from("media_labels")
+          .select("name, media_key, kind, url, label")
+          .eq("user_id", user.id)
+          .order("name", { ascending: true });
+        setLabels((data as MediaLabel[]) || []);
+        return { ok: false, error: error.message };
+      }
+      return { ok: true };
+    },
+    [user, sessionId],
+  );
+
+  const unnameItem = useCallback(
+    async (mediaKey: string) => {
+      if (!user) return;
+      setLabels((prev) => prev.filter((l) => l.media_key !== mediaKey));
+      await supabase
+        .from("media_labels")
+        .delete()
+        .eq("user_id", user.id)
+        .eq("media_key", mediaKey);
+    },
+    [user],
+  );
+
   const value = useMemo<Ctx>(
     () => ({
       bubbles,
@@ -319,6 +391,8 @@ export function MediaRailProvider({ children }: { children: ReactNode }) {
       favorites,
       folders,
       pendingAttachments,
+      labels,
+      labelByKey,
       toggleFavorite,
       hideItem,
       unhideItem,
@@ -326,6 +400,8 @@ export function MediaRailProvider({ children }: { children: ReactNode }) {
       addToFolder,
       enqueueAttachment,
       consumeAttachments,
+      renameItem,
+      unnameItem,
     }),
     [
       bubbles,
@@ -334,6 +410,8 @@ export function MediaRailProvider({ children }: { children: ReactNode }) {
       favorites,
       folders,
       pendingAttachments,
+      labels,
+      labelByKey,
       toggleFavorite,
       hideItem,
       unhideItem,
@@ -341,6 +419,8 @@ export function MediaRailProvider({ children }: { children: ReactNode }) {
       addToFolder,
       enqueueAttachment,
       consumeAttachments,
+      renameItem,
+      unnameItem,
     ],
   );
 
