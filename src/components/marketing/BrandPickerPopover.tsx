@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Building2, Check, Pencil, Plus, Trash2 } from "lucide-react";
-import { Popover, PopoverContent, PopoverTrigger, PopoverClose } from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   AlertDialog,
   AlertDialogAction,
