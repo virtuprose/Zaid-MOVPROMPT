@@ -150,7 +150,17 @@ export function MediaRailPanel() {
       <div className="flex-1 overflow-y-auto px-2 pb-2">
         <div className={cn("grid gap-2", wide ? "grid-cols-2" : "grid-cols-1")}>
           {filtered.map((it) => (
-            <MediaCard key={it.id} item={it} onPickNewFolder={() => setNewFolderFor(it)} />
+            <MediaCard
+              key={it.id}
+              item={it}
+              onPickNewFolder={() => setNewFolderFor(it)}
+              onRename={() => {
+                const current = rail?.labelByKey.get(it.id) ?? "";
+                setRenameValue(current);
+                setRenameError(null);
+                setRenameFor(it);
+              }}
+            />
           ))}
         </div>
       </div>
