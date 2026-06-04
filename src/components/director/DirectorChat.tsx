@@ -3083,6 +3083,7 @@ function DirectorChatInner() {
                     chosenIndex={b.chosenIndex}
                     chosenUrl={b.chosenUrl}
                     uploadedUrl={b.uploadedUrl}
+                    regenerating={b.regenerating}
                     disabled={busy || b.stepMode === "done"}
                     onUpload={(file) => void handleLocationUpload(i, file)}
                     onDescribe={(text) => void handleLocationDescribe(i, text)}
