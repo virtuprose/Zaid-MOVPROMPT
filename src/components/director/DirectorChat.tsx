@@ -2944,11 +2944,11 @@ function DirectorChatInner() {
                   )}
                 >
                   <div className="whitespace-pre-wrap leading-relaxed">
-                    {b.content.split(/(@\d+)/g).map((part, k) =>
-                      /^@\d+$/.test(part) ? (
+                    {b.content.split(/(@(?:\d+|[a-z0-9][a-z0-9-]{0,31}))/g).map((part, k) =>
+                      /^@(?:\d+|[a-z0-9][a-z0-9-]{0,31})$/.test(part) ? (
                         <span
                           key={k}
-                          className="inline-flex items-center rounded bg-accent/25 px-1 text-[12px] font-semibold text-accent"
+                          className="inline-flex items-center rounded bg-accent/25 px-1 font-mono text-[12px] font-semibold text-accent"
                         >
                           {part}
                         </span>
