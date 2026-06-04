@@ -442,7 +442,7 @@ export function Composer({
                 }
                 if (e.key === "Enter" || e.key === "Tab") {
                   e.preventDefault();
-                  insertMention(filteredMentions[mention.index].i);
+                  insertMentionItem(filteredMentions[mention.index]);
                   return;
                 }
                 if (e.key === "Escape") {
