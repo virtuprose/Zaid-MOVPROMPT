@@ -197,17 +197,33 @@ export function LocationStepCard({
               );
             })}
           </div>
-          <Button
-            type="button"
-            size="sm"
-            disabled={draftIndex === null || disabled}
-            onClick={() => draftIndex !== null && onChoose(draftIndex)}
-            className="w-full"
-          >
-            Lock this location
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              size="sm"
+              disabled={draftIndex === null || disabled}
+              onClick={() => draftIndex !== null && onChoose(draftIndex)}
+              className="flex-1"
+            >
+              Lock this location
+            </Button>
+            {onRegenerate && (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={disabled}
+                onClick={onRegenerate}
+                title="Generate 3 new options from the same description"
+              >
+                <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+                Try again
+              </Button>
+            )}
+          </div>
         </>
       )}
+
 
       {isDone && finalUrl && (
         <div className="flex items-center gap-3 rounded-lg bg-background/40 p-2.5 border border-border/30">
