@@ -280,19 +280,20 @@ export default function Director() {
                 {sessions.map((s) => {
                   const active = s.id === sessionId;
                   return (
-                    <ContextMenu key={s.id}>
-                      <ContextMenuTrigger asChild>
-                        <div
-                          className={cn(
-                            "group relative rounded-lg transition-colors",
-                            active ? "bg-white/10" : "hover:bg-white/5",
-                          )}
-                        >
+                    <div
+                      key={s.id}
+                      className={cn(
+                        "group relative rounded-lg transition-colors",
+                        active ? "bg-white/10" : "hover:bg-white/5",
+                      )}
+                    >
+                      <ContextMenu>
+                        <ContextMenuTrigger asChild>
                           <button
                             type="button"
                             onClick={() => navigate(`/director/${s.id}`)}
                             className={cn(
-                              "w-full text-left pl-3 pr-8 py-1.5 text-xs leading-snug break-words",
+                              "w-full text-left pl-3 pr-9 py-1.5 text-xs leading-snug break-words rounded-lg",
                               active ? "text-foreground font-medium" : "text-foreground/70",
                             )}
                             style={{
@@ -304,56 +305,61 @@ export default function Director() {
                           >
                             {s.title || "Untitled brief"}
                           </button>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <button
-                                type="button"
-                                aria-label="Task options"
-                                className={cn(
-                                  "absolute right-1 top-1/2 -translate-y-1/2 inline-flex items-center justify-center size-6 rounded-md text-muted-foreground hover:text-foreground hover:bg-white/10 transition-opacity",
-                                  active ? "opacity-100" : "opacity-0 group-hover:opacity-100 focus:opacity-100",
-                                )}
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                <MoreVertical className="w-3.5 h-3.5" />
-                              </button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onSelect={() => openRename(s)}>
-                                <Pencil className="w-4 h-4 mr-2" /> Edit
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onSelect={() => handleTogglePin(s)}>
-                                <Pin className={cn("w-4 h-4 mr-2", s.pinned && "fill-current text-accent")} />
-                                {s.pinned ? "Unpin" : "Pin"}
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                onSelect={() => setDeleteTarget(s)}
-                                className="text-destructive focus:text-destructive"
-                              >
-                                <Trash2 className="w-4 h-4 mr-2" /> Delete
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
-                      </ContextMenuTrigger>
-                      <ContextMenuContent>
-                        <ContextMenuItem onSelect={() => openRename(s)}>
-                          <Pencil className="w-4 h-4 mr-2" /> Edit
-                        </ContextMenuItem>
-                        <ContextMenuItem onSelect={() => handleTogglePin(s)}>
-                          <Pin className={cn("w-4 h-4 mr-2", s.pinned && "fill-current text-accent")} />
-                          {s.pinned ? "Unpin" : "Pin"}
-                        </ContextMenuItem>
-                        <ContextMenuSeparator />
-                        <ContextMenuItem
-                          onSelect={() => setDeleteTarget(s)}
-                          className="text-destructive focus:text-destructive"
-                        >
-                          <Trash2 className="w-4 h-4 mr-2" /> Delete
-                        </ContextMenuItem>
-                      </ContextMenuContent>
-                    </ContextMenu>
+                        </ContextMenuTrigger>
+                        <ContextMenuContent>
+                          <ContextMenuItem onSelect={() => openRename(s)}>
+                            <Pencil className="w-4 h-4 mr-2" /> Edit
+                          </ContextMenuItem>
+                          <ContextMenuItem onSelect={() => handleTogglePin(s)}>
+                            <Pin className={cn("w-4 h-4 mr-2", s.pinned && "fill-current text-accent")} />
+                            {s.pinned ? "Unpin" : "Pin"}
+                          </ContextMenuItem>
+                          <ContextMenuSeparator />
+                          <ContextMenuItem
+                            onSelect={() => setDeleteTarget(s)}
+                            className="text-destructive focus:text-destructive"
+                          >
+                            <Trash2 className="w-4 h-4 mr-2" /> Delete
+                          </ContextMenuItem>
+                        </ContextMenuContent>
+                      </ContextMenu>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button
+                            type="button"
+                            aria-label="Task options"
+                            onPointerDown={(e) => e.stopPropagation()}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              e.preventDefault();
+                            }}
+                            className={cn(
+                              "absolute right-1 top-1/2 -translate-y-1/2 inline-flex items-center justify-center size-6 rounded-md text-muted-foreground hover:text-foreground hover:bg-white/10 transition-opacity z-10",
+                              "data-[state=open]:opacity-100 data-[state=open]:text-foreground data-[state=open]:bg-white/10",
+                              active ? "opacity-100" : "opacity-0 group-hover:opacity-100 focus-visible:opacity-100",
+                            )}
+                          >
+                            <MoreVertical className="w-3.5 h-3.5" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" onCloseAutoFocus={(e) => e.preventDefault()}>
+                          <DropdownMenuItem onSelect={() => openRename(s)}>
+                            <Pencil className="w-4 h-4 mr-2" /> Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onSelect={() => handleTogglePin(s)}>
+                            <Pin className={cn("w-4 h-4 mr-2", s.pinned && "fill-current text-accent")} />
+                            {s.pinned ? "Unpin" : "Pin"}
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onSelect={() => setDeleteTarget(s)}
+                            className="text-destructive focus:text-destructive"
+                          >
+                            <Trash2 className="w-4 h-4 mr-2" /> Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
                   );
                 })}
               </div>

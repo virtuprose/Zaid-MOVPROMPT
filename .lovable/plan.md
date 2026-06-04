@@ -1,16 +1,17 @@
 ## Goal
-Match the attached screenshot for the Tasks sidebar in AI Director.
+Make the task list kebab menu work reliably on every row with **Edit / Pin / Delete**, and clean up any task-list interaction issues around it.
 
-## Changes (in `src/pages/Director.tsx`)
+## Plan
+1. Audit the task row interaction structure in `src/pages/Director.tsx` and remove any event/trigger conflicts between the row button, the kebab trigger, and the right-click context menu.
+2. Tighten the task row layout so the kebab trigger is always reachable, doesn’t get clipped, and stays visible in the correct hover/active states.
+3. Ensure the dropdown actions are wired correctly:
+   - **Edit** opens the rename dialog
+   - **Pin / Unpin** updates row state and ordering
+   - **Delete** opens the delete confirmation dialog
+4. Fix any task-list rendering/styling issues that interfere with row interaction, including sidebar overflow, hit-area overlap, and active-row behavior.
+5. Re-test the task list in preview and confirm the menu opens and each action behaves correctly.
 
-1. **Background color** — change expanded sidebar bg from `hsl(240 6% 9%)` to `#212121`.
-2. **Task row styling** — give each task item a pill look:
-   - Rounded (`rounded-lg`), horizontal padding, no left border accent.
-   - Hover/active background: subtle lighter overlay (`bg-white/5` hover, `bg-white/10` active).
-   - Active text stays accent-tinted but without the left border bar.
-3. **Kebab menu per row** — add a `MoreVertical` button on the right of each task row, visible on hover or when active. Clicking opens a `DropdownMenu` with the same actions currently in the right-click `ContextMenu` (Edit, Pin/Unpin, Delete). Right-click context menu stays as a bonus.
-4. **Tasks header** — keep "Tasks" label + chevron; small visual polish to align with screenshot (slightly muted, same font size).
-
-## Out of scope
-- No logic changes to rename/pin/delete handlers.
-- No changes to collapsed sidebar, chat, or media rail.
+## Technical details
+- Likely focus area: the nested structure of `ContextMenuTrigger`, row `<button>`, and `DropdownMenuTrigger` inside each task item.
+- I’ll preserve the current visual direction (`#212121` sidebar and pill-style rows) and only adjust interaction/state behavior.
+- Live validation is currently blocked because the preview session lands on `/auth`; once the preview is signed in, I can verify the fix end-to-end there.
