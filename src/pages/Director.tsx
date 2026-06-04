@@ -226,7 +226,7 @@ export default function Director() {
           <aside
             className={cn(
               "hidden lg:flex flex-col gap-2 max-h-[calc(100vh-160px)] min-w-0 overflow-hidden",
-              !navCollapsed && "bg-[hsl(240_6%_9%)] border border-border/40 rounded-xl p-2",
+              !navCollapsed && "bg-[#212121] border border-border/40 rounded-xl p-2",
             )}
           >
 
