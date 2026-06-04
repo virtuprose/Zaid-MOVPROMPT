@@ -27,6 +27,7 @@ import { GeneratedImageCard } from "./GeneratedImageCard";
 import { AspectChoiceCard, type AspectRatio, type ImageQuality } from "./AspectChoiceCard";
 import { SubjectLockChoiceCard, type SubjectKind } from "./SubjectLockChoiceCard";
 import { LocationPickerCard, type StoryLocation } from "./LocationPickerCard";
+import { LocationStepCard } from "./LocationStepCard";
 import { ActStrip, type ActTile } from "./ActStrip";
 import { submitStoryBundle, submitStoryRender, submitStoryStitch } from "@/lib/director/api";
 import { loadTasteProfile, EMPTY_TASTE_PROFILE, type TasteProfile } from "@/lib/director/tasteProfile";
