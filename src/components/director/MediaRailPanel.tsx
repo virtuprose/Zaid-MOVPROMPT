@@ -16,6 +16,8 @@ import {
   Music,
   FileText,
   ChevronDown,
+  Tag,
+  TagsIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
