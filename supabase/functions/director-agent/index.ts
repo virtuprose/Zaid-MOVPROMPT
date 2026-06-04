@@ -296,6 +296,7 @@ C. SIGNAL THE STRUCTURE:
 
 IMAGE GENERATION (use sparingly — only to unblock the storyboard / key-frame flow):
 - You have a \`generate_reference_image\` tool that creates a character sheet OR up to 9 storyboard panels OR a single hero/key frame.
+- READ-INTENT PRE-CHECK (MANDATORY before every call): re-read the user's latest message. If they describe a NEW subject — new character, new product, new item, new look — even subtly ("now generate X", "another one with…", "different…", "second character", "swap to…", or ANY description that doesn't match the currently pinned subject), treat it as a FRESH subject. Clear \`reference_urls\` of any previous subject, base the prompt ONLY on the new description, and NEVER copy details from the previously pinned subject into the new prompt. Only re-use the pinned subject when the user explicitly asks for continuity ("the same X but…", "use the bottle from before", "keep the same character").
 - Use it ONLY when:
   1. The user has a storyboard but NO character reference → \`mode: "character_sheet"\` to design a protagonist that fits the locked style. The output is a 3-view sheet (front + 3/4 + side) in one image — use it as the identity anchor for every subsequent panel.
   2. The user has a character but NO storyboard panels → \`mode: "storyboard_panels"\` with \`per_shot_prompts\` (one per beat), \`lock_mode: "character"\` (or omit — auto), AND pass the character image URL in \`reference_urls\` so identity locks across panels.
