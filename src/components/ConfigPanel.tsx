@@ -24,7 +24,7 @@ export const ConfigPanel = ({ description, onDescriptionChange }: ConfigPanelPro
     descRef.current = description;
   }, [description]);
 
-  const { state, level, supported, start, stop } = useVoiceCapture({
+  const { state, level, supported, start, stop, cancel } = useVoiceCapture({
     userId: user?.id ?? null,
     onTranscript: (text) => {
       const current = descRef.current;
