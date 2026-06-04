@@ -18,7 +18,7 @@ export function DescribeAdMic({ value, onChange, maxLength = 280 }: Props) {
     valueRef.current = value;
   }, [value]);
 
-  const { state, level, supported, start, stop } = useVoiceCapture({
+  const { state, level, supported, start, stop, cancel } = useVoiceCapture({
     userId: user?.id ?? null,
     onTranscript: (text) => {
       const current = valueRef.current;
