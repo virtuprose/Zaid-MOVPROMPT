@@ -657,7 +657,7 @@ function DirectorChatInner() {
       | undefined;
     if (!firstUser) return null;
     const text = (firstUser.content || "")
-      .replace(/@\d+/g, "")
+      .replace(/@(?:\d+|[a-z0-9][a-z0-9-]{0,31})/g, "")
       .replace(/\s+/g, " ")
       .trim();
     if (!text) return null;
