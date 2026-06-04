@@ -223,7 +223,13 @@ export default function Director() {
             navCollapsed ? "lg:grid-cols-[56px_1fr]" : "lg:grid-cols-[240px_1fr]",
           )}
         >
-          <aside className="hidden lg:flex flex-col gap-2 max-h-[calc(100vh-160px)] min-w-0 overflow-hidden">
+          <aside
+            className={cn(
+              "hidden lg:flex flex-col gap-2 max-h-[calc(100vh-160px)] min-w-0 overflow-hidden",
+              !navCollapsed && "bg-[hsl(240_6%_9%)] border border-border/40 rounded-xl p-2",
+            )}
+          >
+
             {navCollapsed ? (
               <TooltipProvider delayDuration={150}>
                 <div className="flex flex-col items-stretch gap-2 py-2">
