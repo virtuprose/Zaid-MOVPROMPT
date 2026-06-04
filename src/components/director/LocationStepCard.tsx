@@ -41,6 +41,7 @@ export function LocationStepCard({
   chosenUrl,
   uploadedUrl,
   disabled,
+  regenerating,
   onUpload,
   onDescribe,
   onChoose,
