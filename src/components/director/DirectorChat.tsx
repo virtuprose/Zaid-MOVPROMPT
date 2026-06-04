@@ -1185,6 +1185,159 @@ function DirectorChatInner() {
     void send(`Location chosen: ${index}`, updated);
   };
 
+  // ===== Location step (post-character-sheet, pre-key-frame) =====
+
+  const updateLocationBubble = (
+    bubbleIndex: number,
+    patch: Partial<Extract<Bubble, { role: "location_step" }>>,
+  ) => {
+    setBubbles((prev) => {
+      const copy = [...prev];
+      const cur = copy[bubbleIndex];
+      if (cur?.role !== "location_step") return prev;
+      copy[bubbleIndex] = { ...cur, ...patch };
+      void persist(copy, null, null);
+      return copy;
+    });
+  };
+
+  const advanceFromLocation = (bubbleIndex: number) => {
+    setBubbles((prev) => {
+      const cur = prev[bubbleIndex];
+      if (cur?.role !== "location_step") return prev;
+      const aspectBubble: Bubble = { role: "aspect_choice", payload: cur.payload };
+      const next = [...prev, aspectBubble];
+      void persist(next, null, null);
+      return next;
+    });
+  };
+
+  const handleLocationUpload = async (bubbleIndex: number, file: File) => {
+    if (busy) return;
+    const target = bubbles[bubbleIndex];
+    if (!target || target.role !== "location_step" || target.stepMode === "done") return;
+    setBusy(true);
+    try {
+      const { ingestImage } = await import("@/lib/director/ingest");
+      const att = await ingestImage(file);
+      if (att.kind !== "image") throw new Error("Upload failed");
+      const locAtt: Attachment = {
+        ...att,
+        name: "location.png",
+        role: "location",
+      };
+      setAttachments((prev) => [...prev, locAtt]);
+      updateLocationBubble(bubbleIndex, {
+        stepMode: "done",
+        uploadedUrl: att.url,
+        uploadedStoragePath: att.storage_path,
+      });
+      // Echo for the agent context.
+      setBubbles((prev) => {
+        const next = [...prev, { role: "user", content: "(Uploaded a location reference photo.)", attachments: [locAtt] } as Bubble];
+        void persist(next, null, null);
+        return next;
+      });
+      // Hop to aspect chooser.
+      setTimeout(() => advanceFromLocation(bubbleIndex), 0);
+      toast.success("Location locked");
+    } catch (e: any) {
+      toast.error(e?.message || "Could not upload location");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleLocationDescribe = async (bubbleIndex: number, text: string) => {
+    if (busy) return;
+    const target = bubbles[bubbleIndex];
+    if (!target || target.role !== "location_step" || target.stepMode === "done") return;
+    const trimmed = text.trim();
+    if (!trimmed) return;
+
+    // Confirm credits (3 images × 5 credits = 15).
+    const PER_IMAGE_CREDITS = 5;
+    const cost = 3 * PER_IMAGE_CREDITS;
+    const confirmed = await new Promise<boolean>((resolve) => {
+      requestApproval({
+        action: "image",
+        label: "3 location options",
+        question: `Use ${cost} credits to design 3 location options?`,
+        items: [trimmed.length > 90 ? trimmed.slice(0, 89) + "…" : trimmed],
+        cost,
+        alwaysAllowKey: "approval:image:location_options",
+        onConfirm: () => resolve(true),
+        onCancel: () => resolve(false),
+      });
+    });
+    if (!confirmed) return;
+
+    updateLocationBubble(bubbleIndex, { stepMode: "generating", description: trimmed });
+    setBusy(true);
+    try {
+      const api = await import("@/lib/director/api");
+      const prompt = `Location plate — empty environment. NO people, NO characters, NO products in the frame. ${trimmed}. Cinematic wide establishing shot, photoreal, deep depth of field on the background, even natural lighting, no text, no watermarks, no logos.`;
+      const result = await api.generateReferenceImage({
+        mode: "single_panel",
+        prompt,
+        reference_urls: [],
+        count: 3,
+      });
+      const options = result.images.map((img, i) => ({
+        url: img.url,
+        storage_path: img.storage_path,
+        index: i + 1,
+      }));
+      if (options.length === 0) throw new Error("No options returned");
+      updateLocationBubble(bubbleIndex, { stepMode: "picking", options });
+    } catch (e: any) {
+      const handled = await notifyInsufficientCredits(e);
+      if (!handled) toast.error(e?.message || "Could not generate location options");
+      updateLocationBubble(bubbleIndex, { stepMode: "ask" });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleLocationChosen = (bubbleIndex: number, index: number) => {
+    if (busy) return;
+    const target = bubbles[bubbleIndex];
+    if (!target || target.role !== "location_step" || target.stepMode === "done") return;
+    const opt = target.options?.find((o) => o.index === index);
+    if (!opt) return;
+    const locAtt: Attachment = {
+      kind: "image",
+      name: "location.png",
+      url: opt.url,
+      storage_path: opt.storage_path,
+      role: "location",
+    };
+    setAttachments((prev) => [...prev, locAtt]);
+    updateLocationBubble(bubbleIndex, {
+      stepMode: "done",
+      chosenIndex: index,
+      chosenUrl: opt.url,
+      chosenStoragePath: opt.storage_path,
+    });
+    setBubbles((prev) => {
+      const next = [...prev, { role: "user", content: `Location chosen: option ${index}.`, attachments: [locAtt] } as Bubble];
+      void persist(next, null, null);
+      return next;
+    });
+    setTimeout(() => advanceFromLocation(bubbleIndex), 0);
+    toast.success("Location locked");
+  };
+
+  const handleLocationSkip = (bubbleIndex: number) => {
+    if (busy) return;
+    const target = bubbles[bubbleIndex];
+    if (!target || target.role !== "location_step" || target.stepMode === "done") return;
+    updateLocationBubble(bubbleIndex, { stepMode: "done" });
+    setTimeout(() => advanceFromLocation(bubbleIndex), 0);
+  };
+
+
+
   const handleActsUpdate = (bubbleIndex: number, nextActs: ActTile[]) => {
     setBubbles((prev) => {
       const copy = [...prev];
