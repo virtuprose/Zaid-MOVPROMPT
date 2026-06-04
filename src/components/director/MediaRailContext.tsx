@@ -143,27 +143,35 @@ export function MediaRailProvider({ children }: { children: ReactNode }) {
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [folders, setFolders] = useState<MediaFolder[]>([]);
   const [pendingAttachments, setPendingAttachments] = useState<Attachment[]>([]);
+  const [labels, setLabels] = useState<MediaLabel[]>([]);
 
-  // Load favorites + folders once per user
+  // Load favorites + folders + labels once per user
   useEffect(() => {
     if (!user) {
       setFavorites(new Set());
       setFolders([]);
+      setLabels([]);
       return;
     }
     let alive = true;
     (async () => {
-      const [fav, fld] = await Promise.all([
+      const [fav, fld, lbl] = await Promise.all([
         supabase.from("media_favorites").select("media_key").eq("user_id", user.id),
         supabase
           .from("media_folders")
           .select("id, name")
           .eq("user_id", user.id)
           .order("created_at", { ascending: true }),
+        supabase
+          .from("media_labels")
+          .select("name, media_key, kind, url, label")
+          .eq("user_id", user.id)
+          .order("name", { ascending: true }),
       ]);
       if (!alive) return;
       if (fav.data) setFavorites(new Set(fav.data.map((r: any) => r.media_key)));
       if (fld.data) setFolders(fld.data as MediaFolder[]);
+      if (lbl.data) setLabels(lbl.data as MediaLabel[]);
     })();
     return () => {
       alive = false;
