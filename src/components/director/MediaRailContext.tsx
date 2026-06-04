@@ -33,6 +33,31 @@ export type MediaItem =
 
 export type MediaFolder = { id: string; name: string };
 
+export type MediaLabel = {
+  name: string;
+  media_key: string;
+  kind: string;
+  url: string;
+  label?: string | null;
+};
+
+/** Validate a user-supplied stable reference name. */
+export const RESERVED_REF_NAMES = new Set(["art", "ref", "me", "self"]);
+export function isValidRefName(name: string): boolean {
+  if (!name) return false;
+  if (RESERVED_REF_NAMES.has(name)) return false;
+  return /^[a-z0-9][a-z0-9-]{0,31}$/.test(name);
+}
+export function normalizeRefName(raw: string): string {
+  return raw
+    .toLowerCase()
+    .trim()
+    .replace(/[\s_]+/g, "-")
+    .replace(/[^a-z0-9-]/g, "")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 32);
+}
+
 export function extractMediaItems(bubbles: any[]): MediaItem[] {
   const items: MediaItem[] = [];
   let order = 0;
