@@ -14,6 +14,7 @@ type Props = {
   chosenUrl?: string;
   uploadedUrl?: string;
   disabled?: boolean;
+  regenerating?: boolean;
   onUpload: (file: File) => void;
   onDescribe: (text: string) => void;
   onChoose: (index: number) => void;
@@ -40,6 +41,7 @@ export function LocationStepCard({
   chosenUrl,
   uploadedUrl,
   disabled,
+  regenerating,
   onUpload,
   onDescribe,
   onChoose,
@@ -163,45 +165,58 @@ export function LocationStepCard({
           <p className="text-xs text-muted-foreground/80">
             Tap a location to lock it in. The character sheet will be composited into it.
           </p>
-          <div className="grid grid-cols-3 gap-2">
-            {options.map((loc) => {
-              const isSel = draftIndex === loc.index;
-              return (
-                <button
-                  key={loc.storage_path}
-                  type="button"
-                  disabled={disabled}
-                  onClick={() => setDraftIndex(loc.index)}
-                  className={cn(
-                    "relative rounded-lg overflow-hidden border aspect-video group transition-all",
-                    isSel
-                      ? "border-primary ring-2 ring-primary/60"
-                      : "border-border/30 hover:border-border/70 hover:-translate-y-0.5",
-                    disabled && "opacity-60 cursor-not-allowed",
-                  )}
-                >
-                  <img
-                    src={loc.url}
-                    alt={`Location ${loc.index}`}
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute top-1 left-1 text-[10px] font-medium bg-background/80 text-foreground px-1.5 py-0.5 rounded">
-                    {loc.index}
-                  </div>
-                  {isSel && (
-                    <div className="absolute inset-0 bg-primary/15 flex items-center justify-center">
-                      <Check className="h-6 w-6 text-primary drop-shadow" />
+          <div className="relative">
+            <div
+              className={cn(
+                "grid grid-cols-3 gap-2 transition-opacity",
+                regenerating && "opacity-40 pointer-events-none",
+              )}
+            >
+              {options.map((loc) => {
+                const isSel = draftIndex === loc.index;
+                return (
+                  <button
+                    key={loc.storage_path}
+                    type="button"
+                    disabled={disabled || regenerating}
+                    onClick={() => setDraftIndex(loc.index)}
+                    className={cn(
+                      "relative rounded-lg overflow-hidden border aspect-video group transition-all",
+                      isSel
+                        ? "border-primary ring-2 ring-primary/60"
+                        : "border-border/30 hover:border-border/70 hover:-translate-y-0.5",
+                      (disabled || regenerating) && "opacity-60 cursor-not-allowed",
+                    )}
+                  >
+                    <img
+                      src={loc.url}
+                      alt={`Location ${loc.index}`}
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute top-1 left-1 text-[10px] font-medium bg-background/80 text-foreground px-1.5 py-0.5 rounded">
+                      {loc.index}
                     </div>
-                  )}
-                </button>
-              );
-            })}
+                    {isSel && (
+                      <div className="absolute inset-0 bg-primary/15 flex items-center justify-center">
+                        <Check className="h-6 w-6 text-primary drop-shadow" />
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+            {regenerating && (
+              <div className="absolute inset-0 flex items-center justify-center gap-2 text-muted-foreground">
+                <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                <span className="text-xs font-medium">Designing 3 new options…</span>
+              </div>
+            )}
           </div>
           <div className="flex gap-2">
             <Button
               type="button"
               size="sm"
-              disabled={draftIndex === null || disabled}
+              disabled={draftIndex === null || disabled || regenerating}
               onClick={() => draftIndex !== null && onChoose(draftIndex)}
               className="flex-1"
             >
@@ -212,12 +227,16 @@ export function LocationStepCard({
                 type="button"
                 size="sm"
                 variant="outline"
-                disabled={disabled}
+                disabled={disabled || regenerating}
                 onClick={onRegenerate}
                 title="Generate 3 new options from the same description"
               >
-                <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
-                Try again
+                {regenerating ? (
+                  <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+                )}
+                {regenerating ? "Generating…" : "Try again"}
               </Button>
             )}
           </div>

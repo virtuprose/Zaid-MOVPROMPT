@@ -178,6 +178,7 @@ type Bubble =
       chosenStoragePath?: string;
       uploadedUrl?: string;
       uploadedStoragePath?: string;
+      regenerating?: boolean;
     };
 
 const WELCOME: Bubble = {
@@ -1272,7 +1273,12 @@ function DirectorChatInner() {
     });
     if (!confirmed) return;
 
-    updateLocationBubble(bubbleIndex, { stepMode: "generating", description: trimmed });
+    const isRegen = target.stepMode === "picking";
+    if (isRegen) {
+      updateLocationBubble(bubbleIndex, { regenerating: true, description: trimmed });
+    } else {
+      updateLocationBubble(bubbleIndex, { stepMode: "generating", description: trimmed });
+    }
     setBusy(true);
     try {
       const api = await import("@/lib/director/api");
@@ -1289,11 +1295,14 @@ function DirectorChatInner() {
         index: i + 1,
       }));
       if (options.length === 0) throw new Error("No options returned");
-      updateLocationBubble(bubbleIndex, { stepMode: "picking", options });
+      updateLocationBubble(bubbleIndex, { stepMode: "picking", options, regenerating: false });
     } catch (e: any) {
       const handled = await notifyInsufficientCredits(e);
       if (!handled) toast.error(e?.message || "Could not generate location options");
-      updateLocationBubble(bubbleIndex, { stepMode: "ask" });
+      updateLocationBubble(bubbleIndex, {
+        stepMode: isRegen ? "picking" : "ask",
+        regenerating: false,
+      });
     } finally {
       setBusy(false);
     }
@@ -3074,6 +3083,7 @@ function DirectorChatInner() {
                     chosenIndex={b.chosenIndex}
                     chosenUrl={b.chosenUrl}
                     uploadedUrl={b.uploadedUrl}
+                    regenerating={b.regenerating}
                     disabled={busy || b.stepMode === "done"}
                     onUpload={(file) => void handleLocationUpload(i, file)}
                     onDescribe={(text) => void handleLocationDescribe(i, text)}
