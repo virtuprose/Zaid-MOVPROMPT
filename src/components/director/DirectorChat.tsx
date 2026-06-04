@@ -178,6 +178,7 @@ type Bubble =
       chosenStoragePath?: string;
       uploadedUrl?: string;
       uploadedStoragePath?: string;
+      regenerating?: boolean;
     };
 
 const WELCOME: Bubble = {
