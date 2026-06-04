@@ -35,9 +35,10 @@ export function BrandPickerPopover({
 }) {
   const atCap = activeIds.length >= max;
   const [pendingDelete, setPendingDelete] = useState<{ id: string; name: string } | null>(null);
+  const [open, setOpen] = useState(false);
   return (
     <>
-    <Popover>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>{trigger}</PopoverTrigger>
       <PopoverContent
         align="start"
