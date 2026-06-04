@@ -64,6 +64,10 @@ export function MediaRailPanel() {
   const [wide, setWide] = useState(false);
   const [newFolderFor, setNewFolderFor] = useState<MediaItem | null>(null);
   const [folderName, setFolderName] = useState("");
+  const [renameFor, setRenameFor] = useState<MediaItem | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+  const [renameError, setRenameError] = useState<string | null>(null);
+  const [renaming, setRenaming] = useState(false);
   const rail = useMediaRail();
 
   useEffect(() => {
