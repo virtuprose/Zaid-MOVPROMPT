@@ -18,6 +18,7 @@ type Props = {
   onDescribe: (text: string) => void;
   onChoose: (index: number) => void;
   onSkip: () => void;
+  onRegenerate?: () => void;
 };
 
 const CHIPS = [
