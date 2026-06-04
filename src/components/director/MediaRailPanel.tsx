@@ -483,6 +483,10 @@ function MediaCard({
             <DropdownMenuItem onSelect={handleRecreate} disabled={!hasUrl}>
               <Copy className="w-4 h-4 mr-2" /> Recreate
             </DropdownMenuItem>
+            <DropdownMenuItem onSelect={onRename} disabled={!hasUrl}>
+              <Tag className="w-4 h-4 mr-2" />
+              {refName ? `Rename (@${refName})` : "Name reference…"}
+            </DropdownMenuItem>
             <DropdownMenuSub>
               <DropdownMenuSubTrigger>
                 <FolderPlus className="w-4 h-4 mr-2" /> Add to folder
