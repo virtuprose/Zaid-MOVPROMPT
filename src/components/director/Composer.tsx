@@ -278,16 +278,45 @@ export function Composer({
     return <FileText className="w-5 h-5" />;
   };
 
-  // @-mention picker state
+  // @-mention picker state — combines (a) current message attachments by index
+  // and (b) the user's stable, named references from the Media Rail.
+  const rail = useMediaRail();
+  type MentionItem =
+    | { kind: "attachment"; index: number; label: string; url?: string; isImage: boolean }
+    | { kind: "ref"; name: string; label: string; url: string; mediaKind: string };
+
   const [mention, setMention] = useState<{ query: string; start: number; index: number } | null>(null);
+
+  const allMentionItems: MentionItem[] = [
+    ...(rail?.labels ?? []).map(
+      (l): MentionItem => ({
+        kind: "ref",
+        name: l.name,
+        label: l.label || l.name,
+        url: l.url,
+        mediaKind: l.kind,
+      }),
+    ),
+    ...attachments.map(
+      (a, i): MentionItem => ({
+        kind: "attachment",
+        index: i,
+        label: a.name,
+        url: "url" in a ? (a as any).url : undefined,
+        isImage: a.kind === "image" || a.kind === "video_keyframes",
+      }),
+    ),
+  ];
+
   const filteredMentions = mention
-    ? attachments
-        .map((a, i) => ({ a, i }))
-        .filter(({ a, i }) => {
-          const q = mention.query.toLowerCase();
-          if (!q) return true;
-          return String(i + 1).startsWith(q) || a.name.toLowerCase().includes(q);
-        })
+    ? allMentionItems.filter((m) => {
+        const q = mention.query.toLowerCase();
+        if (!q) return true;
+        if (m.kind === "attachment") {
+          return String(m.index + 1).startsWith(q) || m.label.toLowerCase().includes(q);
+        }
+        return m.name.toLowerCase().includes(q) || m.label.toLowerCase().includes(q);
+      })
     : [];
 
   const detectMention = (text: string, caret: number) => {
@@ -302,22 +331,41 @@ export function Composer({
     const text = e.target.value;
     onChange(text);
     const caret = e.target.selectionStart ?? text.length;
-    if (attachments.length === 0) {
+    if (attachments.length === 0 && (rail?.labels.length ?? 0) === 0) {
       setMention(null);
       return;
     }
     setMention(detectMention(text, caret));
   };
 
-  const insertMention = (attachmentIndex: number) => {
+  const insertMentionItem = (item: MentionItem) => {
     if (!mention) return;
     const caretEnd = taRef.current?.selectionStart ?? value.length;
     const before = value.slice(0, mention.start);
     const after = value.slice(caretEnd);
-    const token = `@${attachmentIndex + 1} `;
+    const token = item.kind === "attachment" ? `@${item.index + 1} ` : `@${item.name} `;
     const next = before + token + after;
     onChange(next);
     setMention(null);
+
+    // For named references, auto-attach the underlying image so the Director
+    // receives the same pixels regardless of which generation it came from.
+    if (item.kind === "ref" && item.url) {
+      const alreadyAttached = attachments.some(
+        (a) => "url" in a && (a as any).url === item.url,
+      );
+      if (!alreadyAttached) {
+        const att: Attachment = {
+          kind: item.mediaKind === "video" ? ("video_keyframes" as any) : ("image" as any),
+          name: item.name, // use the stable nickname as the attachment's name
+          url: item.url,
+          role: "reference" as any,
+          moderation: { state: "ok" as const },
+        } as any;
+        onAttachmentsChange([...attachments, att].slice(0, 12));
+      }
+    }
+
     requestAnimationFrame(() => {
       const ta = taRef.current;
       if (!ta) return;
