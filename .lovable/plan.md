@@ -1,17 +1,10 @@
 ## Goal
-Make the task list kebab menu work reliably on every row with **Edit / Pin / Delete**, and clean up any task-list interaction issues around it.
+Make each task row in the sidebar render on a single line (no wrapping), truncating overflow with an ellipsis.
 
 ## Plan
-1. Audit the task row interaction structure in `src/pages/Director.tsx` and remove any event/trigger conflicts between the row button, the kebab trigger, and the right-click context menu.
-2. Tighten the task row layout so the kebab trigger is always reachable, doesn’t get clipped, and stays visible in the correct hover/active states.
-3. Ensure the dropdown actions are wired correctly:
-   - **Edit** opens the rename dialog
-   - **Pin / Unpin** updates row state and ordering
-   - **Delete** opens the delete confirmation dialog
-4. Fix any task-list rendering/styling issues that interfere with row interaction, including sidebar overflow, hit-area overlap, and active-row behavior.
-5. Re-test the task list in preview and confirm the menu opens and each action behaves correctly.
+1. In `src/pages/Director.tsx`, change the task row button from the current 2-line clamp to a single-line layout: remove the `-webkit-box` / `WebkitLineClamp: 2` styles and use `truncate` (white-space: nowrap + overflow hidden + text-ellipsis).
+2. Keep the kebab spacing (`pr-9`) and active/hover styles intact so the menu trigger stays visible.
 
 ## Technical details
-- Likely focus area: the nested structure of `ContextMenuTrigger`, row `<button>`, and `DropdownMenuTrigger` inside each task item.
-- I’ll preserve the current visual direction (`#212121` sidebar and pill-style rows) and only adjust interaction/state behavior.
-- Live validation is currently blocked because the preview session lands on `/auth`; once the preview is signed in, I can verify the fix end-to-end there.
+- Replace the inline `style` (line-clamp) on the row button with Tailwind `truncate`, and drop `break-words` and `leading-snug` since the row is now one line.
+- No other behavior or styling changes.

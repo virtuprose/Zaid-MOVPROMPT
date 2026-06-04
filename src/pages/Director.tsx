@@ -293,15 +293,9 @@ export default function Director() {
                             type="button"
                             onClick={() => navigate(`/director/${s.id}`)}
                             className={cn(
-                              "w-full text-left pl-3 pr-9 py-1.5 text-xs leading-snug break-words rounded-lg",
+                              "w-full text-left pl-3 pr-9 py-1.5 text-xs rounded-lg truncate",
                               active ? "text-foreground font-medium" : "text-foreground/70",
                             )}
-                            style={{
-                              display: "-webkit-box",
-                              WebkitLineClamp: 2,
-                              WebkitBoxOrient: "vertical",
-                              overflow: "hidden",
-                            }}
                           >
                             {s.title || "Untitled brief"}
                           </button>
