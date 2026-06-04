@@ -39,7 +39,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { useMediaItems, useMediaRail, type MediaItem } from "./MediaRailContext";
+import {
+  useMediaItems,
+  useMediaRail,
+  type MediaItem,
+  isValidRefName,
+  normalizeRefName,
+} from "./MediaRailContext";
 
 type Filter = "all" | "images" | "videos" | "audios" | "files";
 
