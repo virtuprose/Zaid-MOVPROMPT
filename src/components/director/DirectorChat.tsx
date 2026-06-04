@@ -3047,6 +3047,25 @@ function DirectorChatInner() {
                 </div>
               );
             }
+            if (b.role === "location_step") {
+              return (
+                <div key={i} className="motion-safe:animate-fade-up">
+                  <LocationStepCard
+                    mode={b.stepMode}
+                    description={b.description}
+                    options={b.options}
+                    chosenIndex={b.chosenIndex}
+                    chosenUrl={b.chosenUrl}
+                    uploadedUrl={b.uploadedUrl}
+                    disabled={busy || b.stepMode === "done"}
+                    onUpload={(file) => void handleLocationUpload(i, file)}
+                    onDescribe={(text) => void handleLocationDescribe(i, text)}
+                    onChoose={(index) => handleLocationChosen(i, index)}
+                    onSkip={() => handleLocationSkip(i)}
+                  />
+                </div>
+              );
+            }
             if (b.role === "story_render") {
               return (
                 <div key={i} className="motion-safe:animate-fade-up">
