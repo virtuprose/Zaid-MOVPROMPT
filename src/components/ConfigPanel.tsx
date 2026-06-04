@@ -149,9 +149,20 @@ export const ConfigPanel = ({ description, onDescriptionChange }: ConfigPanelPro
                       )}
                     </button>
                     {isRecording && (
-                      <span className="text-[11px] tabular-nums text-destructive font-medium">
-                        {formatTime(elapsed)}
-                      </span>
+                      <>
+                        <span className="text-[11px] tabular-nums text-destructive font-medium">
+                          {formatTime(elapsed)}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={cancel}
+                          aria-label={t("config.cancelRecording")}
+                          title={t("config.cancelRecording")}
+                          className="inline-flex items-center justify-center w-7 h-7 rounded-full border border-border bg-background/60 text-muted-foreground hover:text-foreground hover:bg-background transition-colors"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </>
                     )}
                     {isTranscribing && (
                       <span className="text-[11px] text-muted-foreground">
