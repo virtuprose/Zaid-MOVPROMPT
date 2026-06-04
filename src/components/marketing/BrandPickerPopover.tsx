@@ -137,7 +137,7 @@ export function BrandPickerPopover({
         <div className="mt-1 p-1.5 border-t border-border/40">
           <button
             type="button"
-            onClick={onNew}
+            onClick={() => { setOpen(false); onNew(); }}
             className="w-full flex items-center gap-2 px-2.5 py-2 rounded-xl text-sm hover:bg-white/[0.04] text-foreground transition-colors"
           >
             <span className="w-9 h-9 rounded-lg border border-dashed border-border/60 flex items-center justify-center text-muted-foreground">
