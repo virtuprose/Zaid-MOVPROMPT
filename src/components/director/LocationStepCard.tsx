@@ -44,6 +44,7 @@ export function LocationStepCard({
   onDescribe,
   onChoose,
   onSkip,
+  onRegenerate,
 }: Props) {
   const [text, setText] = useState(description ?? "");
   const [draftIndex, setDraftIndex] = useState<number | null>(chosenIndex ?? null);
