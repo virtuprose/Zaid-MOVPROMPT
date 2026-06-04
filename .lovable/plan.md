@@ -1,13 +1,16 @@
 ## Goal
-When the Director sidebar is expanded, give the Tasks section the dark background color from the screenshot (~`#131316` / `hsl(240 6% 9%)`).
+Match the attached screenshot for the Tasks sidebar in AI Director.
 
-## Change
-In `src/pages/Director.tsx`, on the `<aside>` (expanded state only), wrap the sidebar content with the new background, rounded corners, subtle border, and inner padding so it reads as a distinct panel. Collapsed state stays unchanged.
+## Changes (in `src/pages/Director.tsx`)
 
-- Add `bg-[hsl(240_6%_9%)] border border-border/40 rounded-xl p-2` to the expanded sidebar container.
-- Keep collapsed (icon-only) state transparent as today.
-- No changes to chat, media rail, or behavior.
+1. **Background color** — change expanded sidebar bg from `hsl(240 6% 9%)` to `#212121`.
+2. **Task row styling** — give each task item a pill look:
+   - Rounded (`rounded-lg`), horizontal padding, no left border accent.
+   - Hover/active background: subtle lighter overlay (`bg-white/5` hover, `bg-white/10` active).
+   - Active text stays accent-tinted but without the left border bar.
+3. **Kebab menu per row** — add a `MoreVertical` button on the right of each task row, visible on hover or when active. Clicking opens a `DropdownMenu` with the same actions currently in the right-click `ContextMenu` (Edit, Pin/Unpin, Delete). Right-click context menu stays as a bonus.
+4. **Tasks header** — keep "Tasks" label + chevron; small visual polish to align with screenshot (slightly muted, same font size).
 
 ## Out of scope
-- Tokenizing the color into the design system (one-off match to attached swatch).
-- Light mode styling.
+- No logic changes to rename/pin/delete handlers.
+- No changes to collapsed sidebar, chat, or media rail.
