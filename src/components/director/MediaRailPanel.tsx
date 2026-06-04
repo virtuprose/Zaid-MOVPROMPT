@@ -425,7 +425,22 @@ function MediaCard({
   // Top-right pill column + bottom-right "Add to task" pill, all rendered as overlays.
   const Overlays = (
     <>
-      {/* Top-left badge removed for a cleaner full-image look */}
+      {refName && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onRename();
+          }}
+          className="absolute top-1.5 left-1.5 inline-flex items-center gap-1 rounded-full bg-accent/85 backdrop-blur px-2 py-0.5 text-[10px] font-mono font-semibold text-accent-foreground border border-accent/40 hover:bg-accent transition-colors max-w-[60%] truncate"
+          title={`Stable reference: @${refName}`}
+        >
+          <Tag className="w-2.5 h-2.5 shrink-0" />
+          <span className="truncate">@{refName}</span>
+        </button>
+      )}
+
 
 
       {/* Top-right action column */}
