@@ -108,6 +108,27 @@ export function MediaRailPanel() {
     }
   };
 
+  const handleRename = async () => {
+    const item = renameFor;
+    if (!item || !rail) return;
+    const name = normalizeRefName(renameValue);
+    if (!isValidRefName(name)) {
+      setRenameError("Use lowercase letters, numbers and dashes (max 32). Reserved: art, ref, me.");
+      return;
+    }
+    setRenaming(true);
+    const res = await rail.renameItem(item, name);
+    setRenaming(false);
+    if (!res.ok) {
+      setRenameError(res.error || "Couldn't save");
+      return;
+    }
+    setRenameFor(null);
+    setRenameValue("");
+    setRenameError(null);
+    toast.success(`Saved as @${name}`);
+  };
+
   return (
     <aside
       ref={containerRef}
