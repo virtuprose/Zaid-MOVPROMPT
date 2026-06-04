@@ -720,8 +720,11 @@ function DirectorChatInner() {
     options?: { subjectSheet?: boolean; subjectKind?: "character" | "product" },
   ) => {
     // Auto-attach the pinned subject sheet to every reference call EXCEPT when
-    // we're generating the sheet itself.
-    if (!options?.subjectSheet && pinnedSubject) {
+    // we're generating the sheet itself, or when the agent is generating a
+    // brand-new character_sheet (which must establish a fresh identity, not
+    // clone the currently pinned subject).
+    const isSheetMode = payload.mode === "character_sheet";
+    if (!isSheetMode && !options?.subjectSheet && pinnedSubject) {
       const refs = payload.reference_urls ?? [];
       if (!refs.includes(pinnedSubject.url)) {
         payload = { ...payload, reference_urls: [pinnedSubject.url, ...refs] };
