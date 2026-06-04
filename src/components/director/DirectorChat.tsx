@@ -155,7 +155,29 @@ type Bubble =
       };
     }
   | { role: "video"; data: import("./VideoBubble").VideoBubbleData }
-  | { role: "image_prompt_result"; data: import("./ImagePromptCard").ImagePromptData };
+  | { role: "image_prompt_result"; data: import("./ImagePromptCard").ImagePromptData }
+  | {
+      role: "location_step";
+      payload: {
+        mode: "single_panel";
+        prompt: string;
+        reference_urls?: string[];
+        count?: number;
+        per_shot_prompts?: string[];
+        shot_index?: number;
+        lock_mode?: "character" | "scene" | "auto";
+        directors_note?: string;
+        scene_already_described?: boolean;
+      };
+      stepMode: "ask" | "generating" | "picking" | "done";
+      description?: string;
+      options?: { url: string; storage_path: string; index: number }[];
+      chosenIndex?: number;
+      chosenUrl?: string;
+      chosenStoragePath?: string;
+      uploadedUrl?: string;
+      uploadedStoragePath?: string;
+    };
 
 const WELCOME: Bubble = {
   role: "assistant",
