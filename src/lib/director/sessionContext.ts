@@ -227,6 +227,9 @@ export function buildSessionStateRecap(bubbles: AnyBubble[]): string | null {
     if (b.role === "scene_describe") {
       pendingStep = b.submitted ? null : "awaiting_scene_description";
     }
+    if (b.role === "location_step") {
+      pendingStep = b.stepMode === "done" ? null : "awaiting_location_choice";
+    }
     if (b.role === "questions") {
       const q = (b.questions || [])[0];
       if (q) lastQuestion = { reason: b.reason || "", question: q };
