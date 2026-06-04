@@ -1108,10 +1108,15 @@ function DirectorChatInner() {
         subject_kind: kind === "product" ? "product" : "character",
       }, { subjectSheet: true, subjectKind: kind === "product" ? "product" : "character" });
 
-      // After the sheet returns, always offer an OPTIONAL scene-detail step. The
-      // user can add more detail for the key frame or skip straight to aspect ratio.
+      // After the sheet returns, ask the user to lock a LOCATION for the scene.
+      // They can upload a reference photo or describe one (we'll generate 3
+      // options to pick from). Skipping jumps straight to aspect.
       setBubbles((prev) => {
-        const nextBubble: Bubble = { role: "scene_describe", payload: target.payload };
+        const nextBubble: Bubble = {
+          role: "location_step",
+          payload: target.payload,
+          stepMode: "ask",
+        };
         const withNext = [...prev, nextBubble];
         void persist(withNext, null, null);
         return withNext;
