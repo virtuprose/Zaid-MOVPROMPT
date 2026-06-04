@@ -672,9 +672,26 @@ export function Composer({
               )}
 
               {recording && (
-                <span className="ml-1 text-[11px] text-destructive font-medium tabular-nums">
-                  ● Recording
-                </span>
+                <>
+                  <span className="ml-1 text-[11px] text-destructive font-medium tabular-nums">
+                    ● Recording
+                  </span>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => voice.cancel()}
+                        aria-label="Cancel recording"
+                        className="h-7 w-7 rounded-full text-muted-foreground hover:text-foreground"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top">Cancel recording</TooltipContent>
+                  </Tooltip>
+                </>
               )}
               {transcribing && (
                 <span className="ml-1 text-[11px] text-muted-foreground">Transcribing…</span>
