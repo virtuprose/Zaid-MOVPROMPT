@@ -17,6 +17,7 @@ import { moderateImage } from "@/lib/director/api";
 import { useVoiceCapture } from "@/lib/director/useVoiceCapture";
 import { QuickReplies } from "./QuickReplies";
 import { CostChip } from "@/components/credits/CostChip";
+import { useMediaRail } from "./MediaRailContext";
 import { cn } from "@/lib/utils";
 
 type Props = {
