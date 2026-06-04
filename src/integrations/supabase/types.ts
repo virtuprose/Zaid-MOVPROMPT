@@ -837,6 +837,45 @@ export type Database = {
         }
         Relationships: []
       }
+      media_labels: {
+        Row: {
+          created_at: string
+          id: string
+          kind: string
+          label: string | null
+          media_key: string
+          name: string
+          session_id: string | null
+          updated_at: string
+          url: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          kind: string
+          label?: string | null
+          media_key: string
+          name: string
+          session_id?: string | null
+          updated_at?: string
+          url: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          kind?: string
+          label?: string | null
+          media_key?: string
+          name?: string
+          session_id?: string | null
+          updated_at?: string
+          url?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       model_availability: {
         Row: {
           available: boolean
