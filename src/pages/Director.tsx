@@ -282,24 +282,60 @@ export default function Director() {
                   return (
                     <ContextMenu key={s.id}>
                       <ContextMenuTrigger asChild>
-                        <button
-                          type="button"
-                          onClick={() => navigate(`/director/${s.id}`)}
+                        <div
                           className={cn(
-                            "w-full text-left px-3 py-1.5 text-xs leading-snug transition-colors border-l-2 break-words",
-                            active
-                              ? "text-accent font-semibold bg-accent/5 border-accent"
-                              : "text-foreground/65 hover:text-foreground hover:bg-muted/20 border-transparent",
+                            "group relative rounded-lg transition-colors",
+                            active ? "bg-white/10" : "hover:bg-white/5",
                           )}
-                          style={{
-                            display: "-webkit-box",
-                            WebkitLineClamp: 2,
-                            WebkitBoxOrient: "vertical",
-                            overflow: "hidden",
-                          }}
                         >
-                          {s.title || "Untitled brief"}
-                        </button>
+                          <button
+                            type="button"
+                            onClick={() => navigate(`/director/${s.id}`)}
+                            className={cn(
+                              "w-full text-left pl-3 pr-8 py-1.5 text-xs leading-snug break-words",
+                              active ? "text-foreground font-medium" : "text-foreground/70",
+                            )}
+                            style={{
+                              display: "-webkit-box",
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: "vertical",
+                              overflow: "hidden",
+                            }}
+                          >
+                            {s.title || "Untitled brief"}
+                          </button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <button
+                                type="button"
+                                aria-label="Task options"
+                                className={cn(
+                                  "absolute right-1 top-1/2 -translate-y-1/2 inline-flex items-center justify-center size-6 rounded-md text-muted-foreground hover:text-foreground hover:bg-white/10 transition-opacity",
+                                  active ? "opacity-100" : "opacity-0 group-hover:opacity-100 focus:opacity-100",
+                                )}
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <MoreVertical className="w-3.5 h-3.5" />
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onSelect={() => openRename(s)}>
+                                <Pencil className="w-4 h-4 mr-2" /> Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onSelect={() => handleTogglePin(s)}>
+                                <Pin className={cn("w-4 h-4 mr-2", s.pinned && "fill-current text-accent")} />
+                                {s.pinned ? "Unpin" : "Pin"}
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                onSelect={() => setDeleteTarget(s)}
+                                className="text-destructive focus:text-destructive"
+                              >
+                                <Trash2 className="w-4 h-4 mr-2" /> Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
                       </ContextMenuTrigger>
                       <ContextMenuContent>
                         <ContextMenuItem onSelect={() => openRename(s)}>
