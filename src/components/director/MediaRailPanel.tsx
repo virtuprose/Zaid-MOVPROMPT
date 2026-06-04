@@ -16,6 +16,7 @@ import {
   Music,
   FileText,
   ChevronDown,
+  Tag,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -38,7 +39,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { useMediaItems, useMediaRail, type MediaItem } from "./MediaRailContext";
+import {
+  useMediaItems,
+  useMediaRail,
+  type MediaItem,
+  isValidRefName,
+  normalizeRefName,
+} from "./MediaRailContext";
 
 type Filter = "all" | "images" | "videos" | "audios" | "files";
 
@@ -57,6 +64,10 @@ export function MediaRailPanel() {
   const [wide, setWide] = useState(false);
   const [newFolderFor, setNewFolderFor] = useState<MediaItem | null>(null);
   const [folderName, setFolderName] = useState("");
+  const [renameFor, setRenameFor] = useState<MediaItem | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+  const [renameError, setRenameError] = useState<string | null>(null);
+  const [renaming, setRenaming] = useState(false);
   const rail = useMediaRail();
 
   useEffect(() => {
@@ -95,6 +106,27 @@ export function MediaRailPanel() {
     } else {
       toast.error("Couldn't create folder");
     }
+  };
+
+  const handleRename = async () => {
+    const item = renameFor;
+    if (!item || !rail) return;
+    const name = normalizeRefName(renameValue);
+    if (!isValidRefName(name)) {
+      setRenameError("Use lowercase letters, numbers and dashes (max 32). Reserved: art, ref, me.");
+      return;
+    }
+    setRenaming(true);
+    const res = await rail.renameItem(item, name);
+    setRenaming(false);
+    if (!res.ok) {
+      setRenameError(res.error || "Couldn't save");
+      return;
+    }
+    setRenameFor(null);
+    setRenameValue("");
+    setRenameError(null);
+    toast.success(`Saved as @${name}`);
   };
 
   return (
@@ -139,7 +171,17 @@ export function MediaRailPanel() {
       <div className="flex-1 overflow-y-auto px-2 pb-2">
         <div className={cn("grid gap-2", wide ? "grid-cols-2" : "grid-cols-1")}>
           {filtered.map((it) => (
-            <MediaCard key={it.id} item={it} onPickNewFolder={() => setNewFolderFor(it)} />
+            <MediaCard
+              key={it.id}
+              item={it}
+              onPickNewFolder={() => setNewFolderFor(it)}
+              onRename={() => {
+                const current = rail?.labelByKey.get(it.id) ?? "";
+                setRenameValue(current);
+                setRenameError(null);
+                setRenameFor(it);
+              }}
+            />
           ))}
         </div>
       </div>
@@ -176,6 +218,96 @@ export function MediaRailPanel() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Dialog
+        open={!!renameFor}
+        onOpenChange={(o) => {
+          if (!o) {
+            setRenameFor(null);
+            setRenameError(null);
+            setRenameValue("");
+          }
+        }}
+      >
+        <DialogContent className="rounded-2xl border-border/60 bg-[hsl(240_5%_8%)] sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="font-display text-xl tracking-tight">
+              Name this reference
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2">
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Give this image a stable nickname you can type in chat — e.g. <span className="font-mono text-foreground/80">@hero-bottle</span>. The reference points to this exact image, even after new generations.
+            </p>
+            <div className="flex items-center gap-1.5 rounded-lg border border-border bg-background/60 pl-2.5">
+              <span className="text-sm text-muted-foreground select-none">@</span>
+              <Input
+                value={renameValue}
+                onChange={(e) => {
+                  setRenameValue(e.target.value);
+                  setRenameError(null);
+                }}
+                placeholder="hero-bottle"
+                maxLength={32}
+                autoFocus
+                className="border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 px-1"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    void handleRename();
+                  }
+                }}
+              />
+            </div>
+            {renameError && (
+              <p className="text-[11px] text-destructive">{renameError}</p>
+            )}
+            {!renameError && renameValue && (
+              <p className="text-[11px] text-muted-foreground">
+                Will become <span className="font-mono text-accent">@{normalizeRefName(renameValue) || "…"}</span>
+              </p>
+            )}
+          </div>
+          <DialogFooter className="gap-2 sm:gap-2">
+            {renameFor && rail?.labelByKey.get(renameFor.id) && (
+              <Button
+                variant="ghost"
+                onClick={async () => {
+                  const item = renameFor;
+                  setRenameFor(null);
+                  setRenameError(null);
+                  setRenameValue("");
+                  if (item) {
+                    await rail?.unnameItem(item.id);
+                    toast.success("Reference name removed");
+                  }
+                }}
+                className="rounded-full text-muted-foreground hover:text-destructive mr-auto"
+              >
+                Remove name
+              </Button>
+            )}
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setRenameFor(null);
+                setRenameError(null);
+                setRenameValue("");
+              }}
+              className="rounded-full"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleRename}
+              disabled={renaming || !normalizeRefName(renameValue)}
+              className="rounded-full bg-primary/15 text-primary border border-primary/30 hover:bg-primary/25"
+            >
+              {renaming ? "Saving…" : "Save"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </aside>
   );
 }
@@ -208,14 +340,17 @@ function safeFilename(label: string, ext: string) {
 function MediaCard({
   item,
   onPickNewFolder,
+  onRename,
 }: {
   item: MediaItem;
   onPickNewFolder: () => void;
+  onRename: () => void;
 }) {
   const rail = useMediaRail();
   const [menuOpen, setMenuOpen] = useState(false);
   const isFav = rail?.favorites.has(item.id) ?? false;
   const folders = rail?.folders ?? [];
+  const refName = rail?.labelByKey.get(item.id);
 
   const ratioClass =
     item.kind === "image"
@@ -290,7 +425,22 @@ function MediaCard({
   // Top-right pill column + bottom-right "Add to task" pill, all rendered as overlays.
   const Overlays = (
     <>
-      {/* Top-left badge removed for a cleaner full-image look */}
+      {refName && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onRename();
+          }}
+          className="absolute top-1.5 left-1.5 inline-flex items-center gap-1 rounded-full bg-accent/85 backdrop-blur px-2 py-0.5 text-[10px] font-mono font-semibold text-accent-foreground border border-accent/40 hover:bg-accent transition-colors max-w-[60%] truncate"
+          title={`Stable reference: @${refName}`}
+        >
+          <Tag className="w-2.5 h-2.5 shrink-0" />
+          <span className="truncate">@{refName}</span>
+        </button>
+      )}
+
 
 
       {/* Top-right action column */}
@@ -347,6 +497,10 @@ function MediaCard({
           >
             <DropdownMenuItem onSelect={handleRecreate} disabled={!hasUrl}>
               <Copy className="w-4 h-4 mr-2" /> Recreate
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={onRename} disabled={!hasUrl}>
+              <Tag className="w-4 h-4 mr-2" />
+              {refName ? `Rename (@${refName})` : "Name reference…"}
             </DropdownMenuItem>
             <DropdownMenuSub>
               <DropdownMenuSubTrigger>

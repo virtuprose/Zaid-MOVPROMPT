@@ -33,6 +33,31 @@ export type MediaItem =
 
 export type MediaFolder = { id: string; name: string };
 
+export type MediaLabel = {
+  name: string;
+  media_key: string;
+  kind: string;
+  url: string;
+  label?: string | null;
+};
+
+/** Validate a user-supplied stable reference name. */
+export const RESERVED_REF_NAMES = new Set(["art", "ref", "me", "self"]);
+export function isValidRefName(name: string): boolean {
+  if (!name) return false;
+  if (RESERVED_REF_NAMES.has(name)) return false;
+  return /^[a-z0-9][a-z0-9-]{0,31}$/.test(name);
+}
+export function normalizeRefName(raw: string): string {
+  return raw
+    .toLowerCase()
+    .trim()
+    .replace(/[\s_]+/g, "-")
+    .replace(/[^a-z0-9-]/g, "")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 32);
+}
+
 export function extractMediaItems(bubbles: any[]): MediaItem[] {
   const items: MediaItem[] = [];
   let order = 0;
@@ -94,6 +119,8 @@ type Ctx = {
   favorites: Set<string>;
   folders: MediaFolder[];
   pendingAttachments: Attachment[];
+  labels: MediaLabel[];
+  labelByKey: Map<string, string>; // media_key -> name
 
   toggleFavorite: (item: MediaItem) => Promise<void>;
   hideItem: (item: MediaItem) => Promise<void>;
@@ -102,6 +129,8 @@ type Ctx = {
   addToFolder: (item: MediaItem, folderId: string) => Promise<void>;
   enqueueAttachment: (a: Attachment) => void;
   consumeAttachments: () => Attachment[];
+  renameItem: (item: MediaItem, name: string) => Promise<{ ok: boolean; error?: string }>;
+  unnameItem: (mediaKey: string) => Promise<void>;
 };
 
 const MediaRailCtx = createContext<Ctx | null>(null);
@@ -114,27 +143,35 @@ export function MediaRailProvider({ children }: { children: ReactNode }) {
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [folders, setFolders] = useState<MediaFolder[]>([]);
   const [pendingAttachments, setPendingAttachments] = useState<Attachment[]>([]);
+  const [labels, setLabels] = useState<MediaLabel[]>([]);
 
-  // Load favorites + folders once per user
+  // Load favorites + folders + labels once per user
   useEffect(() => {
     if (!user) {
       setFavorites(new Set());
       setFolders([]);
+      setLabels([]);
       return;
     }
     let alive = true;
     (async () => {
-      const [fav, fld] = await Promise.all([
+      const [fav, fld, lbl] = await Promise.all([
         supabase.from("media_favorites").select("media_key").eq("user_id", user.id),
         supabase
           .from("media_folders")
           .select("id, name")
           .eq("user_id", user.id)
           .order("created_at", { ascending: true }),
+        supabase
+          .from("media_labels")
+          .select("name, media_key, kind, url, label")
+          .eq("user_id", user.id)
+          .order("name", { ascending: true }),
       ]);
       if (!alive) return;
       if (fav.data) setFavorites(new Set(fav.data.map((r: any) => r.media_key)));
       if (fld.data) setFolders(fld.data as MediaFolder[]);
+      if (lbl.data) setLabels(lbl.data as MediaLabel[]);
     })();
     return () => {
       alive = false;
@@ -272,6 +309,78 @@ export function MediaRailProvider({ children }: { children: ReactNode }) {
     return drained;
   }, [pendingAttachments]);
 
+  const labelByKey = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const l of labels) m.set(l.media_key, l.name);
+    return m;
+  }, [labels]);
+
+  const renameItem = useCallback(
+    async (item: MediaItem, rawName: string): Promise<{ ok: boolean; error?: string }> => {
+      if (!user) return { ok: false, error: "Not signed in" };
+      const name = normalizeRefName(rawName);
+      if (!isValidRefName(name)) {
+        return { ok: false, error: "Use lowercase letters, numbers and dashes (max 32)." };
+      }
+      // Optimistic: drop any previous label for this media_key OR this name, then add the new one.
+      setLabels((prev) => {
+        const filtered = prev.filter(
+          (l) => l.media_key !== item.id && l.name !== name,
+        );
+        return [
+          ...filtered,
+          { name, media_key: item.id, kind: item.kind, url: item.url || "", label: item.label },
+        ].sort((a, b) => a.name.localeCompare(b.name));
+      });
+      // Remove any prior label on this same media_key
+      await supabase
+        .from("media_labels")
+        .delete()
+        .eq("user_id", user.id)
+        .eq("media_key", item.id);
+      // Upsert by (user_id, name) so renaming a different item to the same name replaces it
+      const { error } = await supabase
+        .from("media_labels")
+        .upsert(
+          {
+            user_id: user.id,
+            name,
+            media_key: item.id,
+            kind: item.kind,
+            url: item.url || "",
+            label: item.label,
+            session_id: sessionId ?? null,
+          },
+          { onConflict: "user_id,name" },
+        );
+      if (error) {
+        // Roll back by reloading
+        const { data } = await supabase
+          .from("media_labels")
+          .select("name, media_key, kind, url, label")
+          .eq("user_id", user.id)
+          .order("name", { ascending: true });
+        setLabels((data as MediaLabel[]) || []);
+        return { ok: false, error: error.message };
+      }
+      return { ok: true };
+    },
+    [user, sessionId],
+  );
+
+  const unnameItem = useCallback(
+    async (mediaKey: string) => {
+      if (!user) return;
+      setLabels((prev) => prev.filter((l) => l.media_key !== mediaKey));
+      await supabase
+        .from("media_labels")
+        .delete()
+        .eq("user_id", user.id)
+        .eq("media_key", mediaKey);
+    },
+    [user],
+  );
+
   const value = useMemo<Ctx>(
     () => ({
       bubbles,
@@ -282,6 +391,8 @@ export function MediaRailProvider({ children }: { children: ReactNode }) {
       favorites,
       folders,
       pendingAttachments,
+      labels,
+      labelByKey,
       toggleFavorite,
       hideItem,
       unhideItem,
@@ -289,6 +400,8 @@ export function MediaRailProvider({ children }: { children: ReactNode }) {
       addToFolder,
       enqueueAttachment,
       consumeAttachments,
+      renameItem,
+      unnameItem,
     }),
     [
       bubbles,
@@ -297,6 +410,8 @@ export function MediaRailProvider({ children }: { children: ReactNode }) {
       favorites,
       folders,
       pendingAttachments,
+      labels,
+      labelByKey,
       toggleFavorite,
       hideItem,
       unhideItem,
@@ -304,6 +419,8 @@ export function MediaRailProvider({ children }: { children: ReactNode }) {
       addToFolder,
       enqueueAttachment,
       consumeAttachments,
+      renameItem,
+      unnameItem,
     ],
   );
 

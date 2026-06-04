@@ -17,6 +17,7 @@ import { moderateImage } from "@/lib/director/api";
 import { useVoiceCapture } from "@/lib/director/useVoiceCapture";
 import { QuickReplies } from "./QuickReplies";
 import { CostChip } from "@/components/credits/CostChip";
+import { useMediaRail } from "./MediaRailContext";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -277,16 +278,45 @@ export function Composer({
     return <FileText className="w-5 h-5" />;
   };
 
-  // @-mention picker state
+  // @-mention picker state — combines (a) current message attachments by index
+  // and (b) the user's stable, named references from the Media Rail.
+  const rail = useMediaRail();
+  type MentionItem =
+    | { kind: "attachment"; index: number; label: string; url?: string; isImage: boolean }
+    | { kind: "ref"; name: string; label: string; url: string; mediaKind: string };
+
   const [mention, setMention] = useState<{ query: string; start: number; index: number } | null>(null);
+
+  const allMentionItems: MentionItem[] = [
+    ...(rail?.labels ?? []).map(
+      (l): MentionItem => ({
+        kind: "ref",
+        name: l.name,
+        label: l.label || l.name,
+        url: l.url,
+        mediaKind: l.kind,
+      }),
+    ),
+    ...attachments.map(
+      (a, i): MentionItem => ({
+        kind: "attachment",
+        index: i,
+        label: a.name,
+        url: "url" in a ? (a as any).url : undefined,
+        isImage: a.kind === "image" || a.kind === "video_keyframes",
+      }),
+    ),
+  ];
+
   const filteredMentions = mention
-    ? attachments
-        .map((a, i) => ({ a, i }))
-        .filter(({ a, i }) => {
-          const q = mention.query.toLowerCase();
-          if (!q) return true;
-          return String(i + 1).startsWith(q) || a.name.toLowerCase().includes(q);
-        })
+    ? allMentionItems.filter((m) => {
+        const q = mention.query.toLowerCase();
+        if (!q) return true;
+        if (m.kind === "attachment") {
+          return String(m.index + 1).startsWith(q) || m.label.toLowerCase().includes(q);
+        }
+        return m.name.toLowerCase().includes(q) || m.label.toLowerCase().includes(q);
+      })
     : [];
 
   const detectMention = (text: string, caret: number) => {
@@ -301,22 +331,41 @@ export function Composer({
     const text = e.target.value;
     onChange(text);
     const caret = e.target.selectionStart ?? text.length;
-    if (attachments.length === 0) {
+    if (attachments.length === 0 && (rail?.labels.length ?? 0) === 0) {
       setMention(null);
       return;
     }
     setMention(detectMention(text, caret));
   };
 
-  const insertMention = (attachmentIndex: number) => {
+  const insertMentionItem = (item: MentionItem) => {
     if (!mention) return;
     const caretEnd = taRef.current?.selectionStart ?? value.length;
     const before = value.slice(0, mention.start);
     const after = value.slice(caretEnd);
-    const token = `@${attachmentIndex + 1} `;
+    const token = item.kind === "attachment" ? `@${item.index + 1} ` : `@${item.name} `;
     const next = before + token + after;
     onChange(next);
     setMention(null);
+
+    // For named references, auto-attach the underlying image so the Director
+    // receives the same pixels regardless of which generation it came from.
+    if (item.kind === "ref" && item.url) {
+      const alreadyAttached = attachments.some(
+        (a) => "url" in a && (a as any).url === item.url,
+      );
+      if (!alreadyAttached) {
+        const att: Attachment = {
+          kind: item.mediaKind === "video" ? ("video_keyframes" as any) : ("image" as any),
+          name: item.name, // use the stable nickname as the attachment's name
+          url: item.url,
+          role: "reference" as any,
+          moderation: { state: "ok" as const },
+        } as any;
+        onAttachmentsChange([...attachments, att].slice(0, 12));
+      }
+    }
+
     requestAnimationFrame(() => {
       const ta = taRef.current;
       if (!ta) return;
@@ -372,7 +421,7 @@ export function Composer({
             onChange={handleTextChange}
             onKeyUp={(e) => {
               const ta = e.currentTarget;
-              if (attachments.length === 0) return;
+              if (attachments.length === 0 && (rail?.labels.length ?? 0) === 0) return;
               setMention(detectMention(ta.value, ta.selectionStart ?? ta.value.length));
             }}
             onBlur={() => setTimeout(() => setMention(null), 150)}
@@ -393,7 +442,7 @@ export function Composer({
                 }
                 if (e.key === "Enter" || e.key === "Tab") {
                   e.preventDefault();
-                  insertMention(filteredMentions[mention.index].i);
+                  insertMentionItem(filteredMentions[mention.index]);
                   return;
                 }
                 if (e.key === "Escape") {
@@ -418,30 +467,49 @@ export function Composer({
 
           {mention && filteredMentions.length > 0 && (
             <div className="absolute left-3 right-3 z-20 -translate-y-full mt-[-6px] top-0 max-h-56 overflow-auto rounded-lg border border-border bg-popover shadow-lg">
-              <div className="px-2 py-1 text-[10px] uppercase tracking-wider text-muted-foreground">
-                Reference files
-              </div>
-              {filteredMentions.map(({ a, i }, fi) => (
-                <button
-                  key={i}
-                  type="button"
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    insertMention(i);
-                  }}
-                  className={`flex w-full items-center gap-2 px-2 py-1.5 text-left text-sm ${
-                    fi === mention.index ? "bg-accent/15 text-accent" : "hover:bg-muted"
-                  }`}
-                >
-                  <span className="inline-flex h-5 min-w-[20px] items-center justify-center rounded bg-accent/20 px-1 text-[11px] font-semibold text-accent">
-                    @{i + 1}
-                  </span>
-                  {isImageLike(a) && "url" in a && (
-                    <img src={(a as any).url} alt="" className="h-6 w-6 rounded object-cover" />
-                  )}
-                  <span className="truncate">{a.name}</span>
-                </button>
-              ))}
+              {filteredMentions.some((m) => m.kind === "ref") && (
+                <div className="px-2 py-1 text-[10px] uppercase tracking-wider text-muted-foreground border-b border-border/50">
+                  Pinned references
+                </div>
+              )}
+              {filteredMentions.map((m, fi) => {
+                const isRef = m.kind === "ref";
+                const showHeader =
+                  !isRef &&
+                  fi > 0 &&
+                  filteredMentions[fi - 1].kind === "ref";
+                return (
+                  <div key={isRef ? `ref-${m.name}` : `att-${m.index}`}>
+                    {showHeader && (
+                      <div className="px-2 py-1 text-[10px] uppercase tracking-wider text-muted-foreground border-b border-t border-border/50">
+                        This message
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        insertMentionItem(m);
+                      }}
+                      className={`flex w-full items-center gap-2 px-2 py-1.5 text-left text-sm ${
+                        fi === mention.index ? "bg-accent/15 text-accent" : "hover:bg-muted"
+                      }`}
+                    >
+                      <span className="inline-flex h-5 min-w-[20px] items-center justify-center rounded bg-accent/20 px-1 text-[11px] font-mono font-semibold text-accent">
+                        @{isRef ? m.name : m.index + 1}
+                      </span>
+                      {m.url && (
+                        <img
+                          src={m.url}
+                          alt=""
+                          className="h-6 w-6 rounded object-cover"
+                        />
+                      )}
+                      <span className="truncate text-muted-foreground">{m.label}</span>
+                    </button>
+                  </div>
+                );
+              })}
             </div>
           )}
 
