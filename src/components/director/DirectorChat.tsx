@@ -3079,6 +3079,11 @@ function DirectorChatInner() {
                     onDescribe={(text) => void handleLocationDescribe(i, text)}
                     onChoose={(index) => handleLocationChosen(i, index)}
                     onSkip={() => handleLocationSkip(i)}
+                    onRegenerate={
+                      b.description
+                        ? () => void handleLocationDescribe(i, b.description!)
+                        : undefined
+                    }
                   />
                 </div>
               );
