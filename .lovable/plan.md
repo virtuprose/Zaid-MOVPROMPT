@@ -1,65 +1,49 @@
-# Stable, renameable references for media items
+## Goal
 
-## Problem today
-- In the Composer, `@1`, `@2`, … are just positional shortcuts into the *current message's* attachments. They get re-resolved into the actual image URL at send-time, so the Director sees the right image *for that turn*.
-- Every new generation produces fresh items in the Media Rail (`Key frame`, `Panel 1`, etc.) and the numbering restarts. There is no persistent handle the user can type to point back at an older image.
-- Result: the user has to reopen the picker and re-pick from the rail every time, and the Director can't reliably tie "make @1 brighter" across turns.
+When the Director generates a **second, distinct character sheet**, render a brand-new identity instead of cloning the first character.
 
-## Goal (option B)
-Let the user **rename / pin** any item in the Media Rail (e.g. `hero-bottle`, `model-closeup`). Those named items become **stable references** that:
-1. Survive new generations.
-2. Show up first in the Composer `@` picker, with their custom name as the token (e.g. `@hero-bottle`) instead of a positional number.
-3. Resolve to the same image URL every time, so the Director sees the same pixels whenever the user types that handle.
+## Root cause
 
-## UX
+`DirectorChat.runImageGeneration` (src/components/director/DirectorChat.tsx, ~L722–729) auto-injects the pinned subject sheet into `reference_urls` for every image call unless `options.subjectSheet === true`. When the agent calls `mode: "character_sheet"` without that option (e.g. routed through the tool path rather than the explicit "create subject sheet" UI path), the first character's sheet rides along as a reference. The edge function then activates the identity-lock branch in `generate-reference-image/index.ts` (L270–276) — "Do not redesign the character; only re-pose and re-angle the same person." — and the model dutifully reproduces character #1.
 
-**Media Rail card** — add a "Rename" action to the existing kebab menu next to "Favorite / Add to folder / Hide". Opens a small dialog with a single text field (lowercased, kebab-cased, max 32 chars, must be unique per user).
+## Changes
 
-**Composer `@` picker** — show two sections:
-- **Pinned references** (user's named items, sorted alphabetically) — token is `@name`.
-- **This message** (current attachments, today's behavior) — token stays `@1`, `@2`, …
+### 1. `src/components/director/DirectorChat.tsx` — gate the auto-attach by mode
 
-Typing `@he` filters across both. Selecting a pinned reference inserts `@hero-bottle ` and, on send, the client attaches the corresponding image URL to the outgoing message the same way it already does for `@N`.
+In `runImageGeneration`, change the guard so the pinned subject is NEVER auto-attached when `payload.mode === "character_sheet"`. The sheet is, by definition, the identity-defining artifact — it should only carry a reference when the agent explicitly passes one (e.g. user-uploaded photo of the new character).
 
-**Visual treatment** — pinned tokens render in the bubble (DirectorChat line 2947 area) with the same accent chip but show the name instead of the number.
+```ts
+// before
+if (!options?.subjectSheet && pinnedSubject) { ... }
 
-## Technical plan
-
-### 1. Schema (one new table)
-`public.media_labels` — per-user custom name → media URL.
-
+// after
+const isSheetMode = payload.mode === "character_sheet";
+if (!isSheetMode && !options?.subjectSheet && pinnedSubject) { ... }
 ```
-id uuid pk, user_id uuid, name text, media_key text, kind text,
-url text, label text (original label), session_id uuid null,
-created_at timestamptz default now(),
-unique (user_id, name)
-```
-RLS: owner-only CRUD. Standard GRANTs to `authenticated` + `service_role`.
 
-### 2. MediaRailContext
-- Load labels alongside favorites/folders.
-- Add `renameItem(item, name)` and `unnameItem(name)` (upsert/delete in `media_labels`).
-- Expose `pinnedRefs: { name, url, kind, label }[]`.
+This keeps the existing behavior for `storyboard_panels` and `single_panel` (which still inherit the pinned subject), and only frees `character_sheet` calls.
 
-### 3. MediaCard (MediaRailPanel)
-- New "Rename" menu item → opens dialog (reuse the existing `New folder` dialog pattern).
-- If the item already has a name, the menu shows "Rename (@current-name)" and adds a "Remove name" entry.
-- Small chip on the card itself: `@hero-bottle` when named.
+### 2. `supabase/functions/director-agent/index.ts` — soften the one-sheet rule
 
-### 4. Composer `@` picker
-- Add `pinnedRefs` from `useMediaRail()` to `filteredMentions`.
-- Adjust `insertMention` to accept either an attachment index (`@N`) or a pinned ref (`@name`).
-- On send, resolve any `@name` tokens in `value` against `pinnedRefs` and append the resolved URL as an extra `Attachment` (role: `reference`) on the outgoing message — mirrors how `@N` already flows.
-- Token regex bumps from `/@\d+/` → `/@(?:\d+|[a-z0-9][a-z0-9-]{0,31})/`.
+Update the line in the system prompt (L310):
 
-### 5. Render in DirectorChat
-- Update the `@\d+` split (line 2947 and 660) to the new regex so named tokens get the accent chip styling too.
+> "DO NOT generate more than one character_sheet per session unless the user asks for variations."
 
-### 6. Validation
-- Names: `^[a-z0-9][a-z0-9-]{0,31}$`. Reject reserved words (`art`, `ref`, `me`).
-- Dialog shows live validation + uniqueness check on blur.
+to explicitly permit additional sheets for *new, distinct* characters:
+
+> "Generate additional `character_sheet` calls when the user asks for a NEW or DIFFERENT character (co-star, second protagonist, antagonist). When doing so, do NOT pass the existing character's image in `reference_urls` — only attach a reference if the user uploaded one for the new character. Avoid regenerating the same character on a whim."
+
+This keeps the don't-spam-sheets intent but unblocks the legitimate "add a second character" flow.
 
 ## Out of scope
-- Auto-naming (Director suggesting names) — can come later.
-- Cross-session references for non-rail items.
-- Editing the name of a *generation* itself in the rail (we name the reference handle, not the underlying image).
+
+- Multi-character pinning / picker UI (today only one subject is pinned at a time — a future improvement, not this fix).
+- Edge-function changes to `generate-reference-image` — the lock logic is correct; the bug is upstream in what gets passed in.
+- Storyboard/key-frame behavior — unchanged.
+
+## Verification
+
+1. Generate character sheet A from a photo or description.
+2. Ask the Director: "create another character — a tall older man with grey beard".
+3. Confirm the new sheet shows a different identity, not character A re-posed.
+4. Storyboard panels still lock to whichever subject is currently pinned (regression check).
