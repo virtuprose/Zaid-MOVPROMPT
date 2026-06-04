@@ -51,9 +51,20 @@ export function DescribeAdMic({ value, onChange, maxLength = 280 }: Props) {
   return (
     <div className="flex items-center gap-1.5 shrink-0">
       {isRecording && (
-        <span className="text-[11px] tabular-nums text-destructive font-medium">
-          {fmt(elapsed)}
-        </span>
+        <>
+          <span className="text-[11px] tabular-nums text-destructive font-medium">
+            {fmt(elapsed)}
+          </span>
+          <button
+            type="button"
+            onClick={cancel}
+            aria-label="Cancel recording"
+            title="Cancel recording"
+            className="inline-flex items-center justify-center w-6 h-6 rounded-full border border-border/60 bg-background/60 text-muted-foreground hover:text-foreground hover:bg-background transition-colors"
+          >
+            <X className="w-3 h-3" />
+          </button>
+        </>
       )}
       <button
         type="button"
