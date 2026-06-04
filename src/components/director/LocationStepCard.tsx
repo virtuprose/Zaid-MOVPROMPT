@@ -14,6 +14,7 @@ type Props = {
   chosenUrl?: string;
   uploadedUrl?: string;
   disabled?: boolean;
+  regenerating?: boolean;
   onUpload: (file: File) => void;
   onDescribe: (text: string) => void;
   onChoose: (index: number) => void;
