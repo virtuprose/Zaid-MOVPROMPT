@@ -36,51 +36,6 @@ export const FORMATS: StudioPreset[] = [
     fragment:
       "Handheld vertical UGC selfie style, natural daylight, casual presenter speaking directly to camera, authentic phone-shot look",
   },
-  {
-    id: "tutorial",
-    label: "Tutorial",
-    description: "Show, Don't Tell",
-    category: "ugc",
-    image: u("photo-1556909114-f6e7ad7d3136"),
-    fragment:
-      "Top-down or shoulder POV tutorial, presenter demonstrating the steps clearly, clean kitchen/desk surface, bright even lighting",
-  },
-  {
-    id: "unboxing",
-    label: "Unboxing",
-    description: "Hands-On Reveal",
-    category: "ugc",
-    image: u("photo-1607083206869-4c7672e72a8a"),
-    fragment:
-      "Macro unboxing on neutral surface, slow reveal of product, soft directional light, ASMR-grade tactile sound design",
-  },
-  {
-    id: "testimonial",
-    label: "Testimonial",
-    description: "Real Voices",
-    category: "ugc",
-    image: u("photo-1573496359142-b8d87734a5a2"),
-    fragment:
-      "Customer testimonial talking head, soft natural light, candid eye contact, sincere delivery of one key benefit",
-  },
-  {
-    id: "reaction",
-    label: "Reaction",
-    description: "Caught On Camera",
-    category: "ugc",
-    image: u("photo-1543610892-0b1f7e6d8ac1"),
-    fragment:
-      "Reaction format: subject reacts in real time to seeing or using the product, exaggerated honest expression, quick cuts",
-  },
-  {
-    id: "pov",
-    label: "POV",
-    description: "Through Their Eyes",
-    category: "ugc",
-    image: u("photo-1502920917128-1aa500764cbd"),
-    fragment:
-      "First-person POV throughout, hands enter frame to interact with the product, immersive everyday environment",
-  },
 
   // ── Commercial / brand ──────────────────────
   {
@@ -188,24 +143,6 @@ export const FORMATS: StudioPreset[] = [
     video: "/presets/before-after.mp4",
     fragment:
       "Elite $1M-production before/after transformation commercial — cinematic 8k photorealistic storytelling, high-contrast emotional shift, dramatic transition effects, precise macro and wide-angle cinematography. CRITICAL TIMING RULE: split the total duration exactly in half. Sequences 1–3 (Problem + Catalyst + Process) occupy the FIRST 50% of the clip. The Reveal Transition lands precisely at the MIDPOINT (50% mark) of the video — NOT in the final second. Sequences 5–6 (Confident After + Transformation Hero) occupy the FINAL 50% so the 'After' state holds for half the duration. Build 4–6 sequences: (1) The Problem State — establish the negative 'before' with dim, cool or uneven lighting (macro of aged/cracked/dirty surface, frustrated person in a cluttered room); (2) The Catalyst (optional) — high-speed macro close-up of the product being applied or activated, the exact moment interaction begins (first drop of serum hitting the surface, power button pressed); (3) The Process In Motion — fast-paced montage with dynamic tracking shots or time-lapse showing the product actively working (dirt lifting, fabric smoothing, space de-cluttering); (4) The Reveal Transition — executed at the EXACT MIDPOINT of the video (not the end), describe the exact visual mechanism (vertical wipe left-to-right erasing the dullness, seamless morph, or camera pan from 'before' into 'after'), lighting shifts from dim to radiant and warm; (5) The Confident After — medium shot or close-up of the subject looking satisfied/happy, highlight the new quality (glow of skin, sheen of surface, calm of space), occupying the third quarter of the clip; (6) The Transformation Hero — held for the entire final quarter ending on an iconic wide shot or split-screen with 'Before' left and 'After' right, clean graphic demarcation, perfectly framed and lit, undeniable premium transformation.",
-  },
-  {
-    id: "day-in-life",
-    label: "Day in the Life",
-    description: "A Day With It",
-    category: "ugc",
-    image: u("photo-1499951360447-b19be8fe80f5"),
-    fragment:
-      "Day-in-the-life vlog cut, natural light through the day, the product appears at key moments of the routine",
-  },
-  {
-    id: "day-to-night",
-    label: "Day to Night",
-    description: "One Product, All Day",
-    category: "ugc",
-    image: u("photo-1506905925346-21bda4d32df4"),
-    fragment:
-      "Day-to-night time-lapse UGC: the product stays in frame as the world cycles around it from sunrise to night. Build 5–6 fast sequences in one continuous static or slow-dolly composition, lighting and sky shifting through the day. (1) Sunrise — soft pink/orange ambient light, dew or steam, product introduced into the scene; (2) Mid-morning — bright daylight, first real-use moment, hands enter frame casually; (3) Midday — hard direct light, peak activity around the product, quick cuts of repeated use; (4) Golden hour — warm low side-light, lens flares, slower more contemplative interaction; (5) Blue hour / dusk — cool ambient, practical lights flick on around the product; (6) Night — moody warm interior glow or neon, hero close-up of the product still in use. Keep the product locked in roughly the same spot every sequence so the eye anchors to it while the world transforms. Authentic phone-shot feel with smooth time-lapse pacing, ambient sound design transitioning from birdsong to city night.",
   },
 
 
