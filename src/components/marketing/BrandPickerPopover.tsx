@@ -69,7 +69,7 @@ export function BrandPickerPopover({
                 <li key={k.id} className="group relative">
                   <button
                     type="button"
-                    onClick={() => k.id && !disabled && onSelect(k.id)}
+                    onClick={() => k.id && !disabled && (setOpen(false), onSelect(k.id))}
                     disabled={disabled}
                     title={disabled ? `Up to ${max} products per ad` : undefined}
                     className={cn(
