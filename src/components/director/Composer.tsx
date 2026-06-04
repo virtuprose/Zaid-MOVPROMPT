@@ -421,7 +421,7 @@ export function Composer({
             onChange={handleTextChange}
             onKeyUp={(e) => {
               const ta = e.currentTarget;
-              if (attachments.length === 0) return;
+              if (attachments.length === 0 && (rail?.labels.length ?? 0) === 0) return;
               setMention(detectMention(ta.value, ta.selectionStart ?? ta.value.length));
             }}
             onBlur={() => setTimeout(() => setMention(null), 150)}
