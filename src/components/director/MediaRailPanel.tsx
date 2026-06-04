@@ -197,6 +197,96 @@ export function MediaRailPanel() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Dialog
+        open={!!renameFor}
+        onOpenChange={(o) => {
+          if (!o) {
+            setRenameFor(null);
+            setRenameError(null);
+            setRenameValue("");
+          }
+        }}
+      >
+        <DialogContent className="rounded-2xl border-border/60 bg-[hsl(240_5%_8%)] sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="font-display text-xl tracking-tight">
+              Name this reference
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2">
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Give this image a stable nickname you can type in chat — e.g. <span className="font-mono text-foreground/80">@hero-bottle</span>. The reference points to this exact image, even after new generations.
+            </p>
+            <div className="flex items-center gap-1.5 rounded-lg border border-border bg-background/60 pl-2.5">
+              <span className="text-sm text-muted-foreground select-none">@</span>
+              <Input
+                value={renameValue}
+                onChange={(e) => {
+                  setRenameValue(e.target.value);
+                  setRenameError(null);
+                }}
+                placeholder="hero-bottle"
+                maxLength={32}
+                autoFocus
+                className="border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 px-1"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    void handleRename();
+                  }
+                }}
+              />
+            </div>
+            {renameError && (
+              <p className="text-[11px] text-destructive">{renameError}</p>
+            )}
+            {!renameError && renameValue && (
+              <p className="text-[11px] text-muted-foreground">
+                Will become <span className="font-mono text-accent">@{normalizeRefName(renameValue) || "…"}</span>
+              </p>
+            )}
+          </div>
+          <DialogFooter className="gap-2 sm:gap-2">
+            {renameFor && rail?.labelByKey.get(renameFor.id) && (
+              <Button
+                variant="ghost"
+                onClick={async () => {
+                  const item = renameFor;
+                  setRenameFor(null);
+                  setRenameError(null);
+                  setRenameValue("");
+                  if (item) {
+                    await rail?.unnameItem(item.id);
+                    toast.success("Reference name removed");
+                  }
+                }}
+                className="rounded-full text-muted-foreground hover:text-destructive mr-auto"
+              >
+                Remove name
+              </Button>
+            )}
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setRenameFor(null);
+                setRenameError(null);
+                setRenameValue("");
+              }}
+              className="rounded-full"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleRename}
+              disabled={renaming || !normalizeRefName(renameValue)}
+              className="rounded-full bg-primary/15 text-primary border border-primary/30 hover:bg-primary/25"
+            >
+              {renaming ? "Saving…" : "Save"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </aside>
   );
 }
