@@ -1683,6 +1683,23 @@ function DirectorChatInner() {
               content: `[Generated the story asset bundle (1 character + 1 prop + ${b.payload.locations.length} locations) via generate_story_bundle. Waiting for the user to pick one location.]`,
             });
           }
+        } else if (b.role === "location_step") {
+          if (b.stepMode === "done") {
+            const detail = b.uploadedUrl
+              ? "uploaded a reference photo"
+              : b.chosenIndex
+                ? `picked option ${b.chosenIndex} of 3 generated locations${b.description ? ` (described as: ${b.description})` : ""}`
+                : "skipped — no location anchor";
+            history.push({
+              role: "user",
+              content: `Location step: ${detail}. The chosen location is now pinned as a 'location' attachment and will be composited with the locked subject on the next key frame.`,
+            });
+          } else {
+            history.push({
+              role: "assistant",
+              content: `[Asked the user to lock a location before the key frame — they can upload a reference photo or describe one (we'll generate 3 options to pick from). Do NOT call generate_reference_image or generate-video until they finish this step.]`,
+            });
+          }
         } else if (b.role === "story_render") {
           history.push({
             role: "assistant",
