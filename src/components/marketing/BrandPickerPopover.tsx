@@ -110,7 +110,7 @@ export function BrandPickerPopover({
                   <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity bg-[hsl(240_6%_9%)] rounded-md border border-border/50 px-0.5">
                     <button
                       type="button"
-                      onClick={() => k.id && onEdit(k.id)}
+                      onClick={() => { if (k.id) { setOpen(false); onEdit(k.id); } }}
                       className="w-6 h-6 flex items-center justify-center text-muted-foreground hover:text-foreground"
                       aria-label="Edit"
                     >
