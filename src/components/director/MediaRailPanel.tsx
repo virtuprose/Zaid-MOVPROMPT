@@ -583,7 +583,7 @@ function MediaCard({
               playsInline
             />
           ) : (
-            <div className="p-8 text-sm text-muted-foreground">{item.label}</div>
+            <div className="p-8 text-sm text-muted-foreground">{(item as MediaItem).label}</div>
           )}
         </div>
       </DialogContent>
