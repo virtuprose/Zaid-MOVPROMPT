@@ -1444,6 +1444,21 @@ function DirectorChatInner() {
     }
   };
 
+  // Walk the bubble history backwards to find the most recently locked spec
+  // (from model_choice / generate_prompt / result bubbles). We use it to make
+  // sure the user-selected resolution is always forwarded to the renderer
+  // instead of silently falling back to the provider default.
+  const getLatestLockedSpec = useCallback((): import("@/lib/director/api").LockedSpec | undefined => {
+    const snap = bubblesRef.current;
+    for (let k = snap.length - 1; k >= 0; k -= 1) {
+      const b: any = snap[k];
+      if (!b) continue;
+      if (b.role === "model_choice" && b.lockedSpec) return b.lockedSpec;
+      if (b.role === "result" && b.data?.locked_spec) return b.data.locked_spec;
+    }
+    return undefined;
+  }, []);
+
   const handleAnimatePanel = useCallback(async (panel: import("./GeneratedImageCard").AnimatePanelInput) => {
     const { buildAnimateFromPanelPrompt } = await import("@/lib/director/animatePanelPrompt");
     const provider = panel.provider || "kling-v3-standard";
@@ -1469,10 +1484,12 @@ function DirectorChatInner() {
       "seedance-2.0", "seedance-2.0-ref", "hailuo-02-pro",
     ]);
     const wantsAudio = audioPlan !== "none";
+    const lockedRes = getLatestLockedSpec()?.resolution;
     const options = {
       aspect_ratio: panel.aspectRatio || "16:9",
       duration: panel.duration || 5,
       audio: NATIVE_AUDIO.has(provider) ? wantsAudio : undefined,
+      ...(lockedRes ? { resolution: lockedRes } : {}),
     } as any;
     toast(`Animating panel ${panel.shot_index} on ${providerLabel}${wantsAudio ? ` · ${audioPlan}` : " · silent"}…`);
     try {
@@ -2115,11 +2132,19 @@ function DirectorChatInner() {
             .map((_, i) => `@Image${i + 1} = ${slotLabels[referenceImageSlots[i]] || `reference ${i + 1}`}`)
             .join("\n");
           const resolvedPrompt = tagLines ? `${tagLines}\n\n${basePrompt}` : basePrompt;
+          const locked = getLatestLockedSpec();
+          const videoOptions = locked
+            ? {
+                ...(locked.resolution ? { resolution: locked.resolution } : {}),
+                ...(locked.aspect_ratio ? { aspect_ratio: locked.aspect_ratio } : {}),
+                ...(locked.duration_seconds ? { duration: locked.duration_seconds } : {}),
+              }
+            : undefined;
           const job = await submitVideoJob(
             resolvedPrompt,
             provider,
             sessionIdRef.current,
-            undefined,
+            videoOptions,
             referenceImageUrls.length > 0 ? referenceImageUrls : undefined,
           );
           const videoBubble: Bubble = {
