@@ -2132,11 +2132,19 @@ function DirectorChatInner() {
             .map((_, i) => `@Image${i + 1} = ${slotLabels[referenceImageSlots[i]] || `reference ${i + 1}`}`)
             .join("\n");
           const resolvedPrompt = tagLines ? `${tagLines}\n\n${basePrompt}` : basePrompt;
+          const locked = getLatestLockedSpec();
+          const videoOptions = locked
+            ? {
+                ...(locked.resolution ? { resolution: locked.resolution } : {}),
+                ...(locked.aspect_ratio ? { aspect_ratio: locked.aspect_ratio } : {}),
+                ...(locked.duration_seconds ? { duration: locked.duration_seconds } : {}),
+              }
+            : undefined;
           const job = await submitVideoJob(
             resolvedPrompt,
             provider,
             sessionIdRef.current,
-            undefined,
+            videoOptions,
             referenceImageUrls.length > 0 ? referenceImageUrls : undefined,
           );
           const videoBubble: Bubble = {
