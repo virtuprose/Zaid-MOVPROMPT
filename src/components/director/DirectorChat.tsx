@@ -1444,6 +1444,21 @@ function DirectorChatInner() {
     }
   };
 
+  // Walk the bubble history backwards to find the most recently locked spec
+  // (from model_choice / generate_prompt / result bubbles). We use it to make
+  // sure the user-selected resolution is always forwarded to the renderer
+  // instead of silently falling back to the provider default.
+  const getLatestLockedSpec = useCallback((): import("@/lib/director/api").LockedSpec | undefined => {
+    const snap = bubblesRef.current;
+    for (let k = snap.length - 1; k >= 0; k -= 1) {
+      const b: any = snap[k];
+      if (!b) continue;
+      if (b.role === "model_choice" && b.lockedSpec) return b.lockedSpec;
+      if (b.role === "result" && b.data?.locked_spec) return b.data.locked_spec;
+    }
+    return undefined;
+  }, []);
+
   const handleAnimatePanel = useCallback(async (panel: import("./GeneratedImageCard").AnimatePanelInput) => {
     const { buildAnimateFromPanelPrompt } = await import("@/lib/director/animatePanelPrompt");
     const provider = panel.provider || "kling-v3-standard";
