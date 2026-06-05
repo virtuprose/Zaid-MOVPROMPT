@@ -136,22 +136,45 @@ function buildUserContent(b: Brief): string {
     lines.push(`A reference image of the location is attached and will be passed to the video model — describe the scene so it matches the look, framing, lighting and palette of that reference.`);
   }
   const bi = b.brandIdentity;
-  if (bi) {
+  // Auto-color fallback: when the user hasn't set any brand colors, pull
+  // hero_colors from the first product so the palette still matches.
+  const autoColors: string[] = (() => {
+    if (bi?.primary_color) return [];
+    if (bi?.supporting_colors && bi.supporting_colors.length > 0) return [];
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const br of brands) {
+      for (const c of br?.hero_colors ?? []) {
+        if (!c) continue;
+        const key = c.trim().toLowerCase();
+        if (!key || seen.has(key)) continue;
+        seen.add(key);
+        out.push(c.trim());
+        if (out.length >= 5) break;
+      }
+      if (out.length >= 5) break;
+    }
+    return out;
+  })();
+  if (bi || autoColors.length > 0) {
     const parts: string[] = [];
-    if (bi.primary_color) parts.push(`primary ${bi.primary_color}`);
-    if (bi.supporting_colors && bi.supporting_colors.length > 0) parts.push(`supporting ${bi.supporting_colors.join(" / ")}`);
-    if (bi.avoid_colors && bi.avoid_colors.length > 0) parts.push(`AVOID ${bi.avoid_colors.join(", ")}`);
-    if (bi.typography_vibe) parts.push(`typography vibe ${bi.typography_vibe}${bi.font_hint ? ` (${bi.font_hint})` : ""}`);
-    if (bi.lighting_style) parts.push(`lighting ${bi.lighting_style.replace(/-/g, " ")}`);
-    if (bi.finish_vibe) parts.push(`finish/feel ${bi.finish_vibe.replace(/-/g, " ")}`);
-    if (bi.pacing) parts.push(`pacing ${bi.pacing.replace(/-/g, " ")}`);
-    if (bi.logo_treatment) parts.push(`logo treatment: ${bi.logo_treatment.replace(/-/g, " ")}`);
-    if (bi.industry) parts.push(`industry: ${bi.industry}`);
-    if (bi.brand_voice) parts.push(`brand voice: ${bi.brand_voice}`);
-    if (bi.mood_notes) parts.push(`mood: ${bi.mood_notes}`);
-    if (bi.tagline) parts.push(`brand tagline: "${bi.tagline}"`);
+    if (bi?.primary_color) parts.push(`primary ${bi.primary_color}`);
+    if (bi?.supporting_colors && bi.supporting_colors.length > 0) parts.push(`supporting ${bi.supporting_colors.join(" / ")}`);
+    if (!bi?.primary_color && (!bi?.supporting_colors || bi.supporting_colors.length === 0) && autoColors.length > 0) {
+      parts.push(`auto palette from product photos: ${autoColors.join(" / ")}`);
+    }
+    if (bi?.avoid_colors && bi.avoid_colors.length > 0) parts.push(`AVOID ${bi.avoid_colors.join(", ")}`);
+    if (bi?.typography_vibe) parts.push(`typography vibe ${bi.typography_vibe}${bi.font_hint ? ` (${bi.font_hint})` : ""}`);
+    if (bi?.lighting_style) parts.push(`lighting ${bi.lighting_style.replace(/-/g, " ")}`);
+    if (bi?.finish_vibe) parts.push(`finish/feel ${bi.finish_vibe.replace(/-/g, " ")}`);
+    if (bi?.pacing) parts.push(`pacing ${bi.pacing.replace(/-/g, " ")}`);
+    if (bi?.logo_treatment) parts.push(`logo treatment: ${bi.logo_treatment.replace(/-/g, " ")}`);
+    if (bi?.industry) parts.push(`industry: ${bi.industry}`);
+    if (bi?.brand_voice) parts.push(`brand voice: ${bi.brand_voice}`);
+    if (bi?.mood_notes) parts.push(`mood: ${bi.mood_notes}`);
+    if (bi?.tagline) parts.push(`brand tagline: "${bi.tagline}"`);
     if (parts.length > 0) {
-      lines.push(`BRAND IDENTITY — ${parts.join("; ")}. Apply this palette, lighting, finish and pacing across every shot. Match the typography vibe for any on-screen text. Honor the logo treatment instruction. Never use AVOID colors. Keep the product's own appearance accurate to its PRODUCT LOCK.`);
+      lines.push(`BRAND IDENTITY — ${parts.join("; ")}. Apply this palette across lighting, props, wardrobe and backgrounds. Match the typography vibe for any on-screen text. Honor the logo treatment instruction. Never use AVOID colors. Keep the product's own appearance accurate to its PRODUCT LOCK.`);
     }
   }
   const note = b.userNote?.trim();
