@@ -1,34 +1,73 @@
-# Director Activity — Sequential Typing & Reveal
+# Make Director Activity reflect the real work, not a fixed 5-step scaffold
 
-Make the activity panel feel like a live operator console: each step types itself in character-by-character while running, and the next step only appears once the previous one is done (or fails).
+Today every turn emits the same 4-5 rows up front (read-brief, mine-freechat, skill, preflight, thinking) plus one row per tool call. The user sees "5 steps · 10s" no matter what was actually done.
 
-## Behavior
+This plan replaces the static scaffold with steps tied to the actual work the Director performs for THIS turn.
 
-1. **Sequential reveal.** Render steps one at a time in order. A step is mounted only after the previous step's status is `done` or `failed`. Each new row enters with a soft fade + slide-up (≈220ms).
-2. **Per-step typing.** While a step is `running`, its label types out left-to-right (~22ms/char, capped so long labels finish in ≤900ms) with a blinking caret at the end. Once `done`/`failed`, the full label snaps in and the caret disappears.
-3. **Status icon transitions.** Spinner while running → check (done) or amber triangle (failed) with a 150ms scale-in pop. The leading status dot in the header pulses while any step is running.
-4. **Footer caption.** Keep the rotating caption line, but tie its fade transition to the current running step changing (fade-out 120ms / fade-in 180ms) so it feels handed off between operations.
-5. **Reduced motion.** Respect `prefers-reduced-motion`: skip typing + reveal stagger, render steps immediately with no caret.
-6. **Replay safety.** When the component remounts mid-stream (e.g. session hydration where steps already arrive `done`), do NOT replay typing for already-completed steps — only animate the row currently `running` and any subsequent arrivals. Track which step ids have already been "seen" in a ref.
+## Principles
 
-## Files
+1. **Earned, not announced.** A row only appears once that work begins. No more "5 steps" before the model has done anything.
+2. **Granularity matches the brief.** A plain-text follow-up shows ~2 rows. An image-anchored first turn shows attachment analysis, subject detection, model routing, prompt composition. Story mode shows its real 5-stage pipeline. Retries and skill loads show their own rows.
+3. **Status reflects reality.** `running` while it's happening, `done` when it finishes, with a real `detail` payload when there's something worth expanding.
 
-- `src/components/director/DirectorActivityFeed.tsx` — only file touched.
-  - Add a small `useTypewriter(text, enabled)` hook (inline) that returns the progressively revealed substring + a `done` flag.
-  - Add a `seenIdsRef` + `useEffect` that records ids the first time each step is observed; rows whose id was first observed in a non-running state skip the typing animation.
-  - Derive `visibleSteps`: include every step up to and including the first still-running step; trailing not-yet-started steps stay hidden.
-  - Wrap each `<li>` in a `motion-safe:animate-fade-up` with a tiny CSS `animation-delay` for natural stagger; render the label via the typewriter output plus a `<span className="caret">` that uses an existing/added pulse keyframe.
-  - Add a `.caret` blink (1s steps-2 infinite) — define inline via Tailwind arbitrary `animate-[blink_1s_steps(2)_infinite]` (no tailwind.config change needed) and a `@keyframes blink` in `src/index.css` if not already present.
+## Step taxonomy (final set)
+
+Keep existing kinds (`reading | mining | skill | preflight | thinking | reference | model | prompt | error`) and add:
+
+- `attachment` — "Analyzing 2 images" / "Reading the uploaded PDF" / "Pulling key frames from video"
+- `routing` — "Routing to the Veo expert" / "Skill matched: cinematic-ad-veo3"
+- `retry` — "Retrying after a hiccup (2/3)"
+
+## Edge function changes — `supabase/functions/director-agent/index.ts`
+
+Replace the static `steps.push(...)` block (lines 1229-1266) with conditional emission:
+
+- Drop `read-brief` as a standalone row when the brief is empty or trivial (≤ 12 chars). When kept, only render if there's a `detail` worth expanding.
+- Drop the always-on `preflight` row. Emit it only when the agent's system prompt actually has unresolved axes to check (i.e. when `sessionState` shows missing required axes). Label it with what was checked: "Pre-flight: aspect, duration, audio".
+- `mine-freechat` — keep only when there are ≥ 2 prior user turns AND the recap added new info beyond the latest brief.
+- `skill` — keep, but emit as `running` first, then `done` when the skill payload has been merged into the system prompt (currently emitted as instant-`done`, which gives no sense of work).
+- `attachment` — NEW. When `mergedAttachments` has entries, push one row per attachment kind with a `running → done` transition around the moment the model starts streaming (proxy for "model has now ingested these"). Detail = filenames / counts.
+- `thinking` — keep, but only emit when the first model byte takes > 600ms (otherwise it flashes uselessly).
+- Pass through skill load + retry events as they happen rather than collapsing them into a single header.
+
+## Client changes — `src/components/director/DirectorChat.tsx`
+
+Lines 1789-1808 (`handlePartial` tool-kind branch) become finer:
+
+- `generate_reference_image` — split into two rows: `reference / running` ("Drafting a reference key frame") on tool-call detection, then `reference / done` when the resulting bubble's `imageUrl` actually resolves (currently it instant-marks done before the image returns).
+- `generate_story_bundle` — emit one row per asset bundle slot (character, prop, 7 locations) as they stream in.
+- `generate_prompt` — keep the `running` row, but mark it `done` only when the full prompt (not just the title) has streamed.
+- `ask_model_choice` — add a sibling `routing` row that names the recommended model + reason.
+
+Also: when `streamDirectorAgent` retries (the existing `MAX_ATTEMPTS = 3` loop, line 1854), push a `retry` row labelled "Retrying after a hiccup (attempt N/3)" with the error as `detail`.
+
+## Story-mode wiring — `supabase/functions/director-agent/index.ts` + `DirectorChat.tsx`
+
+Story mode already has a real 5-step pipeline in the system prompt (lines 109-123). Wire each story step to its own activity row so the feed mirrors the visible script:
+
+1. "Story step 1/5 — opening key frame + 3 concepts" — `reference`
+2. "Story step 2/5 — pick a concept" — `thinking`
+3. "Story step 3/5 — aspect ratio" — `thinking`
+4. "Story step 4/5 — building 1 character + 1 prop + 7 locations" — `reference` (with sub-row per asset as they land)
+5. "Story step 5/5 — launching 4 parallel renders" — `prompt`
+
+These should be emitted from the same `handlePartial` based on tool call (`generate_reference_image` with `mode: "single_panel"` → step 1, `generate_story_bundle` → step 4, `request_story_render` → step 5) plus user-turn shapes for steps 2 and 3.
+
+## Header label
+
+`DirectorActivityFeed.tsx` already shows `{visibleSteps.length} steps · {elapsed}s`. No change needed — once steps reflect real work, the count and duration will vary naturally.
 
 ## Out of scope
 
-- No changes to how steps are produced upstream (`director-agent`, orchestrator, DirectorChat). The event stream already arrives incrementally; we just present it more cinematically.
-- No new dependencies (no framer-motion add). Pure CSS + a tiny hook.
-- No design-token or color changes.
+- No new edge functions.
+- No DB / migration changes — activity is ephemeral, not persisted as structured rows.
+- No visual redesign of the activity card itself (the sequential typing + reveal animation from the previous turn stays as-is).
+- We do NOT add fake "Step 1 of N" counters in single-shot flows (the system prompt rule at line 67-70 forbids this) — only story mode keeps explicit numbering.
 
 ## QA checklist
 
-- Fresh run: steps appear one-by-one, each typing, next only after prior completes.
-- Mid-session reload with all steps already `done`: list renders instantly, no typing replay, footer caption hidden or static.
-- Failure mid-stream: failed step stops typing, shows amber icon, subsequent step still reveals.
-- `prefers-reduced-motion: reduce`: no typing, no caret, no stagger.
+- Plain text turn with no attachments → ~2 rows (`thinking`, then the tool-call row).
+- First turn with an image upload → `attachment` (running → done), `routing` / `skill` if matched, `thinking`, then `reference` (running until image returns), then `prompt` if applicable.
+- Story mode → 5 sequential story rows, with sub-rows under step 4.
+- Stream that hits one retry → `retry` row appears between `thinking` and the resolved tool row, with the error in the expandable detail.
+- Reduced-motion users still see the same content, just without the typewriter animation (handled already).
