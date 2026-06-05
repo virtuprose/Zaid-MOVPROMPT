@@ -584,12 +584,24 @@ function MediaCard({
             muted
             loop
             preload="metadata"
-            onMouseEnter={(e) => e.currentTarget.play().catch(() => {})}
+            onMouseEnter={(e) => {
+              const v = e.currentTarget;
+              v.muted = false;
+              v.volume = 1;
+              v.play().catch(() => {
+                // Autoplay with sound may be blocked; fall back to muted playback.
+                v.muted = true;
+                v.play().catch(() => {});
+              });
+            }}
             onMouseLeave={(e) => {
-              e.currentTarget.pause();
-              e.currentTarget.currentTime = 0;
+              const v = e.currentTarget;
+              v.pause();
+              v.currentTime = 0;
+              v.muted = true;
             }}
           />
+
         ) : (
           <div className="absolute inset-0 flex items-center justify-center text-[10px] uppercase tracking-wider text-muted-foreground">
             {item.status === "failed" ? "Failed" : "Rendering…"}
