@@ -1948,6 +1948,14 @@ function DirectorChatInner() {
           const retryable = err?.retryable === true;
           if (!retryable || attempt === MAX_ATTEMPTS) break;
           const backoff = 600 * attempt;
+          pushClientStep({
+            id: `retry-${attempt}`,
+            kind: "error",
+            label: `Retrying after a hiccup (attempt ${attempt + 1}/${MAX_ATTEMPTS})`,
+            status: "running",
+            detail: err?.message ? String(err.message) : undefined,
+            ts: Date.now(),
+          });
           toast.message(`Retrying… (${attempt}/${MAX_ATTEMPTS - 1})`, {
             description: err?.message,
           });
@@ -1956,7 +1964,26 @@ function DirectorChatInner() {
       }
 
       if (!resp) throw lastErr ?? new Error("Director didn't respond.");
+      // Mark any reference/bundle row as done now that the agent's payload has fully arrived.
+      if (resp.kind === "generate_reference_image") {
+        pushClientStep({
+          id: "tool-ref",
+          kind: "reference",
+          label: "Reference key frame drafted",
+          status: "done",
+          ts: Date.now(),
+        });
+      } else if (resp.kind === "generate_story_bundle") {
+        pushClientStep({
+          id: "tool-bundle",
+          kind: "reference",
+          label: "Story asset bundle assembled",
+          status: "done",
+          ts: Date.now(),
+        });
+      }
       notifySkill((resp as any).activeSkill);
+
 
       let added: Bubble;
       let finalPrompt: string | null = null;
