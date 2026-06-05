@@ -679,33 +679,53 @@ function characterLineAt(c: CharacterContext, refs: StudioBrief["imageRefs"], oc
   return bits.join(" — ");
 }
 
-
-export function brandIdentityLine(b?: BrandIdentityContext | null, overlayOff = false): string | null {
-  if (!b) return null;
-  const bits: string[] = [];
-  if (b.primary_color) bits.push(`primary ${b.primary_color}`);
-  if (b.supporting_colors && b.supporting_colors.length > 0) {
-    bits.push(`supporting ${b.supporting_colors.join(" / ")}`);
+function dedupeColors(input: (string | null | undefined)[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const c of input) {
+    if (!c) continue;
+    const key = c.trim().toLowerCase();
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    out.push(c.trim());
   }
-  if (b.avoid_colors && b.avoid_colors.length > 0) {
+  return out;
+}
+
+export function brandIdentityLine(
+  b?: BrandIdentityContext | null,
+  overlayOff = false,
+  autoColors?: string[] | null,
+): string | null {
+  const bits: string[] = [];
+  const hasPrimary = !!b?.primary_color;
+  const hasSupport = !!(b?.supporting_colors && b.supporting_colors.length > 0);
+  if (hasPrimary) bits.push(`primary ${b!.primary_color}`);
+  if (hasSupport) {
+    bits.push(`supporting ${b!.supporting_colors!.join(" / ")}`);
+  }
+  if (!hasPrimary && !hasSupport && autoColors && autoColors.length > 0) {
+    bits.push(`auto palette from product photos: ${autoColors.slice(0, 5).join(" / ")}`);
+  }
+  if (b?.avoid_colors && b.avoid_colors.length > 0) {
     bits.push(`AVOID: ${b.avoid_colors.join(", ")}`);
   }
-  if (b.typography_vibe) {
+  if (b?.typography_vibe) {
     const label = b.typography_vibe.replace(/-/g, " ");
     bits.push(`typography vibe: ${label}${b.font_hint ? ` (${b.font_hint})` : ""}`);
-  } else if (b.font_hint) {
+  } else if (b?.font_hint) {
     bits.push(`font hint: ${b.font_hint}`);
   }
-  if (b.lighting_style) bits.push(`lighting: ${b.lighting_style.replace(/-/g, " ")}`);
-  if (b.finish_vibe) bits.push(`finish/feel: ${b.finish_vibe.replace(/-/g, " ")}`);
-  if (b.pacing) bits.push(`pacing: ${b.pacing.replace(/-/g, " ")}`);
-  if (b.logo_treatment) bits.push(`logo treatment: ${b.logo_treatment.replace(/-/g, " ")}`);
-  if (b.industry) bits.push(`industry: ${b.industry}`);
-  if (b.brand_voice) bits.push(`voice: ${b.brand_voice}`);
-  if (b.mood_notes) bits.push(`mood: ${b.mood_notes}`);
-  if (b.tagline) bits.push(`tagline: "${b.tagline}"`);
+  if (b?.lighting_style) bits.push(`lighting: ${b.lighting_style.replace(/-/g, " ")}`);
+  if (b?.finish_vibe) bits.push(`finish/feel: ${b.finish_vibe.replace(/-/g, " ")}`);
+  if (b?.pacing) bits.push(`pacing: ${b.pacing.replace(/-/g, " ")}`);
+  if (b?.logo_treatment) bits.push(`logo treatment: ${b.logo_treatment.replace(/-/g, " ")}`);
+  if (b?.industry) bits.push(`industry: ${b.industry}`);
+  if (b?.brand_voice) bits.push(`voice: ${b.brand_voice}`);
+  if (b?.mood_notes) bits.push(`mood: ${b.mood_notes}`);
+  if (b?.tagline) bits.push(`tagline: "${b.tagline}"`);
   if (bits.length === 0) return null;
-  const base = `BRAND LOCK — ${bits.join("; ")}. Apply the palette, lighting, finish and pacing across every shot. Never use the AVOID colors. Do NOT recolor the real product itself — the Product Lock above always wins on the product's own appearance.`;
+  const base = `BRAND LOCK — ${bits.join("; ")}. Apply the palette across lighting, props, wardrobe and backgrounds. Never use the AVOID colors. Do NOT recolor the real product itself — the Product Lock above always wins on the product's own appearance.`;
   if (overlayOff) return base;
   return `${base} Match the typography vibe for any on-screen text. Honor the logo treatment instruction.`;
 }
@@ -790,7 +810,11 @@ export function composeStudioPrompt(brief: StudioBrief): string {
     "Cinematic 9:16 social ad, 5 seconds, native audio.",
     subjectLine,
     ...brandLines,
-    brandIdentityLine(brief.brandIdentity, overlayOff),
+    brandIdentityLine(
+      brief.brandIdentity,
+      overlayOff,
+      dedupeColors(brands.flatMap((b) => b.hero_colors ?? [])),
+    ),
     ...characterLines,
     format?.fragment ?? (brief.customFormat?.trim() ? `Format: ${brief.customFormat.trim()}` : null),
     setting?.fragment ?? (brief.customSetting?.trim() ? `Setting: ${brief.customSetting.trim()}` : null),

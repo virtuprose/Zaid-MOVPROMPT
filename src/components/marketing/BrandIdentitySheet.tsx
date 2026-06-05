@@ -1,26 +1,15 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Loader2, Palette, Upload, X, Sparkles, Image as ImageIcon, Sun, Layers, Gauge, BadgeCheck } from "lucide-react";
+import { Loader2, Palette, Upload, X, Sparkles, Image as ImageIcon, Wand2 } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import {
   EMPTY_BRAND_IDENTITY,
-  TYPOGRAPHY_VIBES,
-  LIGHTING_STYLES,
-  FINISH_VIBES,
-  PACING_OPTIONS,
-  LOGO_TREATMENTS,
   useBrandIdentity,
   type BrandIdentity,
-  type TypographyVibe,
-  type LightingStyle,
-  type FinishVibe,
-  type Pacing,
-  type LogoTreatment,
 } from "@/lib/marketing/brandIdentity";
 import { useBrandKit } from "@/lib/marketing/brandKit";
 
@@ -97,42 +86,6 @@ function Section({
   );
 }
 
-function ChipGrid<T extends string>({
-  options,
-  value,
-  onChange,
-  cols = 2,
-}: {
-  options: { id: T; label: string; hint: string }[];
-  value: T | null;
-  onChange: (v: T | null) => void;
-  cols?: 2 | 3;
-}) {
-  return (
-    <div className={cn("grid gap-2", cols === 3 ? "grid-cols-3" : "grid-cols-2")}>
-      {options.map((o) => {
-        const active = value === o.id;
-        return (
-          <button
-            key={o.id}
-            type="button"
-            onClick={() => onChange(active ? null : o.id)}
-            className={cn(
-              "rounded-xl border px-3 py-2 text-left transition-all",
-              active
-                ? "border-accent bg-accent/10 shadow-[0_0_0_4px_hsl(var(--accent)/0.10)]"
-                : "border-border/60 hover:border-foreground/40 hover:bg-secondary/30",
-            )}
-          >
-            <div className="text-xs font-semibold text-foreground">{o.label}</div>
-            <div className="text-[10px] text-muted-foreground mt-0.5">{o.hint}</div>
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
 export function BrandIdentitySheet({
   open,
   onOpenChange,
@@ -141,8 +94,9 @@ export function BrandIdentitySheet({
   onOpenChange: (v: boolean) => void;
 }) {
   const { identity, save, uploadLogo, clear } = useBrandIdentity();
-  const { setActiveIds: setBrandActiveIds } = useBrandKit();
+  const { setActiveIds: setBrandActiveIds, activeKits: brandKits } = useBrandKit();
   const [draft, setDraft] = useState<BrandIdentity>(EMPTY_BRAND_IDENTITY);
+  const [colorMode, setColorMode] = useState<"auto" | "custom">("auto");
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
@@ -151,10 +105,35 @@ export function BrandIdentitySheet({
   const [newAvoid, setNewAvoid] = useState("");
 
   useEffect(() => {
-    if (open) setDraft(identity ?? EMPTY_BRAND_IDENTITY);
+    if (!open) return;
+    const next = identity ?? EMPTY_BRAND_IDENTITY;
+    setDraft(next);
+    const hasCustomColors =
+      !!next.primary_color ||
+      (next.supporting_colors?.length ?? 0) > 0 ||
+      (next.avoid_colors?.length ?? 0) > 0;
+    setColorMode(hasCustomColors ? "custom" : "auto");
   }, [open, identity]);
 
   const update = (patch: Partial<BrandIdentity>) => setDraft((d) => ({ ...d, ...patch }));
+
+  // Sample of auto colors pulled from the user's product photos (preview only).
+  const autoColors = useMemo(() => {
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const k of brandKits) {
+      for (const c of k.hero_colors ?? []) {
+        if (!c) continue;
+        const key = c.trim().toLowerCase();
+        if (seen.has(key)) continue;
+        seen.add(key);
+        out.push(c.trim());
+        if (out.length >= 5) break;
+      }
+      if (out.length >= 5) break;
+    }
+    return out;
+  }, [brandKits]);
 
   const onPickFile = async (file: File) => {
     if (file.size > 10 * 1024 * 1024) {
@@ -197,7 +176,33 @@ export function BrandIdentitySheet({
   const onSave = async () => {
     setSaving(true);
     try {
-      await save(draft);
+      // In Auto mode, clear all color overrides so the prompt builder
+      // falls back to the product photos' palette.
+      const colorPayload =
+        colorMode === "auto"
+          ? { primary_color: null, supporting_colors: null, avoid_colors: null }
+          : {
+              primary_color: draft.primary_color,
+              supporting_colors: draft.supporting_colors,
+              avoid_colors: draft.avoid_colors,
+            };
+      // Always null the fields we no longer surface so stale values don't
+      // keep leaking into the Director's prompt.
+      const payload: BrandIdentity = {
+        ...draft,
+        ...colorPayload,
+        typography_vibe: null,
+        font_hint: null,
+        mood_notes: null,
+        tagline: null,
+        lighting_style: null,
+        finish_vibe: null,
+        pacing: null,
+        logo_treatment: null,
+        brand_voice: null,
+        industry: null,
+      };
+      await save(payload);
       toast.success("Brand kit saved");
       onOpenChange(false);
     } catch (e: any) {
@@ -225,18 +230,18 @@ export function BrandIdentitySheet({
             Brand Kit
           </SheetTitle>
           <p className="text-xs text-muted-foreground">
-            Your brand's DNA — the Director uses every field below to shape lighting, props, pacing and on-screen text.
+            Logo + colors. That's it — the rest is inferred from your product photos.
           </p>
           <div className="absolute left-5 right-5 -bottom-px h-px bg-gradient-to-r from-transparent via-primary/40 to-accent/40" />
         </SheetHeader>
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto px-5 py-5 space-y-4">
-          {/* Identity */}
+          {/* Logo */}
           <Section
-            eyebrow="01 · Identity"
-            title="Logo & industry"
-            helper="What we're working with."
+            eyebrow="01 · Logo"
+            title="Your mark"
+            helper="Shown on screen when the ad needs your logo."
             icon={<Sparkles className="w-2.5 h-2.5" />}
           >
             <div className="flex items-stretch gap-3">
@@ -303,260 +308,163 @@ export function BrandIdentitySheet({
                 </button>
               )}
             </div>
-            <div>
-              <Label className="text-[11px] text-muted-foreground">Industry / category</Label>
-              <Input
-                placeholder="e.g. skincare, SaaS, streetwear, fintech"
-                value={draft.industry ?? ""}
-                onChange={(e) => update({ industry: e.target.value || null })}
-                maxLength={40}
-                className="h-9 text-xs mt-1"
-              />
-              <p className="text-[10px] text-muted-foreground mt-1">
-                Anchors the world the Director writes — a skincare ad shouldn't feel like fintech.
-              </p>
-            </div>
           </Section>
 
-          {/* Color system */}
+          {/* Colors */}
           <Section
             eyebrow="02 · Color"
-            title="Color system"
-            helper="Drives lighting tints, props, wardrobe and background tones — never repainted onto the real product."
+            title="Palette"
+            helper="Used for lighting, props, wardrobe and backgrounds — never repainted onto the real product."
           >
-            <div>
-              <Label className="text-[11px] text-muted-foreground">Primary</Label>
-              <div className="flex flex-wrap gap-2 mt-1.5">
-                {COLOR_PRESETS.map((c) => (
-                  <ColorSwatch
-                    key={c}
-                    color={c}
-                    size="lg"
-                    selected={draft.primary_color === c}
-                    onClick={() => update({ primary_color: c })}
-                  />
-                ))}
-              </div>
-              <Input
-                placeholder="#C8102E"
-                value={draft.primary_color ?? ""}
-                onChange={(e) => update({ primary_color: e.target.value || null })}
-                className="h-8 text-xs font-mono mt-2"
-              />
-            </div>
-
-            <div className="pt-2 border-t border-border/40">
-              <Label className="text-[11px] text-muted-foreground">Supporting (up to 4)</Label>
-              <div className="flex flex-wrap gap-1.5 mt-1.5 min-h-[28px]">
-                {(draft.supporting_colors ?? []).length === 0 && (
-                  <p className="text-[10px] text-muted-foreground italic">No supporting colors yet.</p>
+            {/* Mode switch */}
+            <div className="grid grid-cols-2 gap-2 p-1 rounded-xl bg-secondary/30 border border-border/40">
+              <button
+                type="button"
+                onClick={() => setColorMode("auto")}
+                className={cn(
+                  "rounded-lg px-3 py-2 text-xs font-semibold transition-all flex items-center justify-center gap-1.5",
+                  colorMode === "auto"
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground",
                 )}
-                {(draft.supporting_colors ?? []).map((c) => (
-                  <div key={c} className="inline-flex items-center gap-1.5 rounded-full bg-muted/40 pl-1 pr-2 py-0.5 text-[11px]">
-                    <ColorSwatch color={c} size="sm" />
-                    <span className="font-mono">{c}</span>
-                    <button type="button" onClick={() => removeSupporting(c)} className="text-muted-foreground hover:text-foreground">
-                      <X className="w-3 h-3" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-              <div className="flex gap-2 mt-2">
-                <Input
-                  placeholder="#1A1A1A"
-                  value={newSupport}
-                  onChange={(e) => setNewSupport(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addSupporting(newSupport); } }}
-                  className="h-8 text-xs font-mono"
-                />
-                <Button type="button" variant="outline" size="sm" onClick={() => addSupporting(newSupport)}>Add</Button>
-              </div>
-              <div className="flex flex-wrap gap-1.5 mt-2">
-                {COLOR_PRESETS.map((c) => (
-                  <ColorSwatch key={c} color={c} size="sm" onClick={() => addSupporting(c)} />
-                ))}
-              </div>
+              >
+                <Wand2 className="w-3.5 h-3.5" />
+                Auto from product
+              </button>
+              <button
+                type="button"
+                onClick={() => setColorMode("custom")}
+                className={cn(
+                  "rounded-lg px-3 py-2 text-xs font-semibold transition-all flex items-center justify-center gap-1.5",
+                  colorMode === "custom"
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                <Palette className="w-3.5 h-3.5" />
+                Custom
+              </button>
             </div>
 
-            <div className="pt-2 border-t border-border/40">
-              <Label className="text-[11px] text-muted-foreground">Avoid</Label>
-              <p className="text-[10px] text-muted-foreground">Hard no's. The Director won't use these in lighting, props, wardrobe or backgrounds.</p>
-              <div className="flex flex-wrap gap-1.5 mt-1.5 min-h-[20px]">
-                {(draft.avoid_colors ?? []).map((c) => (
-                  <div key={c} className="inline-flex items-center gap-1 rounded-full bg-destructive/15 text-destructive px-2 py-0.5 text-[11px]">
-                    <span>{c}</span>
-                    <button type="button" onClick={() => removeAvoid(c)}>
-                      <X className="w-3 h-3" />
-                    </button>
+            {colorMode === "auto" ? (
+              <div className="rounded-xl border border-border/40 bg-secondary/15 p-3">
+                <p className="text-[11px] text-muted-foreground leading-snug">
+                  We'll pull the palette straight from your product photos so the ad matches your real product.
+                </p>
+                {autoColors.length > 0 ? (
+                  <div className="mt-2.5">
+                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground/70 mb-1.5">
+                      Detected from your products
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {autoColors.map((c) => (
+                        <div key={c} className="inline-flex items-center gap-1.5 rounded-full bg-background/60 pl-1 pr-2.5 py-0.5 text-[11px] border border-border/40">
+                          <ColorSwatch color={c} size="sm" />
+                          <span className="font-mono text-foreground/80">{c}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                ))}
+                ) : (
+                  <p className="text-[10px] text-muted-foreground/80 italic mt-2">
+                    Upload a product photo on the ads page and the palette will appear here.
+                  </p>
+                )}
               </div>
-              <div className="flex gap-2 mt-2">
-                <Input
-                  placeholder="e.g. neon pink"
-                  value={newAvoid}
-                  onChange={(e) => setNewAvoid(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addAvoid(newAvoid); } }}
-                  className="h-8 text-xs"
-                />
-                <Button type="button" variant="outline" size="sm" onClick={() => addAvoid(newAvoid)}>Add</Button>
-              </div>
-              <div className="flex flex-wrap gap-1.5 mt-2">
-                {AVOID_PRESETS.map((c) => (
-                  <button
-                    key={c}
-                    type="button"
-                    onClick={() => addAvoid(c)}
-                    className="px-2 py-0.5 rounded-full text-[10px] border border-border/60 text-muted-foreground hover:text-foreground hover:border-foreground/40"
-                  >
-                    + {c}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </Section>
+            ) : (
+              <>
+                <div>
+                  <Label className="text-[11px] text-muted-foreground">Primary</Label>
+                  <div className="flex flex-wrap gap-2 mt-1.5">
+                    {COLOR_PRESETS.map((c) => (
+                      <ColorSwatch
+                        key={c}
+                        color={c}
+                        size="lg"
+                        selected={draft.primary_color === c}
+                        onClick={() => update({ primary_color: c })}
+                      />
+                    ))}
+                  </div>
+                  <Input
+                    placeholder="#C8102E"
+                    value={draft.primary_color ?? ""}
+                    onChange={(e) => update({ primary_color: e.target.value || null })}
+                    className="h-8 text-xs font-mono mt-2"
+                  />
+                </div>
 
-          {/* Typography */}
-          <Section
-            eyebrow="03 · Type"
-            title="Typography vibe"
-            helper="Used for any on-screen text in the video — captions, end-card, supers."
-          >
-            <div className="grid grid-cols-2 gap-2">
-              {TYPOGRAPHY_VIBES.map((v) => {
-                const active = draft.typography_vibe === v.id;
-                return (
-                  <button
-                    key={v.id}
-                    type="button"
-                    onClick={() => update({ typography_vibe: active ? null : (v.id as TypographyVibe) })}
-                    className={cn(
-                      "rounded-xl border px-3 py-3 text-left transition-all flex items-center gap-3",
-                      active
-                        ? "border-accent bg-accent/10 shadow-[0_0_0_4px_hsl(var(--accent)/0.10)]"
-                        : "border-border/60 hover:border-foreground/40 hover:bg-secondary/30",
+                <div className="pt-2 border-t border-border/40">
+                  <Label className="text-[11px] text-muted-foreground">Supporting (up to 4)</Label>
+                  <div className="flex flex-wrap gap-1.5 mt-1.5 min-h-[28px]">
+                    {(draft.supporting_colors ?? []).length === 0 && (
+                      <p className="text-[10px] text-muted-foreground italic">No supporting colors yet.</p>
                     )}
-                  >
-                    <div
-                      className={cn(
-                        "w-9 h-9 rounded-md flex items-center justify-center text-base shrink-0",
-                        active ? "bg-accent/15 text-accent" : "bg-muted/40 text-foreground/80",
-                      )}
-                      style={{ fontFamily: v.fontFamily }}
-                    >
-                      {v.sample}
-                    </div>
-                    <div className="min-w-0">
-                      <div
-                        className="text-xs font-semibold text-foreground truncate"
-                        style={{ fontFamily: v.fontFamily }}
-                      >
-                        {v.label}
+                    {(draft.supporting_colors ?? []).map((c) => (
+                      <div key={c} className="inline-flex items-center gap-1.5 rounded-full bg-muted/40 pl-1 pr-2 py-0.5 text-[11px]">
+                        <ColorSwatch color={c} size="sm" />
+                        <span className="font-mono">{c}</span>
+                        <button type="button" onClick={() => removeSupporting(c)} className="text-muted-foreground hover:text-foreground">
+                          <X className="w-3 h-3" />
+                        </button>
                       </div>
-                      <div className="text-[10px] text-muted-foreground">{v.hint}</div>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-            <Input
-              placeholder="Optional font name (e.g. Söhne, Playfair)"
-              value={draft.font_hint ?? ""}
-              onChange={(e) => update({ font_hint: e.target.value || null })}
-              className="h-9 text-xs"
-            />
-          </Section>
+                    ))}
+                  </div>
+                  <div className="flex gap-2 mt-2">
+                    <Input
+                      placeholder="#1A1A1A"
+                      value={newSupport}
+                      onChange={(e) => setNewSupport(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addSupporting(newSupport); } }}
+                      className="h-8 text-xs font-mono"
+                    />
+                    <Button type="button" variant="outline" size="sm" onClick={() => addSupporting(newSupport)}>Add</Button>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {COLOR_PRESETS.map((c) => (
+                      <ColorSwatch key={c} color={c} size="sm" onClick={() => addSupporting(c)} />
+                    ))}
+                  </div>
+                </div>
 
-          {/* Cinematic feel */}
-          <Section
-            eyebrow="04 · Feel"
-            title="Cinematic feel"
-            helper="The four levers a DoP would set before rolling."
-            icon={<Sun className="w-2.5 h-2.5" />}
-          >
-            <div>
-              <Label className="text-[11px] text-muted-foreground flex items-center gap-1.5"><Sun className="w-3 h-3" /> Lighting</Label>
-              <div className="mt-1.5">
-                <ChipGrid<LightingStyle>
-                  options={LIGHTING_STYLES}
-                  value={draft.lighting_style}
-                  onChange={(v) => update({ lighting_style: v })}
-                  cols={3}
-                />
-              </div>
-            </div>
-            <div>
-              <Label className="text-[11px] text-muted-foreground flex items-center gap-1.5"><Layers className="w-3 h-3" /> Finish / feel</Label>
-              <div className="mt-1.5">
-                <ChipGrid<FinishVibe>
-                  options={FINISH_VIBES}
-                  value={draft.finish_vibe}
-                  onChange={(v) => update({ finish_vibe: v })}
-                  cols={3}
-                />
-              </div>
-            </div>
-            <div>
-              <Label className="text-[11px] text-muted-foreground flex items-center gap-1.5"><Gauge className="w-3 h-3" /> Pacing</Label>
-              <div className="mt-1.5">
-                <ChipGrid<Pacing>
-                  options={PACING_OPTIONS}
-                  value={draft.pacing}
-                  onChange={(v) => update({ pacing: v })}
-                  cols={3}
-                />
-              </div>
-            </div>
-            <div>
-              <Label className="text-[11px] text-muted-foreground flex items-center gap-1.5"><BadgeCheck className="w-3 h-3" /> Logo treatment</Label>
-              <div className="mt-1.5">
-                <ChipGrid<LogoTreatment>
-                  options={LOGO_TREATMENTS}
-                  value={draft.logo_treatment}
-                  onChange={(v) => update({ logo_treatment: v })}
-                  cols={2}
-                />
-              </div>
-            </div>
-          </Section>
-
-          {/* Voice */}
-          <Section
-            eyebrow="05 · Voice"
-            title="Words & mood"
-            helper="Used for any spoken or written copy the Director includes."
-          >
-            <div>
-              <Label className="text-[11px] text-muted-foreground">Tagline</Label>
-              <Input
-                placeholder="Built different."
-                value={draft.tagline ?? ""}
-                onChange={(e) => update({ tagline: e.target.value || null })}
-                className="h-9 text-xs mt-1"
-                maxLength={120}
-              />
-            </div>
-            <div>
-              <Label className="text-[11px] text-muted-foreground">Brand voice</Label>
-              <Input
-                placeholder="confident, dry-witty, never corporate"
-                value={draft.brand_voice ?? ""}
-                onChange={(e) => update({ brand_voice: e.target.value || null })}
-                className="h-9 text-xs mt-1"
-                maxLength={120}
-              />
-            </div>
-            <div>
-              <Label className="text-[11px] text-muted-foreground">Free-form notes</Label>
-              <p className="text-[10px] text-muted-foreground">Anything else the Director should remember — references, hard rules, vibe.</p>
-              <Textarea
-                placeholder="premium, minimal, lots of white space. Inspired by Apple product films."
-                value={draft.mood_notes ?? ""}
-                onChange={(e) => update({ mood_notes: e.target.value || null })}
-                className="text-xs min-h-[72px] mt-1"
-                maxLength={280}
-              />
-            </div>
+                <div className="pt-2 border-t border-border/40">
+                  <Label className="text-[11px] text-muted-foreground">Avoid</Label>
+                  <p className="text-[10px] text-muted-foreground">Hard no's. The Director won't use these in lighting, props, wardrobe or backgrounds.</p>
+                  <div className="flex flex-wrap gap-1.5 mt-1.5 min-h-[20px]">
+                    {(draft.avoid_colors ?? []).map((c) => (
+                      <div key={c} className="inline-flex items-center gap-1 rounded-full bg-destructive/15 text-destructive px-2 py-0.5 text-[11px]">
+                        <span>{c}</span>
+                        <button type="button" onClick={() => removeAvoid(c)}>
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex gap-2 mt-2">
+                    <Input
+                      placeholder="e.g. neon pink"
+                      value={newAvoid}
+                      onChange={(e) => setNewAvoid(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addAvoid(newAvoid); } }}
+                      className="h-8 text-xs"
+                    />
+                    <Button type="button" variant="outline" size="sm" onClick={() => addAvoid(newAvoid)}>Add</Button>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {AVOID_PRESETS.map((c) => (
+                      <button
+                        key={c}
+                        type="button"
+                        onClick={() => addAvoid(c)}
+                        className="px-2 py-0.5 rounded-full text-[10px] border border-border/60 text-muted-foreground hover:text-foreground hover:border-foreground/40"
+                      >
+                        + {c}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
           </Section>
         </div>
 
