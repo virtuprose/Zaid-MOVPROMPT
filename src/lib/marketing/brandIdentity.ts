@@ -98,19 +98,9 @@ async function signLogo(path: string | null): Promise<string | null> {
 export function hasBrandIdentity(b: BrandIdentity | null | undefined): boolean {
   if (!b) return false;
   return !!(
-    b.primary_color ||
-    (b.supporting_colors && b.supporting_colors.length > 0) ||
-    (b.avoid_colors && b.avoid_colors.length > 0) ||
-    b.typography_vibe ||
-    b.mood_notes ||
-    b.tagline ||
     b.logo_path ||
-    b.lighting_style ||
-    b.finish_vibe ||
-    b.pacing ||
-    b.logo_treatment ||
-    b.brand_voice ||
-    b.industry
+    b.primary_color ||
+    (b.supporting_colors && b.supporting_colors.length > 0)
   );
 }
 
