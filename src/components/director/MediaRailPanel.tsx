@@ -563,30 +563,32 @@ function MediaCard({
 
   const PreviewDialog = hasUrl ? (
     <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
-      <DialogContent className="max-w-5xl w-[92vw] p-0 bg-black/95 border-border/40 overflow-hidden">
+      <DialogContent className="w-fit max-w-[95vw] p-0 bg-black/95 border-border/40 overflow-hidden">
         <DialogHeader className="sr-only">
           <DialogTitle>{item.label}</DialogTitle>
         </DialogHeader>
-        <div className="flex items-center justify-center max-h-[85vh] w-full">
+        <div className="flex items-center justify-center">
           {item.kind === "image" ? (
             <img
               src={item.url}
               alt={item.label}
-              className="max-h-[85vh] w-auto max-w-full object-contain"
+              className="block max-h-[90vh] max-w-[95vw] w-auto h-auto object-contain"
             />
           ) : item.kind === "video" ? (
             <video
               src={item.url}
-              className="max-h-[85vh] w-auto max-w-full"
+              className="block max-h-[90vh] max-w-[95vw] w-auto h-auto"
               controls
               autoPlay
               playsInline
+              preload="auto"
             />
           ) : (
             <div className="p-8 text-sm text-muted-foreground">{(item as MediaItem).label}</div>
           )}
         </div>
       </DialogContent>
+
     </Dialog>
   ) : null;
 
