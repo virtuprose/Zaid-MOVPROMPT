@@ -1484,10 +1484,12 @@ function DirectorChatInner() {
       "seedance-2.0", "seedance-2.0-ref", "hailuo-02-pro",
     ]);
     const wantsAudio = audioPlan !== "none";
+    const lockedRes = getLatestLockedSpec()?.resolution;
     const options = {
       aspect_ratio: panel.aspectRatio || "16:9",
       duration: panel.duration || 5,
       audio: NATIVE_AUDIO.has(provider) ? wantsAudio : undefined,
+      ...(lockedRes ? { resolution: lockedRes } : {}),
     } as any;
     toast(`Animating panel ${panel.shot_index} on ${providerLabel}${wantsAudio ? ` · ${audioPlan}` : " · silent"}…`);
     try {
