@@ -679,6 +679,18 @@ function characterLineAt(c: CharacterContext, refs: StudioBrief["imageRefs"], oc
   return bits.join(" — ");
 }
 
+function dedupeColors(input: (string | null | undefined)[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const c of input) {
+    if (!c) continue;
+    const key = c.trim().toLowerCase();
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    out.push(c.trim());
+  }
+  return out;
+}
 
 export function brandIdentityLine(
   b?: BrandIdentityContext | null,
