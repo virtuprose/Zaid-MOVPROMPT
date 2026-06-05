@@ -557,63 +557,138 @@ function MediaCard({
     </>
   );
 
+  const openPreview = () => {
+    if (hasUrl) setPreviewOpen(true);
+  };
+
+  const PreviewDialog = hasUrl ? (
+    <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+      <DialogContent className="max-w-5xl w-[92vw] p-0 bg-black/95 border-border/40 overflow-hidden">
+        <DialogHeader className="sr-only">
+          <DialogTitle>{item.label}</DialogTitle>
+        </DialogHeader>
+        <div className="flex items-center justify-center max-h-[85vh] w-full">
+          {item.kind === "image" ? (
+            <img
+              src={item.url}
+              alt={item.label}
+              className="max-h-[85vh] w-auto max-w-full object-contain"
+            />
+          ) : item.kind === "video" ? (
+            <video
+              src={item.url}
+              className="max-h-[85vh] w-auto max-w-full"
+              controls
+              autoPlay
+              playsInline
+            />
+          ) : (
+            <div className="p-8 text-sm text-muted-foreground">{item.label}</div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  ) : null;
+
   if (item.kind === "image") {
     return (
-      <div className="group relative block rounded-xl overflow-hidden border border-border/30 bg-muted/10 hover:border-primary/40 hover:ring-1 hover:ring-primary/30 transition-all">
-        <div className={cn("relative w-full bg-black/40", ratioClass)}>
-          <img
-            src={item.url}
-            alt={item.label}
-            loading="lazy"
-            className="absolute inset-0 w-full h-full object-cover"
-          />
+      <>
+        <div className="group relative block rounded-xl overflow-hidden border border-border/30 bg-muted/10 hover:border-primary/40 hover:ring-1 hover:ring-primary/30 transition-all">
+          <button
+            type="button"
+            onClick={openPreview}
+            disabled={!hasUrl}
+            className={cn("relative w-full bg-black/40 block", ratioClass, hasUrl && "cursor-zoom-in")}
+            aria-label={`Open ${item.label}`}
+          >
+            <img
+              src={item.url}
+              alt={item.label}
+              loading="lazy"
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+          </button>
           {Overlays}
         </div>
-      </div>
+        {PreviewDialog}
+      </>
     );
   }
 
 
   return (
-    <div className="group relative block rounded-xl overflow-hidden border border-border/30 bg-muted/10 hover:border-primary/40 hover:ring-1 hover:ring-primary/30 transition-all">
-      <div className={cn("relative w-full bg-black/60", ratioClass)}>
-        {isVideoReady ? (
-          <video
-            src={item.url}
-            className="absolute inset-0 w-full h-full object-cover"
-            playsInline
-            muted
-            loop
-            preload="metadata"
-            onMouseEnter={(e) => {
-              const v = e.currentTarget;
-              v.muted = false;
-              v.volume = 1;
-              v.play().catch(() => {
-                // Autoplay with sound may be blocked; fall back to muted playback.
-                v.muted = true;
-                v.play().catch(() => {});
-              });
-            }}
-            onMouseLeave={(e) => {
-              const v = e.currentTarget;
-              v.pause();
-              v.currentTime = 0;
-              v.muted = true;
-            }}
-          />
-
-        ) : (
-          <div className="absolute inset-0 flex items-center justify-center text-[10px] uppercase tracking-wider text-muted-foreground">
-            {item.status === "failed" ? "Failed" : "Rendering…"}
-          </div>
-        )}
-        {isVideoReady && (
-          <Play className="absolute inset-0 m-auto w-7 h-7 text-white/90 drop-shadow opacity-80 group-hover:opacity-0 transition-opacity pointer-events-none" />
-        )}
+    <>
+      <div className="group relative block rounded-xl overflow-hidden border border-border/30 bg-muted/10 hover:border-primary/40 hover:ring-1 hover:ring-primary/30 transition-all">
+        <button
+          type="button"
+          onClick={openPreview}
+          disabled={!hasUrl}
+          className={cn("relative w-full bg-black/60 block", ratioClass, hasUrl && "cursor-zoom-in")}
+          aria-label={`Open ${item.label}`}
+        >
+          {isVideoReady ? (
+            <video
+              src={item.url}
+              className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+              playsInline
+              muted
+              loop
+              preload="metadata"
+            />
+          ) : (
+            <div className="absolute inset-0 flex items-center justify-center text-[10px] uppercase tracking-wider text-muted-foreground">
+              {item.status === "failed" ? "Failed" : "Rendering…"}
+            </div>
+          )}
+          {isVideoReady && (
+            <Play className="absolute inset-0 m-auto w-7 h-7 text-white/90 drop-shadow opacity-80 group-hover:opacity-0 transition-opacity pointer-events-none" />
+          )}
+        </button>
+        <VideoHoverBinder enabled={isVideoReady} />
         {Overlays}
       </div>
-    </div>
+      {PreviewDialog}
+    </>
   );
 }
+
+/**
+ * Binds hover-to-play-with-sound on the sibling <video> element of its parent tile.
+ * Lets the play button keep its click-to-expand behaviour while preserving the
+ * existing hover-preview UX.
+ */
+function VideoHoverBinder({ enabled }: { enabled: boolean }) {
+  const ref = useRef<HTMLSpanElement | null>(null);
+
+  useEffect(() => {
+    if (!enabled) return;
+    const host = ref.current?.parentElement;
+    if (!host) return;
+    const video = host.querySelector("video") as HTMLVideoElement | null;
+    if (!video) return;
+
+    const onEnter = () => {
+      video.muted = false;
+      video.volume = 1;
+      video.play().catch(() => {
+        video.muted = true;
+        video.play().catch(() => {});
+      });
+    };
+    const onLeave = () => {
+      video.pause();
+      video.currentTime = 0;
+      video.muted = true;
+    };
+    host.addEventListener("mouseenter", onEnter);
+    host.addEventListener("mouseleave", onLeave);
+    return () => {
+      host.removeEventListener("mouseenter", onEnter);
+      host.removeEventListener("mouseleave", onLeave);
+    };
+  }, [enabled]);
+
+  return <span ref={ref} className="hidden" aria-hidden="true" />;
+}
+
 
