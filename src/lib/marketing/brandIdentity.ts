@@ -98,7 +98,6 @@ async function signLogo(path: string | null): Promise<string | null> {
 export function hasBrandIdentity(b: BrandIdentity | null | undefined): boolean {
   if (!b) return false;
   return !!(
-    b.logo_path ||
     b.primary_color ||
     (b.supporting_colors && b.supporting_colors.length > 0)
   );
