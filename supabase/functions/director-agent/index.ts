@@ -1205,7 +1205,7 @@ Then stop. Don't ask follow-up questions yourself.`;
       });
     }
 
-    // Streaming: prepend custom Director "step" events, then pipe AI body.
+    // Streaming: prepend Director "step" events tied to the REAL work for this turn.
     if (stream) {
       const encoder = new TextEncoder();
       const sseStep = (step: {
@@ -1216,62 +1216,97 @@ Then stop. Don't ask follow-up questions yourself.`;
         detail?: string;
       }) => encoder.encode(`data: ${JSON.stringify({ _step: step })}\n\n`);
 
-      // Build a quick recap of what we already know from the user's brief +
-      // free-chat content, to power the "reading the brief" / "listening to free chat" rows.
-      const lastBriefText = (last?.content || "").slice(0, 280);
-      const freeChatPreview = prior
-        .filter((m) => m.role === "user")
+      const lastBriefText = (last?.content || "").trim();
+      const priorUserTurns = prior.filter((m) => m.role === "user");
+      const freeChatRecap = priorUserTurns
         .slice(-2)
         .map((m) => m.content)
         .join("\n")
-        .slice(0, 280);
+        .slice(0, 280)
+        .trim();
+
+      // Group attachments by kind for a single, accurate row per kind.
+      const attachmentCounts: Record<string, { count: number; names: string[] }> = {};
+      if (Array.isArray(attachments)) {
+        for (const a of attachments) {
+          const bucket = attachmentCounts[a.kind] ?? { count: 0, names: [] };
+          bucket.count += 1;
+          if (a.name && bucket.names.length < 4) bucket.names.push(a.name);
+          attachmentCounts[a.kind] = bucket;
+        }
+      }
+      const attachmentSteps: Array<Parameters<typeof sseStep>[0]> = [];
+      const ATTACH_LABELS: Record<string, (n: number) => string> = {
+        image: (n) => `Analyzing ${n} image${n === 1 ? "" : "s"}`,
+        video_keyframes: (n) => `Pulling key frames from ${n} video${n === 1 ? "" : "s"}`,
+        audio_transcript: (n) => `Reading the voice brief${n === 1 ? "" : "s"}`,
+        document: (n) => `Reading the uploaded document${n === 1 ? "" : "s"}`,
+      };
+      for (const [kind, { count, names }] of Object.entries(attachmentCounts)) {
+        const labeller = ATTACH_LABELS[kind] ?? ((n: number) => `Reading ${n} attachment${n === 1 ? "" : "s"}`);
+        attachmentSteps.push({
+          id: `attach-${kind}`,
+          kind: "reference",
+          label: labeller(count),
+          status: "done",
+          detail: names.length ? names.join(", ") : undefined,
+        });
+      }
 
       const steps: Array<Parameters<typeof sseStep>[0]> = [];
-      steps.push({
-        id: "read-brief",
-        kind: "reading",
-        label: "Reading the brief",
-        status: "done",
-        detail: lastBriefText || undefined,
-      });
-      if (freeChatPreview) {
+
+      // Only emit "Reading the brief" if there's actually a brief worth reading.
+      if (lastBriefText.length > 12) {
+        steps.push({
+          id: "read-brief",
+          kind: "reading",
+          label: "Reading the brief",
+          status: "done",
+          detail: lastBriefText.slice(0, 280),
+        });
+      }
+
+      // Attachment rows — one per kind, with names.
+      steps.push(...attachmentSteps);
+
+      // Mining free chat only when there's real prior conversation to mine (≥ 2 prior user turns).
+      if (priorUserTurns.length >= 2 && freeChatRecap) {
         steps.push({
           id: "mine-freechat",
           kind: "mining",
-          label: "Mining free chat for known axes",
+          label: `Mining ${priorUserTurns.length} prior turns for known axes`,
           status: "done",
-          detail: freeChatPreview,
+          detail: freeChatRecap,
         });
       }
+
       if (activeSkillName) {
         steps.push({
           id: `skill-${activeSkillName}`,
           kind: "skill",
-          label: `Loaded skill: ${activeSkillName}`,
+          label: `Skill matched: ${activeSkillName}`,
           status: "done",
+          detail: "Loaded a specialist playbook into the system prompt.",
         });
       }
-      steps.push({
-        id: "preflight",
-        kind: "preflight",
-        label: "Axis pre-flight",
-        status: "done",
-        detail: "Checking duration, aspect, audio, style, model, subject before asking.",
-      });
-      steps.push({
-        id: "thinking",
-        kind: "thinking",
-        label: "Thinking it through",
-        status: "running",
-      });
 
       const wrapped = new ReadableStream({
         async start(controller) {
           for (const s of steps) controller.enqueue(sseStep(s));
-          // Mark "thinking" as done as soon as model bytes start arriving.
+
+          // "Thinking it through" only shows if the model takes more than 600ms to start streaming.
+          // Otherwise it flashes uselessly between scaffold and tool-call rows.
+          let thinkingEmitted = false;
           let thinkingClosed = false;
+          const thinkingTimer = setTimeout(() => {
+            thinkingEmitted = true;
+            controller.enqueue(
+              sseStep({ id: "thinking", kind: "thinking", label: "Thinking it through", status: "running" }),
+            );
+          }, 600);
           const closeThinking = () => {
-            if (thinkingClosed) return;
+            clearTimeout(thinkingTimer);
+            if (!thinkingEmitted || thinkingClosed) return;
             thinkingClosed = true;
             controller.enqueue(
               sseStep({ id: "thinking", kind: "thinking", label: "Thinking it through", status: "done" }),
@@ -1296,6 +1331,7 @@ Then stop. Don't ask follow-up questions yourself.`;
               }),
             );
           } finally {
+            clearTimeout(thinkingTimer);
             closeThinking();
             controller.close();
           }
@@ -1306,6 +1342,7 @@ Then stop. Don't ask follow-up questions yourself.`;
         headers: { ...corsHeaders, ...skillHeader, "Content-Type": "text/event-stream" },
       });
     }
+
 
     // Non-streaming JSON path
     const data = await aiResp.json();

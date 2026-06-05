@@ -1790,23 +1790,75 @@ function DirectorChatInner() {
         lastKind = partial.kind;
         notifySkill((partial as any).activeSkill);
         const kind = partial.kind;
+        const note: string = (partial as any).directors_note || "";
+        const storyMatch = note.match(/story step\s+(\d+)\s*(?:of|\/)\s*(\d+)/i);
+        const storyPrefix = storyMatch ? `Story step ${storyMatch[1]}/${storyMatch[2]} — ` : "";
+
         if (kind && !seenToolKinds.has(kind)) {
           seenToolKinds.add(kind);
           const ts = Date.now();
           if (kind === "ask_clarification") {
             pushClientStep({ id: "tool-ask", kind: "thinking", label: "Drafting clarifying questions", status: "done", ts });
           } else if (kind === "ask_model_choice") {
-            pushClientStep({ id: "tool-model", kind: "model", label: "Picking the right model", status: "done", ts });
+            const rec = (partial as any).recommended_model_id;
+            const reason = (partial as any).reason;
+            pushClientStep({
+              id: "tool-model",
+              kind: "model",
+              label: rec ? `Routing to ${rec}` : "Picking the right model",
+              status: "done",
+              detail: reason || undefined,
+              ts,
+            });
           } else if (kind === "generate_prompt") {
             pushClientStep({ id: "tool-prompt", kind: "prompt", label: "Composing the cinematic prompt", status: "running", ts });
           } else if (kind === "generate_reference_image") {
-            pushClientStep({ id: "tool-ref", kind: "reference", label: "Drafting a reference key frame", status: "done", ts });
+            const isStoryOpener = storyMatch && storyMatch[1] === "1";
+            pushClientStep({
+              id: "tool-ref",
+              kind: "reference",
+              label: isStoryOpener
+                ? `${storyPrefix}drafting the opening key frame`
+                : storyPrefix
+                  ? `${storyPrefix}drafting a reference key frame`
+                  : "Drafting a reference key frame",
+              status: "running",
+              ts,
+            });
           } else if (kind === "generate_story_bundle") {
-            pushClientStep({ id: "tool-bundle", kind: "reference", label: "Building the story asset bundle", status: "done", ts });
+            pushClientStep({
+              id: "tool-bundle",
+              kind: "reference",
+              label: storyPrefix
+                ? `${storyPrefix}building the asset bundle (character + prop + 7 locations)`
+                : "Building the story asset bundle",
+              status: "running",
+              ts,
+            });
           } else if (kind === "request_video_generation" || kind === "request_story_render") {
-            pushClientStep({ id: "tool-render", kind: "prompt", label: "Handing off to the renderer", status: "done", ts });
+            pushClientStep({
+              id: "tool-render",
+              kind: "prompt",
+              label: storyPrefix
+                ? `${storyPrefix}launching 4 parallel renders`
+                : "Handing off to the renderer",
+              status: "done",
+              ts,
+            });
           }
         }
+
+        // Mark prompt composition done once the full prompt body has streamed.
+        if (kind === "generate_prompt" && typeof (partial as any).prompt === "string" && (partial as any).prompt.length > 40) {
+          pushClientStep({
+            id: "tool-prompt",
+            kind: "prompt",
+            label: "Composing the cinematic prompt",
+            status: "done",
+            ts: Date.now(),
+          });
+        }
+
         setBubbles((prev) => {
           const copy = [...prev];
           if (partial.kind === "generate_prompt") {
@@ -1846,6 +1898,7 @@ function DirectorChatInner() {
           return copy;
         });
       };
+
 
       // Reserve the placeholder slot
       setBubbles((prev) => [...prev, { role: "assistant", content: "…" }]);
@@ -1895,6 +1948,14 @@ function DirectorChatInner() {
           const retryable = err?.retryable === true;
           if (!retryable || attempt === MAX_ATTEMPTS) break;
           const backoff = 600 * attempt;
+          pushClientStep({
+            id: `retry-${attempt}`,
+            kind: "error",
+            label: `Retrying after a hiccup (attempt ${attempt + 1}/${MAX_ATTEMPTS})`,
+            status: "running",
+            detail: err?.message ? String(err.message) : undefined,
+            ts: Date.now(),
+          });
           toast.message(`Retrying… (${attempt}/${MAX_ATTEMPTS - 1})`, {
             description: err?.message,
           });
@@ -1903,7 +1964,26 @@ function DirectorChatInner() {
       }
 
       if (!resp) throw lastErr ?? new Error("Director didn't respond.");
+      // Mark any reference/bundle row as done now that the agent's payload has fully arrived.
+      if (resp.kind === "generate_reference_image") {
+        pushClientStep({
+          id: "tool-ref",
+          kind: "reference",
+          label: "Reference key frame drafted",
+          status: "done",
+          ts: Date.now(),
+        });
+      } else if (resp.kind === "generate_story_bundle") {
+        pushClientStep({
+          id: "tool-bundle",
+          kind: "reference",
+          label: "Story asset bundle assembled",
+          status: "done",
+          ts: Date.now(),
+        });
+      }
       notifySkill((resp as any).activeSkill);
+
 
       let added: Bubble;
       let finalPrompt: string | null = null;
