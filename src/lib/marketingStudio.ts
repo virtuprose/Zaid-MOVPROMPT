@@ -798,7 +798,11 @@ export function composeStudioPrompt(brief: StudioBrief): string {
     "Cinematic 9:16 social ad, 5 seconds, native audio.",
     subjectLine,
     ...brandLines,
-    brandIdentityLine(brief.brandIdentity, overlayOff),
+    brandIdentityLine(
+      brief.brandIdentity,
+      overlayOff,
+      dedupeColors(brands.flatMap((b) => b.hero_colors ?? [])),
+    ),
     ...characterLines,
     format?.fragment ?? (brief.customFormat?.trim() ? `Format: ${brief.customFormat.trim()}` : null),
     setting?.fragment ?? (brief.customSetting?.trim() ? `Setting: ${brief.customSetting.trim()}` : null),
