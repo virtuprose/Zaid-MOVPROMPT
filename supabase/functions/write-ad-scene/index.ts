@@ -168,13 +168,12 @@ function buildUserContent(b: Brief): string {
     if (bi?.lighting_style) parts.push(`lighting ${bi.lighting_style.replace(/-/g, " ")}`);
     if (bi?.finish_vibe) parts.push(`finish/feel ${bi.finish_vibe.replace(/-/g, " ")}`);
     if (bi?.pacing) parts.push(`pacing ${bi.pacing.replace(/-/g, " ")}`);
-    if (bi?.logo_treatment) parts.push(`logo treatment: ${bi.logo_treatment.replace(/-/g, " ")}`);
     if (bi?.industry) parts.push(`industry: ${bi.industry}`);
     if (bi?.brand_voice) parts.push(`brand voice: ${bi.brand_voice}`);
     if (bi?.mood_notes) parts.push(`mood: ${bi.mood_notes}`);
     if (bi?.tagline) parts.push(`brand tagline: "${bi.tagline}"`);
     if (parts.length > 0) {
-      lines.push(`BRAND IDENTITY — ${parts.join("; ")}. Apply this palette across lighting, props, wardrobe and backgrounds. Match the typography vibe for any on-screen text. Honor the logo treatment instruction. Never use AVOID colors. Keep the product's own appearance accurate to its PRODUCT LOCK.`);
+      lines.push(`BRAND IDENTITY — ${parts.join("; ")}. Apply this palette across lighting, props, wardrobe and backgrounds. Match the typography vibe for any on-screen text. Never use AVOID colors. Keep the product's own appearance accurate to its PRODUCT LOCK.`);
     }
   }
   const note = b.userNote?.trim();

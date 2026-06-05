@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Loader2, Palette, Upload, X, Sparkles, Image as ImageIcon, Wand2 } from "lucide-react";
+import { Loader2, Palette, X, Wand2 } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -93,14 +93,11 @@ export function BrandIdentitySheet({
   open: boolean;
   onOpenChange: (v: boolean) => void;
 }) {
-  const { identity, save, uploadLogo, clear } = useBrandIdentity();
+  const { identity, save, clear } = useBrandIdentity();
   const { setActiveIds: setBrandActiveIds, activeKits: brandKits } = useBrandKit();
   const [draft, setDraft] = useState<BrandIdentity>(EMPTY_BRAND_IDENTITY);
   const [colorMode, setColorMode] = useState<"auto" | "custom">("auto");
   const [saving, setSaving] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [dragOver, setDragOver] = useState(false);
-  const fileRef = useRef<HTMLInputElement | null>(null);
   const [newSupport, setNewSupport] = useState("");
   const [newAvoid, setNewAvoid] = useState("");
 
@@ -135,21 +132,6 @@ export function BrandIdentitySheet({
     return out;
   }, [brandKits]);
 
-  const onPickFile = async (file: File) => {
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error("Logo must be under 10MB");
-      return;
-    }
-    setUploading(true);
-    try {
-      const path = await uploadLogo(file);
-      update({ logo_path: path, logo_url: URL.createObjectURL(file) });
-    } catch (e: any) {
-      toast.error(e?.message || "Couldn't upload logo");
-    } finally {
-      setUploading(false);
-    }
-  };
 
   const addSupporting = (c: string) => {
     const color = c.trim();
@@ -187,10 +169,13 @@ export function BrandIdentitySheet({
               avoid_colors: draft.avoid_colors,
             };
       // Always null the fields we no longer surface so stale values don't
-      // keep leaking into the Director's prompt.
+      // keep leaking into the Director's prompt. Logo is fully removed —
+      // users add their real logo in their own editor after download.
       const payload: BrandIdentity = {
         ...draft,
         ...colorPayload,
+        logo_path: null,
+        logo_url: null,
         typography_vibe: null,
         font_hint: null,
         mood_notes: null,
@@ -212,7 +197,7 @@ export function BrandIdentitySheet({
     }
   };
 
-  const hasLogo = !!(draft.logo_url || draft.logo_path);
+  
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -230,89 +215,16 @@ export function BrandIdentitySheet({
             Brand Kit
           </SheetTitle>
           <p className="text-xs text-muted-foreground">
-            Logo + colors. That's it — the rest is inferred from your product photos.
+            Just colors. Add your logo in your own editor after download for perfect fidelity.
           </p>
           <div className="absolute left-5 right-5 -bottom-px h-px bg-gradient-to-r from-transparent via-primary/40 to-accent/40" />
         </SheetHeader>
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto px-5 py-5 space-y-4">
-          {/* Logo */}
-          <Section
-            eyebrow="01 · Logo"
-            title="Your mark"
-            helper="Shown on screen when the ad needs your logo."
-            icon={<Sparkles className="w-2.5 h-2.5" />}
-          >
-            <div className="flex items-stretch gap-3">
-              <div
-                className={cn(
-                  "w-20 h-20 rounded-xl border bg-muted/20 overflow-hidden flex items-center justify-center shrink-0 transition-colors",
-                  hasLogo ? "border-border/60" : "border-dashed border-border",
-                )}
-              >
-                {hasLogo ? (
-                  <img src={draft.logo_url ?? ""} alt="logo" className="w-full h-full object-contain" />
-                ) : (
-                  <ImageIcon className="w-5 h-5 text-muted-foreground" />
-                )}
-              </div>
-              <input
-                ref={fileRef}
-                type="file"
-                accept="image/*"
-                hidden
-                onChange={(e) => {
-                  const f = e.target.files?.[0];
-                  if (f) void onPickFile(f);
-                  e.currentTarget.value = "";
-                }}
-              />
-              <button
-                type="button"
-                onClick={() => fileRef.current?.click()}
-                onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-                onDragLeave={() => setDragOver(false)}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  setDragOver(false);
-                  const f = e.dataTransfer.files?.[0];
-                  if (f) void onPickFile(f);
-                }}
-                disabled={uploading}
-                className={cn(
-                  "flex-1 rounded-xl border border-dashed flex flex-col items-center justify-center gap-1 text-xs transition-all",
-                  dragOver
-                    ? "border-primary bg-primary/5"
-                    : "border-border hover:border-primary/60 hover:bg-secondary/20 bg-secondary/10",
-                )}
-              >
-                {uploading ? (
-                  <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
-                ) : (
-                  <Upload className="w-4 h-4 text-muted-foreground" />
-                )}
-                <span className="font-medium text-foreground/90">
-                  {hasLogo ? "Replace logo" : "Drop or click to upload"}
-                </span>
-                <span className="text-[10px] text-muted-foreground">PNG · SVG · JPG — up to 10MB</span>
-              </button>
-              {hasLogo && (
-                <button
-                  type="button"
-                  onClick={() => update({ logo_path: null, logo_url: null })}
-                  className="self-start rounded-lg p-1.5 text-muted-foreground hover:text-foreground hover:bg-secondary/40"
-                  aria-label="Remove logo"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              )}
-            </div>
-          </Section>
-
           {/* Colors */}
           <Section
-            eyebrow="02 · Color"
+            eyebrow="01 · Color"
             title="Palette"
             helper="Used for lighting, props, wardrobe and backgrounds — never repainted onto the real product."
           >

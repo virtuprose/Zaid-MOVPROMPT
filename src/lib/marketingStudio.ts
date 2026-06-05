@@ -719,7 +719,6 @@ export function brandIdentityLine(
   if (b?.lighting_style) bits.push(`lighting: ${b.lighting_style.replace(/-/g, " ")}`);
   if (b?.finish_vibe) bits.push(`finish/feel: ${b.finish_vibe.replace(/-/g, " ")}`);
   if (b?.pacing) bits.push(`pacing: ${b.pacing.replace(/-/g, " ")}`);
-  if (b?.logo_treatment) bits.push(`logo treatment: ${b.logo_treatment.replace(/-/g, " ")}`);
   if (b?.industry) bits.push(`industry: ${b.industry}`);
   if (b?.brand_voice) bits.push(`voice: ${b.brand_voice}`);
   if (b?.mood_notes) bits.push(`mood: ${b.mood_notes}`);
@@ -727,7 +726,7 @@ export function brandIdentityLine(
   if (bits.length === 0) return null;
   const base = `BRAND LOCK — ${bits.join("; ")}. Apply the palette across lighting, props, wardrobe and backgrounds. Never use the AVOID colors. Do NOT recolor the real product itself — the Product Lock above always wins on the product's own appearance.`;
   if (overlayOff) return base;
-  return `${base} Match the typography vibe for any on-screen text. Honor the logo treatment instruction.`;
+  return `${base} Match the typography vibe for any on-screen text.`;
 }
 
 export function overlayLine(overlay?: OverlayBrief): string | null {
