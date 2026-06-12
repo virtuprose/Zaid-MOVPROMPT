@@ -1486,6 +1486,19 @@ function DirectorChatInner() {
     }
   };
 
+  // Storyboard / multi-angle workflow state (used by handlers below).
+  const [storyboardShotCount, setStoryboardShotCount] = useState<3 | 6 | 9>(() => {
+    if (typeof window === "undefined") return 6;
+    const raw = localStorage.getItem("director:storyboard_shots");
+    const n = raw ? parseInt(raw, 10) : 6;
+    return n === 3 || n === 6 || n === 9 ? (n as 3 | 6 | 9) : 6;
+  });
+  const handleShotCountChange = useCallback((n: 3 | 6 | 9) => {
+    setStoryboardShotCount(n);
+    try { localStorage.setItem("director:storyboard_shots", String(n)); } catch { /* ignore */ }
+  }, []);
+  const [planBusy, setPlanBusy] = useState(false);
+
   // Walk the bubble history backwards to find the most recently locked spec
   // (from model_choice / generate_prompt / result bubbles). We use it to make
   // sure the user-selected resolution is always forwarded to the renderer
