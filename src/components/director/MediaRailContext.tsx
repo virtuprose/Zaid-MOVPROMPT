@@ -388,6 +388,15 @@ export function MediaRailProvider({ children }: { children: ReactNode }) {
     [user],
   );
 
+  const appendBubbleRef = useRef<((b: RailBubble) => void) | null>(null);
+  const registerAppendBubble = useCallback((fn: ((b: RailBubble) => void) | null) => {
+    appendBubbleRef.current = fn;
+  }, []);
+  const appendBubble = useCallback((b: RailBubble) => {
+    const fn = appendBubbleRef.current;
+    if (fn) fn(b);
+  }, []);
+
   const value = useMemo<Ctx>(
     () => ({
       bubbles,
@@ -409,6 +418,8 @@ export function MediaRailProvider({ children }: { children: ReactNode }) {
       consumeAttachments,
       renameItem,
       unnameItem,
+      registerAppendBubble,
+      appendBubble,
     }),
     [
       bubbles,
@@ -428,8 +439,11 @@ export function MediaRailProvider({ children }: { children: ReactNode }) {
       consumeAttachments,
       renameItem,
       unnameItem,
+      registerAppendBubble,
+      appendBubble,
     ],
   );
+
 
   return <MediaRailCtx.Provider value={value}>{children}</MediaRailCtx.Provider>;
 }
