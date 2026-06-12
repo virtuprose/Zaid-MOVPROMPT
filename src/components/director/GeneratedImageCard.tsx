@@ -289,6 +289,8 @@ export function GeneratedImageCard({ data, onRegenerate, onUnpinSubject, onAnima
   const [animateAllOpen, setAnimateAllOpen] = useState(false);
   const [animatingAll, setAnimatingAll] = useState(false);
   const [singleAnimate, setSingleAnimate] = useState<AnimatePanelInput | null>(null);
+  const [editTarget, setEditTarget] = useState<string | null>(null);
+
 
   const handleAnimateOne = useCallback(async (panel: AnimatePanelInput) => {
     if (!onAnimatePanel) return;
