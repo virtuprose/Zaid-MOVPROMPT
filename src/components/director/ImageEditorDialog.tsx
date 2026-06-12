@@ -7,7 +7,7 @@ import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { Brush, Eraser, Replace, Wand2, Undo2, Loader2, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { editImage, type EditMode } from "@/lib/director/editImage";
+import { editImage, type EditMode, type EditQuality } from "@/lib/director/editImage";
 import { useMediaRail } from "./MediaRailContext";
 
 type Props = {
