@@ -1912,7 +1912,13 @@ function DirectorChatInner() {
       // most-recent first, capped at 12 (edge function further limits images to 8).
       const allAttachments: Attachment[] = [];
       const seen = new Set<string>();
+      const isUsableAttachmentUrl = (a: Attachment) => {
+        const url = (a as any).url as string | undefined;
+        if (!url) return true;
+        return /^https?:\/\//i.test(url);
+      };
       const pushAttachment = (a: Attachment) => {
+        if (!isUsableAttachmentUrl(a)) return;
         const key = (a as any).url || (a as any).storage_path || `${a.kind}:${a.name}`;
         if (seen.has(key)) return;
         seen.add(key);
