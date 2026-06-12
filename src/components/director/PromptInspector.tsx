@@ -15,7 +15,7 @@ export type InspectorContext = {
   styleSpec?: StyleSpec;
   lockMode?: "character" | "scene" | "auto";
   referenceUrls?: string[];
-  aspectRatio?: "1:1" | "16:9" | "9:16";
+  aspectRatio?: string;
   subjectKind?: "character" | "product";
   isChain?: boolean;
   totalShots?: number;
