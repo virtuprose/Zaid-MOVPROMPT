@@ -1,11 +1,13 @@
 import { supabase } from "@/integrations/supabase/client";
 
 export type EditMode = "prompt" | "paint" | "swap" | "erase";
+export type EditQuality = "1K" | "2K" | "4K";
 
 export type EditImageResult = {
   url: string;
   storage_path: string;
   edit: { mode: EditMode; prompt: string; parent_url: string };
+  quality?: EditQuality;
 };
 
 /**
@@ -19,6 +21,7 @@ export async function editImage(params: {
   mode: EditMode;
   prompt: string;
   aspectRatio?: "1:1" | "16:9" | "9:16";
+  quality?: EditQuality;
 }): Promise<EditImageResult> {
   const { data, error } = await supabase.functions.invoke("generate-reference-image", {
     body: {
@@ -28,6 +31,7 @@ export async function editImage(params: {
       edit_mode: params.mode,
       prompt: params.prompt || "",
       aspect_ratio: params.aspectRatio,
+      quality: params.quality || "1K",
     },
   });
   if (error) throw new Error(error.message || "Image edit failed");
@@ -37,5 +41,6 @@ export async function editImage(params: {
     url: img.url,
     storage_path: img.storage_path,
     edit: (data as any).edit,
+    quality: (data as any).quality,
   };
 }
