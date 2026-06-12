@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import ReactMarkdown from "react-markdown";
-import { RotateCcw, FileText, Music, Sparkles, MessageCircleMore, ArrowRight, Film, Megaphone, LayoutGrid, Wand2, Send as SendIcon } from "lucide-react";
+import { RotateCcw, FileText, Music, Sparkles, MessageCircleMore, ArrowRight, Film, Megaphone, LayoutGrid, Wand2, Send as SendIcon, Orbit } from "lucide-react";
 import { Message, MessageContent } from "@/components/ai-elements/message";
 import { QuestionCard } from "./QuestionCard";
 import { cn } from "@/lib/utils";
@@ -67,6 +67,9 @@ import { AssistantAvatar, type AvatarState } from "./AssistantAvatar";
 import { TypingIndicator } from "./TypingIndicator";
 import { TypewriterText } from "./TypewriterText";
 import { DirectorActivityFeed, type ActivityStep } from "./DirectorActivityFeed";
+import { StoryboardPlanCard } from "./StoryboardPlanCard";
+import { planStoryboard, shotToPanelBeat, type StoryboardPlan } from "@/lib/director/planStoryboard";
+import { multiAngleBeats } from "@/lib/director/multiAngleBeats";
 
 type Bubble =
   | { role: "user"; content: string; attachments?: Attachment[]; ts?: number }
@@ -87,6 +90,14 @@ type Bubble =
   | { role: "model_choice"; recommended_model_id: string; alternatives?: string[]; reason: string; chosen?: string; lockedSpec?: import("@/lib/director/api").LockedSpec }
   | { role: "error"; message: string; detail?: string; retryable: boolean }
   | { role: "generated_images"; data: import("./GeneratedImageCard").GeneratedImageBubbleData }
+  | {
+      role: "storyboard_plan";
+      plan: StoryboardPlan;
+      shotCount: 3 | 6 | 9;
+      story: string;
+      approved?: boolean;
+      discarded?: boolean;
+    }
   | {
       role: "aspect_choice";
       payload: {
@@ -1475,6 +1486,19 @@ function DirectorChatInner() {
     }
   };
 
+  // Storyboard / multi-angle workflow state (used by handlers below).
+  const [storyboardShotCount, setStoryboardShotCount] = useState<3 | 6 | 9>(() => {
+    if (typeof window === "undefined") return 6;
+    const raw = localStorage.getItem("director:storyboard_shots");
+    const n = raw ? parseInt(raw, 10) : 6;
+    return n === 3 || n === 6 || n === 9 ? (n as 3 | 6 | 9) : 6;
+  });
+  const handleShotCountChange = useCallback((n: 3 | 6 | 9) => {
+    setStoryboardShotCount(n);
+    try { localStorage.setItem("director:storyboard_shots", String(n)); } catch { /* ignore */ }
+  }, []);
+  const [planBusy, setPlanBusy] = useState(false);
+
   // Walk the bubble history backwards to find the most recently locked spec
   // (from model_choice / generate_prompt / result bubbles). We use it to make
   // sure the user-selected resolution is always forwarded to the renderer
@@ -1489,6 +1513,109 @@ function DirectorChatInner() {
     }
     return undefined;
   }, []);
+
+  // ---------- Multi-Angle / Story-driven Storyboard ----------
+  // Multi-angle: from a pinned subject (or attached image), render 6 canonical
+  // camera angles of the SAME scene. Bypasses the agent — calls
+  // generate-reference-image directly with mode=multi_angle.
+  const handleMultiAngle = useCallback(async () => {
+    if (busy) return;
+    const subjectUrl = pinnedSubject?.url ?? attachments.find((a: any) => a.kind === "image" && (a as any).url)?.["url"];
+    if (!subjectUrl) {
+      toast.error("Pin a subject sheet or attach an image first.");
+      return;
+    }
+    const subjectKind: "character" | "product" = (pinnedSubject?.kind === "product" ? "product" : "character");
+    const beats = multiAngleBeats(subjectKind);
+    const lockedSpec = getLatestLockedSpec();
+    const userBubble: Bubble = {
+      role: "user",
+      content: input.trim() || `Render 6 camera angles of the locked ${subjectKind}.`,
+      ts: Date.now(),
+    };
+    const next = [...bubblesRef.current, userBubble];
+    setBubbles(next);
+    setInput("");
+    await runImageGeneration(next, {
+      mode: "multi_angle" as any,
+      prompt: input.trim() || `6-angle turnaround of the locked ${subjectKind}.`,
+      per_shot_prompts: beats,
+      reference_urls: [subjectUrl],
+      lock_mode: "character",
+      aspect_ratio: "1:1",
+      subject_kind: subjectKind,
+      style_spec: lockedSpec as any,
+      directors_note: `6-angle turnaround — same scene, same lighting, only the camera angle changes.`,
+      quality: chatImageQuality,
+    } as any);
+  }, [busy, pinnedSubject, attachments, input, chatImageQuality, getLatestLockedSpec]);
+
+  // Storyboard plan: call plan-storyboard, render an editable plan card.
+  const handlePlanStoryboard = useCallback(async () => {
+    if (busy || planBusy) return;
+    const story = input.trim();
+    if (!story) {
+      toast.error("Tell me your story first — even one line works.");
+      return;
+    }
+    const lockedSpec = getLatestLockedSpec();
+    const subjectSummary = pinnedSubject
+      ? `Locked ${pinnedSubject.kind} — every shot must feature this exact subject from the pinned reference sheet.`
+      : undefined;
+    const userBubble: Bubble = { role: "user", content: story, ts: Date.now() };
+    const next = [...bubblesRef.current, userBubble];
+    setBubbles(next);
+    setInput("");
+    setPlanBusy(true);
+    try {
+      const plan = await planStoryboard({
+        story,
+        shot_count: storyboardShotCount,
+        subject_summary: subjectSummary,
+        style_spec: lockedSpec as any,
+      });
+      setBubbles((prev) => [
+        ...prev,
+        { role: "storyboard_plan", plan, shotCount: storyboardShotCount, story },
+      ]);
+    } catch (e: any) {
+      const msg = String(e?.message || e || "");
+      if (msg.includes("insufficient_credits")) await notifyInsufficientCredits(e);
+      else toast.error(`Couldn't draft the plan — ${msg.slice(0, 120)}`);
+    } finally {
+      setPlanBusy(false);
+    }
+  }, [busy, planBusy, input, storyboardShotCount, pinnedSubject, getLatestLockedSpec]);
+
+  // Approve plan → render panels via storyboard_panels.
+  const handleApprovePlan = useCallback(
+    async (bubbleIndex: number, plan: StoryboardPlan) => {
+      // mark approved so the card switches to a non-editable summary
+      setBubbles((prev) =>
+        prev.map((b, i) =>
+          i === bubbleIndex && b.role === "storyboard_plan" ? { ...b, plan, approved: true } : b,
+        ),
+      );
+      const perShot = plan.shots.map((s, i) => shotToPanelBeat(s, i, plan.shots.length));
+      const lockedSpec = getLatestLockedSpec();
+      const subjectUrl = pinnedSubject?.url;
+      const directorsNote = plan.grammar_note || `Approved ${plan.shots.length}-shot storyboard.`;
+      const next = bubblesRef.current;
+      await runImageGeneration(next, {
+        mode: "storyboard_panels",
+        prompt: plan.shared_style || "Storyboard panels",
+        per_shot_prompts: perShot,
+        reference_urls: subjectUrl ? [subjectUrl] : undefined,
+        lock_mode: subjectUrl ? "character" : "auto",
+        aspect_ratio: "16:9",
+        style_spec: lockedSpec as any,
+        directors_note: directorsNote,
+        quality: chatImageQuality,
+      } as any);
+    },
+    [pinnedSubject, chatImageQuality, getLatestLockedSpec],
+  );
+
 
   const handleAnimatePanel = useCallback(async (panel: import("./GeneratedImageCard").AnimatePanelInput) => {
     const { buildAnimateFromPanelPrompt } = await import("@/lib/director/animatePanelPrompt");
@@ -2438,14 +2565,25 @@ function DirectorChatInner() {
       ],
     },
     {
+      id: "multi_angle",
+      label: "Multi-Angle",
+      tagline: "From one image, render 6 different camera angles of the SAME scene — nothing else changes.",
+      icon: Orbit,
+      prompts: [
+        "Give me 6 angles of this product on the same background",
+        "Rotate around my character — front, 3/4, profile, back, low hero",
+        "6-angle turnaround of this hero frame, lock the lighting",
+      ],
+    },
+    {
       id: "storyboard",
       label: "Storyboard",
-      tagline: "Multi-shot sequence with locked style across panels.",
+      tagline: "Tell me your story — I'll draft a per-shot plan you can edit before I render.",
       icon: LayoutGrid,
       prompts: [
-        "Three-shot intro: establishing wide, medium reveal, close-up emotion",
-        "Five-shot product launch sequence with matched color grade",
-        "Two-frame transition: dawn skyline to character waking up",
+        "30-second product launch: tease, hero close-up, lifestyle shot, payoff",
+        "Character morning routine — wake up, brew coffee, step into the city",
+        "Before / after transformation in 3 shots, matched grade",
       ],
     },
     {
@@ -2778,6 +2916,66 @@ function DirectorChatInner() {
             {activeCat.tagline}
           </p>
 
+          {activeCategory === "multi_angle" && (
+            <div className="flex flex-col gap-2 rounded-xl border border-primary/25 bg-primary/5 p-3">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Orbit className="w-3.5 h-3.5 text-primary" />
+                <span>
+                  {pinnedSubject
+                    ? `Locked ${pinnedSubject.kind} ready — I'll render 6 angles of the same scene.`
+                    : "Pin a subject sheet or attach an image, then hit Render 6 angles."}
+                </span>
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => void handleMultiAngle()}
+                disabled={busy || !pinnedSubject}
+                className="self-start bg-primary text-primary-foreground hover:bg-primary/90"
+              >
+                <Orbit className="w-3.5 h-3.5 mr-1.5" />
+                Render 6 angles
+              </Button>
+            </div>
+          )}
+
+          {activeCategory === "storyboard" && (
+            <div className="flex flex-col gap-2 rounded-xl border border-primary/25 bg-primary/5 p-3">
+              <div className="flex items-center gap-2 text-xs">
+                <span className="text-muted-foreground">Shots:</span>
+                {([3, 6, 9] as const).map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => handleShotCountChange(n)}
+                    className={cn(
+                      "px-2.5 py-0.5 rounded-full text-xs transition-colors border",
+                      storyboardShotCount === n
+                        ? "border-primary/60 bg-primary/15 text-foreground"
+                        : "border-border/40 text-muted-foreground hover:text-foreground hover:border-border",
+                    )}
+                  >
+                    {n}
+                  </button>
+                ))}
+                <span className="text-muted-foreground/70 ml-auto text-[11px]">
+                  ~1 credit to draft the plan, panels render after approve.
+                </span>
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => void handlePlanStoryboard()}
+                disabled={busy || planBusy || !input.trim()}
+                className="self-start bg-primary text-primary-foreground hover:bg-primary/90"
+              >
+                <Sparkles className="w-3.5 h-3.5 mr-1.5" />
+                {planBusy ? "Drafting plan…" : `Draft ${storyboardShotCount}-shot plan`}
+              </Button>
+            </div>
+          )}
+
+
 
           {/* Suggestions */}
           <div className="flex flex-col">
@@ -3080,6 +3278,40 @@ function DirectorChatInner() {
                       </button>
                     </div>
                   )}
+                </div>
+              );
+            }
+            if (b.role === "storyboard_plan") {
+              if (b.discarded) {
+                return (
+                  <div key={i} className="text-xs text-muted-foreground italic px-2">
+                    Storyboard plan discarded.
+                  </div>
+                );
+              }
+              return (
+                <div key={i} className="motion-safe:animate-fade-up">
+                  <StoryboardPlanCard
+                    plan={b.plan}
+                    busy={planBusy || busy || !!b.approved}
+                    onChange={(next) => {
+                      setBubbles((prev) =>
+                        prev.map((bb, idx) =>
+                          idx === i && bb.role === "storyboard_plan" ? { ...bb, plan: next } : bb,
+                        ),
+                      );
+                    }}
+                    onApprove={(approvedPlan) => {
+                      void handleApprovePlan(i, approvedPlan);
+                    }}
+                    onDiscard={() => {
+                      setBubbles((prev) =>
+                        prev.map((bb, idx) =>
+                          idx === i && bb.role === "storyboard_plan" ? { ...bb, discarded: true } : bb,
+                        ),
+                      );
+                    }}
+                  />
                 </div>
               );
             }

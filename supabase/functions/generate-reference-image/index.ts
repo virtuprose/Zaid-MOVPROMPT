@@ -12,8 +12,14 @@ const corsHeaders = {
 
 const SIGNED_URL_TTL = 60 * 60;
 
-type Mode = "character_sheet" | "storyboard_panels" | "single_panel";
+type Mode = "character_sheet" | "storyboard_panels" | "single_panel" | "multi_angle";
 type LockMode = "character" | "scene" | "auto";
+
+// Multi-angle = same subject + same scene, only the camera position changes.
+// This lock is harder than IDENTITY_LOCK because it also pins wardrobe, props,
+// lighting, background, time of day, and scale.
+const ANGLE_LOCK =
+  "ANGLE-ONLY VARIATION. Treat the attached reference as the canonical image. Keep the subject identical (face, hair, skin tone, age, body, wardrobe, accessories — or, for products, the exact same object: shape, materials, colors, branding, logos, proportions). Keep the scene identical (same background, same props, same lighting setup, same color temperature, same time of day, same depth of field, same scale of subject in frame). DO NOT change pose action, expression, wardrobe, props, location, or lighting. ONLY the camera angle changes per the beat below.";
 
 type StyleSpec = {
   lens?: string;
@@ -410,11 +416,35 @@ serve(async (req) => {
         : null;
 
     let prompts: string[];
-    let shotIndices: number[]; // per-prompt shot_index for storyboard_panels
-    const isChain = mode === "storyboard_panels" && !regenIndex;
+    let shotIndices: number[]; // per-prompt shot_index for storyboard_panels and multi_angle
+    const isChain =
+      (mode === "storyboard_panels" && !regenIndex) ||
+      (mode === "multi_angle" && (body.per_shot_prompts?.length ?? 0) > 1);
     const styleHeader = buildStyleHeader(body.style_spec);
     const aspectClause = buildAspectClause(aspect);
-    if (mode === "storyboard_panels") {
+    if (mode === "multi_angle") {
+      // Multi-angle: 6 panels max, each rendered with a hard ANGLE-ONLY lock so
+      // the model re-angles the reference instead of redesigning it. We accept
+      // per_shot_prompts from the client (the canonical 6 angle beats) but cap
+      // at 6 and fall back to a generic 6-angle rotation if none provided.
+      const FALLBACK_ANGLES = [
+        "Front-on, eye-level.",
+        "Three-quarter angle from the left, eye-level.",
+        "Pure left profile, eye-level.",
+        "Back / reverse angle, eye-level.",
+        "Three-quarter angle from the right, eye-level.",
+        "Low hero angle from front-below looking up.",
+      ];
+      const raw =
+        Array.isArray(body.per_shot_prompts) && body.per_shot_prompts.length > 0
+          ? body.per_shot_prompts.slice(0, 6)
+          : FALLBACK_ANGLES;
+      const total = raw.length;
+      prompts = raw.map((beat, i) => {
+        return `${styleHeader}${ANGLE_LOCK} Angle ${i + 1} of ${total}: ${beat}${aspectClause}${PANEL_POLISH_SUFFIX}`;
+      });
+      shotIndices = prompts.map((_, i) => i + 1);
+    } else if (mode === "storyboard_panels") {
       const raw =
         Array.isArray(body.per_shot_prompts) && body.per_shot_prompts.length > 0
           ? body.per_shot_prompts.slice(0, 9)
@@ -517,7 +547,7 @@ serve(async (req) => {
       return {
         url: signed.signedUrl,
         storage_path: path,
-        shot_index: mode === "storyboard_panels" ? shotIndices[i] : undefined,
+        shot_index: (mode === "storyboard_panels" || mode === "multi_angle") ? shotIndices[i] : undefined,
         quality: appliedQuality,
       };
     };
