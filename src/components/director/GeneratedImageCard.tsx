@@ -1,4 +1,4 @@
-import { RotateCcw, Film, Maximize2, X, ChevronLeft, ChevronRight, Download, Wand2, Lightbulb, Play, Loader2 } from "lucide-react";
+import { RotateCcw, Film, Maximize2, X, ChevronLeft, ChevronRight, Download, Wand2, Lightbulb, Play, Loader2, Sparkles } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { PromptInspector, type InspectorContext } from "./PromptInspector";
 import { AnimatePanelDialog, type AnimateDialogResult, type AudioPlan } from "./AnimatePanelDialog";
+import { ImageEditorDialog } from "./ImageEditorDialog";
+
 
 export type GeneratedImageBubbleData = {
   mode: "character_sheet" | "storyboard_panels" | "single_panel";
