@@ -2916,6 +2916,66 @@ function DirectorChatInner() {
             {activeCat.tagline}
           </p>
 
+          {activeCategory === "multi_angle" && (
+            <div className="flex flex-col gap-2 rounded-xl border border-primary/25 bg-primary/5 p-3">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Orbit className="w-3.5 h-3.5 text-primary" />
+                <span>
+                  {pinnedSubject
+                    ? `Locked ${pinnedSubject.kind} ready — I'll render 6 angles of the same scene.`
+                    : "Pin a subject sheet or attach an image, then hit Render 6 angles."}
+                </span>
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => void handleMultiAngle()}
+                disabled={busy || !pinnedSubject}
+                className="self-start bg-primary text-primary-foreground hover:bg-primary/90"
+              >
+                <Orbit className="w-3.5 h-3.5 mr-1.5" />
+                Render 6 angles
+              </Button>
+            </div>
+          )}
+
+          {activeCategory === "storyboard" && (
+            <div className="flex flex-col gap-2 rounded-xl border border-primary/25 bg-primary/5 p-3">
+              <div className="flex items-center gap-2 text-xs">
+                <span className="text-muted-foreground">Shots:</span>
+                {([3, 6, 9] as const).map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => handleShotCountChange(n)}
+                    className={cn(
+                      "px-2.5 py-0.5 rounded-full text-xs transition-colors border",
+                      storyboardShotCount === n
+                        ? "border-primary/60 bg-primary/15 text-foreground"
+                        : "border-border/40 text-muted-foreground hover:text-foreground hover:border-border",
+                    )}
+                  >
+                    {n}
+                  </button>
+                ))}
+                <span className="text-muted-foreground/70 ml-auto text-[11px]">
+                  ~1 credit to draft the plan, panels render after approve.
+                </span>
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => void handlePlanStoryboard()}
+                disabled={busy || planBusy || !input.trim()}
+                className="self-start bg-primary text-primary-foreground hover:bg-primary/90"
+              >
+                <Sparkles className="w-3.5 h-3.5 mr-1.5" />
+                {planBusy ? "Drafting plan…" : `Draft ${storyboardShotCount}-shot plan`}
+              </Button>
+            </div>
+          )}
+
+
 
           {/* Suggestions */}
           <div className="flex flex-col">
