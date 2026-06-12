@@ -108,18 +108,19 @@ export function ImageEditorDialog({ open, onOpenChange, sourceUrl, aspectRatio, 
     const src = mask.getContext("2d")?.getImageData(0, 0, w, h);
     if (!src) return;
     const data = src.data;
+    const alpha = Math.round(Math.max(0, Math.min(1, maskOpacity)) * 255);
     for (let i = 0; i < data.length; i += 4) {
       if (data[i] > 16) {
-        // make a soft cyan
-        data[i] = 56; data[i + 1] = 220; data[i + 2] = 255; data[i + 3] = 130;
+        // make a soft cyan with user-controlled opacity
+        data[i] = 56; data[i + 1] = 220; data[i + 2] = 255; data[i + 3] = alpha;
       } else {
         data[i + 3] = 0;
       }
     }
     octx.putImageData(src, 0, 0);
-  }, [showMask]);
+  }, [showMask, maskOpacity]);
 
-  useEffect(() => { redrawOverlay(); }, [showMask, redrawOverlay]);
+  useEffect(() => { redrawOverlay(); }, [showMask, maskOpacity, redrawOverlay]);
 
   const eventToMaskPoint = (e: React.PointerEvent<HTMLCanvasElement>): { x: number; y: number } | null => {
     const overlay = overlayCanvasRef.current;
