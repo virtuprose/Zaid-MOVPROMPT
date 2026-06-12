@@ -643,6 +643,45 @@ export function Composer({
                   </button>
                 </div>
               )}
+              {onQualityChange && (
+                <div
+                  role="tablist"
+                  aria-label="Image output quality"
+                  className="inline-flex items-center rounded-full border border-border/50 bg-muted/30 p-0.5 mr-1"
+                >
+                  {(["1K", "2K", "4K"] as const).map((q) => {
+                    const active = (quality || "1K") === q;
+                    return (
+                      <Tooltip key={q}>
+                        <TooltipTrigger asChild>
+                          <button
+                            type="button"
+                            role="tab"
+                            aria-selected={active}
+                            onClick={() => onQualityChange(q)}
+                            disabled={busy}
+                            className={cn(
+                              "inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold tracking-wide transition-colors",
+                              active
+                                ? "bg-primary/20 text-primary"
+                                : "text-muted-foreground hover:text-foreground",
+                            )}
+                          >
+                            {q}
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="top">
+                          {q === "1K"
+                            ? "~1024px · base quality"
+                            : q === "2K"
+                              ? "~2048px · free upscale"
+                              : "~4096px · +3 credits per image"}
+                        </TooltipContent>
+                      </Tooltip>
+                    );
+                  })}
+                </div>
+              )}
               <Button
                 type="button"
                 size="icon"
