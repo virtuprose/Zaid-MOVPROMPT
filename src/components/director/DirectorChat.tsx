@@ -1501,6 +1501,109 @@ function DirectorChatInner() {
     return undefined;
   }, []);
 
+  // ---------- Multi-Angle / Story-driven Storyboard ----------
+  // Multi-angle: from a pinned subject (or attached image), render 6 canonical
+  // camera angles of the SAME scene. Bypasses the agent — calls
+  // generate-reference-image directly with mode=multi_angle.
+  const handleMultiAngle = useCallback(async () => {
+    if (busy) return;
+    const subjectUrl = pinnedSubject?.url ?? attachments.find((a: any) => a.kind === "image" && (a as any).url)?.["url"];
+    if (!subjectUrl) {
+      toast.error("Pin a subject sheet or attach an image first.");
+      return;
+    }
+    const subjectKind: "character" | "product" = (pinnedSubject?.kind === "product" ? "product" : "character");
+    const beats = multiAngleBeats(subjectKind);
+    const lockedSpec = getLatestLockedSpec();
+    const userBubble: Bubble = {
+      role: "user",
+      content: input.trim() || `Render 6 camera angles of the locked ${subjectKind}.`,
+      ts: Date.now(),
+    };
+    const next = [...bubblesRef.current, userBubble];
+    setBubbles(next);
+    setInput("");
+    await runImageGeneration(next, {
+      mode: "multi_angle" as any,
+      prompt: input.trim() || `6-angle turnaround of the locked ${subjectKind}.`,
+      per_shot_prompts: beats,
+      reference_urls: [subjectUrl],
+      lock_mode: "character",
+      aspect_ratio: "1:1",
+      subject_kind: subjectKind,
+      style_spec: lockedSpec as any,
+      directors_note: `6-angle turnaround — same scene, same lighting, only the camera angle changes.`,
+      quality: chatImageQuality,
+    } as any);
+  }, [busy, pinnedSubject, attachments, input, chatImageQuality, getLatestLockedSpec]);
+
+  // Storyboard plan: call plan-storyboard, render an editable plan card.
+  const handlePlanStoryboard = useCallback(async () => {
+    if (busy || planBusy) return;
+    const story = input.trim();
+    if (!story) {
+      toast.error("Tell me your story first — even one line works.");
+      return;
+    }
+    const lockedSpec = getLatestLockedSpec();
+    const subjectSummary = pinnedSubject
+      ? `Locked ${pinnedSubject.kind} — every shot must feature this exact subject from the pinned reference sheet.`
+      : undefined;
+    const userBubble: Bubble = { role: "user", content: story, ts: Date.now() };
+    const next = [...bubblesRef.current, userBubble];
+    setBubbles(next);
+    setInput("");
+    setPlanBusy(true);
+    try {
+      const plan = await planStoryboard({
+        story,
+        shot_count: storyboardShotCount,
+        subject_summary: subjectSummary,
+        style_spec: lockedSpec as any,
+      });
+      setBubbles((prev) => [
+        ...prev,
+        { role: "storyboard_plan", plan, shotCount: storyboardShotCount, story },
+      ]);
+    } catch (e: any) {
+      const msg = String(e?.message || e || "");
+      if (msg.includes("insufficient_credits")) notifyInsufficientCredits();
+      else toast.error(`Couldn't draft the plan — ${msg.slice(0, 120)}`);
+    } finally {
+      setPlanBusy(false);
+    }
+  }, [busy, planBusy, input, storyboardShotCount, pinnedSubject, getLatestLockedSpec]);
+
+  // Approve plan → render panels via storyboard_panels.
+  const handleApprovePlan = useCallback(
+    async (bubbleIndex: number, plan: StoryboardPlan) => {
+      // mark approved so the card switches to a non-editable summary
+      setBubbles((prev) =>
+        prev.map((b, i) =>
+          i === bubbleIndex && b.role === "storyboard_plan" ? { ...b, plan, approved: true } : b,
+        ),
+      );
+      const perShot = plan.shots.map((s, i) => shotToPanelBeat(s, i, plan.shots.length));
+      const lockedSpec = getLatestLockedSpec();
+      const subjectUrl = pinnedSubject?.url;
+      const directorsNote = plan.grammar_note || `Approved ${plan.shots.length}-shot storyboard.`;
+      const next = bubblesRef.current;
+      await runImageGeneration(next, {
+        mode: "storyboard_panels",
+        prompt: plan.shared_style || "Storyboard panels",
+        per_shot_prompts: perShot,
+        reference_urls: subjectUrl ? [subjectUrl] : undefined,
+        lock_mode: subjectUrl ? "character" : "auto",
+        aspect_ratio: "16:9",
+        style_spec: lockedSpec as any,
+        directors_note: directorsNote,
+        quality: chatImageQuality,
+      } as any);
+    },
+    [pinnedSubject, chatImageQuality, getLatestLockedSpec],
+  );
+
+
   const handleAnimatePanel = useCallback(async (panel: import("./GeneratedImageCard").AnimatePanelInput) => {
     const { buildAnimateFromPanelPrompt } = await import("@/lib/director/animatePanelPrompt");
     const provider = panel.provider || "kling-v3-standard";
