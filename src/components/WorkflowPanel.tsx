@@ -1543,7 +1543,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
                       const sourceImages = images.filter(Boolean);
                       setHandoffBusy(true);
                       try {
-                        let uploaded: Array<{ kind: "image"; name: string; url: string; storage_path?: string }> = [];
+                        let uploaded: Attachment[] = [];
                         if (sourceImages.length > 0) {
                           // Upload to director-uploads so the Director receives real https URLs.
                           // Without this, blob: previews get filtered out and Seedance ignores the refs.
