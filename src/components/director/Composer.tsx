@@ -55,6 +55,8 @@ export function Composer({
   imagePromptBusy,
   mode = "director",
   onModeChange,
+  quality,
+  onQualityChange,
   focusSignal,
 }: Props) {
   const { user } = useAuth();
