@@ -352,9 +352,11 @@ function MediaCard({
   const rail = useMediaRail();
   const [menuOpen, setMenuOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
   const isFav = rail?.favorites.has(item.id) ?? false;
   const folders = rail?.folders ?? [];
   const refName = rail?.labelByKey.get(item.id);
+
 
   const ratioClass =
     item.kind === "image"
