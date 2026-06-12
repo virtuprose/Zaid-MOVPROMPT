@@ -92,16 +92,58 @@ function dataUrlToBlob(dataUrl: string): { blob: Blob; mime: string } {
 
 // Inline an http(s) image as a data URL. The AI Gateway cannot reliably fetch
 // Supabase private-bucket signed URLs (returns 400 upstream), so we fetch the
-// bytes server-side using the caller's auth context and pass them as data URLs.
-async function toDataUrl(url: string): Promise<string> {
-  if (/^data:/i.test(url)) return url;
-  const resp = await fetch(url);
-  if (!resp.ok) throw new Error(`ref_fetch_${resp.status}`);
-  const buf = new Uint8Array(await resp.arrayBuffer());
-  const mime = resp.headers.get("content-type") || "image/png";
+// bytes server-side. Signed URLs occasionally 400 too (token edge cases, URL
+// re-encoding in transit). When the URL points at our own storage we fall
+// back to a service-role download by parsing the bucket + object path out of
+// the URL. This is critical: if the reference image silently fails to inline,
+// the model invents a brand-new character instead of matching the user's ref.
+const SUPABASE_URL_ENV = Deno.env.get("SUPABASE_URL") || "";
+const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+const adminStorage = SERVICE_ROLE_KEY
+  ? createClient(SUPABASE_URL_ENV, SERVICE_ROLE_KEY).storage
+  : null;
+
+function parseStorageObjectPath(url: string): { bucket: string; path: string } | null {
+  try {
+    const u = new URL(url);
+    if (!SUPABASE_URL_ENV || !u.href.startsWith(SUPABASE_URL_ENV)) return null;
+    const m = u.pathname.match(/\/storage\/v1\/object\/(?:sign|public|authenticated)\/([^/]+)\/(.+)$/);
+    if (!m) return null;
+    return { bucket: decodeURIComponent(m[1]), path: decodeURIComponent(m[2]) };
+  } catch { return null; }
+}
+
+function bytesToDataUrl(buf: Uint8Array, mime: string): string {
   let bin = "";
   for (let i = 0; i < buf.length; i++) bin += String.fromCharCode(buf[i]);
   return `data:${mime};base64,${btoa(bin)}`;
+}
+
+async function toDataUrl(url: string): Promise<string> {
+  if (/^data:/i.test(url)) return url;
+  try {
+    const resp = await fetch(url);
+    if (resp.ok) {
+      const buf = new Uint8Array(await resp.arrayBuffer());
+      const mime = resp.headers.get("content-type") || "image/png";
+      return bytesToDataUrl(buf, mime);
+    }
+    console.warn("ref direct fetch non-ok", resp.status, url.slice(0, 80));
+  } catch (e) {
+    console.warn("ref direct fetch threw", String(e), url.slice(0, 80));
+  }
+  // Fallback: service-role download for our own storage URLs.
+  const parsed = parseStorageObjectPath(url);
+  if (parsed && adminStorage) {
+    const { data, error } = await adminStorage.from(parsed.bucket).download(parsed.path);
+    if (!error && data) {
+      const buf = new Uint8Array(await data.arrayBuffer());
+      const mime = data.type || "image/png";
+      return bytesToDataUrl(buf, mime);
+    }
+    console.warn("ref storage fallback failed", parsed.bucket, parsed.path, error?.message);
+  }
+  throw new Error(`ref_fetch_failed`);
 }
 
 async function materializeRefs(urls: string[]): Promise<string[]> {
@@ -172,7 +214,9 @@ async function upscaleViaFal(
       image_url: sourceUrl,
       upscale_factor: scale,
       creativity: 0.2,
-      resemblance: 1.5,
+      // FAL clarity-upscaler caps `resemblance` at 1.0 — sending >1 returns 422
+      // and the whole 4K request crashes back to 1K. Keep this <= 1.
+      resemblance: 1.0,
       num_inference_steps: 18,
     }),
   });
