@@ -257,9 +257,23 @@ serve(async (req) => {
         });
       }
 
+      const editQuality: Quality =
+        body.quality === "2K" || body.quality === "4K" ? body.quality : "1K";
+      const FAL_KEY_EDIT = editQuality === "1K" ? null : Deno.env.get("FAL_KEY") || null;
+      const effectiveEditQuality: Quality =
+        editQuality !== "1K" && !FAL_KEY_EDIT ? "1K" : editQuality;
+
       const editPrice = await priceFor("image_generation", 5);
+      const upscalePrice4KEdit = await priceFor("image_upscale_4k", UPSCALE_4K_FALLBACK_PRICE);
+      const editSurcharge = effectiveEditQuality === "4K" ? upscalePrice4KEdit : 0;
+      const totalEditCharge = editPrice + editSurcharge;
       try {
-        await chargeCredits({ userId, amount: editPrice, reason: "image_edit", metadata: { mode: editMode } });
+        await chargeCredits({
+          userId,
+          amount: totalEditCharge,
+          reason: "image_edit",
+          metadata: { mode: editMode, quality: effectiveEditQuality },
+        });
       } catch (e) {
         if (e instanceof InsufficientCreditsError) return insufficientResponse(corsHeaders);
         throw e;
