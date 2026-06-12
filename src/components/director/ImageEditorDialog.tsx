@@ -33,6 +33,7 @@ export function ImageEditorDialog({ open, onOpenChange, sourceUrl, aspectRatio, 
   const [mode, setMode] = useState<EditMode>("prompt");
   const [prompt, setPrompt] = useState("");
   const [brush, setBrush] = useState(48);
+  const [maskOpacity, setMaskOpacity] = useState(0.5);
   const [showMask, setShowMask] = useState(true);
   const [busy, setBusy] = useState(false);
   const [quality, setQuality] = useState<EditQuality>(() => {
@@ -107,18 +108,19 @@ export function ImageEditorDialog({ open, onOpenChange, sourceUrl, aspectRatio, 
     const src = mask.getContext("2d")?.getImageData(0, 0, w, h);
     if (!src) return;
     const data = src.data;
+    const alpha = Math.round(Math.max(0, Math.min(1, maskOpacity)) * 255);
     for (let i = 0; i < data.length; i += 4) {
       if (data[i] > 16) {
-        // make a soft cyan
-        data[i] = 56; data[i + 1] = 220; data[i + 2] = 255; data[i + 3] = 130;
+        // make a soft cyan with user-controlled opacity
+        data[i] = 56; data[i + 1] = 220; data[i + 2] = 255; data[i + 3] = alpha;
       } else {
         data[i + 3] = 0;
       }
     }
     octx.putImageData(src, 0, 0);
-  }, [showMask]);
+  }, [showMask, maskOpacity]);
 
-  useEffect(() => { redrawOverlay(); }, [showMask, redrawOverlay]);
+  useEffect(() => { redrawOverlay(); }, [showMask, maskOpacity, redrawOverlay]);
 
   const eventToMaskPoint = (e: React.PointerEvent<HTMLCanvasElement>): { x: number; y: number } | null => {
     const overlay = overlayCanvasRef.current;
@@ -394,6 +396,17 @@ export function ImageEditorDialog({ open, onOpenChange, sourceUrl, aspectRatio, 
                   min={8} max={180} step={2}
                   value={brush}
                   onChange={(e) => setBrush(Number(e.target.value))}
+                  className="w-full accent-primary"
+                />
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs text-muted-foreground">Mask opacity</Label>
+                  <span className="text-[10px] text-muted-foreground/70">{Math.round(maskOpacity * 100)}%</span>
+                </div>
+                <input
+                  type="range"
+                  min={10} max={100} step={5}
+                  value={Math.round(maskOpacity * 100)}
+                  onChange={(e) => setMaskOpacity(Number(e.target.value) / 100)}
                   className="w-full accent-primary"
                 />
                 <div className="flex gap-1.5">
