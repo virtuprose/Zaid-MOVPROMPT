@@ -33,6 +33,7 @@ export function ImageEditorDialog({ open, onOpenChange, sourceUrl, aspectRatio, 
   const [mode, setMode] = useState<EditMode>("prompt");
   const [prompt, setPrompt] = useState("");
   const [brush, setBrush] = useState(48);
+  const [maskOpacity, setMaskOpacity] = useState(0.5);
   const [showMask, setShowMask] = useState(true);
   const [busy, setBusy] = useState(false);
   const [quality, setQuality] = useState<EditQuality>(() => {
