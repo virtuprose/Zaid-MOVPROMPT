@@ -72,7 +72,7 @@ type Props = {
   mode: "single" | "all";
   shotIndex?: number;
   totalPanels?: number;
-  aspectRatio?: "1:1" | "16:9" | "9:16";
+  aspectRatio?: string;
   directorsNote?: string;
   onConfirm: (result: AnimateDialogResult) => void | Promise<void>;
 };

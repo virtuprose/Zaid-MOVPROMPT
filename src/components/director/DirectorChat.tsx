@@ -2290,7 +2290,7 @@ function DirectorChatInner() {
           prompt: resp.prompt,
           reference_urls: resp.reference_urls,
           count: resp.count,
-          aspect_ratio: effectiveAspect,
+          aspect_ratio: effectiveAspect as AspectRatio | undefined,
           per_shot_prompts: resp.per_shot_prompts,
           shot_index: resp.shot_index,
           lock_mode: resp.lock_mode,
