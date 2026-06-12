@@ -1532,35 +1532,69 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
                   </div>
                   <Button
                     size="sm"
-                    onClick={() => {
+                    disabled={handoffBusy}
+                    onClick={async () => {
+                      if (!user) {
+                        toast({ title: "Sign in first", description: "Sign in so we can carry your reference images over to the Director.", variant: "destructive" });
+                        return;
+                      }
                       const first = results[0];
                       const promptText = first?.mainPrompt ?? "";
-                      const attachments = images
-                        .filter(Boolean)
-                        .map((img, i) => ({
-                          kind: "image" as const,
-                          name: img.file?.name || `reference-${i + 1}.jpg`,
-                          url: img.preview,
-                        }));
-                      writeHandoff({
-                        source: "movprompt",
-                        prompt: promptText,
-                        banner:
-                          "Brought over from MovPrompt — your prompt and references are loaded. Tweak anything, then hit send to brief me, or say \"render now\" and I'll generate.",
-                        attachments,
-                        settings: {
-                          model: selectedModel,
-                          aspect: targetAspectRatio,
-                          duration: targetDuration as number | "auto" | undefined,
-                        },
-                      });
-                      navigate("/director?from=movprompt");
+                      const sourceImages = images.filter(Boolean);
+                      setHandoffBusy(true);
+                      try {
+                        let uploaded: Array<{ kind: "image"; name: string; url: string; storage_path: string }> = [];
+                        if (sourceImages.length > 0) {
+                          // Upload to director-uploads so the Director receives real https URLs.
+                          // Without this, blob: previews get filtered out and Seedance ignores the refs.
+                          const uid = await requireUserId();
+                          uploaded = await Promise.all(
+                            sourceImages.map(async (img, i) => {
+                              if (img.file) {
+                                return await ingestImage(img.file);
+                              }
+                              // Fallback: fetch the local preview blob and upload it directly.
+                              const res = await fetch(img.preview);
+                              const blob = await res.blob();
+                              const name = `reference-${i + 1}.jpg`;
+                              const { storage_path, url } = await uploadAndSign(blob, uid, name, blob.type || "image/jpeg");
+                              return { kind: "image" as const, name, url, storage_path };
+                            }),
+                          );
+                        }
+                        writeHandoff({
+                          source: "movprompt",
+                          prompt: promptText,
+                          banner:
+                            "Brought over from MovPrompt — your prompt and references are loaded. Tweak anything, then hit send to brief me, or say \"render now\" and I'll generate.",
+                          attachments: uploaded,
+                          settings: {
+                            model: selectedModel,
+                            aspect: targetAspectRatio,
+                            duration: targetDuration as number | "auto" | undefined,
+                          },
+                        });
+                        navigate("/director?from=movprompt");
+                      } catch (e: any) {
+                        toast({ title: "Could not send references", description: e?.message || "Upload failed. Please try again.", variant: "destructive" });
+                      } finally {
+                        setHandoffBusy(false);
+                      }
                     }}
                     className="rounded-full bg-accent text-accent-foreground hover:bg-accent/90 px-4 h-9 font-semibold text-xs gap-1.5 shrink-0"
                   >
-                    <Clapperboard className="w-3.5 h-3.5" />
-                    Open in AI Director
-                    <ArrowRight className="w-3.5 h-3.5" />
+                    {handoffBusy ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        Sending references…
+                      </>
+                    ) : (
+                      <>
+                        <Clapperboard className="w-3.5 h-3.5" />
+                        Open in AI Director
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </>
+                    )}
                   </Button>
                 </div>
               </div>
