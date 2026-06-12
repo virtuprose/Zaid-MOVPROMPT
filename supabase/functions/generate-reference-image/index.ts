@@ -416,8 +416,10 @@ serve(async (req) => {
         : null;
 
     let prompts: string[];
-    let shotIndices: number[]; // per-prompt shot_index for storyboard_panels
-    const isChain = mode === "storyboard_panels" && !regenIndex;
+    let shotIndices: number[]; // per-prompt shot_index for storyboard_panels and multi_angle
+    const isChain =
+      (mode === "storyboard_panels" && !regenIndex) ||
+      (mode === "multi_angle" && (body.per_shot_prompts?.length ?? 0) > 1);
     const styleHeader = buildStyleHeader(body.style_spec);
     const aspectClause = buildAspectClause(aspect);
     if (mode === "storyboard_panels") {
