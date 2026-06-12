@@ -67,6 +67,9 @@ import { AssistantAvatar, type AvatarState } from "./AssistantAvatar";
 import { TypingIndicator } from "./TypingIndicator";
 import { TypewriterText } from "./TypewriterText";
 import { DirectorActivityFeed, type ActivityStep } from "./DirectorActivityFeed";
+import { StoryboardPlanCard } from "./StoryboardPlanCard";
+import { planStoryboard, shotToPanelBeat, type StoryboardPlan } from "@/lib/director/planStoryboard";
+import { multiAngleBeats } from "@/lib/director/multiAngleBeats";
 
 type Bubble =
   | { role: "user"; content: string; attachments?: Attachment[]; ts?: number }
