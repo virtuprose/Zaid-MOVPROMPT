@@ -44,6 +44,7 @@ export function ImageEditorDialog({ open, onOpenChange, sourceUrl, aspectRatio, 
   });
   const [imgSize, setImgSize] = useState<{ w: number; h: number } | null>(null);
   const [imgEl, setImgEl] = useState<HTMLImageElement | null>(null);
+  const [cursor, setCursor] = useState<{ x: number; y: number; visible: boolean }>({ x: 0, y: 0, visible: false });
   const maskCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const overlayCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -151,15 +152,24 @@ export function ImageEditorDialog({ open, onOpenChange, sourceUrl, aspectRatio, 
     if (undoStack.current.length > 30) undoStack.current.shift();
   };
 
+  const updateCursor = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    const overlay = overlayCanvasRef.current;
+    if (!overlay) return;
+    const rect = overlay.getBoundingClientRect();
+    setCursor({ x: e.clientX - rect.left, y: e.clientY - rect.top, visible: true });
+  };
+
   const onPointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
     if (mode === "prompt") return;
     e.currentTarget.setPointerCapture(e.pointerId);
     pushUndo();
     drawingRef.current = true;
+    updateCursor(e);
     const p = eventToMaskPoint(e);
     if (p) paintStroke(p.x, p.y);
   };
   const onPointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    updateCursor(e);
     if (!drawingRef.current) return;
     const p = eventToMaskPoint(e);
     if (p) paintStroke(p.x, p.y);
@@ -167,6 +177,12 @@ export function ImageEditorDialog({ open, onOpenChange, sourceUrl, aspectRatio, 
   const onPointerUp = (e: React.PointerEvent<HTMLCanvasElement>) => {
     drawingRef.current = false;
     try { e.currentTarget.releasePointerCapture(e.pointerId); } catch {}
+  };
+  const onPointerLeave = () => {
+    setCursor((c) => ({ ...c, visible: false }));
+  };
+  const onPointerEnter = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    updateCursor(e);
   };
 
   const handleUndo = () => {
@@ -315,12 +331,27 @@ export function ImageEditorDialog({ open, onOpenChange, sourceUrl, aspectRatio, 
                   onPointerMove={onPointerMove}
                   onPointerUp={onPointerUp}
                   onPointerCancel={onPointerUp}
+                  onPointerEnter={onPointerEnter}
+                  onPointerLeave={onPointerLeave}
                   className={cn(
                     "absolute inset-0 w-full h-full rounded",
-                    mode === "prompt" ? "cursor-default" : "cursor-crosshair touch-none",
+                    mode === "prompt" ? "cursor-default" : "cursor-none touch-none",
                   )}
                   style={{ pointerEvents: mode === "prompt" ? "none" : "auto" }}
                 />
+                {mode !== "prompt" && cursor.visible && (
+                  <div
+                    aria-hidden
+                    className="absolute pointer-events-none rounded-full border-2 border-primary/90 shadow-[0_0_0_1px_rgba(0,0,0,0.6)]"
+                    style={{
+                      width: brush,
+                      height: brush,
+                      left: cursor.x - brush / 2,
+                      top: cursor.y - brush / 2,
+                      background: "hsl(var(--primary) / 0.12)",
+                    }}
+                  />
+                )}
               </div>
             )}
           </div>
