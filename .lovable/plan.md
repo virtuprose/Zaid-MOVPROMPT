@@ -1,83 +1,79 @@
 ## Goal
 
-Replace the single "Storyboard" category with two distinct, more guided workflows:
+Make the AI Director feel like it never forgets — within a single chat AND across days — without ever hitting a "too many messages" wall again.
 
-1. **Multi-Angle** — from one anchor image, render **6 separate panels** showing the same subject + scene from 6 different camera angles. Nothing else changes (wardrobe, lighting, props, background all locked).
-2. **Storyboard (story-driven)** — user writes a short story / logline, picks **3 / 6 / 9 shots**, the Director shapes a per-shot plan ("pro replay" with action, framing, lens, lighting, mood), shows it in a **plan card** for review/edit/approve, then renders. After render, every panel keeps a per-shot **Regenerate** control.
+Today the agent silently trims to the last 30 messages. That stops the error, but the Director loses earlier context (what was uploaded, decisions made, the locked spec). We'll replace the dumb slice with a **rolling summary** per session, and add a lightweight **long-term user memory** so the Director remembers you across sessions.
 
-## UX flow
+## What changes for the user
 
-### Category strip (chat composer)
+- No "too many messages" error, ever.
+- In a long chat, the Director still remembers what happened on message 1 — uploads, story beats, locked style, characters.
+- When you start a new chat later (next day, next week), the Director recalls: who you are, the characters/brands/locations you've pinned, your style preferences, and a one-line recap of recent sessions.
+- You can view and clear this memory from Account → Preferences.
+
+## Architecture
+
 ```text
-Cinema   UGC   Multi-Angle   Storyboard   Animate
+Each request to director-agent:
+  ┌─────────────────────────────────────────────┐
+  │ SYSTEM PROMPT                               │
+  │ + LONG-TERM USER MEMORY  (cross-session)    │  ← new
+  │ + SESSION SUMMARY        (rolling, this chat)│  ← new
+  │ + RECENT MESSAGES        (last ~20 turns)   │  ← was 30, raw
+  │ + SESSION STATE RECAP    (already exists)   │
+  │ + Current user turn                         │
+  └─────────────────────────────────────────────┘
 ```
-- `Storyboard` chip replaced by two: `Multi-Angle` and `Storyboard`.
-- Each gets its own tagline + starter prompts.
 
-### Multi-Angle
-1. User picks the chip → composer shows "Drop or pick the anchor image" + a short caption field ("anything to emphasize? optional").
-2. If no subject is locked yet, reuse existing subject-lock flow first.
-3. On send, Director calls `generate_reference_image` with new `mode: "multi_angle"`, `per_shot_prompts` = 6 angle beats (front, 3/4 left, profile left, back, profile right, low/hero), `reference_urls` = anchor + locked sheet.
-4. Edge function generates **6 independent panels** (same chained pipeline already used for storyboard, but with `panel_count = 6`, aspect from the anchor, no story preamble). Each panel returns to the rail tagged `role: "multi_angle"` and gets a per-panel Regenerate.
+### 1. Rolling session summary (within one chat)
 
-### Storyboard (story-driven)
-1. User picks the chip → composer expands into a small inline form:
-   - **Story** textarea (logline or short paragraph; examples chips: "30s product launch", "character morning routine", "before/after transformation").
-   - **Shot count** segmented: `3 · 6 · 9` (default 6, persisted to `localStorage`).
-   - Optional **Location** and **Tone** chips (skippable).
-2. On send, the Director (existing `director-agent`) is asked via a new tool call `plan_storyboard` to return a structured plan: shared style preamble + N shot beats (title, action, shot type, camera move, lens, lighting, mood) + a one-line shot-to-shot grammar note. **No image generation yet.**
-3. Plan renders as a new chat bubble: **`StoryboardPlanCard`**
-   - Header: grammar note + shot count selector (lets user bump 3↔6↔9 and re-ask the Director).
-   - Each shot row: editable title + beat (textarea), small chips showing lens/lighting/mood (also editable), `Rewrite with AI` button (re-asks the Director for that single beat), `Delete shot`.
-   - Footer: `Add shot`, `Approve & generate panels` (primary), `Discard`.
-4. On approve, client calls `generate_reference_image` with `mode: "storyboard_panels"`, `per_shot_prompts` = the approved beats, same locked references — existing pipeline.
-5. After render, each panel in the rail / chat keeps the existing per-panel **Regenerate** path (already present for shot_index regen). We surface it more prominently with a tooltip and a "Rewrite beat" submenu that opens the plan card pre-scoped to that one shot.
+- Add a `summary` field on `director_sessions.brief_context` (column already exists as jsonb).
+- When a session crosses ~20 messages, the edge function asynchronously condenses the *oldest* messages into a structured summary: pinned subjects, uploaded image URLs + captions, locked spec (model/aspect/duration/style), story beats, key decisions, last clarification answered.
+- Next request: instead of slicing raw messages, we send `summary + last ~20 raw messages`. The Director sees the whole story compactly.
+- Summary is regenerated incrementally (only the new "to-be-evicted" turns get folded in, not the whole chat each time) so cost stays low.
 
-## Technical breakdown
+### 2. Long-term user memory (across chats)
 
-### Frontend
-- **`DirectorChat.tsx`**
-  - `CATEGORIES`: replace the single `storyboard` entry with `multi_angle` and `storyboard` entries (icons: `Orbit` for multi-angle, keep `LayoutGrid` for storyboard).
-  - New state: `storyboardShotCount` (3/6/9, persisted as `director:storyboard_shots`), `storyboardDraftPlan` (the unapproved plan), `multiAngleAnchorUrl`.
-  - When `activeCategory === "storyboard"`, render `<StoryboardComposerForm />` inside the composer area (story textarea + 3/6/9 + chips).
-  - When `activeCategory === "multi_angle"`, render `<MultiAngleComposerForm />` (anchor preview + optional note).
-  - Wire approval → `runReferenceGeneration` with the approved `per_shot_prompts`.
-- **New `src/components/director/StoryboardPlanCard.tsx`** — renders the editable plan, calls `onRegenerateBeat(shotIndex)` and `onApprove(plan)`.
-- **New `src/components/director/MultiAnglePresetBeats.ts`** — exports the 6 canonical angle beats (front, 3/4 L, profile L, back, profile R, low hero) parameterised by subject_kind (character vs product).
-- **`Composer.tsx`** — accepts an optional `slotBelow` render prop for the inline category forms; no other changes besides existing 1K/2K/4K picker.
-- **`GeneratedImageCard.tsx`** — when `role === "storyboard"` or `role === "multi_angle"`, show a `Rewrite shot` action that opens the plan card scoped to that shot (storyboard) or replaces just that angle (multi-angle).
+- New table `director_user_memory` (one row per user) holding a compact JSON profile:
+  - pinned characters / brands / products the user has reused
+  - recurring style preferences (cinematic look, aspect, audio)
+  - recently used models
+  - a short list of "recent sessions" (id, title, 1-line recap)
+- Updated at the end of each session (debounced) by a small summarizer call.
+- Injected at the top of every director-agent request as `[LONG-TERM USER MEMORY]`.
+- Capped (~2 KB) so it never bloats the prompt.
 
-### Backend
-- **`supabase/functions/director-agent/index.ts`**
-  - Extend the `generate_reference_image` tool enum: `mode: "character_sheet" | "storyboard_panels" | "single_panel" | "multi_angle"`.
-  - Add a new tool `plan_storyboard` (no image gen) — returns `{ shared_style, grammar_note, shots: [{title, beat, shot_type, camera_move, lens, lighting, mood}] }`. Used so the user can review before paying credits.
-  - Update prompts/rules to: when the user provides a story + shot count, call `plan_storyboard` first and wait for client approval before calling `generate_reference_image` with `storyboard_panels`. When the user asks for "multi-angle of this", call `generate_reference_image` directly with `mode: "multi_angle"`.
-- **`supabase/functions/generate-reference-image/index.ts`**
-  - Accept `mode: "multi_angle"`. Behaves like `storyboard_panels` (chained per-shot generation, same upscale + quality + credit logic) but:
-    - `panel_count = 6` fixed.
-    - Prompt builder injects an **angle-only lock**: "Identical subject, wardrobe, lighting, props, background as the reference. Only the camera angle changes. No new action, no new objects." + the per-angle beat.
-    - Aspect ratio inherits from the anchor image.
-  - For `storyboard_panels`, accept `panel_count: 3 | 6 | 9` (existing default stays 9, new path passes explicit value).
-- **No DB schema changes.** Plans live in chat state only; approved generations already persist via `generation_events`.
+### 3. Goodbye to the hard 30-message limit
 
-### Credits
-- Multi-angle = 6 panels × current per-panel cost + selected quality upscale (reuses `priceFor` path already added for 4K).
-- `plan_storyboard` is a text-only LLM call → charged as a small reasoning call (~1 credit) so users aren't blindsided if they iterate.
+- Replace `messages.slice(-30)` with: keep the last ~20 raw, fold the rest into the session summary. No 400, no silent loss.
+- If summary + recent still risk exceeding model context, trim oldest *raw* messages first (their content is already in the summary).
+
+### 4. Image / attachment memory
+
+- The session summary explicitly tracks attachment URLs + what they are ("character sheet of Sara", "product hero shot"), so the Director can reference uploads from turn 1 even after 100 turns.
+- Long-term memory keeps the most-recently-pinned subject sheets so cross-session references like "use Sara again" work.
+
+## Technical details
+
+**Files / edge functions**
+- `supabase/functions/director-agent/index.ts` — remove the 30-cap slice; build prompt from `[long-term memory] + [session summary] + last N raw + recap`; trigger background summarization when history > threshold.
+- New edge function `supabase/functions/director-summarize/index.ts` — gemini-3-flash, takes old messages + previous summary → returns updated structured summary JSON. Called fire-and-forget from director-agent after responding to the user (so latency is unaffected).
+- New edge function `supabase/functions/director-user-memory/index.ts` — folds a finished session's summary into the user's long-term memory row.
+
+**Database (one migration)**
+- New table `public.director_user_memory` (user_id PK, memory jsonb, updated_at). RLS: user reads/writes own row. GRANTs for `authenticated` + `service_role`.
+- No schema change needed on `director_sessions` — we reuse `brief_context.summary`.
+
+**Client (`src/components/director/DirectorChat.tsx`)**
+- No structural change to the UI. We stop sending the entire message array unbounded; the server now owns context assembly. Client still posts the recent messages (it already does).
+- Add a small "Memory" section in Account → Preferences to view/clear long-term memory.
+
+**Costs / limits**
+- Summaries use gemini-3-flash (cheap), run only when history grows, and only over the newly-evicted slice.
+- Hard caps: session summary ≤ 4 KB, long-term memory ≤ 2 KB, recent raw window = 20 messages.
 
 ## Out of scope
-- Saving named storyboard plans / templates.
-- Multi-character scene blocking inside a single panel.
-- Video generation from approved storyboard (already its own animate flow).
-- Re-ordering shots via drag (Add / Delete only in v1).
 
-## Files touched
-- `src/components/director/DirectorChat.tsx` (categories, state, plan handling)
-- `src/components/director/Composer.tsx` (slot for inline forms)
-- `src/components/director/GeneratedImageCard.tsx` (Rewrite shot affordance)
-- new `src/components/director/StoryboardPlanCard.tsx`
-- new `src/components/director/StoryboardComposerForm.tsx`
-- new `src/components/director/MultiAngleComposerForm.tsx`
-- new `src/lib/director/multiAngleBeats.ts`
-- `src/lib/director/api.ts` (types for `multi_angle`, `plan_storyboard`)
-- `supabase/functions/director-agent/index.ts` (tools + rules)
-- `supabase/functions/generate-reference-image/index.ts` (multi_angle branch + panel_count)
+- No change to the storyboard/multi-angle renderers.
+- No change to how attachments are uploaded or stored.
+- No new UI in the chat itself — memory works invisibly.
