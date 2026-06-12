@@ -366,6 +366,7 @@ export const WorkflowPanel = ({ selectedModel, onSwitchModel }: WorkflowPanelPro
   const [twoFrameMode, setTwoFrameMode] = useState(false);
   const [multiShotMode, setMultiShotMode] = useState(false);
   const [audioEnabled, setAudioEnabled] = useState(true);
+  const [handoffBusy, setHandoffBusy] = useState(false);
   const [timelineEnabled, setTimelineEnabled] = useState<boolean>(() => {
     try { return localStorage.getItem("movprompt.timelinePrompting") === "1"; } catch { return false; }
   });
