@@ -978,7 +978,8 @@ Output via the \`storyboard_shots\` tool ONLY.`;
       );
     }
 
-    const { messages, attachments, stream, tasteProfile, mode, lockedSpec } = body as {
+    let { messages } = body as { messages: Array<{ role: "user" | "assistant"; content: string }> };
+    const { attachments, stream, tasteProfile, mode, lockedSpec } = body as {
       messages: Array<{ role: "user" | "assistant"; content: string }>;
       attachments?: Array<{
         kind: "image" | "video_keyframes" | "audio_transcript" | "document";
