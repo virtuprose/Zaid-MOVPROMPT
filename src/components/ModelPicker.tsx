@@ -350,6 +350,7 @@ export const ModelPicker = ({ model, onModelChange }: ModelPickerProps) => {
                         value={m.value}
                         label={m.label}
                         description={t(m.descriptionKey as any)}
+                        hasAudio={m.audio}
                       />
                     ))}
                   </SelectGroup>
@@ -363,6 +364,7 @@ export const ModelPicker = ({ model, onModelChange }: ModelPickerProps) => {
                   label={m.label}
                   description={t(m.descriptionKey as any)}
                   providerLabel={m.provider}
+                  hasAudio={m.audio}
                 />
               ))
             )}
