@@ -604,6 +604,24 @@ export type Database = {
         }
         Relationships: []
       }
+      director_user_memory: {
+        Row: {
+          memory: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          memory?: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          memory?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       email_send_log: {
         Row: {
           created_at: string
