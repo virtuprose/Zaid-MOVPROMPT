@@ -39,6 +39,7 @@ import { useLanguage } from "@/i18n/LanguageContext";
 import { getContract, deriveWorkflowType, supportsTimelinePrompting, timelineMandatory } from "@/lib/modelContracts";
 import { getModelControls } from "@/lib/director/videoModelControls";
 import { writeHandoff } from "@/lib/director/handoff";
+import { ingestImage, uploadAndSign, requireUserId } from "@/lib/director/ingest";
 import { MODEL_GROUPS, getModelLabel } from "@/lib/models";
 import { parseEdgeFnError, pickErrorKey } from "@/lib/edgeFnError";
 import { detectAllIntents } from "@/lib/sceneIntent";
