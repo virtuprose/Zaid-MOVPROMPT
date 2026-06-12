@@ -787,20 +787,36 @@ export function GeneratedImageCard({ data, onRegenerate, onUnpinSubject, onAnima
           </div>
         )}
         {zoomIndex !== null && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                type="button"
-                onClick={() => downloadImage(data.images[zoomIndex].url, data.images[zoomIndex].shot_index ?? zoomIndex + 1)}
-                className="absolute top-2 right-12 bg-background/80 hover:bg-background/95 text-foreground p-1.5 rounded-md transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-white/20"
-                aria-label="Download image"
-              >
-                <Download className="h-4 w-4" />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent>Download</TooltipContent>
-          </Tooltip>
+          <>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={() => { const u = data.images[zoomIndex].url; setZoomIndex(null); setEditTarget(u); }}
+                  className="absolute top-2 right-[5.5rem] bg-accent/20 hover:bg-accent hover:text-accent-foreground text-accent p-1.5 rounded-md transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-white/20"
+                  aria-label="Edit image"
+                >
+                  <Sparkles className="h-4 w-4" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>Edit with AI…</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={() => downloadImage(data.images[zoomIndex].url, data.images[zoomIndex].shot_index ?? zoomIndex + 1)}
+                  className="absolute top-2 right-12 bg-background/80 hover:bg-background/95 text-foreground p-1.5 rounded-md transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-white/20"
+                  aria-label="Download image"
+                >
+                  <Download className="h-4 w-4" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>Download</TooltipContent>
+            </Tooltip>
+          </>
         )}
+
         <DialogClose className="absolute top-2 right-2 bg-background/80 hover:bg-background/95 text-foreground p-1.5 rounded-md transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-white/20">
           <X className="h-4 w-4" />
         </DialogClose>
