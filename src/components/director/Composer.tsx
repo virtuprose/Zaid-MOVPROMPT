@@ -34,6 +34,9 @@ type Props = {
   imagePromptBusy?: boolean;
   mode?: "director" | "free_chat";
   onModeChange?: (mode: "director" | "free_chat") => void;
+  /** Output quality for any image generation kicked off from this composer. */
+  quality?: "1K" | "2K" | "4K";
+  onQualityChange?: (q: "1K" | "2K" | "4K") => void;
   /** Bump to refocus the textarea (and place caret at end) — used by handoffs. */
   focusSignal?: number;
 };
