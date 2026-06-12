@@ -679,6 +679,48 @@ const TOOLS = [
 ];
 
 async function callGatewayWithRetry(body: unknown, apiKey: string): Promise<Response> {
+  const sanitizeForGateway = (value: unknown): unknown => {
+    const isGatewayFetchableUrl = (input: string) => /^(https?:\/\/|data:image\/)/i.test(input);
+
+    if (Array.isArray(value)) {
+      return value
+        .map((item) => sanitizeForGateway(item))
+        .filter((item) => item !== undefined);
+    }
+
+    if (!value || typeof value !== "object") {
+      return value;
+    }
+
+    const record = value as Record<string, unknown>;
+
+    if (record.type === "image_url") {
+      const imageUrl = record.image_url;
+      const url =
+        imageUrl && typeof imageUrl === "object"
+          ? (imageUrl as Record<string, unknown>).url
+          : undefined;
+      if (typeof url !== "string" || !isGatewayFetchableUrl(url)) {
+        return undefined;
+      }
+      return {
+        ...record,
+        image_url: {
+          ...(imageUrl as Record<string, unknown>),
+          url,
+        },
+      };
+    }
+
+    const next: Record<string, unknown> = {};
+    for (const [key, val] of Object.entries(record)) {
+      const sanitized = sanitizeForGateway(val);
+      if (sanitized !== undefined) next[key] = sanitized;
+    }
+    return next;
+  };
+
+  const safeBody = sanitizeForGateway(body);
   const delays = [0, 500, 1500];
   let lastResp: Response | null = null;
   for (let i = 0; i < delays.length; i++) {
@@ -689,7 +731,7 @@ async function callGatewayWithRetry(body: unknown, apiKey: string): Promise<Resp
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(body),
+      body: JSON.stringify(safeBody),
     });
     // Don't retry on auth/credit/rate-limit errors — surface them
     if (resp.ok || resp.status === 402 || resp.status === 429 || resp.status === 401) {
@@ -1305,7 +1347,14 @@ Then stop. Don't ask follow-up questions yourself.`;
           { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
       }
-      return new Response(JSON.stringify({ error: "AI gateway error" }), {
+      const uploadInFlight = Array.isArray(attachments) && attachments.some((a) =>
+        (a.kind === "image" || a.kind === "video_keyframes") && typeof a.url === "string" &&
+        !/^https?:\/\//i.test(a.url)
+      );
+      const errorMessage = uploadInFlight
+        ? "A reference image is still uploading. Wait a moment, then resend your message."
+        : "AI gateway error";
+      return new Response(JSON.stringify({ error: errorMessage }), {
         status: 502,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
