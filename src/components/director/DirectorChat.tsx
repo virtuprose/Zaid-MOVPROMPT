@@ -1567,7 +1567,7 @@ function DirectorChatInner() {
       ]);
     } catch (e: any) {
       const msg = String(e?.message || e || "");
-      if (msg.includes("insufficient_credits")) notifyInsufficientCredits();
+      if (msg.includes("insufficient_credits")) await notifyInsufficientCredits(e);
       else toast.error(`Couldn't draft the plan — ${msg.slice(0, 120)}`);
     } finally {
       setPlanBusy(false);
