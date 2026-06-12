@@ -35,6 +35,13 @@ export function ImageEditorDialog({ open, onOpenChange, sourceUrl, aspectRatio, 
   const [brush, setBrush] = useState(48);
   const [showMask, setShowMask] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [quality, setQuality] = useState<EditQuality>(() => {
+    try {
+      const v = localStorage.getItem("director:image_quality");
+      if (v === "1K" || v === "2K" || v === "4K") return v;
+    } catch {}
+    return "1K";
+  });
   const [imgSize, setImgSize] = useState<{ w: number; h: number } | null>(null);
   const [imgEl, setImgEl] = useState<HTMLImageElement | null>(null);
   const maskCanvasRef = useRef<HTMLCanvasElement | null>(null);
