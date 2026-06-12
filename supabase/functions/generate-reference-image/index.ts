@@ -547,7 +547,7 @@ serve(async (req) => {
       return {
         url: signed.signedUrl,
         storage_path: path,
-        shot_index: mode === "storyboard_panels" ? shotIndices[i] : undefined,
+        shot_index: (mode === "storyboard_panels" || mode === "multi_angle") ? shotIndices[i] : undefined,
         quality: appliedQuality,
       };
     };
