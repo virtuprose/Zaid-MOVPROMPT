@@ -1089,8 +1089,15 @@ Output via the \`storyboard_shots\` tool ONLY.`;
       attachments.slice(0, 12).forEach((a, idx) => {
         const tag = `[@${idx + 1}]`;
         if ((a.kind === "image" || a.kind === "video_keyframes") && a.url) {
-          imageUrls.push(a.url);
-          attachmentBlock += `${tag} ${a.kind === "image" ? "Image" : "Video keyframe"}: ${a.name}\n  url: ${a.url}\n`;
+          // Only pass URLs the AI gateway can fetch. Local blob:/data: URLs
+          // from in-flight uploads must be skipped — they 400 upstream.
+          const isFetchable = /^https?:\/\//i.test(a.url);
+          if (isFetchable) {
+            imageUrls.push(a.url);
+            attachmentBlock += `${tag} ${a.kind === "image" ? "Image" : "Video keyframe"}: ${a.name}\n  url: ${a.url}\n`;
+          } else {
+            attachmentBlock += `${tag} ${a.kind === "image" ? "Image" : "Video keyframe"}: ${a.name} (still uploading — ask the user to wait a moment and resend)\n`;
+          }
         } else if (a.kind === "audio_transcript" && a.text) {
           attachmentBlock += `${tag} Voice brief transcript (${a.name}): "${a.text.slice(0, 1500)}"\n`;
         } else if (a.kind === "document" && a.text) {
