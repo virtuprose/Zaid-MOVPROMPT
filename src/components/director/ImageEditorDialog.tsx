@@ -398,6 +398,17 @@ export function ImageEditorDialog({ open, onOpenChange, sourceUrl, aspectRatio, 
                   onChange={(e) => setBrush(Number(e.target.value))}
                   className="w-full accent-primary"
                 />
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs text-muted-foreground">Mask opacity</Label>
+                  <span className="text-[10px] text-muted-foreground/70">{Math.round(maskOpacity * 100)}%</span>
+                </div>
+                <input
+                  type="range"
+                  min={10} max={100} step={5}
+                  value={Math.round(maskOpacity * 100)}
+                  onChange={(e) => setMaskOpacity(Number(e.target.value) / 100)}
+                  className="w-full accent-primary"
+                />
                 <div className="flex gap-1.5">
                   <Button type="button" size="sm" variant="ghost" className="h-7 text-xs flex-1" onClick={handleUndo}>
                     <Undo2 className="w-3 h-3 mr-1" /> Undo
