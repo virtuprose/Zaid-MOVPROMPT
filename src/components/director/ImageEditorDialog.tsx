@@ -152,15 +152,24 @@ export function ImageEditorDialog({ open, onOpenChange, sourceUrl, aspectRatio, 
     if (undoStack.current.length > 30) undoStack.current.shift();
   };
 
+  const updateCursor = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    const overlay = overlayCanvasRef.current;
+    if (!overlay) return;
+    const rect = overlay.getBoundingClientRect();
+    setCursor({ x: e.clientX - rect.left, y: e.clientY - rect.top, visible: true });
+  };
+
   const onPointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
     if (mode === "prompt") return;
     e.currentTarget.setPointerCapture(e.pointerId);
     pushUndo();
     drawingRef.current = true;
+    updateCursor(e);
     const p = eventToMaskPoint(e);
     if (p) paintStroke(p.x, p.y);
   };
   const onPointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    updateCursor(e);
     if (!drawingRef.current) return;
     const p = eventToMaskPoint(e);
     if (p) paintStroke(p.x, p.y);
@@ -168,6 +177,12 @@ export function ImageEditorDialog({ open, onOpenChange, sourceUrl, aspectRatio, 
   const onPointerUp = (e: React.PointerEvent<HTMLCanvasElement>) => {
     drawingRef.current = false;
     try { e.currentTarget.releasePointerCapture(e.pointerId); } catch {}
+  };
+  const onPointerLeave = () => {
+    setCursor((c) => ({ ...c, visible: false }));
+  };
+  const onPointerEnter = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    updateCursor(e);
   };
 
   const handleUndo = () => {
