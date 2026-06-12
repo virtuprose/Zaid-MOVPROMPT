@@ -850,6 +850,14 @@ export function GeneratedImageCard({ data, onRegenerate, onUnpinSubject, onAnima
         await handleAnimateAll(result);
       }}
     />
+
+    <ImageEditorDialog
+      open={!!editTarget}
+      onOpenChange={(o) => { if (!o) setEditTarget(null); }}
+      sourceUrl={editTarget || ""}
+      aspectRatio={data.aspectRatio}
+    />
     </>
+
   );
 }
