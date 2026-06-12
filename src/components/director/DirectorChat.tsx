@@ -774,7 +774,7 @@ function DirectorChatInner() {
       prompt: string;
       reference_urls?: string[];
       count?: number;
-      aspect_ratio?: "1:1" | "16:9" | "9:16";
+      aspect_ratio?: AspectRatio;
       per_shot_prompts?: string[];
       shot_index?: number;
       lock_mode?: "character" | "scene" | "auto";
@@ -1112,10 +1112,28 @@ function DirectorChatInner() {
     setBusy(true);
     try {
       // Build explicit refs so the "fresh single_panel skip auto-attach" guard
-      // doesn't drop the character or location anchor.
+      // doesn't drop the character or location anchor. Merge with any refs the
+      // agent already supplied (e.g. user-uploaded @1 character + @2 location)
+      // so they aren't accidentally replaced.
       const explicitRefs: string[] = [];
-      if (pinnedSubject) explicitRefs.push(pinnedSubject.url);
-      if (locationAnchor) explicitRefs.push(locationAnchor.url);
+      const pushRef = (u?: string | null) => {
+        if (u && !explicitRefs.includes(u)) explicitRefs.push(u);
+      };
+      if (pinnedSubject) pushRef(pinnedSubject.url);
+      if (locationAnchor) pushRef(locationAnchor.url);
+      // Pull image refs the user uploaded in any prior turn — these are the
+      // character/product/location plates they expect the key frame to honour.
+      for (const b of bubbles) {
+        if (b.role === "user" && Array.isArray(b.attachments)) {
+          for (const a of b.attachments as any[]) {
+            if (a?.kind === "image" && typeof a.url === "string" && /^https?:\/\//i.test(a.url)) {
+              pushRef(a.url);
+            }
+          }
+        }
+      }
+      for (const u of target.payload.reference_urls ?? []) pushRef(u);
+
       const composedPrompt = locationAnchor
         ? `Composite the locked ${pinnedSubject?.kind === "product" ? "product" : "character"} into the locked location. ${pinnedSubject?.kind === "product" ? "The product" : "The character"} must match the reference sheet exactly (form, color, ${pinnedSubject?.kind === "product" ? "materials" : "face, wardrobe, hair"}). The environment must match the location plate exactly (architecture, lighting direction, color palette, time of day). Place ${pinnedSubject?.kind === "product" ? "the product" : "the subject"} naturally in the scene with believable shadow contact and color spill.\n\n${target.payload.prompt}`
         : target.payload.prompt;
@@ -2226,9 +2244,19 @@ function DirectorChatInner() {
           }
 
           // If no subject sheet is pinned and we haven't asked yet this session,
-          // surface the subject-lock chip BEFORE the aspect chip.
+          // surface the subject-lock chip BEFORE the aspect chip — UNLESS the
+          // user has already attached image references this session (those count
+          // as their chosen subject, so don't pester them).
           const alreadyAsked = next.some((b) => b.role === "subject_lock_choice");
-          if (!pinnedSubject && !alreadyAsked) {
+          const hasUserImageRefs = next.some(
+            (b) =>
+              b.role === "user" &&
+              Array.isArray(b.attachments) &&
+              b.attachments.some(
+                (a: any) => a.kind === "image" && typeof a.url === "string" && /^https?:\/\//i.test(a.url),
+              ),
+          );
+          if (!pinnedSubject && !alreadyAsked && !hasUserImageRefs) {
             const subjectBubble: Bubble = { role: "subject_lock_choice", payload };
             const withSubject: Bubble[] = [...next, subjectBubble];
             setBubbles(withSubject);
@@ -2262,7 +2290,7 @@ function DirectorChatInner() {
           prompt: resp.prompt,
           reference_urls: resp.reference_urls,
           count: resp.count,
-          aspect_ratio: effectiveAspect,
+          aspect_ratio: effectiveAspect as AspectRatio | undefined,
           per_shot_prompts: resp.per_shot_prompts,
           shot_index: resp.shot_index,
           lock_mode: resp.lock_mode,

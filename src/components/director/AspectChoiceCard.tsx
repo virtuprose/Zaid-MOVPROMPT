@@ -2,7 +2,7 @@ import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { Check, Sparkles } from "lucide-react";
 
-export type AspectRatio = "16:9" | "9:16" | "1:1";
+export type AspectRatio = "16:9" | "9:16" | "1:1" | "4:3" | "3:4" | "21:9" | "2:3" | "3:2";
 export type ImageQuality = "1K" | "2K" | "4K";
 
 const ASPECTS: Array<{
@@ -14,6 +14,11 @@ const ASPECTS: Array<{
   { value: "16:9", label: "16:9", caption: "Cinematic widescreen", boxClass: "w-10 h-[22px]" },
   { value: "9:16", label: "9:16", caption: "Vertical / social", boxClass: "w-[22px] h-10" },
   { value: "1:1", label: "1:1", caption: "Square", boxClass: "w-8 h-8" },
+  { value: "4:3", label: "4:3", caption: "Classic / TV", boxClass: "w-10 h-[30px]" },
+  { value: "3:4", label: "3:4", caption: "Portrait", boxClass: "w-[30px] h-10" },
+  { value: "21:9", label: "21:9", caption: "Ultra-wide cinemascope", boxClass: "w-12 h-[20px]" },
+  { value: "2:3", label: "2:3", caption: "Editorial portrait", boxClass: "w-[26px] h-10" },
+  { value: "3:2", label: "3:2", caption: "Photo landscape", boxClass: "w-10 h-[26px]" },
 ];
 
 export const QUALITY_4K_CREDITS_PER_PANEL = 3;
