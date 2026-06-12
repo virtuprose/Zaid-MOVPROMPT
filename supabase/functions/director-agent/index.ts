@@ -1010,11 +1010,10 @@ Output via the \`storyboard_shots\` tool ONLY.`;
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+    // Keep only the most recent messages to stay within model context.
+    // Older turns are dropped silently rather than hard-failing the request.
     if (messages.length > 30) {
-      return new Response(JSON.stringify({ error: "Too many messages" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      messages = messages.slice(-30);
     }
 
     let attachmentBlock = "";
