@@ -2587,17 +2587,6 @@ function DirectorChatInner() {
   ] as const;
 
   const [activeCategory, setActiveCategory] = useState<string>("cinema");
-  const [storyboardShotCount, setStoryboardShotCount] = useState<3 | 6 | 9>(() => {
-    if (typeof window === "undefined") return 6;
-    const raw = localStorage.getItem("director:storyboard_shots");
-    const n = raw ? parseInt(raw, 10) : 6;
-    return n === 3 || n === 6 || n === 9 ? (n as 3 | 6 | 9) : 6;
-  });
-  const handleShotCountChange = useCallback((n: 3 | 6 | 9) => {
-    setStoryboardShotCount(n);
-    try { localStorage.setItem("director:storyboard_shots", String(n)); } catch { /* ignore */ }
-  }, []);
-  const [planBusy, setPlanBusy] = useState(false);
   const [composerFocused, setComposerFocused] = useState(false);
   const [chatMode, setChatMode] = useState<"director" | "free_chat">(() => {
     if (typeof window === "undefined") return "director";
