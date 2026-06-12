@@ -2114,6 +2114,7 @@ function DirectorChatInner() {
                   duration: handoffChip.duration,
                 }
               : null,
+            sessionId: sessionIdRef.current,
           });
 
           lastErr = null;

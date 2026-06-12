@@ -979,7 +979,7 @@ Output via the \`storyboard_shots\` tool ONLY.`;
     }
 
     let { messages } = body as { messages: Array<{ role: "user" | "assistant"; content: string }> };
-    const { attachments, stream, tasteProfile, mode, lockedSpec } = body as {
+    const { attachments, stream, tasteProfile, mode, lockedSpec, sessionId } = body as {
       messages: Array<{ role: "user" | "assistant"; content: string }>;
       attachments?: Array<{
         kind: "image" | "video_keyframes" | "audio_transcript" | "document";
@@ -1002,6 +1002,7 @@ Output via the \`storyboard_shots\` tool ONLY.`;
         aspect?: string;
         duration?: number | "auto";
       } | null;
+      sessionId?: string | null;
     };
 
 
@@ -1011,10 +1012,69 @@ Output via the \`storyboard_shots\` tool ONLY.`;
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    // Keep only the most recent messages to stay within model context.
-    // Older turns are dropped silently rather than hard-failing the request.
-    if (messages.length > 30) {
-      messages = messages.slice(-30);
+
+    // ─── Rolling memory: stored session summary + long-term user memory ───
+    // Replaces the old hard 30-message cap. Older turns are folded into a
+    // structured digest by the background `director-summarize` function and
+    // re-injected as a prompt prefix so the Director never "forgets".
+    const KEEP_RECENT = 20;
+    const fullMessageCount = messages.length;
+    const allMessagesForSummary = messages.slice();
+    let sessionSummary = "";
+    let userLongTermMemory = "";
+    let resolvedUserId: string | null = null;
+
+    try {
+      const authz = req.headers.get("Authorization") || "";
+      if (authz.startsWith("Bearer ")) {
+        const sb = createClient(
+          Deno.env.get("SUPABASE_URL")!,
+          Deno.env.get("SUPABASE_ANON_KEY")!,
+          { global: { headers: { Authorization: authz } } },
+        );
+        const { data: userData } = await sb.auth.getUser();
+        resolvedUserId = userData?.user?.id ?? null;
+
+        if (resolvedUserId) {
+          const admin = createClient(
+            Deno.env.get("SUPABASE_URL")!,
+            Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+            { auth: { persistSession: false } },
+          );
+
+          const { data: mem } = await admin
+            .from("director_user_memory")
+            .select("memory")
+            .eq("user_id", resolvedUserId)
+            .maybeSingle();
+          const memText = mem && typeof (mem.memory as Record<string, unknown>)?.text === "string"
+            ? ((mem.memory as Record<string, unknown>).text as string)
+            : "";
+          if (memText) userLongTermMemory = memText;
+
+          if (sessionId) {
+            const { data: sess } = await admin
+              .from("director_sessions")
+              .select("user_id, brief_context")
+              .eq("id", sessionId)
+              .maybeSingle();
+            if (sess && sess.user_id === resolvedUserId) {
+              const bc = (sess.brief_context as Record<string, unknown>) || {};
+              if (typeof bc.summary === "string") sessionSummary = bc.summary as string;
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.error("memory load failed (continuing without)", e);
+    }
+
+    // Trim raw messages once we have a summary; otherwise keep up to 40
+    // recent raw turns as a transitional fallback before first summary lands.
+    if (sessionSummary && messages.length > KEEP_RECENT) {
+      messages = messages.slice(-KEEP_RECENT);
+    } else if (messages.length > 40) {
+      messages = messages.slice(-40);
     }
 
     let attachmentBlock = "";
@@ -1161,8 +1221,16 @@ Then stop. Don't ask follow-up questions yourself.`;
       ? { "x-active-skill": activeSkillName }
       : {};
 
+    // Long-term + session memory blocks injected at the top of the system prompt.
+    const longTermBlock = userLongTermMemory
+      ? `\n\n═══ LONG-TERM USER MEMORY (carries across sessions — already-known facts about this user; never re-ask) ═══\n${userLongTermMemory}`
+      : "";
+    const sessionSummaryBlock = sessionSummary
+      ? `\n\n═══ SESSION DIGEST (compact recap of everything earlier in THIS chat — treat as ground truth) ═══\n${sessionSummary}`
+      : "";
+
     const aiMessages = [
-      { role: "system", content: isFreeChat ? FREE_CHAT_SYSTEM : SYSTEM_PROMPT + tasteAddendum + handoffAddendum + skillBlock },
+      { role: "system", content: isFreeChat ? FREE_CHAT_SYSTEM + longTermBlock + sessionSummaryBlock : SYSTEM_PROMPT + tasteAddendum + handoffAddendum + skillBlock + longTermBlock + sessionSummaryBlock },
       ...prior.map((m) => ({ role: m.role, content: m.content })),
       { role: last.role, content: lastUserContent },
     ];
@@ -1181,6 +1249,37 @@ Then stop. Don't ask follow-up questions yourself.`;
 
     // Director chat replies are free — credits are only charged on real
     // generations (generate-reference-image, generate-video).
+
+    // Fire-and-forget: roll the session digest + long-term memory when
+    // the chat is long enough to need eviction. Never blocks the response.
+    if (
+      sessionId &&
+      resolvedUserId &&
+      fullMessageCount > KEEP_RECENT
+    ) {
+      const authzForBg = req.headers.get("Authorization") || "";
+      const bgPromise = fetch(
+        `${Deno.env.get("SUPABASE_URL")}/functions/v1/director-summarize`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: authzForBg,
+            apikey: Deno.env.get("SUPABASE_ANON_KEY") || "",
+          },
+          body: JSON.stringify({
+            sessionId,
+            userId: resolvedUserId,
+            messages: allMessagesForSummary,
+          }),
+        },
+      ).catch((e) => console.error("director-summarize trigger failed", e));
+      // @ts-ignore — EdgeRuntime is provided by Supabase Edge Functions
+      if (typeof EdgeRuntime !== "undefined" && (EdgeRuntime as any).waitUntil) {
+        // @ts-ignore
+        (EdgeRuntime as any).waitUntil(bgPromise);
+      }
+    }
 
     const aiResp = await callGatewayWithRetry(requestBody, LOVABLE_API_KEY);
 

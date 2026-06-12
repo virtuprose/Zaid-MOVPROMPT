@@ -355,6 +355,7 @@ export async function streamDirectorAgent(
     tasteProfile?: TasteProfile | null;
     mode?: "director" | "free_chat";
     lockedSpec?: HandoffLockedSpec | null;
+    sessionId?: string | null;
   } = {},
 ): Promise<AgentResponse> {
   const idleTimeoutMs = options.idleTimeoutMs ?? 30_000;
@@ -435,7 +436,7 @@ export async function streamDirectorAgent(
         Authorization: `Bearer ${token}`,
         apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
       },
-      body: JSON.stringify({ messages, attachments, stream: true, tasteProfile, mode, lockedSpec }),
+      body: JSON.stringify({ messages, attachments, stream: true, tasteProfile, mode, lockedSpec, sessionId: options.sessionId ?? null }),
       signal: controller.signal,
     });
   } catch (err: any) {
