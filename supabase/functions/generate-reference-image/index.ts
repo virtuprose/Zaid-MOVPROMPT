@@ -84,6 +84,29 @@ function dataUrlToBlob(dataUrl: string): { blob: Blob; mime: string } {
   return { blob: new Blob([bytes], { type: mime }), mime };
 }
 
+// Inline an http(s) image as a data URL. The AI Gateway cannot reliably fetch
+// Supabase private-bucket signed URLs (returns 400 upstream), so we fetch the
+// bytes server-side using the caller's auth context and pass them as data URLs.
+async function toDataUrl(url: string): Promise<string> {
+  if (/^data:/i.test(url)) return url;
+  const resp = await fetch(url);
+  if (!resp.ok) throw new Error(`ref_fetch_${resp.status}`);
+  const buf = new Uint8Array(await resp.arrayBuffer());
+  const mime = resp.headers.get("content-type") || "image/png";
+  let bin = "";
+  for (let i = 0; i < buf.length; i++) bin += String.fromCharCode(buf[i]);
+  return `data:${mime};base64,${btoa(bin)}`;
+}
+
+async function materializeRefs(urls: string[]): Promise<string[]> {
+  const out: string[] = [];
+  for (const u of urls) {
+    try { out.push(await toDataUrl(u)); }
+    catch (e) { console.warn("ref materialize failed; skipping", u, e); }
+  }
+  return out;
+}
+
 async function generateOne(
   apiKey: string,
   prompt: string,
@@ -93,7 +116,8 @@ async function generateOne(
   const aspectLine = aspectRatio ? `\n\nAspect ratio: ${aspectRatio}.` : "";
   const userParts: any[] = [{ type: "text", text: prompt + aspectLine }];
   const validRefs = referenceUrls.filter((u) => /^(https?:|data:)/i.test(u));
-  for (const u of validRefs.slice(0, 4)) {
+  const inlined = await materializeRefs(validRefs.slice(0, 4));
+  for (const u of inlined) {
     userParts.push({ type: "image_url", image_url: { url: u } });
   }
   const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
