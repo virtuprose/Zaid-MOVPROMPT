@@ -3221,6 +3221,40 @@ function DirectorChatInner() {
                 </div>
               );
             }
+            if (b.role === "storyboard_plan") {
+              if (b.discarded) {
+                return (
+                  <div key={i} className="text-xs text-muted-foreground italic px-2">
+                    Storyboard plan discarded.
+                  </div>
+                );
+              }
+              return (
+                <div key={i} className="motion-safe:animate-fade-up">
+                  <StoryboardPlanCard
+                    plan={b.plan}
+                    busy={planBusy || busy || !!b.approved}
+                    onChange={(next) => {
+                      setBubbles((prev) =>
+                        prev.map((bb, idx) =>
+                          idx === i && bb.role === "storyboard_plan" ? { ...bb, plan: next } : bb,
+                        ),
+                      );
+                    }}
+                    onApprove={(approvedPlan) => {
+                      void handleApprovePlan(i, approvedPlan);
+                    }}
+                    onDiscard={() => {
+                      setBubbles((prev) =>
+                        prev.map((bb, idx) =>
+                          idx === i && bb.role === "storyboard_plan" ? { ...bb, discarded: true } : bb,
+                        ),
+                      );
+                    }}
+                  />
+                </div>
+              );
+            }
             if (b.role === "generated_images") {
               return (
                 <div key={i} className="motion-safe:animate-fade-up">
