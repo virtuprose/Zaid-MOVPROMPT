@@ -614,6 +614,15 @@ function MediaCard({
   ) : null;
 
 
+  const EditorMount = item.kind === "image" && hasUrl ? (
+    <ImageEditorDialog
+      open={editOpen}
+      onOpenChange={setEditOpen}
+      sourceUrl={item.url!}
+      aspectRatio={(item as any).aspect}
+    />
+  ) : null;
+
   if (item.kind === "image") {
     return (
       <>
@@ -635,9 +644,11 @@ function MediaCard({
           {Overlays}
         </div>
         {PreviewDialog}
+        {EditorMount}
       </>
     );
   }
+
 
 
   return (
