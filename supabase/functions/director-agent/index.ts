@@ -1221,8 +1221,16 @@ Then stop. Don't ask follow-up questions yourself.`;
       ? { "x-active-skill": activeSkillName }
       : {};
 
+    // Long-term + session memory blocks injected at the top of the system prompt.
+    const longTermBlock = userLongTermMemory
+      ? `\n\n═══ LONG-TERM USER MEMORY (carries across sessions — already-known facts about this user; never re-ask) ═══\n${userLongTermMemory}`
+      : "";
+    const sessionSummaryBlock = sessionSummary
+      ? `\n\n═══ SESSION DIGEST (compact recap of everything earlier in THIS chat — treat as ground truth) ═══\n${sessionSummary}`
+      : "";
+
     const aiMessages = [
-      { role: "system", content: isFreeChat ? FREE_CHAT_SYSTEM : SYSTEM_PROMPT + tasteAddendum + handoffAddendum + skillBlock },
+      { role: "system", content: isFreeChat ? FREE_CHAT_SYSTEM + longTermBlock + sessionSummaryBlock : SYSTEM_PROMPT + tasteAddendum + handoffAddendum + skillBlock + longTermBlock + sessionSummaryBlock },
       ...prior.map((m) => ({ role: m.role, content: m.content })),
       { role: last.role, content: lastUserContent },
     ];
