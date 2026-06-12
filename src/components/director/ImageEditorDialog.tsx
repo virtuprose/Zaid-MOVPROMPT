@@ -261,6 +261,7 @@ export function ImageEditorDialog({ open, onOpenChange, sourceUrl, aspectRatio, 
         mode,
         prompt: prompt.trim(),
         aspectRatio,
+        quality,
       });
       const newBubble = {
         role: "generated_images",
