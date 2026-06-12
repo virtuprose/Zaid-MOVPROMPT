@@ -17,8 +17,11 @@ import {
   FileText,
   ChevronDown,
   Tag,
+  Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
+import { ImageEditorDialog } from "./ImageEditorDialog";
+
 import {
   DropdownMenu,
   DropdownMenuContent,
