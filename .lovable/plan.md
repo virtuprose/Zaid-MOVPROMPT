@@ -1,79 +1,53 @@
 ## Goal
 
-Make the AI Director feel like it never forgets — within a single chat AND across days — without ever hitting a "too many messages" wall again.
+Refresh the **MovPrompt → "Pick your target AI model"** dropdown so it reflects the full current catalog (including the missing **Kling 2.1 Master**), and add a small **AUDIO** badge on every row whose model supports native audio. Nothing else about the picker UX changes.
 
-Today the agent silently trims to the last 30 messages. That stops the error, but the Director loses earlier context (what was uploaded, decisions made, the locked spec). We'll replace the dumb slice with a **rolling summary** per session, and add a lightweight **long-term user memory** so the Director remembers you across sessions.
+## What's broken today
 
-## What changes for the user
+The picker is driven by `src/lib/models.ts`, which is hand-maintained and has drifted away from the actual catalog in `supabase/functions/_shared/videoModelCatalog.ts`. Today the picker is missing:
 
-- No "too many messages" error, ever.
-- In a long chat, the Director still remembers what happened on message 1 — uploads, story beats, locked style, characters.
-- When you start a new chat later (next day, next week), the Director recalls: who you are, the characters/brands/locations you've pinned, your style preferences, and a one-line recap of recent sessions.
-- You can view and clear this memory from Account → Preferences.
+- **Kling**: 3.0 Pro, 3.0 Standard, 3.0 4K, 2.1 Master, 2.0 Master, 1.6 Pro, 1.6 Standard
+- **Google Veo**: Veo 2
+- Other current Seedance variants (Seedance 1 Pro / 1 Lite / 2.0 Reference)
 
-## Architecture
+There's also no visual cue for which models can generate native audio (dialogue, SFX, music), even though it's the #1 thing users want to know before picking.
+
+## Changes
+
+### 1. Refresh the model list (`src/lib/models.ts`)
+
+Add an `audio?: boolean` field to `ModelOption`. Replace the three groups with the up-to-date set, ordered newest/flagship → legacy:
+
+- **Kuaishou (Kling)** — 3.0 Pro · 3.0 Standard · 3.0 4K · 3.0 Omni · 3.0 Omni Edit · 3.0 Motion Control · 2.5 Turbo Pro · **2.1 Master** · 2.0 Master · 1.6 Pro · 1.6 Standard
+- **Google Veo** — Veo 3.1 · Veo 3.1 Fast · Veo 3.1 Lite · Veo 3 · Veo 3 Fast · Veo 2 · Gemini Omni Flash (gated)
+- **ByteDance (Seedance)** — Seedance 2.0 · Seedance 2.0 Fast · Seedance 2.0 Reference · Seedance 1 Pro · Seedance 1 Lite
+
+Audio flag set per the shared catalog:
+- **Audio**: All Kling 3.0 family (Pro / Standard / 4K / Omni / Omni Edit) · all Veo 3 + 3.1 family · Seedance 2.0 family · Gemini Omni Flash
+- **No audio**: Kling 2.5 Turbo and older · Kling 3.0 Motion Control · Veo 2 · Seedance 1 Pro / Lite
+
+### 2. Show an AUDIO badge in the picker (`src/components/ModelPicker.tsx`)
+
+In `ModelRow`, add a small pill next to the existing variant/flagship pills:
 
 ```text
-Each request to director-agent:
-  ┌─────────────────────────────────────────────┐
-  │ SYSTEM PROMPT                               │
-  │ + LONG-TERM USER MEMORY  (cross-session)    │  ← new
-  │ + SESSION SUMMARY        (rolling, this chat)│  ← new
-  │ + RECENT MESSAGES        (last ~20 turns)   │  ← was 30, raw
-  │ + SESSION STATE RECAP    (already exists)   │
-  │ + Current user turn                         │
-  └─────────────────────────────────────────────┘
+Kling 3.0  [FLAGSHIP] [AUDIO]
+Veo 3.1    [FLAGSHIP] [AUDIO]
+Kling 2.1 Master      (no audio badge)
 ```
 
-### 1. Rolling session summary (within one chat)
+Pill style: outline with the cyan primary (matches existing pill grammar), the speaker-volume `Volume2` icon from lucide, label `AUDIO`. Only rendered when `model.audio === true`. The "Any Model" row is unchanged.
 
-- Add a `summary` field on `director_sessions.brief_context` (column already exists as jsonb).
-- When a session crosses ~20 messages, the edge function asynchronously condenses the *oldest* messages into a structured summary: pinned subjects, uploaded image URLs + captions, locked spec (model/aspect/duration/style), story beats, key decisions, last clarification answered.
-- Next request: instead of slicing raw messages, we send `summary + last ~20 raw messages`. The Director sees the whole story compactly.
-- Summary is regenerated incrementally (only the new "to-be-evicted" turns get folded in, not the whole chat each time) so cost stays low.
+### 3. Hook up i18n descriptions
 
-### 2. Long-term user memory (across chats)
+Add `models.desc.*` keys for every newly-added model in `src/i18n/translations/en.ts` and `src/i18n/translations/ar.ts`, using the one-liner from the shared catalog as the source of truth. Same tone as the existing entries.
 
-- New table `director_user_memory` (one row per user) holding a compact JSON profile:
-  - pinned characters / brands / products the user has reused
-  - recurring style preferences (cinematic look, aspect, audio)
-  - recently used models
-  - a short list of "recent sessions" (id, title, 1-line recap)
-- Updated at the end of each session (debounced) by a small summarizer call.
-- Injected at the top of every director-agent request as `[LONG-TERM USER MEMORY]`.
-- Capped (~2 KB) so it never bloats the prompt.
+### 4. Update sorting ranks
 
-### 3. Goodbye to the hard 30-message limit
-
-- Replace `messages.slice(-30)` with: keep the last ~20 raw, fold the rest into the session summary. No 400, no silent loss.
-- If summary + recent still risk exceeding model context, trim oldest *raw* messages first (their content is already in the summary).
-
-### 4. Image / attachment memory
-
-- The session summary explicitly tracks attachment URLs + what they are ("character sheet of Sara", "product hero shot"), so the Director can reference uploads from turn 1 even after 100 turns.
-- Long-term memory keeps the most-recently-pinned subject sheets so cross-session references like "use Sara again" work.
-
-## Technical details
-
-**Files / edge functions**
-- `supabase/functions/director-agent/index.ts` — remove the 30-cap slice; build prompt from `[long-term memory] + [session summary] + last N raw + recap`; trigger background summarization when history > threshold.
-- New edge function `supabase/functions/director-summarize/index.ts` — gemini-3-flash, takes old messages + previous summary → returns updated structured summary JSON. Called fire-and-forget from director-agent after responding to the user (so latency is unaffected).
-- New edge function `supabase/functions/director-user-memory/index.ts` — folds a finished session's summary into the user's long-term memory row.
-
-**Database (one migration)**
-- New table `public.director_user_memory` (user_id PK, memory jsonb, updated_at). RLS: user reads/writes own row. GRANTs for `authenticated` + `service_role`.
-- No schema change needed on `director_sessions` — we reuse `brief_context.summary`.
-
-**Client (`src/components/director/DirectorChat.tsx`)**
-- No structural change to the UI. We stop sending the entire message array unbounded; the server now owns context assembly. Client still posts the recent messages (it already does).
-- Add a small "Memory" section in Account → Preferences to view/clear long-term memory.
-
-**Costs / limits**
-- Summaries use gemini-3-flash (cheap), run only when history grows, and only over the newly-evicted slice.
-- Hard caps: session summary ≤ 4 KB, long-term memory ≤ 2 KB, recent raw window = 20 messages.
+Extend `MODEL_RANKS` and `TIER_OVERRIDES` in `ModelPicker.tsx` so the new IDs sort sensibly under the **Quality / Speed / Price** tabs (e.g. Kling 2.1 Master = high-quality / mid-speed / high-price). Kling 3.0 Pro becomes the flagship anchor of the family.
 
 ## Out of scope
 
-- No change to the storyboard/multi-angle renderers.
-- No change to how attachments are uploaded or stored.
-- No new UI in the chat itself — memory works invisibly.
+- No change to backend `generate-prompt`, `generate-video`, or the shared playbook — those already know every model.
+- No change to the picker layout, search, or sort UI.
+- No new filter (e.g. "Audio only" toggle). If you want one I can add it in a follow-up.
