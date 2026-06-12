@@ -321,8 +321,25 @@ serve(async (req) => {
         if (!img) throw new Error("no_image_returned");
         outDataUrl = img as string;
       } catch (e) {
-        try { await refundCredits({ userId, amount: editPrice, reason: "image_edit_refund", metadata: { mode: editMode } }); } catch {}
+        try { await refundCredits({ userId, amount: totalEditCharge, reason: "image_edit_refund", metadata: { mode: editMode } }); } catch {}
         throw e;
+      }
+
+      // Optional upscale for 2K / 4K
+      let appliedEditQuality: Quality = "1K";
+      if (effectiveEditQuality !== "1K" && FAL_KEY_EDIT) {
+        try {
+          const scale = effectiveEditQuality === "4K" ? 4 : 2;
+          outDataUrl = await upscaleViaFal(FAL_KEY_EDIT, outDataUrl, scale);
+          appliedEditQuality = effectiveEditQuality;
+        } catch (e) {
+          console.error("edit upscale failed; falling back to 1K", e);
+          if (effectiveEditQuality === "4K" && upscalePrice4KEdit > 0) {
+            try {
+              await refundCredits({ userId, amount: upscalePrice4KEdit, reason: "image_upscale_refund", metadata: { stage: "edit_upscale_failed" } });
+            } catch (re) { console.error("upscale refund failed", re); }
+          }
+        }
       }
 
       const { blob, mime } = dataUrlToBlob(outDataUrl);
@@ -332,21 +349,22 @@ serve(async (req) => {
         .from("director-uploads")
         .upload(path, blob, { contentType: mime, upsert: false });
       if (upErr) {
-        try { await refundCredits({ userId, amount: editPrice, reason: "image_edit_refund", metadata: { mode: editMode, stage: "upload" } }); } catch {}
+        try { await refundCredits({ userId, amount: totalEditCharge, reason: "image_edit_refund", metadata: { mode: editMode, stage: "upload" } }); } catch {}
         throw upErr;
       }
       const { data: signed, error: signErr } = await supabase.storage
         .from("director-uploads").createSignedUrl(path, SIGNED_URL_TTL);
       if (signErr || !signed?.signedUrl) {
-        try { await refundCredits({ userId, amount: editPrice, reason: "image_edit_refund", metadata: { mode: editMode, stage: "sign" } }); } catch {}
+        try { await refundCredits({ userId, amount: totalEditCharge, reason: "image_edit_refund", metadata: { mode: editMode, stage: "sign" } }); } catch {}
         throw signErr || new Error("sign_failed");
       }
 
       return new Response(
         JSON.stringify({
           mode: "single_panel",
-          images: [{ url: signed.signedUrl, storage_path: path }],
+          images: [{ url: signed.signedUrl, storage_path: path, quality: appliedEditQuality }],
           edit: { mode: editMode, prompt: userPrompt, parent_url: sourceUrl },
+          quality: appliedEditQuality,
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
