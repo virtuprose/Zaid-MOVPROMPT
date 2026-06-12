@@ -36,9 +36,17 @@ export const MODEL_CHAR_LIMITS: Record<string, number> = {
 
   // Kling — UI accepts up to ~2,500 chars; we keep margin.
   "kling-3.0": 2000,
+  "kling-3.0-pro": 2000,
+  "kling-3.0-standard": 2000,
+  "kling-3.0-4k": 2000,
   "kling-3.0-omni": 2000,
   "kling-3.0-omni-edit": 1200, // edit prompts must stay surgical
   "kling-2.6": 2000,
+  "kling-2.5-turbo": 1500,
+  "kling-2.1-master": 1500,
+  "kling-2-master": 1500,
+  "kling-1.6-pro": 1500,
+  "kling-1.6-standard": 1500,
   "kling-o1-video": 2000,
   "kling-o1-video-edit": 1200,
   "kling-motion-control": 2000,
