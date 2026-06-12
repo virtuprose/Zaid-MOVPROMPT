@@ -331,12 +331,27 @@ export function ImageEditorDialog({ open, onOpenChange, sourceUrl, aspectRatio, 
                   onPointerMove={onPointerMove}
                   onPointerUp={onPointerUp}
                   onPointerCancel={onPointerUp}
+                  onPointerEnter={onPointerEnter}
+                  onPointerLeave={onPointerLeave}
                   className={cn(
                     "absolute inset-0 w-full h-full rounded",
-                    mode === "prompt" ? "cursor-default" : "cursor-crosshair touch-none",
+                    mode === "prompt" ? "cursor-default" : "cursor-none touch-none",
                   )}
                   style={{ pointerEvents: mode === "prompt" ? "none" : "auto" }}
                 />
+                {mode !== "prompt" && cursor.visible && (
+                  <div
+                    aria-hidden
+                    className="absolute pointer-events-none rounded-full border-2 border-primary/90 shadow-[0_0_0_1px_rgba(0,0,0,0.6)]"
+                    style={{
+                      width: brush,
+                      height: brush,
+                      left: cursor.x - brush / 2,
+                      top: cursor.y - brush / 2,
+                      background: "hsl(var(--primary) / 0.12)",
+                    }}
+                  />
+                )}
               </div>
             )}
           </div>
