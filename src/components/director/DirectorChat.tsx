@@ -3151,6 +3151,7 @@ function DirectorChatInner() {
                     <AspectChoiceCard
                       chosen={b.chosen}
                       disabled={busy}
+                      defaultQuality={chatImageQuality}
                       onChoose={(aspect, quality) => void handleAspectChoice(i, aspect, quality)}
                     />
                   </div>
