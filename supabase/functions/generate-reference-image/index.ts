@@ -280,8 +280,10 @@ serve(async (req) => {
         return `You are given TWO images. Image 1 is the source. Image 2 is a binary mask — WHITE pixels mark content to REMOVE. Cleanly remove everything inside the white region and reconstruct a plausible background that matches surrounding lighting, texture, focus, and perspective. The rest of the image (black mask region) must remain pixel-identical.${aspectLine} Return only the edited image — no text.`;
       })();
 
-      const userParts: any[] = [{ type: "text", text: instr }, { type: "image_url", image_url: { url: sourceUrl } }];
-      if (maskUrl) userParts.push({ type: "image_url", image_url: { url: maskUrl } });
+      const inlinedSource = await toDataUrl(sourceUrl).catch((e) => { throw Object.assign(new Error("source_fetch_failed"), { cause: e }); });
+      const inlinedMask = maskUrl ? await toDataUrl(maskUrl).catch(() => maskUrl) : "";
+      const userParts: any[] = [{ type: "text", text: instr }, { type: "image_url", image_url: { url: inlinedSource } }];
+      if (inlinedMask) userParts.push({ type: "image_url", image_url: { url: inlinedMask } });
 
       let outDataUrl: string;
       try {
