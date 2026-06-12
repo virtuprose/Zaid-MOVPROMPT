@@ -6,7 +6,7 @@ import { MODEL_GROUPS, type ModelGroup, type ModelOption } from "@/lib/models";
 import { getContract } from "@/lib/modelContracts";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { useModelAvailability, type AvailabilityMap } from "@/hooks/useModelAvailability";
-import { Sparkles, Search, Pencil } from "lucide-react";
+import { Sparkles, Search, Pencil, Volume2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 
@@ -42,8 +42,11 @@ const TIER_OVERRIDES: Record<string, Tier> = {
   "veo-3.1": "flagship",
   "veo-3": "flagship",
   "kling-3.0": "flagship",
+  "kling-3.0-pro": "flagship",
   "kling-3.0-omni": "flagship",
   "kling-3.0-omni-edit": "flagship",
+  "kling-2.1-master": "flagship",
+  "kling-2-master": "flagship",
   "seedance-2.0": "flagship",
   "seedance-pro": "flagship",
   "seedance-1.5-pro": "flagship",
@@ -76,13 +79,21 @@ const MODEL_RANKS: Record<string, { quality: number; speed: number; price: numbe
   "veo-3.1-lite": { quality: 6, speed: 1, price: 1 },
   "veo-3": { quality: 2, speed: 7, price: 9 },
   "veo-3-fast": { quality: 4, speed: 3, price: 4 },
+  "veo-2": { quality: 6, speed: 4, price: 3 },
   // Kling
   "kling-3.0-omni": { quality: 1, speed: 5, price: 8 },
   "kling-3.0-omni-edit": { quality: 1, speed: 5, price: 8 },
   "kling-3.0": { quality: 2, speed: 5, price: 7 },
+  "kling-3.0-pro": { quality: 1, speed: 5, price: 8 },
+  "kling-3.0-standard": { quality: 3, speed: 2, price: 5 },
+  "kling-3.0-4k": { quality: 1, speed: 7, price: 9 },
   "kling-3.0-motion-control": { quality: 2, speed: 5, price: 7 },
   "kling-2.6": { quality: 4, speed: 4, price: 5 },
   "kling-2.5-turbo": { quality: 5, speed: 1, price: 3 },
+  "kling-2.1-master": { quality: 3, speed: 5, price: 7 },
+  "kling-2-master": { quality: 4, speed: 5, price: 7 },
+  "kling-1.6-pro": { quality: 6, speed: 5, price: 4 },
+  "kling-1.6-standard": { quality: 7, speed: 2, price: 2 },
   "kling-o1-video": { quality: 3, speed: 5, price: 6 },
   "kling-o1-video-edit": { quality: 3, speed: 5, price: 6 },
   "kling-motion-control": { quality: 4, speed: 5, price: 5 },
@@ -106,9 +117,10 @@ interface ModelRowProps {
   description: string;
   isAny?: boolean;
   providerLabel?: string;
+  hasAudio?: boolean;
 }
 
-const ModelRow = ({ value, label, description, isAny, providerLabel }: ModelRowProps) => {
+const ModelRow = ({ value, label, description, isAny, providerLabel, hasAudio }: ModelRowProps) => {
   const { base, variant } = isAny ? { base: label, variant: null } : splitLabel(label);
   const tier = isAny ? "default" : classifyTier(value, variant);
   // Show "FLAGSHIP" pill on top-tier models that have no variant suffix (e.g. Veo 3.1, Kling 3.0).
@@ -150,6 +162,15 @@ const ModelRow = ({ value, label, description, isAny, providerLabel }: ModelRowP
             >
               {isOmniEdit && <Pencil size={9} />}
               {variant}
+            </span>
+          )}
+          {hasAudio && !isAny && (
+            <span
+              title="Native audio (dialogue, SFX, music)"
+              className="inline-flex items-center gap-1 px-1.5 py-[1px] rounded border border-primary/40 text-primary text-[10px] font-semibold uppercase tracking-wider leading-none"
+            >
+              <Volume2 size={9} />
+              Audio
             </span>
           )}
           {isAny && (
