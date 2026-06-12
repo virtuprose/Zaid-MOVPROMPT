@@ -402,8 +402,41 @@ export function ImageEditorDialog({ open, onOpenChange, sourceUrl, aspectRatio, 
             )}
 
             <div className="mt-auto pt-2 flex flex-col gap-2">
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Output quality</Label>
+                <div
+                  role="tablist"
+                  aria-label="Output quality"
+                  className="inline-flex w-full items-center rounded-lg border border-border/50 bg-muted/30 p-0.5"
+                >
+                  {(["1K", "2K", "4K"] as const).map((q) => {
+                    const active = quality === q;
+                    return (
+                      <button
+                        key={q}
+                        type="button"
+                        role="tab"
+                        aria-selected={active}
+                        disabled={busy}
+                        onClick={() => {
+                          setQuality(q);
+                          try { localStorage.setItem("director:image_quality", q); } catch {}
+                        }}
+                        className={cn(
+                          "flex-1 rounded-md px-2 py-1 text-[11px] font-semibold tracking-wide transition-colors",
+                          active
+                            ? "bg-primary/20 text-primary"
+                            : "text-muted-foreground hover:text-foreground",
+                        )}
+                      >
+                        {q}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
               <div className="text-[10px] text-muted-foreground/70">
-                Model: Gemini Nano Banana 2 · ~5 credits
+                Model: Gemini Nano Banana 2 · {quality === "4K" ? "~8 credits (5 + 3 upscale)" : "~5 credits"}
               </div>
               <div className="flex gap-2">
                 <Button type="button" variant="ghost" className="flex-1" onClick={() => onOpenChange(false)} disabled={busy}>
