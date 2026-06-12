@@ -422,7 +422,29 @@ serve(async (req) => {
       (mode === "multi_angle" && (body.per_shot_prompts?.length ?? 0) > 1);
     const styleHeader = buildStyleHeader(body.style_spec);
     const aspectClause = buildAspectClause(aspect);
-    if (mode === "storyboard_panels") {
+    if (mode === "multi_angle") {
+      // Multi-angle: 6 panels max, each rendered with a hard ANGLE-ONLY lock so
+      // the model re-angles the reference instead of redesigning it. We accept
+      // per_shot_prompts from the client (the canonical 6 angle beats) but cap
+      // at 6 and fall back to a generic 6-angle rotation if none provided.
+      const FALLBACK_ANGLES = [
+        "Front-on, eye-level.",
+        "Three-quarter angle from the left, eye-level.",
+        "Pure left profile, eye-level.",
+        "Back / reverse angle, eye-level.",
+        "Three-quarter angle from the right, eye-level.",
+        "Low hero angle from front-below looking up.",
+      ];
+      const raw =
+        Array.isArray(body.per_shot_prompts) && body.per_shot_prompts.length > 0
+          ? body.per_shot_prompts.slice(0, 6)
+          : FALLBACK_ANGLES;
+      const total = raw.length;
+      prompts = raw.map((beat, i) => {
+        return `${styleHeader}${ANGLE_LOCK} Angle ${i + 1} of ${total}: ${beat}${aspectClause}${PANEL_POLISH_SUFFIX}`;
+      });
+      shotIndices = prompts.map((_, i) => i + 1);
+    } else if (mode === "storyboard_panels") {
       const raw =
         Array.isArray(body.per_shot_prompts) && body.per_shot_prompts.length > 0
           ? body.per_shot_prompts.slice(0, 9)
