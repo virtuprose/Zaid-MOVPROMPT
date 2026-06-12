@@ -531,6 +531,20 @@ export function GeneratedImageCard({ data, onRegenerate, onUnpinSubject, onAnima
                 </TooltipTrigger>
                 <TooltipContent>Download</TooltipContent>
               </Tooltip>
+              <Tooltip delayDuration={150}>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); setEditTarget(img.url); }}
+                    className="absolute bottom-1 left-9 z-10 opacity-70 group-hover:opacity-100 focus-visible:opacity-100 [@media(pointer:coarse)]:opacity-100 transition-all bg-accent/20 text-accent hover:bg-accent hover:text-accent-foreground p-1.5 rounded"
+                    aria-label="Edit image"
+                  >
+                    <Sparkles className="h-3 w-3" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>Edit with AI…</TooltipContent>
+              </Tooltip>
+
               {onRegenerate && (
                 <Tooltip delayDuration={150}>
                   <TooltipTrigger asChild>
