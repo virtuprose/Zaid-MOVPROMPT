@@ -2736,6 +2736,8 @@ function DirectorChatInner() {
             imagePromptBusy={imagePromptBusy}
             mode={chatMode}
             onModeChange={handleModeChange}
+            quality={chatImageQuality}
+            onQualityChange={setChatImageQuality}
             focusSignal={composerFocusTick}
           />
         </div>
