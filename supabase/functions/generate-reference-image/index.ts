@@ -172,7 +172,9 @@ async function upscaleViaFal(
       image_url: sourceUrl,
       upscale_factor: scale,
       creativity: 0.2,
-      resemblance: 1.5,
+      // FAL clarity-upscaler caps `resemblance` at 1.0 — sending >1 returns 422
+      // and the whole 4K request crashes back to 1K. Keep this <= 1.
+      resemblance: 1.0,
       num_inference_steps: 18,
     }),
   });
