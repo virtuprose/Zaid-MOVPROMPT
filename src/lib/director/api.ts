@@ -355,6 +355,7 @@ export async function streamDirectorAgent(
     tasteProfile?: TasteProfile | null;
     mode?: "director" | "free_chat";
     lockedSpec?: HandoffLockedSpec | null;
+    sessionId?: string | null;
   } = {},
 ): Promise<AgentResponse> {
   const idleTimeoutMs = options.idleTimeoutMs ?? 30_000;
