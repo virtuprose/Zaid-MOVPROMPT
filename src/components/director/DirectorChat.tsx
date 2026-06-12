@@ -774,7 +774,7 @@ function DirectorChatInner() {
       prompt: string;
       reference_urls?: string[];
       count?: number;
-      aspect_ratio?: "1:1" | "16:9" | "9:16";
+      aspect_ratio?: AspectRatio;
       per_shot_prompts?: string[];
       shot_index?: number;
       lock_mode?: "character" | "scene" | "auto";
