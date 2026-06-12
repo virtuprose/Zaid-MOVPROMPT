@@ -132,7 +132,13 @@ type Ctx = {
   consumeAttachments: () => Attachment[];
   renameItem: (item: MediaItem, name: string) => Promise<{ ok: boolean; error?: string }>;
   unnameItem: (mediaKey: string) => Promise<void>;
+
+  /** Register a host (DirectorChat) that knows how to append a bubble to the live chat + persist it. */
+  registerAppendBubble: (fn: ((b: RailBubble) => void) | null) => void;
+  /** Append a bubble (e.g. an edited-image result card) into the host chat. No-op until a host registers. */
+  appendBubble: (b: RailBubble) => void;
 };
+
 
 const MediaRailCtx = createContext<Ctx | null>(null);
 
