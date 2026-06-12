@@ -31,11 +31,12 @@ const QUALITIES: Array<{
 type Props = {
   chosen?: AspectRatio;
   disabled?: boolean;
+  defaultQuality?: ImageQuality;
   onChoose: (aspect: AspectRatio, quality: ImageQuality) => void;
 };
 
-export function AspectChoiceCard({ chosen, disabled, onChoose }: Props) {
-  const [quality, setQuality] = useState<ImageQuality>("1K");
+export function AspectChoiceCard({ chosen, disabled, defaultQuality, onChoose }: Props) {
+  const [quality, setQuality] = useState<ImageQuality>(defaultQuality ?? "1K");
   const locked = !!disabled;
 
   const handleQuality = (q: ImageQuality) => {

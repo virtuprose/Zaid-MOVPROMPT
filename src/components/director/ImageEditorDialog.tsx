@@ -7,7 +7,7 @@ import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { Brush, Eraser, Replace, Wand2, Undo2, Loader2, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { editImage, type EditMode } from "@/lib/director/editImage";
+import { editImage, type EditMode, type EditQuality } from "@/lib/director/editImage";
 import { useMediaRail } from "./MediaRailContext";
 
 type Props = {
@@ -35,6 +35,13 @@ export function ImageEditorDialog({ open, onOpenChange, sourceUrl, aspectRatio, 
   const [brush, setBrush] = useState(48);
   const [showMask, setShowMask] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [quality, setQuality] = useState<EditQuality>(() => {
+    try {
+      const v = localStorage.getItem("director:image_quality");
+      if (v === "1K" || v === "2K" || v === "4K") return v;
+    } catch {}
+    return "1K";
+  });
   const [imgSize, setImgSize] = useState<{ w: number; h: number } | null>(null);
   const [imgEl, setImgEl] = useState<HTMLImageElement | null>(null);
   const maskCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -254,6 +261,7 @@ export function ImageEditorDialog({ open, onOpenChange, sourceUrl, aspectRatio, 
         mode,
         prompt: prompt.trim(),
         aspectRatio,
+        quality,
       });
       const newBubble = {
         role: "generated_images",
@@ -394,8 +402,41 @@ export function ImageEditorDialog({ open, onOpenChange, sourceUrl, aspectRatio, 
             )}
 
             <div className="mt-auto pt-2 flex flex-col gap-2">
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Output quality</Label>
+                <div
+                  role="tablist"
+                  aria-label="Output quality"
+                  className="inline-flex w-full items-center rounded-lg border border-border/50 bg-muted/30 p-0.5"
+                >
+                  {(["1K", "2K", "4K"] as const).map((q) => {
+                    const active = quality === q;
+                    return (
+                      <button
+                        key={q}
+                        type="button"
+                        role="tab"
+                        aria-selected={active}
+                        disabled={busy}
+                        onClick={() => {
+                          setQuality(q);
+                          try { localStorage.setItem("director:image_quality", q); } catch {}
+                        }}
+                        className={cn(
+                          "flex-1 rounded-md px-2 py-1 text-[11px] font-semibold tracking-wide transition-colors",
+                          active
+                            ? "bg-primary/20 text-primary"
+                            : "text-muted-foreground hover:text-foreground",
+                        )}
+                      >
+                        {q}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
               <div className="text-[10px] text-muted-foreground/70">
-                Model: Gemini Nano Banana 2 · ~5 credits
+                Model: Gemini Nano Banana 2 · {quality === "4K" ? "~8 credits (5 + 3 upscale)" : "~5 credits"}
               </div>
               <div className="flex gap-2">
                 <Button type="button" variant="ghost" className="flex-1" onClick={() => onOpenChange(false)} disabled={busy}>

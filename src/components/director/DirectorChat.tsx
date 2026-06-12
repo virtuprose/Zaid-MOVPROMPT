@@ -238,6 +238,17 @@ function DirectorChatInner() {
   const [input, setInput] = useState("");
   const [composerFocusTick, setComposerFocusTick] = useState(0);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [chatImageQuality, setChatImageQualityState] = useState<ImageQuality>(() => {
+    try {
+      const v = localStorage.getItem("director:image_quality");
+      if (v === "1K" || v === "2K" || v === "4K") return v;
+    } catch {}
+    return "1K";
+  });
+  const setChatImageQuality = useCallback((q: ImageQuality) => {
+    setChatImageQualityState(q);
+    try { localStorage.setItem("director:image_quality", q); } catch {}
+  }, []);
 
   // Pick up attachments enqueued from the Media panel (Recreate / +Add to task).
   useEffect(() => {
@@ -791,7 +802,7 @@ function DirectorChatInner() {
         : Math.min(Math.max(payload.count ?? 1, 1), 9);
     const PER_IMAGE_CREDITS = 5;
     const UPSCALE_4K_PER_PANEL = 3;
-    const quality: ImageQuality = payload.quality || "1K";
+    const quality: ImageQuality = payload.quality || chatImageQuality || "1K";
     const upscaleCost = quality === "4K" ? UPSCALE_4K_PER_PANEL * imageCount : 0;
     const approvalCost = imageCount * PER_IMAGE_CREDITS + upscaleCost;
     const approvalLabel =
@@ -2725,6 +2736,8 @@ function DirectorChatInner() {
             imagePromptBusy={imagePromptBusy}
             mode={chatMode}
             onModeChange={handleModeChange}
+            quality={chatImageQuality}
+            onQualityChange={setChatImageQuality}
             focusSignal={composerFocusTick}
           />
         </div>
@@ -3140,6 +3153,7 @@ function DirectorChatInner() {
                     <AspectChoiceCard
                       chosen={b.chosen}
                       disabled={busy}
+                      defaultQuality={chatImageQuality}
                       onChoose={(aspect, quality) => void handleAspectChoice(i, aspect, quality)}
                     />
                   </div>
@@ -3489,6 +3503,8 @@ function DirectorChatInner() {
           imagePromptBusy={imagePromptBusy}
           mode={chatMode}
           onModeChange={handleModeChange}
+          quality={chatImageQuality}
+          onQualityChange={setChatImageQuality}
           focusSignal={composerFocusTick}
         />
       </div>
