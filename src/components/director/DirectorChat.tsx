@@ -739,6 +739,10 @@ function DirectorChatInner() {
       console.error("persist session failed", e);
     }
   };
+  const persistRef = useRef(persist);
+  useEffect(() => { persistRef.current = persist; });
+
+
 
 
   const runImageGeneration = async (
