@@ -1,88 +1,57 @@
-# Image editing for AI Director
+## Goal
 
-Add an editor that lets the user refine any generated image with prompt-only edits, brush-masked inpaint, subject swap, and erase — powered by `google/gemini-3.1-flash-image-preview` (Nano Banana 2). Each edit is saved as a new image; the original stays in the rail / chat history.
+Let the user pick the output resolution (**1K / 2K / 4K**) up front — both in the Director chat composer (applied to every image the agent generates) and in the ImageEditorDialog (applied to the edit being produced) — instead of only inside the aspect_choice bubble.
 
-## Entry points
+## UX
 
-1. **Chat result bubble** — `GeneratedImageCard` gets a new "Edit" button next to the existing actions (Regenerate / Animate). Opens the editor dialog on that image.
-2. **Media Rail expanded view** — `MediaRailPanel` expanded image overlay gets the same "Edit" button in its action toolbar.
+### 1) Chat composer
 
-Both call the same `ImageEditorDialog` component with `{ sourceUrl, sessionId, originBubbleId? }`.
+- Add a compact segmented control `1K · 2K · 4K` in the Composer's bottom toolbar, next to the mode switch (Director / Chat) and Send button. Same visual language as the existing chips: rounded pill, primary tint when active.
+- Tooltip on 4K: "+3 credits per image".
+- The selected value is sticky across the session and persisted in `localStorage` (`director:image_quality`, default `1K`).
+- This becomes the default quality for any image generation kicked off from the chat — single panel, character/product sheet, and storyboard panels.
+- The existing `AspectChoiceCard` (aspect bubble) still appears, but its quality row is **pre-seeded** with the composer's current choice so the user doesn't have to repick. They can still override per bubble.
 
-## Editor dialog (`src/components/director/ImageEditorDialog.tsx`)
+### 2) ImageEditorDialog
 
-A single dialog with the source image centered and a right-side control rail. Four edit modes selectable via a small segmented control:
+- Add the same `1K / 2K / 4K` segmented control above the "Generate edit" button.
+- Cost label updates live:
+  - 1K / 2K → `~5 credits`
+  - 4K → `~8 credits (5 + 3 upscale)`
+- Default to the composer preference on open.
 
-- **Prompt** — global transform, prompt only (e.g. "make it golden hour").
-- **Paint** — brush over a region, prompt describes what should appear there (inpaint).
-- **Swap** — brush over a subject, prompt describes the replacement (same pipeline as paint, different system hint).
-- **Erase** — brush over an area, no prompt required; sends a "remove cleanly and fill background" instruction.
+## Files
 
-Canvas behavior for Paint/Swap/Erase:
-- Overlay `<canvas>` matched to the image's intrinsic size. Pointer/touch draws a soft white circle into a separate mask canvas (black background).
-- Brush size slider (8–120 px), Undo, Clear mask, Show/Hide mask toggle.
-- On submit, the mask canvas is exported as a PNG data URL.
+**Frontend**
+- `src/components/director/Composer.tsx` — add `quality` + `onQualityChange` props and render the segmented control in the existing toolbar row.
+- `src/components/director/DirectorChat.tsx`
+  - New state `chatImageQuality` (hydrated from `localStorage`, persisted on change).
+  - Pass it to `<Composer />`.
+  - In `runReferenceGeneration(...)`, when `payload.quality` is not explicitly set by the caller (most paths today), fall back to `chatImageQuality` instead of the hard-coded `"1K"`.
+  - Pre-seed `<AspectChoiceCard defaultQuality={chatImageQuality} />` so the bubble's initial pick matches.
+- `src/components/director/AspectChoiceCard.tsx` — accept optional `defaultQuality` prop; use it as the initial `useState` value.
+- `src/components/director/ImageEditorDialog.tsx`
+  - Add `quality` state (default = composer pref via a small `localStorage` read, fallback `"1K"`).
+  - Render the segmented control + dynamic cost label.
+  - Pass `quality` into `editImage(...)`.
 
-Footer: prompt textarea (hidden for pure Erase, optional), "Generate edit" primary button, credit cost chip, cancel.
+**Shared client lib**
+- `src/lib/director/editImage.ts` — extend the `editImage` params with `quality?: "1K" | "2K" | "4K"`, forward as `quality` in the edge-function body.
 
-## Backend — extend `generate-reference-image` (no new function)
+**Edge function**
+- `supabase/functions/generate-reference-image/index.ts`
+  - Edit branch (`op === "edit"`): read `quality` from the body, default `"1K"`.
+  - After the base edit returns, run the same upscale path the generation flow already uses for 4K (or 2K free upscale). For 4K charge an additional `priceFor("image_upscale_4k", 3)` credits, with refund on failure — mirror the existing storyboard 4K handling so behavior stays consistent.
+  - Echo the chosen quality in the response payload so the client can label the new bubble.
 
-The existing edge function already calls `google/gemini-3.1-flash-image-preview` with `image_url` parts. We extend it with an `op: "edit"` branch:
+## Out of scope
 
-Request body additions:
-```
-{
-  op: "edit",
-  sourceUrl: string,           // existing generated image (https or data:)
-  maskUrl?: string,            // PNG data URL, white = edit region (paint/swap/erase)
-  mode: "prompt" | "paint" | "swap" | "erase",
-  prompt: string,              // empty allowed only for erase
-  aspectRatio?: string,
-  sessionId?: string,
-}
-```
-
-Gateway call: send the source image plus mask (when present) as two `image_url` parts, with a system-style text part instructing the model:
-- prompt mode → "Apply this transformation to the entire image".
-- paint mode → "Edit only the region marked white in the mask image; leave the rest pixel-identical".
-- swap mode → "Replace the subject inside the white mask region with: …; keep lighting and surroundings consistent".
-- erase mode → "Remove the content inside the white mask region; reconstruct the background plausibly".
-
-Credit charge: reuse `priceFor("image_generation", { count: 1 })` already used for single-image generation. Refund on failure (same pattern as existing code at lines ~310/471).
-
-Response: `{ url, sessionId, parentUrl: sourceUrl }` — same shape as today's generate response, so client code paths converge.
-
-## Versioning / save behavior
-
-- Each successful edit returns a brand-new image URL. The original stays untouched in the chat bubble and Media Rail.
-- The new image is appended to the session's media via the existing `MediaRailContext.addItem(...)` with `meta: { parentUrl, editPrompt, editMode }` so the rail naturally shows the new version next to the original.
-- When the editor was launched from a chat bubble, we also append a small assistant bubble: `"Edited image (mode: paint) — '<prompt>'"` with the new image card so it's discoverable in the conversation timeline.
-- Optional badge "Edited" on cards whose `meta.parentUrl` is set.
-
-## Files to add / change
-
-Add:
-- `src/components/director/ImageEditorDialog.tsx` — dialog, mask canvas, mode switcher, submit.
-- `src/lib/director/imageMask.ts` — small helpers (init canvas at image size, export PNG mask, undo stack).
-- `src/lib/director/editImage.ts` — typed client wrapper that calls `generate-reference-image` with `op: "edit"`.
-
-Edit:
-- `src/components/director/GeneratedImageCard.tsx` — add "Edit" action; wire dialog.
-- `src/components/director/MediaRailPanel.tsx` — add "Edit" button to expanded image overlay.
-- `src/components/director/MediaRailContext.tsx` — accept optional `parentUrl`, `editPrompt`, `editMode` in item meta; sort so children appear next to parents.
-- `supabase/functions/generate-reference-image/index.ts` — branch on `op === "edit"`, build the edit prompt + mask payload, call gateway, charge/refund, return URL.
-
-No schema changes, no new edge function, no new secrets — Lovable AI key is already available to the function.
+- Per-model quality caps (Nano Banana 2 supports up to 4K via upscale — keep the same three tiers everywhere).
+- Backfilling existing rendered images with a new resolution.
+- Adding 8K or other tiers.
 
 ## Technical notes
 
-- Mask must match the source image's intrinsic resolution; downscale to ≤ 1536px longest edge before sending to keep request size reasonable.
-- For very large source images (e.g. 4K upscales) we send the pre-upscale version when `meta.sourceBeforeUpscale` exists, then optionally re-upscale the result reusing the existing FAL upscaler.
-- Brush operations are local-only until submit — no autosave drafts.
-- Editor is keyboard-accessible: `[` / `]` resize brush, `⌘Z` undo, `Esc` close.
-
-## Out of scope (can follow up later)
-
-- Multi-step edit history with branching (we keep flat parentUrl).
-- Outpainting / canvas extension.
-- Per-edit fine-grained model picker (locked to Nano Banana 2 as requested).
+- 4K pricing surcharge already lives in `AspectChoiceCard` as `QUALITY_4K_CREDITS_PER_PANEL = 3`. Reuse the same constant from the composer / editor so all three surfaces stay in sync (export it or move to `src/lib/credits/pricing.ts`).
+- `runReferenceGeneration` already computes `upscaleCost = quality === "4K" ? UPSCALE_4K_PER_PANEL * imageCount : 0` — only the **source** of `quality` changes (composer state instead of hardcoded `"1K"`).
+- Persist key: `localStorage["director:image_quality"]`. Read once on mount with a safe try/catch.
