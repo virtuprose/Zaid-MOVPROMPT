@@ -20,7 +20,7 @@ export async function editImage(params: {
   maskDataUrl?: string;
   mode: EditMode;
   prompt: string;
-  aspectRatio?: "1:1" | "16:9" | "9:16";
+  aspectRatio?: string;
   quality?: EditQuality;
 }): Promise<EditImageResult> {
   const { data, error } = await supabase.functions.invoke("generate-reference-image", {

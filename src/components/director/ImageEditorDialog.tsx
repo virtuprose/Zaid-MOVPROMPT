@@ -14,7 +14,7 @@ type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   sourceUrl: string;
-  aspectRatio?: "1:1" | "16:9" | "9:16";
+  aspectRatio?: string;
   /** Optional callback after a successful edit (in addition to the chat append). */
   onEdited?: (result: { url: string; mode: EditMode; prompt: string }) => void;
 };

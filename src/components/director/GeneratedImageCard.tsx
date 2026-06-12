@@ -15,7 +15,7 @@ export type GeneratedImageBubbleData = {
   mode: "character_sheet" | "storyboard_panels" | "single_panel";
   images: Array<{ url: string; storage_path: string; shot_index?: number }>;
   directorsNote?: string;
-  aspectRatio?: "1:1" | "16:9" | "9:16";
+  aspectRatio?: string;
   progress?: { done: number; total: number };
   subjectSheet?: boolean;
   subjectKind?: "character" | "product";
@@ -27,7 +27,7 @@ export type AnimatePanelInput = {
   url: string;
   shot_index: number;
   directorsNote?: string;
-  aspectRatio?: "1:1" | "16:9" | "9:16";
+  aspectRatio?: string;
   provider?: string;
   duration?: 5 | 10;
   audioPlan?: AudioPlan;
