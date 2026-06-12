@@ -12,8 +12,14 @@ const corsHeaders = {
 
 const SIGNED_URL_TTL = 60 * 60;
 
-type Mode = "character_sheet" | "storyboard_panels" | "single_panel";
+type Mode = "character_sheet" | "storyboard_panels" | "single_panel" | "multi_angle";
 type LockMode = "character" | "scene" | "auto";
+
+// Multi-angle = same subject + same scene, only the camera position changes.
+// This lock is harder than IDENTITY_LOCK because it also pins wardrobe, props,
+// lighting, background, time of day, and scale.
+const ANGLE_LOCK =
+  "ANGLE-ONLY VARIATION. Treat the attached reference as the canonical image. Keep the subject identical (face, hair, skin tone, age, body, wardrobe, accessories — or, for products, the exact same object: shape, materials, colors, branding, logos, proportions). Keep the scene identical (same background, same props, same lighting setup, same color temperature, same time of day, same depth of field, same scale of subject in frame). DO NOT change pose action, expression, wardrobe, props, location, or lighting. ONLY the camera angle changes per the beat below.";
 
 type StyleSpec = {
   lens?: string;
