@@ -202,7 +202,117 @@ serve(async (req) => {
   }
 
   try {
-    const body = (await req.json()) as Body;
+    const body = (await req.json()) as Body & {
+      op?: "edit";
+      source_url?: string;
+      mask_url?: string;
+      edit_mode?: "prompt" | "paint" | "swap" | "erase";
+    };
+
+    // -------- Edit branch (prompt / paint-mask / swap / erase) --------
+    if (body.op === "edit") {
+      const sourceUrl = (body.source_url || "").trim();
+      const maskUrl = (body.mask_url || "").trim();
+      const editMode = body.edit_mode || "prompt";
+      const userPrompt = (body.prompt || "").trim();
+      const aspectE = body.aspect_ratio || "16:9";
+      if (!sourceUrl) {
+        return new Response(JSON.stringify({ error: "source_url required" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (editMode !== "erase" && !userPrompt) {
+        return new Response(JSON.stringify({ error: "prompt required" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const needsMask = editMode === "paint" || editMode === "swap" || editMode === "erase";
+      if (needsMask && !maskUrl) {
+        return new Response(JSON.stringify({ error: "mask_url required for this edit mode" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const editPrice = await priceFor("image_generation", 5);
+      try {
+        await chargeCredits({ userId, amount: editPrice, reason: "image_edit", metadata: { mode: editMode } });
+      } catch (e) {
+        if (e instanceof InsufficientCreditsError) return insufficientResponse(corsHeaders);
+        throw e;
+      }
+
+      const instr = (() => {
+        const aspectLine = ` Output frame must fill a ${aspectE} aspect ratio (no letterboxing).`;
+        if (editMode === "prompt") {
+          return `Edit the attached image. Apply this transformation to the entire image while preserving the subject identity and overall composition: ${userPrompt}.${aspectLine} Return only the edited image — no text, captions, watermarks, or borders.`;
+        }
+        if (editMode === "paint") {
+          return `You are given TWO images. Image 1 is the source. Image 2 is a binary mask — WHITE pixels mark the region to edit; BLACK pixels must remain pixel-identical. Inside the white region, render: ${userPrompt}. Outside the white region keep the source image unchanged. Blend the edit seamlessly with surrounding lighting, color, focus, and grain.${aspectLine} Return only the edited image — no text.`;
+        }
+        if (editMode === "swap") {
+          return `You are given TWO images. Image 1 is the source. Image 2 is a binary mask — WHITE pixels mark the subject to replace. Replace the subject inside the white region with: ${userPrompt}. Keep lighting direction, color grade, shadows, perspective, scale, and surrounding environment perfectly consistent. The rest of the image (black mask region) must remain pixel-identical.${aspectLine} Return only the edited image.`;
+        }
+        // erase
+        return `You are given TWO images. Image 1 is the source. Image 2 is a binary mask — WHITE pixels mark content to REMOVE. Cleanly remove everything inside the white region and reconstruct a plausible background that matches surrounding lighting, texture, focus, and perspective. The rest of the image (black mask region) must remain pixel-identical.${aspectLine} Return only the edited image — no text.`;
+      })();
+
+      const userParts: any[] = [{ type: "text", text: instr }, { type: "image_url", image_url: { url: sourceUrl } }];
+      if (maskUrl) userParts.push({ type: "image_url", image_url: { url: maskUrl } });
+
+      let outDataUrl: string;
+      try {
+        const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model: "google/gemini-3.1-flash-image-preview",
+            messages: [{ role: "user", content: userParts }],
+            modalities: ["image", "text"],
+          }),
+        });
+        if (!resp.ok) {
+          const txt = await resp.text();
+          console.error("edit gateway error", resp.status, txt);
+          throw Object.assign(new Error(`gateway_${resp.status}`), { status: resp.status, detail: txt });
+        }
+        const data = await resp.json();
+        const msg = data?.choices?.[0]?.message;
+        const img = msg?.images?.[0]?.image_url?.url || msg?.images?.[0]?.url || null;
+        if (!img) throw new Error("no_image_returned");
+        outDataUrl = img as string;
+      } catch (e) {
+        try { await refundCredits({ userId, amount: editPrice, reason: "image_edit_refund", metadata: { mode: editMode } }); } catch {}
+        throw e;
+      }
+
+      const { blob, mime } = dataUrlToBlob(outDataUrl);
+      const ext = (mime.split("/")[1] || "png").split("+")[0];
+      const path = `${userId}/edit-${crypto.randomUUID().slice(0, 8)}-${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from("director-uploads")
+        .upload(path, blob, { contentType: mime, upsert: false });
+      if (upErr) {
+        try { await refundCredits({ userId, amount: editPrice, reason: "image_edit_refund", metadata: { mode: editMode, stage: "upload" } }); } catch {}
+        throw upErr;
+      }
+      const { data: signed, error: signErr } = await supabase.storage
+        .from("director-uploads").createSignedUrl(path, SIGNED_URL_TTL);
+      if (signErr || !signed?.signedUrl) {
+        try { await refundCredits({ userId, amount: editPrice, reason: "image_edit_refund", metadata: { mode: editMode, stage: "sign" } }); } catch {}
+        throw signErr || new Error("sign_failed");
+      }
+
+      return new Response(
+        JSON.stringify({
+          mode: "single_panel",
+          images: [{ url: signed.signedUrl, storage_path: path }],
+          edit: { mode: editMode, prompt: userPrompt, parent_url: sourceUrl },
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+    // -------- end edit branch --------
+
     const mode: Mode = body.mode || "single_panel";
     const basePrompt = (body.prompt || "").trim();
     if (!basePrompt && !(body.per_shot_prompts?.length)) {
@@ -211,6 +321,7 @@ serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
     const referenceUrls = Array.isArray(body.reference_urls)
       ? body.reference_urls.filter((u) => typeof u === "string" && u.length > 0)
       : [];
