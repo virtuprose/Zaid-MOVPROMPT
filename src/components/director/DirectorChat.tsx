@@ -91,6 +91,14 @@ type Bubble =
   | { role: "error"; message: string; detail?: string; retryable: boolean }
   | { role: "generated_images"; data: import("./GeneratedImageCard").GeneratedImageBubbleData }
   | {
+      role: "storyboard_plan";
+      plan: StoryboardPlan;
+      shotCount: 3 | 6 | 9;
+      story: string;
+      approved?: boolean;
+      discarded?: boolean;
+    }
+  | {
       role: "aspect_choice";
       payload: {
         mode: "single_panel";
