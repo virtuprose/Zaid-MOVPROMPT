@@ -14,7 +14,7 @@ export type ModerationResult = {
 export type AttachmentRole = "character" | "storyboard" | "reference" | "key_frame" | "location";
 
 export type Attachment =
-  | { kind: "image"; name: string; url: string; storage_path?: string; moderation?: ModerationResult; role?: AttachmentRole; shot_index?: number; parent_storage_path?: string; aspect_ratio?: "1:1" | "16:9" | "9:16" }
+  | { kind: "image"; name: string; url: string; storage_path?: string; moderation?: ModerationResult; role?: AttachmentRole; shot_index?: number; parent_storage_path?: string; aspect_ratio?: string }
   | { kind: "video_keyframes"; name: string; url: string; storage_path?: string; moderation?: ModerationResult; role?: AttachmentRole; shot_index?: number; parent_storage_path?: string }
   | { kind: "audio_transcript"; name: string; text: string; storage_path?: string }
   | { kind: "document"; name: string; text: string };
