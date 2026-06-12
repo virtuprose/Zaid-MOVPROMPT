@@ -1250,6 +1250,37 @@ Then stop. Don't ask follow-up questions yourself.`;
     // Director chat replies are free — credits are only charged on real
     // generations (generate-reference-image, generate-video).
 
+    // Fire-and-forget: roll the session digest + long-term memory when
+    // the chat is long enough to need eviction. Never blocks the response.
+    if (
+      sessionId &&
+      resolvedUserId &&
+      fullMessageCount > KEEP_RECENT
+    ) {
+      const authzForBg = req.headers.get("Authorization") || "";
+      const bgPromise = fetch(
+        `${Deno.env.get("SUPABASE_URL")}/functions/v1/director-summarize`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: authzForBg,
+            apikey: Deno.env.get("SUPABASE_ANON_KEY") || "",
+          },
+          body: JSON.stringify({
+            sessionId,
+            userId: resolvedUserId,
+            messages: allMessagesForSummary,
+          }),
+        },
+      ).catch((e) => console.error("director-summarize trigger failed", e));
+      // @ts-ignore — EdgeRuntime is provided by Supabase Edge Functions
+      if (typeof EdgeRuntime !== "undefined" && (EdgeRuntime as any).waitUntil) {
+        // @ts-ignore
+        (EdgeRuntime as any).waitUntil(bgPromise);
+      }
+    }
+
     const aiResp = await callGatewayWithRetry(requestBody, LOVABLE_API_KEY);
 
     if (!aiResp.ok) {
