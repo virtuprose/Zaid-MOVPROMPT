@@ -84,6 +84,29 @@ function dataUrlToBlob(dataUrl: string): { blob: Blob; mime: string } {
   return { blob: new Blob([bytes], { type: mime }), mime };
 }
 
+// Inline an http(s) image as a data URL. The AI Gateway cannot reliably fetch
+// Supabase private-bucket signed URLs (returns 400 upstream), so we fetch the
+// bytes server-side using the caller's auth context and pass them as data URLs.
+async function toDataUrl(url: string): Promise<string> {
+  if (/^data:/i.test(url)) return url;
+  const resp = await fetch(url);
+  if (!resp.ok) throw new Error(`ref_fetch_${resp.status}`);
+  const buf = new Uint8Array(await resp.arrayBuffer());
+  const mime = resp.headers.get("content-type") || "image/png";
+  let bin = "";
+  for (let i = 0; i < buf.length; i++) bin += String.fromCharCode(buf[i]);
+  return `data:${mime};base64,${btoa(bin)}`;
+}
+
+async function materializeRefs(urls: string[]): Promise<string[]> {
+  const out: string[] = [];
+  for (const u of urls) {
+    try { out.push(await toDataUrl(u)); }
+    catch (e) { console.warn("ref materialize failed; skipping", u, e); }
+  }
+  return out;
+}
+
 async function generateOne(
   apiKey: string,
   prompt: string,
@@ -93,7 +116,8 @@ async function generateOne(
   const aspectLine = aspectRatio ? `\n\nAspect ratio: ${aspectRatio}.` : "";
   const userParts: any[] = [{ type: "text", text: prompt + aspectLine }];
   const validRefs = referenceUrls.filter((u) => /^(https?:|data:)/i.test(u));
-  for (const u of validRefs.slice(0, 4)) {
+  const inlined = await materializeRefs(validRefs.slice(0, 4));
+  for (const u of inlined) {
     userParts.push({ type: "image_url", image_url: { url: u } });
   }
   const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -256,8 +280,10 @@ serve(async (req) => {
         return `You are given TWO images. Image 1 is the source. Image 2 is a binary mask — WHITE pixels mark content to REMOVE. Cleanly remove everything inside the white region and reconstruct a plausible background that matches surrounding lighting, texture, focus, and perspective. The rest of the image (black mask region) must remain pixel-identical.${aspectLine} Return only the edited image — no text.`;
       })();
 
-      const userParts: any[] = [{ type: "text", text: instr }, { type: "image_url", image_url: { url: sourceUrl } }];
-      if (maskUrl) userParts.push({ type: "image_url", image_url: { url: maskUrl } });
+      const inlinedSource = await toDataUrl(sourceUrl).catch((e) => { throw Object.assign(new Error("source_fetch_failed"), { cause: e }); });
+      const inlinedMask = maskUrl ? await toDataUrl(maskUrl).catch(() => maskUrl) : "";
+      const userParts: any[] = [{ type: "text", text: instr }, { type: "image_url", image_url: { url: inlinedSource } }];
+      if (inlinedMask) userParts.push({ type: "image_url", image_url: { url: inlinedMask } });
 
       let outDataUrl: string;
       try {
