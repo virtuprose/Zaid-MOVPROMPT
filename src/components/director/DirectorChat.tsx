@@ -802,7 +802,7 @@ function DirectorChatInner() {
         : Math.min(Math.max(payload.count ?? 1, 1), 9);
     const PER_IMAGE_CREDITS = 5;
     const UPSCALE_4K_PER_PANEL = 3;
-    const quality: ImageQuality = payload.quality || "1K";
+    const quality: ImageQuality = payload.quality || chatImageQuality || "1K";
     const upscaleCost = quality === "4K" ? UPSCALE_4K_PER_PANEL * imageCount : 0;
     const approvalCost = imageCount * PER_IMAGE_CREDITS + upscaleCost;
     const approvalLabel =
