@@ -2449,14 +2449,25 @@ function DirectorChatInner() {
       ],
     },
     {
+      id: "multi_angle",
+      label: "Multi-Angle",
+      tagline: "From one image, render 6 different camera angles of the SAME scene — nothing else changes.",
+      icon: Orbit,
+      prompts: [
+        "Give me 6 angles of this product on the same background",
+        "Rotate around my character — front, 3/4, profile, back, low hero",
+        "6-angle turnaround of this hero frame, lock the lighting",
+      ],
+    },
+    {
       id: "storyboard",
       label: "Storyboard",
-      tagline: "Multi-shot sequence with locked style across panels.",
+      tagline: "Tell me your story — I'll draft a per-shot plan you can edit before I render.",
       icon: LayoutGrid,
       prompts: [
-        "Three-shot intro: establishing wide, medium reveal, close-up emotion",
-        "Five-shot product launch sequence with matched color grade",
-        "Two-frame transition: dawn skyline to character waking up",
+        "30-second product launch: tease, hero close-up, lifestyle shot, payoff",
+        "Character morning routine — wake up, brew coffee, step into the city",
+        "Before / after transformation in 3 shots, matched grade",
       ],
     },
     {
