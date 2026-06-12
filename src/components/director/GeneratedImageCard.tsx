@@ -1,4 +1,4 @@
-import { RotateCcw, Film, Maximize2, X, ChevronLeft, ChevronRight, Download, Wand2, Lightbulb, Play, Loader2 } from "lucide-react";
+import { RotateCcw, Film, Maximize2, X, ChevronLeft, ChevronRight, Download, Wand2, Lightbulb, Play, Loader2, Sparkles } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { PromptInspector, type InspectorContext } from "./PromptInspector";
 import { AnimatePanelDialog, type AnimateDialogResult, type AudioPlan } from "./AnimatePanelDialog";
+import { ImageEditorDialog } from "./ImageEditorDialog";
+
 
 export type GeneratedImageBubbleData = {
   mode: "character_sheet" | "storyboard_panels" | "single_panel";
@@ -287,6 +289,8 @@ export function GeneratedImageCard({ data, onRegenerate, onUnpinSubject, onAnima
   const [animateAllOpen, setAnimateAllOpen] = useState(false);
   const [animatingAll, setAnimatingAll] = useState(false);
   const [singleAnimate, setSingleAnimate] = useState<AnimatePanelInput | null>(null);
+  const [editTarget, setEditTarget] = useState<string | null>(null);
+
 
   const handleAnimateOne = useCallback(async (panel: AnimatePanelInput) => {
     if (!onAnimatePanel) return;
@@ -527,6 +531,20 @@ export function GeneratedImageCard({ data, onRegenerate, onUnpinSubject, onAnima
                 </TooltipTrigger>
                 <TooltipContent>Download</TooltipContent>
               </Tooltip>
+              <Tooltip delayDuration={150}>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); setEditTarget(img.url); }}
+                    className="absolute bottom-1 left-9 z-10 opacity-70 group-hover:opacity-100 focus-visible:opacity-100 [@media(pointer:coarse)]:opacity-100 transition-all bg-accent/20 text-accent hover:bg-accent hover:text-accent-foreground p-1.5 rounded"
+                    aria-label="Edit image"
+                  >
+                    <Sparkles className="h-3 w-3" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>Edit with AI…</TooltipContent>
+              </Tooltip>
+
               {onRegenerate && (
                 <Tooltip delayDuration={150}>
                   <TooltipTrigger asChild>
@@ -769,20 +787,36 @@ export function GeneratedImageCard({ data, onRegenerate, onUnpinSubject, onAnima
           </div>
         )}
         {zoomIndex !== null && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                type="button"
-                onClick={() => downloadImage(data.images[zoomIndex].url, data.images[zoomIndex].shot_index ?? zoomIndex + 1)}
-                className="absolute top-2 right-12 bg-background/80 hover:bg-background/95 text-foreground p-1.5 rounded-md transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-white/20"
-                aria-label="Download image"
-              >
-                <Download className="h-4 w-4" />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent>Download</TooltipContent>
-          </Tooltip>
+          <>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={() => { const u = data.images[zoomIndex].url; setZoomIndex(null); setEditTarget(u); }}
+                  className="absolute top-2 right-[5.5rem] bg-accent/20 hover:bg-accent hover:text-accent-foreground text-accent p-1.5 rounded-md transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-white/20"
+                  aria-label="Edit image"
+                >
+                  <Sparkles className="h-4 w-4" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>Edit with AI…</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={() => downloadImage(data.images[zoomIndex].url, data.images[zoomIndex].shot_index ?? zoomIndex + 1)}
+                  className="absolute top-2 right-12 bg-background/80 hover:bg-background/95 text-foreground p-1.5 rounded-md transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-white/20"
+                  aria-label="Download image"
+                >
+                  <Download className="h-4 w-4" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>Download</TooltipContent>
+            </Tooltip>
+          </>
         )}
+
         <DialogClose className="absolute top-2 right-2 bg-background/80 hover:bg-background/95 text-foreground p-1.5 rounded-md transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-white/20">
           <X className="h-4 w-4" />
         </DialogClose>
@@ -816,6 +850,14 @@ export function GeneratedImageCard({ data, onRegenerate, onUnpinSubject, onAnima
         await handleAnimateAll(result);
       }}
     />
+
+    <ImageEditorDialog
+      open={!!editTarget}
+      onOpenChange={(o) => { if (!o) setEditTarget(null); }}
+      sourceUrl={editTarget || ""}
+      aspectRatio={data.aspectRatio}
+    />
     </>
+
   );
 }

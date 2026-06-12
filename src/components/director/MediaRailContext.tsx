@@ -4,6 +4,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -131,7 +132,13 @@ type Ctx = {
   consumeAttachments: () => Attachment[];
   renameItem: (item: MediaItem, name: string) => Promise<{ ok: boolean; error?: string }>;
   unnameItem: (mediaKey: string) => Promise<void>;
+
+  /** Register a host (DirectorChat) that knows how to append a bubble to the live chat + persist it. */
+  registerAppendBubble: (fn: ((b: RailBubble) => void) | null) => void;
+  /** Append a bubble (e.g. an edited-image result card) into the host chat. No-op until a host registers. */
+  appendBubble: (b: RailBubble) => void;
 };
+
 
 const MediaRailCtx = createContext<Ctx | null>(null);
 
@@ -381,6 +388,15 @@ export function MediaRailProvider({ children }: { children: ReactNode }) {
     [user],
   );
 
+  const appendBubbleRef = useRef<((b: RailBubble) => void) | null>(null);
+  const registerAppendBubble = useCallback((fn: ((b: RailBubble) => void) | null) => {
+    appendBubbleRef.current = fn;
+  }, []);
+  const appendBubble = useCallback((b: RailBubble) => {
+    const fn = appendBubbleRef.current;
+    if (fn) fn(b);
+  }, []);
+
   const value = useMemo<Ctx>(
     () => ({
       bubbles,
@@ -402,6 +418,8 @@ export function MediaRailProvider({ children }: { children: ReactNode }) {
       consumeAttachments,
       renameItem,
       unnameItem,
+      registerAppendBubble,
+      appendBubble,
     }),
     [
       bubbles,
@@ -421,8 +439,11 @@ export function MediaRailProvider({ children }: { children: ReactNode }) {
       consumeAttachments,
       renameItem,
       unnameItem,
+      registerAppendBubble,
+      appendBubble,
     ],
   );
+
 
   return <MediaRailCtx.Provider value={value}>{children}</MediaRailCtx.Provider>;
 }

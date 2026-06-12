@@ -17,8 +17,11 @@ import {
   FileText,
   ChevronDown,
   Tag,
+  Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
+import { ImageEditorDialog } from "./ImageEditorDialog";
+
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -349,9 +352,11 @@ function MediaCard({
   const rail = useMediaRail();
   const [menuOpen, setMenuOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
   const isFav = rail?.favorites.has(item.id) ?? false;
   const folders = rail?.folders ?? [];
   const refName = rail?.labelByKey.get(item.id);
+
 
   const ratioClass =
     item.kind === "image"
@@ -499,6 +504,12 @@ function MediaCard({
             <DropdownMenuItem onSelect={handleRecreate} disabled={!hasUrl}>
               <Copy className="w-4 h-4 mr-2" /> Recreate
             </DropdownMenuItem>
+            {item.kind === "image" && (
+              <DropdownMenuItem onSelect={() => setEditOpen(true)} disabled={!hasUrl}>
+                <Sparkles className="w-4 h-4 mr-2" /> Edit with AI…
+              </DropdownMenuItem>
+            )}
+
             <DropdownMenuItem onSelect={onRename} disabled={!hasUrl}>
               <Tag className="w-4 h-4 mr-2" />
               {refName ? `Rename (@${refName})` : "Name reference…"}
@@ -567,7 +578,7 @@ function MediaCard({
         <DialogHeader className="sr-only">
           <DialogTitle>{item.label}</DialogTitle>
         </DialogHeader>
-        <div className="flex items-center justify-center">
+        <div className="relative flex items-center justify-center">
           {item.kind === "image" ? (
             <img
               src={item.url}
@@ -586,10 +597,30 @@ function MediaCard({
           ) : (
             <div className="p-8 text-sm text-muted-foreground">{(item as MediaItem).label}</div>
           )}
+          {item.kind === "image" && (
+            <button
+              type="button"
+              onClick={() => { setPreviewOpen(false); setEditOpen(true); }}
+              className="absolute top-2 left-2 inline-flex items-center gap-1.5 rounded-full bg-accent/90 hover:bg-accent text-accent-foreground text-xs font-medium px-3 py-1.5 shadow-md transition-colors"
+              aria-label="Edit image with AI"
+            >
+              <Sparkles className="w-3.5 h-3.5" /> Edit with AI
+            </button>
+          )}
         </div>
       </DialogContent>
 
     </Dialog>
+  ) : null;
+
+
+  const EditorMount = item.kind === "image" && hasUrl ? (
+    <ImageEditorDialog
+      open={editOpen}
+      onOpenChange={setEditOpen}
+      sourceUrl={item.url!}
+      aspectRatio={(item as any).aspect}
+    />
   ) : null;
 
   if (item.kind === "image") {
@@ -613,9 +644,11 @@ function MediaCard({
           {Overlays}
         </div>
         {PreviewDialog}
+        {EditorMount}
       </>
     );
   }
+
 
 
   return (

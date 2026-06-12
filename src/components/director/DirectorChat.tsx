@@ -219,6 +219,22 @@ function DirectorChatInner() {
   useEffect(() => {
     mediaRail?.setSessionId(routeSessionId);
   }, [routeSessionId, mediaRail]);
+
+  // Register a hook so floating dialogs (e.g. ImageEditorDialog) can append
+  // a new bubble into the live chat AND trigger persistence.
+  useEffect(() => {
+    if (!mediaRail) return;
+    mediaRail.registerAppendBubble((b: any) => {
+      setBubbles((prev) => {
+        const next = [...prev, b];
+        void persistRef.current?.(next, null, null);
+        return next;
+      });
+    });
+    return () => {
+      mediaRail.registerAppendBubble(null);
+    };
+  }, [mediaRail]);
   const [input, setInput] = useState("");
   const [composerFocusTick, setComposerFocusTick] = useState(0);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
@@ -723,6 +739,10 @@ function DirectorChatInner() {
       console.error("persist session failed", e);
     }
   };
+  const persistRef = useRef(persist);
+  useEffect(() => { persistRef.current = persist; });
+
+
 
 
   const runImageGeneration = async (
