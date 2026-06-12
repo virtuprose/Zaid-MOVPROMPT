@@ -578,7 +578,7 @@ function MediaCard({
         <DialogHeader className="sr-only">
           <DialogTitle>{item.label}</DialogTitle>
         </DialogHeader>
-        <div className="flex items-center justify-center">
+        <div className="relative flex items-center justify-center">
           {item.kind === "image" ? (
             <img
               src={item.url}
@@ -597,11 +597,22 @@ function MediaCard({
           ) : (
             <div className="p-8 text-sm text-muted-foreground">{(item as MediaItem).label}</div>
           )}
+          {item.kind === "image" && (
+            <button
+              type="button"
+              onClick={() => { setPreviewOpen(false); setEditOpen(true); }}
+              className="absolute top-2 left-2 inline-flex items-center gap-1.5 rounded-full bg-accent/90 hover:bg-accent text-accent-foreground text-xs font-medium px-3 py-1.5 shadow-md transition-colors"
+              aria-label="Edit image with AI"
+            >
+              <Sparkles className="w-3.5 h-3.5" /> Edit with AI
+            </button>
+          )}
         </div>
       </DialogContent>
 
     </Dialog>
   ) : null;
+
 
   if (item.kind === "image") {
     return (
