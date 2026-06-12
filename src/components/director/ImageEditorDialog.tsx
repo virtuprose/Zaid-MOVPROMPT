@@ -44,6 +44,7 @@ export function ImageEditorDialog({ open, onOpenChange, sourceUrl, aspectRatio, 
   });
   const [imgSize, setImgSize] = useState<{ w: number; h: number } | null>(null);
   const [imgEl, setImgEl] = useState<HTMLImageElement | null>(null);
+  const [cursor, setCursor] = useState<{ x: number; y: number; visible: boolean }>({ x: 0, y: 0, visible: false });
   const maskCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const overlayCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
