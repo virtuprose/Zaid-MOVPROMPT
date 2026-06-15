@@ -1,38 +1,59 @@
-## Problem
+## Why
 
-When you generate a prompt in MovPrompt and click "Open in AI Director" to render, Seedance generates a video of a different baby — your reference image is ignored.
+A scan of every `chargeCredits` / `priceFor` / `videoCost` call vs the `credit_prices` table found three problems:
 
-Root cause traced in the code + database:
+1. **Missing rows** — these reasons are charged in production but have NO row in `credit_prices`, so they silently fall back to hardcoded defaults in the edge functions:
+   - `storyboard_plan` (fallback **1**) — `plan-storyboard`
+   - `image_upscale_4k` (fallback **3**) — `generate-reference-image` (both edit + generate paths)
+   - `image_edit` (no fallback registered — charged via `priceFor("image_generation", 5)` reuse)
+   - `video.seedance-2.0-ref` (fallback **15/s**) — `story-render` charges 4 acts × duration with this key
+2. **Stale per-action prices** — `director_chat_multimodal` (3) is the same tier as a full image_generation step minus 2; multimodal Director turns now drive Gemini 3 Pro vision and cost more.
+3. **Video catalog drift** — several new model ids exist in `videoModelCatalog.ts` and the model picker but have no `video.<id>` row, so they fall back to the generic 15/s default (under-charging for premium tiers, over-charging for lite tiers).
 
-- `WorkflowPanel.tsx` writes the handoff with `attachments: [{ kind: "image", url: img.preview, … }]`. `img.preview` is a local **`blob:`** URL created by the browser — it only exists in that tab.
-- `DirectorChat.tsx` rebuilds `referenceImageUrls` from chat attachments but filters URLs through `isProviderReadyImageUrl`, which only accepts `https://` or `data:image/…`. Every `blob:` URL is dropped.
-- Result: `submitVideoJob` is called with **zero** reference images, so `generate-video` stores `reference_image_urls = NULL` and the Seedance 2.0 reference-to-video endpoint never receives `image_urls`. The DB confirms this — the latest `seedance-2.0-ref` job row has empty `reference_image_urls` and the prompt even contains the giveaway phrase "Inspired by ." with nothing after it.
+## What changes
 
-## Fix
+### A. Add missing rows to `credit_prices`
 
-Upload the MovPrompt reference images to the `director-uploads` bucket during the handoff, so the Director receives real signed `https://` URLs that survive the filter and get forwarded to Seedance.
+| key | kind | amount | notes |
+|---|---|---|---|
+| `storyboard_plan` | flat | 2 | planner uses Gemini vision; was effectively 1 |
+| `image_upscale_4k` | flat | 4 | FAL clarity-upscaler call after generation/edit |
+| `image_edit` | flat | 6 | nano-banana edit + mask compositing; was reusing `image_generation` (5) |
+| `video.seedance-2.0-ref` | per_second | 18 | matches Seedance 2.0 reference-to-video provider cost; was falling back to 15 |
 
-### `src/components/WorkflowPanel.tsx` — "Open in AI Director" button
+### B. Reprice existing rows
 
-1. Make the click handler async. Disable the button and show a small "Sending references…" state while it runs.
-2. For each `img` in `images.filter(Boolean)`:
-   - If `img.file` exists, call `ingestImage(img.file)` from `@/lib/director/ingest` — this already handles auth, optional downscale, upload to `director-uploads`, and returns `{ kind: "image", name, url, storage_path }` with a real signed URL.
-   - If `img.file` is missing (e.g. a pre-existing preview without a File), fall back to fetching `img.preview` as a Blob and calling `uploadAndSign(blob, uid, name, "image/jpeg")`, then construct the same `Attachment` shape.
-3. Pass that array as `attachments` to `writeHandoff`. Never pass `blob:` URLs.
-4. If the user is not signed in, show a toast asking them to sign in and abort the handoff (Director needs auth to use the references anyway).
-5. If any single upload fails, surface a clear error toast and abort — partial reference sets silently produce the wrong baby, which is exactly the bug we're fixing.
+| key | from → to | reason |
+|---|---|---|
+| `director_chat_text` | 1 → 1 | unchanged |
+| `director_chat_multimodal` | 3 → 4 | Gemini 3 Pro vision |
+| `image_generation` | 5 → 5 | unchanged |
+| `write_ad_scene` | 2 → 2 | unchanged |
+| `story_stitch` | 10 → 8 | ffmpeg-only, no model inference; was overpriced |
 
-### Why not "fix it in the Director"
+### C. Realign video rates against the catalog tiers in `videoModelCatalog.ts`
 
-Doing the upload on the Director side would mean re-introducing the same browser session's `blob:` URL through `sessionStorage`. `blob:` URLs from one page are sometimes inaccessible after navigation; even when they work, we'd be duplicating logic that already exists in `ingest.ts`. Uploading at the source is one straightforward call.
+Only the rows where catalog tier and current price disagree are touched. Examples:
 
-### No backend changes needed
+- `video.veo-3.1` 45 → 42, `video.veo-3.1-fast` 20 → 18, `video.veo-3.1-lite` 10 → 8
+- `video.kling-v3-4k` 60 → 55, `video.kling-omni*` 50 → 45
+- `video.seedance-v1-pro-ref` 15 → 16 (ref variants are slightly more expensive on FAL)
+- `video.hailuo-02-standard` 8 → 7
 
-- `generate-video` already routes `seedance-2.0-ref` correctly and passes `image_urls` to fal when references exist (verified at `supabase/functions/generate-video/index.ts:292`).
-- `DirectorChat`'s `referenceImageUrls` memo already picks up image attachments from both pending attachments and prior bubbles, so once the URLs are real `https://` they will flow through to `submitVideoJob` and into the job row.
+Full final values delivered as one SQL upsert.
 
-## Verification
+### D. No code changes required
 
-After the fix, repeat the same flow (generate in MovPrompt → Open in AI Director → render with Seedance 2.0). Check a fresh row in `video_jobs`:
-- `reference_image_urls` should be a non-empty array of `https://…supabase.co/storage/v1/object/sign/director-uploads/…` URLs.
-- The rendered video should preserve the baby from the reference image.
+All charging paths already read from `credit_prices` via `priceFor` / `videoCost`. The pricing UI (`src/lib/credits/pricing.ts` + `AccountBilling`) re-reads the catalog on mount, so the price-list page updates automatically. The frontend `videoModels.ts` shows credit/s from the same table.
+
+### E. Out of scope
+
+- No refunds or retroactive adjustments for past charges.
+- No change to the daily grant (+10/day, cap 30) or signup bonus (50).
+- No change to the `charge_credits` / `refund_credits` RPCs.
+
+## Technical details
+
+Single migration that runs one `INSERT ... ON CONFLICT (key) DO UPDATE SET kind = EXCLUDED.kind, amount = EXCLUDED.amount` against `public.credit_prices` for every row in sections A–C. Server cache TTL in `_shared/credits.ts` is 60s, so new prices take effect within a minute without a redeploy.
+
+After the migration I'll spot-check `credit_prices` with `supabase--read_query` to confirm all keys exist and amounts match the table above.
