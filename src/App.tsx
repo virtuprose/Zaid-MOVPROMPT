@@ -47,6 +47,7 @@ import Learn from "./pages/Learn.tsx";
 import Docs from "./pages/Docs.tsx";
 import Terms from "./pages/Terms.tsx";
 import PrivacyPolicy from "./pages/PrivacyPolicy.tsx";
+import About from "./pages/About.tsx";
 import QaMobile from "./pages/QaMobile.tsx";
 import SharedPrompt from "./pages/SharedPrompt.tsx";
 import Referrals from "./pages/Referrals.tsx";
