@@ -291,6 +291,14 @@ export function TopNav() {
                       </DropdownMenuItem>
                       <DropdownMenuSeparator className="my-1.5 bg-muted" />
                       <DropdownMenuItem
+                        onClick={() => navigate("/terms")}
+                        className="gap-3 px-4 py-3 rounded-lg cursor-pointer focus:bg-muted focus:text-foreground group"
+                      >
+                        <FileText className="w-4 h-4 text-muted-foreground group-hover:text-accent group-focus:text-accent transition-colors" />
+                        <span className="text-sm">Terms & conditions</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator className="my-1.5 bg-muted" />
+                      <DropdownMenuItem
                         onClick={signOut}
                         className="gap-3 px-4 py-3 rounded-lg cursor-pointer text-muted-foreground focus:bg-destructive/10 focus:text-destructive group"
                       >
