@@ -19,6 +19,7 @@ import {
   Sparkles,
   Coins,
   Megaphone,
+  FileText,
 } from "lucide-react";
 import { CommandPalette } from "@/components/CommandPalette";
 import { Button } from "@/components/ui/button";
@@ -290,6 +291,14 @@ export function TopNav() {
                       </DropdownMenuItem>
                       <DropdownMenuSeparator className="my-1.5 bg-muted" />
                       <DropdownMenuItem
+                        onClick={() => navigate("/terms")}
+                        className="gap-3 px-4 py-3 rounded-lg cursor-pointer focus:bg-muted focus:text-foreground group"
+                      >
+                        <FileText className="w-4 h-4 text-muted-foreground group-hover:text-accent group-focus:text-accent transition-colors" />
+                        <span className="text-sm">Terms & conditions</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator className="my-1.5 bg-muted" />
+                      <DropdownMenuItem
                         onClick={signOut}
                         className="gap-3 px-4 py-3 rounded-lg cursor-pointer text-muted-foreground focus:bg-destructive/10 focus:text-destructive group"
                       >
@@ -388,6 +397,15 @@ export function TopNav() {
                         onClick={() => { setMobileOpen(false); navigate("/referrals"); }}
                       >
                         <Gift className="w-4 h-4 text-muted-foreground" /> Refer friends
+                      </Button>
+
+                      <div className="my-2 h-px bg-border/40" />
+                      <Button
+                        variant="ghost"
+                        className="justify-start h-11 rounded-lg gap-3 px-3 text-[14px]"
+                        onClick={() => { setMobileOpen(false); navigate("/terms"); }}
+                      >
+                        <FileText className="w-4 h-4 text-muted-foreground" /> Terms & conditions
                       </Button>
 
                       <div className="my-2 h-px bg-border/40" />
