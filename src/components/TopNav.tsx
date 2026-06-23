@@ -403,6 +403,15 @@ export function TopNav() {
                       <Button
                         variant="ghost"
                         className="justify-start h-11 rounded-lg gap-3 px-3 text-[14px]"
+                        onClick={() => { setMobileOpen(false); navigate("/terms"); }}
+                      >
+                        <FileText className="w-4 h-4 text-muted-foreground" /> Terms & conditions
+                      </Button>
+
+                      <div className="my-2 h-px bg-border/40" />
+                      <Button
+                        variant="ghost"
+                        className="justify-start h-11 rounded-lg gap-3 px-3 text-[14px]"
                         onSelect={undefined as any}
                         onClick={toggleTheme}
                       >
