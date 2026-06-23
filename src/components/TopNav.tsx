@@ -19,6 +19,7 @@ import {
   Sparkles,
   Coins,
   Megaphone,
+  FileText,
 } from "lucide-react";
 import { CommandPalette } from "@/components/CommandPalette";
 import { Button } from "@/components/ui/button";
