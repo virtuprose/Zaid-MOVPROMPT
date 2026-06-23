@@ -47,6 +47,7 @@ import Learn from "./pages/Learn.tsx";
 import Docs from "./pages/Docs.tsx";
 import Terms from "./pages/Terms.tsx";
 import PrivacyPolicy from "./pages/PrivacyPolicy.tsx";
+import About from "./pages/About.tsx";
 import QaMobile from "./pages/QaMobile.tsx";
 import SharedPrompt from "./pages/SharedPrompt.tsx";
 import Referrals from "./pages/Referrals.tsx";
@@ -81,6 +82,7 @@ const AppRoutes = () => {
         <Route path="/unsubscribe" element={<Unsubscribe />} />
         <Route path="/terms" element={<Terms />} />
         <Route path="/privacy" element={<PrivacyPolicy />} />
+        <Route path="/about" element={<About />} />
         <Route path="/qa/mobile" element={<QaMobile />} />
         <Route path="/p/:slug" element={<SharedPrompt />} />
         <Route path="/referrals" element={<AuthGuard><Referrals /></AuthGuard>} />
