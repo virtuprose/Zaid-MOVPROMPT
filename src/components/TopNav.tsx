@@ -20,6 +20,7 @@ import {
   Coins,
   Megaphone,
   FileText,
+  Shield,
 } from "lucide-react";
 import { CommandPalette } from "@/components/CommandPalette";
 import { Button } from "@/components/ui/button";
@@ -297,6 +298,13 @@ export function TopNav() {
                         <FileText className="w-4 h-4 text-muted-foreground group-hover:text-accent group-focus:text-accent transition-colors" />
                         <span className="text-sm">Terms & conditions</span>
                       </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => navigate("/privacy")}
+                        className="gap-3 px-4 py-3 rounded-lg cursor-pointer focus:bg-muted focus:text-foreground group"
+                      >
+                        <Shield className="w-4 h-4 text-muted-foreground group-hover:text-accent group-focus:text-accent transition-colors" />
+                        <span className="text-sm">Privacy policy</span>
+                      </DropdownMenuItem>
                       <DropdownMenuSeparator className="my-1.5 bg-muted" />
                       <DropdownMenuItem
                         onClick={signOut}
@@ -406,6 +414,13 @@ export function TopNav() {
                         onClick={() => { setMobileOpen(false); navigate("/terms"); }}
                       >
                         <FileText className="w-4 h-4 text-muted-foreground" /> Terms & conditions
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        className="justify-start h-11 rounded-lg gap-3 px-3 text-[14px]"
+                        onClick={() => { setMobileOpen(false); navigate("/privacy"); }}
+                      >
+                        <Shield className="w-4 h-4 text-muted-foreground" /> Privacy policy
                       </Button>
 
                       <div className="my-2 h-px bg-border/40" />
