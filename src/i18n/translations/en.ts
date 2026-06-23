@@ -424,6 +424,14 @@ export const en = {
   "privacy.contact.title": "9. Contact Us",
   "privacy.contact.body": "For privacy-related questions or requests, please contact us through our website at movprompt.com.",
 
+  // About
+  "about.title": "About Us",
+  "about.body": "MovPrompt is your AI Director of Photography — an intelligent tool that turns still images into director-grade cinematic video prompts. Built for filmmakers, creatives, and AI video artists who want precise control over every shot.",
+  "about.mission.title": "Our Mission",
+  "about.mission.body": "We believe every frame deserves a director's eye. MovPrompt reads your images like a cinematographer would — analyzing composition, light, lens, and mood — then translates them into production-ready prompts for Kling, Seedance, Veo, and any AI video model.",
+  "about.contact.title": "Contact",
+  "about.contact.body": "For questions, feedback, or partnerships, reach out through our website at movprompt.com.",
+
   // Auth T&C
   "auth.agreeTerms": "I agree to the",
   "auth.termsLink": "Terms & Conditions",

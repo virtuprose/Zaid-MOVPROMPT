@@ -81,6 +81,7 @@ const AppRoutes = () => {
         <Route path="/unsubscribe" element={<Unsubscribe />} />
         <Route path="/terms" element={<Terms />} />
         <Route path="/privacy" element={<PrivacyPolicy />} />
+        <Route path="/about" element={<About />} />
         <Route path="/qa/mobile" element={<QaMobile />} />
         <Route path="/p/:slug" element={<SharedPrompt />} />
         <Route path="/referrals" element={<AuthGuard><Referrals /></AuthGuard>} />

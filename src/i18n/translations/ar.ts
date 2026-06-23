@@ -426,6 +426,14 @@ export const ar: Record<TranslationKey, string> = {
   "privacy.contact.title": "٩. تواصل معنا",
   "privacy.contact.body": "لأسئلة أو طلبات الخصوصية، تواصل معنا عبر موقعنا movprompt.com.",
 
+  // About
+  "about.title": "من نحن",
+  "about.body": "MovPrompt هو مصوّرك السينمائي الذكي — أداة ذكية تحوّل صورك الثابتة إلى كادرات سينمائية ملهمة. مصمّم لصنّاع الأفلام والمبدعين وفناني الفيديو بالذكاء الاصطناعي الذين يريدون تحكماً دقيقاً في كل لقطة.",
+  "about.mission.title": "رسالتنا",
+  "about.mission.body": "نؤمن بأن كل إطار يستحق عين مخرج. يقرأ MovPrompt صورك كما يقرأها المصوّر السينمائي — محللاً التكوين والإضاءة والعدسة والمزاج — ثم يحوّلها إلى أوامر جاهزة للإنتاج لـ Kling وSeedance وVeo وأي نموذج فيديو ذكي.",
+  "about.contact.title": "التواصل",
+  "about.contact.body": "للاستفسارات أو الملاحظات أو الشراكات، تواصل معنا عبر موقعنا movprompt.com.",
+
   // Auth T&C
   "auth.agreeTerms": "أوافق على",
   "auth.termsLink": "الشروط والأحكام",
