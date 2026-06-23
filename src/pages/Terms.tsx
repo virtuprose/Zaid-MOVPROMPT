@@ -70,6 +70,11 @@ const Terms = () => {
           </section>
 
           <section className="space-y-3">
+            <h2 className="text-lg font-semibold text-foreground">{t("terms.refund.title")}</h2>
+            <p className="text-sm text-muted-foreground leading-relaxed">{t("terms.refund.body")}</p>
+          </section>
+
+          <section className="space-y-3">
             <h2 className="text-lg font-semibold text-foreground">{t("terms.contact.title")}</h2>
             <p className="text-sm text-muted-foreground leading-relaxed">{t("terms.contact.body")}</p>
           </section>

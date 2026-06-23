@@ -398,8 +398,10 @@ export const en = {
   "terms.disclaimer.body": "MovPrompt is provided \"as is\" without warranties of any kind. We do not guarantee that generated prompts will produce specific results in any video generation model. The service may be interrupted for maintenance or updates.",
   "terms.changes.title": "7. Changes to Terms",
   "terms.changes.body": "We reserve the right to modify these terms at any time. Continued use of the service after changes constitutes acceptance of the updated terms.",
-  "terms.contact.title": "8. Contact",
-  "terms.contact.body": "For questions about these terms, please contact us through our website at movprompt.com.",
+ "terms.refund.title": "8. Credits, Billing & Refunds",
+ "terms.refund.body": "MovPrompt operates on a credit-based system. Credits are consumed when you generate prompts, images, or videos. If a generation fails due to a technical error on our side, the credits used for that request are automatically refunded to your account. Cancelled video renders may receive a partial automatic refund based on remaining processing. Beyond these automatic refunds, all credit purchases and subscription payments are final and non-refundable. If you believe you were charged in error, contact us within 14 days and we will review your case.",
+ "terms.contact.title": "9. Contact",
+ "terms.contact.body": "For questions about these terms, please contact us through our website at movprompt.com.",
 
   // Privacy Policy
   "privacy.title": "Privacy Policy",
