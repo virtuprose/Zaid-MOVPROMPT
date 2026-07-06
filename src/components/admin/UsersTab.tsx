@@ -109,7 +109,7 @@ const UsersTab = () => {
       supabase.from("generation_events").select("user_id"),
       supabase.from("prompt_history").select("user_id"),
       supabase.from("generation_events").select("user_id, created_at").gte("created_at", thirtyDaysAgo),
-      supabase.functions.invoke("admin-list-users-meta", { body: {} }),
+      metaPromise,
     ]);
 
     const roleMap: Record<string, "admin" | "user"> = {};
