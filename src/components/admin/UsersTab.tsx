@@ -86,6 +86,16 @@ const UsersTab = () => {
   const fetchUsers = async () => {
     setLoading(true);
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+    // Only call the admin-only meta function if we still have an authenticated session.
+    // After "Revoke all sessions" or a stale mount, this would otherwise 401.
+    const { data: sessionData } = await supabase.auth.getSession();
+    const metaPromise = sessionData?.session
+      ? supabase.functions.invoke("admin-list-users-meta", { body: {} }).catch((e) => {
+          console.warn("admin-list-users-meta unavailable:", e);
+          return { data: null } as { data: null };
+        })
+      : Promise.resolve({ data: null } as { data: null });
+
     const [
       { data: profiles },
       { data: roles },
@@ -99,7 +109,7 @@ const UsersTab = () => {
       supabase.from("generation_events").select("user_id"),
       supabase.from("prompt_history").select("user_id"),
       supabase.from("generation_events").select("user_id, created_at").gte("created_at", thirtyDaysAgo),
-      supabase.functions.invoke("admin-list-users-meta", { body: {} }),
+      metaPromise,
     ]);
 
     const roleMap: Record<string, "admin" | "user"> = {};
