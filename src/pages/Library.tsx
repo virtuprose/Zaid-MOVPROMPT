@@ -1061,7 +1061,7 @@ const Library = () => {
                   <Button onClick={() => navigate("/")} size="sm">
                     Open Studio
                   </Button>
-                  <Button onClick={() => navigate("/marketing")} size="sm" variant="outline">
+                  <Button onClick={() => navigate("/ads")} size="sm" variant="outline">
                     Open Ads
                   </Button>
                 </div>

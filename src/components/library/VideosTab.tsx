@@ -844,7 +844,7 @@ export function VideosTab() {
           You haven't rendered any videos yet. Generate a prompt and click "Render" to start.
         </p>
         <div className="flex items-center justify-center gap-2">
-          <Button onClick={() => navigate("/marketing")} className="bg-accent text-accent-foreground hover:bg-accent/90">
+          <Button onClick={() => navigate("/ads")} className="bg-accent text-accent-foreground hover:bg-accent/90">
             <Sparkles className="w-4 h-4 mr-1.5" />
             Open Ads Studio
           </Button>
