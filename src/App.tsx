@@ -60,6 +60,7 @@ import AccountSettings from "./pages/account/AccountSettings.tsx";
 import AccountBilling from "./pages/account/AccountBilling.tsx";
 import AccountPreferences from "./pages/account/AccountPreferences.tsx";
 import HeroPreview from "./pages/HeroPreview.tsx";
+import OAuthConsent from "./pages/OAuthConsent.tsx";
 
 const queryClient = new QueryClient();
 
