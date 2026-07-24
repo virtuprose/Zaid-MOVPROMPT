@@ -10,7 +10,7 @@ import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
 import { trackPageVisit } from "@/lib/analytics";
 import { useNavigate } from "react-router-dom";
-import Seo from "@/components/Seo";
+import { Seo } from "@/components/Seo";
 import {
   analyzeConcept,
   saveTemplate,
