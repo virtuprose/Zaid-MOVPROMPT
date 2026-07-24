@@ -127,6 +127,8 @@ export default function MarketingStudio() {
   
 
   const [openPicker, setOpenPicker] = useState<"format" | "location" | null>(null);
+  const [templatePickerOpen, setTemplatePickerOpen] = useState(false);
+  const [appliedTemplate, setAppliedTemplate] = useState<{ id: string; name: string } | null>(null);
   const [placeMode, setPlaceMode] = useState<"preset" | "city" | "image">("preset");
   const [brandOpen, setBrandOpen] = useState(false);
   const [brandEditId, setBrandEditId] = useState<string | null>(null);
@@ -1038,6 +1040,16 @@ export default function MarketingStudio() {
             })()}
 
             <div className="flex flex-wrap items-center gap-2">
+
+              <PresetChip
+                icon={<Sparkles className="w-3.5 h-3.5" />}
+                label="Template"
+                value={appliedTemplate?.name}
+                tooltip="Seed the composer from a saved ad template"
+                onClick={() => setTemplatePickerOpen(true)}
+                flash={flashChips}
+              />
+
 
               <PresetChip
                 icon={<Sparkles className="w-3.5 h-3.5" />}
