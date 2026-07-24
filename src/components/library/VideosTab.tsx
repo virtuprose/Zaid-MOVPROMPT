@@ -63,7 +63,7 @@ export interface VideoJob {
 }
 
 // ─── Source / status / model derivation ─────────────────────────────────
-const SOURCES = ["Studio", "AI Director", "Ads Studio"] as const;
+const SOURCES = ["Studio", "Ads Studio"] as const;
 type Source = (typeof SOURCES)[number];
 
 const STATUS_GROUPS = ["Completed", "In progress", "Failed"] as const;
@@ -73,9 +73,6 @@ const MODEL_FAMILIES = ["Seedance", "Kling", "Veo", "Sora", "Runway"] as const;
 type ModelFam = (typeof MODEL_FAMILIES)[number];
 
 function sourceOf(job: VideoJob): Source {
-  // session_id => generated from director session
-  if (job.session_id) return "AI Director";
-  // Heuristic: provider strings used by the marketing/ads flow include "ads" or hosted Studio fallback
   const p = (job.provider || "").toLowerCase();
   if (p.includes("ads") || p.includes("marketing")) return "Ads Studio";
   return "Studio";
@@ -813,10 +810,8 @@ export function VideosTab() {
   };
 
   const handleRemix = (job: VideoJob) => {
-    const target = job.session_id ? "/director" : "/";
-    const where = job.session_id ? "AI Director" : "Studio";
-    navigate(target, { state: { restorePrompt: job.prompt } });
-    toast({ title: "Remixing…", description: `Prompt loaded into ${where}. Edit and regenerate.` });
+    navigate("/", { state: { restorePrompt: job.prompt } });
+    toast({ title: "Remixing…", description: "Prompt loaded into Studio. Edit and regenerate." });
   };
 
   const handleRetry = (job: VideoJob) => {
@@ -855,9 +850,6 @@ export function VideosTab() {
           </Button>
           <Button variant="outline" onClick={() => navigate("/")}>
             Open Studio
-          </Button>
-          <Button variant="outline" onClick={() => navigate("/director")}>
-            Open AI Director
           </Button>
         </div>
       </motion.div>

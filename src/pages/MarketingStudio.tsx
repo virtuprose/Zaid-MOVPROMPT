@@ -53,7 +53,7 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
-import { ConfirmRightsDialog } from "@/components/director/ConfirmRightsDialog";
+import { ConfirmRightsDialog } from "@/components/marketing/ConfirmRightsDialog";
 import { PresetPickerDialog } from "@/components/marketing/PresetPickerDialog";
 import { AccuracyBoostDialog } from "@/components/marketing/AccuracyBoostDialog";
 import { DescribeAdMic } from "@/components/marketing/DescribeAdMic";

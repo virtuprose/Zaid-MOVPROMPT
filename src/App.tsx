@@ -52,7 +52,7 @@ import QaMobile from "./pages/QaMobile.tsx";
 import SharedPrompt from "./pages/SharedPrompt.tsx";
 import Referrals from "./pages/Referrals.tsx";
 import Onboarding from "./pages/Onboarding.tsx";
-import Director from "./pages/Director.tsx";
+
 import MarketingStudio from "./pages/MarketingStudio.tsx";
 import { MarketingStudioSkeleton } from "@/components/marketing/MarketingStudioSkeleton";
 
@@ -87,8 +87,8 @@ const AppRoutes = () => {
         <Route path="/p/:slug" element={<SharedPrompt />} />
         <Route path="/referrals" element={<AuthGuard><Referrals /></AuthGuard>} />
         <Route path="/onboarding" element={<AuthGuard><Onboarding /></AuthGuard>} />
-        <Route path="/director" element={<AuthGuard><Director /></AuthGuard>} />
-        <Route path="/director/:sessionId" element={<AuthGuard><Director /></AuthGuard>} />
+        <Route path="/director" element={<Navigate to="/marketing" replace />} />
+        <Route path="/director/:sessionId" element={<Navigate to="/marketing" replace />} />
         <Route path="/marketing" element={<AuthGuard fallback={<MarketingStudioSkeleton />}><MarketingStudio /></AuthGuard>} />
         <Route path="/account/settings" element={<AuthGuard><AccountSettings /></AuthGuard>} />
         <Route path="/account/billing" element={<AuthGuard><AccountBilling /></AuthGuard>} />
