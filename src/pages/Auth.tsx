@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
 import { useAuth } from "@/hooks/useAuth";
@@ -19,6 +19,10 @@ import { Seo } from "@/components/Seo";
 
 const Auth = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const nextParam = searchParams.get("next");
+  const nextPath = nextParam && nextParam.startsWith("/") && !nextParam.startsWith("//") ? nextParam : null;
+  const redirectOrigin = window.location.origin + (nextPath ?? "");
   const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const { t } = useLanguage();
@@ -35,8 +39,8 @@ const Auth = () => {
   ];
 
   useEffect(() => {
-    if (user) navigate("/", { replace: true });
-  }, [user, navigate]);
+    if (user) navigate(nextPath ?? "/", { replace: true });
+  }, [user, navigate, nextPath]);
 
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,7 +68,7 @@ const Auth = () => {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { emailRedirectTo: window.location.origin },
+      options: { emailRedirectTo: redirectOrigin },
     });
     setLoading(false);
     if (error) {
@@ -101,7 +105,7 @@ const Auth = () => {
 
   const handleGoogleSignIn = async () => {
     const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
+      redirect_uri: redirectOrigin,
     });
     if (result.error) {
       toast({ title: t("toast.googleFailed"), description: String(result.error), variant: "destructive" });
@@ -110,7 +114,7 @@ const Auth = () => {
 
   const handleAppleSignIn = async () => {
     const result = await lovable.auth.signInWithOAuth("apple", {
-      redirect_uri: window.location.origin,
+      redirect_uri: redirectOrigin,
     });
     if (result.error) {
       toast({ title: t("toast.appleFailed"), description: String(result.error), variant: "destructive" });

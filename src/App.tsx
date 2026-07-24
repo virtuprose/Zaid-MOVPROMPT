@@ -60,6 +60,7 @@ import AccountSettings from "./pages/account/AccountSettings.tsx";
 import AccountBilling from "./pages/account/AccountBilling.tsx";
 import AccountPreferences from "./pages/account/AccountPreferences.tsx";
 import HeroPreview from "./pages/HeroPreview.tsx";
+import OAuthConsent from "./pages/OAuthConsent.tsx";
 
 const queryClient = new QueryClient();
 
@@ -96,6 +97,7 @@ const AppRoutes = () => {
         <Route path="/account/billing" element={<AuthGuard><AccountBilling /></AuthGuard>} />
         <Route path="/account/preferences" element={<AuthGuard><AccountPreferences /></AuthGuard>} />
         <Route path="/hero-preview" element={<HeroPreview />} />
+        <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
         <Route path="*" element={<NotFound />} />
       </Routes>
