@@ -49,10 +49,10 @@ export function CommandPalette({ open, onOpenChange }: Props) {
         {tab === "actions" && (
           <>
             <CommandGroup heading="Quick actions">
-              <CommandItem onSelect={() => go("/marketing")}>
+              <CommandItem onSelect={() => go("/ads")}>
                 <Megaphone className="w-4 h-4 mr-2" /> New Ads brief
               </CommandItem>
-              <CommandItem onSelect={() => go("/")}>
+              <CommandItem onSelect={() => go("/movprompt")}>
                 <Sparkles className="w-4 h-4 mr-2" /> Open MovPrompt
               </CommandItem>
             </CommandGroup>
