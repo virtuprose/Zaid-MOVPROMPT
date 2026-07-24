@@ -52,7 +52,7 @@ import QaMobile from "./pages/QaMobile.tsx";
 import SharedPrompt from "./pages/SharedPrompt.tsx";
 import Referrals from "./pages/Referrals.tsx";
 import Onboarding from "./pages/Onboarding.tsx";
-import Director from "./pages/Director.tsx";
+
 import MarketingStudio from "./pages/MarketingStudio.tsx";
 import { MarketingStudioSkeleton } from "@/components/marketing/MarketingStudioSkeleton";
 
