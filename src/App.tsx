@@ -8,7 +8,7 @@ import { AuthGuard } from "@/components/AuthGuard";
 import { OfflineFallback } from "@/components/OfflineFallback";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 
-import Index from "./pages/Index.tsx";
+import TemplateWorkshop from "./pages/TemplateWorkshop.tsx";
 import { CinematicHero } from "@/components/hero/CinematicHero";
 import { useAuth } from "@/hooks/useAuth";
 import { Loader2 } from "lucide-react";
@@ -72,7 +72,7 @@ const AppRoutes = () => {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<RootRoute />} />
-        <Route path="/movprompt" element={<AuthGuard><Index /></AuthGuard>} />
+        <Route path="/movprompt" element={<AuthGuard><TemplateWorkshop /></AuthGuard>} />
         <Route path="/auth" element={<Auth />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/admin/login" element={<AdminLogin />} />

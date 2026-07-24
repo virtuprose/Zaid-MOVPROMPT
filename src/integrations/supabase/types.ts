@@ -14,6 +14,63 @@ export type Database = {
   }
   public: {
     Tables: {
+      ad_templates: {
+        Row: {
+          aspect_ratio: string | null
+          concept_input: string | null
+          concept_source: string
+          concept_video_url: string | null
+          created_at: string
+          description: string | null
+          duration_seconds: number | null
+          id: string
+          name: string
+          preview_video_url: string | null
+          status: string
+          tags: string[] | null
+          template_json: Json
+          thumbnail_url: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          aspect_ratio?: string | null
+          concept_input?: string | null
+          concept_source?: string
+          concept_video_url?: string | null
+          created_at?: string
+          description?: string | null
+          duration_seconds?: number | null
+          id?: string
+          name: string
+          preview_video_url?: string | null
+          status?: string
+          tags?: string[] | null
+          template_json?: Json
+          thumbnail_url?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          aspect_ratio?: string | null
+          concept_input?: string | null
+          concept_source?: string
+          concept_video_url?: string | null
+          created_at?: string
+          description?: string | null
+          duration_seconds?: number | null
+          id?: string
+          name?: string
+          preview_video_url?: string | null
+          status?: string
+          tags?: string[] | null
+          template_json?: Json
+          thumbnail_url?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       admin_audit_log: {
         Row: {
           action: string
