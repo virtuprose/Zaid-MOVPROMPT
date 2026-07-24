@@ -851,9 +851,6 @@ export function VideosTab() {
           <Button variant="outline" onClick={() => navigate("/")}>
             Open Studio
           </Button>
-          <Button variant="outline" onClick={() => navigate("/director")}>
-            Open AI Director
-          </Button>
         </div>
       </motion.div>
     );
