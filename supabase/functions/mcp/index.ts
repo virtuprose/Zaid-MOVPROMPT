@@ -3,7 +3,7 @@
 // supabase function: mcp
 // Bundled from src/lib/mcp/index.ts by @lovable.dev/mcp-js.
 // src/lib/mcp/index.ts
-import { defineMcp } from "npm:@lovable.dev/mcp-js@0.20.0";
+import { auth, defineMcp } from "npm:@lovable.dev/mcp-js@0.20.0";
 
 // src/lib/mcp/tools/about-movprompt.ts
 import { defineTool } from "npm:@lovable.dev/mcp-js@0.20.0";
@@ -730,11 +730,16 @@ var list_video_models_default = defineTool2({
 });
 
 // src/lib/mcp/index.ts
+var projectRef = "foaxkfpblyovbocvmtjj";
 var mcp_default = defineMcp({
   name: "movprompt-mcp",
   title: "MovPrompt MCP",
   version: "0.1.0",
   instructions: "MovPrompt exposes cinematic video prompt tooling. Use `about_movprompt` for an overview and `list_video_models` to see supported target video models (optionally filter by family).",
+  auth: auth.oauth.issuer({
+    issuer: `https://${projectRef}.supabase.co/auth/v1`,
+    acceptedAudiences: "authenticated"
+  }),
   tools: [about_movprompt_default, list_video_models_default]
 });
 
