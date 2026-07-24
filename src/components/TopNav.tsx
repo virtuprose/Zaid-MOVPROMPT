@@ -46,8 +46,8 @@ import { cn } from "@/lib/utils";
 type NavItem = { to: string; label: string; badge?: string; icon: typeof Sparkles };
 
 const NAV_ITEMS: NavItem[] = [
-  { to: "/", label: "MovPrompt", icon: Sparkles },
-  { to: "/marketing", label: "Ads", icon: Megaphone },
+  { to: "/ads", label: "Ads", icon: Megaphone },
+  { to: "/movprompt", label: "MovPrompt", icon: Sparkles },
 ];
 
 
