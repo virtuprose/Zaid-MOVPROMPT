@@ -47,7 +47,6 @@ type NavItem = { to: string; label: string; badge?: string; icon: typeof Sparkle
 
 const NAV_ITEMS: NavItem[] = [
   { to: "/", label: "MovPrompt", icon: Sparkles },
-  { to: "/director", label: "AI Director", icon: Disc },
   { to: "/marketing", label: "Ads", icon: Megaphone },
 ];
 
