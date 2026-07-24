@@ -32,7 +32,7 @@ const RootRoute = () => {
     } catch {
       /* ignore */
     }
-    return <Index />;
+    return <Navigate to="/ads" replace />;
   }
   return <CinematicHero />;
 };
@@ -72,6 +72,7 @@ const AppRoutes = () => {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<RootRoute />} />
+        <Route path="/movprompt" element={<AuthGuard><Index /></AuthGuard>} />
         <Route path="/auth" element={<Auth />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/admin/login" element={<AdminLogin />} />
@@ -87,9 +88,10 @@ const AppRoutes = () => {
         <Route path="/p/:slug" element={<SharedPrompt />} />
         <Route path="/referrals" element={<AuthGuard><Referrals /></AuthGuard>} />
         <Route path="/onboarding" element={<AuthGuard><Onboarding /></AuthGuard>} />
-        <Route path="/director" element={<Navigate to="/marketing" replace />} />
-        <Route path="/director/:sessionId" element={<Navigate to="/marketing" replace />} />
-        <Route path="/marketing" element={<AuthGuard fallback={<MarketingStudioSkeleton />}><MarketingStudio /></AuthGuard>} />
+        <Route path="/director" element={<Navigate to="/ads" replace />} />
+        <Route path="/director/:sessionId" element={<Navigate to="/ads" replace />} />
+        <Route path="/marketing" element={<Navigate to="/ads" replace />} />
+        <Route path="/ads" element={<AuthGuard fallback={<MarketingStudioSkeleton />}><MarketingStudio /></AuthGuard>} />
         <Route path="/account/settings" element={<AuthGuard><AccountSettings /></AuthGuard>} />
         <Route path="/account/billing" element={<AuthGuard><AccountBilling /></AuthGuard>} />
         <Route path="/account/preferences" element={<AuthGuard><AccountPreferences /></AuthGuard>} />

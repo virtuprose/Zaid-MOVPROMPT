@@ -115,7 +115,7 @@ export const CinematicHero = () => {
             className="mt-9 flex items-center gap-3"
           >
             <Link
-              to="/marketing"
+              to="/ads"
               className="bg-white text-black font-medium px-6 py-3.5 rounded-xl hover:scale-[1.02] hover:shadow-2xl transition-all"
             >
               Start creating
