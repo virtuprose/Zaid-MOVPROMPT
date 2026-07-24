@@ -32,7 +32,7 @@ const RootRoute = () => {
     } catch {
       /* ignore */
     }
-    return <Index />;
+    return <Navigate to="/ads" replace />;
   }
   return <CinematicHero />;
 };
