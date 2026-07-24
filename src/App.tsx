@@ -87,8 +87,8 @@ const AppRoutes = () => {
         <Route path="/p/:slug" element={<SharedPrompt />} />
         <Route path="/referrals" element={<AuthGuard><Referrals /></AuthGuard>} />
         <Route path="/onboarding" element={<AuthGuard><Onboarding /></AuthGuard>} />
-        <Route path="/director" element={<AuthGuard><Director /></AuthGuard>} />
-        <Route path="/director/:sessionId" element={<AuthGuard><Director /></AuthGuard>} />
+        <Route path="/director" element={<Navigate to="/marketing" replace />} />
+        <Route path="/director/:sessionId" element={<Navigate to="/marketing" replace />} />
         <Route path="/marketing" element={<AuthGuard fallback={<MarketingStudioSkeleton />}><MarketingStudio /></AuthGuard>} />
         <Route path="/account/settings" element={<AuthGuard><AccountSettings /></AuthGuard>} />
         <Route path="/account/billing" element={<AuthGuard><AccountBilling /></AuthGuard>} />
