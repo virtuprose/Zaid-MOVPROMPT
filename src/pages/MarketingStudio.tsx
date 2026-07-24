@@ -55,6 +55,8 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { ConfirmRightsDialog } from "@/components/marketing/ConfirmRightsDialog";
 import { PresetPickerDialog } from "@/components/marketing/PresetPickerDialog";
+import { AdTemplatePickerDialog } from "@/components/marketing/AdTemplatePickerDialog";
+import type { AdTemplateRow } from "@/lib/adTemplates";
 import { AccuracyBoostDialog } from "@/components/marketing/AccuracyBoostDialog";
 import { DescribeAdMic } from "@/components/marketing/DescribeAdMic";
 import { evaluateAccuracyRisk, shortTip, type AccuracyRiskResult } from "@/lib/marketing/accuracyRisk";
