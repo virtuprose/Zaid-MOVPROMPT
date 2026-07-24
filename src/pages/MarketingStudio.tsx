@@ -55,6 +55,8 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { ConfirmRightsDialog } from "@/components/marketing/ConfirmRightsDialog";
 import { PresetPickerDialog } from "@/components/marketing/PresetPickerDialog";
+import { AdTemplatePickerDialog } from "@/components/marketing/AdTemplatePickerDialog";
+import type { AdTemplateRow } from "@/lib/adTemplates";
 import { AccuracyBoostDialog } from "@/components/marketing/AccuracyBoostDialog";
 import { DescribeAdMic } from "@/components/marketing/DescribeAdMic";
 import { evaluateAccuracyRisk, shortTip, type AccuracyRiskResult } from "@/lib/marketing/accuracyRisk";
@@ -125,6 +127,8 @@ export default function MarketingStudio() {
   
 
   const [openPicker, setOpenPicker] = useState<"format" | "location" | null>(null);
+  const [templatePickerOpen, setTemplatePickerOpen] = useState(false);
+  const [appliedTemplate, setAppliedTemplate] = useState<{ id: string; name: string } | null>(null);
   const [placeMode, setPlaceMode] = useState<"preset" | "city" | "image">("preset");
   const [brandOpen, setBrandOpen] = useState(false);
   const [brandEditId, setBrandEditId] = useState<string | null>(null);
@@ -1039,6 +1043,16 @@ export default function MarketingStudio() {
 
               <PresetChip
                 icon={<Sparkles className="w-3.5 h-3.5" />}
+                label="Template"
+                value={appliedTemplate?.name}
+                tooltip="Seed the composer from a saved ad template"
+                onClick={() => setTemplatePickerOpen(true)}
+                flash={flashChips}
+              />
+
+
+              <PresetChip
+                icon={<Sparkles className="w-3.5 h-3.5" />}
                 label="Format"
                 value={
                   format?.label ||
@@ -1441,6 +1455,39 @@ export default function MarketingStudio() {
         />
 
         <BrandIdentitySheet open={brandIdentityOpen} onOpenChange={setBrandIdentityOpen} />
+
+        <AdTemplatePickerDialog
+          open={templatePickerOpen}
+          onOpenChange={setTemplatePickerOpen}
+          onSelect={(t: AdTemplateRow) => {
+            const tj = t.template_json;
+            setAppliedTemplate({ id: t.id, name: t.name });
+            setFormatId(undefined);
+            setCustomFormat(t.name);
+            const shotLines = (tj.shots ?? [])
+              .slice(0, 6)
+              .map((s) => `${s.index}. ${s.beat}: ${s.description}`)
+              .join("\n");
+            const note = [
+              tj.tagline,
+              tj.goal ? `Goal: ${tj.goal}` : "",
+              tj.pacing ? `Pacing: ${tj.pacing}` : "",
+              tj.camera_language?.movement ? `Camera: ${tj.camera_language.movement}` : "",
+              tj.lighting ? `Lighting: ${tj.lighting}` : "",
+              shotLines ? `Shots:\n${shotLines}` : "",
+            ]
+              .filter(Boolean)
+              .join("\n");
+            setUserNote(note);
+            setRenderSettings((prev) => ({
+              ...prev,
+              aspect_ratio: tj.aspect_ratio || prev.aspect_ratio,
+              duration: tj.duration_seconds || prev.duration,
+            }));
+            toast.success(`Applied "${t.name}"`);
+          }}
+        />
+
 
 
 
