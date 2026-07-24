@@ -63,7 +63,7 @@ export interface VideoJob {
 }
 
 // ─── Source / status / model derivation ─────────────────────────────────
-const SOURCES = ["Studio", "AI Director", "Ads Studio"] as const;
+const SOURCES = ["Studio", "Ads Studio"] as const;
 type Source = (typeof SOURCES)[number];
 
 const STATUS_GROUPS = ["Completed", "In progress", "Failed"] as const;
@@ -73,9 +73,6 @@ const MODEL_FAMILIES = ["Seedance", "Kling", "Veo", "Sora", "Runway"] as const;
 type ModelFam = (typeof MODEL_FAMILIES)[number];
 
 function sourceOf(job: VideoJob): Source {
-  // session_id => generated from director session
-  if (job.session_id) return "AI Director";
-  // Heuristic: provider strings used by the marketing/ads flow include "ads" or hosted Studio fallback
   const p = (job.provider || "").toLowerCase();
   if (p.includes("ads") || p.includes("marketing")) return "Ads Studio";
   return "Studio";
