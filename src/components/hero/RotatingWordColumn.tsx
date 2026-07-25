@@ -2,15 +2,15 @@ import { useEffect, useRef, useState } from "react";
 import { Play } from "lucide-react";
 
 const WORDS = [
-  "Scale campaigns",
-  "Generate prompts",
-  "Shoot cinematic shots",
-  "Build storyboards",
-  "Stitch scenes",
-  "Lock characters",
-  "Direct shots",
-  "Cast subjects",
+  "Build ad templates",
+  "Generate video concepts",
+  "Shoot campaigns",
   "Stay on brand",
+  "Lock the look",
+  "Scale ads",
+  "Storyboard shots",
+  "Match any model",
+  "Export to Ads",
 ];
 
 const ITEM_HEIGHT = 72; // px per word
