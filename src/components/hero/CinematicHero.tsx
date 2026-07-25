@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Play, ArrowRight } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { HeroTopNav } from "./HeroTopNav";
 import { RotatingWordColumn } from "./RotatingWordColumn";
@@ -9,8 +9,8 @@ import { RotatingWordColumn } from "./RotatingWordColumn";
 const VIDEO_URL = "/hero-bg.mp4";
 
 const HEADLINE_LINES = [
-  ["The", "director's", "platform", "to"],
-  ["shoot", "your", "best", "work"],
+  ["The", "AI", "ad", "studio"],
+  ["for", "generative", "video"],
 ];
 
 export const CinematicHero = () => {
@@ -65,7 +65,7 @@ export const CinematicHero = () => {
             className="inline-flex items-center gap-3 bg-black/35 backdrop-blur-md border border-white/15 rounded-full pl-4 pr-2 py-2 mb-8"
           >
             <span className="text-sm text-white font-medium">
-              AI video director
+              AI video ad templates
             </span>
             <Link
               to="/docs"
@@ -104,8 +104,9 @@ export const CinematicHero = () => {
             transition={{ duration: 0.6, delay: 0.9 }}
             className="mt-7 text-white/85 text-base md:text-lg max-w-xl leading-relaxed"
           >
-            Every AI video model. Intelligent storyboards. Frame-perfect prompts.
-            On-brand cinematography at any scale.
+            Describe a concept or upload a reference video. MovPrompt builds
+            structured ad templates — shots, pacing, look — and generates a
+            preview ready for any AI video model.
           </motion.p>
 
           <motion.div
@@ -118,14 +119,13 @@ export const CinematicHero = () => {
               to="/ads"
               className="bg-white text-black font-medium px-6 py-3.5 rounded-xl hover:scale-[1.02] hover:shadow-2xl transition-all"
             >
-              Start creating
+              Create an ad
             </Link>
             <Link
-              to="/docs"
+              to="/movprompt"
               className="flex items-center gap-2 bg-black/40 backdrop-blur-md text-white border border-white/15 font-medium px-6 py-3.5 rounded-xl hover:bg-black/55 transition-all"
             >
-              <Play className="w-4 h-4 fill-white" strokeWidth={0} />
-              Why MovPrompt?
+              Build a template
             </Link>
           </motion.div>
         </div>
