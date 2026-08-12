@@ -34,7 +34,7 @@ var about_movprompt_default = defineTool({
 import { defineTool as defineTool2 } from "npm:@lovable.dev/mcp-js@0.20.0";
 import { z } from "npm:zod@^4.4.3";
 
-// supabase/functions/_shared/videoModelCatalog.ts
+// ../../supabase/functions/_shared/videoModelCatalog.ts
 var STD = ["16:9", "9:16", "1:1"];
 var SEEDANCE_ASPECTS = ["16:9", "9:16", "1:1", "4:3", "3:4", "21:9"];
 var VEO_DIALECT = 'Wrap spoken lines in double quotes and name the speaker (e.g. Anna: "Line"). Keep dialogue \u22642 short sentences. Put ambient SFX in parentheses.';

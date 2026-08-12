@@ -1,0 +1,92 @@
+import { z } from "zod";
+import { PublicCapabilitySchema } from "./capabilities.js";
+
+export const RequestIdSchema = z
+  .string()
+  .min(8)
+  .max(128)
+  .regex(/^[A-Za-z0-9._:-]+$/);
+
+export const IdempotencyKeySchema = z
+  .string()
+  .min(8)
+  .max(200)
+  .regex(/^[A-Za-z0-9._:-]+$/);
+
+export const ApiErrorBodySchema = z
+  .object({
+    code: z.string().min(1),
+    message: z.string().min(1),
+    retryable: z.boolean(),
+    requestId: RequestIdSchema,
+    details: z.unknown().optional(),
+  })
+  .strict();
+
+export const ApiErrorEnvelopeSchema = z
+  .object({
+    error: ApiErrorBodySchema,
+  })
+  .strict();
+
+export type ApiErrorEnvelope = z.infer<typeof ApiErrorEnvelopeSchema>;
+
+export const ServiceHealthSchema = z
+  .object({
+    service: z.string().min(1),
+    status: z.enum(["ok", "degraded", "unavailable"]),
+    version: z.string().min(1),
+    environment: z.string().min(1),
+    timestamp: z.iso.datetime(),
+    requestId: RequestIdSchema,
+    dependencies: z
+      .array(
+        z
+          .object({
+            name: z.string().min(1),
+            status: z.enum(["ok", "unavailable"]),
+            latencyMs: z.number().nonnegative().optional(),
+          })
+          .strict(),
+      )
+      .default([]),
+  })
+  .strict();
+
+export type ServiceHealth = z.infer<typeof ServiceHealthSchema>;
+
+export const ServiceVersionSchema = z
+  .object({
+    service: z.string().min(1),
+    version: z.string().min(1),
+    commitSha: z.string().min(1),
+    builtAt: z.iso.datetime().nullable(),
+    environment: z.string().min(1),
+  })
+  .strict();
+
+export type ServiceVersion = z.infer<typeof ServiceVersionSchema>;
+
+export const ProductFeatureFlagsSchema = z
+  .object({
+    authentication: z.boolean(),
+    assets: z.boolean(),
+    templateMode: z.boolean(),
+    advancedMode: z.boolean(),
+    generation: z.boolean(),
+    exports: z.boolean(),
+    billing: z.boolean(),
+  })
+  .strict();
+
+export type ProductFeatureFlags = z.infer<typeof ProductFeatureFlagsSchema>;
+
+export const FeatureFlagsResponseSchema = z
+  .object({
+    features: ProductFeatureFlagsSchema,
+    capabilities: z.array(PublicCapabilitySchema),
+    evaluatedAt: z.iso.datetime(),
+  })
+  .strict();
+
+export type FeatureFlagsResponse = z.infer<typeof FeatureFlagsResponseSchema>;

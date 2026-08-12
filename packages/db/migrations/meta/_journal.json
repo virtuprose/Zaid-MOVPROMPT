@@ -1,0 +1,34 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1786533318100,
+      "tag": "0000_initial_portable_foundation",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1786533799050,
+      "tag": "0001_extend_portable_foundation",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1786534000000,
+      "tag": "0002_foundation_invariants",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1786535603088,
+      "tag": "0003_credit_reservations",
+      "breakpoints": true
+    }
+  ]
+}

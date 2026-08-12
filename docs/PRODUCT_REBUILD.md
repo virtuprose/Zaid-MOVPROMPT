@@ -22,7 +22,7 @@ The visual direction is a calm enterprise workspace: warm neutral surfaces, dark
 | `/onboarding` | Legacy mandatory detour | Optional setup, never blocks generation resume |
 | `/qa/create`, `/qa/mobile`, `/hero-preview` | Development-only | Development-only |
 
-Route definitions originate in `src/App.tsx`. No baseline route is removed during consolidation.
+Route definitions originate in `apps/web/src/App.tsx`. No baseline route is removed during consolidation.
 
 ## Shared terminology
 
@@ -35,7 +35,7 @@ Route definitions originate in `src/App.tsx`. No baseline route is removed durin
 
 ## Feature flags
 
-The new guest creator, workspace shell, projects, Advanced Mode and export pipeline are controlled in `src/config/features.ts`. Environment overrides use `VITE_FEATURE_*` values. New routes may ship behind flags while legacy routes remain reachable.
+The new guest creator, workspace shell, projects, Advanced Mode and export pipeline are controlled in `apps/web/src/config/features.ts`. Environment overrides use `VITE_FEATURE_*` values. New routes may ship behind flags while legacy routes remain reachable. Backend-dependent behavior is additionally controlled by server feature flags.
 
 ## Baseline risks
 
@@ -47,9 +47,11 @@ The new guest creator, workspace shell, projects, Advanced Mode and export pipel
 
 Phase exit evidence must include code checks, database/API checks where deployable, and rendered-browser checks. Code alone does not close a phase.
 
-## Deployment operations
+## Portable deployment operations
 
-- Apply `20260811213000_creator_template_flow.sql` before enabling durable creator generation.
-- Deploy `generation-quote`, `start-generation`, `generation-status`, `cancel-generation` and `reconcile-generation` together with the updated `generate-video` function.
-- Schedule `reconcile-generation` with a service-role authenticated request every minute. The function reconciles stale active runs in bounded batches and owns completed provider output in `creator-outputs`.
-- Regenerate Supabase TypeScript types from the deployed schema and compare them with the checked-in canonical types before enabling the feature flag.
+- Keep Supabase unchanged and read-only during development and the cutover window.
+- Apply repository-owned PostgreSQL migrations through `packages/db` before enabling portable API flags.
+- Run API and worker as separate always-on services. Browser polling displays state but never owns completion.
+- Store stable private object keys in PostgreSQL and generate short-lived signed URLs on demand.
+- Enable generation only after quotes, ledger reservations, render runs and the transactional outbox are atomically connected.
+- Activate compatibility redirects only after data and behavior parity has been demonstrated.

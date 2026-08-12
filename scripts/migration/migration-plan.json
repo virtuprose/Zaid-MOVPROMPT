@@ -1,0 +1,249 @@
+{
+  "version": 1,
+  "sourceLabel": "supabase-legacy-read-only",
+  "targetLabel": "portable-postgresql",
+  "tables": [
+    {
+      "id": "users",
+      "order": 10,
+      "source": {
+        "schema": "auth",
+        "table": "users",
+        "key": ["id"],
+        "columns": ["id", "email", "email_confirmed_at", "raw_user_meta_data", "created_at", "updated_at"]
+      },
+      "target": {
+        "schema": "public",
+        "table": "users",
+        "key": ["id"],
+        "columns": ["id", "name", "email", "email_verified", "image", "role", "locale", "legacy_supabase_user_id", "created_at", "updated_at"]
+      },
+      "transform": "supabaseUser"
+    },
+    {
+      "id": "videoTemplates",
+      "order": 20,
+      "source": { "schema": "public", "table": "video_templates", "key": ["id"], "columns": ["*"] },
+      "target": {
+        "schema": "public",
+        "table": "video_templates",
+        "key": ["id"],
+        "columns": ["id", "slug", "category", "publishing_state", "current_published_version_id", "created_at", "updated_at"]
+      },
+      "transform": "identity"
+    },
+    {
+      "id": "videoTemplateVersions",
+      "order": 30,
+      "source": { "schema": "public", "table": "video_template_versions", "key": ["id"], "columns": ["*"] },
+      "target": {
+        "schema": "public",
+        "table": "video_template_versions",
+        "key": ["id"],
+        "columns": ["id", "template_id", "version_number", "localized_name", "localized_description", "recipe_json", "input_schema", "edit_schema", "supported_languages", "supported_ratios", "supported_markets", "duration_seconds", "preview_object_key", "poster_object_key", "published_at", "created_at"]
+      },
+      "transform": "templateVersion"
+    },
+    {
+      "id": "creatorProjects",
+      "order": 40,
+      "source": { "schema": "public", "table": "creator_projects", "key": ["id"], "columns": ["*"] },
+      "target": {
+        "schema": "public",
+        "table": "creator_projects",
+        "key": ["id"],
+        "columns": ["id", "user_id", "title", "mode", "status", "current_accepted_version_id", "deleted_at", "created_at", "updated_at"]
+      },
+      "transform": "identity"
+    },
+    {
+      "id": "creatorProjectVersions",
+      "order": 50,
+      "source": { "schema": "public", "table": "creator_project_versions", "key": ["id"], "columns": ["*"] },
+      "target": {
+        "schema": "public",
+        "table": "creator_project_versions",
+        "key": ["id"],
+        "columns": ["id", "project_id", "user_id", "parent_version_id", "template_version_id", "mode", "version_number", "configuration", "product_recipe", "campaign_recipe", "change_reason", "created_at"]
+      },
+      "transform": "identity"
+    },
+    {
+      "id": "creatorProjectAssets",
+      "order": 60,
+      "source": { "schema": "public", "table": "creator_project_assets", "key": ["id"], "columns": ["*"] },
+      "target": {
+        "schema": "public",
+        "table": "creator_project_assets",
+        "key": ["id"],
+        "columns": ["id", "project_id", "user_id", "asset_kind", "storage_bucket", "object_key", "mime_type", "size_bytes", "checksum_sha256", "width", "height", "duration_ms", "source_metadata", "created_at"]
+      },
+      "transform": "creatorAsset"
+    },
+    {
+      "id": "generationQuotes",
+      "order": 70,
+      "source": { "schema": "public", "table": "creator_generation_quotes", "key": ["id"], "columns": ["*"] },
+      "target": {
+        "schema": "public",
+        "table": "generation_quotes",
+        "key": ["id"],
+        "columns": ["id", "user_id", "template_version_id", "capability_alias", "credits", "entitlement_eligible", "breakdown", "configuration_hash", "expires_at", "created_at"]
+      },
+      "transform": "identity"
+    },
+    {
+      "id": "renderRuns",
+      "order": 80,
+      "source": { "schema": "public", "table": "creator_render_runs", "key": ["id"], "columns": ["*"] },
+      "target": {
+        "schema": "public",
+        "table": "render_runs",
+        "key": ["id"],
+        "columns": ["id", "project_id", "project_version_id", "user_id", "idempotency_key", "capability_alias", "quote_id", "quoted_credits", "charged_credits", "starter_entitlement_used", "status", "provider", "provider_request_id", "output_bucket", "output_object_key", "error_code", "error_message", "refund_status", "charged_at", "provider_accepted_at", "completed_at", "created_at", "updated_at"]
+      },
+      "transform": "renderRun"
+    },
+    {
+      "id": "entitlements",
+      "order": 90,
+      "source": { "schema": "public", "table": "creator_entitlements", "key": ["id"], "columns": ["*"] },
+      "target": {
+        "schema": "public",
+        "table": "entitlements",
+        "key": ["id"],
+        "columns": ["id", "user_id", "entitlement_type", "status", "reserved_run_id", "reserved_operation_key", "consumed_at", "created_at", "updated_at"]
+      },
+      "transform": "entitlement"
+    },
+    {
+      "id": "exports",
+      "order": 100,
+      "source": { "schema": "public", "table": "creator_exports", "key": ["id"], "columns": ["*"] },
+      "target": {
+        "schema": "public",
+        "table": "exports",
+        "key": ["id"],
+        "columns": ["id", "project_id", "project_version_id", "render_run_id", "user_id", "idempotency_key", "aspect_ratio", "resolution", "codec", "preset", "status", "output_bucket", "output_object_key", "width", "height", "duration_ms", "error_message", "created_at", "updated_at", "completed_at"]
+      },
+      "transform": "creatorExport"
+    },
+    {
+      "id": "creditAccounts",
+      "order": 110,
+      "source": { "schema": "public", "table": "user_credits", "key": ["user_id"], "columns": ["*"] },
+      "target": {
+        "schema": "public",
+        "table": "credit_accounts",
+        "key": ["user_id"],
+        "columns": ["user_id", "balance", "lifetime_purchased", "lifetime_spent", "updated_at"]
+      },
+      "transform": "creditAccount"
+    },
+    {
+      "id": "creditLedger",
+      "order": 120,
+      "source": { "schema": "public", "table": "credit_ledger", "key": ["id"], "columns": ["*"] },
+      "target": {
+        "schema": "public",
+        "table": "credit_ledger",
+        "key": ["id"],
+        "columns": ["id", "user_id", "kind", "delta", "balance_after", "reason", "reference_type", "reference_id", "idempotency_key", "metadata", "created_at"]
+      },
+      "transform": "creditLedger"
+    }
+  ],
+  "sourceInventory": [
+    "auth.identities",
+    "auth.mfa_factors",
+    "auth.refresh_tokens",
+    "auth.sessions",
+    "auth.users",
+    "storage.buckets",
+    "storage.objects",
+    "public.ad_templates",
+    "public.admin_audit_log",
+    "public.agent_profiles",
+    "public.announcements",
+    "public.brand_identities",
+    "public.brand_kit_selection",
+    "public.brand_kit_selections",
+    "public.brand_kits",
+    "public.character_kit_selection",
+    "public.character_kit_selections",
+    "public.character_kits",
+    "public.creator_entitlements",
+    "public.creator_exports",
+    "public.creator_generation_quotes",
+    "public.creator_project_assets",
+    "public.creator_project_versions",
+    "public.creator_projects",
+    "public.creator_render_runs",
+    "public.credit_ledger",
+    "public.credit_prices",
+    "public.credit_topups",
+    "public.custom_presets",
+    "public.director_message_feedback",
+    "public.director_sessions",
+    "public.director_user_memory",
+    "public.email_send_log",
+    "public.email_send_state",
+    "public.email_unsubscribe_tokens",
+    "public.generation_events",
+    "public.media_favorites",
+    "public.media_folder_items",
+    "public.media_folders",
+    "public.media_hidden",
+    "public.media_labels",
+    "public.model_availability",
+    "public.notification_reads",
+    "public.notifications",
+    "public.page_visits",
+    "public.preset_preview_meta",
+    "public.product_references",
+    "public.profiles",
+    "public.prompt_history",
+    "public.referral_codes",
+    "public.referrals",
+    "public.shared_prompts",
+    "public.suppressed_emails",
+    "public.user_credits",
+    "public.user_roles",
+    "public.video_jobs",
+    "public.video_template_versions",
+    "public.video_templates",
+    "public.welcome_popups"
+  ],
+  "targetInventory": [
+    "public.users",
+    "public.sessions",
+    "public.accounts",
+    "public.verifications",
+    "public.video_templates",
+    "public.video_template_versions",
+    "public.creator_projects",
+    "public.creator_project_versions",
+    "public.creator_project_assets",
+    "public.generation_quotes",
+    "public.render_runs",
+    "public.entitlements",
+    "public.credit_accounts",
+    "public.credit_ledger",
+    "public.credit_reservations",
+    "public.exports",
+    "public.payment_bundles",
+    "public.payment_orders",
+    "public.payment_attempts",
+    "public.payment_refunds",
+    "public.payment_events",
+    "public.notifications",
+    "public.audit_logs",
+    "public.outbox_jobs"
+  ],
+  "objectBuckets": [
+    { "source": "creator-assets", "target": "creator-assets" },
+    { "source": "creator-outputs", "target": "creator-outputs" },
+    { "source": "director-uploads", "target": "creator-assets", "requiresPrefixMapping": true },
+    { "source": "welcome-popup-media", "target": "template-previews", "requiresPrefixMapping": true }
+  ]
+}

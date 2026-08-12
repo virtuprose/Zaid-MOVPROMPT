@@ -1,0 +1,145 @@
+import { schema, type Database } from "@movprompt/db";
+import { betterAuth } from "better-auth";
+import { drizzleAdapter } from "better-auth/adapters/drizzle";
+
+import type { AuthEnvironment } from "./config.js";
+
+export interface AuthEmail {
+  type: "verify-email" | "reset-password";
+  to: string;
+  name: string;
+  url: string;
+}
+
+export type AuthEmailSender = (email: AuthEmail) => Promise<void>;
+
+export interface CreateAuthInput {
+  db: Database;
+  environment: AuthEnvironment;
+  sendEmail: AuthEmailSender;
+}
+
+function dispatchEmail(sender: AuthEmailSender, email: AuthEmail): void {
+  // Authentication responses must not reveal email-provider latency.
+  void sender(email).catch((error: unknown) => {
+    console.error("Failed to enqueue authentication email", {
+      type: email.type,
+      error: error instanceof Error ? error.message : "unknown_error",
+    });
+  });
+}
+
+/**
+ * Builds the Better Auth handler used by the API at `/api/auth/*`.
+ *
+ * All core IDs are PostgreSQL UUIDs. Supabase users are imported into `users`
+ * with their existing UUID before cutover; new records use UUIDs too.
+ */
+export function createMovPromptAuth(input: CreateAuthInput) {
+  const { environment } = input;
+  const socialProviders = {
+    ...(environment.google ? { google: environment.google } : {}),
+    ...(environment.apple ? { apple: environment.apple } : {}),
+  };
+
+  return betterAuth({
+    appName: "MovPrompt",
+    baseURL: environment.baseUrl,
+    secret: environment.secret,
+    trustedOrigins: environment.trustedOrigins,
+    database: drizzleAdapter(input.db, {
+      provider: "pg",
+      schema: {
+        ...schema,
+        user: schema.users,
+        session: schema.sessions,
+        account: schema.accounts,
+        verification: schema.verifications,
+      },
+      transaction: true,
+    }),
+    user: {
+      modelName: "users",
+      additionalFields: {
+        role: {
+          type: ["user", "admin"],
+          required: false,
+          defaultValue: "user",
+          input: false,
+        },
+        locale: {
+          type: "string",
+          required: false,
+          defaultValue: "en",
+        },
+        legacySupabaseUserId: {
+          type: "string",
+          required: false,
+          input: false,
+          returned: false,
+        },
+      },
+    },
+    session: {
+      modelName: "sessions",
+      expiresIn: 60 * 60 * 24 * 7,
+      updateAge: 60 * 60 * 24,
+    },
+    account: {
+      modelName: "accounts",
+      encryptOAuthTokens: true,
+      storeStateStrategy: "database",
+      accountLinking: {
+        enabled: true,
+        trustedProviders: ["google", "apple", "credential"],
+        allowDifferentEmails: false,
+      },
+    },
+    verification: {
+      modelName: "verifications",
+    },
+    emailAndPassword: {
+      enabled: true,
+      requireEmailVerification: true,
+      minPasswordLength: 10,
+      maxPasswordLength: 128,
+      revokeSessionsOnPasswordReset: true,
+      resetPasswordTokenExpiresIn: 60 * 60,
+      sendResetPassword: async ({ user, url }) => {
+        dispatchEmail(input.sendEmail, {
+          type: "reset-password",
+          to: user.email,
+          name: user.name,
+          url,
+        });
+      },
+    },
+    emailVerification: {
+      sendOnSignUp: true,
+      sendOnSignIn: true,
+      autoSignInAfterVerification: true,
+      expiresIn: 60 * 60,
+      sendVerificationEmail: async ({ user, url }) => {
+        dispatchEmail(input.sendEmail, {
+          type: "verify-email",
+          to: user.email,
+          name: user.name,
+          url,
+        });
+      },
+    },
+    socialProviders,
+    advanced: {
+      database: {
+        generateId: "uuid",
+      },
+      defaultCookieAttributes: {
+        httpOnly: true,
+        sameSite: "lax",
+        secure: environment.baseUrl.startsWith("https://"),
+      },
+    },
+  });
+}
+
+export type MovPromptAuth = ReturnType<typeof createMovPromptAuth>;
