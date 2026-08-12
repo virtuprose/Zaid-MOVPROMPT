@@ -21,6 +21,7 @@ import {
   Megaphone,
   FileText,
   Shield,
+  LayoutTemplate,
 } from "lucide-react";
 import { CommandPalette } from "@/components/CommandPalette";
 import { Button } from "@/components/ui/button";
@@ -46,8 +47,10 @@ import { cn } from "@/lib/utils";
 type NavItem = { to: string; label: string; badge?: string; icon: typeof Sparkles };
 
 const NAV_ITEMS: NavItem[] = [
-  { to: "/ads", label: "Ads", icon: Megaphone },
-  { to: "/movprompt", label: "MovPrompt", icon: Sparkles },
+  { to: "/create", label: "Create", icon: Sparkles },
+  { to: "/templates", label: "Templates", icon: LayoutTemplate },
+  { to: "/projects", label: "Projects", icon: FolderOpen },
+  { to: "/ads", label: "Advanced", icon: Megaphone },
 ];
 
 
@@ -430,7 +433,6 @@ export function TopNav() {
                       <Button
                         variant="ghost"
                         className="justify-start h-11 rounded-lg gap-3 px-3 text-[14px]"
-                        onSelect={undefined as any}
                         onClick={toggleTheme}
                       >
                         {theme === "dark" ? <Sun className="w-4 h-4 text-muted-foreground" /> : <Moon className="w-4 h-4 text-muted-foreground" />}

@@ -19,4 +19,15 @@ project_id = "foaxkfpblyovbocvmtjj"
     verify_jwt = false
   [functions.recommend-animate-model]
     verify_jwt = false
-
+  [functions.generation-quote]
+    verify_jwt = false
+  [functions.scrape-product-url]
+    verify_jwt = false
+  [functions.start-generation]
+    verify_jwt = true
+  [functions.generation-status]
+    verify_jwt = true
+  [functions.cancel-generation]
+    verify_jwt = true
+  [functions.reconcile-generation]
+    verify_jwt = false

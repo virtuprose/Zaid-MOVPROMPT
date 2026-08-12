@@ -8,6 +8,7 @@ import {
   InsufficientCreditsError,
   insufficientResponse,
 } from "../_shared/credits.ts";
+import { isCapabilityAlias, resolveCapability } from "../_shared/capabilityRegistry.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -336,21 +337,19 @@ serve(async (req) => {
     });
   }
 
-  const userClient = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_ANON_KEY")!,
-    { global: { headers: { Authorization: auth } } },
-  );
-  const { data: claims, error: claimsErr } = await userClient.auth.getClaims(
-    auth.replace("Bearer ", ""),
-  );
-  if (claimsErr || !claims?.claims) {
-    return new Response(JSON.stringify({ error: "Unauthorized" }), {
-      status: 401,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+  const bearerToken = auth.replace("Bearer ", "");
+  const internalUserId = req.headers.get("x-internal-user-id");
+  let uid: string;
+  if (bearerToken === Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") && internalUserId && /^[0-9a-f-]{36}$/i.test(internalUserId)) {
+    uid = internalUserId;
+  } else {
+    const userClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, { global: { headers: { Authorization: auth } } });
+    const { data: claims, error: claimsErr } = await userClient.auth.getClaims(bearerToken);
+    if (claimsErr || !claims?.claims) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    uid = claims.claims.sub as string;
   }
-  const uid = claims.claims.sub as string;
 
   const FAL_KEY = Deno.env.get("FAL_KEY");
   if (!FAL_KEY) {
@@ -481,8 +480,10 @@ serve(async (req) => {
                 completed_at: new Date().toISOString(),
               })
               .eq("id", jobId);
-            const refundAmt = await videoCost(job.provider, 5);
-            await refundCredits({ userId: uid, amount: refundAmt, reason: "video_render_refund", refId: jobId, metadata: { stage: "terminal_4xx" } });
+            const refundAmt = Number(job.metadata?.charged_credits) || await videoCost(job.provider, 5);
+            const operationId = String(job.metadata?.credit_operation_id || jobId);
+            if (job.metadata?.starter_entitlement_used) await admin.rpc("restore_starter_render", { _user_id: uid, _operation_key: operationId });
+            else await refundCredits({ userId: uid, amount: refundAmt, reason: "video_render_refund", refId: jobId, idempotencyKey: `${operationId}:refund`, metadata: { stage: "terminal_4xx" } });
             return new Response(
               JSON.stringify({
                 ...job,
@@ -501,6 +502,14 @@ serve(async (req) => {
         }
         const firstOutput = Array.isArray(result.output) ? result.output[0] : result.output;
         const videoUrl = result.video?.url || firstOutput?.url || firstOutput || result.video_url;
+        if (typeof videoUrl !== "string" || !/^https?:\/\//i.test(videoUrl)) {
+          const refundAmt = Number(job.metadata?.charged_credits) || await videoCost(job.provider, 5);
+          const operationId = String(job.metadata?.credit_operation_id || jobId);
+          await admin.from("video_jobs").update({ status: "failed", error: "Provider completed without a valid video output", completed_at: new Date().toISOString() }).eq("id", jobId);
+          if (job.metadata?.starter_entitlement_used) await admin.rpc("restore_starter_render", { _user_id: uid, _operation_key: operationId });
+          else await refundCredits({ userId: uid, amount: refundAmt, reason: "video_render_refund", refId: jobId, idempotencyKey: `${operationId}:refund`, metadata: { stage: "missing_output" } });
+          return new Response(JSON.stringify({ ...job, status: "failed", error: "The provider did not return a usable video. Your credits were restored." }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
         await admin
           .from("video_jobs")
           .update({
@@ -524,8 +533,10 @@ serve(async (req) => {
             completed_at: new Date().toISOString(),
           })
           .eq("id", jobId);
-        const refundAmt = await videoCost(job.provider, 5);
-        await refundCredits({ userId: uid, amount: refundAmt, reason: "video_render_refund", refId: jobId, metadata: { stage: "provider_failed" } });
+        const refundAmt = Number(job.metadata?.charged_credits) || await videoCost(job.provider, 5);
+        const operationId = String(job.metadata?.credit_operation_id || jobId);
+        if (job.metadata?.starter_entitlement_used) await admin.rpc("restore_starter_render", { _user_id: uid, _operation_key: operationId });
+        else await refundCredits({ userId: uid, amount: refundAmt, reason: "video_render_refund", refId: jobId, idempotencyKey: `${operationId}:refund`, metadata: { stage: "provider_failed" } });
         return new Response(
           JSON.stringify({ ...job, status: "failed", error: statusData.error }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } },
@@ -563,19 +574,24 @@ serve(async (req) => {
       }
       // Best-effort cancel on fal
       const model = FAL_MODELS[job.provider];
+      let providerCancelled = false;
       if (model && job.fal_request_id) {
         const cancelUrl =
           normalizeFalQueueUrl((job as { fal_status_url?: string | null }).fal_status_url, "cancel") ||
           normalizeFalQueueUrl((job as { fal_response_url?: string | null }).fal_response_url, "cancel") ||
           getFallbackFalUrls(model, job.fal_request_id).cancelUrl;
         try {
-          await fetch(cancelUrl, {
+          const cancelResponse = await fetch(cancelUrl, {
             method: "PUT",
             headers: { Authorization: `Key ${FAL_KEY}` },
           });
+          providerCancelled = cancelResponse.ok;
         } catch (e) {
           console.warn("fal cancel failed", e);
         }
+      }
+      if (!providerCancelled && job.fal_request_id) {
+        return new Response(JSON.stringify({ error: "cancellation_unconfirmed", message: "The provider has not confirmed cancellation yet. The render remains active." }), { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
       const { data: updated } = await admin
         .from("video_jobs")
@@ -587,6 +603,10 @@ serve(async (req) => {
         .eq("id", jobId)
         .select("*")
         .maybeSingle();
+      const refundAmt = Number(job.metadata?.charged_credits) || await videoCost(job.provider, 5);
+      const operationId = String(job.metadata?.credit_operation_id || jobId);
+      if (job.metadata?.starter_entitlement_used) await admin.rpc("restore_starter_render", { _user_id: uid, _operation_key: operationId });
+      else await refundCredits({ userId: uid, amount: refundAmt, reason: "video_render_refund", refId: jobId, idempotencyKey: `${operationId}:refund`, metadata: { stage: "provider_cancelled" } });
       return new Response(JSON.stringify(updated || { ...job, status: "failed", error: "Canceled by user" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -603,11 +623,29 @@ serve(async (req) => {
       storyboard_shot_index?: number;
       metadata?: Record<string, unknown> | null;
     };
+
+    const beginnerFlow = metadata?.beginner_flow === true;
+    if (beginnerFlow && !isCapabilityAlias(provider)) {
+      return new Response(JSON.stringify({ error: "unapproved_capability", message: "This creator only accepts approved capability aliases." }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    if (isCapabilityAlias(provider)) {
+      try {
+        provider = resolveCapability(provider, "video").externalModelId!;
+      } catch (error) {
+        const code = error instanceof Error ? error.message : "capability_unavailable";
+        return new Response(JSON.stringify({ error: code, message: code === "capability_unavailable" ? "This approved capability is temporarily unavailable." : "The requested capability is not approved." }), { status: code === "capability_unavailable" ? 409 : 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+    }
     const refImages = Array.isArray(reference_image_urls)
       ? reference_image_urls.filter((u): u is string => typeof u === "string" && u.length > 0)
       : [];
-    const safeMetadata =
-      metadata && typeof metadata === "object" && !Array.isArray(metadata) ? metadata : null;
+    const pendingGenerationId = typeof metadata?.pending_generation_id === "string" ? metadata.pending_generation_id : null;
+    if (pendingGenerationId) {
+      const { data: existingJob } = await admin.from("video_jobs").select("*").eq("user_id", uid).contains("metadata", { pending_generation_id: pendingGenerationId }).maybeSingle();
+      if (existingJob) return new Response(JSON.stringify(existingJob), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    const creditOperationId = pendingGenerationId || crypto.randomUUID();
+    let safeMetadata = metadata && typeof metadata === "object" && !Array.isArray(metadata) ? { ...metadata } : {};
 
     if ((!prompt || !prompt.trim()) && session_id) {
       const { data: session } = await admin
@@ -671,13 +709,22 @@ serve(async (req) => {
       typeof options?.duration === "number"
         ? options.duration
         : 5;
-    const creditCost = await videoCost(provider, durationSec);
+    const quotedCreditCost = await videoCost(provider, durationSec);
+    let starterEntitlementUsed = false;
+    if (beginnerFlow) {
+      const { data } = await admin.rpc("claim_starter_render", { _user_id: uid, _operation_key: creditOperationId });
+      starterEntitlementUsed = data === true;
+    }
+    const creditCost = starterEntitlementUsed ? 0 : quotedCreditCost;
+    safeMetadata = { ...safeMetadata, charged_credits: creditCost, quoted_credits: quotedCreditCost, credit_operation_id: creditOperationId, starter_entitlement_used: starterEntitlementUsed };
     try {
-      await chargeCredits({
+      if (!starterEntitlementUsed) await chargeCredits({
         userId: uid,
         amount: creditCost,
         reason: "video_render",
-        metadata: { provider, duration: durationSec },
+        refId: creditOperationId,
+        idempotencyKey: `${creditOperationId}:charge`,
+        metadata: { provider, duration: durationSec, pending_generation_id: pendingGenerationId },
       });
     } catch (e) {
       if (e instanceof InsufficientCreditsError) return insufficientResponse(corsHeaders);
@@ -706,7 +753,12 @@ serve(async (req) => {
       .single();
     if (insErr || !job) {
       console.error("insert video_job failed", insErr);
-      await refundCredits({ userId: uid, amount: creditCost, reason: "video_render_refund", metadata: { stage: "insert_failed" } });
+      if (pendingGenerationId) {
+        const { data: concurrentJob } = await admin.from("video_jobs").select("*").eq("user_id", uid).contains("metadata", { pending_generation_id: pendingGenerationId }).maybeSingle();
+        if (concurrentJob) return new Response(JSON.stringify(concurrentJob), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      if (starterEntitlementUsed) await admin.rpc("restore_starter_render", { _user_id: uid, _operation_key: creditOperationId });
+      else await refundCredits({ userId: uid, amount: creditCost, reason: "video_render_refund", refId: creditOperationId, idempotencyKey: `${creditOperationId}:refund`, metadata: { stage: "insert_failed" } });
       return new Response(JSON.stringify({ error: "Could not create job" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -730,7 +782,8 @@ serve(async (req) => {
         .from("video_jobs")
         .update({ status: "failed", error: friendlySubmit })
         .eq("id", job.id);
-      await refundCredits({ userId: uid, amount: creditCost, reason: "video_render_refund", refId: job.id, metadata: { stage: "submit_error" } });
+      if (starterEntitlementUsed) await admin.rpc("restore_starter_render", { _user_id: uid, _operation_key: creditOperationId });
+      else await refundCredits({ userId: uid, amount: creditCost, reason: "video_render_refund", refId: job.id, idempotencyKey: `${creditOperationId}:refund`, metadata: { stage: "submit_error" } });
       return new Response(JSON.stringify({ error: friendlySubmit }), {
         status: typeof falError.status === "number" && falError.status >= 400 && falError.status < 500 ? falError.status : 502,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -742,13 +795,15 @@ serve(async (req) => {
         .from("video_jobs")
         .update({ status: "failed", error: "Provider returned an invalid submission response" })
         .eq("id", job.id);
-      await refundCredits({ userId: uid, amount: creditCost, reason: "video_render_refund", refId: job.id, metadata: { stage: "submit_invalid" } });
+      if (starterEntitlementUsed) await admin.rpc("restore_starter_render", { _user_id: uid, _operation_key: creditOperationId });
+      else await refundCredits({ userId: uid, amount: creditCost, reason: "video_render_refund", refId: job.id, idempotencyKey: `${creditOperationId}:refund`, metadata: { stage: "submit_invalid" } });
       return new Response(JSON.stringify({ error: "Provider rejected request" }), {
         status: 502,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
     const fallbackUrls = getFallbackFalUrls(model, submitData.request_id);
+    if (starterEntitlementUsed) await admin.rpc("consume_starter_render", { _user_id: uid, _operation_key: creditOperationId });
     const normalizedStatusUrl =
       normalizeFalQueueUrl(submitData.status_url as string | null | undefined, "status") ||
       fallbackUrls.statusUrl;

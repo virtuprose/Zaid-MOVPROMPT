@@ -43,16 +43,18 @@ export async function chargeCredits(opts: {
   reason: string;
   refId?: string;
   metadata?: Record<string, unknown>;
+  idempotencyKey?: string;
 }): Promise<number> {
   if (!opts.amount || opts.amount <= 0) return 0;
   // Admins are exempt from credit charges.
   if (await isAdminUser(opts.userId)) return 0;
-  const { data, error } = await admin().rpc("charge_credits", {
+  const { data, error } = await admin().rpc(opts.idempotencyKey ? "charge_credits_idempotent" : "charge_credits", {
     _user_id: opts.userId,
     _amount: opts.amount,
     _reason: opts.reason,
     _ref_id: opts.refId ?? null,
     _metadata: opts.metadata ?? null,
+    ...(opts.idempotencyKey ? { _idempotency_key: opts.idempotencyKey } : {}),
   });
   if (error) {
     if ((error.message || "").includes("insufficient_credits")) {
@@ -69,14 +71,16 @@ export async function refundCredits(opts: {
   reason: string;
   refId?: string;
   metadata?: Record<string, unknown>;
+  idempotencyKey?: string;
 }) {
   if (!opts.amount || opts.amount <= 0) return;
-  await admin().rpc("refund_credits", {
+  await admin().rpc(opts.idempotencyKey ? "refund_credits_idempotent" : "refund_credits", {
     _user_id: opts.userId,
     _amount: opts.amount,
     _reason: opts.reason,
     _ref_id: opts.refId ?? null,
     _metadata: opts.metadata ?? null,
+    ...(opts.idempotencyKey ? { _idempotency_key: opts.idempotencyKey } : {}),
   });
 }
 

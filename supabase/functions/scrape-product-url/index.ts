@@ -22,12 +22,91 @@ const UA =
 
 const MAX_IMAGES = 12;
 const MAX_ANGLES_MIRROR = 5;
+const MAX_PAGE_BYTES = 1_000_000;
+const PUBLIC_SCAN_WINDOW_MS = 60_000;
+const PUBLIC_SCAN_LIMIT = 12;
+const scanWindows = new Map<string, { startedAt: number; count: number }>();
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
+}
+
+function isBlockedIp(ip: string) {
+  const value = ip.toLowerCase();
+  if (value === "::1" || value === "::" || value.startsWith("fe80:") || value.startsWith("fc") || value.startsWith("fd")) return true;
+  const parts = value.split(".").map(Number);
+  if (parts.length !== 4 || parts.some((part) => !Number.isInteger(part))) return false;
+  const [a, b] = parts;
+  return a === 0 || a === 10 || a === 127 || (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || a >= 224;
+}
+
+async function assertPublicHttpUrl(raw: string) {
+  const url = new URL(raw);
+  if (url.protocol !== "http:" && url.protocol !== "https:") throw new Error("invalid_url");
+  if (url.username || url.password) throw new Error("invalid_url");
+  const host = url.hostname.replace(/^\[|\]$/g, "");
+  if (host === "localhost" || host.endsWith(".local") || isBlockedIp(host)) throw new Error("blocked_destination");
+  const recordTypes: ("A" | "AAAA")[] = ["A", "AAAA"];
+  for (const recordType of recordTypes) {
+    try {
+      const addresses = await Deno.resolveDns(host, recordType);
+      if (addresses.some(isBlockedIp)) throw new Error("blocked_destination");
+    } catch (error) {
+      if (error instanceof Error && error.message === "blocked_destination") throw error;
+    }
+  }
+  return url;
+}
+
+function enforcePublicRateLimit(request: Request) {
+  const key = request.headers.get("x-forwarded-for")?.split(",")[0].trim() || "unknown";
+  const now = Date.now();
+  const current = scanWindows.get(key);
+  if (!current || now - current.startedAt >= PUBLIC_SCAN_WINDOW_MS) {
+    scanWindows.set(key, { startedAt: now, count: 1 });
+    return;
+  }
+  current.count += 1;
+  if (current.count > PUBLIC_SCAN_LIMIT) throw new Error("rate_limited");
+}
+
+async function fetchPublicUrl(rawUrl: string) {
+  let current = (await assertPublicHttpUrl(rawUrl)).toString();
+  for (let redirect = 0; redirect <= 4; redirect += 1) {
+    await assertPublicHttpUrl(current);
+    const response = await fetch(current, {
+      headers: { "User-Agent": UA, Accept: "text/html,application/xhtml+xml,image/*;q=0.8", "Accept-Language": "en-US,en;q=0.9" },
+      redirect: "manual",
+      signal: AbortSignal.timeout(8_000),
+    });
+    if ([301, 302, 303, 307, 308].includes(response.status)) {
+      const location = response.headers.get("location");
+      if (!location) throw new Error("invalid_redirect");
+      current = new URL(location, current).toString();
+      continue;
+    }
+    return response;
+  }
+  throw new Error("too_many_redirects");
+}
+
+async function readLimitedText(response: Response) {
+  if (!response.body) return "";
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let total = 0;
+  let result = "";
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > MAX_PAGE_BYTES) throw new Error("page_too_large");
+    result += decoder.decode(value, { stream: true });
+  }
+  return result + decoder.decode();
 }
 
 function abs(base: string, maybe: string | null | undefined): string | null {
@@ -195,22 +274,16 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) return json({ error: "unauthorized" }, 401);
-
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-      { global: { headers: { Authorization: authHeader } } },
-    );
-    const { data: userData } = await supabase.auth.getUser();
-    if (!userData?.user) return json({ error: "unauthorized" }, 401);
-
     const body = await req.json().catch(() => ({}));
     const action: string = (body?.action ?? "scan").toString();
 
     // ─────────── MIRROR action ───────────
     if (action === "mirror") {
+      const authHeader = req.headers.get("Authorization");
+      if (!authHeader) return json({ error: "unauthorized" }, 401);
+      const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { global: { headers: { Authorization: authHeader } } });
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData?.user) return json({ error: "unauthorized" }, 401);
       const heroUrl: string | undefined = body?.hero_url;
       const angleUrls: string[] = Array.isArray(body?.angle_urls) ? body.angle_urls.slice(0, MAX_ANGLES_MIRROR) : [];
       const referer: string = (body?.referer ?? heroUrl ?? "").toString();
@@ -254,17 +327,10 @@ Deno.serve(async (req) => {
       return json({ error: "invalid_url" }, 400);
     }
 
+    enforcePublicRateLimit(req);
     let pageRes: Response;
     try {
-      pageRes = await fetch(rawUrl, {
-        headers: {
-          "User-Agent": UA,
-          Accept:
-            "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-          "Accept-Language": "en-US,en;q=0.9",
-        },
-        redirect: "follow",
-      });
+      pageRes = await fetchPublicUrl(rawUrl);
     } catch (e) {
       console.warn("scrape-product-url: fetch failed", e);
       return json({ error: "fetch_failed" }, 502);
@@ -285,7 +351,7 @@ Deno.serve(async (req) => {
       return json({ error: "not_html", contentType }, 415);
     }
 
-    const html = (await pageRes.text()).slice(0, 800_000); // cap to ~800KB
+    const html = await readLimitedText(pageRes);
 
     const images = collectImages(html, finalUrl);
     if (images.length === 0) {
@@ -301,6 +367,7 @@ Deno.serve(async (req) => {
     return json({ images, name, description, url: finalUrl });
   } catch (err) {
     console.error("scrape-product-url error", err);
-    return json({ error: err instanceof Error ? err.message : "unknown" }, 500);
+    const code = err instanceof Error ? err.message : "unknown";
+    return json({ error: code }, code === "rate_limited" ? 429 : code === "blocked_destination" || code === "invalid_url" ? 400 : 500);
   }
 });

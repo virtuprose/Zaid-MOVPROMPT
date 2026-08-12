@@ -708,6 +708,26 @@ export async function cancelVideoJob(jobId: string): Promise<VideoJob> {
   return data as VideoJob;
 }
 
+export async function startCreatorGeneration(input: { projectId: string; projectVersionId: string; quoteId: string; idempotencyKey: string; mode: "template" | "advanced"; prompt: string; capability: "video.seedance.latest" | "video.omni_flash.latest"; options: VideoOptions; referenceImages?: string[]; metadata?: Record<string, unknown>; rightsAttested: boolean; }): Promise<{ runId: string; job: VideoJob }> {
+  const { data, error } = await supabase.functions.invoke("start-generation", { body: { project_id: input.projectId, project_version_id: input.projectVersionId, quote_id: input.quoteId, idempotency_key: input.idempotencyKey, mode: input.mode, prompt: input.prompt, capability: input.capability, options: input.options, reference_image_urls: input.referenceImages, metadata: input.metadata, rights_attested: input.rightsAttested } });
+  if (error) throw error;
+  if (!data?.run?.id || !data?.job?.id) throw new Error("The render operation could not be created.");
+  return { runId: data.run.id, job: data.job as VideoJob };
+}
+
+export async function pollCreatorGeneration(runId: string): Promise<VideoJob> {
+  const { data, error } = await supabase.functions.invoke("generation-status", { body: { run_id: runId } });
+  if (error) throw error;
+  if (!data?.job) throw new Error("The render job is still being prepared.");
+  return data.job as VideoJob;
+}
+
+export async function cancelCreatorGeneration(runId: string) {
+  const { data, error } = await supabase.functions.invoke("cancel-generation", { body: { run_id: runId } });
+  if (error) throw error;
+  return data;
+}
+
 export type ModerateImageResult = {
   eligible: boolean;
   severity: "safe" | "borderline" | "blocked";
@@ -813,4 +833,3 @@ export async function writeAdScene(
   const data = await resp.json();
   return typeof data?.scene === "string" ? data.scene : "";
 }
-

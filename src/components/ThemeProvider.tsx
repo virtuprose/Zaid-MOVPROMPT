@@ -8,14 +8,18 @@ interface ThemeContextValue {
   toggleTheme: () => void;
 }
 
-const STORAGE_KEY = "movprompt-theme";
+const STORAGE_KEY = "movprompt-theme-v2";
 
 const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
 
 function readInitial(): Theme {
-  if (typeof window === "undefined") return "dark";
-  const stored = window.localStorage.getItem(STORAGE_KEY);
-  return stored === "light" ? "light" : "dark";
+  if (typeof window === "undefined") return "light";
+  try {
+    const stored = window.localStorage.getItem(STORAGE_KEY);
+    return stored === "dark" ? "dark" : "light";
+  } catch {
+    return "light";
+  }
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
@@ -25,6 +29,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     const root = document.documentElement;
     root.classList.toggle("light", theme === "light");
     root.classList.toggle("dark", theme === "dark");
+    root.style.colorScheme = theme;
+    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", theme === "light" ? "#f4f2ed" : "#0a0a0b");
     try {
       window.localStorage.setItem(STORAGE_KEY, theme);
     } catch {

@@ -1,16 +1,43 @@
 {
-  "name": "vite_react_shadcn_ts",
+  "name": "movprompt",
   "private": true,
   "version": "0.0.0",
+  "description": "MovPrompt template-first and advanced AI video creation platform",
   "type": "module",
+  "packageManager": "bun@1.3.12",
+  "engines": {
+    "node": "24.x",
+    "bun": ">=1.3.12"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
     "dev": "vite",
+    "dev:web": "vite",
+    "dev:api": "bun --cwd apps/api run dev",
+    "dev:worker": "bun --cwd apps/worker run dev",
+    "dev:services": "docker compose up -d postgres minio minio-init mailpit",
+    "dev:stack": "docker compose up --build",
     "build": "vite build",
+    "build:web": "vite build",
+    "build:workspaces": "bun run --filter '@movprompt/*' build",
+    "build:all": "bun run build:web && bun run build:workspaces",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview",
-    "test": "vitest run",
-    "test:watch": "vitest"
+    "test": "NODE_OPTIONS=--localstorage-file=/tmp/movprompt-vitest-localstorage vitest run",
+    "test:watch": "NODE_OPTIONS=--localstorage-file=/tmp/movprompt-vitest-localstorage vitest",
+    "test:workspaces": "bun run --filter '@movprompt/*' test",
+    "test:all": "bun run test && bun run test:workspaces",
+    "typecheck:web": "tsc -b --pretty false",
+    "typecheck:workspaces": "bun run --filter '@movprompt/*' typecheck",
+    "typecheck": "bun run typecheck:web && bun run typecheck:workspaces",
+    "db:generate": "bun --cwd packages/db run generate",
+    "db:migrate": "bun --cwd packages/db run migrate",
+    "db:check": "bun --cwd packages/db run check",
+    "db:studio": "bun --cwd packages/db run studio"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

@@ -13,7 +13,6 @@ import { CinematicHero } from "@/components/hero/CinematicHero";
 import { useAuth } from "@/hooks/useAuth";
 import { Loader2 } from "lucide-react";
 import { Navigate } from "react-router-dom";
-import { onboardingDoneKey, ONBOARDING_PENDING_KEY } from "@/components/onboarding/OnboardingContext";
 
 const RootRoute = () => {
   const { user, loading } = useAuth();
@@ -25,14 +24,7 @@ const RootRoute = () => {
     );
   }
   if (user) {
-    try {
-      const pending = localStorage.getItem(ONBOARDING_PENDING_KEY) === "1";
-      const done = localStorage.getItem(onboardingDoneKey(user.id)) === "1";
-      if (pending && !done) return <Navigate to="/onboarding" replace />;
-    } catch {
-      /* ignore */
-    }
-    return <Navigate to="/ads" replace />;
+    return <Navigate to="/create" replace />;
   }
   return <CinematicHero />;
 };
@@ -55,12 +47,19 @@ import Onboarding from "./pages/Onboarding.tsx";
 
 import MarketingStudio from "./pages/MarketingStudio.tsx";
 import { MarketingStudioSkeleton } from "@/components/marketing/MarketingStudioSkeleton";
+import { CreateStudio } from "@/features/create/CreateStudio";
+import CreatorTemplates from "./pages/CreatorTemplates.tsx";
+import CreatorProjects from "./pages/CreatorProjects.tsx";
+import CreatorQa from "./pages/CreatorQa.tsx";
 
 import AccountSettings from "./pages/account/AccountSettings.tsx";
 import AccountBilling from "./pages/account/AccountBilling.tsx";
 import AccountPreferences from "./pages/account/AccountPreferences.tsx";
 import HeroPreview from "./pages/HeroPreview.tsx";
 import OAuthConsent from "./pages/OAuthConsent.tsx";
+import Pricing from "./pages/Pricing.tsx";
+import AdvancedStudio from "./pages/AdvancedStudio.tsx";
+import Notifications from "./pages/Notifications.tsx";
 
 const queryClient = new QueryClient();
 
@@ -80,7 +79,7 @@ const AppRoutes = () => {
         <Route path="/admin" element={<AuthGuard requireAdmin><Analytics /></AuthGuard>} />
         <Route path="/library" element={<AuthGuard><Library /></AuthGuard>} />
         <Route path="/learn" element={<Learn />} />
-        <Route path="/docs" element={<Docs />} />
+        <Route path="/docs" element={<Navigate to="/learn" replace />} />
         <Route path="/unsubscribe" element={<Unsubscribe />} />
         <Route path="/terms" element={<Terms />} />
         <Route path="/privacy" element={<PrivacyPolicy />} />
@@ -88,15 +87,27 @@ const AppRoutes = () => {
         <Route path="/qa/mobile" element={<QaMobile />} />
         <Route path="/p/:slug" element={<SharedPrompt />} />
         <Route path="/referrals" element={<AuthGuard><Referrals /></AuthGuard>} />
-        <Route path="/onboarding" element={<AuthGuard><Onboarding /></AuthGuard>} />
+        <Route path="/onboarding" element={<Navigate to="/create" replace />} />
+        <Route path="/create" element={<CreateStudio />} />
+        <Route path="/create/:draftId" element={<CreateStudio />} />
+        <Route path="/templates" element={<CreatorTemplates />} />
+        <Route path="/templates/:slug" element={<CreatorTemplates />} />
+        <Route path="/projects" element={<AuthGuard><CreatorProjects /></AuthGuard>} />
+        <Route path="/projects/:projectId" element={<AuthGuard><CreateStudio /></AuthGuard>} />
         <Route path="/director" element={<Navigate to="/ads" replace />} />
         <Route path="/director/:sessionId" element={<Navigate to="/ads" replace />} />
         <Route path="/marketing" element={<Navigate to="/ads" replace />} />
+        <Route path="/advanced" element={<AdvancedStudio />} />
+        <Route path="/advanced/templates" element={<AuthGuard><TemplateWorkshop /></AuthGuard>} />
+        <Route path="/advanced/history" element={<AuthGuard><Library /></AuthGuard>} />
         <Route path="/ads" element={<AuthGuard fallback={<MarketingStudioSkeleton />}><MarketingStudio /></AuthGuard>} />
+        <Route path="/pricing" element={<Pricing />} />
+        <Route path="/notifications" element={<AuthGuard><Notifications /></AuthGuard>} />
         <Route path="/account/settings" element={<AuthGuard><AccountSettings /></AuthGuard>} />
         <Route path="/account/billing" element={<AuthGuard><AccountBilling /></AuthGuard>} />
         <Route path="/account/preferences" element={<AuthGuard><AccountPreferences /></AuthGuard>} />
         <Route path="/hero-preview" element={<HeroPreview />} />
+        {import.meta.env.DEV && <Route path="/qa/create" element={<CreatorQa />} />}
         <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
         <Route path="*" element={<NotFound />} />

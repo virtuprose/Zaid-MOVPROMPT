@@ -11,6 +11,29 @@ node_modules
 dist
 dist-ssr
 *.local
+.turbo
+.vite
+.cache
+coverage
+playwright-report
+test-results
+
+# Local configuration and credentials
+.env
+.env.*
+!.env.example
+
+# Local service state
+.data
+data
+minio-data
+postgres-data
+mailpit-data
+
+# Generated release and migration artifacts
+artifacts
+backups
+tmp
 
 # Editor directories and files
 .vscode/*

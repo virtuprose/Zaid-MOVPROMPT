@@ -71,6 +71,48 @@ export type Database = {
         }
         Relationships: []
       }
+      creator_projects: {
+        Row: {
+          created_at: string
+          current_accepted_version_id: string | null
+          deleted_at: string | null
+          id: string
+          mode: string
+          status: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          current_accepted_version_id?: string | null
+          deleted_at?: string | null
+          id?: string
+          mode?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          current_accepted_version_id?: string | null
+          deleted_at?: string | null
+          id?: string
+          mode?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      creator_project_versions: {
+        Row: { campaign_recipe: Json; change_reason: string | null; configuration: Json; created_at: string; id: string; mode: string; parent_version_id: string | null; product_recipe: Json; project_id: string; template_version_id: string | null; user_id: string; version_number: number }
+        Insert: { campaign_recipe?: Json; change_reason?: string | null; configuration: Json; created_at?: string; id?: string; mode: string; parent_version_id?: string | null; product_recipe?: Json; project_id: string; template_version_id?: string | null; user_id: string; version_number: number }
+        Update: { campaign_recipe?: Json; change_reason?: string | null; configuration?: Json; created_at?: string; id?: string; mode?: string; parent_version_id?: string | null; product_recipe?: Json; project_id?: string; template_version_id?: string | null; user_id?: string; version_number?: number }
+        Relationships: []
+      }
       admin_audit_log: {
         Row: {
           action: string
