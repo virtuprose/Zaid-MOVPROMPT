@@ -63,9 +63,17 @@ export interface CreationDraft {
 }
 
 export type ApprovedCapability =
-  | "video.seedance.latest"
-  | "video.omni_flash.latest"
-  | "image.nano_banana.latest";
+  | "video.cinematic"
+  | "video.product_fidelity"
+  | "image.product"
+  | "presenter.ai_ugc"
+  | "avatar.enroll"
+  | "avatar.perform"
+  | "voice.clone"
+  | "speech.generate"
+  | "speech.lip_sync"
+  | "media.transcribe"
+  | "media.moderate";
 
 export interface GenerationQuote {
   quoteId: string;

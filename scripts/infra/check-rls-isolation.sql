@@ -65,13 +65,13 @@ VALUES
   (
     '11111000-0000-4000-8000-000000000001',
     '10000000-0000-4000-8000-000000000001',
-    'video.seedance.latest', 10, '[{"label":"test","credits":10}]'::jsonb,
+    'video.cinematic', 10, '[{"label":"test","credits":10}]'::jsonb,
     repeat('a', 64), now() + interval '5 minutes'
   ),
   (
     '22222000-0000-4000-8000-000000000002',
     '20000000-0000-4000-8000-000000000002',
-    'video.seedance.latest', 10, '[{"label":"test","credits":10}]'::jsonb,
+    'video.cinematic', 10, '[{"label":"test","credits":10}]'::jsonb,
     repeat('b', 64), now() + interval '5 minutes'
   );
 
@@ -83,7 +83,7 @@ VALUES
     '11000000-0000-4000-8000-000000000001',
     '11100000-0000-4000-8000-000000000001',
     '10000000-0000-4000-8000-000000000001',
-    'rls-owner-a-render', 'video.seedance.latest',
+    'rls-owner-a-render', 'video.cinematic',
     '11111000-0000-4000-8000-000000000001', 10
   ),
   (
@@ -91,7 +91,7 @@ VALUES
     '22000000-0000-4000-8000-000000000002',
     '22200000-0000-4000-8000-000000000002',
     '20000000-0000-4000-8000-000000000002',
-    'rls-owner-b-render', 'video.seedance.latest',
+    'rls-owner-b-render', 'video.cinematic',
     '22222000-0000-4000-8000-000000000002', 10
   );
 

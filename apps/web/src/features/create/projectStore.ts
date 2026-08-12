@@ -1,5 +1,8 @@
-import { supabase } from "@/integrations/supabase/client";
-import type { Json } from "@/integrations/supabase/types";
+import type { ClaimDraftRequest, CreatorProjectRecord } from "@movprompt/contracts";
+
+import { isFeatureEnabled } from "@/config/features";
+import { PortableApiError, portableCreatorApi } from "@/lib/api/portableApiClient";
+import { hydrateCloudProject, stableProjectConfiguration } from "./portableProjectMapper";
 import type { CreatorProject } from "./types";
 
 const STORAGE_KEY = "movprompt.creator-projects.v2";
@@ -51,66 +54,157 @@ export function subscribeToCreatorProjects(callback: () => void) {
   };
 }
 
+function generationConfiguration(project: CreatorProject) {
+  return {
+    prompt: [
+      `Create a ${project.aspectRatio} campaign for ${project.product.name || "the confirmed business"}.`,
+      project.product.description,
+      project.offer ? `Offer: ${project.offer}.` : "Do not invent an offer.",
+      `Call to action: ${project.cta}.`,
+      ...project.scenes.map((scene, index) => `${index + 1}. ${scene.direction} On-screen copy: ${scene.headline}.`),
+    ]
+      .filter(Boolean)
+      .join("\n"),
+    durationSeconds: project.scenes.reduce((sum, scene) => sum + scene.duration, 0),
+    aspectRatio: project.aspectRatio,
+    references: project.product.images.flatMap((image) =>
+      image.storagePath
+        ? [{ objectKey: image.storagePath, mimeType: "image/jpeg" }]
+        : [],
+    ),
+  };
+}
+
+function portableConfiguration(project: CreatorProject): ClaimDraftRequest["configuration"] {
+  return {
+    creatorProject: stableProjectConfiguration(project),
+    generation: generationConfiguration(project),
+  };
+}
+
+async function portableTemplateVersionId(templateId: string): Promise<string> {
+  return (await portableCreatorApi.getTemplate(templateId)).versionId;
+}
+
+function portableCreatorEnabled() {
+  return isFeatureEnabled("portableAuth");
+}
+
 export async function syncCreatorProject(project: CreatorProject, userId?: string | null) {
-  const saved = saveLocalCreatorProject(project, userId);
-  if (!userId) return saved;
+  if (!userId) return saveLocalCreatorProject(project, userId);
+  if (!portableCreatorEnabled()) {
+    // During the cutover, authenticated creator writes are intentionally not
+    // mirrored to the legacy backend. The portable flag must be enabled only
+    // with the API running.
+    return saveLocalCreatorProject(project, userId);
+  }
 
-  const { error } = await supabase.from("creator_projects").upsert({
-    id: saved.id,
-    user_id: userId,
-    title: saved.title,
-    mode: "template",
-    status: saved.status,
-    updated_at: saved.updatedAt,
-  });
-
-  if (!error) {
-    const versionId = saved.versionId || crypto.randomUUID();
-    const { error: versionError } = await supabase.from("creator_project_versions").upsert({
-      id: versionId,
-      project_id: saved.id,
-      user_id: userId,
-      template_version_id: null,
+  let existing: CreatorProjectRecord | null = null;
+  try {
+    existing = await portableCreatorApi.getProject(project.id);
+  } catch (error) {
+    if (!(error instanceof PortableApiError) || error.status !== 404) throw error;
+    existing = null;
+  }
+  if (!existing) {
+    const templateVersionId = await portableTemplateVersionId(project.templateId);
+    const claimed = await portableCreatorApi.claimDraft({
+      draftId: project.id,
+      title: project.title,
       mode: "template",
-      version_number: saved.versionNumber || 1,
-      configuration: { ...saved, versionId } as unknown as Json,
-      product_recipe: saved.product as unknown as Json,
-      campaign_recipe: { market: saved.market, language: saved.language, offer: saved.offer, cta: saved.cta, aspectRatio: saved.aspectRatio, resolution: saved.resolution } as unknown as Json,
+      templateVersionId,
+      configuration: portableConfiguration(project),
+      productRecipe: project.product,
+      campaignRecipe: {
+        market: project.market,
+        language: project.language,
+        offer: project.offer,
+        cta: project.cta,
+        aspectRatio: project.aspectRatio,
+        resolution: project.resolution,
+      },
     });
-    if (!versionError) await supabase.from("creator_projects").update({ current_accepted_version_id: versionId }).eq("id", saved.id).eq("user_id", userId);
+    const hydrated = await hydrateCloudProject(claimed);
+    if (!hydrated) throw new Error("The claimed project did not include its saved campaign configuration.");
+    return saveLocalCreatorProject(hydrated, userId);
   }
 
-  if (error) {
-    console.warn("Creator project cloud sync failed", error.message);
-  }
-  return saved;
+  const canonicalProject = existing.currentVersion ? (await hydrateCloudProject(existing)) ?? project : project;
+  const projectForSave: CreatorProject = {
+    ...project,
+    id: existing.id,
+    versionId: existing.currentVersion?.id ?? project.versionId,
+    versionNumber: existing.currentVersion?.versionNumber ?? project.versionNumber,
+    createdAt: existing.createdAt,
+    // Preserve fresh UI changes over the last cloud snapshot.
+    product: project.product,
+    scenes: project.scenes,
+    title: project.title,
+  };
+
+  const templateVersionId = await portableTemplateVersionId(projectForSave.templateId);
+  const operationKey = `project-save:${projectForSave.id}:${projectForSave.updatedAt.replace(/[^A-Za-z0-9]/g, "")}`;
+  const version = await portableCreatorApi.createVersion(
+    projectForSave.id,
+    {
+      parentVersionId: projectForSave.versionId ?? null,
+      templateVersionId,
+      mode: "template",
+      configuration: portableConfiguration(projectForSave),
+      productRecipe: projectForSave.product,
+      campaignRecipe: {
+        market: projectForSave.market,
+        language: projectForSave.language,
+        offer: projectForSave.offer,
+        cta: projectForSave.cta,
+        aspectRatio: projectForSave.aspectRatio,
+        resolution: projectForSave.resolution,
+      },
+      changeReason: "Campaign draft updated",
+    },
+    operationKey,
+  );
+  return saveLocalCreatorProject(
+    { ...canonicalProject, ...projectForSave, versionId: version.id, versionNumber: version.versionNumber },
+    userId,
+  );
 }
 
 export async function loadCreatorProjects(userId?: string | null) {
-  const local = listLocalCreatorProjects(userId);
-  if (!userId) return local;
+  if (!userId || !portableCreatorEnabled()) return listLocalCreatorProjects(userId);
+  const rows = await portableCreatorApi.listProjects();
+  const resolved = await Promise.all(rows.map(hydrateCloudProject));
+  const cloud = resolved.filter((project): project is CreatorProject => Boolean(project));
+  writeLocal(cloud, userId);
+  return cloud;
+}
 
-  const { data, error } = await supabase
-    .from("creator_projects")
-    .select("id,updated_at,current_accepted_version_id")
-    .eq("user_id", userId)
-    .is("deleted_at", null)
-    .order("updated_at", { ascending: false });
+export async function duplicateCreatorProject(projectId: string, userId?: string | null) {
+  if (!userId || !portableCreatorEnabled()) {
+    const source = getLocalCreatorProject(projectId, userId);
+    if (!source) throw new Error("Project not found.");
+    const now = new Date().toISOString();
+    const copy = {
+      ...source,
+      id: crypto.randomUUID(),
+      versionId: undefined,
+      versionNumber: 1,
+      title: `${source.title} copy`,
+      status: "draft" as const,
+      videoUrl: null,
+      jobId: null,
+      renderRunId: null,
+      createdAt: now,
+      updatedAt: now,
+    };
+    return saveLocalCreatorProject(copy, userId);
+  }
+  const duplicated = await hydrateCloudProject(await portableCreatorApi.duplicateProject(projectId));
+  if (!duplicated) throw new Error("The duplicated project could not be loaded.");
+  return saveLocalCreatorProject(duplicated, userId);
+}
 
-  if (error || !data) return local;
-  const versionIds = data.flatMap((row) => row.current_accepted_version_id ? [row.current_accepted_version_id] : []);
-  const { data: versions } = versionIds.length ? await supabase.from("creator_project_versions").select("id,configuration").in("id", versionIds) : { data: [] };
-  const versionMap = new Map((versions || []).map((row) => [row.id, row.configuration as unknown as CreatorProject]));
-  const cloud = data.flatMap((row) => {
-    const project = row.current_accepted_version_id ? versionMap.get(row.current_accepted_version_id) : null;
-    return project ? [{ ...project, updatedAt: row.updated_at }] : [];
-  });
-  const merged = new Map<string, CreatorProject>();
-  [...local, ...cloud].forEach((project) => {
-    const current = merged.get(project.id);
-    if (!current || project.updatedAt > current.updatedAt) merged.set(project.id, project);
-  });
-  const result = Array.from(merged.values()).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
-  writeLocal(result, userId);
-  return result;
+export async function trashCreatorProject(projectId: string, userId?: string | null) {
+  if (userId && portableCreatorEnabled()) await portableCreatorApi.trashProject(projectId);
+  deleteLocalCreatorProject(projectId, userId);
 }

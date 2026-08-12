@@ -27,7 +27,7 @@ function validPayload() {
     projectId: randomUUID(),
     projectVersionId: randomUUID(),
     quoteId: randomUUID(),
-    capabilityAlias: "video.seedance.latest",
+    capabilityAlias: "video.cinematic",
     configurationHash: "a".repeat(64),
   };
 }

@@ -87,7 +87,7 @@ describePostgres("render worker PostgreSQL lifecycle", () => {
     const configuration = { prompt: "Premium perfume rotating under a soft rim light.", durationSeconds: 5 };
     const quote = await service.createQuote({
       userId: ids.userId,
-      capabilityAlias: "video.seedance.latest",
+      capabilityAlias: "video.cinematic",
       credits: 40,
       entitlementEligible: false,
       breakdown: [{ label: "5 second render", credits: 40 }],
@@ -171,7 +171,7 @@ describePostgres("render worker PostgreSQL lifecycle", () => {
     const configuration = { prompt: "Premium perfume rotating under a soft rim light.", durationSeconds: 5 };
     const quote = await service.createQuote({
       userId: ids.userId,
-      capabilityAlias: "video.seedance.latest",
+      capabilityAlias: "video.cinematic",
       credits: 40,
       entitlementEligible: false,
       breakdown: [{ label: "5 second render", credits: 40 }],
@@ -191,7 +191,7 @@ describePostgres("render worker PostgreSQL lifecycle", () => {
       projectId: ids.projectId,
       projectVersionId: ids.projectVersionId,
       quoteId: quote.id,
-      capability: "video.seedance.latest",
+      capability: "video.cinematic",
       idempotencyKey: `render.start:${run.id}`,
       requestId: randomUUID(),
     };
@@ -199,7 +199,7 @@ describePostgres("render worker PostgreSQL lifecycle", () => {
     let operation: ProviderOperation = { providerRequestId: "provider-request-1", status: "processing" };
     const provider: ProviderAdapter = {
       id: "test-provider",
-      capability: "video.seedance.latest",
+      capability: "video.cinematic",
       submit: vi.fn(async () => ({
         providerRequestId: "provider-request-1",
         status: "queued",
@@ -209,7 +209,7 @@ describePostgres("render worker PostgreSQL lifecycle", () => {
       cancel: vi.fn(async () => ({ providerRequestId: "provider-request-1", status: "cancelled" })),
     };
     const capabilityRegistry = new CapabilityRegistry({
-      "video.seedance.latest": {
+      "video.cinematic": {
         enabled: true,
         adapterId: provider.id,
         providerModelId: "server-private-model-id",

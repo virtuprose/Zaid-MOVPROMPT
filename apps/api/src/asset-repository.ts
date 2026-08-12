@@ -1,4 +1,4 @@
-import { schema, type Database } from "@movprompt/db";
+import { schema, withUserTransaction, type Database } from "@movprompt/db";
 import { CreatorAssetKindSchema, type CreatorAsset } from "@movprompt/contracts";
 import { and, eq, ne } from "drizzle-orm";
 
@@ -31,7 +31,7 @@ function originalFilename(value: unknown): string | undefined {
 export function createDrizzleAssetRepository(db: Database): AssetRepository {
   return {
     async isProjectOwned(userId, projectId) {
-      const [project] = await db
+      const [project] = await withUserTransaction(db, userId, (tx) => tx
         .select({ id: schema.creatorProjects.id })
         .from(schema.creatorProjects)
         .where(
@@ -41,12 +41,12 @@ export function createDrizzleAssetRepository(db: Database): AssetRepository {
             ne(schema.creatorProjects.status, "trashed"),
           ),
         )
-        .limit(1);
+        .limit(1));
       return Boolean(project);
     },
 
     async createOrFind(record) {
-      await db
+      await withUserTransaction(db, record.userId, (tx) => tx
         .insert(schema.creatorProjectAssets)
         .values({
           id: record.id,
@@ -65,7 +65,7 @@ export function createDrizzleAssetRepository(db: Database): AssetRepository {
             ? { originalFilename: record.originalFilename }
             : {},
         })
-        .onConflictDoNothing();
+        .onConflictDoNothing());
 
       const persisted = await this.findOwned(record.userId, record.projectId, record.id);
       if (!persisted) throw new Error("asset_record_not_persisted");
@@ -73,7 +73,7 @@ export function createDrizzleAssetRepository(db: Database): AssetRepository {
     },
 
     async findOwned(userId, projectId, assetId) {
-      const [asset] = await db
+      const [asset] = await withUserTransaction(db, userId, (tx) => tx
         .select({
           id: schema.creatorProjectAssets.id,
           projectId: schema.creatorProjectAssets.projectId,
@@ -102,7 +102,7 @@ export function createDrizzleAssetRepository(db: Database): AssetRepository {
             ne(schema.creatorProjects.status, "trashed"),
           ),
         )
-        .limit(1);
+        .limit(1));
 
       if (!asset?.checksumSha256) return null;
       const parsedKind = CreatorAssetKindSchema.safeParse(asset.kind);

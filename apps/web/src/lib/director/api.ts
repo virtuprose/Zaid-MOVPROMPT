@@ -708,7 +708,7 @@ export async function cancelVideoJob(jobId: string): Promise<VideoJob> {
   return data as VideoJob;
 }
 
-export async function startCreatorGeneration(input: { projectId: string; projectVersionId: string; quoteId: string; idempotencyKey: string; mode: "template" | "advanced"; prompt: string; capability: "video.seedance.latest" | "video.omni_flash.latest"; options: VideoOptions; referenceImages?: string[]; metadata?: Record<string, unknown>; rightsAttested: boolean; }): Promise<{ runId: string; job: VideoJob }> {
+export async function startCreatorGeneration(input: { projectId: string; projectVersionId: string; quoteId: string; idempotencyKey: string; mode: "template" | "advanced"; prompt: string; capability: "video.cinematic" | "video.product_fidelity"; options: VideoOptions; referenceImages?: string[]; metadata?: Record<string, unknown>; rightsAttested: boolean; }): Promise<{ runId: string; job: VideoJob }> {
   const { data, error } = await supabase.functions.invoke("start-generation", { body: { project_id: input.projectId, project_version_id: input.projectVersionId, quote_id: input.quoteId, idempotency_key: input.idempotencyKey, mode: input.mode, prompt: input.prompt, capability: input.capability, options: input.options, reference_image_urls: input.referenceImages, metadata: input.metadata, rights_attested: input.rightsAttested } });
   if (error) throw error;
   if (!data?.run?.id || !data?.job?.id) throw new Error("The render operation could not be created.");

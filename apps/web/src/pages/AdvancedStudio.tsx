@@ -82,7 +82,7 @@ export default function AdvancedStudio() {
   const [prompt, setPrompt] = useState("");
   const [duration, setDuration] = useState(8);
   const [ratio, setRatio] = useState<CreatorAspectRatio>("9:16");
-  const [capability, setCapability] = useState<ApprovedCapability>("video.seedance.latest");
+  const [capability, setCapability] = useState<ApprovedCapability>("video.cinematic");
   const [cameraMove, setCameraMove] = useState<(typeof CAMERA_OPTIONS)[number]["id"]>("push-in");
   const [shotType, setShotType] = useState<(typeof SHOT_OPTIONS)[number]["id"]>("macro");
   const [motion, setMotion] = useState<(typeof MOTION_OPTIONS)[number]>("Natural");
@@ -136,7 +136,7 @@ export default function AdvancedStudio() {
       }
       setSourceDraft(draft);
       setPrompt(draft.advanced?.prompt || "");
-      setCapability(draft.advanced?.capability || "video.seedance.latest");
+      setCapability(draft.advanced?.capability || "video.cinematic");
       setDuration(Number(readSetting(draft, "duration", 8)));
       setRatio(readSetting(draft, "ratio", draft.campaign.aspectRatio));
       setCameraMove(readSetting(draft, "camera", "push-in"));
@@ -251,7 +251,7 @@ export default function AdvancedStudio() {
       if (versionError) throw versionError;
       await supabase.from("creator_projects").update({ current_accepted_version_id: versionId }).eq("id", draftId).eq("user_id", user.id);
       const referenceImages = [...(sourceDraft?.product.images.map((image) => image.url) ?? []), ...references.map((reference) => reference.url)];
-      const generation = await startCreatorGeneration({ projectId: draftId, projectVersionId: versionId, quoteId: quote.quoteId, idempotencyKey: operationId, mode: "advanced", prompt: directorPrompt(), capability: capability as "video.seedance.latest" | "video.omni_flash.latest", options: { duration, aspect_ratio: ratio, resolution: "1080p", audio }, referenceImages, rightsAttested: true, metadata: { advanced_flow: true, camera_move: cameraMove, shot_type: shotType, motion, lighting, product_fidelity: fidelity, source_template_version_id: sourceDraft?.templateVersionId } });
+      const generation = await startCreatorGeneration({ projectId: draftId, projectVersionId: versionId, quoteId: quote.quoteId, idempotencyKey: operationId, mode: "advanced", prompt: directorPrompt(), capability: capability as "video.cinematic" | "video.product_fidelity", options: { duration, aspect_ratio: ratio, resolution: "1080p", audio }, referenceImages, rightsAttested: true, metadata: { advanced_flow: true, camera_move: cameraMove, shot_type: shotType, motion, lighting, product_fidelity: fidelity, source_template_version_id: sourceDraft?.templateVersionId } });
       toast.success("Direction queued. You can follow it in Advanced History.");
       window.location.assign(`/advanced/history?run=${encodeURIComponent(generation.runId)}`);
     } catch (error) {
@@ -381,7 +381,7 @@ export default function AdvancedStudio() {
           <details className="advanced-control-disclosure"><summary><span><SunMedium aria-hidden="true" /> Lighting</span><span>{lighting}<ChevronRight aria-hidden="true" /></span></summary><div className="advanced-detail-options">{LIGHTING_OPTIONS.map((option) => <button key={option} type="button" className={cn(lighting === option && "is-selected")} onClick={() => setLighting(option)}>{option}</button>)}</div></details>
           <details className="advanced-control-disclosure"><summary><span><ShieldCheck aria-hidden="true" /> Product fidelity</span><span>{fidelity}<ChevronRight aria-hidden="true" /></span></summary><div className="advanced-detail-options">{FIDELITY_OPTIONS.map((option) => <button key={option} type="button" className={cn(fidelity === option && "is-selected")} onClick={() => setFidelity(option)}>{option}</button>)}</div></details>
           <details className="advanced-control-disclosure"><summary><span><Mic2 aria-hidden="true" /> Audio</span><span>{audio ? "On" : "Off"}<ChevronRight aria-hidden="true" /></span></summary><div className="advanced-detail-options"><button type="button" className={cn(audio && "is-selected")} onClick={() => setAudio(true)}>Audio on</button><button type="button" className={cn(!audio && "is-selected")} onClick={() => setAudio(false)}>Silent</button></div></details>
-          <details className="advanced-control-disclosure advanced-expert-settings"><summary><span><Settings2 aria-hidden="true" /> Expert settings</span><ChevronRight aria-hidden="true" /></summary><label>Approved capability<select value={capability} onChange={(event) => setCapability(event.target.value as ApprovedCapability)}><option value="video.seedance.latest">Seedance · Latest approved</option><option value="video.omni_flash.latest" disabled>Omni Flash · Unavailable</option></select></label></details>
+          <details className="advanced-control-disclosure advanced-expert-settings"><summary><span><Settings2 aria-hidden="true" /> Expert settings</span><ChevronRight aria-hidden="true" /></summary><label>Creative capability<select value={capability} onChange={(event) => setCapability(event.target.value as ApprovedCapability)}><option value="video.cinematic">Cinematic direction</option><option value="video.product_fidelity">Product fidelity</option></select></label></details>
           <div className="advanced-render-strip"><span><Move3D aria-hidden="true" /> {duration}s</span><span><Frame aria-hidden="true" /> {ratio}</span><span><ImagePlus aria-hidden="true" /> 1080p</span><button type="button" onClick={() => setSettingsOpen(true)} aria-label="Edit render settings"><Settings2 aria-hidden="true" /></button></div>
         </aside>
       </div>

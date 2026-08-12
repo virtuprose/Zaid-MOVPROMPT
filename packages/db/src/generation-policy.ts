@@ -1,9 +1,17 @@
 import { createHash } from "node:crypto";
 
 export const APPROVED_CAPABILITY_ALIASES = [
-  "video.seedance.latest",
-  "video.omni_flash.latest",
-  "image.nano_banana.latest",
+  "video.cinematic",
+  "video.product_fidelity",
+  "image.product",
+  "presenter.ai_ugc",
+  "avatar.enroll",
+  "avatar.perform",
+  "voice.clone",
+  "speech.generate",
+  "speech.lip_sync",
+  "media.transcribe",
+  "media.moderate",
 ] as const;
 
 export type ApprovedCapabilityAlias = (typeof APPROVED_CAPABILITY_ALIASES)[number];

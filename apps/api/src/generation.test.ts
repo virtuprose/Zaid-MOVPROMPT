@@ -38,7 +38,7 @@ function publicRun(status: PublicRenderRun["status"] = "submitting"): PublicRend
     id: runId,
     projectId,
     projectVersionId,
-    capability: "video.seedance.latest",
+    capability: "video.cinematic",
     quoteId,
     quotedCredits: 80,
     chargedCredits: 0,
@@ -57,7 +57,7 @@ function generationService(): GenerationApiService {
     isAvailable: () => true,
     createQuote: vi.fn(async () => ({
       quoteId: null,
-      capability: "video.seedance.latest",
+      capability: "video.cinematic",
       credits: 80,
       entitlementEligible: false,
       configurationHash: "a".repeat(64),
@@ -95,7 +95,7 @@ describe("generation API routes", () => {
       method: "POST",
       headers: { "content-type": "application/json", "x-request-id": "quote-request-1" },
       body: JSON.stringify({
-        capability: "video.seedance.latest",
+        capability: "video.cinematic",
         configuration: { prompt: "A precise product reveal", durationSeconds: 8 },
       }),
     });
@@ -155,7 +155,7 @@ describe("generation API routes", () => {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
-        capability: "video.seedance.latest",
+        capability: "video.cinematic",
         configuration: { prompt: "Product reveal", durationSeconds: 8 },
       }),
     });

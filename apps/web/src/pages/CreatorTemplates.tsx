@@ -1,15 +1,45 @@
+import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { Seo } from "@/components/Seo";
 import { CreatorShell } from "@/features/create/CreatorShell";
 import { TemplateGrid } from "@/features/create/TemplateGrid";
+import { creatorTemplateFromCatalog } from "@/features/create/templateCatalogMapper";
 import { getCreatorTemplate } from "@/features/create/templates";
+import type { CreatorTemplate } from "@/features/create/types";
+import { isFeatureEnabled } from "@/config/features";
+import { portableCreatorApi } from "@/lib/api/portableApiClient";
 import { ArrowLeft, Sparkles } from "lucide-react";
 
 export default function CreatorTemplates({ qaMode = false }: { qaMode?: boolean }) {
   const navigate = useNavigate();
   const { slug } = useParams();
+  const [template, setTemplate] = useState<CreatorTemplate>(() => getCreatorTemplate(slug));
+  const [detailState, setDetailState] = useState<"loading" | "ready" | "missing">(
+    slug && isFeatureEnabled("portableAuth") ? "loading" : "ready",
+  );
+  useEffect(() => {
+    if (!slug || !isFeatureEnabled("portableAuth")) {
+      setTemplate(getCreatorTemplate(slug));
+      setDetailState("ready");
+      return;
+    }
+    let active = true;
+    void portableCreatorApi.getTemplate(slug).then((published) => {
+      if (!active) return;
+      setTemplate(creatorTemplateFromCatalog(published));
+      setDetailState("ready");
+    }).catch(() => {
+      if (active) setDetailState("missing");
+    });
+    return () => { active = false; };
+  }, [slug]);
   if (slug) {
-    const template = getCreatorTemplate(slug);
+    if (detailState === "loading") {
+      return <CreatorShell qaMode={qaMode}><div className="creator-page"><p className="creator-catalog-status" role="status">Loading the published template…</p></div></CreatorShell>;
+    }
+    if (detailState === "missing") {
+      return <CreatorShell qaMode={qaMode}><div className="creator-page creator-empty"><div><h1>Template unavailable</h1><p>This template is not currently published. Choose another campaign format.</p><Link className="creator-button creator-button-primary" to="/templates">Browse templates</Link></div></div></CreatorShell>;
+    }
     return (
       <CreatorShell qaMode={qaMode}>
         <Seo title={`${template.name} template · MovPrompt`} description={template.description} path={`/templates/${template.id}`} />

@@ -1,4 +1,4 @@
-import { schema, type Database, type JsonObject } from "@movprompt/db";
+import { schema, withUserTransaction, type Database, type JsonObject } from "@movprompt/db";
 import { and, eq, inArray, isNotNull, ne } from "drizzle-orm";
 
 const STARTER_ENTITLEMENT_TYPE = "starter_template_render";
@@ -64,7 +64,7 @@ function starterEligible(recipe: JsonObject): boolean {
 export function createDrizzleGenerationRepository(db: Database): GenerationRepository {
   return {
     async findOwnedProjectVersion(userId, projectVersionId) {
-      const [version] = await db
+      const [version] = await withUserTransaction(db, userId, (tx) => tx
         .select({
           id: schema.creatorProjectVersions.id,
           projectId: schema.creatorProjectVersions.projectId,
@@ -86,7 +86,7 @@ export function createDrizzleGenerationRepository(db: Database): GenerationRepos
             ne(schema.creatorProjects.status, "trashed"),
           ),
         )
-        .limit(1);
+        .limit(1));
       return version ?? null;
     },
 
@@ -123,7 +123,7 @@ export function createDrizzleGenerationRepository(db: Database): GenerationRepos
     },
 
     async hasAvailableStarterEntitlement(userId) {
-      const [entitlement] = await db
+      const [entitlement] = await withUserTransaction(db, userId, (tx) => tx
         .select({ id: schema.entitlements.id })
         .from(schema.entitlements)
         .where(
@@ -133,12 +133,12 @@ export function createDrizzleGenerationRepository(db: Database): GenerationRepos
             eq(schema.entitlements.status, "available"),
           ),
         )
-        .limit(1);
+        .limit(1));
       return Boolean(entitlement);
     },
 
     async findOwnedQuote(userId, quoteId) {
-      const [quote] = await db
+      const [quote] = await withUserTransaction(db, userId, (tx) => tx
         .select({
           id: schema.generationQuotes.id,
           templateVersionId: schema.generationQuotes.templateVersionId,
@@ -155,12 +155,12 @@ export function createDrizzleGenerationRepository(db: Database): GenerationRepos
             eq(schema.generationQuotes.userId, userId),
           ),
         )
-        .limit(1);
+        .limit(1));
       return quote ?? null;
     },
 
     async findOwnedRun(userId, runId) {
-      const [run] = await db
+      const [run] = await withUserTransaction(db, userId, (tx) => tx
         .select({
           id: schema.renderRuns.id,
           projectId: schema.renderRuns.projectId,
@@ -183,12 +183,12 @@ export function createDrizzleGenerationRepository(db: Database): GenerationRepos
         })
         .from(schema.renderRuns)
         .where(and(eq(schema.renderRuns.id, runId), eq(schema.renderRuns.userId, userId)))
-        .limit(1);
+        .limit(1));
       return run ?? null;
     },
 
     async requestProviderCancellation(userId, runId, now) {
-      const [updated] = await db
+      const [updated] = await withUserTransaction(db, userId, (tx) => tx
         .update(schema.renderRuns)
         .set({ status: "cancelling", updatedAt: now })
         .where(
@@ -200,7 +200,7 @@ export function createDrizzleGenerationRepository(db: Database): GenerationRepos
             isNotNull(schema.renderRuns.chargedAt),
           ),
         )
-        .returning({ id: schema.renderRuns.id });
+        .returning({ id: schema.renderRuns.id }));
       return updated ? this.findOwnedRun(userId, updated.id) : null;
     },
   };

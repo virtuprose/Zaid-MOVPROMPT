@@ -29,9 +29,9 @@ import { toast } from "sonner";
 import { Seo } from "@/components/Seo";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/integrations/supabase/client";
+import { isFeatureEnabled } from "@/config/features";
+import { portableCreatorApi } from "@/lib/api/portableApiClient";
 import { cancelCreatorGeneration, cancelVideoJob, pollCreatorGeneration, pollVideoJob, startCreatorGeneration } from "@/lib/director/api";
-import { ingestImage } from "@/lib/director/ingest";
 import { cn } from "@/lib/utils";
 import { CreatorShell } from "./CreatorShell";
 import { AuthGateDialog } from "./AuthGateDialog";
@@ -196,7 +196,13 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
     let active = true;
     setQuoteLoaded(false);
     setQuoteError("");
-    void supabase.functions.invoke("generation-quote", { body: { capability: "video.seedance.latest", duration_seconds: template.duration, template_id: template.id } }).then(({ data, error }) => {
+    if (isFeatureEnabled("portableAuth")) {
+      setQuote(null);
+      setQuoteError("Generation remains safely disabled until a benchmarked provider and authoritative pricing are configured.");
+      setQuoteLoaded(true);
+      return () => { active = false; };
+    }
+    void Promise.resolve({ data: null, error: new Error("Legacy creator pricing is retired.") }).then(({ data, error }) => {
       if (!active) return;
       if (!error && data?.quoteId) setQuote(data as GenerationQuote);
       else {
@@ -354,20 +360,21 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
     setSourceBusy(true);
     setSourceError("");
     try {
-      const { data, error } = await supabase.functions.invoke("scrape-product-url", { body: { url: trimmed, action: "scan" } });
-      if (error || !Array.isArray(data?.images) || data.images.length === 0) throw error || new Error("no_image_found");
-      const name = data.name?.trim() || "Imported product";
+      const scan = await portableCreatorApi.scan("product", trimmed);
+      if (!scan.imageCandidates.length) throw new Error("no_image_found");
+      const fact = (field: string) => scan.facts.find((item) => item.field === field)?.value ?? "";
+      const name = fact("name") || "Imported product";
       updateProject({
         title: `${name} — ${template.name}`,
         status: "ready",
         product: {
           sourceType: "link",
-          sourceUrl: data.url || trimmed,
+          sourceUrl: scan.canonicalUrl,
           name,
-          description: data.description?.trim() || "",
-          price: project.product.price,
+          description: fact("description"),
+          price: fact("price") || project.product.price,
           brand: project.product.brand,
-          images: data.images.slice(0, 5).map((url: string, index: number) => ({ id: `url-${index}`, name: `${name} ${index + 1}`, url, source: "url" as const })),
+          images: scan.imageCandidates.slice(0, 5).map((url, index) => ({ id: `url-${index}`, name: `${name} ${index + 1}`, url, source: "url" as const })),
         },
       });
     } catch (error) {
@@ -389,16 +396,9 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
     setSourceError("");
     try {
       const assets = await Promise.all(selected.map(async (file) => {
-        if (qaMode || !user) {
-          validateLocalImage(file);
-          const assetKey = await putGuestAsset(project.id, file);
-          return { id: crypto.randomUUID(), name: file.name, url: URL.createObjectURL(file), assetKey, source: "upload" as const };
-        }
-        const uploaded = await ingestImage(file);
-        if (uploaded.kind !== "image") {
-          throw new Error("The selected file did not produce an image asset.");
-        }
-        return { id: crypto.randomUUID(), name: file.name, url: uploaded.url, storagePath: uploaded.storage_path, source: "upload" as const };
+        validateLocalImage(file);
+        const assetKey = await putGuestAsset(project.id, file);
+        return { id: crypto.randomUUID(), name: file.name, url: URL.createObjectURL(file), assetKey, source: "upload" as const };
       }));
       const images = [...project.product.images, ...assets].slice(0, 5);
       updateProject({
@@ -432,7 +432,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
         ...templateDraft,
         mode: "advanced",
         advanced: {
-          capability: "video.seedance.latest",
+          capability: "video.product_fidelity",
           prompt: project.product.images.length ? buildTemplatePrompt(project) : "",
           references: project.product.images.map((image) => image.assetKey || image.storagePath || image.url),
           renderSettings: { duration: template.duration, ratio: project.aspectRatio },
@@ -469,16 +469,16 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
 
   const claimGuestProject = async (candidate: CreatorProject) => {
     if (!user || qaMode) return candidate;
-    let images = await Promise.all(candidate.product.images.map(async (image) => {
+    const cloudProject = await syncCreatorProject(candidate, user.id);
+    let images = await Promise.all(cloudProject.product.images.map(async (image) => {
       if (!image.assetKey) return image;
       const stored = await getGuestAsset(image.assetKey);
       if (!stored) throw new Error(`The local copy of ${image.name} is no longer available. Add it again to continue.`);
-      const claimed = await claimGuestImage({ userId: user.id, projectId: candidate.id, assetId: image.id, name: stored.name, blob: stored.blob, contentType: stored.mimeType });
-      return { ...image, url: claimed.url, storagePath: claimed.storagePath, checksum: claimed.checksum };
+      const claimed = await claimGuestImage({ userId: user.id, projectId: cloudProject.id, assetId: image.id, name: stored.name, blob: stored.blob, contentType: stored.mimeType });
+      return { ...image, id: claimed.assetId, url: claimed.url, storagePath: claimed.storagePath, checksum: claimed.checksum, assetKey: undefined };
     }));
-    if (images.some((image) => image.source === "url" && !image.storagePath)) images = await mirrorProductImages(candidate.id, images);
-    const claimed = { ...candidate, product: { ...candidate.product, images } };
-    await syncCreatorProject(claimed, user.id);
+    if (images.some((image) => image.source === "url" && !image.storagePath)) images = await mirrorProductImages(cloudProject.id, images);
+    const claimed = await syncCreatorProject({ ...cloudProject, product: { ...cloudProject.product, images } }, user.id);
     if (requestedDraft || candidate.product.images.some((image) => image.assetKey)) await deleteGuestDraft(candidate.id);
     return claimed;
   };
@@ -530,7 +530,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
     }
 
     try {
-      const generation = await startCreatorGeneration({ projectId: renderProject.id, projectVersionId: renderProject.versionId!, quoteId: quote!.quoteId, idempotencyKey: renderProject.pendingGenerationId || crypto.randomUUID(), mode: "template", prompt: buildTemplatePrompt(renderProject), capability: "video.seedance.latest", options: { aspect_ratio: renderProject.aspectRatio === "4:5" ? "3:4" : renderProject.aspectRatio, duration: Math.min(15, template.duration), resolution: renderProject.resolution, audio: renderProject.audio }, referenceImages: renderProject.product.images.map((image) => image.url), rightsAttested: rightsConfirmed, metadata: { creator_project_id: renderProject.id, template_id: renderProject.templateId, language: renderProject.language, market: renderProject.market } });
+      const generation = await startCreatorGeneration({ projectId: renderProject.id, projectVersionId: renderProject.versionId!, quoteId: quote!.quoteId, idempotencyKey: renderProject.pendingGenerationId || crypto.randomUUID(), mode: "template", prompt: buildTemplatePrompt(renderProject), capability: "video.product_fidelity", options: { aspect_ratio: renderProject.aspectRatio === "4:5" ? "3:4" : renderProject.aspectRatio, duration: Math.min(15, template.duration), resolution: renderProject.resolution, audio: renderProject.audio }, referenceImages: renderProject.product.images.map((image) => image.url), rightsAttested: rightsConfirmed, metadata: { creator_project_id: renderProject.id, template_id: renderProject.templateId, language: renderProject.language, market: renderProject.market } });
       setProject((current) => ({ ...current, jobId: generation.job.id, renderRunId: generation.runId, status: "generating" }));
       setGenerationProgress(18);
       setGenerationMessage("Your campaign is queued securely");

@@ -13,7 +13,7 @@ const aboutMovPromptTool = {
       "1. Template Mode — add a product, choose a proven campaign recipe, review the quote, and generate.",
       "2. Advanced Mode — direct approved video capabilities with prompt, reference, camera, and timing controls.",
       "",
-      "Approved capabilities: video.seedance.latest, video.omni_flash.latest, image.nano_banana.latest.",
+      "Approved capability contracts include cinematic video, product-fidelity video and imagery, presenters, consented avatars and voices, speech, transcription and moderation. Provider model IDs remain server-only.",
       "",
       "Site: https://movprompt.com",
     ].join("\n");

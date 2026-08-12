@@ -33,7 +33,7 @@ describe("MovPrompt API foundation", () => {
 
   it("returns only server-evaluated public capability state", async () => {
     const capabilityRegistry = new CapabilityRegistry({
-      "video.seedance.latest": {
+      "video.cinematic": {
         enabled: true,
         adapterId: "private-adapter",
         providerModelId: "private-model-id",
@@ -44,7 +44,7 @@ describe("MovPrompt API foundation", () => {
     const body = await response.text();
 
     expect(response.status).toBe(200);
-    expect(body).toContain("video.seedance.latest");
+    expect(body).toContain("video.cinematic");
     expect(body).not.toContain("private-adapter");
     expect(body).not.toContain("private-model-id");
   });

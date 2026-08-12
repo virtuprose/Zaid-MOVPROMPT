@@ -233,12 +233,18 @@ export const creatorProjects = pgTable(
     mode: creationMode("mode").notNull().default("template"),
     status: projectStatus("status").notNull().default("draft"),
     currentAcceptedVersionId: uuid("current_accepted_version_id"),
+    /**
+     * Stable browser draft identity used to make the guest-to-account claim
+     * idempotent. It is scoped to the owner and never acts as authorization.
+     */
+    clientDraftId: uuid("client_draft_id"),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
   (table) => [
     unique("creator_projects_id_user_unique").on(table.id, table.userId),
+    uniqueIndex("creator_projects_client_draft_unique").on(table.clientDraftId),
     index("creator_projects_user_updated_idx").on(table.userId, table.updatedAt),
   ],
 );
@@ -257,11 +263,17 @@ export const creatorProjectVersions = pgTable(
     productRecipe: jsonb("product_recipe").$type<JsonObject>().notNull().default({}),
     campaignRecipe: jsonb("campaign_recipe").$type<JsonObject>().notNull().default({}),
     changeReason: text("change_reason"),
+    operationKey: text("operation_key"),
     createdAt: createdAt(),
   },
   (table) => [
     unique("creator_versions_project_number_unique").on(table.projectId, table.versionNumber),
     unique("creator_versions_owner_tuple_unique").on(table.id, table.projectId, table.userId),
+    uniqueIndex("creator_versions_user_project_operation_unique").on(
+      table.userId,
+      table.projectId,
+      table.operationKey,
+    ),
     foreignKey({
       name: "creator_versions_project_owner_fk",
       columns: [table.projectId, table.userId],

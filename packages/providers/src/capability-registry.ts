@@ -13,20 +13,60 @@ type ServerCapabilitySpec = {
 
 const SERVER_CAPABILITY_SPECS: Readonly<Record<CapabilityAlias, ServerCapabilitySpec>> =
   Object.freeze({
-    "video.seedance.latest": {
-      alias: "video.seedance.latest",
+    "video.cinematic": {
+      alias: "video.cinematic",
       kind: "video",
-      environmentPrefix: "SEEDANCE",
+      environmentPrefix: "VIDEO_CINEMATIC",
     },
-    "video.omni_flash.latest": {
-      alias: "video.omni_flash.latest",
+    "video.product_fidelity": {
+      alias: "video.product_fidelity",
       kind: "video",
-      environmentPrefix: "OMNI_FLASH",
+      environmentPrefix: "VIDEO_PRODUCT_FIDELITY",
     },
-    "image.nano_banana.latest": {
-      alias: "image.nano_banana.latest",
+    "image.product": {
+      alias: "image.product",
       kind: "image",
-      environmentPrefix: "NANO_BANANA",
+      environmentPrefix: "IMAGE_PRODUCT",
+    },
+    "presenter.ai_ugc": {
+      alias: "presenter.ai_ugc",
+      kind: "presenter",
+      environmentPrefix: "PRESENTER_AI_UGC",
+    },
+    "avatar.enroll": {
+      alias: "avatar.enroll",
+      kind: "avatar",
+      environmentPrefix: "AVATAR_ENROLL",
+    },
+    "avatar.perform": {
+      alias: "avatar.perform",
+      kind: "avatar",
+      environmentPrefix: "AVATAR_PERFORM",
+    },
+    "voice.clone": {
+      alias: "voice.clone",
+      kind: "voice",
+      environmentPrefix: "VOICE_CLONE",
+    },
+    "speech.generate": {
+      alias: "speech.generate",
+      kind: "speech",
+      environmentPrefix: "SPEECH_GENERATE",
+    },
+    "speech.lip_sync": {
+      alias: "speech.lip_sync",
+      kind: "speech",
+      environmentPrefix: "SPEECH_LIP_SYNC",
+    },
+    "media.transcribe": {
+      alias: "media.transcribe",
+      kind: "media",
+      environmentPrefix: "MEDIA_TRANSCRIBE",
+    },
+    "media.moderate": {
+      alias: "media.moderate",
+      kind: "media",
+      environmentPrefix: "MEDIA_MODERATE",
     },
   });
 
@@ -60,7 +100,7 @@ export class CapabilityResolutionError extends Error {
 
 /**
  * Resolves public aliases to server-only provider configuration. Only the
- * three approved aliases can be represented in this registry.
+ * approved semantic aliases can be represented in this registry.
  */
 export class CapabilityRegistry {
   readonly #configuration: Readonly<Partial<Record<CapabilityAlias, ServerCapabilityConfiguration>>>;

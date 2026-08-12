@@ -23,7 +23,7 @@ describe("generation service boundary validation", () => {
   it("rejects a misleading quote breakdown before accessing PostgreSQL", async () => {
     await expect(
       serviceWithoutDatabase.createQuote({
-        capabilityAlias: "video.seedance.latest",
+        capabilityAlias: "video.cinematic",
         credits: 20,
         entitlementEligible: false,
         breakdown: [{ label: "generation", credits: 10 }],

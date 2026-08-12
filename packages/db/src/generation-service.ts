@@ -1,6 +1,7 @@
 import { and, eq, gt, sql } from "drizzle-orm";
 
 import type { Database } from "./client.js";
+import type { UserScopedTransaction } from "./user-transaction.js";
 import {
   assertApprovedCapability,
   assertConfigurationHash,
@@ -20,6 +21,7 @@ import {
 } from "./schema.js";
 
 const STARTER_ENTITLEMENT_TYPE = "starter_template_render";
+type QueryExecutor = Database | UserScopedTransaction;
 
 export interface CreateGenerationQuoteInput {
   userId?: string;
@@ -124,9 +126,8 @@ export function createGenerationService(db: Database): GenerationService {
         throw new GenerationDomainError("invalid_quote_breakdown", "quote breakdown must total the quoted credits");
       }
 
-      const [quote] = await db
-        .insert(generationQuotes)
-        .values({
+      const insertQuote = async (executor: QueryExecutor) => {
+        const [quote] = await executor.insert(generationQuotes).values({
           userId: input.userId,
           templateVersionId: input.templateVersionId,
           capabilityAlias: input.capabilityAlias,
@@ -136,10 +137,15 @@ export function createGenerationService(db: Database): GenerationService {
           configurationHash: hashGenerationConfiguration(input.configuration),
           expiresAt: input.expiresAt,
           createdAt: now,
-        })
-        .returning();
-      if (!quote) throw new Error("generation quote insert did not return a row");
-      return quote;
+        }).returning();
+        if (!quote) throw new Error("generation quote insert did not return a row");
+        return quote;
+      };
+      if (!input.userId) return insertQuote(db);
+      return db.transaction(async (tx) => {
+        await tx.execute(sql`select set_config('movprompt.user_id', ${input.userId!}, true)`);
+        return insertQuote(tx);
+      });
     },
 
     async startRender(input) {
@@ -149,6 +155,7 @@ export function createGenerationService(db: Database): GenerationService {
       const now = input.now ?? new Date();
 
       return db.transaction(async (tx) => {
+        await tx.execute(sql`select set_config('movprompt.user_id', ${input.userId}, true)`);
         await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtextextended(${`${input.userId}:${idempotencyKey}`}, 0))`);
 
         const [existing] = await tx
@@ -362,6 +369,7 @@ export function createGenerationService(db: Database): GenerationService {
       if (!provider || !providerRequestId) throw new Error("provider and providerRequestId are required");
 
       return db.transaction(async (tx) => {
+        await tx.execute(sql`select set_config('movprompt.user_id', ${input.userId}, true)`);
         const [run] = await tx
           .select()
           .from(renderRuns)
@@ -399,6 +407,7 @@ export function createGenerationService(db: Database): GenerationService {
       if (!provider || !providerRequestId) throw new Error("provider and providerRequestId are required");
 
       return db.transaction(async (tx) => {
+        await tx.execute(sql`select set_config('movprompt.user_id', ${input.userId}, true)`);
         const [run] = await tx
           .select()
           .from(renderRuns)
@@ -544,6 +553,7 @@ export function createGenerationService(db: Database): GenerationService {
       const now = input.now ?? new Date();
 
       return db.transaction(async (tx) => {
+        await tx.execute(sql`select set_config('movprompt.user_id', ${input.userId}, true)`);
         const [run] = await tx
           .select()
           .from(renderRuns)
@@ -637,6 +647,7 @@ export function createGenerationService(db: Database): GenerationService {
       const now = input.now ?? new Date();
 
       return db.transaction(async (tx) => {
+        await tx.execute(sql`select set_config('movprompt.user_id', ${input.userId}, true)`);
         const [run] = await tx
           .select()
           .from(renderRuns)

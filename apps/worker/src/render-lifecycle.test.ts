@@ -23,7 +23,7 @@ function payload(): GenerationJobPayload {
     projectId: randomUUID(),
     projectVersionId: randomUUID(),
     quoteId: randomUUID(),
-    capability: "video.seedance.latest",
+    capability: "video.cinematic",
     idempotencyKey: `render.start:${randomUUID()}`,
     requestId: randomUUID(),
   };
@@ -84,7 +84,7 @@ function billing() {
 
 function registries(adapter?: ProviderAdapter) {
   const capabilityRegistry = new CapabilityRegistry({
-    "video.seedance.latest": {
+    "video.cinematic": {
       enabled: true,
       adapterId: "test-provider",
       providerModelId: "server-private-model-id",
@@ -98,7 +98,7 @@ function registries(adapter?: ProviderAdapter) {
 function adapter(overrides: Partial<ProviderAdapter> = {}): ProviderAdapter {
   return {
     id: "test-provider",
-    capability: "video.seedance.latest",
+    capability: "video.cinematic",
     submit: vi.fn(async () => ({
       providerRequestId: "provider-request-1",
       status: "queued" as const,

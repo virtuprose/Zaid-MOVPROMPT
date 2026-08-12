@@ -6,10 +6,9 @@ import { Seo } from "@/components/Seo";
 import { useAuth } from "@/hooks/useAuth";
 import { CreatorShell } from "@/features/create/CreatorShell";
 import { getCreatorTemplate } from "@/features/create/templates";
-import { deleteLocalCreatorProject, listLocalCreatorProjects, loadCreatorProjects, saveLocalCreatorProject, subscribeToCreatorProjects, syncCreatorProject } from "@/features/create/projectStore";
+import { duplicateCreatorProject, listLocalCreatorProjects, loadCreatorProjects, subscribeToCreatorProjects, trashCreatorProject } from "@/features/create/projectStore";
 import type { CreatorProject } from "@/features/create/types";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { supabase } from "@/integrations/supabase/client";
 
 function statusLabel(status: CreatorProject["status"]) {
   if (status === "review") return "Ready to review";
@@ -30,20 +29,26 @@ export default function CreatorProjects({ qaMode = false }: { qaMode?: boolean }
     return subscribeToCreatorProjects(() => setProjects(listLocalCreatorProjects(qaMode ? null : user?.id)));
   }, [qaMode, user?.id]);
 
-  const duplicate = (project: CreatorProject) => {
-    const now = new Date().toISOString();
-    const copy = { ...project, id: crypto.randomUUID(), versionId: crypto.randomUUID(), versionNumber: 1, title: `${project.title} copy`, status: "draft" as const, videoUrl: null, jobId: null, renderRunId: null, createdAt: now, updatedAt: now };
-    saveLocalCreatorProject(copy, qaMode ? null : user?.id);
-    if (!qaMode && user) void syncCreatorProject(copy, user.id);
-    toast.success("Project duplicated.");
+  const duplicate = async (project: CreatorProject) => {
+    try {
+      await duplicateCreatorProject(project.id, qaMode ? null : user?.id);
+      setProjects(await loadCreatorProjects(qaMode ? null : user?.id));
+      toast.success("Project duplicated.");
+    } catch {
+      toast.error("We couldn’t duplicate this project. Try again.");
+    }
   };
 
   const remove = async () => {
     if (!pendingDelete) return;
-    deleteLocalCreatorProject(pendingDelete.id, qaMode ? null : user?.id);
-    if (!qaMode && user) await supabase.from("creator_projects").update({ deleted_at: new Date().toISOString(), status: "trashed" }).eq("id", pendingDelete.id).eq("user_id", user.id);
-    setPendingDelete(null);
-    toast.success("Project moved to trash.");
+    try {
+      await trashCreatorProject(pendingDelete.id, qaMode ? null : user?.id);
+      setProjects(await loadCreatorProjects(qaMode ? null : user?.id));
+      setPendingDelete(null);
+      toast.success("Project moved to trash.");
+    } catch {
+      toast.error("We couldn’t move this project to trash. Try again.");
+    }
   };
 
   const createNew = () => {
@@ -78,7 +83,7 @@ export default function CreatorProjects({ qaMode = false }: { qaMode?: boolean }
                     <p>{template.name} · {project.aspectRatio} · Updated {new Date(project.updatedAt).toLocaleDateString()}</p>
                     <div className="creator-project-actions">
                       <Link className="creator-button creator-button-secondary" to={qaMode ? `/qa/create?project=${project.id}` : `/projects/${project.id}`}>Open</Link>
-                      <button className="creator-icon-button" type="button" onClick={() => duplicate(project)} aria-label={`Duplicate ${project.title}`}><Copy aria-hidden="true" /></button>
+                      <button className="creator-icon-button" type="button" onClick={() => void duplicate(project)} aria-label={`Duplicate ${project.title}`}><Copy aria-hidden="true" /></button>
                       <button className="creator-icon-button" type="button" onClick={() => setPendingDelete(project)} aria-label={`Move ${project.title} to trash`}><Trash2 aria-hidden="true" /></button>
                     </div>
                   </div>

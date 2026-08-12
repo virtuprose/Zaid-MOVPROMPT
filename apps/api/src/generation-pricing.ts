@@ -1,9 +1,9 @@
 import type { CapabilityAlias } from "@movprompt/contracts";
 
-const RATE_ENVIRONMENT_KEYS: Readonly<Record<CapabilityAlias, string>> = {
-  "video.seedance.latest": "GENERATION_SEEDANCE_CREDITS_PER_SECOND",
-  "video.omni_flash.latest": "GENERATION_OMNI_FLASH_CREDITS_PER_SECOND",
-  "image.nano_banana.latest": "GENERATION_NANO_BANANA_CREDITS_PER_IMAGE",
+const RATE_ENVIRONMENT_KEYS: Readonly<Partial<Record<CapabilityAlias, string>>> = {
+  "video.cinematic": "GENERATION_VIDEO_CINEMATIC_CREDITS_PER_SECOND",
+  "video.product_fidelity": "GENERATION_VIDEO_PRODUCT_FIDELITY_CREDITS_PER_SECOND",
+  "image.product": "GENERATION_IMAGE_PRODUCT_CREDITS_PER_IMAGE",
 };
 
 export type GenerationPrice = {
@@ -110,7 +110,7 @@ export function createGenerationPricingFromEnvironment(
         throw new GenerationPricingUnavailableError(capability);
       }
 
-      if (capability === "image.nano_banana.latest") {
+      if (capability === "image.product") {
         const credits = checkedCredits(rate, 1);
         return { credits, breakdown: [{ label: "1 generated image", credits }] };
       }

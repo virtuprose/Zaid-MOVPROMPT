@@ -11,7 +11,7 @@ import {
 
 describe("public contracts", () => {
   it("accepts only approved capability aliases", () => {
-    expect(CapabilityAliasSchema.parse("video.seedance.latest")).toBe("video.seedance.latest");
+    expect(CapabilityAliasSchema.parse("video.cinematic")).toBe("video.cinematic");
     expect(() => CapabilityAliasSchema.parse("fal-ai/kling-video/v2.1/master")).toThrow();
     expect(() => CapabilityAliasSchema.parse("seedance-2.0-ref")).toThrow();
   });
@@ -23,7 +23,7 @@ describe("public contracts", () => {
       projectId: "project-1",
       projectVersionId: "version-1",
       quoteId: "quote-1",
-      capability: "video.seedance.latest",
+      capability: "video.cinematic",
       idempotencyKey: "generation:run-1",
       requestId: "request-1",
       providerModelId: "seedance-2.0-ref",
@@ -86,7 +86,7 @@ describe("public contracts", () => {
   it("keeps provider IDs and entitlement decisions out of quote requests", () => {
     expect(() =>
       CreateGenerationQuoteRequestSchema.parse({
-        capability: "video.seedance.latest",
+        capability: "video.cinematic",
         providerModelId: "private-provider-model",
         entitlementEligible: true,
         configuration: { prompt: "A product reveal" },

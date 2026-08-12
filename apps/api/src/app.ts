@@ -13,10 +13,13 @@ import type { AuthGateway } from "./auth-gateway.js";
 import type { ApiConfig } from "./config.js";
 import { loadApiConfig } from "./config.js";
 import { ApiHttpError } from "./errors.js";
+import type { CreatorRepository } from "./creator-repository.js";
+import { registerCreatorRoutes } from "./creator-routes.js";
 import { registerGenerationRoutes } from "./generation-routes.js";
 import type { GenerationApiService } from "./generation-service.js";
 import { createOpenApiDocument } from "./openapi.js";
 import { requestContext, type ApiEnvironment } from "./request-context.js";
+import type { SourceScanner } from "./source-scanner.js";
 
 export type ReadinessDependency = {
   name: string;
@@ -31,6 +34,8 @@ export type CreateApiOptions = {
   authGateway?: AuthGateway;
   assetRepository?: AssetRepository;
   assetStorage?: AssetStorageGateway;
+  creatorRepository?: CreatorRepository;
+  sourceScanner?: SourceScanner;
   generationService?: GenerationApiService;
 };
 
@@ -158,6 +163,14 @@ export function createApi(options: CreateApiOptions = {}) {
     ...(options.authGateway ? { auth: options.authGateway } : {}),
     ...(options.assetRepository ? { repository: options.assetRepository } : {}),
     ...(options.assetStorage ? { storage: options.assetStorage } : {}),
+  });
+
+  registerCreatorRoutes(app, {
+    enabled: config.featureFlags.templateMode && Boolean(options.creatorRepository),
+    ...(options.authGateway ? { auth: options.authGateway } : {}),
+    ...(options.creatorRepository ? { repository: options.creatorRepository } : {}),
+    ...(options.assetStorage ? { storage: options.assetStorage } : {}),
+    ...(options.sourceScanner ? { scanner: options.sourceScanner } : {}),
   });
 
   registerGenerationRoutes(app, {

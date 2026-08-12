@@ -1,0 +1,175 @@
+import {
+  CreditSummaryResponseSchema,
+  ProjectListResponseSchema,
+  ProjectResponseSchema,
+  ProjectVersionResponseSchema,
+  SourceScanResponseSchema,
+  SignedAssetDownloadResponseSchema,
+  TemplateListResponseSchema,
+  TemplateResponseSchema,
+  type ClaimDraftRequest,
+  type CreateProjectVersionRequest,
+  type CreatorProjectRecord,
+  type CreditSummaryResponse,
+  type ProjectVersion,
+  type PublicTemplate,
+  type SourceScanResponse,
+} from "@movprompt/contracts";
+import { z } from "zod";
+
+function apiOrigin(): string {
+  const configured = import.meta.env.VITE_API_ORIGIN?.trim();
+  if (!configured) return window.location.origin;
+  try {
+    const url = new URL(configured);
+    if (!/^https?:$/.test(url.protocol)) throw new Error("unsupported protocol");
+    return url.origin;
+  } catch {
+    throw new Error("VITE_API_ORIGIN must be an absolute HTTP(S) origin");
+  }
+}
+
+type RequestOptions = {
+  method?: "GET" | "POST";
+  body?: unknown;
+  idempotencyKey?: string;
+  signal?: AbortSignal;
+};
+
+export class PortableApiError extends Error {
+  constructor(
+    message: string,
+    readonly code: string,
+    readonly retryable: boolean,
+    readonly requestId?: string,
+    readonly status?: number,
+  ) {
+    super(message);
+    this.name = "PortableApiError";
+  }
+}
+
+async function request<T>(path: string, schema: z.ZodType<T>, options: RequestOptions = {}): Promise<T> {
+  const headers = new Headers({ accept: "application/json" });
+  if (options.body !== undefined) headers.set("content-type", "application/json");
+  if (options.idempotencyKey) headers.set("idempotency-key", options.idempotencyKey);
+  const response = await fetch(`${apiOrigin()}${path}`, {
+    method: options.method ?? "GET",
+    headers,
+    credentials: "include",
+    ...(options.body === undefined ? {} : { body: JSON.stringify(options.body) }),
+    ...(options.signal ? { signal: options.signal } : {}),
+  });
+  const raw: unknown = await response.json().catch(() => null);
+  if (!response.ok) {
+    const error = raw && typeof raw === "object" && "error" in raw ? raw.error : null;
+    if (error && typeof error === "object") {
+      const value = error as Record<string, unknown>;
+      throw new PortableApiError(
+        typeof value.message === "string" ? value.message : "MovPrompt could not complete the request.",
+        typeof value.code === "string" ? value.code : "api_error",
+        value.retryable === true,
+        typeof value.requestId === "string" ? value.requestId : undefined,
+        response.status,
+      );
+    }
+    throw new PortableApiError("MovPrompt could not complete the request.", "api_error", response.status >= 500, undefined, response.status);
+  }
+  return schema.parse(raw);
+}
+
+export const portableCreatorApi = {
+  async listTemplates(filters: { vertical?: string; goal?: string; language?: string } = {}): Promise<PublicTemplate[]> {
+    const query = new URLSearchParams();
+    if (filters.vertical) query.set("vertical", filters.vertical);
+    if (filters.goal) query.set("goal", filters.goal);
+    if (filters.language) query.set("language", filters.language);
+    const result = await request(`/api/v1/templates${query.size ? `?${query}` : ""}`, TemplateListResponseSchema);
+    return result.templates;
+  },
+
+  async getTemplate(slug: string): Promise<PublicTemplate> {
+    const result = await request(`/api/v1/templates/${encodeURIComponent(slug)}`, TemplateResponseSchema);
+    return result.template;
+  },
+
+  async claimDraft(input: ClaimDraftRequest): Promise<CreatorProjectRecord> {
+    const result = await request("/api/v1/drafts/claim", ProjectResponseSchema, {
+      method: "POST",
+      body: input,
+      idempotencyKey: input.draftId,
+    });
+    return result.project;
+  },
+
+  async listProjects(filters: { status?: string; includeTrashed?: boolean; search?: string } = {}): Promise<CreatorProjectRecord[]> {
+    const query = new URLSearchParams();
+    if (filters.status) query.set("status", filters.status);
+    if (filters.includeTrashed) query.set("includeTrashed", "true");
+    if (filters.search) query.set("search", filters.search);
+    const result = await request(`/api/v1/projects${query.size ? `?${query}` : ""}`, ProjectListResponseSchema);
+    return result.projects;
+  },
+
+  async getProject(projectId: string): Promise<CreatorProjectRecord> {
+    const result = await request(`/api/v1/projects/${projectId}`, ProjectResponseSchema);
+    return result.project;
+  },
+
+  async duplicateProject(projectId: string): Promise<CreatorProjectRecord> {
+    const key = `project-duplicate:${projectId}:${crypto.randomUUID()}`;
+    const result = await request(`/api/v1/projects/${projectId}/duplicate`, ProjectResponseSchema, {
+      method: "POST",
+      body: {},
+      idempotencyKey: key,
+    });
+    return result.project;
+  },
+
+  async trashProject(projectId: string): Promise<CreatorProjectRecord> {
+    const result = await request(`/api/v1/projects/${projectId}/trash`, ProjectResponseSchema, {
+      method: "POST",
+      body: {},
+      idempotencyKey: `project-trash:${projectId}`,
+    });
+    return result.project;
+  },
+
+  async restoreProject(projectId: string): Promise<CreatorProjectRecord> {
+    const result = await request(`/api/v1/projects/${projectId}/restore`, ProjectResponseSchema, {
+      method: "POST",
+      body: {},
+      idempotencyKey: `project-restore:${projectId}`,
+    });
+    return result.project;
+  },
+
+  async createVersion(projectId: string, input: CreateProjectVersionRequest, idempotencyKey: string): Promise<ProjectVersion> {
+    const result = await request(`/api/v1/projects/${projectId}/versions`, ProjectVersionResponseSchema, {
+      method: "POST",
+      body: input,
+      idempotencyKey,
+    });
+    return result.version;
+  },
+
+  async assetDownload(projectId: string, assetId: string): Promise<string> {
+    const result = await request(
+      `/api/v1/projects/${projectId}/assets/${assetId}/download-url`,
+      SignedAssetDownloadResponseSchema,
+    );
+    return result.download.url;
+  },
+
+  async credits(): Promise<CreditSummaryResponse> {
+    return request("/api/v1/credits", CreditSummaryResponseSchema);
+  },
+
+  async scan(kind: "product" | "business", url: string, signal?: AbortSignal): Promise<SourceScanResponse> {
+    return request(`/api/v1/${kind}-scans`, SourceScanResponseSchema, {
+      method: "POST",
+      body: { url },
+      ...(signal ? { signal } : {}),
+    });
+  },
+};

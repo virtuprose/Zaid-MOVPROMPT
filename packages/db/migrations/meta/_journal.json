@@ -29,6 +29,27 @@
       "when": 1786535603088,
       "tag": "0003_credit_reservations",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1786540800000,
+      "tag": "0004_creator_data_plane",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1786541700000,
+      "tag": "0005_global_guest_draft_claim",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1786542600000,
+      "tag": "0006_semantic_capabilities",
+      "breakpoints": true
     }
   ]
 }

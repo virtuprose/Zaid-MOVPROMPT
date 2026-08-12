@@ -12,6 +12,8 @@ import { createSmtpAuthEmailSender, smtpEmailConfigFromEnv } from "./email.js";
 import { createGenerationPricingFromEnvironment } from "./generation-pricing.js";
 import { createDrizzleGenerationRepository } from "./generation-repository.js";
 import { createGenerationApiService } from "./generation-service.js";
+import { createDrizzleCreatorRepository } from "./creator-repository.js";
+import { createSourceScanner } from "./source-scanner.js";
 
 export type RuntimeServices = Pick<
   CreateApiOptions,
@@ -19,6 +21,8 @@ export type RuntimeServices = Pick<
   | "assetRepository"
   | "assetStorage"
   | "generationService"
+  | "creatorRepository"
+  | "sourceScanner"
   | "readinessDependencies"
 > & {
   close(): Promise<void>;
@@ -81,10 +85,14 @@ export function createRuntimeServices(
         capabilities: createCapabilityRegistryFromEnvironment(environment),
       })
     : undefined;
+  const creatorRepository = createDrizzleCreatorRepository(database.db);
+  const sourceScanner = createSourceScanner();
 
   if (!assetsEnabled) {
     return {
       authGateway: createBetterAuthGateway(auth),
+      creatorRepository,
+      sourceScanner,
       ...(generationService ? { generationService } : {}),
       readinessDependencies,
       close: () => database.close(),
@@ -94,6 +102,8 @@ export function createRuntimeServices(
   const storage = new PrivateObjectStorage(objectStorageConfigFromEnv(environment));
   return {
     authGateway: createBetterAuthGateway(auth),
+    creatorRepository,
+    sourceScanner,
     assetRepository: createDrizzleAssetRepository(database.db),
     assetStorage: createAssetStorageGateway(storage),
     ...(generationService ? { generationService } : {}),

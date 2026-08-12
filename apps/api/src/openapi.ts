@@ -58,6 +58,152 @@ export function createOpenApiDocument(version: string) {
           },
         },
       },
+      "/api/v1/templates": {
+        get: {
+          operationId: "listPublishedTemplates",
+          description: "Lists immutable, published campaign template versions.",
+          parameters: [
+            { name: "vertical", in: "query", schema: { type: "string" } },
+            { name: "goal", in: "query", schema: { type: "string" } },
+            { name: "language", in: "query", schema: { type: "string" } },
+          ],
+          responses: { "200": { description: "Published template catalog." } },
+        },
+      },
+      "/api/v1/templates/{slug}": {
+        get: {
+          operationId: "getPublishedTemplate",
+          parameters: [
+            { name: "slug", in: "path", required: true, schema: { type: "string" } },
+          ],
+          responses: {
+            "200": { description: "Published immutable template version." },
+            "404": { description: "Published template not found." },
+          },
+        },
+      },
+      "/api/v1/product-scans": {
+        post: {
+          operationId: "scanProductSource",
+          responses: {
+            "200": { description: "Imported product facts requiring user confirmation." },
+            "400": { description: "Unsafe or invalid source URL." },
+            "413": { description: "Source page exceeds the import limit." },
+          },
+        },
+      },
+      "/api/v1/business-scans": {
+        post: {
+          operationId: "scanBusinessSource",
+          responses: {
+            "200": { description: "Imported service facts requiring user confirmation." },
+            "400": { description: "Unsafe or invalid source URL." },
+            "413": { description: "Source page exceeds the import limit." },
+          },
+        },
+      },
+      "/api/v1/drafts/claim": {
+        post: {
+          operationId: "claimGuestDraft",
+          security: [{ cookieAuth: [] }],
+          parameters: [
+            {
+              name: "Idempotency-Key",
+              in: "header",
+              required: true,
+              description: "Must equal the stable browser draft UUID.",
+              schema: { type: "string", format: "uuid" },
+            },
+          ],
+          responses: {
+            "201": { description: "Existing or newly claimed project and first version." },
+            "401": { description: "Authentication required." },
+            "409": { description: "Draft was already claimed or the payload changed." },
+          },
+        },
+      },
+      "/api/v1/projects": {
+        get: {
+          operationId: "listProjects",
+          security: [{ cookieAuth: [] }],
+          responses: { "200": { description: "Owner-scoped project list." } },
+        },
+      },
+      "/api/v1/projects/{projectId}": {
+        get: {
+          operationId: "getProject",
+          security: [{ cookieAuth: [] }],
+          parameters: [
+            {
+              name: "projectId",
+              in: "path",
+              required: true,
+              schema: { type: "string", format: "uuid" },
+            },
+          ],
+          responses: {
+            "200": { description: "Owner-scoped project and accepted version." },
+            "404": { description: "Project not found for this account." },
+          },
+        },
+      },
+      "/api/v1/projects/{projectId}/duplicate": {
+        post: {
+          operationId: "duplicateProject",
+          security: [{ cookieAuth: [] }],
+          responses: { "201": { description: "Idempotent immutable project copy." } },
+        },
+      },
+      "/api/v1/projects/{projectId}/trash": {
+        post: {
+          operationId: "trashProject",
+          security: [{ cookieAuth: [] }],
+          responses: { "200": { description: "Project moved to recoverable trash." } },
+        },
+      },
+      "/api/v1/projects/{projectId}/restore": {
+        post: {
+          operationId: "restoreProject",
+          security: [{ cookieAuth: [] }],
+          responses: { "200": { description: "Trashed project restored." } },
+        },
+      },
+      "/api/v1/projects/{projectId}/versions": {
+        get: {
+          operationId: "listProjectVersions",
+          security: [{ cookieAuth: [] }],
+          responses: { "200": { description: "Immutable project version history." } },
+        },
+        post: {
+          operationId: "createProjectVersion",
+          security: [{ cookieAuth: [] }],
+          responses: { "201": { description: "New idempotent immutable version." } },
+        },
+      },
+      "/api/v1/projects/{projectId}/accepted-version": {
+        post: {
+          operationId: "acceptProjectVersion",
+          security: [{ cookieAuth: [] }],
+          responses: { "200": { description: "Project now points to the selected version." } },
+        },
+      },
+      "/api/v1/credits": {
+        get: {
+          operationId: "getCreditSummary",
+          security: [{ cookieAuth: [] }],
+          responses: { "200": { description: "Authoritative balance, holds, entitlement and ledger." } },
+        },
+      },
+      "/api/v1/projects/{projectId}/render-runs/{runId}/output": {
+        get: {
+          operationId: "createRenderOutputDownload",
+          security: [{ cookieAuth: [] }],
+          responses: {
+            "200": { description: "Fresh signed URL for a MovPrompt-owned completed output." },
+            "404": { description: "Output not found for this account." },
+          },
+        },
+      },
       "/api/v1/projects/{projectId}/assets/upload-url": {
         post: {
           operationId: "createAssetUploadUrl",

@@ -59,7 +59,7 @@ describePostgres("generation service PostgreSQL transactions", () => {
     const configuration = { duration: 8, ratio: "9:16", template: "luxury" };
     const quote = await service.createQuote({
       userId: ids.userId,
-      capabilityAlias: "video.seedance.latest",
+      capabilityAlias: "video.cinematic",
       credits: 144,
       entitlementEligible: false,
       breakdown: [{ label: "8 seconds", credits: 144 }],
@@ -71,7 +71,7 @@ describePostgres("generation service PostgreSQL transactions", () => {
       ...ids,
       quoteId: quote.id,
       idempotencyKey: `generation:${randomUUID()}`,
-      capabilityAlias: "video.seedance.latest",
+      capabilityAlias: "video.cinematic",
       configuration,
     };
     const first = await service.startRender(input);
@@ -93,7 +93,7 @@ describePostgres("generation service PostgreSQL transactions", () => {
     const quoteTime = new Date("2026-08-12T10:00:00.000Z");
     const expiredQuote = await service.createQuote({
       userId: ids.userId,
-      capabilityAlias: "video.seedance.latest",
+      capabilityAlias: "video.cinematic",
       credits: 108,
       entitlementEligible: false,
       breakdown: [{ label: "6 seconds", credits: 108 }],
@@ -116,7 +116,7 @@ describePostgres("generation service PostgreSQL transactions", () => {
     ).rejects.toMatchObject({ code: "quote_expired" } satisfies Partial<GenerationDomainError>);
 
     const guestQuote = await service.createQuote({
-      capabilityAlias: "video.seedance.latest",
+      capabilityAlias: "video.cinematic",
       credits: 108,
       entitlementEligible: false,
       breakdown: [{ label: "6 seconds", credits: 108 }],
@@ -138,7 +138,7 @@ describePostgres("generation service PostgreSQL transactions", () => {
     const configuration = { duration: 5, ratio: "9:16" };
     const quote = await service.createQuote({
       userId: ids.userId,
-      capabilityAlias: "video.seedance.latest",
+      capabilityAlias: "video.cinematic",
       credits: 90,
       entitlementEligible: true,
       breakdown: [{ label: "5 seconds", credits: 90 }],
@@ -168,7 +168,7 @@ describePostgres("generation service PostgreSQL transactions", () => {
     const configuration = { duration: 5, ratio: "1:1" };
     const quote = await service.createQuote({
       userId: ids.userId,
-      capabilityAlias: "video.seedance.latest",
+      capabilityAlias: "video.cinematic",
       credits: 90,
       entitlementEligible: false,
       breakdown: [{ label: "5 seconds", credits: 90 }],
@@ -253,7 +253,7 @@ describePostgres("generation service PostgreSQL transactions", () => {
     const secondConfiguration = { duration: 4, variant: "second" };
     const firstQuote = await service.createQuote({
       userId: ids.userId,
-      capabilityAlias: "video.seedance.latest",
+      capabilityAlias: "video.cinematic",
       credits: 70,
       entitlementEligible: false,
       breakdown: [{ label: "first", credits: 70 }],
@@ -262,7 +262,7 @@ describePostgres("generation service PostgreSQL transactions", () => {
     });
     const secondQuote = await service.createQuote({
       userId: ids.userId,
-      capabilityAlias: "video.seedance.latest",
+      capabilityAlias: "video.cinematic",
       credits: 70,
       entitlementEligible: false,
       breakdown: [{ label: "second", credits: 70 }],
@@ -319,7 +319,7 @@ describePostgres("generation service PostgreSQL transactions", () => {
     const configuration = { duration: 3, ratio: "9:16", template: "starter" };
     const quote = await service.createQuote({
       userId: ids.userId,
-      capabilityAlias: "video.seedance.latest",
+      capabilityAlias: "video.cinematic",
       credits: 54,
       entitlementEligible: true,
       breakdown: [{ label: "Starter render", credits: 54 }],
@@ -353,7 +353,7 @@ describePostgres("generation service PostgreSQL transactions", () => {
     const configuration = { duration: 3 };
     const quote = await service.createQuote({
       userId: ids.userId,
-      capabilityAlias: "video.seedance.latest",
+      capabilityAlias: "video.cinematic",
       credits: 10,
       entitlementEligible: false,
       breakdown: [{ label: "test", credits: 10 }],

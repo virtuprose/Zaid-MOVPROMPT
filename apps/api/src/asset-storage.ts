@@ -13,6 +13,7 @@ export type AssetObjectHead = {
 
 export interface AssetStorageGateway {
   readonly assetsBucket: string;
+  readonly outputsBucket: string;
   signUpload(input: SignUploadRequest): Promise<SignedUpload>;
   signDownload(input: {
     bucket: string;
@@ -25,6 +26,7 @@ export interface AssetStorageGateway {
 export function createAssetStorageGateway(storage: PrivateObjectStorage): AssetStorageGateway {
   return {
     assetsBucket: storage.assetsBucket,
+    outputsBucket: storage.outputsBucket,
     signUpload: (input) => storage.signUpload(input),
     signDownload: (input) => storage.signDownload(input),
     async head(bucket, key) {
