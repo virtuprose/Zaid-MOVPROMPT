@@ -126,6 +126,26 @@ export const CREATOR_TEMPLATES: CreatorTemplate[] = [
       { id: "app-3", title: "Start now", purpose: "Convert", duration: 4, headline: "Download and get started", direction: "Service result, app mark and store or signup CTA." },
     ],
   },
+  {
+    id: "salon-booking-offer",
+    name: "Salon booking offer",
+    eyebrow: "Kuwait bookings",
+    description: "A fact-safe service campaign designed to turn local attention into qualified bookings.",
+    bestFor: "Salons, beauty services and appointment-led businesses",
+    duration: 12,
+    previewVideo: "/presets/lifestyle.mp4",
+    poster: "/homepage/hero-lifestyle.png",
+    languages: ["en", "ar", "bilingual"],
+    aspectRatios: ["9:16", "1:1", "4:5", "16:9"],
+    accent: "#bf8b62",
+    tags: ["Salon", "Bookings", "Kuwait"],
+    scenes: [
+      { id: "salon-1", title: "Service promise", purpose: "Create relevance", duration: 3, headline: "Your next appointment", direction: "Open with the real service environment and a concise, factual promise." },
+      { id: "salon-2", title: "Experience", purpose: "Build trust", duration: 4, headline: "Care in every detail", direction: "Show the real space, process or practitioner without inventing results." },
+      { id: "salon-3", title: "Offer", purpose: "Make value clear", duration: 3, headline: "Book your visit", direction: "Present the confirmed service, price or offer in a Kuwait-safe layout." },
+      { id: "salon-4", title: "Booking close", purpose: "Drive action", duration: 2, headline: "Book on WhatsApp", direction: "Close with the confirmed WhatsApp or booking destination, location and logo." },
+    ],
+  },
 ];
 
 export const SAMPLE_PRODUCT = {
@@ -152,6 +172,7 @@ export function getCreatorTemplate(id: string | null | undefined) {
 export function createDraftProject(templateId = CREATOR_TEMPLATES[0].id): CreatorProject {
   const template = getCreatorTemplate(templateId);
   const now = new Date().toISOString();
+  const serviceTemplate = template.id === "salon-booking-offer" || template.id === "app-service";
   return {
     id: crypto.randomUUID(),
     versionId: crypto.randomUUID(),
@@ -159,11 +180,18 @@ export function createDraftProject(templateId = CREATOR_TEMPLATES[0].id): Creato
     title: "Untitled campaign",
     templateId: template.id,
     status: "draft",
+    promotionKind: serviceTemplate ? "business" : "product",
+    vertical: template.id === "salon-booking-offer" ? "salon" : serviceTemplate ? "retail" : "ecommerce",
+    goal: template.id === "salon-booking-offer" ? "bookings" : "launch",
+    presenterMode: "none",
+    location: "",
+    bookingUrl: "",
+    whatsapp: "",
     product: { sourceType: null, sourceUrl: "", name: "", description: "", price: "", brand: "", images: [] },
     language: template.id === "gcc-offer-launch" ? "ar" : "en",
     market: "KW",
     offer: "",
-    cta: template.id === "gcc-offer-launch" ? "Order on WhatsApp" : "Shop now",
+    cta: template.id === "gcc-offer-launch" ? "Order on WhatsApp" : serviceTemplate ? "Book now" : "Shop now",
     brandColor: template.accent,
     logoUrl: "",
     aspectRatio: "9:16",

@@ -29,6 +29,13 @@ export function projectFromCloud(input: CreatorProjectRecord): CreatorProject | 
     versionNumber: input.currentVersion?.versionNumber,
     title: input.title,
     status: input.status === "trashed" ? "draft" : input.status,
+    promotionKind: candidate.promotionKind ?? "product",
+    vertical: candidate.vertical ?? "ecommerce",
+    goal: candidate.goal ?? "launch",
+    presenterMode: candidate.presenterMode ?? "none",
+    location: candidate.location ?? "",
+    bookingUrl: candidate.bookingUrl ?? "",
+    whatsapp: candidate.whatsapp ?? "",
     createdAt: input.createdAt,
     updatedAt: input.updatedAt,
   };

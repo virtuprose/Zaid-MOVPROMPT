@@ -161,7 +161,7 @@ export default function AdvancedStudio() {
   const makeDraft = useCallback((status: CreationDraft["status"]): CreationDraft => {
     const now = new Date();
     const product = sourceDraft?.product ?? { sourceType: null, sourceUrl: "", name: "Advanced video", description: "", price: "", brand: "", images: [] };
-    const campaign = sourceDraft?.campaign ?? { market: "KW", language: "en", offer: "", cta: "Learn more", brandColor: "#d49737", aspectRatio: "9:16", resolution: "1080p", subtitles: false, audio: true };
+    const campaign = sourceDraft?.campaign ?? { market: "KW", language: "en", vertical: "ecommerce", goal: "launch", presenterMode: "none", location: "", bookingUrl: "", whatsapp: "", offer: "", cta: "Learn more", brandColor: "#d49737", aspectRatio: "9:16", resolution: "1080p", subtitles: false, audio: true };
     return {
       id: draftId,
       mode: "advanced",

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   ArrowLeft,
@@ -54,7 +54,7 @@ import {
 
 const STEPS: Array<{ id: CreatorStep; label: string }> = [
   { id: "template", label: "Template" },
-  { id: "source", label: "Product" },
+  { id: "source", label: "Source" },
   { id: "details", label: "Campaign" },
   { id: "generating", label: "Create" },
   { id: "editor", label: "Review" },
@@ -101,9 +101,10 @@ function buildTemplatePrompt(project: CreatorProject) {
   const refs = project.product.images.map((_, index) => `@Image${index + 1}`).join(", ");
   const language = project.language === "ar" ? "Arabic" : project.language === "bilingual" ? "Arabic and English" : "English";
   return [
-    `Create a ${template.duration}-second ${project.aspectRatio} product campaign using ${template.name}.`,
-    `The supplied product references are ${refs}. Preserve the exact product shape, package, label, colours and logo across every shot.`,
-    `Product facts: ${project.product.name}. ${project.product.description}. Brand: ${project.product.brand || "not supplied"}. Price: ${project.product.price || "not supplied"} ${MARKET_META[project.market].currency}.`,
+    `Create a ${template.duration}-second ${project.aspectRatio} ${project.promotionKind === "business" ? "service" : "product"} campaign using ${template.name}.`,
+    `The supplied references are ${refs}. ${project.promotionKind === "business" ? "Keep the business environment, people and branding faithful to the references. Do not invent service results, qualifications or claims." : "Preserve the exact product shape, package, label, colours and logo across every shot."}`,
+    `${project.promotionKind === "business" ? "Business or service" : "Product"} facts: ${project.product.name}. ${project.product.description}. Brand: ${project.product.brand || "not supplied"}. Price: ${project.product.price || "not supplied"} ${MARKET_META[project.market].currency}.`,
+    ...(project.promotionKind === "business" ? [`Location: ${project.location || "not supplied"}. Booking destination: ${project.bookingUrl || "not supplied"}. WhatsApp: ${project.whatsapp || "not supplied"}.`] : []),
     `Market: ${MARKET_META[project.market].label}. On-screen language: ${language}. ${project.language !== "en" ? "Use natural RTL Arabic composition and correct punctuation." : ""}`,
     project.offer ? `Offer: ${project.offer}.` : "Do not invent an offer or discount.",
     `CTA: ${project.cta}. Brand colour: ${project.brandColor}.`,
@@ -149,7 +150,9 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
   const [project, setProject] = useState<CreatorProject>(() => initialProject ?? createDraftProject(initialTemplate));
   const sessionDraftId = useRef(project.id);
   const [step, setStep] = useState<CreatorStep>(() => initialProject?.videoUrl ? "editor" : initialProject?.product.images.length ? "details" : "source");
-  const [sourceTab, setSourceTab] = useState<"link" | "upload">("link");
+  const [sourceTab, setSourceTab] = useState<"product" | "business" | "upload">(
+    initialProject?.promotionKind === "business" ? "business" : "product",
+  );
   const [productUrl, setProductUrl] = useState(initialProject?.product.sourceUrl ?? homepageHandoff.sourceUrl);
   const [sourceError, setSourceError] = useState("");
   const [sourceBusy, setSourceBusy] = useState(false);
@@ -261,6 +264,13 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
         product: { ...draft.product, images: hydratedImages },
         market: draft.campaign.market,
         language: draft.campaign.language,
+        promotionKind: draft.product.sourceType === "business_link" || draft.campaign.goal === "bookings" ? "business" : "product",
+        vertical: draft.campaign.vertical ?? rebuilt.vertical,
+        goal: draft.campaign.goal ?? rebuilt.goal,
+        presenterMode: draft.campaign.presenterMode ?? "none",
+        location: draft.campaign.location ?? "",
+        bookingUrl: draft.campaign.bookingUrl ?? "",
+        whatsapp: draft.campaign.whatsapp ?? "",
         offer: draft.campaign.offer,
         cta: draft.campaign.cta,
         brandColor: draft.campaign.brandColor,
@@ -273,6 +283,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
       });
       setRightsConfirmed(Boolean(draft.rightsAttestation?.confirmed));
       setProductUrl(draft.product.sourceUrl);
+      setSourceTab(draft.product.sourceType === "business_link" ? "business" : draft.product.sourceType === "upload" ? "upload" : "product");
       setStep(draft.product.images.length ? "details" : "source");
       setDraftRestoring(false);
       if (user && shouldResumeGeneration && draft.pendingGenerationId) {
@@ -333,10 +344,15 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
 
   const selectTemplate = (templateId: string) => {
     const nextTemplate = getCreatorTemplate(templateId);
+    const serviceTemplate = templateId === "salon-booking-offer" || templateId === "app-service";
     updateProject({
       templateId,
       brandColor: nextTemplate.accent,
       language: templateId === "gcc-offer-launch" ? "ar" : project.language,
+      promotionKind: serviceTemplate ? "business" : project.promotionKind,
+      vertical: templateId === "salon-booking-offer" ? "salon" : project.vertical,
+      goal: templateId === "salon-booking-offer" ? "bookings" : project.goal,
+      cta: templateId === "salon-booking-offer" ? "Book now" : project.cta,
       scenes: nextTemplate.scenes.map((scene) => ({ ...scene })),
       title: project.product.name ? `${project.product.name} — ${nextTemplate.name}` : "Untitled campaign",
     });
@@ -346,29 +362,60 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
   };
 
   const useSampleProduct = () => {
-    updateProject({ product: SAMPLE_PRODUCT, title: `${SAMPLE_PRODUCT.name} — ${template.name}`, status: "ready" });
+    updateProject({ promotionKind: "product", product: SAMPLE_PRODUCT, title: `${SAMPLE_PRODUCT.name} — ${template.name}`, status: "ready" });
+    setSourceTab("product");
     setProductUrl("");
     setSourceError("");
   };
 
-  const scanProduct = async () => {
+  const chooseSourceTab = (next: "product" | "business" | "upload") => {
+    setSourceTab(next);
+    setSourceError("");
+    if (next === "business") {
+      updateProject({ promotionKind: "business", vertical: "salon", goal: "bookings", cta: "Book now" });
+    } else if (next === "product") {
+      updateProject({ promotionKind: "product", vertical: "ecommerce", goal: "launch", cta: project.cta === "Book now" ? "Shop now" : project.cta });
+    }
+  };
+
+  const handleSourceTabKey = (event: KeyboardEvent<HTMLDivElement>) => {
+    const tabs = ["product", "business", "upload"] as const;
+    const currentIndex = tabs.indexOf(sourceTab);
+    const nextIndex = event.key === "Home"
+      ? 0
+      : event.key === "End"
+        ? tabs.length - 1
+        : event.key === "ArrowRight"
+          ? (currentIndex + 1) % tabs.length
+          : event.key === "ArrowLeft"
+            ? (currentIndex - 1 + tabs.length) % tabs.length
+            : -1;
+    if (nextIndex < 0) return;
+    event.preventDefault();
+    const next = tabs[nextIndex]!;
+    chooseSourceTab(next);
+    window.requestAnimationFrame(() => document.getElementById(`source-${next}-tab`)?.focus());
+  };
+
+  const scanSource = async () => {
     const trimmed = productUrl.trim();
     if (!/^https?:\/\/\S+$/i.test(trimmed)) {
-      setSourceError("Enter a complete product link beginning with http:// or https://.");
+      setSourceError(`Enter a complete ${project.promotionKind === "business" ? "business" : "product"} link beginning with http:// or https://.`);
       return;
     }
     setSourceBusy(true);
     setSourceError("");
     try {
-      const scan = await portableCreatorApi.scan("product", trimmed);
+      const kind = project.promotionKind;
+      const scan = await portableCreatorApi.scan(kind, trimmed);
       if (!scan.imageCandidates.length) throw new Error("no_image_found");
       const fact = (field: string) => scan.facts.find((item) => item.field === field)?.value ?? "";
-      const name = fact("name") || "Imported product";
+      const name = fact("name") || (kind === "business" ? "Imported business" : "Imported product");
       updateProject({
         title: `${name} — ${template.name}`,
         status: "ready",
         product: {
-          sourceType: "link",
+          sourceType: kind === "business" ? "business_link" : "product_link",
           sourceUrl: scan.canonicalUrl,
           name,
           description: fact("description"),
@@ -379,7 +426,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : "";
-      setSourceError(message.includes("no_image") ? "We couldn't find a clear product image on that page. Upload photos instead." : "We couldn't read that page. Check the link or upload product photos instead.");
+      setSourceError(message.includes("no_image") ? `We couldn't find a clear ${project.promotionKind === "business" ? "business" : "product"} image on that page. Upload photos instead.` : "We couldn't read that page. Check the link or upload photos instead.");
     } finally {
       setSourceBusy(false);
     }
@@ -415,7 +462,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
 
   const continueFromSource = () => {
     if (!project.product.images.length) {
-      setSourceError("Add at least one product photo or use the sample product to continue.");
+      setSourceError(`Add at least one ${project.promotionKind === "business" ? "business or service" : "product"} photo${project.promotionKind === "product" ? " or use the sample product" : ""} to continue.`);
       return;
     }
     setSourceError("");
@@ -485,12 +532,12 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
 
   const startGeneration = async (ratioOverride?: CreatorAspectRatio) => {
     if (!project.product.images.length) {
-      setSourceError("Add at least one product image before generating.");
+      setSourceError(`Add at least one ${project.promotionKind === "business" ? "business or service" : "product"} image before generating.`);
       setStep("source");
       return;
     }
     if (!rightsConfirmed && !project.videoUrl) {
-      setSourceError("Confirm that you have permission to use these product images.");
+      setSourceError("Confirm that you have permission to use these images and that the campaign facts are accurate.");
       return;
     }
     if (!qaMode && (!quoteLoaded || !quote)) {
@@ -788,13 +835,13 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
 
   return (
     <CreatorShell qaMode={qaMode}>
-      <Seo title="Create a video · MovPrompt" description="Turn a product link or photos into a ready-to-post campaign with a guided MovPrompt template." path="/create" noindex />
+      <Seo title="Create a video · MovPrompt" description="Turn a product, business link or photos into a ready-to-post Kuwait campaign with a guided MovPrompt template." path="/create" noindex />
       {draftRestoring ? <div className="creator-page"><div className="creator-empty" role="status"><Loader2 className="animate-spin" aria-hidden="true" /><p>Restoring your campaign…</p></div></div> : <div className="creator-page">
         <header className="creator-page-head">
           <div>
             <p className="creator-kicker">Create with a template</p>
-            <h1 className="creator-title creator-title-sm">{step === "template" ? (project.product.images.length ? "Choose the best format for this product." : "Choose the result you want.") : step === "source" ? "Add the product." : "Review the campaign."}</h1>
-            <p className="creator-subtitle">{step === "template" ? (project.product.images.length ? "MovPrompt keeps your product details while you compare proven campaign outcomes." : "Start from a proven campaign structure. You can still change the copy, branding and individual scenes later.") : step === "source" ? "Paste a product page or upload clear photos. You will review everything before generation." : "A few final details help MovPrompt create the right version for your GCC market."}</p>
+            <h1 className="creator-title creator-title-sm">{step === "template" ? (project.product.images.length ? `Choose the best format for this ${project.promotionKind === "business" ? "service" : "product"}.` : "Choose the result you want.") : step === "source" ? "What are you promoting?" : "Review the campaign."}</h1>
+            <p className="creator-subtitle">{step === "template" ? (project.product.images.length ? `MovPrompt keeps your ${project.promotionKind === "business" ? "business" : "product"} facts while you compare proven campaign outcomes.` : "Start from a proven campaign structure. You can still change the copy, branding and individual scenes later.") : step === "source" ? "Add a product page, business website or clear photos. You will confirm every imported fact before generation." : "A few final details help MovPrompt create the right version for Kuwait."}</p>
             <button className="creator-mode-switch" type="button" onClick={() => void switchToAdvanced()} disabled={modeSwitching}>
               <span className="creator-mode-switch-icon"><SlidersHorizontal aria-hidden="true" /></span>
               <span className="creator-mode-switch-copy">
@@ -812,20 +859,22 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
         {step === "source" && (
           <div className="creator-workspace">
             <section className="creator-panel creator-panel-pad" aria-labelledby="source-heading">
-              <div className="creator-panel-heading"><div><h2 id="source-heading">Product source</h2><p>We only use the information you review and approve.</p></div><button className="creator-button creator-button-quiet" type="button" onClick={() => setStep("template")}><ArrowLeft aria-hidden="true" /> Change template</button></div>
-              <div className="creator-source-tabs" role="tablist" aria-label="Product source">
-                <button role="tab" aria-selected={sourceTab === "link"} className={cn("creator-source-tab", sourceTab === "link" && "is-active")} type="button" onClick={() => setSourceTab("link")}>Product link</button>
-                <button role="tab" aria-selected={sourceTab === "upload"} className={cn("creator-source-tab", sourceTab === "upload" && "is-active")} type="button" onClick={() => setSourceTab("upload")}>Upload photos</button>
+              <div className="creator-panel-heading"><div><h2 id="source-heading">Campaign source</h2><p>Choose one starting point. We only use facts you review and approve.</p></div><button className="creator-button creator-button-quiet" type="button" onClick={() => setStep("template")}><ArrowLeft aria-hidden="true" /> Change template</button></div>
+              <div className="creator-source-tabs" role="tablist" aria-label="Campaign source" onKeyDown={handleSourceTabKey}>
+                <button id="source-product-tab" role="tab" aria-controls="source-link-panel" aria-selected={sourceTab === "product"} tabIndex={sourceTab === "product" ? 0 : -1} className={cn("creator-source-tab", sourceTab === "product" && "is-active")} type="button" onClick={() => chooseSourceTab("product")}>Product link</button>
+                <button id="source-business-tab" role="tab" aria-controls="source-link-panel" aria-selected={sourceTab === "business"} tabIndex={sourceTab === "business" ? 0 : -1} className={cn("creator-source-tab", sourceTab === "business" && "is-active")} type="button" onClick={() => chooseSourceTab("business")}>Business or service</button>
+                <button id="source-upload-tab" role="tab" aria-controls="source-upload-panel" aria-selected={sourceTab === "upload"} tabIndex={sourceTab === "upload" ? 0 : -1} className={cn("creator-source-tab", sourceTab === "upload" && "is-active")} type="button" onClick={() => chooseSourceTab("upload")}>Upload photos</button>
               </div>
 
-              {sourceTab === "link" ? (
-                <div style={{ marginTop: 22 }}>
-                  <div className="creator-field"><label htmlFor="product-url">Product page</label><div className="creator-input-row"><input id="product-url" className="creator-input" value={productUrl} onChange={(event) => setProductUrl(event.target.value)} placeholder="https://yourstore.com/product" inputMode="url" aria-describedby={sourceError ? "source-error" : "product-url-help"} /><button className="creator-button creator-button-primary" type="button" onClick={scanProduct} disabled={sourceBusy}>{sourceBusy ? <Loader2 className="animate-spin" aria-hidden="true" /> : <ArrowRight aria-hidden="true" />} Import</button></div><span id="product-url-help" className="creator-field-help">We’ll look for the product name, description and up to five clear images.</span></div>
-                  <div className="creator-upload-zone" style={{ minHeight: 150, marginTop: 20 }}><button className="creator-button creator-button-quiet" type="button" onClick={useSampleProduct}><Sparkles aria-hidden="true" /> Or try a sample product</button></div>
+              {sourceTab !== "upload" ? (
+                <div id="source-link-panel" role="tabpanel" aria-labelledby={sourceTab === "business" ? "source-business-tab" : "source-product-tab"} style={{ marginTop: 22 }}>
+                  <div className="creator-field"><label htmlFor="source-url">{sourceTab === "business" ? "Business or service website" : "Product page"}</label><div className="creator-input-row"><input id="source-url" className="creator-input" value={productUrl} onChange={(event) => setProductUrl(event.target.value)} placeholder={sourceTab === "business" ? "https://yoursalon.com" : "https://yourstore.com/product"} inputMode="url" aria-describedby={sourceError ? "source-error" : "source-url-help"} /><button className="creator-button creator-button-primary" type="button" onClick={scanSource} disabled={sourceBusy}>{sourceBusy ? <Loader2 className="animate-spin" aria-hidden="true" /> : <ArrowRight aria-hidden="true" />} Import</button></div><span id="source-url-help" className="creator-field-help">{sourceTab === "business" ? "We’ll look for the business name, description and public images. You will confirm location and booking details next." : "We’ll look for the product name, description, price and up to five clear images."}</span></div>
+                  {sourceTab === "product" && <div className="creator-upload-zone" style={{ minHeight: 150, marginTop: 20 }}><button className="creator-button creator-button-quiet" type="button" onClick={useSampleProduct}><Sparkles aria-hidden="true" /> Or try a sample product</button></div>}
+                  {sourceTab === "business" && <div className="creator-import-note" role="note"><strong>Business facts stay locked</strong><span>MovPrompt will not invent qualifications, prices, treatment results or service claims.</span></div>}
                 </div>
               ) : (
-                <div className="creator-upload-zone">
-                  <label htmlFor="product-files"><span className="creator-upload-icon"><Upload aria-hidden="true" /></span><strong>Drop product photos here</strong><span>JPG, PNG or WebP · up to 5 images · 12 MB each</span></label>
+                <div id="source-upload-panel" role="tabpanel" aria-labelledby="source-upload-tab" className="creator-upload-zone">
+                  <label htmlFor="product-files"><span className="creator-upload-icon"><Upload aria-hidden="true" /></span><strong>Drop product or business photos here</strong><span>JPG, PNG or WebP · up to 5 images · 12 MB each</span></label>
                   <input id="product-files" type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={(event) => void uploadFiles(event.target.files)} />
                 </div>
               )}
@@ -834,9 +883,9 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
               <div className="creator-actions-row"><button className="creator-button creator-button-quiet" type="button" onClick={() => setStep("template")}><ArrowLeft aria-hidden="true" /> Back</button><button className="creator-button creator-button-primary" type="button" onClick={continueFromSource} disabled={!project.product.images.length}>Review campaign <ArrowRight aria-hidden="true" /></button></div>
             </section>
 
-            <aside className="creator-panel creator-product-card" aria-label="Imported product preview">
-              <div className="creator-product-image">{project.product.images[0] ? <img src={project.product.images[0].url} alt={project.product.name || "Imported product"} /> : <div className="creator-empty" style={{ minHeight: "100%", border: 0, borderRadius: 0 }}><div><span className="creator-empty-icon"><FileImage aria-hidden="true" /></span><p>Your selected product will appear here.</p></div></div>}</div>
-              <div className="creator-product-copy"><p className="creator-kicker">{template.name}</p><h3>{project.product.name || "No product added yet"}</h3><p>{project.product.description || "Add a link or photos to prepare your campaign."}</p>{project.product.images.length > 0 && <div className="creator-image-strip">{project.product.images.map((image) => <span className="creator-image-thumb" key={image.id}><img src={image.url} alt="" /></span>)}</div>}</div>
+            <aside className="creator-panel creator-product-card" aria-label={`Imported ${project.promotionKind} preview`}>
+              <div className="creator-product-image">{project.product.images[0] ? <img src={project.product.images[0].url} alt={project.product.name || `Imported ${project.promotionKind}`} /> : <div className="creator-empty" style={{ minHeight: "100%", border: 0, borderRadius: 0 }}><div><span className="creator-empty-icon"><FileImage aria-hidden="true" /></span><p>Your selected {project.promotionKind === "business" ? "business or service" : "product"} will appear here.</p></div></div>}</div>
+              <div className="creator-product-copy"><p className="creator-kicker">{project.promotionKind === "business" ? "Business campaign" : template.name}</p><h3>{project.product.name || `No ${project.promotionKind} added yet`}</h3><p>{project.product.description || `Add a link or photos to prepare your ${project.promotionKind === "business" ? "booking" : "product"} campaign.`}</p>{project.product.images.length > 0 && <div className="creator-image-strip">{project.product.images.map((image) => <span className="creator-image-thumb" key={image.id}><img src={image.url} alt="" /></span>)}</div>}</div>
             </aside>
           </div>
         )}
@@ -846,16 +895,19 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
             <section className="creator-panel creator-panel-pad" aria-labelledby="campaign-heading">
               <div className="creator-panel-heading"><div><h2 id="campaign-heading">Campaign details</h2><p>Keep it simple. You can refine these details in the editor.</p></div></div>
               <div className="creator-form-grid">
-                <div className="creator-field"><label htmlFor="product-name">Product name</label><input id="product-name" className="creator-input" value={project.product.name} onChange={(event) => updateProject({ product: { ...project.product, name: event.target.value }, title: `${event.target.value || "Untitled"} — ${template.name}` })} /></div>
-                <div className="creator-field"><label htmlFor="brand-name">Brand</label><input id="brand-name" className="creator-input" value={project.product.brand} onChange={(event) => updateProject({ product: { ...project.product, brand: event.target.value } })} placeholder="Optional" /></div>
+                <div className="creator-field"><label htmlFor="product-name">{project.promotionKind === "business" ? "Business or service name" : "Product name"}</label><input id="product-name" className="creator-input" value={project.product.name} onChange={(event) => updateProject({ product: { ...project.product, name: event.target.value }, title: `${event.target.value || "Untitled"} — ${template.name}` })} /></div>
+                <div className="creator-field"><label htmlFor="brand-name">{project.promotionKind === "business" ? "Business name" : "Brand"}</label><input id="brand-name" className="creator-input" value={project.product.brand} onChange={(event) => updateProject({ product: { ...project.product, brand: event.target.value } })} placeholder="Optional" /></div>
                 <div className="creator-field"><label htmlFor="market">Market</label><select id="market" className="creator-select" value={project.market} onChange={(event) => updateProject({ market: event.target.value as CreatorMarket })}>{Object.entries(MARKET_META).map(([code, meta]) => <option key={code} value={code}>{meta.label} · {meta.currency}</option>)}</select></div>
                 <div className="creator-field"><label htmlFor="language">Language</label><select id="language" className="creator-select" value={project.language} onChange={(event) => updateProject({ language: event.target.value as CreatorLanguage })}><option value="en">English</option><option value="ar">Arabic</option><option value="bilingual">Arabic + English</option></select></div>
                 <div className="creator-field"><label htmlFor="price">Price</label><input id="price" className="creator-input" value={project.product.price} onChange={(event) => updateProject({ product: { ...project.product, price: event.target.value } })} placeholder={`Optional · ${MARKET_META[project.market].currency}`} /></div>
                 <div className="creator-field"><label htmlFor="offer">Offer</label><input id="offer" className="creator-input" value={project.offer} onChange={(event) => updateProject({ offer: event.target.value })} placeholder="Optional · e.g. 20% off today" /></div>
                 <div className="creator-field"><label htmlFor="cta">Call to action</label><select id="cta" className="creator-select" value={project.cta} onChange={(event) => updateProject({ cta: event.target.value })}>{CTA_OPTIONS.map((option) => <option key={option}>{option}</option>)}</select></div>
                 <div className="creator-field"><label htmlFor="brand-colour">Brand colour</label><input id="brand-colour" className="creator-input" type="color" value={project.brandColor} onChange={(event) => updateProject({ brandColor: event.target.value })} /></div>
+                {project.promotionKind === "business" && <div className="creator-field"><label htmlFor="location">Kuwait location</label><input id="location" className="creator-input" value={project.location} onChange={(event) => updateProject({ location: event.target.value })} placeholder="Area and branch, if relevant" /></div>}
+                {project.promotionKind === "business" && <div className="creator-field"><label htmlFor="booking-url">Booking link</label><input id="booking-url" className="creator-input" inputMode="url" value={project.bookingUrl} onChange={(event) => updateProject({ bookingUrl: event.target.value })} placeholder="Optional · https://…" /></div>}
+                <div className="creator-field"><label htmlFor="whatsapp">WhatsApp number</label><input id="whatsapp" className="creator-input" inputMode="tel" value={project.whatsapp} onChange={(event) => updateProject({ whatsapp: event.target.value })} placeholder="Optional · +965 0000 0000" /></div>
               </div>
-              <div className="creator-check-row"><input id="rights" type="checkbox" checked={rightsConfirmed} onChange={(event) => setRightsConfirmed(event.target.checked)} /><label htmlFor="rights">I own these images or have permission to use them in generated advertising.</label></div>
+              <div className="creator-check-row"><input id="rights" type="checkbox" checked={rightsConfirmed} onChange={(event) => setRightsConfirmed(event.target.checked)} /><label htmlFor="rights">I own these images or have permission to use them in advertising, and the campaign details above are accurate.</label></div>
               {sourceError && <p className="creator-error" role="alert">{sourceError}</p>}
               <div className="creator-actions-row"><button className="creator-button creator-button-quiet" type="button" onClick={() => setStep(templateFirst.current ? "source" : "template")}><ArrowLeft aria-hidden="true" /> Back</button><button className="creator-button creator-button-primary" type="button" onClick={() => void startGeneration()} disabled={!project.product.name.trim() || !rightsConfirmed || (!qaMode && (!quoteLoaded || !quote)) || sourceBusy}><Sparkles aria-hidden="true" /> Generate video</button></div>
             </section>
@@ -863,7 +915,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
             <aside className="creator-panel creator-panel-pad" aria-label="Generation summary">
               <p className="creator-kicker">Ready to create</p>
               <div className="creator-product-image" style={{ borderRadius: 14, overflow: "hidden" }}><img src={project.product.images[0]?.url} alt={project.product.name} /></div>
-              <div className="creator-summary-list" style={{ marginTop: 16 }}><div className="creator-summary-row"><span>Template</span><strong>{template.name}</strong></div><div className="creator-summary-row"><span>Market</span><strong>{MARKET_META[project.market].label}</strong></div><div className="creator-summary-row"><span>Language</span><strong>{project.language === "bilingual" ? "Arabic + English" : project.language === "ar" ? "Arabic" : "English"}</strong></div><div className="creator-summary-row"><span>Format</span><strong>{project.aspectRatio} · {project.resolution}</strong></div></div>
+              <div className="creator-summary-list" style={{ marginTop: 16 }}><div className="creator-summary-row"><span>Template</span><strong>{template.name}</strong></div><div className="creator-summary-row"><span>Outcome</span><strong>{project.goal === "bookings" ? "Get bookings" : project.goal === "whatsapp_orders" ? "Get WhatsApp orders" : "Launch campaign"}</strong></div><div className="creator-summary-row"><span>Market</span><strong>{MARKET_META[project.market].label}</strong></div><div className="creator-summary-row"><span>Language</span><strong>{project.language === "bilingual" ? "Arabic + English" : project.language === "ar" ? "Arabic" : "English"}</strong></div><div className="creator-summary-row"><span>Format</span><strong>{project.aspectRatio} · {project.resolution}</strong></div></div>
               <div className="creator-cost-box">
                 {quote ? <><small>{quote.entitlementEligible ? "Starter render eligible" : "Confirmed generation price"}</small><strong>{quote.entitlementEligible ? `Included for eligible new accounts · otherwise ${quote.credits} credits` : `${quote.credits} credits`} · usually 2–5 minutes</strong></> : <><small>Live pricing unavailable</small><strong>{qaMode ? "Development preview — no credits charged" : "Generation is disabled until pricing reconnects"}</strong></>}
               </div>

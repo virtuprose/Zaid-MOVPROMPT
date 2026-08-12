@@ -10,6 +10,13 @@ const project: CreatorProject = {
   title: "Northfield campaign",
   templateId: "luxury-product-reveal",
   status: "ready",
+  promotionKind: "product",
+  vertical: "ecommerce",
+  goal: "launch",
+  presenterMode: "none",
+  location: "",
+  bookingUrl: "",
+  whatsapp: "",
   product: {
     sourceType: "upload",
     sourceUrl: "",

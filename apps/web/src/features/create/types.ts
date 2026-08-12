@@ -1,3 +1,5 @@
+import type { BusinessVertical, CampaignGoal, PresenterMode } from "@movprompt/contracts";
+
 export type CreatorLanguage = "en" | "ar" | "bilingual";
 export type CreatorMarket = "KW" | "SA" | "AE" | "QA" | "BH" | "OM";
 export type CreatorAspectRatio = "9:16" | "1:1" | "4:5" | "16:9";
@@ -48,7 +50,7 @@ export type CreatorTemplate = {
 };
 
 export type CreatorProduct = {
-  sourceType: "link" | "upload" | "sample" | null;
+  sourceType: "product_link" | "business_link" | "upload" | "sample" | null;
   sourceUrl: string;
   name: string;
   description: string;
@@ -64,6 +66,13 @@ export type CreatorProject = {
   title: string;
   templateId: string;
   status: CreatorProjectStatus;
+  promotionKind: "product" | "business";
+  vertical: BusinessVertical;
+  goal: CampaignGoal;
+  presenterMode: PresenterMode;
+  location: string;
+  bookingUrl: string;
+  whatsapp: string;
   product: CreatorProduct;
   language: CreatorLanguage;
   market: CreatorMarket;
@@ -97,4 +106,4 @@ export const MARKET_META: Record<CreatorMarket, { label: string; currency: strin
   OM: { label: "Oman", currency: "OMR" },
 };
 
-export const CTA_OPTIONS = ["Shop now", "Order on WhatsApp", "Learn more", "Visit store"];
+export const CTA_OPTIONS = ["Shop now", "Order on WhatsApp", "Book now", "Learn more", "Visit store"];

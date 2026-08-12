@@ -6,6 +6,7 @@ import type {
   CreatorProject,
   CreatorResolution,
 } from "./types";
+import type { BusinessVertical, CampaignGoal, PresenterMode } from "@movprompt/contracts";
 
 export type CreationMode = "template" | "advanced";
 export type DraftStatus =
@@ -27,6 +28,12 @@ export type RightsAttestation = {
 export type CampaignSettings = {
   market: CreatorMarket;
   language: CreatorLanguage;
+  vertical: BusinessVertical;
+  goal: CampaignGoal;
+  presenterMode: PresenterMode;
+  location: string;
+  bookingUrl: string;
+  whatsapp: string;
   offer: string;
   cta: string;
   brandColor: string;
@@ -102,6 +109,12 @@ export function projectToCreationDraft(
     campaign: {
       market: project.market,
       language: project.language,
+      vertical: project.vertical,
+      goal: project.goal,
+      presenterMode: project.presenterMode,
+      location: project.location,
+      bookingUrl: project.bookingUrl,
+      whatsapp: project.whatsapp,
       offer: project.offer,
       cta: project.cta,
       brandColor: project.brandColor,

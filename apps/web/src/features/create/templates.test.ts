@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { CREATOR_TEMPLATES, createDraftProject, getCreatorTemplate } from "./templates";
 
 describe("beginner creator templates", () => {
-  it("ships the GCC launch catalog with editable scenes", () => {
-    expect(CREATOR_TEMPLATES).toHaveLength(12);
+  it("ships the commerce catalog plus the first service recipe with editable scenes", () => {
+    expect(CREATOR_TEMPLATES).toHaveLength(13);
     for (const template of CREATOR_TEMPLATES) {
       expect(template.scenes.length).toBeGreaterThanOrEqual(3);
       expect(template.aspectRatios).toContain("9:16");

@@ -35,6 +35,24 @@ describe("source scanner security", () => {
       }),
     ).rejects.toMatchObject({ code: "source_url_blocked", status: 400 });
     expect(fetcher).toHaveBeenCalledTimes(1);
+    expect(fetcher.mock.calls[0]?.[2]).toEqual(["8.8.8.8"]);
+  });
+
+  it("passes only the validated public addresses to the network transport", async () => {
+    const fetcher = vi.fn(async () => new Response("<title>Public business</title>", {
+      status: 200,
+      headers: { "content-type": "text/html" },
+    }));
+    const scanner = createSourceScanner({
+      fetch: fetcher,
+      resolveHost: vi.fn(async () => ["8.8.8.8", "2606:4700:4700::1111"]),
+    });
+    await scanner.scan({
+      url: "https://public.example.test",
+      kind: "business",
+      requestId: "request-pinned-dns",
+    });
+    expect(fetcher.mock.calls[0]?.[2]).toEqual(["8.8.8.8", "2606:4700:4700::1111"]);
   });
 
   it("extracts imported facts while clearly warning that users must confirm them", async () => {

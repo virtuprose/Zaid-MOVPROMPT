@@ -1,5 +1,8 @@
 import { isIP } from "node:net";
 import { resolve4, resolve6 } from "node:dns/promises";
+import { request as httpRequest } from "node:http";
+import { request as httpsRequest } from "node:https";
+import { Readable } from "node:stream";
 
 import type { SourceScanResponse } from "@movprompt/contracts";
 
@@ -10,7 +13,7 @@ const MAX_REDIRECTS = 3;
 const DEFAULT_TIMEOUT_MS = 8_000;
 
 type ResolveHost = (hostname: string) => Promise<string[]>;
-type FetchLike = (input: string, init: RequestInit) => Promise<Response>;
+type FetchLike = (input: string, init: RequestInit, pinnedAddresses?: readonly string[]) => Promise<Response>;
 
 export interface SourceScanner {
   scan(input: {
@@ -110,7 +113,7 @@ function safeHttpUrl(value: string, base?: URL): URL {
   return url;
 }
 
-async function assertPublicHost(url: URL, resolveHost: ResolveHost): Promise<void> {
+async function resolvePublicHost(url: URL, resolveHost: ResolveHost): Promise<string[]> {
   const addresses = await resolveHost(url.hostname);
   if (!addresses.length || addresses.some((address) => !isPublicAddress(address))) {
     throw new ApiHttpError({
@@ -120,6 +123,40 @@ async function assertPublicHost(url: URL, resolveHost: ResolveHost): Promise<voi
       retryable: false,
     });
   }
+  return addresses;
+}
+
+async function pinnedNodeFetch(input: string, init: RequestInit, pinnedAddresses: readonly string[] = []): Promise<Response> {
+  const url = new URL(input);
+  const request = url.protocol === "https:" ? httpsRequest : httpRequest;
+  if (!pinnedAddresses.length) throw new Error("A validated public address is required.");
+  return new Promise<Response>((resolve, reject) => {
+    const requestHeaders: Record<string, string> = {};
+    new Headers(init.headers).forEach((value, key) => { requestHeaders[key] = value; });
+    const clientRequest = request(url, {
+      method: init.method ?? "GET",
+      headers: requestHeaders,
+      signal: init.signal ?? undefined,
+      lookup: (_hostname, options, callback) => {
+        const records = pinnedAddresses.map((address) => ({ address, family: isIP(address) }));
+        if (options.all) callback(null, records);
+        else callback(null, records[0]!.address, records[0]!.family);
+      },
+    }, (incoming) => {
+      const headers = new Headers();
+      for (const [key, value] of Object.entries(incoming.headers)) {
+        if (Array.isArray(value)) value.forEach((item) => headers.append(key, item));
+        else if (value !== undefined) headers.set(key, value);
+      }
+      resolve(new Response(Readable.toWeb(incoming) as ReadableStream<Uint8Array>, {
+        status: incoming.statusCode ?? 500,
+        ...(incoming.statusMessage ? { statusText: incoming.statusMessage } : {}),
+        headers,
+      }));
+    });
+    clientRequest.once("error", reject);
+    clientRequest.end();
+  });
 }
 
 function meta(html: string, keys: string[]): string | null {
@@ -177,7 +214,7 @@ function priceFact(html: string): string | null {
 }
 
 export function createSourceScanner(options: SourceScannerOptions = {}): SourceScanner {
-  const fetcher = options.fetch ?? ((input, init) => fetch(input, init));
+  const fetcher = options.fetch ?? pinnedNodeFetch;
   const resolveHost = options.resolveHost ?? defaultResolveHost;
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
 
@@ -186,7 +223,7 @@ export function createSourceScanner(options: SourceScannerOptions = {}): SourceS
       let url = safeHttpUrl(input.url);
       let response: Response | null = null;
       for (let redirect = 0; redirect <= MAX_REDIRECTS; redirect += 1) {
-        await assertPublicHost(url, resolveHost);
+        const pinnedAddresses = await resolvePublicHost(url, resolveHost);
         const controller = new AbortController();
         const timer = setTimeout(() => controller.abort(), timeoutMs);
         try {
@@ -198,7 +235,7 @@ export function createSourceScanner(options: SourceScannerOptions = {}): SourceS
               accept: "text/html,application/xhtml+xml",
               "user-agent": "MovPromptSourceScanner/1.0",
             },
-          });
+          }, pinnedAddresses);
         } catch (error) {
           throw new ApiHttpError({
             code: error instanceof Error && error.name === "AbortError" ? "source_scan_timeout" : "source_scan_failed",
