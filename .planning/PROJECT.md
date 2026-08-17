@@ -84,18 +84,21 @@ A Kuwait business owner with no video skills can create a professional, accurate
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Serve all business social-content outcomes, not ads only | Businesses need a repeatable content system: education, announcements, trust, offers, products, services, and stories | — Pending |
-| Launch Kuwait first | Allows high-quality KWD, Arabic/RTL, Gulf tone, phone, WhatsApp, booking, seasonal, and clinic policy support | — Pending |
-| Focus launch templates on salons, clinics, shops, and ecommerce | These verticals cover the main Kuwait booking, trust, retail, and WhatsApp-commerce jobs | — Pending |
-| Template Mode is the default | The primary user has no video knowledge and should choose outcomes rather than models or prompts | — Pending |
-| Advanced Mode is separate and secondary | Preserves professional control without burdening beginners | — Pending |
-| No traditional timeline at launch | Guided edits are easier and sufficient for business facts and social formats | — Pending |
-| Account creation occurs only at Generate | Users experience value before authentication and retain the exact draft | — Pending |
-| Accept product/business URLs, photos, footage, and manual entry | Supports both physical-product and service businesses | — Pending |
-| Every generation produces a social-media pack | Customers need usable deliverables, not one isolated provider clip | — Pending |
-| PostgreSQL is authenticated source of truth; IndexedDB is guest-only | Enables durable projects, ownership, recovery, and cross-device authenticated use | — Pending |
-| Retain the current portable architecture | The foundation is substantial; another rewrite would delay user value and increase risk | — Pending |
-| Clinic content has stricter guardrails | Medical claims, patient privacy, consent, and before/after content create higher legal and trust risk | — Pending |
+| Serve all business social-content outcomes, not ads only | Businesses need a repeatable content system: education, announcements, trust, offers, products, services, and stories | ✓ Locked 2026-08-17 |
+| Launch Kuwait first | Allows high-quality KWD, Arabic/RTL, Gulf tone, phone, WhatsApp, booking, seasonal, and clinic policy support | ✓ Locked 2026-08-17 |
+| Focus launch templates on salons, clinics, shops, and ecommerce | These verticals cover the main Kuwait booking, trust, retail, and WhatsApp-commerce jobs | ✓ Locked 2026-08-17 |
+| Template Mode is the default | The primary user has no video knowledge and should choose outcomes rather than models or prompts | ✓ Locked 2026-08-17 |
+| Advanced Mode is separate and secondary | Preserves professional control without burdening beginners | ✓ Locked 2026-08-17 |
+| No traditional timeline at launch | Guided edits are easier and sufficient for business facts and social formats | ✓ Locked 2026-08-17 |
+| Account creation occurs only at Generate | Users experience value before authentication and retain the exact draft | ✓ Locked 2026-08-17 |
+| Accept product/business URLs, photos, footage, and manual entry | Supports both physical-product and service businesses | ✓ Locked 2026-08-17 |
+| Every generation produces a social-media pack | Customers need usable deliverables, not one isolated provider clip | ✓ Locked 2026-08-17 |
+| PostgreSQL is authenticated source of truth; IndexedDB is guest-only | Enables durable projects, ownership, recovery, and cross-device authenticated use | ✓ Locked 2026-08-17 |
+| Retain the current portable architecture | The foundation is substantial; another rewrite would delay user value and increase risk | ✓ Locked 2026-08-17 |
+| Clinic content has stricter guardrails | Medical claims, patient privacy, consent, and before/after content create higher legal and trust risk | ✓ Locked 2026-08-17 |
+| Launch with 18 verified templates; keep unreviewed concepts hidden or labeled directions | A smaller trustworthy catalog is stronger than 50 repeated or unplayable demo cards | ✓ Locked 2026-08-17 |
+| Allow private-beta first campaign before email verification; remind in dashboard | Removes meeting/private-beta friction while preserving a clear path to production verification controls | ✓ Locked 2026-08-17 |
+| Defer Digital Twins to v2 | Consent, identity, revocation, deletion, Arabic voice, and provider proof are too risky to bundle into the beginner launch | ✓ Locked 2026-08-17 |
 
 ## Evolution
 
