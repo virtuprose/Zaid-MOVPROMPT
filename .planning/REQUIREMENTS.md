@@ -178,17 +178,120 @@ Deferred until the beginner Kuwait launch is stable and measured.
 
 ## Traceability
 
-Roadmap mapping will be populated after phase creation. Every v1 requirement must map to exactly one phase.
-
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| *(populated by roadmap)* | - | - |
+| TRUTH-01 | Phase 1 | Pending |
+| TRUTH-02 | Phase 1 | Pending |
+| TRUTH-03 | Phase 1 | Pending |
+| TRUTH-04 | Phase 1 | Pending |
+| TRUTH-05 | Phase 1 | Pending |
+| TRUTH-06 | Phase 1 | Pending |
+| TRUTH-07 | Phase 1 | Pending |
+| AUTH-01 | Phase 2 | Pending |
+| AUTH-02 | Phase 2 | Pending |
+| AUTH-03 | Phase 2 | Pending |
+| AUTH-04 | Phase 2 | Pending |
+| AUTH-05 | Phase 2 | Pending |
+| AUTH-06 | Phase 2 | Pending |
+| AUTH-07 | Phase 2 | Pending |
+| AUTH-08 | Phase 2 | Pending |
+| AUTH-09 | Phase 2 | Pending |
+| AUTH-10 | Phase 2 | Pending |
+| SOURCE-01 | Phase 3 | Pending |
+| SOURCE-02 | Phase 3 | Pending |
+| SOURCE-03 | Phase 3 | Pending |
+| SOURCE-04 | Phase 2 | Pending |
+| SOURCE-05 | Phase 2 | Pending |
+| SOURCE-06 | Phase 2 | Pending |
+| SOURCE-07 | Phase 2 | Pending |
+| CREATE-01 | Phase 3 | Pending |
+| CREATE-02 | Phase 3 | Pending |
+| CREATE-03 | Phase 3 | Pending |
+| CREATE-04 | Phase 3 | Pending |
+| CREATE-05 | Phase 3 | Pending |
+| CREATE-06 | Phase 3 | Pending |
+| CREATE-07 | Phase 3 | Pending |
+| CREATE-08 | Phase 3 | Pending |
+| CREATE-09 | Phase 3 | Pending |
+| CREATE-10 | Phase 3 | Pending |
+| GEN-01 | Phase 1 | Pending |
+| GEN-02 | Phase 1 | Pending |
+| GEN-03 | Phase 1 | Pending |
+| GEN-04 | Phase 1 | Pending |
+| GEN-05 | Phase 4 | Pending |
+| GEN-06 | Phase 4 | Pending |
+| GEN-07 | Phase 4 | Pending |
+| GEN-08 | Phase 4 | Pending |
+| GEN-09 | Phase 4 | Pending |
+| GEN-10 | Phase 4 | Pending |
+| GEN-11 | Phase 4 | Pending |
+| GEN-12 | Phase 4 | Pending |
+| GEN-13 | Phase 4 | Pending |
+| GEN-14 | Phase 4 | Pending |
+| PROJ-01 | Phase 5 | Pending |
+| PROJ-02 | Phase 5 | Pending |
+| PROJ-03 | Phase 5 | Pending |
+| PROJ-04 | Phase 5 | Pending |
+| PROJ-05 | Phase 5 | Pending |
+| PROJ-06 | Phase 2 | Pending |
+| EDIT-01 | Phase 6 | Pending |
+| EDIT-02 | Phase 6 | Pending |
+| EDIT-03 | Phase 6 | Pending |
+| EDIT-04 | Phase 6 | Pending |
+| EDIT-05 | Phase 6 | Pending |
+| EDIT-06 | Phase 6 | Pending |
+| EDIT-07 | Phase 6 | Pending |
+| PACK-01 | Phase 6 | Pending |
+| PACK-02 | Phase 6 | Pending |
+| PACK-03 | Phase 6 | Pending |
+| PACK-04 | Phase 6 | Pending |
+| PACK-05 | Phase 6 | Pending |
+| PACK-06 | Phase 6 | Pending |
+| PACK-07 | Phase 6 | Pending |
+| LOCAL-01 | Phase 8 | Pending |
+| LOCAL-02 | Phase 8 | Pending |
+| LOCAL-03 | Phase 8 | Pending |
+| LOCAL-04 | Phase 8 | Pending |
+| LOCAL-05 | Phase 8 | Pending |
+| LOCAL-06 | Phase 8 | Pending |
+| SAFE-01 | Phase 8 | Pending |
+| SAFE-02 | Phase 8 | Pending |
+| SAFE-03 | Phase 8 | Pending |
+| SAFE-04 | Phase 8 | Pending |
+| SAFE-05 | Phase 8 | Pending |
+| TMPL-01 | Phase 7 | Pending |
+| TMPL-02 | Phase 7 | Pending |
+| TMPL-03 | Phase 7 | Pending |
+| TMPL-04 | Phase 7 | Pending |
+| TMPL-05 | Phase 7 | Pending |
+| TMPL-06 | Phase 7 | Pending |
+| ADV-01 | Phase 9 | Pending |
+| ADV-02 | Phase 9 | Pending |
+| ADV-03 | Phase 9 | Pending |
+| ADV-04 | Phase 9 | Pending |
+| ADV-05 | Phase 9 | Pending |
+| ADV-06 | Phase 9 | Pending |
+| ADV-07 | Phase 9 | Pending |
+| BILL-01 | Phase 10 | Pending |
+| BILL-02 | Phase 10 | Pending |
+| BILL-03 | Phase 10 | Pending |
+| BILL-04 | Phase 10 | Pending |
+| BILL-05 | Phase 10 | Pending |
+| OPS-01 | Phase 10 | Pending |
+| OPS-02 | Phase 10 | Pending |
+| OPS-03 | Phase 10 | Pending |
+| OPS-04 | Phase 10 | Pending |
+| OPS-05 | Phase 10 | Pending |
+| OPS-06 | Phase 10 | Pending |
+| OPS-07 | Phase 10 | Pending |
+| OPS-08 | Phase 10 | Pending |
+| OPS-09 | Phase 10 | Pending |
 
 **Coverage:**
 - v1 requirements: 106 total
-- Mapped to phases: 0
-- Unmapped: 106
+- Mapped to phases: 106
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-08-17*
-*Last updated: 2026-08-17 after autonomous research and product scoping*
+*Last updated: 2026-08-17 after roadmap traceability mapping*
