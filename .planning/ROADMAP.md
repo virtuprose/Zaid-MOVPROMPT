@@ -33,12 +33,12 @@ MovPrompt moves from a feature-rich prototype to a production Kuwait Campaign Au
 4. API and worker fail closed when capability, pricing, storage, quality, or runtime fingerprints differ.
 5. Sample, source, direction, template-preview, and generated media are visibly and technically distinct throughout canonical routes.
 
-**Plans:** 1/3 plans executed
+**Plans:** 2/3 plans executed
 
 Plans:
 
 - [x] 01-01-PLAN.md
-- [ ] 01-02-PLAN.md
+- [x] 01-02-PLAN.md
 - [ ] 01-03-PLAN.md
 - [x] 01-01: Reconcile current runtime, migrations, service heartbeat, capability fingerprint, and generation availability contract.
 - [ ] 01-02: Complete authoritative pricing, quote invalidation, starter entitlement, and idempotent submit integration.
@@ -244,7 +244,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Production Truth Foundation | 1/3 | In Progress|  |
+| 1. Production Truth Foundation | 2/3 | In Progress|  |
 | 2. Guest, Authentication, and Data Integrity | 0/3 | Not started | - |
 | 3. Product and Service Golden Paths | 0/3 | Not started | - |
 | 4. Durable Generation and Accepted Quality | 0/3 | Not started | - |
