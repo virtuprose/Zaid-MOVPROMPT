@@ -100,6 +100,8 @@ export const paymentRefundStatus = pgEnum("payment_refund_status", [
 export const notificationSeverity = pgEnum("notification_severity", ["info", "success", "warning", "error"]);
 export const outboxStatus = pgEnum("outbox_status", ["pending", "processing", "completed", "failed", "dead"]);
 export const serviceHeartbeatStatus = pgEnum("service_heartbeat_status", ["starting", "ready", "stopping"]);
+export const guestClaimStatus = pgEnum("guest_claim_status", ["pending", "securing", "ready", "failed"]);
+export const guestClaimAssetStatus = pgEnum("guest_claim_asset_status", ["pending", "securing", "verified", "failed"]);
 
 /** Better Auth core user table. Existing Supabase UUIDs can be inserted unchanged. */
 export const users = pgTable(
@@ -325,6 +327,100 @@ export const creatorProjectAssets = pgTable(
       sql`${table.checksumSha256} IS NULL OR ${table.checksumSha256} ~ '^[0-9a-f]{64}$'`,
     ),
     index("creator_assets_project_created_idx").on(table.projectId, table.createdAt),
+  ],
+);
+
+/** Durable authenticated handoff for one browser-local campaign snapshot. */
+export const guestClaimOperations = pgTable(
+  "guest_claim_operations",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    draftId: uuid("draft_id").notNull(),
+    pendingGenerationId: text("pending_generation_id").notNull(),
+    snapshotDigest: text("snapshot_digest").notNull(),
+    snapshot: jsonb("snapshot_json").$type<JsonObject>().notNull(),
+    assetManifest: jsonb("asset_manifest").$type<JsonObject[]>().notNull().default([]),
+    projectId: uuid("project_id"),
+    projectVersionId: uuid("project_version_id"),
+    status: guestClaimStatus("status").notNull().default("pending"),
+    errorCode: text("error_code"),
+    errorMetadata: jsonb("error_metadata").$type<JsonObject>().notNull().default({}),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+    finalizedAt: timestamp("finalized_at", { withTimezone: true }),
+  },
+  (table) => [
+    unique("guest_claim_operations_id_user_unique").on(table.id, table.userId),
+    unique("guest_claim_operations_draft_unique").on(table.draftId),
+    unique("guest_claim_operations_user_intent_unique").on(table.userId, table.pendingGenerationId),
+    foreignKey({
+      name: "guest_claim_operations_project_owner_fk",
+      columns: [table.projectId, table.userId],
+      foreignColumns: [creatorProjects.id, creatorProjects.userId],
+    }).onDelete("restrict"),
+    foreignKey({
+      name: "guest_claim_operations_version_owner_fk",
+      columns: [table.projectVersionId, table.projectId, table.userId],
+      foreignColumns: [creatorProjectVersions.id, creatorProjectVersions.projectId, creatorProjectVersions.userId],
+    }).onDelete("restrict"),
+    check("guest_claim_operations_digest_format", sql`${table.snapshotDigest} ~ '^[0-9a-f]{64}$'`),
+    check("guest_claim_operations_error_code_bounded", sql`${table.errorCode} IS NULL OR length(${table.errorCode}) <= 120`),
+    check("guest_claim_operations_error_metadata_bounded", sql`octet_length(${table.errorMetadata}::text) <= 4096`),
+    check(
+      "guest_claim_operations_ready_receipt",
+      sql`${table.status} <> 'ready' OR (${table.projectId} IS NOT NULL AND ${table.projectVersionId} IS NOT NULL AND ${table.finalizedAt} IS NOT NULL)`,
+    ),
+    index("guest_claim_operations_user_updated_idx").on(table.userId, table.updatedAt),
+    index("guest_claim_operations_status_updated_idx").on(table.status, table.updatedAt),
+  ],
+);
+
+/** Each browser asset checkpoint is owned by the operation's authenticated user. */
+export const guestClaimAssets = pgTable(
+  "guest_claim_assets",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    claimOperationId: uuid("claim_operation_id").notNull(),
+    userId: uuid("user_id").notNull(),
+    localAssetId: uuid("local_asset_id").notNull(),
+    ordinal: integer("ordinal").notNull(),
+    kind: assetKind("asset_kind").notNull(),
+    status: guestClaimAssetStatus("status").notNull().default("pending"),
+    bucket: text("storage_bucket"),
+    objectKey: text("object_key"),
+    mimeType: text("mime_type").notNull(),
+    sizeBytes: bigint("size_bytes", { mode: "number" }).notNull(),
+    checksumSha256: text("checksum_sha256").notNull(),
+    errorCode: text("error_code"),
+    errorMetadata: jsonb("error_metadata").$type<JsonObject>().notNull().default({}),
+    verifiedAt: timestamp("verified_at", { withTimezone: true }),
+    localCleanupEligibleAt: timestamp("local_cleanup_eligible_at", { withTimezone: true }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (table) => [
+    unique("guest_claim_assets_operation_ordinal_unique").on(table.claimOperationId, table.ordinal),
+    unique("guest_claim_assets_operation_local_asset_unique").on(table.claimOperationId, table.localAssetId),
+    foreignKey({
+      name: "guest_claim_assets_operation_owner_fk",
+      columns: [table.claimOperationId, table.userId],
+      foreignColumns: [guestClaimOperations.id, guestClaimOperations.userId],
+    }).onDelete("cascade"),
+    check("guest_claim_assets_ordinal_range", sql`${table.ordinal} BETWEEN 0 AND 99`),
+    check("guest_claim_assets_size_range", sql`${table.sizeBytes} > 0 AND ${table.sizeBytes} <= 52428800`),
+    check("guest_claim_assets_checksum_format", sql`${table.checksumSha256} ~ '^[0-9a-f]{64}$'`),
+    check("guest_claim_assets_storage_pair", sql`(${table.bucket} IS NULL) = (${table.objectKey} IS NULL)`),
+    check(
+      "guest_claim_assets_verified_storage",
+      sql`${table.status} <> 'verified' OR (${table.bucket} IS NOT NULL AND ${table.objectKey} IS NOT NULL AND ${table.verifiedAt} IS NOT NULL)`,
+    ),
+    check("guest_claim_assets_error_code_bounded", sql`${table.errorCode} IS NULL OR length(${table.errorCode}) <= 120`),
+    check("guest_claim_assets_error_metadata_bounded", sql`octet_length(${table.errorMetadata}::text) <= 4096`),
+    index("guest_claim_assets_operation_status_idx").on(table.claimOperationId, table.status, table.ordinal),
+    uniqueIndex("guest_claim_assets_bucket_key_unique").on(table.bucket, table.objectKey).where(sql`${table.objectKey} IS NOT NULL`),
   ],
 );
 

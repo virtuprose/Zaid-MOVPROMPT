@@ -68,12 +68,12 @@ assert_query() {
 }
 
 assert_query "guest claim tables exist" "SELECT (to_regclass('public.guest_claim_operations') IS NOT NULL AND to_regclass('public.guest_claim_assets') IS NOT NULL)::int;"
-assert_query "guest claim owner RLS is forced" "SELECT (SELECT relrowsecurity AND relforcerowsecurity FROM pg_class WHERE oid = 'public.guest_claim_operations'::regclass) AND (SELECT relrowsecurity AND relforcerowsecurity FROM pg_class WHERE oid = 'public.guest_claim_assets'::regclass);"
+assert_query "guest claim owner RLS is forced" "SELECT ((SELECT relrowsecurity AND relforcerowsecurity FROM pg_class WHERE oid = 'public.guest_claim_operations'::regclass) AND (SELECT relrowsecurity AND relforcerowsecurity FROM pg_class WHERE oid = 'public.guest_claim_assets'::regclass))::int;"
 assert_query "claim operation owner tuple foreign keys exist" "SELECT (SELECT count(*) >= 2 FROM pg_constraint WHERE conrelid = 'public.guest_claim_operations'::regclass AND contype = 'f')::int;"
 assert_query "claim asset operation owner foreign key exists" "SELECT (SELECT count(*) >= 1 FROM pg_constraint WHERE conrelid = 'public.guest_claim_assets'::regclass AND contype = 'f')::int;"
 assert_query "claim operations have a user intent uniqueness index" "SELECT EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname = 'public' AND tablename = 'guest_claim_operations' AND indexdef LIKE '%(user_id, pending_generation_id)%')::int;"
 assert_query "claim assets have ordered checkpoint uniqueness" "SELECT EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname = 'public' AND tablename = 'guest_claim_assets' AND indexdef LIKE '%(claim_operation_id, ordinal)%')::int;"
-assert_query "claim tables never persist signed URLs" "SELECT NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name IN ('guest_claim_operations', 'guest_claim_assets') AND column_name ILIKE '%signed%url%')::int;"
+assert_query "claim tables never persist signed URLs" "SELECT (NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name IN ('guest_claim_operations', 'guest_claim_assets') AND column_name ILIKE '%signed%url%'))::int;"
 
 DATABASE_URL_DIRECT="$database_url" bun run db:migrate >/dev/null
 echo "Phase 2 migration validation passed on a disposable PostgreSQL 17 database."
