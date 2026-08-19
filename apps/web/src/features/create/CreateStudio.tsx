@@ -56,7 +56,7 @@ import {
 } from "./projectStore";
 import { projectToCreationDraft, type CreationDraft, type GenerationQuote } from "./contracts";
 import { automaticQuoteRetryDelay } from "./quoteRecovery";
-import { cleanupExpiredGuestDrafts, deleteGuestDraft, getGuestAsset, getGuestDraft, putGuestAsset, saveGuestDraft } from "./guestDraftStore";
+import { cleanupExpiredGuestDrafts, getGuestAsset, getGuestDraft, putGuestAsset, saveGuestDraft } from "./guestDraftStore";
 import { claimGuestImage, mirrorProductImages } from "./creatorAssets";
 import {
   hasUnclaimedCreatorAssets,
@@ -292,6 +292,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
   const generationSubmission = useRef(false);
   const resumedGeneration = useRef(false);
   const startGenerationRef = useRef<(ratioOverride?: CreatorAspectRatio) => Promise<void>>(async () => undefined);
+  const generateButtonRef = useRef<HTMLButtonElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const template = getCreatorTemplate(project.templateId);
   const projectDurationSeconds = project.scenes.reduce((sum, scene) => sum + scene.duration, 0);
@@ -818,13 +819,14 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
       mergeClaimedCreatorProject(candidate, cloudProject, images),
       user.id,
     );
-    if (
-      (requestedDraft || candidate.product.images.some((image) => image.assetKey)) &&
-      claimed.product.images.every((image) => Boolean(image.storagePath))
-    ) {
-      await deleteGuestDraft(candidate.id);
-    }
+    // Guest blobs stay local until the canonical claim receipt and every asset digest
+    // are compared by guestClaimRecovery. Storage-path presence alone is not proof.
     return claimed;
+  };
+
+  const handleAuthGateChange = (open: boolean) => {
+    setAuthGateOpen(open);
+    if (!open) window.setTimeout(() => generateButtonRef.current?.focus(), 0);
   };
 
   const startGeneration = async (ratioOverride?: CreatorAspectRatio) => {
@@ -1318,7 +1320,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
               <div className="creator-check-row"><input id="preflight-audio" type="checkbox" checked={project.audio} onChange={(event) => updateProject({ audio: event.target.checked })} /><label htmlFor="preflight-audio">{tr("Generate music and sound for this version.", "ولّد موسيقى وصوت لهذه النسخة.")}</label></div>
               <div className="creator-check-row"><input id="rights" type="checkbox" checked={rightsConfirmed} onChange={(event) => setRightsConfirmed(event.target.checked)} /><label htmlFor="rights">{tr("I own these images or have permission to use them in advertising, and the campaign details above are accurate.", "أنا أملك هذه الصور أو عندي إذن لاستخدامها إعلانياً، ومعلومات الحملة أعلاه صحيحة.")}</label></div>
               {sourceError && <p className="creator-error" role="alert">{sourceError}</p>}
-              <div className="creator-actions-row"><button className="creator-button creator-button-quiet" type="button" onClick={() => setStep(templateFirst.current ? "source" : "template")}><ArrowLeft aria-hidden="true" /> {tr("Back", "رجوع")}</button><button className="creator-button creator-button-primary" type="button" onClick={() => void startGeneration()} disabled={!project.product.name.trim() || !rightsConfirmed || (!simulatedGeneration && (!quoteLoaded || !quote)) || sourceBusy}><Sparkles aria-hidden="true" /> {simulatedGeneration ? tr("Prepare product preview", "جهّز معاينة المنتج") : tr("Generate video", "ولّد الفيديو")}</button></div>
+              <div className="creator-actions-row"><button className="creator-button creator-button-quiet" type="button" onClick={() => setStep(templateFirst.current ? "source" : "template")}><ArrowLeft aria-hidden="true" /> {tr("Back", "رجوع")}</button><button ref={generateButtonRef} className="creator-button creator-button-primary" type="button" onClick={() => void startGeneration()} disabled={!project.product.name.trim() || !rightsConfirmed || (!simulatedGeneration && (!quoteLoaded || !quote)) || sourceBusy}><Sparkles aria-hidden="true" /> {simulatedGeneration ? tr("Prepare product preview", "جهّز معاينة المنتج") : tr("Generate video", "ولّد الفيديو")}</button></div>
             </section>
 
             <aside className="creator-panel creator-panel-pad creator-generation-summary" aria-label={tr("Generation summary", "ملخص التوليد")}>
@@ -1336,7 +1338,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
           </div>
         )}
       </div>}
-      <AuthGateDialog open={authGateOpen} onOpenChange={setAuthGateOpen} returnPath={`/create?draft=${encodeURIComponent(project.id)}&resume=generate`} />
+      <AuthGateDialog open={authGateOpen} onOpenChange={handleAuthGateChange} returnPath={`/create?draft=${encodeURIComponent(project.id)}&resume=generate`} />
     </CreatorShell>
   );
 }
