@@ -260,6 +260,7 @@
   justify-content: flex-end;
   gap: 8px;
 }
+.creator-progress-current-step { display: none; }
 
 .creator-progress-step { display: flex; align-items: center; gap: 8px; color: hsl(var(--creator-muted)); font-size: 12px; font-weight: 600; }
 .creator-progress-step::after { content: ""; width: 28px; height: 1px; background: hsl(var(--creator-line)); }
@@ -921,6 +922,9 @@
   .creator-mode-handoff { align-items: flex-start; flex-wrap: wrap; }
   .creator-mode-handoff .creator-button { width: 100%; margin-inline-start: 0; }
   .creator-progress { min-width: 0; justify-content: flex-start; margin-top: 20px; overflow-x: auto; }
+  .creator-progress-current-step { display: block; margin-top: 20px; color: hsl(var(--creator-ink)); font-size: 12px; font-weight: 700; line-height: 1.4; }
+  .creator-progress-wrap .creator-progress { margin-top: 9px; }
+  .creator-progress-step-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
   .creator-progress-step span { font-size: 11px; }
   .creator-template-grid, .creator-project-grid, .creator-generation-grid { grid-template-columns: 1fr; }
   .creator-generation-history-head { align-items: stretch; flex-direction: column; }

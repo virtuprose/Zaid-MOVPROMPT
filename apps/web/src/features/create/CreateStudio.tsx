@@ -3,7 +3,6 @@ import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   ArrowLeft,
   ArrowRight,
-  Check,
   CheckCircle2,
   ChevronDown,
   ChevronUp,
@@ -70,6 +69,7 @@ import { automaticQuoteRetryDelay } from "./quoteRecovery";
 import { cleanupExpiredGuestDrafts, getGuestAsset, getGuestDraft, loadGuestDraft, markClaimCheckpoint, putGuestAsset, saveGuestDraft } from "./guestDraftStore";
 import { claimGuestAssets, GuestClaimAssetFailure, type GuestClaimProgress as GuestClaimProgressState } from "./creatorAssets";
 import { GuestClaimProgress } from "./GuestClaimProgress";
+import { CreatorProgress } from "./CreatorProgress";
 import { buildGuestClaimSnapshot } from "./guestClaimSnapshot";
 import {
   hasUnclaimedCreatorAssets,
@@ -213,28 +213,6 @@ async function checksumForBlob(blob: Blob): Promise<string> {
 function isAbortError(error: unknown): boolean {
   return error instanceof DOMException && error.name === "AbortError"
     || error instanceof Error && error.name === "AbortError";
-}
-
-function Progress({ current, steps, label }: { current: CreatorStep; steps: Array<{ id: CreatorStep; label: string }>; label: string }) {
-  const currentIndex = steps.findIndex((step) => step.id === current);
-  return (
-    <div
-      className="creator-progress"
-      role="progressbar"
-      aria-label={`${label} ${currentIndex + 1} / ${steps.length}`}
-      aria-valuemin={1}
-      aria-valuemax={steps.length}
-      aria-valuenow={currentIndex + 1}
-      aria-valuetext={`${steps[currentIndex]?.label ?? label} (${currentIndex + 1} / ${steps.length})`}
-    >
-      {steps.map((step, index) => (
-        <div key={step.id} aria-current={index === currentIndex ? "step" : undefined} className={cn("creator-progress-step", index === currentIndex && "is-current", index < currentIndex && "is-done")}>
-          <span>{index < currentIndex ? <Check aria-hidden="true" /> : index + 1}</span>
-          {step.label}
-        </div>
-      ))}
-    </div>
-  );
 }
 
 function normalizeLoadedProject(project: CreatorProject): CreatorProject {
@@ -1542,7 +1520,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
               {modeSwitching ? <Loader2 className="animate-spin" aria-hidden="true" /> : <ArrowRight aria-hidden="true" />}
             </button>
           </div>
-          <Progress current={step} steps={flowSteps} label={tr("Step", "الخطوة")} />
+          <CreatorProgress current={step} steps={flowSteps} label={tr("Step", "الخطوة")} arabic={arabicUi} />
         </header>
 
         {step === "template" && <TemplateGrid selectedId={project.templateId} onSelect={selectTemplate} />}
