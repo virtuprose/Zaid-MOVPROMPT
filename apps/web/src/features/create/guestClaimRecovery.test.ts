@@ -5,6 +5,8 @@ import {
   createMemoryGuestDraftStorage,
   getGuestDraft,
   markClaimCheckpoint,
+  getGuestAsset,
+  putGuestAsset,
   saveGuestDraft,
   setGuestDraftStorageForTests,
 } from "./guestDraftStore";
@@ -46,7 +48,7 @@ function receipt(overrides: Partial<CanonicalClaimReceipt> = {}): CanonicalClaim
     pendingGenerationId: INTENT_ID,
     snapshotDigest: "b".repeat(64),
     project: {} as CanonicalClaimReceipt["project"],
-    version: { configuration } as CanonicalClaimReceipt["version"],
+    version: { configuration } as unknown as CanonicalClaimReceipt["version"],
     assetManifest: manifest,
     ...overrides,
   };
@@ -60,17 +62,19 @@ describe("guest claim recovery", () => {
     await saveGuestDraft(draft());
     const checkpoint = await markClaimCheckpoint(DRAFT_ID, { pendingGenerationId: INTENT_ID, snapshotDigest: "b".repeat(64), configuration, assetManifest: manifest });
 
-    expect(verifyCanonicalReceipt(checkpoint!, receipt({ version: { configuration: {} } as CanonicalClaimReceipt["version"] }))).toMatchObject({ state: "configuration_mismatch" });
+    expect(verifyCanonicalReceipt(checkpoint!, receipt({ version: { configuration: {} } as unknown as CanonicalClaimReceipt["version"] }))).toMatchObject({ state: "configuration_mismatch" });
     expect(await verifyAndDeleteVerifiedDraft(DRAFT_ID, receipt({ assetManifest: [{ ...manifest[0]!, checksumSha256: "c".repeat(64) }] }))).toMatchObject({ state: "asset_mismatch" });
     expect(await getGuestDraft(DRAFT_ID)).toMatchObject({ pendingGenerationId: INTENT_ID });
   });
 
   it("deletes a matching draft once and treats replay as harmless", async () => {
     setGuestDraftStorageForTests(createMemoryGuestDraftStorage());
-    await saveGuestDraft(draft());
+    const localBlobKey = await putGuestAsset(DRAFT_ID, new File(["image bytes"], "coffee.png", { type: "image/png" }));
+    await saveGuestDraft({ ...draft(), assetKeys: [localBlobKey] });
     await markClaimCheckpoint(DRAFT_ID, { pendingGenerationId: INTENT_ID, snapshotDigest: "b".repeat(64), configuration, assetManifest: manifest });
 
     await expect(verifyAndDeleteVerifiedDraft(DRAFT_ID, receipt())).resolves.toMatchObject({ state: "verified" });
+    await expect(getGuestAsset(localBlobKey)).resolves.toBeNull();
     await expect(verifyAndDeleteVerifiedDraft(DRAFT_ID, receipt())).resolves.toEqual({ state: "missing" });
   });
 

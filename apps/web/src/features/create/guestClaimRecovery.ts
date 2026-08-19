@@ -7,6 +7,7 @@ import {
   type GuestClaimCheckpoint,
   type StoredGuestDraft,
 } from "./guestDraftStore";
+import type { CreationDraft } from "./contracts";
 
 export type GuestClaimRecoveryState =
   | { state: "missing" | "expired" }
@@ -18,6 +19,12 @@ export type CanonicalClaimReceipt = GuestClaimReceipt & {
   /** The authenticated claim boundary must return the server-confirmed manifest, never inferred from URLs. */
   assetManifest?: GuestClaimAssetManifest;
 };
+
+export type GuestClaimFailureReason = "claim_failed" | "offline" | "checksum_mismatch" | "configuration_mismatch" | "wrong_account";
+
+export function recoverFailedGuestClaim(draft: CreationDraft, reason: GuestClaimFailureReason): { state: GuestClaimFailureReason; draft: CreationDraft } {
+  return { state: reason, draft };
+}
 
 function canonical(value: unknown): string {
   if (value === null || typeof value !== "object") return JSON.stringify(value);
