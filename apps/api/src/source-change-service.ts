@@ -49,6 +49,7 @@ function withoutIncompatibleOutput(
     creatorProject.pendingGenerationId = null;
     creatorProject.pendingQuoteCredits = null;
     creatorProject.status = "ready";
+    creatorProject.sourceFingerprint = fingerprint;
   }
   return next;
 }

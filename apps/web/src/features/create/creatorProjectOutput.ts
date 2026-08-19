@@ -16,13 +16,16 @@ export function isBundledDemoVideoUrl(value: string | null | undefined) {
   }
 }
 
-export function hasRealCreatorVideo(project: Pick<CreatorProject, "videoUrl">) {
-  return Boolean(project.videoUrl?.trim()) && !isBundledDemoVideoUrl(project.videoUrl);
+export function hasRealCreatorVideo(project: Pick<CreatorProject, "videoUrl" | "sourceFingerprint" | "outputSourceFingerprint">) {
+  return Boolean(project.videoUrl?.trim())
+    && !isBundledDemoVideoUrl(project.videoUrl)
+    && (!project.sourceFingerprint || project.outputSourceFingerprint === project.sourceFingerprint);
 }
 
 function withoutRenderBinding(project: CreatorProject): CreatorProject {
+  const { outputSourceFingerprint: _outputSourceFingerprint, ...withoutOutputFingerprint } = project;
   return {
-    ...project,
+    ...withoutOutputFingerprint,
     status: project.product.images.length ? "ready" : "draft",
     videoUrl: null,
     jobId: null,
@@ -43,7 +46,7 @@ export function invalidateCreatorProjectOutput(project: CreatorProject) {
  * provider outputs or any campaign fields.
  */
 export function sanitizeCreatorProjectOutput(project: CreatorProject) {
-  return isBundledDemoVideoUrl(project.videoUrl) ? withoutRenderBinding(project) : project;
+  return hasRealCreatorVideo(project) || !project.videoUrl ? project : withoutRenderBinding(project);
 }
 
 /** Local/QA preparation ends in an honest still-image state, never a fake MP4. */

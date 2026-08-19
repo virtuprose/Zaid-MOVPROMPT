@@ -86,6 +86,10 @@ export type CreatorProject = {
   id: string;
   versionId?: string;
   versionNumber?: number;
+  /** Server-computed identity of the product/business facts and owned source assets. */
+  sourceFingerprint?: string;
+  /** The fingerprint attached to the render that produced the current output. */
+  outputSourceFingerprint?: string;
   title: string;
   templateId: string;
   status: CreatorProjectStatus;

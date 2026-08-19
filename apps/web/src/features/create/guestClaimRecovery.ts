@@ -22,6 +22,32 @@ export type CanonicalClaimReceipt = GuestClaimReceipt & {
 
 export type GuestClaimFailureReason = "claim_failed" | "offline" | "checksum_mismatch" | "configuration_mismatch" | "wrong_account";
 
+export type GuestClaimRecoveryCode = "asset_claim_failed" | "import_failed" | "network_offline" | "session_mismatch" | "claim_failed";
+
+export type GuestClaimRecoveryAction = "retry" | "retry_asset" | "replace_source" | "continue_editing" | "sign_out";
+
+export type TypedGuestClaimRecovery = {
+  state: "claim_failed" | "import_failed" | "offline" | "session_mismatch";
+  action: GuestClaimRecoveryAction;
+  draft: CreationDraft;
+  localAssetId?: string;
+};
+
+/** Failure selection is pure: the caller retains every fact, local blob, and pending intent. */
+export function selectGuestClaimRecovery(
+  draft: CreationDraft,
+  code: GuestClaimRecoveryCode,
+  details: { localAssetId?: string } = {},
+): TypedGuestClaimRecovery {
+  if (code === "network_offline") return { state: "offline", action: "retry", draft };
+  if (code === "session_mismatch") return { state: "session_mismatch", action: "continue_editing", draft };
+  if (code === "import_failed") return { state: "import_failed", action: "replace_source", draft };
+  if (code === "asset_claim_failed" && details.localAssetId) {
+    return { state: "claim_failed", action: "retry_asset", localAssetId: details.localAssetId, draft };
+  }
+  return { state: "claim_failed", action: "retry", draft };
+}
+
 export function recoverFailedGuestClaim(draft: CreationDraft, reason: GuestClaimFailureReason): { state: GuestClaimFailureReason; draft: CreationDraft } {
   return { state: reason, draft };
 }
