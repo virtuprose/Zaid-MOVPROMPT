@@ -3,6 +3,7 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import {
   createDatabase,
+  createDatabaseAbandonedClaimCleanupRepository,
   createServiceHeartbeatRepository,
   MOVPROMPT_WORKER_SERVICE_NAME,
 } from "@movprompt/db";
@@ -17,6 +18,7 @@ import { objectStorageConfigFromEnv, PrivateObjectStorage } from "@movprompt/sto
 import { loadWorkerConfig } from "./config.js";
 import { createAzureCampaignVoiceRenderer } from "./campaign-voice.js";
 import { createHealthJobHandler } from "./handlers.js";
+import { AbandonedClaimCleanupService } from "./abandoned-claim-cleanup.js";
 import { jsonWorkerLogger } from "./logger.js";
 import { createFfprobeTechnicalAnalyzer, createGatewayVideoQualityAnalyzer } from "./media-quality-analyzers.js";
 import { createPostgresOutboxRepository, OutboxDispatcher } from "./outbox-dispatcher.js";
@@ -55,6 +57,11 @@ const bytePlusApiKey = process.env.BYTEPLUS_ARK_API_KEY?.trim();
 const workerStorage = providerOutputHosts.length || bytePlusApiKey
   ? new PrivateObjectStorage(objectStorageConfigFromEnv(process.env))
   : undefined;
+// Cleanup is independently useful before any paid-generation provider is enabled.
+// When explicitly enabled, storage configuration remains fail-closed at startup.
+const cleanupStorage = workerStorage ?? (process.env.MOVPROMPT_ABANDONED_CLAIM_CLEANUP_ENABLED?.trim().toLowerCase() === "true"
+  ? new PrivateObjectStorage(objectStorageConfigFromEnv(process.env))
+  : undefined);
 const azureSpeechKey = process.env.AZURE_SPEECH_KEY?.trim();
 const azureSpeechRegion = process.env.AZURE_SPEECH_REGION?.trim();
 const campaignVoiceRenderer = azureSpeechKey && azureSpeechRegion
@@ -235,6 +242,14 @@ const worker = new PgBossWorker({
     health: createHealthJobHandler(),
     generation: generationHandler,
   },
+  ...(cleanupStorage
+    ? {
+        abandonedClaimCleanup: new AbandonedClaimCleanupService({
+          repository: createDatabaseAbandonedClaimCleanupRepository(database.db),
+          storage: { remove: (bucket, objectKey) => cleanupStorage.delete(bucket, objectKey) },
+        }),
+      }
+    : {}),
 });
 resolveWorker(worker);
 

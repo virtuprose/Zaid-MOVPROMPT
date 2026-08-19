@@ -20,6 +20,8 @@ import type {
 } from "./handlers.js";
 import { jsonWorkerLogger, type WorkerLogger } from "./logger.js";
 
+const ABANDONED_CLAIM_CLEANUP_JOB = "abandoned-claim-cleanup.v1";
+
 const DEAD_LETTER_QUEUES = {
   generation: `${WORKER_JOB_NAMES.generation}.dead-letter`,
   export: `${WORKER_JOB_NAMES.export}.dead-letter`,
@@ -33,6 +35,9 @@ type JobHandler<T extends object, TResult> = {
 export type PgBossWorkerOptions = {
   config: WorkerConfig;
   handlers: WorkerHandlers;
+  abandonedClaimCleanup?: {
+    cleanOne(input: { jobId: string; workerId: string; requestId: string }): Promise<unknown>;
+  };
   logger?: WorkerLogger;
   boss?: PgBoss;
 };
@@ -40,6 +45,7 @@ export type PgBossWorkerOptions = {
 export class PgBossWorker {
   readonly #config: WorkerConfig;
   readonly #handlers: WorkerHandlers;
+  readonly #abandonedClaimCleanup: PgBossWorkerOptions["abandonedClaimCleanup"];
   readonly #logger: WorkerLogger;
   readonly #boss: PgBoss;
   #started = false;
@@ -47,6 +53,7 @@ export class PgBossWorker {
   constructor(options: PgBossWorkerOptions) {
     this.#config = options.config;
     this.#handlers = options.handlers;
+    this.#abandonedClaimCleanup = options.abandonedClaimCleanup;
     this.#logger = options.logger ?? jsonWorkerLogger;
     this.#boss =
       options.boss ??
@@ -93,11 +100,42 @@ export class PgBossWorker {
       );
     }
 
+    if (this.#abandonedClaimCleanup) {
+      await this.#ensureQueue(ABANDONED_CLAIM_CLEANUP_JOB, {
+        retryLimit: 5,
+        retryDelay: 60,
+        retryBackoff: true,
+        retryDelayMax: 60 * 60,
+        expireInSeconds: 15 * 60,
+        notify: true,
+      });
+      await this.#boss.schedule(
+        ABANDONED_CLAIM_CLEANUP_JOB,
+        "*/15 * * * *",
+        { requestId: "scheduled" },
+        { key: ABANDONED_CLAIM_CLEANUP_JOB, singletonKey: ABANDONED_CLAIM_CLEANUP_JOB },
+      );
+      await this.#boss.work<{ requestId?: string }, unknown>(
+        ABANDONED_CLAIM_CLEANUP_JOB,
+        { batchSize: 1, includeMetadata: true },
+        async (jobs) => {
+          const job = jobs[0] as JobWithMetadata<{ requestId?: string }> | undefined;
+          if (!job) throw new Error("pg_boss_returned_empty_batch");
+          return this.#abandonedClaimCleanup!.cleanOne({
+            jobId: job.id,
+            workerId: this.#config.workerId,
+            requestId: job.data.requestId ?? job.id,
+          });
+        },
+      );
+    }
+
     this.#started = true;
     this.#logger.info("worker_started", {
       workerId: this.#config.workerId,
       generationHandler: Boolean(this.#handlers.generation),
       exportHandler: Boolean(this.#handlers.export),
+      abandonedClaimCleanup: Boolean(this.#abandonedClaimCleanup),
     });
   }
 

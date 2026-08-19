@@ -9,7 +9,7 @@ import {
 const NOW = new Date("2026-08-19T12:00:00.000Z");
 const CLAIM_ID = "claim-1";
 const ASSET_ID = "asset-1";
-const OBJECT_KEY = "creator/u-1/projects/p-1/assets/asset-1/product/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.jpg";
+const OBJECT_KEY = "users/u-1/projects/p-1/assets/product/asset-1/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 
 function candidate(overrides: Partial<Parameters<AbandonedClaimCleanupRepository["leaseCandidate"]>[0]> = {}) {
   return {
@@ -27,9 +27,11 @@ function candidate(overrides: Partial<Parameters<AbandonedClaimCleanupRepository
 }
 
 function setup(options: { candidate?: ReturnType<typeof candidate> | null; recheck?: ReturnType<typeof candidate> | null; remove?: () => Promise<void> } = {}) {
+  const leased = options.candidate === undefined ? candidate() : options.candidate;
+  const rechecked = options.recheck === undefined ? leased : options.recheck;
   const repository: AbandonedClaimCleanupRepository = {
-    leaseCandidate: vi.fn(async () => options.candidate ?? candidate()),
-    recheckLeasedCandidate: vi.fn(async () => options.recheck ?? options.candidate ?? candidate()),
+    leaseCandidate: vi.fn(async () => leased),
+    recheckLeasedCandidate: vi.fn(async () => rechecked),
     complete: vi.fn(async () => undefined),
     retry: vi.fn(async () => undefined),
     release: vi.fn(async () => undefined),
@@ -42,15 +44,15 @@ function setup(options: { candidate?: ReturnType<typeof candidate> | null; reche
 describe("AbandonedClaimCleanupService", () => {
   it("retains an incomplete private object at 23:59:59", async () => {
     const { repository, storage, service } = setup({
-      candidate: null,
+      candidate: candidate({ updatedAt: new Date(NOW.getTime() - 24 * 60 * 60 * 1_000 + 1) }),
     });
-    vi.mocked(repository.leaseCandidate).mockResolvedValueOnce(null);
 
     await expect(service.cleanOne({ jobId: "job-1", workerId: "worker-1", requestId: "request-1" }))
-      .resolves.toEqual({ outcome: "none" });
+      .resolves.toEqual({ outcome: "released", claimId: CLAIM_ID, assetId: ASSET_ID });
 
     expect(storage.remove).not.toHaveBeenCalled();
     expect(repository.complete).not.toHaveBeenCalled();
+    expect(repository.release).toHaveBeenCalledWith(expect.objectContaining({ reason: "retention_window" }));
   });
 
   it("deletes one canonical private object at the 24-hour boundary and audits completion", async () => {
@@ -109,7 +111,7 @@ describe("AbandonedClaimCleanupService", () => {
 
   it("rejects non-canonical candidate keys before deletion", async () => {
     const { repository, storage, service } = setup({
-      candidate: candidate({ objectKey: "creator/u-2/projects/p-1/assets/asset-1/product/unsafe.jpg" }),
+      candidate: candidate({ objectKey: "users/u-2/projects/p-1/assets/product/asset-1/unsafe" }),
     });
 
     await expect(service.cleanOne({ jobId: "job-1", workerId: "worker-1", requestId: "request-1" }))

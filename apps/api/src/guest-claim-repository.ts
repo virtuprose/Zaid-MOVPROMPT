@@ -12,6 +12,8 @@ import { objectKeys } from "@movprompt/storage";
 import { schema, type Database, type JsonObject, type UserScopedTransaction, withUserTransaction } from "@movprompt/db";
 import { and, asc, eq, sql } from "drizzle-orm";
 
+export { createDatabaseAbandonedClaimCleanupRepository } from "@movprompt/db";
+
 export class GuestClaimRepositoryError extends Error {
   constructor(readonly code: "conflict" | "not_found" | "assets_pending" | "asset_invalid") {
     super(code);
