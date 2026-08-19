@@ -152,6 +152,24 @@ function guestClaimService(): GuestClaimService {
       project,
       version,
     })),
+    startClaim: vi.fn(async ({ snapshot }) => ({
+      id: "claim-1",
+      projectId: PROJECT_ID,
+      draftId: snapshot.draftId,
+      pendingGenerationId: snapshot.pendingGenerationId,
+      snapshotDigest: snapshot.snapshotDigest,
+      status: "securing" as const,
+      nextAsset: {
+        id: "claim-asset-1",
+        localAssetId: "88888888-8888-4888-8888-888888888888",
+        ordinal: 0,
+        status: "pending" as const,
+      },
+    })),
+    resumeClaim: vi.fn(),
+    markAssetVerified: vi.fn(),
+    markAssetFailed: vi.fn(),
+    finalizeClaim: vi.fn(),
   };
 }
 
@@ -300,6 +318,53 @@ describe("portable creator API", () => {
     });
     expect(response.status).toBe(409);
     expect(claims.claimGuestDraft).not.toHaveBeenCalled();
+  });
+
+  it("starts a resumable asset claim with the immutable browser manifest", async () => {
+    const claims = guestClaimService();
+    const app = createApi({
+      config,
+      creatorRepository: repository(),
+      authGateway: auth(),
+      guestClaimService: claims,
+    });
+    const snapshot = {
+      draftId: DRAFT_ID,
+      pendingGenerationId: PENDING_GENERATION_ID,
+      snapshotDigest: "a".repeat(64),
+      assetManifest: [{
+        localAssetId: "88888888-8888-4888-8888-888888888888",
+        ordinal: 0,
+        kind: "product",
+        mimeType: "image/jpeg",
+        sizeBytes: 1_024,
+        checksumSha256: "b".repeat(64),
+      }],
+      title: "Northfield campaign",
+      mode: "template",
+      configuration: {},
+      productRecipe: {},
+      campaignRecipe: {},
+    };
+
+    const response = await app.request("/api/v1/drafts/claim/start", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "idempotency-key": PENDING_GENERATION_ID,
+      },
+      body: JSON.stringify(snapshot),
+    });
+
+    expect(response.status).toBe(201);
+    await expect(response.json()).resolves.toMatchObject({
+      operation: {
+        projectId: PROJECT_ID,
+        pendingGenerationId: PENDING_GENERATION_ID,
+        nextAsset: { localAssetId: snapshot.assetManifest[0]!.localAssetId },
+      },
+    });
+    expect(claims.startClaim).toHaveBeenCalledWith({ userId: USER_ID, snapshot });
   });
 
   it("never lets a session select another user's project", async () => {
