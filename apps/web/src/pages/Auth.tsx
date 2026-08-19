@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Camera, History, Layers, Loader2, Mail } from "lucide-react";
 import { motion } from "framer-motion";
@@ -22,9 +22,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { authErrorMessage } from "@/lib/auth/portableAuthClient";
 import { portableAuthActions } from "@/lib/auth/portableAuthActions";
 import { authCallbackUrl, rememberAuthReturnIntent, safeAuthReturnPath } from "@/lib/auth/returnPath";
+import { portableCreatorApi } from "@/lib/api/portableApiClient";
+import type { AuthCapability } from "@movprompt/contracts";
 
 const portableAuth = isFeatureEnabled("portableAuth");
-const socialProviders = enabledSocialAuthProviders();
 const requireEmailVerification = isEmailVerificationRequired();
 
 export default function Auth() {
@@ -44,6 +45,26 @@ export default function Auth() {
   const [busy, setBusy] = useState<"email" | "google" | "apple" | null>(null);
   const [forgotMode, setForgotMode] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [serverCapability, setServerCapability] = useState<AuthCapability | null>(null);
+  const [formError, setFormError] = useState("");
+  const headingRef = useRef<HTMLHeadingElement | null>(null);
+  const errorRef = useRef<HTMLParagraphElement | null>(null);
+  const socialProviders = enabledSocialAuthProviders(serverCapability);
+
+  useEffect(() => {
+    headingRef.current?.focus();
+  }, []);
+
+  useEffect(() => {
+    if (!portableAuth) return;
+    void portableCreatorApi.featureFlags()
+      .then((result) => setServerCapability(result.auth))
+      .catch(() => setServerCapability(null));
+  }, []);
+
+  useEffect(() => {
+    if (formError) errorRef.current?.focus();
+  }, [formError]);
 
   const features = [
     { icon: Camera, title: t("auth.feat.dop.title"), description: t("auth.feat.dop.desc") },
@@ -57,12 +78,15 @@ export default function Auth() {
 
   async function emailSignIn(event: React.FormEvent) {
     event.preventDefault();
+    setFormError("");
     setBusy("email");
     if (portableAuth) {
       const result = await portableAuthActions.signInEmail({ email, password, callbackURL });
       setBusy(null);
       if ((result as { error?: unknown }).error) {
-        toast({ title: t("toast.signInFailed"), description: authErrorMessage((result as { error?: unknown }).error), variant: "destructive" });
+        const message = `${authErrorMessage((result as { error?: unknown }).error)} ${t("auth.draftStillSaved")}`;
+        setFormError(message);
+        toast({ title: t("toast.signInFailed"), description: message, variant: "destructive" });
       } else {
         navigate(nextPath, { replace: true });
       }
@@ -70,12 +94,18 @@ export default function Auth() {
     }
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     setBusy(null);
-    if (error) toast({ title: t("toast.signInFailed"), description: error.message, variant: "destructive" });
+    if (error) {
+      const message = `${error.message} ${t("auth.draftStillSaved")}`;
+      setFormError(message);
+      toast({ title: t("toast.signInFailed"), description: message, variant: "destructive" });
+    }
   }
 
   async function emailSignUp(event: React.FormEvent) {
     event.preventDefault();
+    setFormError("");
     if (!agreedToTerms) {
+      setFormError(t("auth.mustAgreeTerms"));
       toast({ title: t("auth.mustAgreeTerms"), variant: "destructive" });
       return;
     }
@@ -85,7 +115,9 @@ export default function Auth() {
       const result = await portableAuthActions.signUpEmail({ email, password, name: displayName, callbackURL });
       setBusy(null);
       if ((result as { error?: unknown }).error) {
-        toast({ title: t("toast.signUpFailed"), description: authErrorMessage((result as { error?: unknown }).error), variant: "destructive" });
+        const message = `${authErrorMessage((result as { error?: unknown }).error)} ${t("auth.draftStillSaved")}`;
+        setFormError(message);
+        toast({ title: t("toast.signUpFailed"), description: message, variant: "destructive" });
       } else {
         try { localStorage.setItem("first_signup_pending", "1"); } catch { /* optional welcome state */ }
         if (requireEmailVerification) {
@@ -104,6 +136,7 @@ export default function Auth() {
 
   async function forgotPassword(event: React.FormEvent) {
     event.preventDefault();
+    setFormError("");
     setBusy("email");
     const redirectTo = `${window.location.origin}/reset-password`;
     const result = portableAuth
@@ -111,7 +144,9 @@ export default function Auth() {
       : await supabase.auth.resetPasswordForEmail(email, { redirectTo });
     setBusy(null);
     if (result.error) {
-      toast({ title: t("toast.resetFailed"), description: authErrorMessage(result.error), variant: "destructive" });
+      const message = `${authErrorMessage(result.error)} ${t("auth.draftStillSaved")}`;
+      setFormError(message);
+      toast({ title: t("toast.resetFailed"), description: message, variant: "destructive" });
     } else {
       toast({ title: t("toast.checkEmail"), description: t("auth.resetEmailDesc") });
       setForgotMode(false);
@@ -157,8 +192,9 @@ export default function Auth() {
 
         <motion.section initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-center px-4 py-20 md:py-8" aria-labelledby="auth-title">
           <div className="w-full max-w-sm">
-            <div className="mb-5"><h1 id="auth-title" className="text-2xl font-display font-bold">{t("auth.continueTitle")}</h1><p className="mt-1 text-sm text-muted-foreground">{t("auth.continueDesc")}</p></div>
+            <div className="mb-5"><h1 ref={headingRef} id="auth-title" tabIndex={-1} className="text-2xl font-display font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">{t("auth.continueTitle")}</h1><p className="mt-1 text-sm text-muted-foreground">{t("auth.continueDesc")}</p></div>
             <Card className="bg-card border-border shadow-[inset_0_0_40px_0_hsl(var(--primary)/0.07)]"><CardContent className="p-5 sm:p-6 space-y-5">
+              {formError && <p ref={errorRef} role="alert" tabIndex={-1} className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">{formError}</p>}
               {socialProviders.map((provider) => (
                 <Button key={provider} variant="outline" className="w-full h-11" onClick={() => void socialSignIn(provider)} disabled={busy !== null}>
                   {busy === provider && <Loader2 aria-hidden className="w-4 h-4 animate-spin me-2" />}

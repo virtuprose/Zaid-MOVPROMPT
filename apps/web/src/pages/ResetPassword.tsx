@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft, KeyRound, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
@@ -28,6 +28,7 @@ export default function ResetPassword() {
   const [isRecovery, setIsRecovery] = useState(() => portableAuth && Boolean(searchParams.get("token")));
   const [checking, setChecking] = useState(!portableAuth);
   const [formError, setFormError] = useState<string | null>(null);
+  const errorRef = useRef<HTMLParagraphElement | null>(null);
   const token = searchParams.get("token");
 
   useEffect(() => {
@@ -43,6 +44,10 @@ export default function ResetPassword() {
       window.clearTimeout(timeout);
     };
   }, []);
+
+  useEffect(() => {
+    if (formError) errorRef.current?.focus();
+  }, [formError]);
 
   async function handleReset(event: React.FormEvent) {
     event.preventDefault();
@@ -91,7 +96,7 @@ export default function ResetPassword() {
           <div className="space-y-1.5"><Label htmlFor="new-password">{t("reset.newPassword")}</Label><Input className={fieldClass} id="new-password" type="password" autoComplete="new-password" value={password} onChange={(event) => setPassword(event.target.value)} required minLength={10} aria-invalid={Boolean(formError)} /></div>
           <div className="space-y-1.5"><Label htmlFor="confirm-password">{t("reset.confirmPassword")}</Label><Input className={fieldClass} id="confirm-password" type="password" autoComplete="new-password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} required minLength={10} aria-invalid={Boolean(formError)} /></div>
           <p id="password-requirement" className="text-xs text-muted-foreground">Use at least 10 characters.</p>
-          <p id="reset-error" role="alert" className="min-h-5 text-sm text-destructive">{formError}</p>
+          <p ref={errorRef} id="reset-error" role="alert" tabIndex={-1} className="min-h-5 text-sm text-destructive">{formError}</p>
           <Button type="submit" className="w-full min-h-11" disabled={loading}>{loading ? <Loader2 aria-hidden className="w-4 h-4 animate-spin me-2" /> : <KeyRound aria-hidden className="w-4 h-4 me-2" />}{t("reset.updatePassword")}</Button>
         </form></CardContent></Card>
       </motion.div>
