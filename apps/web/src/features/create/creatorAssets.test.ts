@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { claimGuestImage, mirrorProductImages } from "./creatorAssets";
+import { claimGuestAssets, claimGuestImage, mirrorProductImages } from "./creatorAssets";
 import type { CreatorAsset } from "./types";
 
 describe("creator remote product image mirroring", () => {
@@ -122,6 +122,83 @@ describe("creator remote product image mirroring", () => {
     expect(fetchMock).toHaveBeenCalledTimes(3);
     expect(fetchMock.mock.calls[0]![0]).toEqual(fetchMock.mock.calls[1]![0]);
     expect(fetchMock.mock.calls[0]![1]).toEqual(fetchMock.mock.calls[1]![1]);
+  });
+
+  it("resumes only the server-reported failed asset and keeps the supplied local blobs on failure", async () => {
+    const projectId = "22222222-2222-4222-8222-222222222222";
+    const pendingGenerationId = "33333333-3333-4333-8333-333333333333";
+    const skippedAssetId = "44444444-4444-4444-8444-444444444444";
+    const failedAssetId = "55555555-5555-4555-8555-555555555555";
+    const checksum = "b".repeat(64);
+    const privateAsset = {
+      id: failedAssetId,
+      projectId,
+      kind: "product",
+      objectKey: `users/u/projects/${projectId}/assets/product/${failedAssetId}/${checksum}`,
+      mimeType: "image/jpeg",
+      sizeBytes: 4,
+      checksumSha256: checksum,
+    };
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        operation: {
+          id: "66666666-6666-4666-8666-666666666666",
+          projectId,
+          draftId: "77777777-7777-4777-8777-777777777777",
+          pendingGenerationId,
+          snapshotDigest: "a".repeat(64),
+          status: "failed",
+          nextAsset: {
+            id: "88888888-8888-4888-8888-888888888888",
+            localAssetId: failedAssetId,
+            ordinal: 1,
+            status: "failed",
+          },
+        },
+        requestId: "start-request",
+      }), { status: 201, headers: { "content-type": "application/json" } }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        asset: privateAsset,
+        upload: { method: "PUT", url: "https://storage.example.test/upload", headers: {}, expiresInSeconds: 900 },
+        requestId: "reserve-request",
+      }), { status: 201, headers: { "content-type": "application/json" } }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        asset: privateAsset,
+        download: { method: "GET", url: "https://storage.example.test/short-lived", expiresInSeconds: 900 },
+        requestId: "content-request",
+      }), { status: 201, headers: { "content-type": "application/json" } }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        error: { code: "asset_integrity_mismatch", message: "The uploaded asset could not be verified." },
+      }), { status: 409, headers: { "content-type": "application/json" } }));
+    vi.stubGlobal("fetch", fetchMock);
+    const blobs = new Map([
+      [skippedAssetId, new Blob(["already secure"], { type: "image/jpeg" })],
+      [failedAssetId, new Blob([new Uint8Array([0xff, 0xd8, 0xff, 0xe0])], { type: "image/jpeg" })],
+    ]);
+
+    await expect(claimGuestAssets({
+      snapshot: {
+        draftId: "77777777-7777-4777-8777-777777777777",
+        pendingGenerationId,
+        snapshotDigest: "a".repeat(64),
+        assetManifest: [
+          { localAssetId: skippedAssetId, ordinal: 0, kind: "product", mimeType: "image/jpeg", sizeBytes: 14, checksumSha256: "c".repeat(64) },
+          { localAssetId: failedAssetId, ordinal: 1, kind: "product", mimeType: "image/jpeg", sizeBytes: 4, checksumSha256: checksum },
+        ],
+        title: "Coffee campaign",
+        mode: "template",
+        configuration: {},
+        productRecipe: {},
+        campaignRecipe: {},
+      },
+      blobs,
+    })).rejects.toMatchObject({ localAssetId: failedAssetId });
+
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+    expect(String(fetchMock.mock.calls[1]![0])).toContain(`/assets/upload-url`);
+    expect(JSON.parse(String((fetchMock.mock.calls[1]![1] as RequestInit).body))).toMatchObject({ assetId: failedAssetId });
+    expect(blobs.get(skippedAssetId)).toBeInstanceOf(Blob);
+    expect(blobs.get(failedAssetId)).toBeInstanceOf(Blob);
   });
 
   it("calls the authenticated mirror endpoint and returns only the private stored asset", async () => {
