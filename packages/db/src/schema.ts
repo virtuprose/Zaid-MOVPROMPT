@@ -929,6 +929,8 @@ export const schema = {
   creatorProjects,
   creatorProjectVersions,
   creatorProjectAssets,
+  guestClaimOperations,
+  guestClaimAssets,
   generationQuotes,
   renderRuns,
   renderAttempts,
