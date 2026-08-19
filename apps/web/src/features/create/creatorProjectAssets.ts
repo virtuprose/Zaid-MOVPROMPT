@@ -1,5 +1,5 @@
 import { mirrorProductImages } from "./creatorAssets";
-import { syncCreatorProject } from "./projectStore";
+import { replaceCreatorProjectSource, syncCreatorProject } from "./projectStore";
 import type { CreatorProject } from "./types";
 
 export function hasUnclaimedCreatorAssets(project: CreatorProject): boolean {
@@ -42,7 +42,7 @@ export async function syncCreatorProjectWithOwnedRemoteImages(
   if (!hasUnownedRemoteImages) return cloudProject;
 
   const images = await mirrorProductImages(cloudProject.id, project.product.images);
-  return syncCreatorProject(
+  return replaceCreatorProjectSource(
     {
       ...project,
       id: cloudProject.id,

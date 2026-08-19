@@ -289,6 +289,63 @@ export async function syncCreatorProject(project: CreatorProject, userId?: strin
   );
 }
 
+/**
+ * Source replacement has stricter truth rules than ordinary campaign edits:
+ * the API creates a fingerprinted child version and removes stale output.
+ */
+export async function replaceCreatorProjectSource(project: CreatorProject, userId?: string | null) {
+  if (!userId || !portableCreatorEnabled()) return saveLocalCreatorProject(project, userId);
+  const sourceType = project.product.sourceType;
+  if (sourceType !== "product_link" && sourceType !== "business_link" && sourceType !== "upload") {
+    return syncCreatorProject(project, userId);
+  }
+  const existing = await portableCreatorApi.getProject(project.id);
+  if (!existing.currentVersion) return syncCreatorProject(project, userId);
+  const assetIds = project.product.images
+    .filter((image) => Boolean(image.storagePath))
+    .map((image) => image.id);
+  if (!assetIds.length) return syncCreatorProject(project, userId);
+  const templateVersionId = await resolvePortableTemplateVersionId(project.templateId);
+  const result = await portableCreatorApi.replaceSource(project.id, {
+    parentVersionId: existing.currentVersion.id,
+    templateVersionId,
+    mode: "template",
+    configuration: portableConfiguration(project),
+    productRecipe: portableProductRecipe(project),
+    campaignRecipe: {
+      promotionKind: project.promotionKind,
+      vertical: project.vertical,
+      goal: project.goal,
+      presenterMode: project.presenterMode,
+      market: project.market,
+      language: project.language,
+      arabicDialect: project.arabicDialect,
+      dialectRegister: project.dialectRegister,
+      location: project.location,
+      bookingUrl: project.bookingUrl,
+      whatsapp: project.whatsapp,
+      offer: project.offer,
+      cta: project.cta,
+      aspectRatio: project.aspectRatio,
+      resolution: project.resolution,
+    },
+    source: {
+      type: sourceType,
+      name: project.product.name,
+      description: project.product.description,
+      price: project.product.price,
+      brand: project.product.brand,
+      assetIds,
+    },
+  }, `source-change:${project.id}:${existing.currentVersion.id}:${project.updatedAt.replace(/[^A-Za-z0-9]/g, "")}`);
+  return saveLocalCreatorProject({
+    ...project,
+    versionId: result.version.id,
+    versionNumber: result.version.versionNumber,
+    sourceFingerprint: result.sourceFingerprint,
+  }, userId);
+}
+
 export async function loadCreatorProjects(userId?: string | null) {
   if (!userId || !portableCreatorEnabled()) return listLocalCreatorProjects(userId);
   const rows = await portableCreatorApi.listProjects();

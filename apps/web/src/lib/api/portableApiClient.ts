@@ -6,6 +6,7 @@ import {
   ProjectListResponseSchema,
   ProjectResponseSchema,
   ProjectVersionResponseSchema,
+  ReplaceProjectSourceResponseSchema,
   RenderRunListResponseSchema,
   RenderRunResponseSchema,
   SourceScanResponseSchema,
@@ -20,6 +21,7 @@ import {
   type GenerationQuoteResponse,
   type FeatureFlagsResponse,
   type ProjectVersion,
+  type ReplaceProjectSourceRequest,
   type PublicRenderRun,
   type PublicTemplate,
   type SourceScanResponse,
@@ -165,6 +167,15 @@ export const portableCreatorApi = {
       idempotencyKey,
     });
     return result.version;
+  },
+
+  async replaceSource(projectId: string, input: ReplaceProjectSourceRequest, idempotencyKey: string) {
+    const result = await request(`/api/v1/projects/${projectId}/source`, ReplaceProjectSourceResponseSchema, {
+      method: "POST",
+      body: input,
+      idempotencyKey,
+    });
+    return result;
   },
 
   async generationQuote(input: CreateGenerationQuoteRequest): Promise<GenerationQuoteResponse["quote"]> {
