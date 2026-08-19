@@ -110,7 +110,10 @@ export const portableCreatorApi = {
   },
 
   async claimDraft(input: ClaimDraftRequest): Promise<CreatorProjectRecord> {
-    const result = await request("/api/v1/drafts/claim", ProjectResponseSchema, {
+    // Canonical guest recovery owns `/drafts/claim`. This endpoint is retained
+    // for authenticated, non-guest drafts and deliberately has a distinct
+    // contract and route so the two lifecycles cannot be confused.
+    const result = await request("/api/v1/projects/claim", ProjectResponseSchema, {
       method: "POST",
       body: input,
       idempotencyKey: input.draftId,

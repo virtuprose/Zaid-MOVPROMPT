@@ -76,6 +76,14 @@ export class GuestClaimAssetFailure extends Error {
   }
 }
 
+export type ClaimedGuestAsset = {
+  localAssetId: string;
+  storagePath: string;
+  mimeType: CreatorImageMimeType;
+  checksum: string;
+  url: string;
+};
+
 async function requestClaimOperation(
   pendingGenerationId: string,
 ): Promise<ReturnType<typeof GuestClaimOperationResponseSchema.parse>["operation"]> {
@@ -94,7 +102,7 @@ async function secureClaimAsset(input: {
   sizeBytes: number;
   checksumSha256: string;
   blob: Blob;
-}): Promise<void> {
+}): Promise<ClaimedGuestAsset> {
   if (input.blob.size !== input.sizeBytes || input.blob.type !== input.mimeType || await sha256(input.blob) !== input.checksumSha256) {
     throw new Error("local_asset_integrity_mismatch");
   }
@@ -131,7 +139,7 @@ async function secureClaimAsset(input: {
     },
   );
   // A signed preview may exist only in this response. Claim recovery stores neither it nor the object key.
-  SignedAssetDownloadResponseSchema.parse(await jsonResponse(stored));
+  const download = SignedAssetDownloadResponseSchema.parse(await jsonResponse(stored));
   const completed = await fetch(
     `${apiOrigin()}/api/v1/projects/${input.projectId}/assets/${upload.asset.id}/complete`,
     {
@@ -145,6 +153,15 @@ async function secureClaimAsset(input: {
   if (ready.asset.id !== input.localAssetId || ready.asset.checksumSha256 !== input.checksumSha256) {
     throw new Error("claim_asset_completion_mismatch");
   }
+  return {
+    localAssetId: ready.asset.id,
+    storagePath: ready.asset.objectKey,
+    mimeType: parseCreatorImageMimeType(ready.asset.mimeType),
+    checksum: ready.asset.checksumSha256,
+    // The URL remains in active component state only. projectStore removes it
+    // before the project cache is written to durable browser storage.
+    url: download.download.url,
+  };
 }
 
 /**
@@ -154,7 +171,7 @@ async function secureClaimAsset(input: {
 export async function claimGuestAssets(input: {
   snapshot: GuestClaimSnapshot;
   blobs: ReadonlyMap<string, Blob>;
-}): Promise<GuestClaimReceipt> {
+}): Promise<{ receipt: GuestClaimReceipt; assets: ClaimedGuestAsset[] }> {
   const started = await fetch(`${apiOrigin()}/api/v1/drafts/claim/start`, {
     method: "POST",
     credentials: "include",
@@ -166,6 +183,7 @@ export async function claimGuestAssets(input: {
   });
   let operation = GuestClaimOperationResponseSchema.parse(await jsonResponse(started)).operation;
   const manifest = new Map(input.snapshot.assetManifest.map((asset) => [asset.localAssetId, asset]));
+  const securedAssets = new Map<string, ClaimedGuestAsset>();
 
   while (operation.nextAsset) {
     const checkpoint = operation.nextAsset;
@@ -173,7 +191,7 @@ export async function claimGuestAssets(input: {
     const blob = asset ? input.blobs.get(asset.localAssetId) : undefined;
     if (!asset || !blob) throw new GuestClaimAssetFailure(checkpoint.localAssetId, new Error("local_asset_missing"));
     try {
-      await secureClaimAsset({
+      const secured = await secureClaimAsset({
         projectId: operation.projectId,
         pendingGenerationId: input.snapshot.pendingGenerationId,
         localAssetId: asset.localAssetId,
@@ -183,6 +201,7 @@ export async function claimGuestAssets(input: {
         checksumSha256: asset.checksumSha256,
         blob,
       });
+      securedAssets.set(secured.localAssetId, secured);
     } catch (error) {
       throw new GuestClaimAssetFailure(checkpoint.localAssetId, error);
     }
@@ -201,7 +220,26 @@ export async function claimGuestAssets(input: {
       body: JSON.stringify({}),
     },
   );
-  return GuestClaimResponseSchema.parse(await jsonResponse(finalized)).claim;
+  const receipt = GuestClaimResponseSchema.parse(await jsonResponse(finalized)).claim;
+  // A retry may resume after a browser interruption, leaving some assets
+  // already verified by an earlier attempt. Refresh their signed previews
+  // from the owned endpoint while retaining only stable metadata in projects.
+  for (const asset of receipt.assetManifest) {
+    if (securedAssets.has(asset.localAssetId)) continue;
+    const response = await fetch(
+      `${apiOrigin()}/api/v1/projects/${receipt.project.id}/assets/${asset.localAssetId}/download-url`,
+      { credentials: "include" },
+    );
+    const download = SignedAssetDownloadResponseSchema.parse(await jsonResponse(response));
+    securedAssets.set(asset.localAssetId, {
+      localAssetId: download.asset.id,
+      storagePath: download.asset.objectKey,
+      mimeType: parseCreatorImageMimeType(download.asset.mimeType),
+      checksum: download.asset.checksumSha256,
+      url: download.download.url,
+    });
+  }
+  return { receipt, assets: [...securedAssets.values()] };
 }
 
 export async function claimGuestImage(input: {

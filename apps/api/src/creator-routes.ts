@@ -1,5 +1,6 @@
 import {
   AcceptProjectVersionRequestSchema,
+  ClaimDraftRequestSchema,
   CreditSummaryResponseSchema,
   CreateProjectVersionRequestSchema,
   EmptyMutationRequestSchema,
@@ -183,6 +184,30 @@ export function registerCreatorRoutes(
     const body: TemplateResponse = { template, requestId: context.get("requestId") };
     context.header("cache-control", "public, max-age=60, stale-while-revalidate=300");
     return context.json(body);
+  });
+
+  /** Authenticated non-guest drafts use a deliberately separate route from the canonical guest-claim protocol. */
+  app.post("/api/v1/projects/claim", async (context) => {
+    const repository = requireRepository(services);
+    const userId = await requireUserId(services, context.req.raw.headers);
+    const idempotencyKey = IdempotencyKeySchema.parse(context.req.header("idempotency-key") ?? "");
+    const input = ClaimDraftRequestSchema.parse(await parseJson(context.req.raw));
+    if (idempotencyKey !== input.draftId) {
+      throw new ApiHttpError({
+        code: "idempotency_conflict",
+        message: "The draft ID must be used as the stable project claim operation key.",
+        status: 409,
+        retryable: false,
+      });
+    }
+    try {
+      const project = await repository.claimDraft(userId, input);
+      const body: ProjectResponse = { project, requestId: context.get("requestId") };
+      noStore(context);
+      return context.json(body, 201);
+    } catch (error) {
+      mapRepositoryError(error);
+    }
   });
 
   app.post("/api/v1/drafts/claim", async (context) => {

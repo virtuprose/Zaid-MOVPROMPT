@@ -201,6 +201,31 @@ describe("portable creator API", () => {
     });
   });
 
+  it("keeps authenticated project claims separate from the guest claim snapshot protocol", async () => {
+    const projectRepository = repository();
+    const app = createApi({ config, creatorRepository: projectRepository, authGateway: auth() });
+    const response = await app.request("/api/v1/projects/claim", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "idempotency-key": DRAFT_ID,
+      },
+      body: JSON.stringify({
+        draftId: DRAFT_ID,
+        title: project.title,
+        mode: "template",
+        templateVersionId: TEMPLATE_VERSION_ID,
+        configuration: version.configuration,
+        productRecipe: version.productRecipe,
+        campaignRecipe: version.campaignRecipe,
+      }),
+    });
+
+    expect(response.status).toBe(201);
+    await expect(response.json()).resolves.toMatchObject({ project: { id: PROJECT_ID } });
+    expect(projectRepository.claimDraft).toHaveBeenCalledWith(USER_ID, expect.objectContaining({ draftId: DRAFT_ID }));
+  });
+
   it("retries one transient source-scan failure through the complete scanner boundary", async () => {
     const scanner: SourceScanner = {
       scan: vi

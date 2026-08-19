@@ -175,10 +175,30 @@ export function portableProductRecipe(project: CreatorProject): ClaimDraftReques
   };
 }
 
-function portableConfiguration(project: CreatorProject): ClaimDraftRequest["configuration"] {
+export function portableConfiguration(project: CreatorProject): ClaimDraftRequest["configuration"] {
   return {
     creatorProject: stableProjectConfiguration(project),
     generation: buildPortableGenerationConfiguration(project),
+  };
+}
+
+export function portableCampaignRecipe(project: CreatorProject): ClaimDraftRequest["campaignRecipe"] {
+  return {
+    promotionKind: project.promotionKind,
+    vertical: project.vertical,
+    goal: project.goal,
+    presenterMode: project.presenterMode,
+    market: project.market,
+    language: project.language,
+    arabicDialect: project.arabicDialect,
+    dialectRegister: project.dialectRegister,
+    location: project.location,
+    bookingUrl: project.bookingUrl,
+    whatsapp: project.whatsapp,
+    offer: project.offer,
+    cta: project.cta,
+    aspectRatio: project.aspectRatio,
+    resolution: project.resolution,
   };
 }
 
@@ -227,23 +247,7 @@ export async function syncCreatorProject(project: CreatorProject, userId?: strin
       templateVersionId,
       configuration: portableConfiguration(project),
       productRecipe: portableProductRecipe(project),
-      campaignRecipe: {
-        promotionKind: project.promotionKind,
-        vertical: project.vertical,
-        goal: project.goal,
-        presenterMode: project.presenterMode,
-        market: project.market,
-        language: project.language,
-        arabicDialect: project.arabicDialect,
-        dialectRegister: project.dialectRegister,
-        location: project.location,
-        bookingUrl: project.bookingUrl,
-        whatsapp: project.whatsapp,
-        offer: project.offer,
-        cta: project.cta,
-        aspectRatio: project.aspectRatio,
-        resolution: project.resolution,
-      },
+      campaignRecipe: portableCampaignRecipe(project),
     });
     const hydrated = await hydrateCloudProject(claimed);
     if (!hydrated) throw new Error("The claimed project did not include its saved campaign configuration.");
@@ -288,23 +292,7 @@ export async function syncCreatorProject(project: CreatorProject, userId?: strin
       mode: "template",
       configuration: nextConfiguration,
       productRecipe: portableProductRecipe(projectForSave),
-      campaignRecipe: {
-        promotionKind: projectForSave.promotionKind,
-        vertical: projectForSave.vertical,
-        goal: projectForSave.goal,
-        presenterMode: projectForSave.presenterMode,
-        market: projectForSave.market,
-        language: projectForSave.language,
-        arabicDialect: projectForSave.arabicDialect,
-        dialectRegister: projectForSave.dialectRegister,
-        location: projectForSave.location,
-        bookingUrl: projectForSave.bookingUrl,
-        whatsapp: projectForSave.whatsapp,
-        offer: projectForSave.offer,
-        cta: projectForSave.cta,
-        aspectRatio: projectForSave.aspectRatio,
-        resolution: projectForSave.resolution,
-      },
+      campaignRecipe: portableCampaignRecipe(projectForSave),
       changeReason: "Campaign draft updated",
     },
     operationKey,
@@ -338,23 +326,7 @@ export async function replaceCreatorProjectSource(project: CreatorProject, userI
     mode: "template",
     configuration: portableConfiguration(project),
     productRecipe: portableProductRecipe(project),
-    campaignRecipe: {
-      promotionKind: project.promotionKind,
-      vertical: project.vertical,
-      goal: project.goal,
-      presenterMode: project.presenterMode,
-      market: project.market,
-      language: project.language,
-      arabicDialect: project.arabicDialect,
-      dialectRegister: project.dialectRegister,
-      location: project.location,
-      bookingUrl: project.bookingUrl,
-      whatsapp: project.whatsapp,
-      offer: project.offer,
-      cta: project.cta,
-      aspectRatio: project.aspectRatio,
-      resolution: project.resolution,
-    },
+    campaignRecipe: portableCampaignRecipe(project),
     source: {
       type: sourceType,
       name: project.product.name,

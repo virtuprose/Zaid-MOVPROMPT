@@ -27,7 +27,7 @@ import {
   WandSparkles,
 } from "lucide-react";
 import { toast } from "sonner";
-import type { RenderProcessingStage } from "@movprompt/contracts";
+import type { GuestClaimAssetManifest, RenderProcessingStage } from "@movprompt/contracts";
 import { Seo } from "@/components/Seo";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { useAuth } from "@/hooks/useAuth";
@@ -51,21 +51,26 @@ import {
   getGuestClaimRecoveryCopy,
   selectGuestClaimRecovery,
   type TypedGuestClaimRecovery,
+  verifyAndDeleteVerifiedDraft,
 } from "./guestClaimRecovery";
 import {
   buildPortableGenerationConfiguration,
   getLocalCreatorProject,
   loadCreatorProjects,
+  portableCampaignRecipe,
+  portableConfiguration,
+  portableProductRecipe,
   resolvePortableTemplateVersionId,
   syncCreatorProject,
 } from "./projectStore";
+import { hydrateCloudProject } from "./portableProjectMapper";
 import { projectToCreationDraft, type CreationDraft, type GenerationQuote } from "./contracts";
 import { automaticQuoteRetryDelay } from "./quoteRecovery";
-import { cleanupExpiredGuestDrafts, getGuestAsset, getGuestDraft, putGuestAsset, saveGuestDraft } from "./guestDraftStore";
-import { claimGuestImage, mirrorProductImages } from "./creatorAssets";
+import { cleanupExpiredGuestDrafts, getGuestAsset, getGuestDraft, markClaimCheckpoint, putGuestAsset, saveGuestDraft } from "./guestDraftStore";
+import { claimGuestAssets, mirrorProductImages } from "./creatorAssets";
+import { buildGuestClaimSnapshot } from "./guestClaimSnapshot";
 import {
   hasUnclaimedCreatorAssets,
-  mergeClaimedCreatorProject,
   syncCreatorProjectWithOwnedRemoteImages,
 } from "./creatorProjectAssets";
 import { SaveStatusIndicator, type SaveLifecycleState } from "./SaveStatusIndicator";
@@ -186,6 +191,19 @@ function validateLocalImage(file: File) {
     throw new Error(`${file.name} must be a JPEG, PNG or WebP image.`);
   }
   if (file.size > 12 * 1024 * 1024) throw new Error(`${file.name} is over 12 MB.`);
+}
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function isClaimableImage(image: CreatorProject["product"]["images"][number]) {
+  return !image.storagePath && (Boolean(image.assetKey) || image.source === "sample");
+}
+
+async function checksumForBlob(blob: Blob): Promise<string> {
+  const digest = await crypto.subtle.digest("SHA-256", await blob.arrayBuffer());
+  return Array.from(new Uint8Array(digest))
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
 }
 
 function Progress({ current, steps, label }: { current: CreatorStep; steps: Array<{ id: CreatorStep; label: string }>; label: string }) {
@@ -862,35 +880,105 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
 
   const claimGuestProject = async (candidate: CreatorProject) => {
     if (!user || qaMode) return candidate;
-    const cloudProject = await syncCreatorProject(candidate, user.id);
-    let images = await Promise.all(candidate.product.images.map(async (pending) => {
-      if (pending.assetKey) {
-        const stored = await getGuestAsset(pending.assetKey);
-        if (!stored) throw new Error(`The local copy of ${pending.name} is no longer available. Add it again to continue.`);
-        const claimed = await claimGuestImage({ userId: user.id, projectId: cloudProject.id, assetId: pending.id, name: stored.name, blob: stored.blob, contentType: stored.mimeType });
-        return { ...pending, id: claimed.assetId, url: claimed.url, storagePath: claimed.storagePath, mimeType: claimed.mimeType, checksum: claimed.checksum, assetKey: undefined };
+    const guestDraft = await getGuestDraft(candidate.id);
+    if (!guestDraft?.pendingGenerationId) return syncCreatorProject(candidate, user.id);
+
+    // The local IDs become the immutable asset identities accepted by the
+    // server. Bundled samples did not originate in IndexedDB, so give them a
+    // UUID before the same secure claim path fetches their bytes.
+    const projectForClaim: CreatorProject = {
+      ...candidate,
+      product: {
+        ...candidate.product,
+        images: candidate.product.images.map((image) => isClaimableImage(image) && !UUID_PATTERN.test(image.id)
+          ? { ...image, id: crypto.randomUUID() }
+          : image),
+      },
+    };
+    const blobs = new Map<string, Blob>();
+    const assetManifest: GuestClaimAssetManifest = [];
+    for (const [ordinal, image] of projectForClaim.product.images.entries()) {
+      if (!isClaimableImage(image)) continue;
+      let blob: Blob;
+      let mimeType: string;
+      if (image.assetKey) {
+        const stored = await getGuestAsset(image.assetKey);
+        if (!stored) throw new Error(`The local copy of ${image.name} is no longer available. Add it again to continue.`);
+        blob = stored.blob;
+        mimeType = stored.mimeType.toLowerCase();
+      } else {
+        const response = await fetch(image.url, { credentials: "same-origin" });
+        if (!response.ok) throw new Error(`The bundled sample image ${image.name} could not be loaded.`);
+        blob = await response.blob();
+        mimeType = blob.type.toLowerCase();
       }
-      if (pending.source === "sample" && !pending.storagePath) {
-        const response = await fetch(pending.url, { credentials: "same-origin" });
-        if (!response.ok) throw new Error(`The bundled sample image ${pending.name} could not be loaded.`);
-        const blob = await response.blob();
-        const contentType = blob.type.toLowerCase();
-        if (!["image/jpeg", "image/png", "image/webp"].includes(contentType)) {
-          throw new Error(`The bundled sample image ${pending.name} has an unsupported format.`);
-        }
-        const claimed = await claimGuestImage({ userId: user.id, projectId: cloudProject.id, assetId: pending.id, name: pending.name, blob, contentType });
-        return { ...pending, id: claimed.assetId, url: claimed.url, storagePath: claimed.storagePath, mimeType: claimed.mimeType, checksum: claimed.checksum, assetKey: undefined };
+      if (!["image/jpeg", "image/png", "image/webp"].includes(mimeType)) {
+        throw new Error(`${image.name} must be a JPEG, PNG or WebP image.`);
       }
-      return pending;
-    }));
-    if (images.some((image) => image.source === "url" && !image.storagePath)) images = await mirrorProductImages(cloudProject.id, images);
-    const claimed = await syncCreatorProject(
-      mergeClaimedCreatorProject(candidate, cloudProject, images),
-      user.id,
-    );
-    // Guest blobs stay local until the canonical claim receipt and every asset digest
-    // are compared by guestClaimRecovery. Storage-path presence alone is not proof.
-    return claimed;
+      const checksumSha256 = await checksumForBlob(blob);
+      blobs.set(image.id, blob);
+      assetManifest.push({
+        localAssetId: image.id,
+        ordinal,
+        kind: "product",
+        mimeType,
+        sizeBytes: blob.size,
+        checksumSha256,
+      });
+    }
+
+    const snapshot = await buildGuestClaimSnapshot({
+      draftId: projectForClaim.id,
+      pendingGenerationId: guestDraft.pendingGenerationId,
+      assetManifest,
+      title: projectForClaim.title,
+      mode: "template",
+      templateVersionId: await resolvePortableTemplateVersionId(projectForClaim.templateId),
+      configuration: portableConfiguration(projectForClaim),
+      productRecipe: portableProductRecipe(projectForClaim),
+      campaignRecipe: portableCampaignRecipe(projectForClaim),
+    });
+    await saveGuestDraft({
+      ...projectToCreationDraft(projectForClaim, rightsConfirmed, "claiming"),
+      pendingGenerationId: snapshot.pendingGenerationId,
+      acceptedQuote: guestDraft.acceptedQuote,
+    });
+    const checkpoint = await markClaimCheckpoint(projectForClaim.id, {
+      pendingGenerationId: snapshot.pendingGenerationId,
+      snapshotDigest: snapshot.snapshotDigest,
+      configuration: snapshot.configuration,
+      assetManifest: snapshot.assetManifest,
+    });
+    if (!checkpoint) throw new Error("The local campaign could not be prepared for secure recovery.");
+
+    const claimed = await claimGuestAssets({ snapshot, blobs });
+    const recovery = await verifyAndDeleteVerifiedDraft(projectForClaim.id, claimed.receipt);
+    if (recovery.state !== "verified") {
+      throw new Error("MovPrompt could not verify your claimed campaign. Your local draft is unchanged.");
+    }
+    const cloudProject = await hydrateCloudProject(claimed.receipt.project);
+    if (!cloudProject) throw new Error("The saved campaign could not be restored after secure claim.");
+    const claimedAssets = new Map(claimed.assets.map((asset) => [asset.localAssetId, asset]));
+    let images = projectForClaim.product.images.map((image) => {
+      const secure = claimedAssets.get(image.id);
+      return secure
+        ? { ...image, assetKey: undefined, storagePath: secure.storagePath, mimeType: secure.mimeType, checksum: secure.checksum, url: secure.url }
+        : image;
+    });
+    if (images.some((image) => image.source === "url" && !image.storagePath)) {
+      images = await mirrorProductImages(cloudProject.id, images);
+    }
+    // The canonical receipt proves the original guest configuration. This
+    // follow-up immutable version adds only server-issued storage paths and
+    // fresh in-memory previews, never untrusted storage coordinates.
+    return syncCreatorProject({
+      ...projectForClaim,
+      id: cloudProject.id,
+      versionId: cloudProject.versionId,
+      versionNumber: cloudProject.versionNumber,
+      createdAt: cloudProject.createdAt,
+      product: { ...projectForClaim.product, images },
+    }, user.id);
   };
 
   const handleAuthGateChange = (open: boolean) => {
