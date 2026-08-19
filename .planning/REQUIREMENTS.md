@@ -20,11 +20,11 @@ Requirements for the first production release. A requirement is complete only af
 ### Accounts and Guest Drafts
 
 - [ ] **AUTH-01**: Guest can configure a complete campaign before creating an account.
-- [ ] **AUTH-02**: User can create an account or sign in with email and password only when Generate is selected.
-- [ ] **AUTH-03**: Google and Apple sign-in appear only when correctly configured and recover the same pending campaign.
-- [ ] **AUTH-04**: Private-beta user can complete the first campaign without an email-verification interruption and sees a dashboard reminder to verify later.
-- [ ] **AUTH-05**: User can reset a forgotten password and return safely to the intended MovPrompt route.
-- [ ] **AUTH-06**: Cancelled authentication returns the user to the unchanged campaign.
+- [x] **AUTH-02**: User can create an account or sign in with email and password only when Generate is selected.
+- [x] **AUTH-03**: Google and Apple sign-in appear only when correctly configured and recover the same pending campaign.
+- [x] **AUTH-04**: Private-beta user can complete the first campaign without an email-verification interruption and sees a dashboard reminder to verify later.
+- [x] **AUTH-05**: User can reset a forgotten password and return safely to the intended MovPrompt route.
+- [x] **AUTH-06**: Cancelled authentication returns the user to the unchanged campaign.
 - [x] **AUTH-07**: Successful authentication restores the exact template, sources, facts, language, campaign settings, rights decision, and pending generation intent.
 - [x] **AUTH-08**: Repeated authentication callbacks create at most one project, one run, and one charge.
 - [ ] **AUTH-09**: Guest drafts and local media expire after seven days and cannot be claimed or viewed by a different account.
@@ -188,11 +188,11 @@ Deferred until the beginner Kuwait launch is stable and measured.
 | TRUTH-06 | Phase 1 | Complete |
 | TRUTH-07 | Phase 1 | Complete |
 | AUTH-01 | Phase 2 | Pending |
-| AUTH-02 | Phase 2 | Pending |
-| AUTH-03 | Phase 2 | Pending |
-| AUTH-04 | Phase 2 | Pending |
-| AUTH-05 | Phase 2 | Pending |
-| AUTH-06 | Phase 2 | Pending |
+| AUTH-02 | Phase 2 | Complete |
+| AUTH-03 | Phase 2 | Complete |
+| AUTH-04 | Phase 2 | Complete |
+| AUTH-05 | Phase 2 | Complete |
+| AUTH-06 | Phase 2 | Complete |
 | AUTH-07 | Phase 2 | Complete |
 | AUTH-08 | Phase 2 | Complete |
 | AUTH-09 | Phase 2 | Pending |
