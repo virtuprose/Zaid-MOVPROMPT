@@ -17,8 +17,10 @@ import type { CreatorRepository } from "./creator-repository.js";
 import { registerCreatorRoutes } from "./creator-routes.js";
 import { registerGenerationRoutes } from "./generation-routes.js";
 import type { GenerationApiService } from "./generation-service.js";
+import type { GenerationAvailabilityService } from "./generation-availability.js";
 import { createOpenApiDocument } from "./openapi.js";
 import { requestContext, type ApiEnvironment } from "./request-context.js";
+import type { RemoteImageFetcher } from "./remote-image-fetcher.js";
 import type { SourceScanner } from "./source-scanner.js";
 
 export type ReadinessDependency = {
@@ -34,9 +36,11 @@ export type CreateApiOptions = {
   authGateway?: AuthGateway;
   assetRepository?: AssetRepository;
   assetStorage?: AssetStorageGateway;
+  remoteImageFetcher?: RemoteImageFetcher;
   creatorRepository?: CreatorRepository;
   sourceScanner?: SourceScanner;
   generationService?: GenerationApiService;
+  generationAvailability?: GenerationAvailabilityService;
 };
 
 async function checkDependencies(dependencies: ReadinessDependency[]) {
@@ -75,10 +79,16 @@ export function createApi(options: CreateApiOptions = {}) {
       config.featureFlags.assets &&
       config.featureFlags.authentication &&
       Boolean(options.authGateway && options.assetRepository && options.assetStorage),
-    generation:
-      config.featureFlags.generation &&
-      Boolean(options.authGateway && options.generationService?.isAvailable()),
+    generation: false,
   };
+
+  async function generationAvailability() {
+    return options.generationAvailability?.evaluate() ?? {
+      status: "unavailable" as const,
+      reason: "disabled" as const,
+      retryable: false,
+    };
+  }
 
   app.use("*", requestContext);
   if (config.corsOrigins.length > 0) {
@@ -92,7 +102,7 @@ export function createApi(options: CreateApiOptions = {}) {
           "X-Request-ID",
           "Idempotency-Key",
         ],
-        allowMethods: ["GET", "POST", "OPTIONS"],
+        allowMethods: ["GET", "POST", "PUT", "OPTIONS"],
         exposeHeaders: ["Content-Length", "X-Request-ID"],
         maxAge: 600,
         credentials: true,
@@ -163,6 +173,7 @@ export function createApi(options: CreateApiOptions = {}) {
     ...(options.authGateway ? { auth: options.authGateway } : {}),
     ...(options.assetRepository ? { repository: options.assetRepository } : {}),
     ...(options.assetStorage ? { storage: options.assetStorage } : {}),
+    ...(options.remoteImageFetcher ? { remoteImages: options.remoteImageFetcher } : {}),
   });
 
   registerCreatorRoutes(app, {
@@ -174,16 +185,26 @@ export function createApi(options: CreateApiOptions = {}) {
   });
 
   registerGenerationRoutes(app, {
-    enabled: effectiveFeatures.generation,
+    enabled: Boolean(options.authGateway && options.generationService),
+    ...(options.generationAvailability ? { availability: options.generationAvailability } : {}),
     ...(options.authGateway ? { auth: options.authGateway } : {}),
     ...(options.generationService ? { generation: options.generationService } : {}),
   });
 
-  app.get("/api/v1/feature-flags", (context) => {
+  app.get("/api/v1/feature-flags", async (context) => {
+    const availability = await generationAvailability();
+    const publicCapabilities = capabilities.listPublic().map((capability) => ({
+      ...capability,
+      available:
+        capability.kind === "video"
+          ? capability.available && availability.status === "ready"
+          : capability.available,
+    }));
     context.header("cache-control", "private, no-store");
     return context.json({
-      features: effectiveFeatures,
-      capabilities: capabilities.listPublic(),
+      features: { ...effectiveFeatures, generation: availability.status === "ready" },
+      capabilities: publicCapabilities,
+      generationAvailability: availability,
       evaluatedAt: new Date().toISOString(),
     });
   });

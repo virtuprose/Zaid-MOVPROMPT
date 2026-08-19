@@ -9,6 +9,7 @@ export type WorkerConfig = {
   outboxLeaseMs: number;
   outboxPollIntervalMs: number;
   renderReconciliationDelaySeconds: number;
+  heartbeatIntervalSeconds: number;
 };
 
 function readBoolean(value: string | undefined): boolean {
@@ -49,6 +50,11 @@ export function loadWorkerConfig(
       environment.WORKER_RENDER_RECONCILIATION_DELAY_SECONDS,
       15,
       "WORKER_RENDER_RECONCILIATION_DELAY_SECONDS",
+    ),
+    heartbeatIntervalSeconds: readPositiveInteger(
+      environment.WORKER_HEARTBEAT_INTERVAL_SECONDS,
+      15,
+      "WORKER_HEARTBEAT_INTERVAL_SECONDS",
     ),
   };
 }

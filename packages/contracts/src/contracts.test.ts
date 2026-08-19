@@ -4,6 +4,7 @@ import {
   CreateAssetUploadRequestSchema,
   CapabilityAliasSchema,
   ExportJobPayloadSchema,
+  GenerationConfigurationSchema,
   GenerationJobPayloadSchema,
   CreateGenerationQuoteRequestSchema,
   StartRenderRunRequestSchema,
@@ -92,6 +93,22 @@ describe("public contracts", () => {
         configuration: { prompt: "A product reveal" },
       }),
     ).toThrow();
+  });
+
+  it("binds resolution and audio into every generation configuration", () => {
+    expect(GenerationConfigurationSchema.parse({ prompt: "A product reveal" })).toMatchObject({
+      resolution: "720p",
+      audio: true,
+    });
+    expect(GenerationConfigurationSchema.parse({
+      prompt: "A muted preview",
+      resolution: "480p",
+      audio: false,
+    })).toMatchObject({ resolution: "480p", audio: false });
+    expect(() => GenerationConfigurationSchema.parse({
+      prompt: "Unsupported tier",
+      resolution: "1080p",
+    })).toThrow();
   });
 
   it("requires render ownership to come from authentication rather than the request", () => {

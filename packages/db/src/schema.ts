@@ -9,6 +9,7 @@ import {
   jsonb,
   pgEnum,
   pgTable,
+  primaryKey,
   text,
   timestamp,
   unique,
@@ -98,6 +99,7 @@ export const paymentRefundStatus = pgEnum("payment_refund_status", [
 ]);
 export const notificationSeverity = pgEnum("notification_severity", ["info", "success", "warning", "error"]);
 export const outboxStatus = pgEnum("outbox_status", ["pending", "processing", "completed", "failed", "dead"]);
+export const serviceHeartbeatStatus = pgEnum("service_heartbeat_status", ["starting", "ready", "stopping"]);
 
 /** Better Auth core user table. Existing Supabase UUIDs can be inserted unchanged. */
 export const users = pgTable(
@@ -232,6 +234,9 @@ export const creatorProjects = pgTable(
     title: text("title").notNull().default("Untitled campaign"),
     mode: creationMode("mode").notNull().default("template"),
     status: projectStatus("status").notNull().default("draft"),
+    /** Latest immutable version the user is editing or generating. */
+    currentWorkingVersionId: uuid("current_working_version_id"),
+    /** Last version with a completed, accepted render. */
     currentAcceptedVersionId: uuid("current_accepted_version_id"),
     /**
      * Stable browser draft identity used to make the guest-to-account claim
@@ -361,8 +366,16 @@ export const renderRuns = pgTable(
     chargedCredits: integer("charged_credits").notNull().default(0),
     starterEntitlementUsed: boolean("starter_entitlement_used").notNull().default(false),
     status: renderStatus("status").notNull().default("submitting"),
+    processingStage: text("processing_stage")
+      .$type<"preparing" | "rendering" | "securing_output" | "quality_review" | "ready" | "cancelling" | "failed" | "cancelled">()
+      .notNull()
+      .default("preparing"),
     provider: text("provider"),
     providerRequestId: text("provider_request_id"),
+    qualityAttempt: integer("quality_attempt").notNull().default(0),
+    maxQualityRetries: integer("max_quality_retries").notNull().default(2),
+    qualityRetryDirective: text("quality_retry_directive"),
+    lastQualityReport: jsonb("last_quality_report").$type<JsonObject>(),
     outputBucket: text("output_bucket"),
     outputObjectKey: text("output_object_key"),
     errorCode: text("error_code"),
@@ -395,8 +408,56 @@ export const renderRuns = pgTable(
     }).onDelete("restrict"),
     check("render_runs_quoted_credits_nonnegative", sql`${table.quotedCredits} >= 0`),
     check("render_runs_charged_credits_nonnegative", sql`${table.chargedCredits} >= 0`),
+    check(
+      "render_runs_processing_stage_valid",
+      sql`${table.processingStage} IN ('preparing', 'rendering', 'securing_output', 'quality_review', 'ready', 'cancelling', 'failed', 'cancelled')`,
+    ),
+    check("render_runs_quality_attempt_valid", sql`${table.qualityAttempt} >= 0 AND ${table.qualityAttempt} <= 3`),
+    check("render_runs_max_quality_retries_valid", sql`${table.maxQualityRetries} >= 0 AND ${table.maxQualityRetries} <= 3`),
     index("render_runs_project_created_idx").on(table.projectId, table.createdAt),
     index("render_runs_reconcile_idx").on(table.status, table.updatedAt),
+  ],
+);
+
+/** Immutable evidence for every provider candidate considered by the quality gate. */
+export const renderAttempts = pgTable(
+  "render_attempts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    renderRunId: uuid("render_run_id").notNull(),
+    projectId: uuid("project_id").notNull(),
+    projectVersionId: uuid("project_version_id").notNull(),
+    userId: uuid("user_id").notNull(),
+    attemptNumber: integer("attempt_number").notNull(),
+    provider: text("provider").notNull(),
+    providerRequestId: text("provider_request_id").notNull(),
+    status: text("status").notNull().default("submitted"),
+    candidateBucket: text("candidate_bucket"),
+    candidateObjectKey: text("candidate_object_key"),
+    qualityScore: integer("quality_score"),
+    qualityDecision: jsonb("quality_decision").$type<JsonObject>(),
+    /** Provider-reported attempt cost. One micro-USD equals USD 0.000001. */
+    providerCostMicrousd: bigint("provider_cost_microusd", { mode: "number" }),
+    providerLatencyMs: integer("provider_latency_ms"),
+    /** Strictly sanitized usage counters and routing metadata; never signed URLs or secrets. */
+    providerUsage: jsonb("provider_usage").$type<JsonObject>(),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (table) => [
+    unique("render_attempts_run_number_unique").on(table.renderRunId, table.userId, table.attemptNumber),
+    unique("render_attempts_provider_request_unique").on(table.provider, table.providerRequestId),
+    foreignKey({
+      name: "render_attempts_run_owner_fk",
+      columns: [table.renderRunId, table.projectId, table.projectVersionId, table.userId],
+      foreignColumns: [renderRuns.id, renderRuns.projectId, renderRuns.projectVersionId, renderRuns.userId],
+    }).onDelete("cascade"),
+    check("render_attempts_number_valid", sql`${table.attemptNumber} >= 0 AND ${table.attemptNumber} <= 3`),
+    check("render_attempts_quality_score_valid", sql`${table.qualityScore} IS NULL OR (${table.qualityScore} >= 0 AND ${table.qualityScore} <= 100)`),
+    check("render_attempts_provider_cost_nonnegative", sql`${table.providerCostMicrousd} IS NULL OR ${table.providerCostMicrousd} >= 0`),
+    check("render_attempts_provider_latency_nonnegative", sql`${table.providerLatencyMs} IS NULL OR ${table.providerLatencyMs} >= 0`),
+    check("render_attempts_status_valid", sql`${table.status} IN ('submitted', 'processing', 'quality_rejected', 'accepted', 'failed', 'cancelled')`),
+    index("render_attempts_run_created_idx").on(table.renderRunId, table.createdAt),
   ],
 );
 
@@ -744,6 +805,24 @@ export const outboxJobs = pgTable(
   ],
 );
 
+/** Operational liveness record used to stop new quotes when no worker is ready. */
+export const serviceHeartbeats = pgTable(
+  "service_heartbeats",
+  {
+    serviceName: text("service_name").notNull(),
+    instanceId: text("instance_id").notNull(),
+    status: serviceHeartbeatStatus("status").notNull().default("starting"),
+    metadata: jsonb("metadata").$type<JsonObject>().notNull().default({}),
+    startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
+    lastSeenAt: timestamp("last_seen_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: updatedAt(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.serviceName, table.instanceId] }),
+    index("service_heartbeats_freshness_idx").on(table.serviceName, table.status, table.lastSeenAt),
+  ],
+);
+
 export const schema = {
   users,
   sessions,
@@ -756,6 +835,7 @@ export const schema = {
   creatorProjectAssets,
   generationQuotes,
   renderRuns,
+  renderAttempts,
   entitlements,
   creditAccounts,
   creditReservations,
@@ -769,6 +849,7 @@ export const schema = {
   notifications,
   auditLogs,
   outboxJobs,
+  serviceHeartbeats,
 };
 
 export type User = typeof users.$inferSelect;
@@ -776,6 +857,7 @@ export type NewUser = typeof users.$inferInsert;
 export type CreatorProject = typeof creatorProjects.$inferSelect;
 export type CreatorProjectVersion = typeof creatorProjectVersions.$inferSelect;
 export type RenderRun = typeof renderRuns.$inferSelect;
+export type RenderAttempt = typeof renderAttempts.$inferSelect;
 export type CreditReservation = typeof creditReservations.$inferSelect;
 export type CreditLedgerEntry = typeof creditLedger.$inferSelect;
 export type PaymentOrder = typeof paymentOrders.$inferSelect;

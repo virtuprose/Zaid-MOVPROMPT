@@ -14,6 +14,7 @@ describe("worker configuration", () => {
     expect(config.outboxLeaseMs).toBe(60_000);
     expect(config.outboxPollIntervalMs).toBe(1_000);
     expect(config.renderReconciliationDelaySeconds).toBe(15);
+    expect(config.heartbeatIntervalSeconds).toBe(15);
   });
 
   it("accepts the temporary legacy environment name", () => {

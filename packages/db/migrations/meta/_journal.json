@@ -50,6 +50,62 @@
       "when": 1786542600000,
       "tag": "0006_semantic_capabilities",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1786637700000,
+      "tag": "0007_kuwait_campaign_catalog",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1786638600000,
+      "tag": "0008_render_quality_attempts",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1786639500000,
+      "tag": "0009_speech_sync_quality_gate",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1786640400000,
+      "tag": "0010_auth_generation_benefits",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1786641300000,
+      "tag": "0011_separate_working_and_accepted_versions",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1786642200000,
+      "tag": "0012_pgboss_worker_schema",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1786728600000,
+      "tag": "0013_generation_activation_observability",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1786732200000,
+      "tag": "0014_render_processing_stage",
+      "breakpoints": true
     }
   ]
 }

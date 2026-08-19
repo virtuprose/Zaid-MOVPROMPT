@@ -1,5 +1,9 @@
 import { authEnvironmentFromEnv, createMovPromptAuth } from "@movprompt/auth";
-import { createDatabase, createGenerationService } from "@movprompt/db";
+import {
+  createDatabase,
+  createGenerationService,
+  createServiceHeartbeatRepository,
+} from "@movprompt/db";
 import { createCapabilityRegistryFromEnvironment } from "@movprompt/providers";
 import { objectStorageConfigFromEnv, PrivateObjectStorage } from "@movprompt/storage";
 import { sql } from "drizzle-orm";
@@ -12,7 +16,9 @@ import { createSmtpAuthEmailSender, smtpEmailConfigFromEnv } from "./email.js";
 import { createGenerationPricingFromEnvironment } from "./generation-pricing.js";
 import { createDrizzleGenerationRepository } from "./generation-repository.js";
 import { createGenerationApiService } from "./generation-service.js";
+import { createGenerationAvailabilityService } from "./generation-availability.js";
 import { createDrizzleCreatorRepository } from "./creator-repository.js";
+import { createRemoteImageFetcher } from "./remote-image-fetcher.js";
 import { createSourceScanner } from "./source-scanner.js";
 
 export type RuntimeServices = Pick<
@@ -20,7 +26,10 @@ export type RuntimeServices = Pick<
   | "authGateway"
   | "assetRepository"
   | "assetStorage"
+  | "remoteImageFetcher"
   | "generationService"
+  | "generationAvailability"
+  | "capabilityRegistry"
   | "creatorRepository"
   | "sourceScanner"
   | "readinessDependencies"
@@ -46,13 +55,19 @@ export function createRuntimeServices(
   const authenticationEnabled = config.featureFlags.authentication;
   const assetsEnabled = config.featureFlags.assets;
   const generationEnabled = config.featureFlags.generation;
+  const sourceScanner = createSourceScanner();
+  const remoteImageFetcher = createRemoteImageFetcher();
 
   if ((assetsEnabled || generationEnabled) && !authenticationEnabled) {
     throw new Error("FEATURE_ASSETS and FEATURE_GENERATION require FEATURE_AUTHENTICATION=true");
   }
+  if (generationEnabled && !assetsEnabled) {
+    throw new Error("FEATURE_GENERATION requires FEATURE_ASSETS=true");
+  }
 
   if (!authenticationEnabled) {
     return {
+      sourceScanner,
       readinessDependencies: [],
       async close() {},
     };
@@ -63,9 +78,10 @@ export function createRuntimeServices(
     ssl: environment.DATABASE_SSL === "require" ? "require" : false,
     applicationName: `${config.serviceName}-${config.environment}`,
   });
+  const authEnvironment = authEnvironmentFromEnv(environment);
   const auth = createMovPromptAuth({
     db: database.db,
-    environment: authEnvironmentFromEnv(environment),
+    environment: authEnvironment,
     sendEmail: createSmtpAuthEmailSender(smtpEmailConfigFromEnv(environment)),
   });
   const readinessDependencies: ReadinessDependency[] = [
@@ -77,36 +93,60 @@ export function createRuntimeServices(
     },
   ];
 
-  const generationService = generationEnabled
+  const capabilities = createCapabilityRegistryFromEnvironment(environment);
+  const pricing = createGenerationPricingFromEnvironment(environment);
+  const generationService = assetsEnabled
     ? createGenerationApiService({
         repository: createDrizzleGenerationRepository(database.db),
         generation: createGenerationService(database.db),
-        pricing: createGenerationPricingFromEnvironment(environment),
-        capabilities: createCapabilityRegistryFromEnvironment(environment),
+        pricing,
+        capabilities,
+        starterOnly: environment.GENERATION_STARTER_ONLY?.trim().toLowerCase() !== "false",
+        starterEligibilityRequiresEmailVerification: authEnvironment.requireEmailVerification,
       })
     : undefined;
   const creatorRepository = createDrizzleCreatorRepository(database.db);
-  const sourceScanner = createSourceScanner();
-
   if (!assetsEnabled) {
     return {
       authGateway: createBetterAuthGateway(auth),
       creatorRepository,
       sourceScanner,
       ...(generationService ? { generationService } : {}),
+      capabilityRegistry: capabilities,
       readinessDependencies,
       close: () => database.close(),
     };
   }
 
   const storage = new PrivateObjectStorage(objectStorageConfigFromEnv(environment));
+  const assetStorage = createAssetStorageGateway(storage);
+  const generationAvailability = createGenerationAvailabilityService({
+    enabled: generationEnabled,
+    environment,
+    capabilities,
+    pricing,
+    storage: assetStorage,
+    heartbeats: createServiceHeartbeatRepository(database.db),
+  });
+  if (generationEnabled) {
+    readinessDependencies.push({
+      name: "generation-runtime",
+      check: async () => {
+        const availability = await generationAvailability.evaluate();
+        if (availability.status !== "ready") throw new Error(availability.reason ?? "unavailable");
+      },
+    });
+  }
   return {
     authGateway: createBetterAuthGateway(auth),
     creatorRepository,
     sourceScanner,
     assetRepository: createDrizzleAssetRepository(database.db),
-    assetStorage: createAssetStorageGateway(storage),
+    assetStorage,
+    remoteImageFetcher,
     ...(generationService ? { generationService } : {}),
+    generationAvailability,
+    capabilityRegistry: capabilities,
     readinessDependencies,
     close: () => database.close(),
   };

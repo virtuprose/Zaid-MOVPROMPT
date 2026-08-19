@@ -1,0 +1,53 @@
+import { createHash } from "node:crypto";
+
+function normalizedList(value: string | undefined): string[] {
+  return (value ?? "")
+    .split(",")
+    .map((item) => item.trim().toLowerCase())
+    .filter(Boolean)
+    .sort();
+}
+
+function normalizedBoolean(value: string | undefined): boolean {
+  return value?.trim().toLowerCase() === "true";
+}
+
+/**
+ * Non-secret activation fingerprint shared by API and worker. A heartbeat only
+ * unlocks submissions when both processes agree on provider, storage and media
+ * policy. Secret values are deliberately excluded; only their presence is used.
+ */
+export function generationRuntimeFingerprint(
+  environment: Readonly<Record<string, string | undefined>>,
+): string {
+  const configuration = {
+    gatewayBaseUrl: environment.VERCEL_AI_GATEWAY_BASE_URL?.trim() || "",
+    providerReady: normalizedBoolean(environment.MOVPROMPT_PROVIDER_VERCEL_GATEWAY_READY),
+    gatewayKeyPresent: Boolean(environment.AI_GATEWAY_API_KEY?.trim()),
+    capabilities: ["VIDEO_CINEMATIC", "VIDEO_PRODUCT_FIDELITY"].map((name) => {
+      const prefix = `MOVPROMPT_CAPABILITY_${name}`;
+      return {
+        name,
+        enabled: normalizedBoolean(environment[`${prefix}_ENABLED`]),
+        adapterId: environment[`${prefix}_ADAPTER_ID`]?.trim() || "",
+        modelId: environment[`${prefix}_MODEL_ID`]?.trim() || "",
+      };
+    }),
+    generateAudio: normalizedBoolean(environment.VERCEL_GATEWAY_SEEDANCE_GENERATE_AUDIO),
+    outputHosts: normalizedList(environment.PROVIDER_OUTPUT_ALLOWED_HOSTS),
+    qualityModel: environment.MOVPROMPT_QUALITY_MODEL_ID?.trim() || "",
+    storage: {
+      endpoint: environment.S3_ENDPOINT?.trim() || "",
+      region: environment.S3_REGION?.trim() || "auto",
+      assetsBucket: environment.S3_ASSETS_BUCKET?.trim() || "",
+      outputsBucket: environment.S3_OUTPUTS_BUCKET?.trim() || "",
+      forcePathStyle: normalizedBoolean(environment.S3_FORCE_PATH_STYLE),
+      credentialsPresent: Boolean(
+        environment.S3_ACCESS_KEY_ID?.trim() && environment.S3_SECRET_ACCESS_KEY?.trim(),
+      ),
+    },
+    ffmpegPath: environment.FFMPEG_PATH?.trim() || "",
+    ffprobePath: environment.FFPROBE_PATH?.trim() || "",
+  };
+  return createHash("sha256").update(JSON.stringify(configuration)).digest("hex");
+}

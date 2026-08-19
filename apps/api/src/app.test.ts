@@ -49,6 +49,36 @@ describe("MovPrompt API foundation", () => {
     expect(body).not.toContain("private-model-id");
   });
 
+  it("keeps public product scanning available before authentication", async () => {
+    const app = createApi({
+      config,
+      capabilityRegistry: new CapabilityRegistry(),
+      sourceScanner: {
+        scan: async ({ url, kind, requestId }) => ({
+          kind,
+          canonicalUrl: url,
+          facts: [{ field: "name", value: "Imported product", source: "page_title" }],
+          imageCandidates: ["https://cdn.example.com/product.jpg"],
+          requestId,
+        }),
+      },
+    });
+    const response = await app.request("/api/v1/product-scans", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ url: "https://shop.example.com/product" }),
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("cache-control")).toBe("private, no-store");
+    await expect(response.json()).resolves.toMatchObject({
+      kind: "product",
+      canonicalUrl: "https://shop.example.com/product",
+      facts: [{ field: "name", value: "Imported product" }],
+      imageCandidates: ["https://cdn.example.com/product.jpg"],
+    });
+  });
+
   it("fails readiness when a required dependency is unavailable", async () => {
     const app = createApi({
       config,

@@ -81,10 +81,30 @@ export const ProductFeatureFlagsSchema = z
 
 export type ProductFeatureFlags = z.infer<typeof ProductFeatureFlagsSchema>;
 
+export const GenerationAvailabilitySchema = z
+  .object({
+    status: z.enum(["ready", "unavailable"]),
+    reason: z
+      .enum([
+        "disabled",
+        "pricing_unavailable",
+        "capability_unavailable",
+        "worker_unavailable",
+        "storage_unavailable",
+        "quality_unavailable",
+      ])
+      .nullable(),
+    retryable: z.boolean(),
+  })
+  .strict();
+
+export type GenerationAvailability = z.infer<typeof GenerationAvailabilitySchema>;
+
 export const FeatureFlagsResponseSchema = z
   .object({
     features: ProductFeatureFlagsSchema,
     capabilities: z.array(PublicCapabilitySchema),
+    generationAvailability: GenerationAvailabilitySchema,
     evaluatedAt: z.iso.datetime(),
   })
   .strict();
