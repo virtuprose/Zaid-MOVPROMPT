@@ -3,112 +3,133 @@ phase: 2
 slug: guest-authentication-and-data-integrity
 status: evidence_partial
 nyquist_compliant: false
-wave_0_complete: false
 created: 2026-08-19
 updated: 2026-08-19
 ---
 
-# Phase 2 — Validation Strategy
+# Phase 2 — Validation Strategy and Audit
 
-> Execution-aligned contract for eight sequential plans covering durable claim, IndexedDB recovery, auth capability, private media, shared abuse controls, source truth, cleanup/isolation, and rendered UI proof.
+> Phase 2’s automated behavioral checks are green. The phase is not marked Nyquist-compliant yet because the real rendered browser journey through the local API, private storage, email delivery, and configured social providers has not been observed. Those checks remain manual-only rather than inferred from code or unit tests.
 
 ## Test Infrastructure
 
-| Property | Value |
+| Property | Verified setup |
 |---|---|
-| Framework | Vitest 4.1.10, Testing Library/jsdom, PostgreSQL 17 integration, pg-boss worker tests, restricted-role SQL, private storage integration, rendered browser QA |
-| Config | Workspace test scripts; `apps/web/vitest.config.ts`; `scripts/infra/validate-phase2-migrations.sh`; `scripts/infra/check-rls-isolation.sql` |
-| Focused task rule | Run only the test files and affected workspace typecheck named by each task |
-| Full phase gate | `bun run test:all && bun run typecheck && bun run db:check`, guarded PostgreSQL 17 migration/RLS proof, worker cleanup suite, private-object checks, and rendered browser matrix |
-| Browser proof | Available in-app browser or Chrome control; do not add `@playwright/test` in Phase 2 |
+| Framework | Vitest 4.1.10; Testing Library/jsdom; Hono API tests; PostgreSQL 17 integration tests; pg-boss worker tests |
+| Browser storage | IndexedDB/localStorage test seams in `apps/web` |
+| Database evidence | Guarded disposable PostgreSQL 17 database only; migration script rejects non-local/shared targets before `psql` |
+| Storage evidence | Private object/key, metadata, checksum, owner-refresh API tests; no real cloud bucket contacted |
+| Full commands | `bun run test:all`, `bun run typecheck`, `bun run db:check` |
+| Phase-specific commands | Listed in the audit trail below; all commands were executed without paid/provider calls |
 
-## Sampling Rate
+## Requirement Coverage
 
-- **After every task:** focused command in the corresponding PLAN task; no watch mode.
-- **After each plan:** affected workspace tests/typecheck plus any plan-specific PostgreSQL/storage/worker gate.
-- **Only at the final phase gate:** full workspace suite, guarded empty→latest migration/RLS harness and complete rendered matrix.
-- **Evidence task:** quick web lint plus evidence-redaction script; it does not repeat the full phase suite.
+| Requirement | Behavioral evidence | Status |
+|---|---|---|
+| AUTH-01 | Seven-day local campaign persistence, full Generate-time auth UI, recovery-state tests | ✅ automated green |
+| AUTH-02 | Generate-time auth gate, exact bilingual copy, safe return behavior | ✅ automated green |
+| AUTH-03 | Server capability visibility plus deterministic Google/Apple callback and replay seams | ✅ automated green; live provider redirect open |
+| AUTH-04 | Deferred first-campaign verification policy and quiet workspace reminder | ✅ automated green |
+| AUTH-05 | Same-origin password-reset return contract and neutral reset copy | ✅ automated green; real mail delivery open |
+| AUTH-06 | Cancel, offline, retry, mismatch and expiry preserve local campaign state | ✅ automated green |
+| AUTH-07 | Immutable snapshot/digest, exact configuration comparison, replay-safe recovery | ✅ automated green |
+| AUTH-08 | User/intent idempotency, concurrent claim/callback protection, replay receipt reuse | ✅ automated green |
+| AUTH-09 | Seven-day expiry, generic cross-account denial, cleanup lease protection | ✅ automated green |
+| AUTH-10 | PostgreSQL claim lifecycle, forced owner RLS, private stable-key/checksum receipts | ✅ automated green |
+| SOURCE-04 | Atomic rate limits plus shared SSRF/redirect/MIME/byte/timeout policy | ✅ automated green |
+| SOURCE-05 | Owner-scoped upload, magic-MIME/head/checksum verification, signed URL refresh denial | ✅ automated green |
+| SOURCE-06 | Partial asset/source failure, retry, local-blob retention and recovery states | ✅ automated green |
+| SOURCE-07 | Source fingerprint and immutable version invalidation preserve accepted history | ✅ automated green |
+| PROJ-06 | API, PostgreSQL/RLS and private-asset cross-user denial matrix | ✅ automated green |
 
 ## Per-Task Verification Map
 
-| Task | Plan | Wave | Requirements | Primary proof | Focused command / artifact | Status |
-|---|---:|---:|---|---|---|---|
-| 02-01-01 | 01 | 1 | AUTH-07, AUTH-08, AUTH-10 | Route→service→repository→PostgreSQL asset-free tracer | `apps/api/src/guest-claim-service.postgres.test.ts` | ⬜ pending |
-| 02-01-02 | 01 | 1 | AUTH-08, AUTH-10 | Claim tables/FKs/indexes/RLS plus safe empty→latest/rerun | `validate-phase2-migrations.sh` | ⬜ pending |
-| 02-01-03 | 01 | 1 | AUTH-07, AUTH-08, AUTH-10 | Start/resume/finalize concurrency and preconditions | `guest-claim-service.postgres` | ⬜ pending |
-| 02-02-01 | 02 | 2 | AUTH-01, AUTH-02, AUTH-06, AUTH-07 | Complete local campaign + stable intent; zero cloud before auth | `guestDraftStore guestClaimRecovery` | ⬜ pending |
-| 02-02-02 | 02 | 2 | AUTH-07, AUTH-09 | Seven-day expiry, fail-closed receipt, one cleanup | `guestDraftStore guestClaimRecovery` | ⬜ pending |
-| 02-03-01 | 03 | 3 | AUTH-02, AUTH-03, AUTH-04 | Shared auth capability and verification policy | `packages/auth config` + contracts | ⬜ pending |
-| 02-03-02 | 03 | 3 | AUTH-03, AUTH-06, AUTH-07, AUTH-08 | Deterministic Google/Apple callback/claim/replay stubs | `auth-provider-stubs app` | ⬜ pending |
-| 02-03-03 | 03 | 3 | AUTH-02, AUTH-05, AUTH-06 | Provider visibility and safe return priority | `authProviders returnPath` | ⬜ pending |
-| 02-04-01 | 04 | 4 | AUTH-10, SOURCE-05, PROJ-06 | One private image, exact integrity, owner refresh | `apps/api assets` + storage | ⬜ pending |
-| 02-04-02 | 04 | 4 | AUTH-07, AUTH-09, SOURCE-05, SOURCE-06 | Multi-asset partial failure/resume and local retention | `creatorAssets guestClaimRecovery` | ⬜ pending |
-| 02-04-03 | 04 | 4 | AUTH-07, AUTH-10, SOURCE-05, PROJ-06 | Multi-asset server integrity, owner denial and replay | `apps/api assets` | ⬜ pending |
-| 02-05-01 | 05 | 5 | SOURCE-04 | Atomic 20/10m scan quota and trusted-client identity | `request-rate-limiter source-scanner` + migration harness | ⬜ pending |
-| 02-05-02 | 05 | 5 | SOURCE-04, SOURCE-05 | Shared SSRF/media policy and 50/10m mirror quota | `source-scanner remote-image-fetcher creator-routes` | ⬜ pending |
-| 02-05-03 | 05 | 5 | SOURCE-04 | Runtime defaults/overrides/fail-closed composition | `request-rate-limiter creator-routes config` | ⬜ pending |
-| 02-06-01 | 06 | 6 | AUTH-10, SOURCE-07 | Immutable source fingerprint/version and stale-output denial | `creator-routes.postgres source-change` | ⬜ pending |
-| 02-06-02 | 06 | 6 | AUTH-07, SOURCE-06, SOURCE-07 | Recovery state and current-output truth | `guestClaimRecovery projectStore creatorProjectOutput` | ⬜ pending |
-| 02-06-03 | 06 | 6 | AUTH-06, SOURCE-06 | Exact bilingual retry/replace/offline/session UI | `guestClaimRecovery creatorProjectOutput` | ⬜ pending |
-| 02-07-01 | 07 | 7 | AUTH-09, AUTH-10, SOURCE-05 | 24h pg-boss cleanup, audit/retry/finalized immunity | `abandoned-claim-cleanup` | ⬜ pending |
-| 02-07-02 | 07 | 7 | AUTH-10, PROJ-06 | Guarded PostgreSQL17 migration and restricted-role RLS | `validate-phase2-migrations.sh` | ⬜ pending |
-| 02-07-03 | 07 | 7 | AUTH-08, AUTH-09, AUTH-10, SOURCE-05, PROJ-06 | Two-user HTTP/DB/storage/cleanup race matrix | API + worker + DB focused suites | ⬜ pending |
-| 02-08-01 | 08 | 8 | AUTH-01, AUTH-02, AUTH-03, AUTH-04 | Generate/email UI, claim stages and full AuthCopy contract | `AuthGateDialog AuthCopy CreatorShell` | ✅ green — focused tests and web typecheck passed |
-| 02-08-02 | 08 | 8 | AUTH-03, AUTH-04, AUTH-05, AUTH-06, AUTH-07, AUTH-08, AUTH-09, SOURCE-06 | Callback/reset/replay/recovery bilingual UI | `AuthCopy GuestAuthRecovery returnPath` | ✅ green — deterministic recovery seam and web typecheck passed |
-| 02-08-03 | 08 | 8 | AUTH-01..10, SOURCE-04..07, PROJ-06 | Rendered responsive/RTL/theme/a11y plus redacted evidence | web lint + evidence redaction + browser matrix | ⚠️ partial — local rendered shell/auth matrix passed; live API/provider/claim routes were unavailable |
+| Task | Plan | Requirements | Behavioral command / artifact | Status |
+|---|---:|---|---|---|
+| 02-01-01 | 01 | AUTH-07, AUTH-08, AUTH-10 | `apps/api/src/guest-claim-service.postgres.test.ts` against disposable PG17 | ✅ green |
+| 02-01-02 | 01 | AUTH-08, AUTH-10 | `bash scripts/infra/validate-phase2-migrations.test.sh`; guarded migration/RLS harness | ✅ green |
+| 02-01-03 | 01 | AUTH-07, AUTH-08, AUTH-10 | Claim start/resume/finalize and concurrent replay tests on disposable PG17 | ✅ green |
+| 02-02-01 | 02 | AUTH-01, AUTH-02, AUTH-06, AUTH-07 | `guestDraftStore`, `guestClaimSnapshot`, `guestClaimRecovery` tests | ✅ green |
+| 02-02-02 | 02 | AUTH-07, AUTH-09 | Seven-day expiry, receipt validation and one-time local cleanup tests | ✅ green |
+| 02-03-01 | 03 | AUTH-02, AUTH-03, AUTH-04 | Auth capability/configuration contract tests | ✅ green |
+| 02-03-02 | 03 | AUTH-03, AUTH-06, AUTH-07, AUTH-08 | `auth-provider-stubs` deterministic callback/replay tests on disposable PG17 | ✅ green |
+| 02-03-03 | 03 | AUTH-02, AUTH-05, AUTH-06 | `authProviders`, `returnPath`, auth/recovery UI tests | ✅ green |
+| 02-04-01 | 04 | AUTH-10, SOURCE-05, PROJ-06 | `assets` API plus storage suite | ✅ green |
+| 02-04-02 | 04 | AUTH-07, AUTH-09, SOURCE-05, SOURCE-06 | `creatorAssets` and `guestClaimRecovery` resume/retention tests | ✅ green |
+| 02-04-03 | 04 | AUTH-07, AUTH-10, SOURCE-05, PROJ-06 | Asset replay/checksum/owner denial tests | ✅ green |
+| 02-05-01 | 05 | SOURCE-04 | `request-rate-limiter` unit and disposable PG17 tests | ✅ green |
+| 02-05-02 | 05 | SOURCE-04, SOURCE-05 | `source-scanner`, `remote-image-fetcher`, assets tests | ✅ green |
+| 02-05-03 | 05 | SOURCE-04 | Runtime quota/configuration fail-closed tests | ✅ green |
+| 02-06-01 | 06 | AUTH-10, SOURCE-07 | `source-change-service` and PG17 creator-route tests | ✅ green |
+| 02-06-02 | 06 | AUTH-07, SOURCE-06, SOURCE-07 | Project output/recovery browser-state tests | ✅ green |
+| 02-06-03 | 06 | AUTH-06, SOURCE-06 | Bilingual source/recovery action tests | ✅ green |
+| 02-07-01 | 07 | AUTH-09, AUTH-10, SOURCE-05 | `abandoned-claim-cleanup` worker tests | ✅ green |
+| 02-07-02 | 07 | AUTH-10, PROJ-06 | Guarded PG17 migrations and restricted-role RLS script | ✅ green |
+| 02-07-03 | 07 | AUTH-08, AUTH-09, AUTH-10, SOURCE-05, PROJ-06 | Two-user API/DB claim, source and ownership matrix | ✅ green |
+| 02-08-01 | 08 | AUTH-01, AUTH-02, AUTH-03, AUTH-04 | `AuthGateDialog`, `AuthCopy`, `CreatorShell` UI tests | ✅ green |
+| 02-08-02 | 08 | AUTH-03, AUTH-04, AUTH-05, AUTH-06, AUTH-07, AUTH-08, AUTH-09, SOURCE-06 | `GuestAuthRecovery`, `returnPath`, bilingual recovery tests | ✅ green |
+| 02-08-03 | 08 | AUTH-01..10, SOURCE-04..07, PROJ-06 | [02-BROWSER-EVIDENCE.md](02-BROWSER-EVIDENCE.md), redaction guard, local rendered UI matrix | ⚠️ partial — service-backed browser path open |
 
-*Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
+## Validation Audit — 2026-08-19
 
-## Wave 0 Artifacts Required by Plans
+### Commands actually run
 
-- [ ] `packages/contracts/src/guest-claims.ts`
-- [ ] `apps/api/src/guest-claim-service.postgres.test.ts`
-- [ ] `apps/web/src/features/create/guestDraftStore.test.ts`
-- [ ] `apps/web/src/features/create/guestClaimRecovery.test.ts`
-- [ ] `apps/api/src/auth-provider-stubs.test.ts` plus test-only provider stubs
-- [ ] `apps/api/src/request-rate-limiter.test.ts`
-- [ ] `apps/worker/src/abandoned-claim-cleanup.test.ts`
-- [ ] `apps/web/src/features/create/GuestAuthRecovery.test.tsx`
-- [ ] Extend concrete `apps/web/src/pages/AuthCopy.test.ts` for all complete English/Arabic strings
-- [ ] `scripts/infra/validate-phase2-migrations.sh` and restricted `check-rls-isolation.sql`
-- [ ] `02-BROWSER-EVIDENCE.md` plus evidence-redaction script
+```text
+# Focused non-PostgreSQL Phase 2 suites
+bun run --cwd apps/api test -- guest-claim-service creator-routes auth-provider-stubs request-rate-limiter source-scanner remote-image-fetcher source-change
+bun run --cwd apps/api test -- assets
+bun run --cwd packages/storage test
+bun run --cwd apps/worker test -- abandoned-claim-cleanup
+bun run --cwd apps/web test -- guestDraftStore guestClaimRecovery guestClaimSnapshot creatorAssets creatorProjectOutput GuestAuthRecovery AuthGateDialog AuthCopy authProviders returnPath
 
-## Blocking Migration and Isolation Proof
+# Disposable PostgreSQL 17 proof
+bash scripts/infra/validate-phase2-migrations.test.sh
+MOVPROMPT_PHASE2_ADMIN_DATABASE_URL=postgresql://…@127.0.0.1:55432/postgres bash scripts/infra/validate-phase2-migrations.sh
+MOVPROMPT_TEST_DATABASE_URL=postgresql://…/movprompt_phase2_test_nyquist_* bun run --cwd apps/api test -- guest-claim-service.postgres creator-routes.postgres request-rate-limiter.postgres auth-provider-stubs
+MOVPROMPT_TEST_DATABASE_URL=postgresql://…/movprompt_phase2_test_nyquist_* bun run --cwd packages/db test -- creator-data-plane.postgres
 
-The Phase 2 migration harness must:
+# Type and evidence checks
+bun run --cwd apps/web typecheck
+bun run --cwd apps/api typecheck
+bun run --cwd apps/worker typecheck
+bun run --cwd packages/db typecheck
+node scripts/infra/check-phase2-evidence-redaction.mjs
+git diff --check
+```
 
-1. Use PostgreSQL 17.
-2. Generate only a unique database matching `movprompt_phase2_test_*`.
-3. Reject database names or hosts indicating production, staging or development before any create/drop.
-4. Apply repository SQL migrations empty→latest; never use `drizzle push`.
-5. Assert Phase 2 tables, functions, FKs, checks, indexes and forced RLS.
-6. Reapply migrations safely.
-7. Run the restricted-role proof with `current_user`, `rolbypassrls=false`, `rolsuper=false`, and transaction-local `SET LOCAL movprompt.user_id` for two users.
-8. Drop only the validated generated database under success/error trap.
+### Results
 
-Any failure blocks the next dependent plan.
+| Metric | Result |
+|---|---:|
+| Focused API tests | 43 passed; environment-gated cases then rerun on disposable PG17 |
+| Focused web tests | 38 passed |
+| Focused worker tests | 6 passed |
+| Focused storage tests | 6 passed |
+| Disposable PostgreSQL 17 API/DB tests | 15 passed; 1 unrelated environment-gated test skipped |
+| Guarded PostgreSQL migration and RLS proof | passed |
+| Typechecks | web, API, worker and DB passed |
+| Evidence redaction / diff check | passed |
+| Added validation tests in this audit | none — existing tests were behavioral and executable |
 
-## Rendered UI Matrix
+## Manual-Only External Evidence Still Required
 
-Validate all approved default/loading/success/cancel/error/offline/mismatch/expiry/replay/reminder states at:
+These are deliberately not converted to passing claims. They require an operational local or staging stack with private object storage, mail delivery, and configured OAuth credentials:
 
-- 375, 768, 1024 and 1440 pixels.
-- English/LTR and Arabic/RTL.
-- Light and dark themes.
-- Keyboard-only, screen-reader semantics, focus trap/restore, 44px targets and reduced motion.
-- No horizontal overflow, clipped action, fake percentage/render progress, duplicate toast or hidden primary action.
+1. In a real browser, create a two-image guest campaign; choose Generate; authenticate by email; confirm the claimed project/version, media checksums and exact campaign fields match before local draft cleanup.
+2. Cancel auth, deliberately fail one asset transfer, retry, go offline, and confirm the original local blobs remain until the canonical claim receipt succeeds.
+3. Complete configured Google and Apple redirects, replay the callback in a second tab, and confirm only one project/claim is present.
+4. Sign in as a second user in the same browser and confirm the first user’s claimed draft, project and private media remain invisible.
+5. Refresh an expired owner download URL; confirm owner recovery works and another user receives a generic denial.
+6. Run the full 375/768/1024/1440, English/Arabic, light/dark keyboard, focus-trap, reduced-motion, console and accessibility-tree matrix against the live claim flow.
 
-`02-BROWSER-EVIDENCE.md` must omit passwords, cookies, OAuth state, tokens, signed URLs, raw remote URLs, object keys, secrets and other-user identifiers. Record request IDs, row/object counts and checksum agreement only.
+## Sign-Off
 
-## Validation Sign-Off
+- [x] Every Phase 2 requirement has a focused automated behavioral test and the tests ran green.
+- [x] Guarded PostgreSQL 17 migration/reapply/drop and restricted-role RLS proof ran green.
+- [x] Two-user claim/project/asset ownership behavior ran on disposable PostgreSQL 17.
+- [x] Worker abandoned-claim cleanup behavior ran green.
+- [x] Local rendered UI evidence and evidence-redaction check passed.
+- [ ] Service-backed browser, real email delivery, real OAuth redirect, and real private-storage evidence is still outstanding.
+- [ ] `nyquist_compliant: true` must wait for the manual-only external evidence above.
 
-- [x] Every task-focused command passes.
-- [ ] Guarded PostgreSQL 17 empty→latest/rerun/drop passes.
-- [ ] Restricted-role RLS and two-user matrix pass.
-- [ ] 24-hour cleanup/audit/retry/finalized-immunity pass.
-- [ ] Full phase suite passes once at the phase gate (root DB/API/worker harness intentionally not rerun in this browser-only evidence task).
-- [ ] Rendered UI matrix and redaction pass (redaction passes; live provider/claim/browser paths remain open because the local API/worker/storage stack was unavailable).
-- [ ] No new browser-test dependency appears.
-- [ ] `nyquist_compliant: true` is set only after all evidence is green.
-
-**Approval:** partial — web suite, typecheck, build, lint, and redaction passed. See `02-BROWSER-EVIDENCE.md` for the rendered matrix and the explicitly open live-stack checks.
+**Decision:** `evidence_partial` is intentional. Automated integrity coverage is complete; live rendered integration proof is not yet available and must not be represented as complete.
