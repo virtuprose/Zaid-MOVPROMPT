@@ -5,10 +5,14 @@ import type { CreatorProject } from "./types";
 const mocks = vi.hoisted(() => ({
   mirrorProductImages: vi.fn(),
   syncCreatorProject: vi.fn(),
+  replaceCreatorProjectSource: vi.fn(),
 }));
 
 vi.mock("./creatorAssets", () => ({ mirrorProductImages: mocks.mirrorProductImages }));
-vi.mock("./projectStore", () => ({ syncCreatorProject: mocks.syncCreatorProject }));
+vi.mock("./projectStore", () => ({
+  syncCreatorProject: mocks.syncCreatorProject,
+  replaceCreatorProjectSource: mocks.replaceCreatorProjectSource,
+}));
 
 import {
   hasUnclaimedCreatorAssets,
@@ -41,6 +45,7 @@ describe("authenticated creator image persistence", () => {
   beforeEach(() => {
     mocks.mirrorProductImages.mockReset();
     mocks.syncCreatorProject.mockReset();
+    mocks.replaceCreatorProjectSource.mockReset();
   });
 
   it("keeps every local campaign field while attaching verified cloud assets", () => {
@@ -111,17 +116,16 @@ describe("authenticated creator image persistence", () => {
       versionNumber: 2,
       product: { ...imported.product, images: mirroredImages },
     };
-    mocks.syncCreatorProject
-      .mockResolvedValueOnce(firstCloudSave)
-      .mockResolvedValueOnce(finalCloudSave);
+    mocks.syncCreatorProject.mockResolvedValueOnce(firstCloudSave);
+    mocks.replaceCreatorProjectSource.mockResolvedValueOnce(finalCloudSave);
     mocks.mirrorProductImages.mockResolvedValue(mirroredImages);
 
     const result = await syncCreatorProjectWithOwnedRemoteImages(imported, "user-one");
 
-    expect(mocks.syncCreatorProject).toHaveBeenCalledTimes(2);
+    expect(mocks.syncCreatorProject).toHaveBeenCalledTimes(1);
     expect(mocks.syncCreatorProject).toHaveBeenNthCalledWith(1, imported, "user-one");
     expect(mocks.mirrorProductImages).toHaveBeenCalledWith(firstCloudSave.id, imported.product.images);
-    const securedSave = mocks.syncCreatorProject.mock.calls[1]![0] as CreatorProject;
+    const securedSave = mocks.replaceCreatorProjectSource.mock.calls[0]![0] as CreatorProject;
     expect(securedSave).toMatchObject({
       id: firstCloudSave.id,
       versionId: firstCloudSave.versionId,
@@ -135,6 +139,7 @@ describe("authenticated creator image persistence", () => {
         }],
       },
     });
+    expect(mocks.replaceCreatorProjectSource).toHaveBeenCalledWith(securedSave, "user-one");
     expect(result).toEqual(finalCloudSave);
   });
 
