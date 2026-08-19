@@ -38,8 +38,10 @@ function dispatchEmail(sender: AuthEmailSender, email: AuthEmail): void {
  */
 export function createMovPromptAuth(input: CreateAuthInput) {
   const { environment } = input;
+  const isFirstCampaignVerificationDeferred =
+    environment.firstCampaignVerificationPolicy === "deferred_until_after_first_campaign";
   const provisioningHooks = createAuthProvisioningHooks(createAuthUserProvisioner(input.db, {
-    requireEmailVerificationForStarter: environment.requireEmailVerification,
+    requireEmailVerificationForStarter: !isFirstCampaignVerificationDeferred,
   }));
   const socialProviders = {
     ...(environment.google ? { google: environment.google } : {}),
@@ -105,7 +107,7 @@ export function createMovPromptAuth(input: CreateAuthInput) {
     },
     emailAndPassword: {
       enabled: true,
-      requireEmailVerification: environment.requireEmailVerification,
+      requireEmailVerification: !isFirstCampaignVerificationDeferred,
       minPasswordLength: 10,
       maxPasswordLength: 128,
       revokeSessionsOnPasswordReset: true,
@@ -120,8 +122,8 @@ export function createMovPromptAuth(input: CreateAuthInput) {
       },
     },
     emailVerification: {
-      sendOnSignUp: environment.requireEmailVerification,
-      sendOnSignIn: environment.requireEmailVerification,
+      sendOnSignUp: isFirstCampaignVerificationDeferred,
+      sendOnSignIn: !isFirstCampaignVerificationDeferred,
       autoSignInAfterVerification: true,
       expiresIn: 60 * 60,
       sendVerificationEmail: async ({ user, url }) => {

@@ -105,7 +105,8 @@ export function createRuntimeServices(
         pricing,
         capabilities,
         starterOnly: environment.GENERATION_STARTER_ONLY?.trim().toLowerCase() !== "false",
-        starterEligibilityRequiresEmailVerification: authEnvironment.requireEmailVerification,
+        starterEligibilityRequiresEmailVerification:
+          authEnvironment.firstCampaignVerificationPolicy !== "deferred_until_after_first_campaign",
       })
     : undefined;
   const creatorRepository = createDrizzleCreatorRepository(database.db);
@@ -114,7 +115,7 @@ export function createRuntimeServices(
   });
   if (!assetsEnabled) {
     return {
-      authGateway: createBetterAuthGateway(auth),
+      authGateway: createBetterAuthGateway(auth, authEnvironment.publicCapability),
       creatorRepository,
       guestClaimService,
       sourceScanner,
@@ -145,7 +146,7 @@ export function createRuntimeServices(
     });
   }
   return {
-    authGateway: createBetterAuthGateway(auth),
+    authGateway: createBetterAuthGateway(auth, authEnvironment.publicCapability),
     creatorRepository,
     guestClaimService,
     sourceScanner,

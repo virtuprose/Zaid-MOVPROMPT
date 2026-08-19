@@ -81,6 +81,24 @@ export const ProductFeatureFlagsSchema = z
 
 export type ProductFeatureFlags = z.infer<typeof ProductFeatureFlagsSchema>;
 
+export const FirstCampaignVerificationPolicySchema = z.literal(
+  "deferred_until_after_first_campaign",
+);
+
+export type FirstCampaignVerificationPolicy = z.infer<
+  typeof FirstCampaignVerificationPolicySchema
+>;
+
+export const AuthCapabilitySchema = z
+  .object({
+    emailPassword: z.literal(true),
+    configuredProviders: z.array(z.enum(["google", "apple"])),
+    firstCampaignVerificationPolicy: FirstCampaignVerificationPolicySchema,
+  })
+  .strict();
+
+export type AuthCapability = z.infer<typeof AuthCapabilitySchema>;
+
 export const GenerationAvailabilitySchema = z
   .object({
     status: z.enum(["ready", "unavailable"]),
@@ -103,6 +121,7 @@ export type GenerationAvailability = z.infer<typeof GenerationAvailabilitySchema
 export const FeatureFlagsResponseSchema = z
   .object({
     features: ProductFeatureFlagsSchema,
+    auth: AuthCapabilitySchema.nullable(),
     capabilities: z.array(PublicCapabilitySchema),
     generationAvailability: GenerationAvailabilitySchema,
     evaluatedAt: z.iso.datetime(),
