@@ -280,6 +280,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
   const [modeSwitching, setModeSwitching] = useState(false);
   const [rightsConfirmed, setRightsConfirmed] = useState(false);
   const [authGateOpen, setAuthGateOpen] = useState(false);
+  const [authGateCancellation, setAuthGateCancellation] = useState("");
   const [draftRestoring, setDraftRestoring] = useState(Boolean(requestedDraft));
   const [generationProgress, setGenerationProgress] = useState(0);
   const [generationStage, setGenerationStage] = useState<RenderProcessingStage>("preparing");
@@ -893,6 +894,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
   };
 
   const handleAuthGateChange = (open: boolean) => {
+    if (authGateOpen && !open) setAuthGateCancellation(tr("Nothing changed. Continue editing when you’re ready.", "لم يتغيّر شيء. تابع التعديل عندما تكون جاهزاً."));
     setAuthGateOpen(open);
     if (!open) window.setTimeout(() => generateButtonRef.current?.focus(), 0);
   };
@@ -916,6 +918,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
       const pendingProject = { ...project, pendingGenerationId, pendingQuoteCredits: quote!.credits };
       setProject(pendingProject);
       await saveGuestDraft(projectToCreationDraft(pendingProject, true, "auth_required"));
+      setAuthGateCancellation("");
       setAuthGateOpen(true);
       return;
     }
@@ -1388,7 +1391,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
               </div>
               <div className="creator-check-row"><input id="preflight-subtitles" type="checkbox" checked={project.subtitles} onChange={(event) => updateProject({ subtitles: event.target.checked })} /><label htmlFor="preflight-subtitles">{tr("Include subtitles when the video contains speech.", "أضف ترجمة مكتوبة إذا كان الفيديو يحتوي على كلام.")}</label></div>
               <div className="creator-check-row"><input id="preflight-audio" type="checkbox" checked={project.audio} onChange={(event) => updateProject({ audio: event.target.checked })} /><label htmlFor="preflight-audio">{tr("Generate music and sound for this version.", "ولّد موسيقى وصوت لهذه النسخة.")}</label></div>
-              <div className="creator-check-row"><input id="rights" type="checkbox" checked={rightsConfirmed} onChange={(event) => setRightsConfirmed(event.target.checked)} /><label htmlFor="rights">{tr("I own these images or have permission to use them in advertising, and the campaign details above are accurate.", "أنا أملك هذه الصور أو عندي إذن لاستخدامها إعلانياً، ومعلومات الحملة أعلاه صحيحة.")}</label></div>
+              <div className="creator-check-row"><input id="rights" type="checkbox" checked={rightsConfirmed} onChange={(event) => setRightsConfirmed(event.target.checked)} /><label htmlFor="rights">{tr("Confirm that you have permission to use these images and that the campaign facts are accurate.", "أكّد أن لديك إذناً لاستخدام هذه الصور وأن معلومات الحملة دقيقة.")}</label></div>
               {sourceError && <p className="creator-error" role="alert">{sourceError}</p>}
               {recoveryActions}
               <div className="creator-actions-row"><button className="creator-button creator-button-quiet" type="button" onClick={() => setStep(templateFirst.current ? "source" : "template")}><ArrowLeft aria-hidden="true" /> {tr("Back", "رجوع")}</button><button ref={generateButtonRef} className="creator-button creator-button-primary" type="button" onClick={() => void startGeneration()} disabled={!project.product.name.trim() || !rightsConfirmed || (!simulatedGeneration && (!quoteLoaded || !quote)) || sourceBusy}><Sparkles aria-hidden="true" /> {simulatedGeneration ? tr("Prepare product preview", "جهّز معاينة المنتج") : tr("Generate video", "ولّد الفيديو")}</button></div>
@@ -1410,6 +1413,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
         )}
       </div>}
       <AuthGateDialog open={authGateOpen} onOpenChange={handleAuthGateChange} returnPath={`/create?draft=${encodeURIComponent(project.id)}&resume=generate`} />
+      <p className="sr-only" role="status" aria-live="polite" aria-atomic="true">{authGateCancellation}</p>
     </CreatorShell>
   );
 }

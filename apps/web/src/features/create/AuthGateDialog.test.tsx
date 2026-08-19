@@ -1,6 +1,7 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { MemoryRouter, useLocation } from "react-router-dom";
+import type { AuthCapability } from "@movprompt/contracts";
 
 import { LanguageProvider } from "@/i18n/LanguageContext";
 import { AuthGateDialog } from "./AuthGateDialog";
@@ -10,12 +11,12 @@ function LocationProbe() {
   return <output data-testid="location">{location.pathname}{location.search}</output>;
 }
 
-function renderGate(locale: "en" | "ar" = "en") {
+function renderGate(locale: "en" | "ar" = "en", authCapability?: AuthCapability | null) {
   localStorage.setItem("movprompt-lang", locale);
   return render(
     <MemoryRouter initialEntries={["/create"]}>
       <LanguageProvider>
-        <AuthGateDialog open onOpenChange={() => undefined} returnPath="/create?draft=draft-1&resume=generate" />
+        <AuthGateDialog open onOpenChange={() => undefined} returnPath="/create?draft=draft-1&resume=generate" authCapability={authCapability} />
         <LocationProbe />
       </LanguageProvider>
     </MemoryRouter>,
@@ -49,5 +50,23 @@ describe("AuthGateDialog provider truth", () => {
     expect(screen.getByRole("button", { name: "المتابعة بالبريد الإلكتروني" })).toBeVisible();
     expect(screen.getByText(/لن يتم الخصم قبل تأكيد السعر النهائي/)).toBeVisible();
     expect(screen.queryByText(/Your campaign|Continue with email|No charge/)).not.toBeInTheDocument();
+  });
+
+  it("renders exactly the configured server social methods and focuses the first enabled method", async () => {
+    const baseCapability: AuthCapability = {
+      emailPassword: true,
+      configuredProviders: ["google"],
+      firstCampaignVerificationPolicy: "deferred_until_after_first_campaign",
+    };
+
+    renderGate("en", baseCapability);
+    const google = await screen.findByRole("button", { name: "Continue with Google" });
+    expect(google).toHaveFocus();
+    expect(screen.queryByRole("button", { name: "Continue with Apple" })).not.toBeInTheDocument();
+
+    cleanup();
+    renderGate("en", { ...baseCapability, configuredProviders: ["google", "apple"] });
+    expect(await screen.findByRole("button", { name: "Continue with Google" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Continue with Apple" })).toBeVisible();
   });
 });
