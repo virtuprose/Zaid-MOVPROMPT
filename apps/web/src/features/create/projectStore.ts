@@ -29,9 +29,35 @@ function writeLocal(projects: CreatorProject[], userId?: string | null) {
   // Signed output URLs are short-lived capabilities, not project data. Keep
   // them in the active React state only and refresh from the owned render when
   // a project is reopened.
-  const cacheable = projects.slice(0, 24).map((project) => ({ ...project, videoUrl: null }));
+  const cacheable = projects.slice(0, 24).map((project) => ({
+    ...project,
+    videoUrl: null,
+    logoUrl: removeSignedUrl(project.logoUrl),
+    product: {
+      ...project.product,
+      images: project.product.images.map((image) => ({
+        ...image,
+        // Asset identity and its stable object key are sufficient to request
+        // a fresh preview. A signed URL is a short-lived bearer capability and
+        // must not enter durable browser storage.
+        url: removeSignedUrl(image.url),
+      })),
+    },
+  }));
   localStorage.setItem(storageKey(userId), JSON.stringify(cacheable));
   window.dispatchEvent(new Event(CHANGE_EVENT));
+}
+
+function removeSignedUrl(value: string): string {
+  try {
+    const url = new URL(value, window.location.origin);
+    if ([...url.searchParams.keys()].some((key) => /^(x-amz-|signature$|sig$|token$|expires$|se$|sp$|sv$)/i.test(key))) {
+      return "";
+    }
+  } catch {
+    // Blob URLs and ordinary display values are not durable credentials.
+  }
+  return value;
 }
 
 export function listLocalCreatorProjects(userId?: string | null) {

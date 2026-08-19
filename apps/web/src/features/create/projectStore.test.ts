@@ -28,6 +28,35 @@ describe("creator project local cache", () => {
     });
   });
 
+  it("never persists signed private image or logo URLs", () => {
+    const project = createDraftProject();
+    const privateImageUrl = "https://storage.example.test/private.jpg?X-Amz-Signature=short-lived";
+    const privateLogoUrl = "https://storage.example.test/logo.png?token=short-lived";
+    saveLocalCreatorProject({
+      ...project,
+      logoUrl: privateLogoUrl,
+      product: {
+        ...project.product,
+        images: [{
+          id: "33333333-3333-4333-8333-333333333333",
+          name: "product.jpg",
+          url: privateImageUrl,
+          storagePath: "users/u/projects/p/assets/product/a/checksum",
+          source: "upload",
+        }],
+      },
+    }, "user-one");
+
+    const serialized = localStorage.getItem("movprompt.creator-projects.v2:user-one")!;
+    expect(serialized).not.toContain(privateImageUrl);
+    expect(serialized).not.toContain(privateLogoUrl);
+    expect(serialized).not.toMatch(/signature|token/i);
+    expect(listLocalCreatorProjects("user-one")[0]).toMatchObject({
+      logoUrl: "",
+      product: { images: [expect.objectContaining({ storagePath: "users/u/projects/p/assets/product/a/checksum", url: "" })] },
+    });
+  });
+
   it("uses the authoritative image MIME and keeps transient URLs out of the product recipe", () => {
     const project = createDraftProject();
     project.product.sourceUrl = "https://shop.example.test/product?token=private";
