@@ -124,6 +124,7 @@ describePostgres("deterministic social callback recovery", () => {
   it("rejects invalid, cancelled and hostile callbacks without creating a claim", async () => {
     const { app, auth } = appWithStubs();
     const campaign = snapshot();
+    const before = await database.db.select({ id: schema.guestClaimOperations.id }).from(schema.guestClaimOperations);
     const invalid = await app.request(auth.callbackRequest({
       provider: "google",
       state: "invalid-state",
@@ -139,7 +140,8 @@ describePostgres("deterministic social callback recovery", () => {
     expect(invalid.status).toBe(400);
     expect(cancelled.status).toBe(302);
     expect(cancelled.headers.get("location")).toBe("/create");
-    await expect(database.db.select().from(schema.guestClaimOperations)).resolves.toEqual([]);
+    await expect(database.db.select({ id: schema.guestClaimOperations.id }).from(schema.guestClaimOperations))
+      .resolves.toEqual(before);
   });
 
   it("rejects a changed snapshot and other provider account without disclosure", async () => {
