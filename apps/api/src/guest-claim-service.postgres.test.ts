@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 import { createDatabase, schema } from "@movprompt/db";
+import { and, eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import type { AuthGateway } from "./auth-gateway.js";
@@ -259,5 +260,47 @@ describePostgres("guest claim service PostgreSQL boundary", () => {
       .rejects.toMatchObject({ code: "assets_pending" });
     await expect(service.resumeClaim({ userId: firstUserId, pendingGenerationId: lifecycleSnapshot.pendingGenerationId }))
       .resolves.toMatchObject({ id: started.id, status: "failed", nextAsset: { status: "failed" } });
+  });
+
+  it("does not let a late retry reclaim an asset leased for abandoned-claim cleanup", async () => {
+    const lifecycleSnapshot = {
+      ...snapshot,
+      draftId: randomUUID(),
+      pendingGenerationId: randomUUID(),
+      snapshotDigest: "1".repeat(64),
+      assetManifest: [{
+        localAssetId: randomUUID(),
+        ordinal: 0,
+        kind: "product" as const,
+        mimeType: "image/jpeg",
+        sizeBytes: 128,
+        checksumSha256: "2".repeat(64),
+      }],
+    };
+    const service = createGuestClaimService({
+      repository: createGuestClaimRepository({ db: database.db }),
+    });
+    const started = await service.startClaim({ userId: firstUserId, snapshot: lifecycleSnapshot });
+    await database.db.update(schema.guestClaimAssets).set({
+      status: "securing",
+      errorMetadata: { cleanup: { state: "leased", jobId: "cleanup-job" } },
+    }).where(and(
+      eq(schema.guestClaimAssets.claimOperationId, started.id),
+      eq(schema.guestClaimAssets.localAssetId, lifecycleSnapshot.assetManifest[0]!.localAssetId),
+    ));
+
+    await expect(service.markAssetVerified({
+      userId: firstUserId,
+      pendingGenerationId: lifecycleSnapshot.pendingGenerationId,
+      localAssetId: lifecycleSnapshot.assetManifest[0]!.localAssetId,
+      bucket: "movprompt-assets",
+      objectKey: `users/${firstUserId}/projects/${started.projectId}/assets/product/${lifecycleSnapshot.assetManifest[0]!.localAssetId}/${"2".repeat(64)}`,
+    })).rejects.toMatchObject({ code: "assets_pending", retryable: true });
+
+    const [asset] = await database.db.select().from(schema.guestClaimAssets).where(and(
+      eq(schema.guestClaimAssets.claimOperationId, started.id),
+      eq(schema.guestClaimAssets.localAssetId, lifecycleSnapshot.assetManifest[0]!.localAssetId),
+    ));
+    expect(asset).toMatchObject({ status: "securing", errorMetadata: { cleanup: { state: "leased" } } });
   });
 });

@@ -25,6 +25,7 @@ export interface GuestClaimService {
 function mapError(error: unknown): never {
   if (error instanceof GuestClaimRepositoryError) {
     if (error.code === "assets_pending") throw new GuestClaimServiceError("assets_pending", true);
+    if (error.code === "cleanup_leased") throw new GuestClaimServiceError("assets_pending", true);
     if (error.code === "not_found") throw new GuestClaimServiceError("not_found", false);
     throw new GuestClaimServiceError("conflict", false);
   }

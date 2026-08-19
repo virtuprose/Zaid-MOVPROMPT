@@ -15,10 +15,16 @@ import { and, asc, eq, sql } from "drizzle-orm";
 export { createDatabaseAbandonedClaimCleanupRepository } from "@movprompt/db";
 
 export class GuestClaimRepositoryError extends Error {
-  constructor(readonly code: "conflict" | "not_found" | "assets_pending" | "asset_invalid") {
+  constructor(readonly code: "conflict" | "not_found" | "assets_pending" | "asset_invalid" | "cleanup_leased") {
     super(code);
     this.name = "GuestClaimRepositoryError";
   }
+}
+
+function hasActiveCleanupLease(value: JsonObject): boolean {
+  const cleanup = value.cleanup;
+  return Boolean(cleanup && typeof cleanup === "object" && !Array.isArray(cleanup)
+    && (cleanup as JsonObject).state === "leased");
 }
 
 export type GuestClaimAssetCheckpoint = {
@@ -257,6 +263,13 @@ export function createGuestClaimRepository(dependencies: { db: Database }): Gues
           eq(schema.guestClaimAssets.userId, userId),
         )).limit(1);
         if (!asset) throw new GuestClaimRepositoryError("not_found");
+        // A cleanup lease is exclusive. A late browser retry must not restore
+        // the asset to verified while the worker owns the delete decision.
+        // The client receives a retryable error and can resume after the
+        // worker has either released or terminally completed the lease.
+        if (asset.status === "securing" && hasActiveCleanupLease(asset.errorMetadata)) {
+          throw new GuestClaimRepositoryError("cleanup_leased");
+        }
         if (!["product", "logo", "audio", "reference"].includes(asset.kind)) {
           throw new GuestClaimRepositoryError("asset_invalid");
         }
