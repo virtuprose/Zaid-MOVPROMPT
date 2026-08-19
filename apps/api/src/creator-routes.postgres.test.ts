@@ -91,7 +91,7 @@ describePostgres("portable creator HTTP ownership", () => {
       productRecipe: { name: "Private product" },
       campaignRecipe: { market: "KW", language: "bilingual" },
     });
-    const first = await app.request("/api/v1/drafts/claim", {
+    const claim = () => app.request("/api/v1/drafts/claim", {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -100,18 +100,10 @@ describePostgres("portable creator HTTP ownership", () => {
       },
       body,
     });
+    const [first, repeated] = await Promise.all([claim(), claim()]);
     expect(first.status).toBe(201);
     const firstProject = (await first.json()) as { claim: { project: { id: string } } };
 
-    const repeated = await app.request("/api/v1/drafts/claim", {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        "idempotency-key": pendingGenerationId,
-        "x-test-user": firstUserId,
-      },
-      body,
-    });
     expect(repeated.status).toBe(201);
     await expect(repeated.json()).resolves.toMatchObject({
       claim: { project: { id: firstProject.claim.project.id } },
@@ -172,6 +164,7 @@ describePostgres("portable creator HTTP ownership", () => {
 
   it("replays concurrent source replacement once, preserves accepted history, and clears stale output", async () => {
     const localDraftId = randomUUID();
+    const claimIntentId = randomUUID();
     const sourceAssetId = randomUUID();
     const sourceOperationKey = `source-change:${randomUUID()}`;
     const creatorRepository = createDrizzleCreatorRepository(database.db);
@@ -183,10 +176,10 @@ describePostgres("portable creator HTTP ownership", () => {
     });
     const claim = await app.request("/api/v1/drafts/claim", {
       method: "POST",
-      headers: { "content-type": "application/json", "idempotency-key": randomUUID(), "x-test-user": firstUserId },
+      headers: { "content-type": "application/json", "idempotency-key": claimIntentId, "x-test-user": firstUserId },
       body: JSON.stringify({
         draftId: localDraftId,
-        pendingGenerationId: randomUUID(),
+        pendingGenerationId: claimIntentId,
         snapshotDigest: "d".repeat(64),
         assetManifest: [],
         title: "Coffee campaign",
@@ -196,6 +189,7 @@ describePostgres("portable creator HTTP ownership", () => {
         campaignRecipe: { market: "KW", language: "en" },
       }),
     });
+    expect(claim.status).toBe(201);
     const claimed = (await claim.json()) as { claim: { project: { id: string; currentVersion: { id: string } } } };
     const projectId = claimed.claim.project.id;
     const parentVersionId = claimed.claim.project.currentVersion.id;
@@ -239,7 +233,10 @@ describePostgres("portable creator HTTP ownership", () => {
       project: { currentWorkingVersionId: firstVersion.version.id, currentAcceptedVersionId: parentVersionId },
     });
     const history = await app.request(`/api/v1/projects/${projectId}/versions`, { headers: { "x-test-user": firstUserId } });
-    await expect(history.json()).resolves.toMatchObject({ versions: expect.arrayContaining([{ id: parentVersionId }, { id: firstVersion.version.id }]) });
+    const historyBody = (await history.json()) as { versions: Array<{ id: string }> };
+    expect(historyBody.versions.map((version) => version.id)).toEqual(
+      expect.arrayContaining([parentVersionId, firstVersion.version.id]),
+    );
 
     const crossOwner = await app.request(`/api/v1/projects/${projectId}/source`, {
       method: "POST",
