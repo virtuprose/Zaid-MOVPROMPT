@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import {
   AssetDownloadQuerySchema,
   AssetRouteParametersSchema,
+  CompleteClaimAssetRequestSchema,
   CreateAssetUploadRequestSchema,
   IdempotencyKeySchema,
   MirrorRemoteImageRequestSchema,
@@ -17,6 +18,7 @@ import type { AuthGateway } from "./auth-gateway.js";
 import type { AssetRepository, OwnedAssetRecord } from "./asset-repository.js";
 import type { AssetStorageGateway } from "./asset-storage.js";
 import { ApiHttpError } from "./errors.js";
+import type { GuestClaimService } from "./guest-claim-service.js";
 import type { RemoteImageFetcher } from "./remote-image-fetcher.js";
 import type { ApiEnvironment } from "./request-context.js";
 
@@ -26,6 +28,7 @@ export type AssetRouteServices = {
   repository?: AssetRepository;
   storage?: AssetStorageGateway;
   remoteImages?: RemoteImageFetcher;
+  guestClaimService?: GuestClaimService;
 };
 
 type RequiredAssetServices = {
@@ -48,6 +51,18 @@ function requireServices(services: AssetRouteServices): RequiredAssetServices {
     repository: services.repository,
     storage: services.storage,
   };
+}
+
+function requireGuestClaimService(services: AssetRouteServices): GuestClaimService {
+  if (!services.guestClaimService) {
+    throw new ApiHttpError({
+      code: "guest_claim_service_unavailable",
+      message: "Campaign recovery is temporarily unavailable.",
+      status: 503,
+      retryable: true,
+    });
+  }
+  return services.guestClaimService;
 }
 
 async function requireUserId(auth: AuthGateway, headers: Headers): Promise<string> {
@@ -324,7 +339,7 @@ export function registerAssetRoutes(
       });
     }
 
-    const assetId = deterministicAssetId(userId, projectId, idempotencyKey);
+    const assetId = input.assetId ?? deterministicAssetId(userId, projectId, idempotencyKey);
     const objectKey = objectKeys.creatorAsset({
       userId,
       projectId,
@@ -570,13 +585,30 @@ export function registerAssetRoutes(
 
   app.post("/api/v1/projects/:projectId/assets/:assetId/complete", async (context) => {
     const { auth, repository, storage } = requireServices(services);
+    const guestClaimService = requireGuestClaimService(services);
     const userId = await requireUserId(auth, context.req.raw.headers);
     const { projectId, assetId } = AssetRouteParametersSchema.parse({
       projectId: context.req.param("projectId"),
       assetId: context.req.param("assetId"),
     });
     const asset = await findOwnedAsset(repository, userId, projectId, assetId!);
+    const input = CompleteClaimAssetRequestSchema.parse(await parseJson(context.req.raw));
+    if (input.localAssetId !== asset.id) {
+      throw new ApiHttpError({
+        code: "asset_not_found",
+        message: "The requested project asset was not found.",
+        status: 404,
+        retryable: false,
+      });
+    }
     await verifyStoredObject(storage, asset);
+    await guestClaimService.markAssetVerified({
+      userId,
+      pendingGenerationId: input.pendingGenerationId,
+      localAssetId: input.localAssetId,
+      bucket: asset.bucket,
+      objectKey: asset.objectKey,
+    });
 
     const response: AssetReadyResponse = {
       asset: publicAsset(asset),

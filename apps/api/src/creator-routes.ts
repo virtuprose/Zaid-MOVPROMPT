@@ -3,6 +3,8 @@ import {
   CreditSummaryResponseSchema,
   CreateProjectVersionRequestSchema,
   EmptyMutationRequestSchema,
+  GuestClaimOperationResponseSchema,
+  GuestClaimRouteParametersSchema,
   GuestClaimResponseSchema,
   GuestClaimSnapshotSchema,
   IdempotencyKeySchema,
@@ -196,6 +198,101 @@ export function registerCreatorRoutes(
         claim,
         requestId: context.get("requestId"),
       });
+      noStore(context);
+      return context.json(body, 201);
+    } catch (error) {
+      if (error instanceof GuestClaimServiceError) {
+        throw new ApiHttpError({
+          code: "guest_claim_conflict",
+          message: "This campaign claim cannot be completed.",
+          status: 409,
+          retryable: error.retryable,
+        });
+      }
+      mapRepositoryError(error);
+    }
+  });
+
+  app.post("/api/v1/drafts/claim/start", async (context) => {
+    const claimService = requireGuestClaimService(services);
+    const userId = await requireUserId(services, context.req.raw.headers);
+    const idempotencyKey = IdempotencyKeySchema.parse(context.req.header("idempotency-key") ?? "");
+    const snapshot = GuestClaimSnapshotSchema.parse(await parseJson(context.req.raw));
+    if (idempotencyKey !== snapshot.pendingGenerationId) {
+      throw new ApiHttpError({
+        code: "idempotency_conflict",
+        message: "The pending generation ID must be used as the stable claim operation key.",
+        status: 409,
+        retryable: false,
+      });
+    }
+    try {
+      const operation = await claimService.startClaim({ userId, snapshot });
+      const body = GuestClaimOperationResponseSchema.parse({
+        operation,
+        requestId: context.get("requestId"),
+      });
+      noStore(context);
+      return context.json(body, 201);
+    } catch (error) {
+      if (error instanceof GuestClaimServiceError) {
+        throw new ApiHttpError({
+          code: "guest_claim_conflict",
+          message: "This campaign claim cannot be completed.",
+          status: 409,
+          retryable: error.retryable,
+        });
+      }
+      mapRepositoryError(error);
+    }
+  });
+
+  app.get("/api/v1/drafts/claim/:pendingGenerationId", async (context) => {
+    const claimService = requireGuestClaimService(services);
+    const userId = await requireUserId(services, context.req.raw.headers);
+    const { pendingGenerationId } = GuestClaimRouteParametersSchema.parse({
+      pendingGenerationId: context.req.param("pendingGenerationId"),
+    });
+    try {
+      const operation = await claimService.resumeClaim({ userId, pendingGenerationId });
+      const body = GuestClaimOperationResponseSchema.parse({
+        operation,
+        requestId: context.get("requestId"),
+      });
+      noStore(context);
+      return context.json(body);
+    } catch (error) {
+      if (error instanceof GuestClaimServiceError) {
+        throw new ApiHttpError({
+          code: "guest_claim_conflict",
+          message: "This campaign claim cannot be completed.",
+          status: 409,
+          retryable: error.retryable,
+        });
+      }
+      mapRepositoryError(error);
+    }
+  });
+
+  app.post("/api/v1/drafts/claim/:pendingGenerationId/finalize", async (context) => {
+    const claimService = requireGuestClaimService(services);
+    const userId = await requireUserId(services, context.req.raw.headers);
+    const { pendingGenerationId } = GuestClaimRouteParametersSchema.parse({
+      pendingGenerationId: context.req.param("pendingGenerationId"),
+    });
+    const idempotencyKey = IdempotencyKeySchema.parse(context.req.header("idempotency-key") ?? "");
+    EmptyMutationRequestSchema.parse(await parseJson(context.req.raw));
+    if (idempotencyKey !== pendingGenerationId) {
+      throw new ApiHttpError({
+        code: "idempotency_conflict",
+        message: "The pending generation ID must be used as the stable claim operation key.",
+        status: 409,
+        retryable: false,
+      });
+    }
+    try {
+      const claim = await claimService.finalizeClaim({ userId, pendingGenerationId });
+      const body = GuestClaimResponseSchema.parse({ claim, requestId: context.get("requestId") });
       noStore(context);
       return context.json(body, 201);
     } catch (error) {

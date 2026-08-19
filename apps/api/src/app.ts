@@ -176,6 +176,7 @@ export function createApi(options: CreateApiOptions = {}) {
     ...(options.assetRepository ? { repository: options.assetRepository } : {}),
     ...(options.assetStorage ? { storage: options.assetStorage } : {}),
     ...(options.remoteImageFetcher ? { remoteImages: options.remoteImageFetcher } : {}),
+    ...(options.guestClaimService ? { guestClaimService: options.guestClaimService } : {}),
   });
 
   registerCreatorRoutes(app, {

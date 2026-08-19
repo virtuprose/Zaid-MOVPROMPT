@@ -21,12 +21,24 @@ export type AssetUploadMetadata = z.infer<typeof AssetUploadMetadataSchema>;
 
 export const CreateAssetUploadRequestSchema = z
   .object({
+    /** A browser-local opaque UUID may be retained as the canonical asset identity during guest claim. */
+    assetId: z.uuid().optional(),
     kind: CreatorAssetKindSchema,
     metadata: AssetUploadMetadataSchema,
   })
   .strict();
 
 export type CreateAssetUploadRequest = z.infer<typeof CreateAssetUploadRequestSchema>;
+
+/** The browser identifies a guest-claim checkpoint without ever sending storage coordinates. */
+export const CompleteClaimAssetRequestSchema = z
+  .object({
+    pendingGenerationId: z.uuid(),
+    localAssetId: z.uuid(),
+  })
+  .strict();
+
+export type CompleteClaimAssetRequest = z.infer<typeof CompleteClaimAssetRequestSchema>;
 
 export const MirrorRemoteImageRequestSchema = z
   .object({

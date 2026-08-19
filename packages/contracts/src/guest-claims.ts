@@ -67,6 +67,42 @@ export type GuestClaimSnapshot = z.infer<typeof GuestClaimSnapshotSchema>;
 export const GuestClaimStatusSchema = z.enum(["pending", "securing", "ready", "failed"]);
 export type GuestClaimStatus = z.infer<typeof GuestClaimStatusSchema>;
 
+export const GuestClaimAssetCheckpointSchema = z
+  .object({
+    id: z.string().uuid(),
+    localAssetId: z.uuid(),
+    ordinal: z.number().int().nonnegative().max(99),
+    status: z.enum(["pending", "securing", "verified", "failed"]),
+  })
+  .strict();
+export type GuestClaimAssetCheckpoint = z.infer<typeof GuestClaimAssetCheckpointSchema>;
+
+/** Server-owned claim state lets the browser resume one failed local asset without guessing progress. */
+export const GuestClaimOperationSchema = z
+  .object({
+    id: z.uuid(),
+    projectId: z.uuid(),
+    draftId: z.uuid(),
+    pendingGenerationId: IdempotencyKeySchema,
+    snapshotDigest: Sha256Schema,
+    status: GuestClaimStatusSchema,
+    nextAsset: GuestClaimAssetCheckpointSchema.nullable(),
+  })
+  .strict();
+export type GuestClaimOperation = z.infer<typeof GuestClaimOperationSchema>;
+
+export const GuestClaimOperationResponseSchema = z
+  .object({
+    operation: GuestClaimOperationSchema,
+    requestId: RequestIdSchema,
+  })
+  .strict();
+export type GuestClaimOperationResponse = z.infer<typeof GuestClaimOperationResponseSchema>;
+
+export const GuestClaimRouteParametersSchema = z
+  .object({ pendingGenerationId: z.uuid() })
+  .strict();
+
 export const GuestClaimReceiptSchema = z
   .object({
     status: GuestClaimStatusSchema,

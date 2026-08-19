@@ -153,14 +153,14 @@ function guestClaimService(): GuestClaimService {
       version,
     })),
     startClaim: vi.fn(async ({ snapshot }) => ({
-      id: "claim-1",
+      id: "99999999-9999-4999-8999-999999999999",
       projectId: PROJECT_ID,
       draftId: snapshot.draftId,
       pendingGenerationId: snapshot.pendingGenerationId,
       snapshotDigest: snapshot.snapshotDigest,
       status: "securing" as const,
       nextAsset: {
-        id: "claim-asset-1",
+        id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
         localAssetId: "88888888-8888-4888-8888-888888888888",
         ordinal: 0,
         status: "pending" as const,
