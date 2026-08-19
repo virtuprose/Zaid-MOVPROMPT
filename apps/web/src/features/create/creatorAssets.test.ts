@@ -129,7 +129,10 @@ describe("creator remote product image mirroring", () => {
     const pendingGenerationId = "33333333-3333-4333-8333-333333333333";
     const skippedAssetId = "44444444-4444-4444-8444-444444444444";
     const failedAssetId = "55555555-5555-4555-8555-555555555555";
-    const checksum = "b".repeat(64);
+    const failedBlob = new Blob([new Uint8Array([0xff, 0xd8, 0xff, 0xe0])], { type: "image/jpeg" });
+    const checksum = Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", await failedBlob.arrayBuffer())))
+      .map((value) => value.toString(16).padStart(2, "0"))
+      .join("");
     const privateAsset = {
       id: failedAssetId,
       projectId,
@@ -173,7 +176,7 @@ describe("creator remote product image mirroring", () => {
     vi.stubGlobal("fetch", fetchMock);
     const blobs = new Map([
       [skippedAssetId, new Blob(["already secure"], { type: "image/jpeg" })],
-      [failedAssetId, new Blob([new Uint8Array([0xff, 0xd8, 0xff, 0xe0])], { type: "image/jpeg" })],
+      [failedAssetId, failedBlob],
     ]);
 
     await expect(claimGuestAssets({
