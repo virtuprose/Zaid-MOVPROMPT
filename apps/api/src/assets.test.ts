@@ -7,6 +7,7 @@ import type { AssetStorageGateway } from "./asset-storage.js";
 import { loadApiConfig } from "./config.js";
 import type { GuestClaimService } from "./guest-claim-service.js";
 import type { RemoteImageFetcher } from "./remote-image-fetcher.js";
+import type { RequestRateLimiter } from "./request-rate-limiter.js";
 
 const USER_ID = "11111111-1111-4111-8111-111111111111";
 const OTHER_USER_ID = "22222222-2222-4222-8222-222222222222";
@@ -97,6 +98,14 @@ function storage(): AssetStorageGateway {
       contentType: "image/jpeg",
       checksumSha256: CHECKSUM,
     })),
+  };
+}
+
+function rateLimiter(allowed = true): RequestRateLimiter {
+  return {
+    consume: vi.fn(),
+    consumePublicScan: vi.fn(),
+    consumeAuthenticatedMirror: vi.fn(async () => ({ allowed, retryAfterSeconds: 120 })),
   };
 }
 
@@ -385,6 +394,7 @@ describe("private asset API", () => {
       assetRepository: repo,
       assetStorage: objectStorage,
       remoteImageFetcher,
+      requestRateLimiter: rateLimiter(),
     });
 
     const response = await app.request(`/api/v1/projects/${PROJECT_ID}/assets/mirror`, {
@@ -448,6 +458,7 @@ describe("private asset API", () => {
       assetRepository: repository({ projectOwned: false }),
       assetStorage: objectStorage,
       remoteImageFetcher,
+      requestRateLimiter: rateLimiter(),
     });
     const response = await app.request(`/api/v1/projects/${PROJECT_ID}/assets/mirror`, {
       method: "POST",
@@ -465,6 +476,31 @@ describe("private asset API", () => {
     await expect(response.json()).resolves.toMatchObject({
       error: { code: "project_not_found", retryable: false },
     });
+    expect(remoteImageFetcher.fetch).not.toHaveBeenCalled();
+    expect(objectStorage.put).not.toHaveBeenCalled();
+  });
+
+  it("rejects a rate-limited mirror before it fetches or stores remote media", async () => {
+    const remoteImageFetcher: RemoteImageFetcher = { fetch: vi.fn() };
+    const objectStorage = storage();
+    const app = createApi({
+      config,
+      authGateway: authGateway(),
+      assetRepository: repository(),
+      assetStorage: objectStorage,
+      remoteImageFetcher,
+      requestRateLimiter: rateLimiter(false),
+    });
+
+    const response = await app.request(`/api/v1/projects/${PROJECT_ID}/assets/mirror`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "idempotency-key": "asset-mirror-limited", "x-request-id": "request-mirror-limited" },
+      body: JSON.stringify({ kind: "product", url: "https://cdn.example.test/product.jpg" }),
+    });
+
+    expect(response.status).toBe(429);
+    expect(response.headers.get("retry-after")).toBe("120");
+    await expect(response.json()).resolves.toMatchObject({ error: { code: "remote_image_rate_limited", requestId: "request-mirror-limited" } });
     expect(remoteImageFetcher.fetch).not.toHaveBeenCalled();
     expect(objectStorage.put).not.toHaveBeenCalled();
   });
@@ -502,6 +538,7 @@ describe("private asset API", () => {
       assetRepository: repo,
       assetStorage: objectStorage,
       remoteImageFetcher,
+      requestRateLimiter: rateLimiter(),
     });
     const request = (url: string) => app.request(
       `/api/v1/projects/${PROJECT_ID}/assets/mirror`,

@@ -6,11 +6,18 @@ import { isIP } from "node:net";
 import { Readable } from "node:stream";
 
 import { ApiHttpError } from "./errors.js";
-import { isPublicAddress } from "./source-scanner.js";
+import {
+  DEFAULT_REMOTE_TIMEOUT_MS,
+  MAX_REMOTE_REDIRECTS,
+  defaultResolvePublicHost,
+  isPublicAddress,
+  parsePublicHttpUrl,
+  pinnedNodeFetch as sharedPinnedNodeFetch,
+} from "./network-media-policy.js";
 
 export const MAX_REMOTE_IMAGE_BYTES = 12 * 1024 * 1024;
-const MAX_REDIRECTS = 3;
-const DEFAULT_TIMEOUT_MS = 8_000;
+const MAX_REDIRECTS = MAX_REMOTE_REDIRECTS;
+const DEFAULT_TIMEOUT_MS = DEFAULT_REMOTE_TIMEOUT_MS;
 const ALLOWED_IMAGE_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 export type ResolveRemoteImageHost = (hostname: string) => Promise<string[]>;
@@ -52,9 +59,8 @@ async function defaultResolveHost(hostname: string): Promise<string[]> {
 }
 
 function remoteImageUrl(value: string, base?: URL): URL {
-  let url: URL;
   try {
-    url = base ? new URL(value, base) : new URL(value);
+    return parsePublicHttpUrl(value, base);
   } catch {
     throw new ApiHttpError({
       code: "invalid_remote_image_url",
@@ -63,15 +69,6 @@ function remoteImageUrl(value: string, base?: URL): URL {
       retryable: false,
     });
   }
-  if ((url.protocol !== "https:" && url.protocol !== "http:") || url.username || url.password) {
-    throw new ApiHttpError({
-      code: "invalid_remote_image_url",
-      message: "Only public HTTP or HTTPS image links without embedded credentials are supported.",
-      status: 400,
-      retryable: false,
-    });
-  }
-  return url;
 }
 
 async function resolvePublicHost(
@@ -276,8 +273,8 @@ function rejectWhenAborted(signal: AbortSignal): Promise<never> {
 export function createRemoteImageFetcher(
   options: RemoteImageFetcherOptions = {},
 ): RemoteImageFetcher {
-  const fetcher = options.fetch ?? pinnedNodeFetch;
-  const resolveHost = options.resolveHost ?? defaultResolveHost;
+  const fetcher = options.fetch ?? sharedPinnedNodeFetch;
+  const resolveHost = options.resolveHost ?? defaultResolvePublicHost;
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const maxBytes = options.maxBytes ?? MAX_REMOTE_IMAGE_BYTES;
   if (!Number.isSafeInteger(maxBytes) || maxBytes < 1 || maxBytes > MAX_REMOTE_IMAGE_BYTES) {

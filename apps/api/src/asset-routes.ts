@@ -20,6 +20,7 @@ import type { AssetStorageGateway } from "./asset-storage.js";
 import { ApiHttpError } from "./errors.js";
 import type { GuestClaimService } from "./guest-claim-service.js";
 import type { RemoteImageFetcher } from "./remote-image-fetcher.js";
+import type { RequestRateLimiter } from "./request-rate-limiter.js";
 import type { ApiEnvironment } from "./request-context.js";
 
 export type AssetRouteServices = {
@@ -28,6 +29,7 @@ export type AssetRouteServices = {
   repository?: AssetRepository;
   storage?: AssetStorageGateway;
   remoteImages?: RemoteImageFetcher;
+  rateLimiter?: RequestRateLimiter;
   guestClaimService?: GuestClaimService;
 };
 
@@ -498,6 +500,24 @@ export function registerAssetRoutes(
         code: "remote_image_service_unavailable",
         message: "Secure product image import is not available in this environment.",
         status: 503,
+        retryable: true,
+      });
+    }
+    if (!services.rateLimiter) {
+      throw new ApiHttpError({
+        code: "remote_image_service_unavailable",
+        message: "Secure product image import is not available in this environment.",
+        status: 503,
+        retryable: true,
+      });
+    }
+    const quota = await services.rateLimiter.consumeAuthenticatedMirror(userId);
+    if (!quota.allowed) {
+      context.header("retry-after", String(quota.retryAfterSeconds));
+      throw new ApiHttpError({
+        code: "remote_image_rate_limited",
+        message: "Too many image imports. Please try again shortly.",
+        status: 429,
         retryable: true,
       });
     }

@@ -178,6 +178,7 @@ export function createApi(options: CreateApiOptions = {}) {
     ...(options.assetRepository ? { repository: options.assetRepository } : {}),
     ...(options.assetStorage ? { storage: options.assetStorage } : {}),
     ...(options.remoteImageFetcher ? { remoteImages: options.remoteImageFetcher } : {}),
+    ...(options.requestRateLimiter ? { rateLimiter: options.requestRateLimiter } : {}),
     ...(options.guestClaimService ? { guestClaimService: options.guestClaimService } : {}),
   });
 

@@ -7,6 +7,7 @@ import { Readable } from "node:stream";
 import type { SourceScanResponse } from "@movprompt/contracts";
 
 import { ApiHttpError } from "./errors.js";
+import { createPublicRemoteRequestPolicy, parsePublicHttpUrl } from "./network-media-policy.js";
 
 const MAX_HTML_BYTES = 2 * 1024 * 1024;
 const MAX_REDIRECTS = 3;
@@ -224,93 +225,36 @@ export function createSourceScanner(options: SourceScannerOptions = {}): SourceS
   const fetcher = options.fetch ?? pinnedNodeFetch;
   const resolveHost = options.resolveHost ?? defaultResolveHost;
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+  const policy = createPublicRemoteRequestPolicy({ fetch: fetcher, resolveHost, timeoutMs });
 
   return {
     async scan(input) {
-      let url = safeHttpUrl(input.url);
-      let response: Response | null = null;
-      for (let redirect = 0; redirect <= MAX_REDIRECTS; redirect += 1) {
-        const pinnedAddresses = await resolvePublicHost(url, resolveHost);
-        const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), timeoutMs);
-        try {
-          response = await fetcher(url.toString(), {
-            method: "GET",
-            redirect: "manual",
-            signal: controller.signal,
-            headers: {
-              accept: "text/html,application/xhtml+xml",
-              "user-agent": "MovPromptSourceScanner/1.0",
-            },
-          }, pinnedAddresses);
-        } catch (error) {
-          throw new ApiHttpError({
-            code: error instanceof Error && error.name === "AbortError" ? "source_scan_timeout" : "source_scan_failed",
-            message: "MovPrompt could not read this website. Upload photos or enter the details manually.",
-            status: 422,
-            retryable: true,
-          });
-        } finally {
-          clearTimeout(timer);
-        }
-
-        if ([301, 302, 303, 307, 308].includes(response.status)) {
-          const location = response.headers.get("location");
-          if (!location || redirect === MAX_REDIRECTS) {
-            throw new ApiHttpError({
-              code: "source_redirect_invalid",
-              message: "The website redirected too many times.",
-              status: 422,
-              retryable: false,
-            });
-          }
-          url = safeHttpUrl(location, url);
-          continue;
-        }
-        break;
+      let initialUrl: URL;
+      try { initialUrl = parsePublicHttpUrl(input.url); } catch {
+        throw new ApiHttpError({ code: "invalid_source_url", message: "Enter a complete public website link.", status: 400, retryable: false });
       }
-
-      if (!response?.ok) {
-        throw new ApiHttpError({
-          code: "source_scan_failed",
-          message: "The website did not return a readable page.",
-          status: 422,
-          retryable: true,
+      let fetched: { url: URL; html: string };
+      try {
+        fetched = await policy.fetch(initialUrl, {
+          headers: { accept: "text/html,application/xhtml+xml", "user-agent": "MovPromptSourceScanner/1.0" },
+          consume: async ({ response, url }) => {
+            if (!response.ok) throw new ApiHttpError({ code: "source_scan_failed", message: "The website did not return a readable page.", status: 422, retryable: true });
+            const contentType = response.headers.get("content-type")?.split(";")[0]?.trim().toLowerCase();
+            if (contentType !== "text/html" && contentType !== "application/xhtml+xml") throw new ApiHttpError({ code: "source_content_unsupported", message: "This link is not a supported website page.", status: 415, retryable: false });
+            const contentLength = Number(response.headers.get("content-length") || "0");
+            if (Number.isFinite(contentLength) && contentLength > MAX_HTML_BYTES) throw new ApiHttpError({ code: "source_too_large", message: "This website page is too large to import safely.", status: 413, retryable: false });
+            const reader = response.body?.getReader();
+            if (!reader) throw new ApiHttpError({ code: "source_scan_failed", message: "The page body was empty.", status: 422, retryable: true });
+            const chunks: Uint8Array[] = []; let bytes = 0;
+            while (true) { const { done, value } = await reader.read(); if (done) break; bytes += value.byteLength; if (bytes > MAX_HTML_BYTES) { await reader.cancel(); throw new ApiHttpError({ code: "source_too_large", message: "This website page is too large to import safely.", status: 413, retryable: false }); } chunks.push(value); }
+            return { url, html: new TextDecoder().decode(Buffer.concat(chunks)) };
+          },
         });
+      } catch (error) {
+        if (error instanceof ApiHttpError) throw error;
+        throw new ApiHttpError({ code: error instanceof Error && error.message === "timeout" ? "source_scan_timeout" : error instanceof Error && error.message === "redirect" ? "source_redirect_invalid" : error instanceof Error && error.message === "blocked" ? "source_url_blocked" : "source_scan_failed", message: "MovPrompt could not read this website. Upload photos or enter the details manually.", status: error instanceof Error && error.message === "blocked" ? 400 : 422, retryable: error instanceof Error && error.message !== "blocked" && error.message !== "redirect" });
       }
-      const contentType = response.headers.get("content-type")?.split(";")[0]?.trim().toLowerCase();
-      if (contentType !== "text/html" && contentType !== "application/xhtml+xml") {
-        throw new ApiHttpError({
-          code: "source_content_unsupported",
-          message: "This link is not a supported website page.",
-          status: 415,
-          retryable: false,
-        });
-      }
-      const contentLength = Number(response.headers.get("content-length") || "0");
-      if (Number.isFinite(contentLength) && contentLength > MAX_HTML_BYTES) {
-        throw new ApiHttpError({
-          code: "source_too_large",
-          message: "This website page is too large to import safely.",
-          status: 413,
-          retryable: false,
-        });
-      }
-      const reader = response.body?.getReader();
-      if (!reader) throw new ApiHttpError({ code: "source_scan_failed", message: "The page body was empty.", status: 422, retryable: true });
-      const chunks: Uint8Array[] = [];
-      let bytes = 0;
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        bytes += value.byteLength;
-        if (bytes > MAX_HTML_BYTES) {
-          await reader.cancel();
-          throw new ApiHttpError({ code: "source_too_large", message: "This website page is too large to import safely.", status: 413, retryable: false });
-        }
-        chunks.push(value);
-      }
-      const html = new TextDecoder().decode(Buffer.concat(chunks));
+      const { url, html } = fetched;
       const importedName = meta(html, ["og:title", "twitter:title"]) || title(html);
       const description = meta(html, ["og:description", "twitter:description", "description"]);
       const price = input.kind === "product" ? priceFact(html) : null;

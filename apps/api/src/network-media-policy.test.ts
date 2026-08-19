@@ -13,7 +13,7 @@ describe("public remote request policy", () => {
       resolveHost: vi.fn(async () => ["8.8.8.8", "127.0.0.1"]),
     });
 
-    await expect(policy.fetch(new URL("https://public.example.test/source"), { headers: {} }))
+    await expect(policy.fetch(new URL("https://public.example.test/source"), { headers: {}, consume: async () => undefined }))
       .rejects.toMatchObject<Partial<RemoteNetworkPolicyError>>({ kind: "blocked" });
     expect(transport).not.toHaveBeenCalled();
   });
@@ -28,7 +28,10 @@ describe("public remote request policy", () => {
     );
     const policy = createPublicRemoteRequestPolicy({ fetch: transport, resolveHost });
 
-    const result = await policy.fetch(new URL("https://public.example.test/source"), { headers: {} });
+    const result = await policy.fetch(new URL("https://public.example.test/source"), {
+      headers: {},
+      consume: async ({ url }) => ({ url }),
+    });
 
     expect(result.url.toString()).toBe("https://public.example.test/next");
     expect(transport).toHaveBeenCalledTimes(2);
