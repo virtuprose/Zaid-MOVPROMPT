@@ -49,6 +49,39 @@ describe("MovPrompt API foundation", () => {
     expect(body).not.toContain("private-model-id");
   });
 
+  it("returns only configured auth method names and the shared verification policy", async () => {
+    const app = createApi({
+      config: loadApiConfig({
+        APP_ENV: "test",
+        API_PORT: "3001",
+        FEATURE_AUTHENTICATION: "true",
+      }),
+      authGateway: {
+        handle: async () => new Response("ok"),
+        getSession: async () => null,
+        publicCapability: {
+          emailPassword: true,
+          configuredProviders: ["google"],
+          firstCampaignVerificationPolicy: "deferred_until_after_first_campaign",
+        },
+      },
+    });
+
+    const response = await app.request("/api/v1/feature-flags");
+    const body = await response.text();
+
+    expect(response.status).toBe(200);
+    expect(JSON.parse(body)).toMatchObject({
+      auth: {
+        emailPassword: true,
+        configuredProviders: ["google"],
+        firstCampaignVerificationPolicy: "deferred_until_after_first_campaign",
+      },
+    });
+    expect(body).not.toContain("clientSecret");
+    expect(body).not.toContain("oauth-state");
+  });
+
   it("keeps public product scanning available before authentication", async () => {
     const app = createApi({
       config,
