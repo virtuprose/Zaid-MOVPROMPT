@@ -1,14 +1,19 @@
-export type SocialAuthProvider = "google" | "apple";
+import type { AuthCapability } from "@movprompt/contracts";
 
-const providerEnvNames: Record<SocialAuthProvider, string> = {
-  google: "VITE_AUTH_GOOGLE_ENABLED",
-  apple: "VITE_AUTH_APPLE_ENABLED",
-};
+export type SocialAuthProvider = AuthCapability["configuredProviders"][number];
 
-export function isSocialAuthProviderEnabled(provider: SocialAuthProvider) {
-  return import.meta.env[providerEnvNames[provider]] === "true";
+/** The server capability is the only authority for social sign-in visibility. */
+export function isSocialAuthProviderEnabled(
+  capability: AuthCapability | null | undefined,
+  provider: SocialAuthProvider,
+): boolean {
+  return capability?.configuredProviders.includes(provider) ?? false;
 }
 
-export function enabledSocialAuthProviders(): SocialAuthProvider[] {
-  return (["google", "apple"] as const).filter(isSocialAuthProviderEnabled);
+export function enabledSocialAuthProviders(
+  capability?: AuthCapability | null,
+): SocialAuthProvider[] {
+  return (["google", "apple"] as const).filter((provider) =>
+    isSocialAuthProviderEnabled(capability, provider),
+  );
 }

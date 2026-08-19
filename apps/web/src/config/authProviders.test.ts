@@ -1,12 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
+import type { AuthCapability } from "@movprompt/contracts";
 
 import { enabledSocialAuthProviders, isSocialAuthProviderEnabled } from "./authProviders";
 
 describe("social authentication provider visibility", () => {
-  const capability = {
-    emailPassword: true as const,
-    configuredProviders: ["google", "apple"] as const,
-    firstCampaignVerificationPolicy: "deferred_until_after_first_campaign" as const,
+  const capability: AuthCapability = {
+    emailPassword: true,
+    configuredProviders: ["google", "apple"],
+    firstCampaignVerificationPolicy: "deferred_until_after_first_campaign",
   };
 
   it("fails closed before the server capability is available", () => {
