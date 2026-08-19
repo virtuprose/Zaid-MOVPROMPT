@@ -72,15 +72,35 @@ Plans:
 
 **Wave 1**
 
-- [x] 02-01: Finish guest draft lifecycle, Generate-time auth, safe returns, and idempotent claim contracts.
+- [x] 02-01: Create the durable authenticated guest-claim boundary with replay-safe ownership and verified asset checkpoints.
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 02-02: Finish private media mirroring/upload verification and authenticated project ownership enforcement.
+- [x] 02-02: Preserve the exact seven-day browser draft, stable Generate intent, auth cancellation, and verified local cleanup.
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 02-03: Add cross-user, callback-replay, expiry, failure-recovery, and browser E2E proof.
+- [ ] 02-03: Make authentication capability, verification policy, and OAuth/password returns server-controlled and safe.
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [ ] 02-04: Secure guest media into the authenticated user's private namespace with resumable integrity checks.
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
+- [ ] 02-05: Add PostgreSQL-authoritative rate limits and hardened source scanning and image mirroring.
+
+**Wave 6** *(blocked on Wave 5 completion)*
+
+- [ ] 02-06: Make source changes versioned and every source or claim failure safely recoverable.
+
+**Wave 7** *(blocked on Wave 6 completion)*
+
+- [ ] 02-07: Prove abandoned-claim cleanup, guarded migrations, RLS isolation, and adversarial ownership safety.
+
+**Wave 8** *(blocked on Wave 7 completion)*
+
+- [ ] 02-08: Complete and verify the guest/auth recovery UI across languages, themes, viewports, and accessibility states.
 
 ### Phase 3: Product and Service Golden Paths
 
