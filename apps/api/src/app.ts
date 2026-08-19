@@ -206,6 +206,7 @@ export function createApi(options: CreateApiOptions = {}) {
     context.header("cache-control", "private, no-store");
     return context.json({
       features: { ...effectiveFeatures, generation: availability.status === "ready" },
+      auth: options.authGateway?.publicCapability ?? null,
       capabilities: publicCapabilities,
       generationAvailability: availability,
       evaluatedAt: new Date().toISOString(),

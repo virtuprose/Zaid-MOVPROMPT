@@ -1,17 +1,30 @@
 import { randomUUID } from "node:crypto";
 
 import { createDatabase, schema } from "@movprompt/db";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { createApi } from "./app.js";
 import { loadApiConfig } from "./config.js";
 import { createDrizzleCreatorRepository } from "./creator-repository.js";
 import { createGuestClaimRepository } from "./guest-claim-repository.js";
 import { createGuestClaimService } from "./guest-claim-service.js";
-import { createTestAuthProviderStubs } from "./test/auth-provider-stubs.js";
+import {
+  createTestAuthProviderStubs,
+  TEST_SOCIAL_AUTH_USERS,
+  testCallbackState,
+} from "./test/auth-provider-stubs.js";
 
 const integrationUrl = process.env.MOVPROMPT_TEST_DATABASE_URL;
 const describePostgres = integrationUrl ? describe.sequential : describe.skip;
+
+describe("test auth provider stub boundary", () => {
+  afterEach(() => vi.unstubAllEnvs());
+
+  it("fails closed if a production runtime attempts to load it", () => {
+    vi.stubEnv("NODE_ENV", "production");
+    expect(() => createTestAuthProviderStubs()).toThrow(/not_available_in_production/);
+  });
+});
 
 function snapshot() {
   return {
@@ -36,6 +49,20 @@ describePostgres("deterministic social callback recovery", () => {
       maxConnections: 3,
       applicationName: "movprompt-auth-provider-stubs-test",
     });
+    await database.db.insert(schema.users).values([
+      {
+        id: TEST_SOCIAL_AUTH_USERS.google,
+        name: "Google callback owner",
+        email: "google.callback@movprompt.test",
+        emailVerified: true,
+      },
+      {
+        id: TEST_SOCIAL_AUTH_USERS.apple,
+        name: "Apple callback owner",
+        email: "apple.callback@movprompt.test",
+        emailVerified: true,
+      },
+    ]).onConflictDoNothing();
   });
 
   afterAll(async () => {
@@ -67,7 +94,7 @@ describePostgres("deterministic social callback recovery", () => {
       const campaign = snapshot();
       const callback = await app.request(auth.callbackRequest({
         provider,
-        state: `state-${campaign.pendingGenerationId}`,
+        state: testCallbackState(provider),
         next: `/create?draft=${campaign.draftId}`,
       }));
 
@@ -89,10 +116,8 @@ describePostgres("deterministic social callback recovery", () => {
       expect(replay.status).toBe(201);
       const firstReceipt = await first.json() as { claim: { project: { id: string }; version: { id: string } } };
       const replayReceipt = await replay.json() as { claim: { project: { id: string }; version: { id: string } } };
-      expect(replayReceipt.claim).toEqual(expect.objectContaining({
-        project: { id: firstReceipt.claim.project.id },
-        version: { id: firstReceipt.claim.version.id },
-      }));
+      expect(replayReceipt.claim.project.id).toBe(firstReceipt.claim.project.id);
+      expect(replayReceipt.claim.version.id).toBe(firstReceipt.claim.version.id);
     },
   );
 
@@ -106,7 +131,7 @@ describePostgres("deterministic social callback recovery", () => {
     }));
     const cancelled = await app.request(auth.callbackRequest({
       provider: "apple",
-      state: `cancel-${campaign.pendingGenerationId}`,
+      state: testCallbackState("apple"),
       next: "/create",
       cancelled: true,
     }));
@@ -122,7 +147,7 @@ describePostgres("deterministic social callback recovery", () => {
     const campaign = snapshot();
     const firstCallback = await app.request(auth.callbackRequest({
       provider: "google",
-      state: `state-${campaign.pendingGenerationId}`,
+      state: testCallbackState("google"),
       next: "/create",
     }));
     const firstCookie = firstCallback.headers.get("set-cookie")!;
@@ -134,7 +159,7 @@ describePostgres("deterministic social callback recovery", () => {
     expect(first.status).toBe(201);
     const secondCallback = await app.request(auth.callbackRequest({
       provider: "apple",
-      state: `state-second-${campaign.pendingGenerationId}`,
+      state: testCallbackState("apple"),
       next: "/create",
     }));
     const changed = await app.request("/api/v1/drafts/claim", {
