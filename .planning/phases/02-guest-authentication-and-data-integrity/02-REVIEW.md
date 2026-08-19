@@ -1,6 +1,6 @@
 ---
 phase: 02-guest-authentication-and-data-integrity
-reviewed: 2026-08-20T00:31:00+03:00
+reviewed: 2026-08-19T21:41:26Z
 depth: standard
 files_reviewed: 74
 files_reviewed_list:
@@ -88,42 +88,43 @@ status: issues_found
 
 # Phase 02: Code Review Report
 
-**Reviewed:** 2026-08-20T00:31:00+03:00
+**Reviewed:** 2026-08-19T21:41:26Z
 **Depth:** standard
 **Files Reviewed:** 74
 **Status:** issues_found
 
 ## Summary
 
-Iteration 1 correctly repaired the original route-contract break, durable signed-URL persistence, cleanup-lease race, and email-delivery accuracy defect. The canonical guest snapshot is now built and checkpointed before the claim, its receipt is verified before the local draft is removed, and the old non-guest claim flow now has a distinct route. The focused web/API/auth suites and all three reviewed TypeScript projects pass.
+Iteration 2 correctly fixed the prior link-import ordering defect: remote images now mirror and persist into a source version before IndexedDB cleanup. The focused claim, source-persistence, and recovery suites pass, as do the web and API typechecks.
 
-One blocker remains: the link-import variant removes the guest draft before remote source images have been mirrored and durably versioned. A transient mirror failure immediately after a successful empty-asset claim therefore destroys the only recoverable copy of the imported source URLs and can leave the cloud project with no usable product asset.
+One blocker remains in the recovery path. If source persistence succeeds but IndexedDB cleanup fails, the user is told the draft is unchanged. Retrying then derives a new source-replacement idempotency key from the already-advanced current version, creating another immutable source version without a user change. This is a data-integrity/replay failure in precisely the failure-preservation path Phase 2 promises.
 
 ## Narrative Findings (AI reviewer)
 
 ## Critical Issues
 
-### CR-01: Guest link-import cleanup happens before remote images are safely claimed
+### CR-01: Cleanup-failure retry duplicates immutable source versions
 
 **Classification:** BLOCKER
 
-**File:** `apps/web/src/features/create/CreateStudio.tsx:954-974`
+**File:** `apps/web/src/features/create/guestClaimRecovery.ts:154-157`
 
-**Also affects:** `apps/web/src/features/create/guestClaimRecovery.ts:117-125`, `apps/web/src/features/create/creatorAssets.ts:242-282`, `apps/web/src/features/create/portableProjectMapper.ts:18-38`
+**Also affects:** `apps/web/src/features/create/CreateStudio.tsx:956-975`, `apps/web/src/features/create/creatorProjectAssets.ts:31-57`, `apps/web/src/features/create/projectStore.ts:316-344`
 
-**Issue:** A guest-created product/business link has `source: "url"` images but no local blobs, so the snapshot's asset manifest is empty. The canonical claim finalizes immediately. `claimGuestProject` then calls `verifyAndDeleteVerifiedDraft` at line 955, which clears IndexedDB (including the imported remote URLs), and only afterward tries `mirrorProductImages` at line 969. If mirroring fails because the upstream image, storage, or network is temporarily unavailable, the function throws after deletion. The claimed version intentionally redacts `sourceUrl` and image `url` fields, so a reload cannot recover the remote source from the cloud either. This violates the required exact-recovery and failure-preservation behavior for guest link import.
+**Issue:** `persistBeforeVerifiedDraftCleanup` correctly persists the mirrored source version before deleting IndexedDB. However, `deleteVerifiedGuestDraft` is a separate IndexedDB operation and can fail after `persist()` has already succeeded. The helper then rejects with the same “local draft is unchanged” recovery path. On retry, `claimGuestProject` loads the original local project, gets the cloud project whose `currentVersion` is now the already-persisted source version, and calls `replaceCreatorProjectSource` again. Its idempotency key includes `existing.currentVersion.id` (`source-change:${project.id}:${existing.currentVersion.id}:...`), so the retried request has a different key and a different parent version. The repository therefore creates a second, identical source-replacement version. This breaks exact replay/immutable-version correctness and can repeatedly advance the working version after any client-side cleanup interruption.
 
-**Fix:** Treat the remote images as required claim assets before cleanup, or defer `verifyAndDeleteVerifiedDraft` until every remote image has been mirrored, a new immutable version persists the stable object keys, and that version/receipt has been verified. On any mirror or version failure, retain the IndexedDB draft/checkpoint and show a retry action. Add an end-to-end test for guest link → auth → forced mirror failure → reload/retry, then assert no local source field/blob is lost.
+**Fix:** Persist a stable, receipt-bound “source persistence completed” marker containing the resulting project/version identity before cleanup, and make retries first verify/reuse that version rather than invoke source replacement again. Alternatively make the source-replacement idempotency key derive solely from the immutable claim receipt/pending intent and require the API to return the same version for that operation regardless of the current working version. Add a regression test for guest link → mirror/source replacement succeeds → IndexedDB cleanup throws → reload/retry, asserting exactly one source version and one working-version transition.
 
-## Verified Resolutions from Iteration 1
+## Verified Resolutions from Prior Iterations
 
 - **Original CR-01:** `CreateStudio` now builds and checkpoints `GuestClaimSnapshot`, uses `claimGuestAssets`, verifies the `GuestClaimReceipt`, and routes non-guest claims to `/api/v1/projects/claim`.
 - **Original CR-02:** `projectStore.writeLocal` strips signed image, logo, and render URLs; its regression test checks stored JSON contains no signing tokens.
 - **Original CR-03:** `markAssetVerified` now refuses an active cleanup lease, and PostgreSQL coverage exercises the lease/retry interleaving.
 - **Original WR-01:** verification and reset senders are awaited and delivery failures become a sanitized authentication error.
+- **Iteration-2 CR-01:** the link-import flow now waits for remote-image mirroring and immutable source persistence before attempting IndexedDB cleanup; a mirror failure preserves the source URL, checkpoint, and local blobs.
 
 ---
 
-_Reviewed: 2026-08-20T00:31:00+03:00_
+_Reviewed: 2026-08-19T21:41:26Z_
 _Reviewer: the agent (gsd-code-reviewer)_
 _Depth: standard_
