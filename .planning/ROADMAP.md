@@ -60,9 +60,16 @@ Plans:
 **Plans:** 3 plans
 
 Plans:
+**Wave 1**
 
 - [ ] 02-01: Finish guest draft lifecycle, Generate-time auth, safe returns, and idempotent claim contracts.
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 02-02: Finish private media mirroring/upload verification and authenticated project ownership enforcement.
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 02-03: Add cross-user, callback-replay, expiry, failure-recovery, and browser E2E proof.
 
 ### Phase 3: Product and Service Golden Paths

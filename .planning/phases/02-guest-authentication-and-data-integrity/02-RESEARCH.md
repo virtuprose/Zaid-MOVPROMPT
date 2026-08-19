@@ -176,9 +176,10 @@ apps/api/src/
 apps/web/src/features/create/
 ├── guestDraftStore.ts           # draft + blob persistence and verified cleanup
 ├── guestClaimRecovery.ts        # callback/retry bridge and canonical comparison
+├── GuestAuthRecovery.test.tsx   # integrated auth/recovery state coverage
 └── CreateStudio.tsx             # state presentation only
-apps/web/e2e/
-└── guest-auth-claim.spec.ts     # full browser proof (Wave 0)
+.planning/phases/02-guest-authentication-and-data-integrity/
+└── 02-BROWSER-EVIDENCE.md       # in-app browser/Chrome rendered proof
 ```
 
 ### Pattern 1: Persisted Claim Saga
@@ -217,7 +218,7 @@ apps/web/e2e/
 | Cross-user DB authorization | UI-only user-id checks | `withUserTransaction`, owner predicates, PostgreSQL RLS | Browser checks do not prevent direct HTTP/database access. [VERIFIED: packages/db/src/user-transaction.ts:7-21] [CITED: https://www.postgresql.org/docs/current/ddl-rowsecurity.html] |
 | Private object authorization | Signed URL persistence or public bucket paths | Existing object key assertion + owner-authorized signed URL response | Signed URLs expire and must not become database authority. [VERIFIED: packages/storage/src/keys.ts:20-74] |
 | SSRF filtering | Regex-only URL validation | Existing DNS-pinned scanner/mirror plus rate limiter | Redirects, DNS rebinding, IPv6, content magic, and byte caps need layered validation. [VERIFIED: apps/api/src/source-scanner.ts:100-333] |
-| E2E browser behavior | jsdom-only imitation | Playwright browser contexts after checkpoint | IndexedDB, redirects, cookies, callback navigation, and focus require a browser. [CITED: https://playwright.dev/docs/intro] |
+| Rendered browser behavior | jsdom-only imitation | Existing in-app browser or Chrome control plus redacted evidence record | IndexedDB, redirects, cookies, callback navigation, focus and responsive/RTL behavior require a real rendered browser. [ASSUMED] |
 
 **Key insight:** Reuse the mature primitives, but compose them under an explicit, durable claim operation; none of the individual primitives proves the full guest-to-owned transition alone. [ASSUMED]
 
@@ -297,24 +298,19 @@ The source’s exact condition is quoted above. Use that one validated contract 
 | A1 | A persisted server-side claim saga is the smallest viable design for DB plus S3 recovery. | Architecture Patterns | More/less schema work than planned. |
 | A2 | A public configured-provider API contract is preferable to independent browser flags. | Common Pitfalls | Requires a small API contract addition. |
 | A3 | Claim input should include snapshot digest and asset manifest. | Architecture Patterns | Schema/compatibility design needs confirmation. |
-| A4 | `@playwright/test` should be added after a human checkpoint. | Standard Stack | Tooling approval may select another E2E mechanism. |
-| A5 | Rate-limit threshold/mechanism needs a product/operations decision. | Security Domain | Abuse-control strength could be inadequate. |
+| A4 | Phase 2 browser proof uses the available in-app browser or Chrome control and does not add `@playwright/test`. | Validation Architecture | Rendered proof must be recorded manually/tool-assisted rather than through a new package. |
+| A5 | The resolved PostgreSQL quotas and proxy-hop policy are the Phase 2 defaults. | Security Domain | Operations may tune validated server configuration later without changing the contract. |
 
-## Open Questions
+## Open Questions — Resolved for Planning
 
 1. **What exact retention and cleanup policy applies to partially uploaded objects after a claim permanently fails?**
-   - What we know: local media must remain until verified success, while private object keys are server-owned. [VERIFIED: .planning/phases/02-guest-authentication-and-data-integrity/02-CONTEXT.md:27-31]
-   - What's unclear: whether unfinished private objects are deleted immediately, by an outbox cleanup, or by a retention job. [ASSUMED]
-   - Recommendation: plan a terminal cleanup/outbox task with an auditable retry policy before production. [ASSUMED]
+   - **Resolved decision:** retain incomplete-claim private objects for 24 hours. After the cutoff, an idempotent pg-boss cleanup job leases each candidate, rechecks that the claim/asset is still incomplete, validates the canonical private key, deletes or accepts already-missing objects, and records an auditable outcome. Transient failures retry with backoff. Finalized/verified assets are permanently ineligible, including delayed or replayed cleanup jobs. Local IndexedDB data remains governed by verified canonical claim success and is never deleted by this worker. [ASSUMED — locked for Phase 2 planning]
 
 2. **Which rate limit is appropriate for source scan and mirror requests?**
-   - What we know: scanner and mirror controls exist; a repository search did not show a request-rate policy in these paths. [VERIFIED: apps/api/src/source-scanner.ts:100-333] [VERIFIED: apps/api/src/remote-image-fetcher.ts:149-224]
-   - What's unclear: business-safe per-user/IP quota and proxy identity source. [ASSUMED]
-   - Recommendation: make the first threshold/configuration a human-approved operational decision and test deterministic 429 behavior. [ASSUMED]
+   - **Resolved decision:** public source scan defaults to 20 requests per 10 minutes per trusted client IP; authenticated mirror defaults to 50 requests per 10 minutes per session user. PostgreSQL is the authoritative atomic limiter across API instances; no process-local production fallback is allowed. Forwarded client headers are trusted only when an explicit trusted proxy-hop count is configured, otherwise the direct peer address is authoritative. Limits remain validated server configuration and deterministic tests must prove 429 plus no outbound fetch/storage after rejection. [ASSUMED — locked for Phase 2 planning]
 
 3. **How is email verification policy made consistent across server, web, and private-beta deployment configuration?**
-   - What we know: the auth configuration defaults can require verification, while Phase 2 locks a non-blocking first campaign. [VERIFIED: packages/auth/src/config.ts:42-94] [VERIFIED: .planning/phases/02-guest-authentication-and-data-integrity/02-CONTEXT.md:19-34]
-   - Recommendation: create one explicit, tested policy capability—never a UI-only bypass. [ASSUMED]
+   - **Resolved decision:** define exactly `firstCampaignVerificationPolicy = "deferred_until_after_first_campaign"` in shared auth configuration/contracts. Better Auth behavior, the public API capability and web UI consume this one value. Email/password users may claim and finish the first private-beta campaign before verification, while the workspace presents the approved non-blocking reminder and verification remains available. No independent UI boolean or deployment-only bypass is permitted. [ASSUMED — locked for Phase 2 planning]
 
 ## Environment Availability
 
@@ -325,10 +321,10 @@ The source’s exact condition is quoted above. Use that one validated contract 
 | PostgreSQL client/service | RLS/claim integration | ✓ socket accepts connections; client is older | psql 15.17 | Use project PostgreSQL 17 Compose path for release evidence. [VERIFIED: compose.yaml:10-26] |
 | Docker / Compose | PostgreSQL 17 + MinIO + Mailpit full-stack E2E | ✗ | — | No equivalent local full-stack path was verified. |
 | FFmpeg/FFprobe | Existing overall worker stack, not primary Phase 2 path | ✓ | 8.1.2 | — |
-| Browser E2E runner | Callback/IndexedDB/cookie evidence | ✗ | — | Add reviewed Playwright dependency and browser binary. [ASSUMED] |
+| Browser E2E runner | Callback/IndexedDB/cookie evidence | ✗ | — | Use the available in-app browser or Chrome control and record the rendered matrix; no package addition in Phase 2. [ASSUMED] |
 
 **Missing dependencies with no fallback:** Docker/Compose (or a securely configured equivalent PostgreSQL 17, private S3-compatible store, and mail test service) for release-grade asset/auth E2E proof.  
-**Missing dependencies with fallback:** Browser E2E runner can be added after the required human package checkpoint. [ASSUMED]
+**Missing dependencies with fallback:** Rendered browser evidence uses the available in-app browser or Chrome control. Any later browser-test dependency is a separate plan and requires a blocking human package-provenance checkpoint before package modification. [ASSUMED]
 
 ## Validation Architecture
 
@@ -340,21 +336,21 @@ The source’s exact condition is quoted above. Use that one validated contract 
 | Config file | `apps/web/vitest.config.ts`; API and packages use workspace Vitest scripts. [VERIFIED: apps/web/vitest.config.ts:12-20] |
 | Quick run command | `bun run --cwd apps/web test` / `bun run --cwd apps/api test` [VERIFIED: apps/web/package.json:12-14] [VERIFIED: apps/api/package.json:15-15] |
 | Full suite command | `bun run test:all && bun run typecheck` [VERIFIED: package.json:16-40] |
-| Required browser layer | Add Playwright E2E after checkpoint; current repository search found no committed browser-test config. [ASSUMED] |
+| Required browser layer | Existing Testing Library integration plus in-app browser/Chrome rendered evidence; current repository search found no committed browser-test config and Phase 2 adds none. [ASSUMED] |
 
 ### Phase Requirements → Test Map
 
 | Req ID | Behavior | Test Type | Automated Command | File Exists? |
 |---|---|---|---|---|
 | AUTH-01 | Complete guest JSON/blob campaign survives refresh before Generate. | web unit + E2E | `bun run --cwd apps/web test -- guestDraftStore` | ❌ Wave 0 |
-| AUTH-02, AUTH-06 | Generate opens contextual auth; cancel preserves exact draft. | E2E | `bun run test:e2e -- guest-auth-claim` | ❌ Wave 0 |
-| AUTH-03 | Only server-configured social providers appear and replay safely. | API + E2E | `bun run test:e2e -- guest-auth-claim` | ❌ Wave 0 |
-| AUTH-04, AUTH-05 | Non-blocking verification and reset preserve validated route. | API/web + E2E | `bun run test:e2e -- auth-return-intent` | ❌ Wave 0 |
-| AUTH-07, AUTH-09 | Callback/reload/expiry preserve-or-reject exact snapshot and same-browser ownership. | web unit + E2E | `bun run test:e2e -- guest-auth-claim` | ❌ Wave 0 |
+| AUTH-02, AUTH-06 | Generate opens contextual auth; cancel preserves exact draft. | Testing Library + rendered browser | `bun run --cwd apps/web test -- AuthGateDialog GuestAuthRecovery` | ❌ Wave 0 |
+| AUTH-03 | Only server-configured social providers appear and replay safely. | API stub + rendered browser | `bun run --cwd apps/api test -- auth-provider-stubs` | ❌ Wave 0 |
+| AUTH-04, AUTH-05 | Non-blocking verification and reset preserve validated route. | API/web + rendered browser | `bun run --cwd apps/web test -- AuthCopy GuestAuthRecovery returnPath` | ❌ Wave 0 |
+| AUTH-07, AUTH-09 | Callback/reload/expiry preserve-or-reject exact snapshot and same-browser ownership. | web unit + rendered browser | `bun run --cwd apps/web test -- guestDraftStore GuestAuthRecovery` | ❌ Wave 0 |
 | AUTH-08 | Concurrent callback/retry yields one project/version/run/charge. | PostgreSQL integration + E2E | `bun run --cwd apps/api test -- creator-routes.postgres` | ✅ partial: existing route test only |
 | AUTH-10, SOURCE-05, PROJ-06 | Two-user project/version/asset/object URL isolation. | PostgreSQL + storage integration | `bun run --cwd apps/api test -- creator-routes.postgres` | ✅ partial: extend |
 | SOURCE-04 | Private IP, redirect, DNS, MIME/size/timeouts and rate limits are rejected. | API unit/integration | `bun run --cwd apps/api test -- source-scanner remote-image-fetcher` | ✅ partial: rate test missing |
-| SOURCE-06 | Failed upload/mirror leaves local draft and offers Retry/Replace. | web E2E | `bun run test:e2e -- guest-auth-claim` | ❌ Wave 0 |
+| SOURCE-06 | Failed upload/mirror leaves local draft and offers Retry/Replace. | Testing Library + rendered browser | `bun run --cwd apps/web test -- GuestAuthRecovery guestClaimRecovery` | ❌ Wave 0 |
 | SOURCE-07 | Source change creates/invokes compatible output invalidation. | API/domain integration | `bun run --cwd apps/api test -- creator` | ❌ Wave 0 |
 
 ### Sampling Rate
@@ -368,7 +364,7 @@ The source’s exact condition is quoted above. Use that one validated contract 
 - [ ] `apps/web/src/features/create/guestDraftStore.test.ts` — IndexedDB save/expiry/blob deletion/retry behavior for AUTH-01/AUTH-09.
 - [ ] `apps/api/src/guest-claim-service.postgres.test.ts` — concurrent resume, partial asset recovery, one final version, one pending intent for AUTH-07/AUTH-08/AUTH-10.
 - [ ] Extend `apps/api/src/creator-routes.postgres.test.ts` — two-user claims/assets/URL/version/run attempts for PROJ-06.
-- [ ] `apps/web/e2e/guest-auth-claim.spec.ts` and E2E config — cookie/callback/IndexedDB/viewport/RTL evidence for AUTH-02..09 and SOURCE-06.
+- [ ] `apps/web/src/features/create/GuestAuthRecovery.test.tsx` plus `02-BROWSER-EVIDENCE.md` — jsdom state coverage and in-app browser/Chrome evidence for AUTH-02..09 and SOURCE-06, without adding a browser dependency.
 - [ ] Scanner/mirror rate-limit test — deterministic reject/429 evidence for SOURCE-04.
 - [ ] Source-change output invalidation integration test for SOURCE-07.
 
@@ -407,7 +403,6 @@ The source’s exact condition is quoted above. Use that one validated contract 
 - [Better Auth security documentation](https://better-auth.com/docs/reference/security) — trusted origins, callback/session security. [CITED: https://better-auth.com/docs/reference/security]
 - [PostgreSQL row security documentation](https://www.postgresql.org/docs/current/ddl-rowsecurity.html) — RLS behavior. [CITED: https://www.postgresql.org/docs/current/ddl-rowsecurity.html]
 - [OWASP SSRF Prevention Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html) — redirect/DNS/IP controls. [CITED: https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html]
-- [Playwright documentation](https://playwright.dev/docs/intro) — isolated browser E2E testing. [CITED: https://playwright.dev/docs/intro]
 
 ### Tertiary (LOW confidence)
 
