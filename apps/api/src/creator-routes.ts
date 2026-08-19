@@ -30,6 +30,7 @@ import { ApiHttpError } from "./errors.js";
 import { GuestClaimServiceError, type GuestClaimService } from "./guest-claim-service.js";
 import type { ApiEnvironment } from "./request-context.js";
 import type { SourceScanner } from "./source-scanner.js";
+import type { RequestRateLimiter } from "./request-rate-limiter.js";
 
 export type CreatorRouteServices = {
   enabled: boolean;
@@ -37,6 +38,7 @@ export type CreatorRouteServices = {
   repository?: CreatorRepository;
   storage?: AssetStorageGateway;
   scanner?: SourceScanner;
+  rateLimiter?: RequestRateLimiter;
   guestClaimService?: GuestClaimService;
 };
 
@@ -463,6 +465,28 @@ export function registerCreatorRoutes(
         });
       }
       const { url } = SourceScanRequestSchema.parse(await parseJson(context.req.raw));
+      if (!services.rateLimiter) {
+        throw new ApiHttpError({
+          code: "source_scan_unavailable",
+          message: "Link import is not available in this environment.",
+          status: 503,
+          retryable: true,
+        });
+      }
+      const directAddress = context.env?.incoming?.socket.remoteAddress;
+      const quota = await services.rateLimiter.consumePublicScan({
+        headers: context.req.raw.headers,
+        ...(directAddress === undefined ? {} : { directAddress }),
+      });
+      if (!quota.allowed) {
+        context.header("retry-after", String(quota.retryAfterSeconds));
+        throw new ApiHttpError({
+          code: "source_scan_rate_limited",
+          message: "Too many link imports. Please try again shortly.",
+          status: 429,
+          retryable: true,
+        });
+      }
       const body = await scanSourceWithOneRetry(services.scanner, {
         url,
         kind,

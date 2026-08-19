@@ -23,6 +23,7 @@ import { createOpenApiDocument } from "./openapi.js";
 import { requestContext, type ApiEnvironment } from "./request-context.js";
 import type { RemoteImageFetcher } from "./remote-image-fetcher.js";
 import type { SourceScanner } from "./source-scanner.js";
+import type { RequestRateLimiter } from "./request-rate-limiter.js";
 
 export type ReadinessDependency = {
   name: string;
@@ -41,6 +42,7 @@ export type CreateApiOptions = {
   creatorRepository?: CreatorRepository;
   guestClaimService?: GuestClaimService;
   sourceScanner?: SourceScanner;
+  requestRateLimiter?: RequestRateLimiter;
   generationService?: GenerationApiService;
   generationAvailability?: GenerationAvailabilityService;
 };
@@ -186,6 +188,7 @@ export function createApi(options: CreateApiOptions = {}) {
     ...(options.guestClaimService ? { guestClaimService: options.guestClaimService } : {}),
     ...(options.assetStorage ? { storage: options.assetStorage } : {}),
     ...(options.sourceScanner ? { scanner: options.sourceScanner } : {}),
+    ...(options.requestRateLimiter ? { rateLimiter: options.requestRateLimiter } : {}),
   });
 
   registerGenerationRoutes(app, {

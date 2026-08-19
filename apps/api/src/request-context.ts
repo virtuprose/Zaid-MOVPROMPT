@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import type { IncomingMessage } from "node:http";
 import { RequestIdSchema } from "@movprompt/contracts";
 import type { MiddlewareHandler } from "hono";
 
@@ -7,6 +8,9 @@ export type ApiVariables = {
 };
 
 export type ApiEnvironment = {
+  Bindings: {
+    incoming?: IncomingMessage;
+  };
   Variables: ApiVariables;
 };
 

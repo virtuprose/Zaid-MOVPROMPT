@@ -74,6 +74,9 @@ assert_query "claim asset operation owner foreign key exists" "SELECT (SELECT co
 assert_query "claim operations have a user intent uniqueness index" "SELECT EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname = 'public' AND tablename = 'guest_claim_operations' AND indexdef LIKE '%(user_id, pending_generation_id)%')::int;"
 assert_query "claim assets have ordered checkpoint uniqueness" "SELECT EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname = 'public' AND tablename = 'guest_claim_assets' AND indexdef LIKE '%(claim_operation_id, ordinal)%')::int;"
 assert_query "claim tables never persist signed URLs" "SELECT (NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name IN ('guest_claim_operations', 'guest_claim_assets') AND column_name ILIKE '%signed%url%'))::int;"
+assert_query "request rate limit table exists" "SELECT (to_regclass('public.request_rate_limits') IS NOT NULL)::int;"
+assert_query "request rate limit function exists" "SELECT EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'consume_request_rate_limit')::int;"
+assert_query "rate limit table only persists hashed subjects" "SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'request_rate_limits' AND column_name = 'subject_hash')::int;"
 
 DATABASE_URL_DIRECT="$database_url" bun run db:migrate >/dev/null
 echo "Phase 2 migration validation passed on a disposable PostgreSQL 17 database."

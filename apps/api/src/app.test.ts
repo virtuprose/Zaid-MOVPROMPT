@@ -95,6 +95,11 @@ describe("MovPrompt API foundation", () => {
           requestId,
         }),
       },
+      requestRateLimiter: {
+        consume: async () => ({ allowed: true, retryAfterSeconds: 1 }),
+        consumePublicScan: async () => ({ allowed: true, retryAfterSeconds: 1 }),
+        consumeAuthenticatedMirror: async () => ({ allowed: true, retryAfterSeconds: 1 }),
+      },
     });
     const response = await app.request("/api/v1/product-scans", {
       method: "POST",

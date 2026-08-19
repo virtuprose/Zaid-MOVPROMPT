@@ -12,6 +12,7 @@ import { loadApiConfig } from "./config.js";
 import { ApiHttpError } from "./errors.js";
 import type { GuestClaimService } from "./guest-claim-service.js";
 import type { SourceScanner } from "./source-scanner.js";
+import type { RequestRateLimiter } from "./request-rate-limiter.js";
 
 const USER_ID = "11111111-1111-4111-8111-111111111111";
 const OTHER_ID = "22222222-2222-4222-8222-222222222222";
@@ -183,6 +184,11 @@ function guestClaimService(): GuestClaimService {
 }
 
 describe("portable creator API", () => {
+  const rateLimiter = (allowed = true): RequestRateLimiter => ({
+    consume: vi.fn(),
+    consumePublicScan: vi.fn(async () => ({ allowed, retryAfterSeconds: 120 })),
+    consumeAuthenticatedMirror: vi.fn(),
+  });
   it("serves the public published template catalog without authentication", async () => {
     const app = createApi({ config, creatorRepository: repository(), authGateway: auth(null) });
     const response = await app.request("/api/v1/templates?vertical=retail&language=ar", {
@@ -220,6 +226,7 @@ describe("portable creator API", () => {
       creatorRepository: repository(),
       authGateway: auth(null),
       sourceScanner: scanner,
+      requestRateLimiter: rateLimiter(),
     });
     const response = await app.request("/api/v1/product-scans", {
       method: "POST",
@@ -258,6 +265,7 @@ describe("portable creator API", () => {
       creatorRepository: repository(),
       authGateway: auth(null),
       sourceScanner: scanner,
+      requestRateLimiter: rateLimiter(),
     });
     const response = await app.request("/api/v1/product-scans", {
       method: "POST",
@@ -267,6 +275,35 @@ describe("portable creator API", () => {
 
     expect(response.status).toBe(400);
     expect(scanner.scan).toHaveBeenCalledTimes(1);
+  });
+
+  it("rejects a public scan before the scanner can resolve or fetch", async () => {
+    const scanner: SourceScanner = { scan: vi.fn() };
+    const limiter = rateLimiter(false);
+    const app = createApi({
+      config,
+      creatorRepository: repository(),
+      authGateway: auth(null),
+      sourceScanner: scanner,
+      requestRateLimiter: limiter,
+    });
+
+    const response = await app.request("/api/v1/product-scans", {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-request-id": "request-scan-limited" },
+      body: JSON.stringify({ url: "https://public.example.test/product" }),
+    });
+
+    expect(response.status).toBe(429);
+    expect(response.headers.get("retry-after")).toBe("120");
+    await expect(response.json()).resolves.toMatchObject({
+      error: {
+        code: "source_scan_rate_limited",
+        retryable: true,
+        requestId: "request-scan-limited",
+      },
+    });
+    expect(scanner.scan).not.toHaveBeenCalled();
   });
 
   it("claims a draft only when its stable idempotency key matches", async () => {
