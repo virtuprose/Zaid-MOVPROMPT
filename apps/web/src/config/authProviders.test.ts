@@ -1,36 +1,30 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { enabledSocialAuthProviders, isSocialAuthProviderEnabled } from "./authProviders";
 
 describe("social authentication provider visibility", () => {
-  afterEach(() => {
-    vi.unstubAllEnvs();
+  const capability = {
+    emailPassword: true as const,
+    configuredProviders: ["google", "apple"] as const,
+    firstCampaignVerificationPolicy: "deferred_until_after_first_campaign" as const,
+  };
+
+  it("fails closed before the server capability is available", () => {
+    expect(isSocialAuthProviderEnabled(undefined, "google")).toBe(false);
+    expect(isSocialAuthProviderEnabled(undefined, "apple")).toBe(false);
+    expect(enabledSocialAuthProviders(undefined)).toEqual([]);
   });
 
-  it("fails closed when providers are not explicitly enabled", () => {
-    expect(isSocialAuthProviderEnabled("google")).toBe(false);
-    expect(isSocialAuthProviderEnabled("apple")).toBe(false);
-    expect(enabledSocialAuthProviders()).toEqual([]);
+  it("mirrors the configured social methods from the server capability", () => {
+    expect(enabledSocialAuthProviders({ ...capability, configuredProviders: ["google"] })).toEqual(["google"]);
+    expect(enabledSocialAuthProviders({ ...capability, configuredProviders: ["apple"] })).toEqual(["apple"]);
+    expect(enabledSocialAuthProviders(capability)).toEqual(["google", "apple"]);
   });
 
-  it("returns only explicitly enabled providers", () => {
-    vi.stubEnv("VITE_AUTH_GOOGLE_ENABLED", "true");
-    vi.stubEnv("VITE_AUTH_APPLE_ENABLED", "false");
-
-    expect(enabledSocialAuthProviders()).toEqual(["google"]);
-  });
-
-  it("requires the exact lowercase true value", () => {
-    vi.stubEnv("VITE_AUTH_GOOGLE_ENABLED", "TRUE");
-    vi.stubEnv("VITE_AUTH_APPLE_ENABLED", "1");
-
-    expect(enabledSocialAuthProviders()).toEqual([]);
-  });
-
-  it("can expose both providers after both are explicitly configured", () => {
+  it("does not permit a browser environment override", () => {
     vi.stubEnv("VITE_AUTH_GOOGLE_ENABLED", "true");
     vi.stubEnv("VITE_AUTH_APPLE_ENABLED", "true");
 
-    expect(enabledSocialAuthProviders()).toEqual(["google", "apple"]);
+    expect(enabledSocialAuthProviders({ ...capability, configuredProviders: [] })).toEqual([]);
   });
 });
