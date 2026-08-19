@@ -57,7 +57,7 @@ Plans:
 3. Another user cannot read, claim, reference, download, or mutate the campaign, asset, run, or output through HTTP or PostgreSQL.
 4. Source/import/upload failure keeps the exact local draft and gives a clear safe recovery action.
 
-**Plans:** 6/8 plans executed
+**Plans:** 7/8 plans executed
 
 Plans:
 
@@ -67,7 +67,7 @@ Plans:
 - [x] 02-04-PLAN.md
 - [x] 02-05-PLAN.md
 - [x] 02-06-PLAN.md
-- [ ] 02-07-PLAN.md
+- [x] 02-07-PLAN.md
 - [ ] 02-08-PLAN.md
 
 **Wave 1**
@@ -92,7 +92,7 @@ Plans:
 
 **Wave 6** *(blocked on Wave 5 completion)*
 
-- [ ] 02-06: Make source changes versioned and every source or claim failure safely recoverable.
+- [x] 02-06: Make source changes versioned and every source or claim failure safely recoverable.
 
 **Wave 7** *(blocked on Wave 6 completion)*
 
@@ -282,7 +282,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Production Truth Foundation | 3/3 | Complete    | 2026-08-19 |
-| 2. Guest, Authentication, and Data Integrity | 6/8 | In Progress|  |
+| 2. Guest, Authentication, and Data Integrity | 7/8 | In Progress|  |
 | 3. Product and Service Golden Paths | 0/3 | Not started | - |
 | 4. Durable Generation and Accepted Quality | 0/3 | Not started | - |
 | 5. Projects and Immutable Version Recovery | 0/2 | Not started | - |

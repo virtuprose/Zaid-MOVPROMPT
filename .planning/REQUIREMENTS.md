@@ -27,7 +27,7 @@ Requirements for the first production release. A requirement is complete only af
 - [x] **AUTH-06**: Cancelled authentication returns the user to the unchanged campaign.
 - [x] **AUTH-07**: Successful authentication restores the exact template, sources, facts, language, campaign settings, rights decision, and pending generation intent.
 - [x] **AUTH-08**: Repeated authentication callbacks create at most one project, one run, and one charge.
-- [ ] **AUTH-09**: Guest drafts and local media expire after seven days and cannot be claimed or viewed by a different account.
+- [x] **AUTH-09**: Guest drafts and local media expire after seven days and cannot be claimed or viewed by a different account.
 - [x] **AUTH-10**: Authenticated projects use PostgreSQL and private object storage as their source of truth; browser storage is only a recoverable cache.
 
 ### Business and Product Sources
@@ -77,7 +77,7 @@ Requirements for the first production release. A requirement is complete only af
 - [ ] **PROJ-03**: User can duplicate, retry, trash, restore within 30 days, and permanently purge an owned project with confirmation.
 - [ ] **PROJ-04**: Every meaningful campaign, visual, or Advanced change creates an immutable version rather than overwriting history.
 - [ ] **PROJ-05**: User can compare versions and explicitly choose a completed version as the accepted result.
-- [ ] **PROJ-06**: Two users cannot read, mutate, download, or reference each other's projects, versions, assets, runs, credits, or outputs.
+- [x] **PROJ-06**: Two users cannot read, mutate, download, or reference each other's projects, versions, assets, runs, credits, or outputs.
 
 ### Guided Editor
 
@@ -195,7 +195,7 @@ Deferred until the beginner Kuwait launch is stable and measured.
 | AUTH-06 | Phase 2 | Complete |
 | AUTH-07 | Phase 2 | Complete |
 | AUTH-08 | Phase 2 | Complete |
-| AUTH-09 | Phase 2 | Pending |
+| AUTH-09 | Phase 2 | Complete |
 | AUTH-10 | Phase 2 | Complete |
 | SOURCE-01 | Phase 3 | Pending |
 | SOURCE-02 | Phase 3 | Pending |
@@ -233,7 +233,7 @@ Deferred until the beginner Kuwait launch is stable and measured.
 | PROJ-03 | Phase 5 | Pending |
 | PROJ-04 | Phase 5 | Pending |
 | PROJ-05 | Phase 5 | Pending |
-| PROJ-06 | Phase 2 | Pending |
+| PROJ-06 | Phase 2 | Complete |
 | EDIT-01 | Phase 6 | Pending |
 | EDIT-02 | Phase 6 | Pending |
 | EDIT-03 | Phase 6 | Pending |
