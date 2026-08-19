@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 02
 current_phase_name: Guest, Authentication, and Data Integrity
 status: executing
-stopped_at: Completed 02-04-PLAN.md
-last_updated: "2026-08-19T19:49:40.356Z"
+stopped_at: Completed 02-05-PLAN.md
+last_updated: "2026-08-19T20:06:45.731Z"
 last_activity: 2026-08-19
 last_activity_desc: Phase 01 verified complete; transitioned to Phase 2
 progress:
   total_phases: 2
   completed_phases: 1
   total_plans: 11
-  completed_plans: 7
+  completed_plans: 8
 ---
 
 # Project State
@@ -28,11 +28,11 @@ See: `.planning/PROJECT.md` (updated 2026-08-17)
 ## Current Position
 
 Phase: 02 (Guest, Authentication, and Data Integrity) — EXECUTING
-Plan: 4 of 8
+Plan: 5 of 8
 Status: Ready to execute
 Last activity: 2026-08-19 — Phase 02 execution started
 
-Progress: [██████░░░░] 64%
+Progress: [███████░░░] 73%
 
 ## Performance Metrics
 
@@ -57,6 +57,7 @@ Progress: [██████░░░░] 64%
 | Phase 02 P02 | 11 min | 2 tasks | 5 files |
 | Phase 02-guest-authentication-and-data-integrity P03 | 11min | 3 tasks | 15 files |
 | Phase 02 P04 | 10min | 3 tasks | 11 files |
+| Phase 02 P05 | 25min | 3 tasks | 20 files |
 
 ## Accumulated Context
 
@@ -78,6 +79,9 @@ Full decisions are recorded in `.planning/PROJECT.md`.
 - [Phase ?]: Guest claim lifecycle is explicit: start, resume per server checkpoint, then idempotent finalization.
 - [Phase ?]: The immutable local manifest asset ID is also the private object asset ID, avoiding browser-side ID translation.
 - [Phase ?]: Signed previews remain response-only; ordered checksum manifests are the browser cleanup authority.
+- [Phase ?]: PostgreSQL fixed-window consume function is the only quota authority; no in-memory fallback exists.
+- [Phase ?]: Forwarded identities are ignored by default and selected only from explicitly configured trusted proxy hops.
+- [Phase ?]: Source scans and image mirrors share public-address filtering, DNS resolution, address pinning, redirect limits, and timeout defaults.
 
 ### Pending Todos
 
@@ -100,6 +104,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-08-19T19:49:40.349Z
-Stopped at: Completed 02-04-PLAN.md
+Last session: 2026-08-19T20:06:45.723Z
+Stopped at: Completed 02-05-PLAN.md
 Resume file: None

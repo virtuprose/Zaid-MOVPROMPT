@@ -35,8 +35,8 @@ Requirements for the first production release. A requirement is complete only af
 - [ ] **SOURCE-01**: User can begin with a product URL, business/service URL, product photos, real footage, or manual entry.
 - [ ] **SOURCE-02**: User can review and correct imported name, description, price, offer, location, booking link, WhatsApp number, logo, colors, images, and service facts.
 - [ ] **SOURCE-03**: Each business fact is marked as imported, user-confirmed, or manually entered.
-- [ ] **SOURCE-04**: Product/business scanning blocks private networks, unsafe redirects, oversized responses, invalid media, and abusive request rates.
-- [ ] **SOURCE-05**: Authenticated remote images are mirrored into owner-scoped private storage with verified type, size, checksum, and project ownership.
+- [x] **SOURCE-04**: Product/business scanning blocks private networks, unsafe redirects, oversized responses, invalid media, and abusive request rates.
+- [x] **SOURCE-05**: Authenticated remote images are mirrored into owner-scoped private storage with verified type, size, checksum, and project ownership.
 - [ ] **SOURCE-06**: Failed import or media upload leaves the local draft unchanged and provides a clear Retry or Upload instead action.
 - [ ] **SOURCE-07**: Changing the source invalidates incompatible prior outputs instead of showing an old product or demo video.
 
@@ -200,8 +200,8 @@ Deferred until the beginner Kuwait launch is stable and measured.
 | SOURCE-01 | Phase 3 | Pending |
 | SOURCE-02 | Phase 3 | Pending |
 | SOURCE-03 | Phase 3 | Pending |
-| SOURCE-04 | Phase 2 | Pending |
-| SOURCE-05 | Phase 2 | Pending |
+| SOURCE-04 | Phase 2 | Complete |
+| SOURCE-05 | Phase 2 | Complete |
 | SOURCE-06 | Phase 2 | Pending |
 | SOURCE-07 | Phase 2 | Pending |
 | CREATE-01 | Phase 3 | Pending |
