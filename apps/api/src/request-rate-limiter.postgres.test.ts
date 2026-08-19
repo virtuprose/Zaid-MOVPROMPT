@@ -5,9 +5,7 @@ import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { createRequestRateLimiter } from "./request-rate-limiter.js";
 
 const databaseUrl = process.env.MOVPROMPT_RATE_LIMIT_DATABASE_URL?.trim();
-const describePostgres = databaseUrl ? describe : describe.skip;
-
-describePostgres("PostgreSQL request rate limiter", () => {
+if (databaseUrl) describe("PostgreSQL request rate limiter", () => {
   const first = createDatabase({ url: databaseUrl!, maxConnections: 4 });
   const second = createDatabase({ url: databaseUrl!, maxConnections: 4 });
 
@@ -35,4 +33,7 @@ describePostgres("PostgreSQL request rate limiter", () => {
     expect(decisions.filter((decision) => !decision.allowed)).toHaveLength(10);
     expect(decisions.every((decision) => decision.retryAfterSeconds >= 1)).toBe(true);
   });
+});
+else describe.skip("PostgreSQL request rate limiter", () => {
+  it("requires a disposable test database URL", () => {});
 });

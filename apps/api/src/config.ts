@@ -9,6 +9,12 @@ export type ApiConfig = {
   port: number;
   corsOrigins: string[];
   featureFlags: ProductFeatureFlags;
+  requestRateLimit: {
+    publicScanLimit: number;
+    authenticatedMirrorLimit: number;
+    windowSeconds: number;
+    trustedProxyHops: number;
+  };
 };
 
 function readBoolean(value: string | undefined, fallback: boolean): boolean {
@@ -20,6 +26,14 @@ function readPort(value: string | undefined): number {
   const parsed = Number(value ?? "3001");
   if (!Number.isInteger(parsed) || parsed < 1 || parsed > 65_535) {
     throw new Error("API_PORT must be an integer between 1 and 65535.");
+  }
+  return parsed;
+}
+
+function readBoundedInteger(value: string | undefined, fallback: number, label: string, minimum: number, maximum: number): number {
+  const parsed = Number(value ?? String(fallback));
+  if (!Number.isInteger(parsed) || parsed < minimum || parsed > maximum) {
+    throw new Error(`${label} must be an integer between ${minimum} and ${maximum}.`);
   }
   return parsed;
 }
@@ -67,6 +81,12 @@ export function loadApiConfig(
     environment: environment.APP_ENV?.trim() || "development",
     port: readPort(environment.API_PORT),
     corsOrigins: readOrigins(environment),
+    requestRateLimit: {
+      publicScanLimit: readBoundedInteger(environment.SOURCE_SCAN_RATE_LIMIT, 20, "Source scan rate limit", 1, 100000),
+      authenticatedMirrorLimit: readBoundedInteger(environment.AUTHENTICATED_MIRROR_RATE_LIMIT, 50, "Authenticated mirror rate limit", 1, 100000),
+      windowSeconds: readBoundedInteger(environment.RATE_LIMIT_WINDOW_SECONDS, 600, "Rate-limit window", 1, 86400),
+      trustedProxyHops: readBoundedInteger(environment.TRUSTED_PROXY_HOPS, 0, "Trusted proxy hops", 0, 32),
+    },
     featureFlags: {
       authentication: readBoolean(environment.FEATURE_AUTHENTICATION, false),
       assets: readBoolean(environment.FEATURE_ASSETS, false),

@@ -424,6 +424,26 @@ export const guestClaimAssets = pgTable(
   ],
 );
 
+/** Shared fixed-window abuse state; subjects are SHA-256 hashes, never raw addresses or URLs. */
+export const requestRateLimits = pgTable(
+  "request_rate_limits",
+  {
+    subjectHash: text("subject_hash").notNull(),
+    action: text("action").notNull(),
+    windowStartedAt: timestamp("window_started_at", { withTimezone: true }).notNull(),
+    requestCount: integer("request_count").notNull().default(0),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.subjectHash, table.action, table.windowStartedAt] }),
+    check("request_rate_limits_subject_hash_format", sql`${table.subjectHash} ~ '^[0-9a-f]{64}$'`),
+    check("request_rate_limits_action_bounded", sql`length(${table.action}) BETWEEN 1 AND 80`),
+    check("request_rate_limits_count_nonnegative", sql`${table.requestCount} >= 0`),
+    check("request_rate_limits_expiry_after_window", sql`${table.expiresAt} > ${table.windowStartedAt}`),
+    index("request_rate_limits_expiry_idx").on(table.expiresAt),
+  ],
+);
+
 export const generationQuotes = pgTable(
   "generation_quotes",
   {
@@ -931,6 +951,7 @@ export const schema = {
   creatorProjectAssets,
   guestClaimOperations,
   guestClaimAssets,
+  requestRateLimits,
   generationQuotes,
   renderRuns,
   renderAttempts,

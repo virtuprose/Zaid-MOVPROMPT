@@ -21,6 +21,7 @@ import { createDrizzleCreatorRepository } from "./creator-repository.js";
 import { createGuestClaimRepository } from "./guest-claim-repository.js";
 import { createGuestClaimService } from "./guest-claim-service.js";
 import { createRemoteImageFetcher } from "./remote-image-fetcher.js";
+import { createRequestRateLimiter } from "./request-rate-limiter.js";
 import { createSourceScanner } from "./source-scanner.js";
 
 export type RuntimeServices = Pick<
@@ -35,6 +36,7 @@ export type RuntimeServices = Pick<
   | "creatorRepository"
   | "guestClaimService"
   | "sourceScanner"
+  | "requestRateLimiter"
   | "readinessDependencies"
 > & {
   close(): Promise<void>;
@@ -45,7 +47,7 @@ function databaseUrl(environment: Readonly<Record<string, string | undefined>>):
     environment.DATABASE_URL_POOLED?.trim() || environment.DATABASE_URL_DIRECT?.trim();
   if (!value) {
     throw new Error(
-      "DATABASE_URL_POOLED or DATABASE_URL_DIRECT is required when authentication is enabled",
+      "DATABASE_URL_POOLED or DATABASE_URL_DIRECT is required for PostgreSQL-authoritative request limits",
     );
   }
   return value;
@@ -58,8 +60,6 @@ export function createRuntimeServices(
   const authenticationEnabled = config.featureFlags.authentication;
   const assetsEnabled = config.featureFlags.assets;
   const generationEnabled = config.featureFlags.generation;
-  const sourceScanner = createSourceScanner();
-  const remoteImageFetcher = createRemoteImageFetcher();
 
   if ((assetsEnabled || generationEnabled) && !authenticationEnabled) {
     throw new Error("FEATURE_ASSETS and FEATURE_GENERATION require FEATURE_AUTHENTICATION=true");
@@ -68,33 +68,30 @@ export function createRuntimeServices(
     throw new Error("FEATURE_GENERATION requires FEATURE_ASSETS=true");
   }
 
-  if (!authenticationEnabled) {
-    return {
-      sourceScanner,
-      readinessDependencies: [],
-      async close() {},
-    };
-  }
-
   const database = createDatabase({
     url: databaseUrl(environment),
     ssl: environment.DATABASE_SSL === "require" ? "require" : false,
     applicationName: `${config.serviceName}-${config.environment}`,
   });
+  const requestRateLimiter = createRequestRateLimiter({
+    database: database.db,
+    ...config.requestRateLimit,
+  });
+  const sourceScanner = createSourceScanner();
+  const remoteImageFetcher = createRemoteImageFetcher();
+  const readinessDependencies: ReadinessDependency[] = [
+    { name: "postgres", check: async () => { await database.db.execute(sql`select 1`); } },
+  ];
+
+  if (!authenticationEnabled) {
+    return { sourceScanner, requestRateLimiter, readinessDependencies, close: () => database.close() };
+  }
   const authEnvironment = authEnvironmentFromEnv(environment);
   const auth = createMovPromptAuth({
     db: database.db,
     environment: authEnvironment,
     sendEmail: createSmtpAuthEmailSender(smtpEmailConfigFromEnv(environment)),
   });
-  const readinessDependencies: ReadinessDependency[] = [
-    {
-      name: "postgres",
-      check: async () => {
-        await database.db.execute(sql`select 1`);
-      },
-    },
-  ];
 
   const capabilities = createCapabilityRegistryFromEnvironment(environment);
   const pricing = createGenerationPricingFromEnvironment(environment);
@@ -119,6 +116,7 @@ export function createRuntimeServices(
       creatorRepository,
       guestClaimService,
       sourceScanner,
+      requestRateLimiter,
       ...(generationService ? { generationService } : {}),
       capabilityRegistry: capabilities,
       readinessDependencies,
@@ -150,6 +148,7 @@ export function createRuntimeServices(
     creatorRepository,
     guestClaimService,
     sourceScanner,
+    requestRateLimiter,
     assetRepository: createDrizzleAssetRepository(database.db),
     assetStorage,
     remoteImageFetcher,
