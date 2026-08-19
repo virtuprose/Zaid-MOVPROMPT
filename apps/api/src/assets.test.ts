@@ -5,6 +5,7 @@ import { createApi } from "./app.js";
 import type { AssetRepository, OwnedAssetRecord } from "./asset-repository.js";
 import type { AssetStorageGateway } from "./asset-storage.js";
 import { loadApiConfig } from "./config.js";
+import type { GuestClaimService } from "./guest-claim-service.js";
 import type { RemoteImageFetcher } from "./remote-image-fetcher.js";
 
 const USER_ID = "11111111-1111-4111-8111-111111111111";
@@ -96,6 +97,25 @@ function storage(): AssetStorageGateway {
       contentType: "image/jpeg",
       checksumSha256: CHECKSUM,
     })),
+  };
+}
+
+function guestClaimService(): GuestClaimService {
+  return {
+    claimGuestDraft: vi.fn(),
+    startClaim: vi.fn(),
+    resumeClaim: vi.fn(),
+    markAssetVerified: vi.fn(async () => ({
+      id: "claim-1",
+      projectId: PROJECT_ID,
+      draftId: "55555555-5555-4555-8555-555555555555",
+      pendingGenerationId: "66666666-6666-4666-8666-666666666666",
+      snapshotDigest: CHECKSUM,
+      status: "securing",
+      nextAsset: null,
+    })),
+    markAssetFailed: vi.fn(),
+    finalizeClaim: vi.fn(),
   };
 }
 
@@ -233,6 +253,53 @@ describe("private asset API", () => {
       contentType: "image/jpeg",
       metadata: { "sha256-hex": checksumSha256 },
     }));
+  });
+
+  it("advances only the matching guest-claim checkpoint after private object verification", async () => {
+    const bytes = new Uint8Array(1_024);
+    bytes.set([0xff, 0xd8, 0xff, 0xe0]);
+    const checksumSha256 = createHash("sha256").update(bytes).digest("hex");
+    const asset = {
+      ...ownedAsset(),
+      id: ASSET_ID,
+      checksumSha256,
+      objectKey: `users/${USER_ID}/projects/${PROJECT_ID}/assets/product/${ASSET_ID}/${checksumSha256}`,
+    };
+    const claims = guestClaimService();
+    const objectStorage = storage();
+    objectStorage.head = vi.fn(async () => ({
+      contentLength: bytes.byteLength,
+      contentType: "image/jpeg",
+      checksumSha256,
+    }));
+    const app = createApi({
+      config,
+      authGateway: authGateway(),
+      assetRepository: repository({ asset }),
+      assetStorage: objectStorage,
+      guestClaimService: claims,
+    });
+
+    const response = await app.request(
+      `/api/v1/projects/${PROJECT_ID}/assets/${ASSET_ID}/complete`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          pendingGenerationId: "66666666-6666-4666-8666-666666666666",
+          localAssetId: ASSET_ID,
+        }),
+      },
+    );
+
+    expect(response.status).toBe(200);
+    expect(claims.markAssetVerified).toHaveBeenCalledWith({
+      userId: USER_ID,
+      pendingGenerationId: "66666666-6666-4666-8666-666666666666",
+      localAssetId: ASSET_ID,
+      bucket: "creator-assets",
+      objectKey: asset.objectKey,
+    });
   });
 
   it("rejects image bytes that do not match the declared checksum", async () => {
