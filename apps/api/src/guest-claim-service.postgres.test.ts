@@ -66,7 +66,7 @@ describePostgres("guest claim service PostgreSQL boundary", () => {
 
   function app() {
     const creatorRepository = createDrizzleCreatorRepository(database.db);
-    const claimRepository = createGuestClaimRepository({ creatorRepository });
+    const claimRepository = createGuestClaimRepository({ db: database.db });
     return createApi({
       config: loadApiConfig({
         APP_ENV: "test",
@@ -215,7 +215,7 @@ describePostgres("guest claim service PostgreSQL boundary", () => {
       pendingGenerationId: lifecycleSnapshot.pendingGenerationId,
       localAssetId: lifecycleSnapshot.assetManifest[0]!.localAssetId,
       bucket: "movprompt-assets",
-      objectKey: `users/${firstUserId}/projects/${first.projectId}/assets/product/claim-asset/${"d".repeat(64)}`,
+      objectKey: `users/${firstUserId}/projects/${first.projectId}/assets/product/${lifecycleSnapshot.assetManifest[0]!.localAssetId}/${"d".repeat(64)}`,
     });
 
     const receipt = await service.finalizeClaim({

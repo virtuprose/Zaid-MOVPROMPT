@@ -18,6 +18,8 @@ import { createDrizzleGenerationRepository } from "./generation-repository.js";
 import { createGenerationApiService } from "./generation-service.js";
 import { createGenerationAvailabilityService } from "./generation-availability.js";
 import { createDrizzleCreatorRepository } from "./creator-repository.js";
+import { createGuestClaimRepository } from "./guest-claim-repository.js";
+import { createGuestClaimService } from "./guest-claim-service.js";
 import { createRemoteImageFetcher } from "./remote-image-fetcher.js";
 import { createSourceScanner } from "./source-scanner.js";
 
@@ -31,6 +33,7 @@ export type RuntimeServices = Pick<
   | "generationAvailability"
   | "capabilityRegistry"
   | "creatorRepository"
+  | "guestClaimService"
   | "sourceScanner"
   | "readinessDependencies"
 > & {
@@ -106,10 +109,14 @@ export function createRuntimeServices(
       })
     : undefined;
   const creatorRepository = createDrizzleCreatorRepository(database.db);
+  const guestClaimService = createGuestClaimService({
+    repository: createGuestClaimRepository({ db: database.db }),
+  });
   if (!assetsEnabled) {
     return {
       authGateway: createBetterAuthGateway(auth),
       creatorRepository,
+      guestClaimService,
       sourceScanner,
       ...(generationService ? { generationService } : {}),
       capabilityRegistry: capabilities,
@@ -140,6 +147,7 @@ export function createRuntimeServices(
   return {
     authGateway: createBetterAuthGateway(auth),
     creatorRepository,
+    guestClaimService,
     sourceScanner,
     assetRepository: createDrizzleAssetRepository(database.db),
     assetStorage,

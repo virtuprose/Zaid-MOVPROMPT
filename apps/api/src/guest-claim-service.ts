@@ -1,19 +1,13 @@
-import {
-  GuestClaimReceiptSchema,
-  type GuestClaimReceipt,
-  type GuestClaimSnapshot,
-} from "@movprompt/contracts";
+import { GuestClaimReceiptSchema, type GuestClaimReceipt, type GuestClaimSnapshot } from "@movprompt/contracts";
 
 import {
   GuestClaimRepositoryError,
+  type GuestClaimOperation,
   type GuestClaimRepository,
 } from "./guest-claim-repository.js";
 
 export class GuestClaimServiceError extends Error {
-  constructor(
-    readonly code: "conflict" | "assets_pending",
-    readonly retryable: boolean,
-  ) {
+  constructor(readonly code: "conflict" | "assets_pending" | "not_found", readonly retryable: boolean) {
     super(code);
     this.name = "GuestClaimServiceError";
   }
@@ -21,35 +15,81 @@ export class GuestClaimServiceError extends Error {
 
 export interface GuestClaimService {
   claimGuestDraft(input: { userId: string; snapshot: GuestClaimSnapshot }): Promise<GuestClaimReceipt>;
+  startClaim(input: { userId: string; snapshot: GuestClaimSnapshot }): Promise<GuestClaimOperation>;
+  resumeClaim(input: { userId: string; pendingGenerationId: string }): Promise<GuestClaimOperation>;
+  markAssetVerified(input: { userId: string; pendingGenerationId: string; localAssetId: string; bucket: string; objectKey: string }): Promise<GuestClaimOperation>;
+  markAssetFailed(input: { userId: string; pendingGenerationId: string; localAssetId: string; code: string }): Promise<GuestClaimOperation>;
+  finalizeClaim(input: { userId: string; pendingGenerationId: string }): Promise<GuestClaimReceipt>;
 }
 
-export function createGuestClaimService(dependencies: {
-  repository: GuestClaimRepository;
-}): GuestClaimService {
-  return {
-    async claimGuestDraft({ userId, snapshot }) {
-      if (snapshot.assetManifest.length > 0) {
-        throw new GuestClaimServiceError("assets_pending", true);
-      }
+function mapError(error: unknown): never {
+  if (error instanceof GuestClaimRepositoryError) {
+    if (error.code === "assets_pending") throw new GuestClaimServiceError("assets_pending", true);
+    if (error.code === "not_found") throw new GuestClaimServiceError("not_found", false);
+    throw new GuestClaimServiceError("conflict", false);
+  }
+  throw error;
+}
 
+export function createGuestClaimService(dependencies: { repository: GuestClaimRepository }): GuestClaimService {
+  const { repository } = dependencies;
+  return {
+    async startClaim(input) {
       try {
-        const project = await dependencies.repository.claimAssetFree({ userId, snapshot });
+        return await repository.start(input);
+      } catch (error) {
+        return mapError(error);
+      }
+    },
+
+    async resumeClaim(input) {
+      try {
+        return await repository.resume(input);
+      } catch (error) {
+        return mapError(error);
+      }
+    },
+
+    async markAssetVerified(input) {
+      try {
+        return await repository.markAssetVerified(input);
+      } catch (error) {
+        return mapError(error);
+      }
+    },
+
+    async markAssetFailed(input) {
+      try {
+        return await repository.markAssetFailed(input);
+      } catch (error) {
+        return mapError(error);
+      }
+    },
+
+    async finalizeClaim(input) {
+      try {
+        const { operation, project } = await repository.finalize(input);
         const version = project.currentVersion;
         if (!version) throw new Error("guest_claim_version_missing");
-
         return GuestClaimReceiptSchema.parse({
-          status: "ready",
-          draftId: snapshot.draftId,
-          pendingGenerationId: snapshot.pendingGenerationId,
-          snapshotDigest: snapshot.snapshotDigest,
+          status: operation.status,
+          draftId: operation.draftId,
+          pendingGenerationId: operation.pendingGenerationId,
+          snapshotDigest: operation.snapshotDigest,
           project,
           version,
         });
       } catch (error) {
-        if (error instanceof GuestClaimRepositoryError) {
-          throw new GuestClaimServiceError("conflict", false);
-        }
-        throw error;
+        return mapError(error);
+      }
+    },
+
+    async claimGuestDraft({ userId, snapshot }) {
+      try {
+        await repository.start({ userId, snapshot });
+        return await this.finalizeClaim({ userId, pendingGenerationId: snapshot.pendingGenerationId });
+      } catch (error) {
+        return mapError(error);
       }
     },
   };
