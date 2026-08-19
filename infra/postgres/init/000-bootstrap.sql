@@ -23,6 +23,12 @@ BEGIN
 END
 $database_access$;
 
+-- pg-boss receives one dedicated schema. The worker stays NOCREATEDB and does
+-- not receive broad CREATE permission on the database or public schema.
+CREATE SCHEMA IF NOT EXISTS pgboss AUTHORIZATION movprompt_worker;
+REVOKE ALL ON SCHEMA pgboss FROM PUBLIC;
+GRANT USAGE, CREATE ON SCHEMA pgboss TO movprompt_worker;
+
 DO $bootstrap$
 BEGIN
   EXECUTE format(

@@ -21,7 +21,8 @@ deployment.
 
 ## Staging sequence
 
-1. Validate environment separation with `verify-environment.sh staging`.
+1. Validate environment separation with `verify-environment.sh staging` and,
+   when generation is enabled, follow `GENERATION_ACTIVATION.md`.
 2. Restore the latest approved production-shaped sanitized fixture.
 3. Run structural migration checks and verify Auth/assets feature dependencies.
 4. Execute migrations through a one-shot migration task using
@@ -32,7 +33,7 @@ deployment.
 6. Deploy one durable worker artifact by digest; verify pg-boss queues, outbox
    lease/retry behavior and reconciliation scheduling before scaling it.
 7. Deploy the web artifact and verify `/healthz`, `/api/v1/health`, server
-   feature flags and dependency connectivity.
+   feature flags, safe generation availability and dependency connectivity.
 8. Run email/password and Google/Apple OAuth draft recovery plus two-user
    authorization tests.
 9. Run generation success, failure, missing-output, duplicate, cancel and

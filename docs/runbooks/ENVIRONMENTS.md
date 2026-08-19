@@ -67,6 +67,47 @@ from it, for example
 `${BETTER_AUTH_URL}/api/auth/callback/apple`. Register exact staging and
 production callbacks in separate OAuth applications.
 
+`AUTH_REQUIRE_EMAIL_VERIFICATION` and
+`VITE_AUTH_REQUIRE_EMAIL_VERIFICATION` are one policy exposed to the server
+and browser respectively, so they must always match. Local private-beta
+development may set both to `false`: email/password sign-up creates a session
+immediately, restores the exact campaign and exposes a manual verification
+action in Account settings. Staging and production keep both values `true` so
+starter-render eligibility and sign-in remain verification-gated. Changing
+this policy requires rebuilding the web bundle as well as restarting the API.
+
+All public UI feature flags are explicit in the staging and production build
+contracts. `VITE_FEATURE_ADVANCED_MODE` must match `FEATURE_ADVANCED_MODE`, and
+`VITE_FEATURE_EXPORT_PIPELINE` must match `FEATURE_EXPORTS`, so the browser does
+not advertise a server-disabled workflow. `VITE_FEATURE_LOCAL_DEMO_GENERATION`
+must always be `false` outside local development; it is a non-provider client
+simulation and is never a production fallback.
+
+Seedance 2.5 production rendering uses the exact server-only adapter/model pair
+`vercel-ai-gateway` and `bytedance/seedance-2.5`. Capability availability stays
+false unless the Gateway key, private S3-compatible storage, provider-output
+host allowlist, FFmpeg/FFprobe and explicit `MOVPROMPT_QUALITY_MODEL_ID`
+Gateway reviewer are all configured
+and `MOVPROMPT_PROVIDER_VERCEL_GATEWAY_READY=true` is deliberately set last.
+Both video aliases can use this same adapter; no model ID crosses the public
+API. Gemini Omni Flash is not registered in the render worker until a durable,
+official async operation contract has been implemented and tested.
+
+Video pricing is resolution-bound. Prefer the four
+`GENERATION_VIDEO_*_{480P,720P}_CREDITS_PER_SECOND` variables. The legacy
+single-rate variables are accepted only when
+`GENERATION_VIDEO_FIXED_RESOLUTION` is explicitly `480p` or `720p`; requesting
+the other tier fails closed. Change the pricing version whenever a tier rate
+changes so stale quotes cannot be submitted silently.
+
+New generation also requires a fresh worker heartbeat. The worker publishes
+every `WORKER_HEARTBEAT_INTERVAL_SECONDS`; the API rejects new quotes when no
+ready heartbeat exists within `WORKER_HEARTBEAT_MAX_AGE_SECONDS` or when the
+worker's secret-free runtime fingerprint differs from the API. Keep the max age
+greater than the interval. `GENERATION_STARTER_ONLY=true` is required during
+private-beta cost calibration; paid-credit submissions remain blocked while
+verified accounts can consume one eligible starter render.
+
 The storage endpoint used for signing must be reachable by both the API and the
 browser consuming each signed URL. Local Compose uses `minio.localhost` to meet
 that requirement without publishing a bucket. Production should use the

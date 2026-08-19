@@ -9,6 +9,10 @@ is not evidence of category leadership.
 The fixed corpus contains 48 briefs: four verticals × four scenarios × three
 campaign languages.
 
+The executable corpus and approval score are defined in
+`packages/creative-engine/src/benchmark.ts`. An adapter cannot be marked
+approved with fewer than all 48 observations.
+
 | Vertical | Scenario 1 | Scenario 2 | Scenario 3 | Scenario 4 |
 |---|---|---|---|---|
 | Salon | WhatsApp booking offer | Practitioner introduction | Facility trust story | Seasonal service launch |
@@ -16,8 +20,10 @@ campaign languages.
 | Retail | Premium product reveal | WhatsApp offer | New-arrival launch | Gift campaign |
 | Ecommerce | Product demonstration | UGC review | Unboxing | Feature-led offer |
 
-Every scenario is tested in Arabic, English and bilingual output. Brief IDs use
-`KW-{vertical}-{scenario}-{language}`. The input pack for each brief must include:
+Every scenario is tested in Arabic, English and bilingual output. Executable
+brief IDs are stable lowercase IDs such as `retail-ar-identity`; they must never
+be renamed after evidence collection begins. The input pack for each brief must
+include:
 
 - Confirmed business/product name.
 - Confirmed description and allowed claims.
@@ -28,6 +34,13 @@ Every scenario is tested in Arabic, English and bilingual output. Brief IDs use
 - One hero image plus up to four detail references.
 - Person-consent reference when a real person appears.
 - Expected 9:16 safe zones and campaign goal.
+
+The private `kw-48-assets-v1` manifest contains exactly 48 entries. Arabic,
+English and bilingual variants of a subject reuse the same checksum-verified
+asset pack so the language evaluation is isolated. The four verticals × four
+challenges require at least sixteen distinct primary reference checksums.
+Before any paid request, the CLI verifies each object exists in private storage
+and that its MIME type, byte size and `sha256-hex` object metadata match.
 
 Clinic briefs must never contain generated before/after imagery, patient health
 information, guaranteed results or unverified qualifications.
@@ -43,7 +56,60 @@ information, guaranteed results or unverified qualifications.
 6. Store the brief version, provider configuration hash, latency, provider cost,
    retries and technical outcome with every review.
 
-## Weighted quality score
+## Executable staging gate
+
+The paid gate is implemented by `apps/worker/src/benchmark-cli.ts`. It exercises
+the real asynchronous adapter, private reference signing, output download and
+normalization, deterministic Kuwait voice, FFprobe validation and a structured
+Gemini video review routed through Vercel AI Gateway. It deliberately bypasses
+the provider `READY` flag because passing this
+gate is the evidence required before that flag may be enabled.
+
+Prepare the private reference corpus first. The source directory must contain
+sixteen folders named `{vertical}-{challenge}` (for example
+`retail-identity` and `clinic-arabic`). Every folder requires exactly one
+`primary.jpg`, `primary.png` or `primary.webp`, plus up to eight optional
+detail images or MP4 references. The preparation command validates file
+signatures and sizes, uploads checksum-addressed private objects, and writes a
+mode-0600 manifest:
+
+```bash
+bun run --cwd apps/worker benchmark:prepare
+```
+
+It refuses to upload unless `MOVPROMPT_BENCHMARK_RIGHTS_ATTESTED=YES`. This
+attestation must cover commercial-use rights and consent for any identifiable
+person.
+
+```bash
+bun run --cwd apps/worker benchmark:live
+```
+
+The command requires the benchmark variables documented in `.env.example` and
+refuses to start unless `MOVPROMPT_BENCHMARK_CONFIRM_PAID_RUN=YES`. One JSONL
+checkpoint is written immediately after provider acceptance and another after
+the scored sample. Re-running the same run ID resumes an already accepted task
+instead of submitting it again, then runs only missing briefs. Stable request
+keys also narrow the remaining submit/accept checkpoint window; the provider's
+own idempotency semantics must still be confirmed in the live bake-off. A comma-separated
+`MOVPROMPT_BENCHMARK_BRIEF_IDS` subset may be used for a smoke run, but no subset
+can receive approval.
+
+Automated provider approval requires all of the following in the code-owned
+scorecard:
+
+- All 48 distinct brief IDs exactly once; duplicated or unexpected IDs fail.
+- At least 98% technical success.
+- At least 80% first-render usable output.
+- Weighted provider quality score of at least 85.
+- At least 95% of samples scoring 80+ on product identity.
+- At least 95% of Arabic/bilingual samples scoring 85+ on Kuwait dialect.
+
+This automated approval is necessary but not sufficient for a public competitor
+claim. The generated report always records that the five-person blind Kuwait
+review remains required.
+
+## Human blind-review score
 
 | Dimension | Weight | Automatic gate |
 |---|---:|---|
@@ -104,3 +170,23 @@ rejection_reason
 ```
 
 Provider and model IDs never appear in the public API or beginner interface.
+
+## Research basis
+
+- Higgsfield's preset approach demonstrates the value of encoding repeatable
+  camera, pacing and style structures instead of asking beginners to engineer
+  prompts: <https://openai.com/index/higgsfield/>.
+- Seedance 2.0 documents multimodal text, image, audio and video references plus
+  camera, motion and audio control. These are treated as provider capabilities,
+  not assumptions that a specific adapter is production-ready:
+  <https://seed.bytedance.com/en/seedance2_0>.
+- BytePlus ModelArk provides the asynchronous Seedance 2.0 task ID, polling,
+  callback, output URL and cancellation contract used by the durable worker:
+  <https://docs.byteplus.com/en/docs/modelark/1520757>.
+- The Vercel AI Gateway and AI SDK structured-output contract route the bounded
+  video and reference review without a second provider key:
+  <https://vercel.com/docs/ai-gateway> and
+  <https://ai-sdk.dev/docs/ai-sdk-core/generating-structured-data>.
+- Kuwait ecommerce guidance identifies food, personal care, electronics and
+  home services as relevant sectors and notes widespread WhatsApp usage:
+  <https://www.trade.gov/country-commercial-guides/kuwait-ecommerce>.
