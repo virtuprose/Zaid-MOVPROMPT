@@ -1,8 +1,8 @@
 ---
 phase: 02
-fixed_at: 2026-08-20T00:36:41+03:00
+fixed_at: 2026-08-20T00:50:01+03:00
 review_path: .planning/phases/02-guest-authentication-and-data-integrity/02-REVIEW.md
-iteration: 2
+iteration: 3
 findings_in_scope: 1
 fixed: 1
 skipped: 0
@@ -12,9 +12,9 @@ verification_environment: isolated worktree for implementation; main checkout fo
 
 # Phase 02: Code Review Fix Report
 
-**Fixed at:** 2026-08-20T00:36:41+03:00
+**Fixed at:** 2026-08-20T00:50:01+03:00
 **Source review:** `.planning/phases/02-guest-authentication-and-data-integrity/02-REVIEW.md`  
-**Iteration:** 2
+**Iteration:** 3
 
 ## Summary
 
@@ -24,26 +24,26 @@ verification_environment: isolated worktree for implementation; main checkout fo
 
 ## Fixed Issues
 
-### CR-01: Guest link-import cleanup happened before remote images were safely claimed
+### CR-01: Cleanup-failure retry duplicated immutable source versions
 
-**Files modified:** `apps/web/src/features/create/CreateStudio.tsx`, `apps/web/src/features/create/creatorProjectAssets.ts`, `apps/web/src/features/create/creatorProjectAssets.test.ts`, `apps/web/src/features/create/guestClaimRecovery.ts`, `apps/web/src/features/create/guestClaimRecovery.test.ts`
-**Commit:** `92ce5c1`
+**Files modified:** `apps/web/src/features/create/CreateStudio.tsx`, `apps/web/src/features/create/guestClaimRecovery.ts`, `apps/web/src/features/create/guestDraftStore.ts`, `apps/web/src/features/create/guestClaimRecovery.test.ts`
+**Commit:** `e8895e7`
 
-**Applied fix:** The canonical receipt is now checked without deleting the guest draft. For link imports, MovPrompt mirrors remote images, writes the stable object keys through an immutable source version, and verifies that version before the draft-cleanup boundary runs. A mirror or source-version failure leaves the IndexedDB draft, source URL, checkpoint, and local blobs unchanged; the existing retry action safely replays the same pending intent.
+**Applied fix:** Before IndexedDB cleanup, MovPrompt now records the exact persisted source project/version, bound to the canonical pending-generation intent and snapshot digest. If browser cleanup is interrupted, a resumed Generate flow loads and verifies that precise immutable version from the API, then only retries cleanup; it does not repeat source replacement against the advanced working version.
 
 ## Verification
 
-- Re-read all five changed source/test sections and ran `git diff --check`.
-- Focused regression: `bun run --cwd apps/web test -- src/features/create/creatorProjectAssets.test.ts src/features/create/guestClaimRecovery.test.ts` — passed, 11 tests.
-- Web typecheck: `bun run --cwd apps/web typecheck` — passed.
-- The new regression covers guest link → authenticated canonical claim → forced mirror failure → retained IndexedDB source/checkpoint/blob → retry persistence → cleanup.
+- Re-read all four changed source/test sections and ran `git diff --check`.
+- Focused regression: `bun run --filter @movprompt/web test -- guestClaimRecovery.test.ts` — passed, 7 tests.
+- Web typecheck: `bun run --filter @movprompt/web typecheck` — passed.
+- The regression covers source persistence success → forced IndexedDB cleanup interruption → reload/retry → exact version reuse, with one source version and one working-version transition.
 
 ## Remaining Risks
 
-- This closes the reviewed browser-state ordering defect. Full authenticated browser and provider generation evidence remains a later release gate, not evidence supplied by this focused code-review fix.
+- Full authenticated browser and provider generation evidence remains a later release gate, not evidence supplied by this focused code-review fix.
 
 ---
 
-_Fixed: 2026-08-20T00:36:41+03:00_
+_Fixed: 2026-08-20T00:50:01+03:00_
 _Fixer: the agent (gsd-code-fixer)_  
-_Iteration: 2_
+_Iteration: 3_
