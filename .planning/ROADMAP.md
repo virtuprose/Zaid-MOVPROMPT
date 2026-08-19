@@ -42,7 +42,7 @@ Plans:
 - [x] 01-03-PLAN.md
 - [x] 01-01: Reconcile current runtime, migrations, service heartbeat, capability fingerprint, and generation availability contract.
 - [x] 01-02: Complete authoritative pricing, quote invalidation, starter entitlement, and idempotent submit integration.
-- [ ] 01-03: Replace simulated progress/media fallbacks with persisted stages, supportable failure states, and end-to-end runtime proof.
+- [x] 01-03: Replace simulated progress/media fallbacks with persisted stages, supportable failure states, and end-to-end runtime proof.
 
 ### Phase 2: Guest, Authentication, and Data Integrity
 
