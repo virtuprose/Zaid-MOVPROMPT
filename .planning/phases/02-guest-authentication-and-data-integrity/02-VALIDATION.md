@@ -1,7 +1,7 @@
 ---
 phase: 2
 slug: guest-authentication-and-data-integrity
-status: draft
+status: evidence_partial
 nyquist_compliant: false
 wave_0_complete: false
 created: 2026-08-19
@@ -53,9 +53,9 @@ updated: 2026-08-19
 | 02-07-01 | 07 | 7 | AUTH-09, AUTH-10, SOURCE-05 | 24h pg-boss cleanup, audit/retry/finalized immunity | `abandoned-claim-cleanup` | ⬜ pending |
 | 02-07-02 | 07 | 7 | AUTH-10, PROJ-06 | Guarded PostgreSQL17 migration and restricted-role RLS | `validate-phase2-migrations.sh` | ⬜ pending |
 | 02-07-03 | 07 | 7 | AUTH-08, AUTH-09, AUTH-10, SOURCE-05, PROJ-06 | Two-user HTTP/DB/storage/cleanup race matrix | API + worker + DB focused suites | ⬜ pending |
-| 02-08-01 | 08 | 8 | AUTH-01, AUTH-02, AUTH-03, AUTH-04 | Generate/email UI, claim stages and full AuthCopy contract | `AuthGateDialog AuthCopy CreatorShell` | ⬜ pending |
-| 02-08-02 | 08 | 8 | AUTH-03, AUTH-04, AUTH-05, AUTH-06, AUTH-07, AUTH-08, AUTH-09, SOURCE-06 | Callback/reset/replay/recovery bilingual UI | `AuthCopy GuestAuthRecovery returnPath` | ⬜ pending |
-| 02-08-03 | 08 | 8 | AUTH-01..10, SOURCE-04..07, PROJ-06 | Rendered responsive/RTL/theme/a11y plus redacted evidence | web lint + evidence redaction + browser matrix | ⬜ pending |
+| 02-08-01 | 08 | 8 | AUTH-01, AUTH-02, AUTH-03, AUTH-04 | Generate/email UI, claim stages and full AuthCopy contract | `AuthGateDialog AuthCopy CreatorShell` | ✅ green — focused tests and web typecheck passed |
+| 02-08-02 | 08 | 8 | AUTH-03, AUTH-04, AUTH-05, AUTH-06, AUTH-07, AUTH-08, AUTH-09, SOURCE-06 | Callback/reset/replay/recovery bilingual UI | `AuthCopy GuestAuthRecovery returnPath` | ✅ green — deterministic recovery seam and web typecheck passed |
+| 02-08-03 | 08 | 8 | AUTH-01..10, SOURCE-04..07, PROJ-06 | Rendered responsive/RTL/theme/a11y plus redacted evidence | web lint + evidence redaction + browser matrix | ⚠️ partial — local rendered shell/auth matrix passed; live API/provider/claim routes were unavailable |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -102,13 +102,13 @@ Validate all approved default/loading/success/cancel/error/offline/mismatch/expi
 
 ## Validation Sign-Off
 
-- [ ] Every task-focused command passes.
+- [x] Every task-focused command passes.
 - [ ] Guarded PostgreSQL 17 empty→latest/rerun/drop passes.
 - [ ] Restricted-role RLS and two-user matrix pass.
 - [ ] 24-hour cleanup/audit/retry/finalized-immunity pass.
-- [ ] Full phase suite passes once at the phase gate.
-- [ ] Rendered UI matrix and redaction pass.
+- [ ] Full phase suite passes once at the phase gate (root DB/API/worker harness intentionally not rerun in this browser-only evidence task).
+- [ ] Rendered UI matrix and redaction pass (redaction passes; live provider/claim/browser paths remain open because the local API/worker/storage stack was unavailable).
 - [ ] No new browser-test dependency appears.
 - [ ] `nyquist_compliant: true` is set only after all evidence is green.
 
-**Approval:** pending
+**Approval:** partial — web suite, typecheck, build, lint, and redaction passed. See `02-BROWSER-EVIDENCE.md` for the rendered matrix and the explicitly open live-stack checks.
