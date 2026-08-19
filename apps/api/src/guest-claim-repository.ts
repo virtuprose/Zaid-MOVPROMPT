@@ -1,9 +1,11 @@
 import {
   CreatorProjectSchema,
   GuestClaimSnapshotSchema,
+  GuestClaimAssetManifestSchema,
   ProjectVersionSchema,
   type CreatorProjectRecord,
   type GuestClaimSnapshot,
+  type GuestClaimAssetManifest,
   type ProjectVersion,
 } from "@movprompt/contracts";
 import { objectKeys } from "@movprompt/storage";
@@ -39,7 +41,7 @@ export interface GuestClaimRepository {
   resume(input: { userId: string; pendingGenerationId: string }): Promise<GuestClaimOperation>;
   markAssetVerified(input: { userId: string; pendingGenerationId: string; localAssetId: string; bucket: string; objectKey: string }): Promise<GuestClaimOperation>;
   markAssetFailed(input: { userId: string; pendingGenerationId: string; localAssetId: string; code: string }): Promise<GuestClaimOperation>;
-  finalize(input: { userId: string; pendingGenerationId: string }): Promise<{ operation: GuestClaimOperation; project: CreatorProjectRecord }>;
+  finalize(input: { userId: string; pendingGenerationId: string }): Promise<{ operation: GuestClaimOperation; project: CreatorProjectRecord; assetManifest: GuestClaimAssetManifest }>;
 }
 
 type ClaimRow = typeof schema.guestClaimOperations.$inferSelect;
@@ -76,6 +78,17 @@ function operationPublic(row: ClaimRow, assets: AssetRow[]): GuestClaimOperation
     status: row.status,
     nextAsset: checkpoint(next),
   };
+}
+
+function assetManifest(assets: AssetRow[]): GuestClaimAssetManifest {
+  return GuestClaimAssetManifestSchema.parse(assets.map((asset) => ({
+    localAssetId: asset.localAssetId,
+    ordinal: asset.ordinal,
+    kind: asset.kind,
+    mimeType: asset.mimeType,
+    sizeBytes: asset.sizeBytes,
+    checksumSha256: asset.checksumSha256,
+  })));
 }
 
 function versionPublic(row: typeof schema.creatorProjectVersions.$inferSelect): ProjectVersion {
@@ -287,7 +300,13 @@ export function createGuestClaimRepository(dependencies: { db: Database }): Gues
         await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${`guest-claim:${userId}:${pendingGenerationId}`}, 0))`);
         const operation = await claimByIntent(tx, userId, pendingGenerationId);
         const assets = await assetsFor(tx, operation.id);
-        if (operation.status === "ready") return { operation: operationPublic(operation, assets), project: await receiptProject(tx, userId, operation) };
+        if (operation.status === "ready") {
+          return {
+            operation: operationPublic(operation, assets),
+            project: await receiptProject(tx, userId, operation),
+            assetManifest: assetManifest(assets),
+          };
+        }
         if (assets.some((asset) => asset.status !== "verified")) throw new GuestClaimRepositoryError("assets_pending");
         if (!operation.projectId) throw new Error("guest_claim_project_missing");
         const snapshot = GuestClaimSnapshotSchema.parse(operation.snapshot);
@@ -322,7 +341,11 @@ export function createGuestClaimRepository(dependencies: { db: Database }): Gues
           status: "ready", projectVersionId: version.id, errorCode: null, errorMetadata: {}, finalizedAt: new Date(), updatedAt: new Date(),
         }).where(and(eq(schema.guestClaimOperations.id, operation.id), eq(schema.guestClaimOperations.userId, userId))).returning();
         if (!ready) throw new Error("guest_claim_finalize_update_failed");
-        return { operation: operationPublic(ready, assets), project: await receiptProject(tx, userId, ready) };
+        return {
+          operation: operationPublic(ready, assets),
+          project: await receiptProject(tx, userId, ready),
+          assetManifest: assetManifest(assets),
+        };
       });
     },
   };

@@ -109,6 +109,8 @@ export const GuestClaimReceiptSchema = z
     draftId: z.uuid(),
     pendingGenerationId: IdempotencyKeySchema,
     snapshotDigest: Sha256Schema,
+    /** Ordered verified manifest is required before browser-local blobs may be cleaned up. */
+    assetManifest: GuestClaimAssetManifestSchema,
     project: CreatorProjectSchema,
     version: ProjectVersionSchema,
   })

@@ -68,7 +68,7 @@ export function createGuestClaimService(dependencies: { repository: GuestClaimRe
 
     async finalizeClaim(input) {
       try {
-        const { operation, project } = await repository.finalize(input);
+        const { operation, project, assetManifest } = await repository.finalize(input);
         const version = project.currentVersion;
         if (!version) throw new Error("guest_claim_version_missing");
         return GuestClaimReceiptSchema.parse({
@@ -76,6 +76,7 @@ export function createGuestClaimService(dependencies: { repository: GuestClaimRe
           draftId: operation.draftId,
           pendingGenerationId: operation.pendingGenerationId,
           snapshotDigest: operation.snapshotDigest,
+          assetManifest,
           project,
           version,
         });
