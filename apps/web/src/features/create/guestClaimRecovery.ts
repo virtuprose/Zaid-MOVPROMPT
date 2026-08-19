@@ -128,3 +128,33 @@ export async function verifyAndDeleteVerifiedDraft(draftId: string, receipt: Can
   await deleteVerifiedGuestDraft(draftId, receipt.pendingGenerationId);
   return verified;
 }
+
+/**
+ * A canonical claim receipt proves the original browser snapshot, not later
+ * remote-image mirroring. Link imports therefore retain IndexedDB until the
+ * mirrored object keys are saved in their own immutable project version.
+ */
+export async function persistBeforeVerifiedDraftCleanup<T>(input: {
+  draftId: string;
+  receipt: CanonicalClaimReceipt;
+  persist: () => Promise<T>;
+}): Promise<T> {
+  const recovery = await loadGuestClaimRecovery(input.draftId);
+  if (recovery.state !== "recoverable") {
+    throw new Error("The local campaign is no longer available for secure recovery.");
+  }
+  const verified = verifyCanonicalReceipt(recovery.draft, input.receipt);
+  if (verified.state !== "verified") {
+    throw new Error("MovPrompt could not verify the saved campaign. Your local draft is unchanged.");
+  }
+
+  // Deliberately await persistence before the only destructive step. A retry
+  // can safely replay a completed server claim, while the original link and
+  // local checkpoint remain available if mirroring or version creation fails.
+  const result = await input.persist();
+  const cleaned = await verifyAndDeleteVerifiedDraft(input.draftId, input.receipt);
+  if (cleaned.state !== "verified") {
+    throw new Error("MovPrompt could not verify the saved campaign. Your local draft is unchanged.");
+  }
+  return result;
+}

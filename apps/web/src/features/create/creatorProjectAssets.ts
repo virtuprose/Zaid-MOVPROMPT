@@ -24,6 +24,40 @@ export function mergeClaimedCreatorProject(
 }
 
 /**
+ * Guest link claims create an initial redacted version before their public
+ * image URLs are mirrored. The follow-up source version is required before
+ * guest IndexedDB can be removed: it is the durable proof of the stable keys.
+ */
+export async function persistGuestClaimedCreatorProject(
+  project: CreatorProject,
+  userId: string,
+): Promise<CreatorProject> {
+  const hasUnownedRemoteImages = project.product.images.some(
+    (image) => image.source === "url" && !image.storagePath,
+  );
+  if (!hasUnownedRemoteImages) return syncCreatorProject(project, userId);
+
+  let images: CreatorProject["product"]["images"];
+  try {
+    images = await mirrorProductImages(project.id, project.product.images);
+  } catch (error) {
+    throw new Error("MovPrompt could not secure the imported images yet. Your campaign is still saved here.", { cause: error });
+  }
+  if (images.some((image) => image.source === "url" && !image.storagePath)) {
+    throw new Error("MovPrompt could not verify the imported images. Your campaign is still saved here.");
+  }
+
+  const persisted = await replaceCreatorProjectSource(
+    { ...project, product: { ...project.product, images } },
+    userId,
+  );
+  if (!persisted.versionId || persisted.product.images.some((image) => image.source === "url" && !image.storagePath)) {
+    throw new Error("MovPrompt could not verify the imported images. Your campaign is still saved here.");
+  }
+  return persisted;
+}
+
+/**
  * Persists an authenticated project without ever placing remote image URLs in
  * the cloud recipe, then mirrors those images into the project's private
  * object-storage namespace and saves the resulting stable object keys.

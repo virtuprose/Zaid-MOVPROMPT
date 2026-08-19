@@ -49,9 +49,9 @@ import {
 } from "./creatorProjectOutput";
 import {
   getGuestClaimRecoveryCopy,
+  persistBeforeVerifiedDraftCleanup,
   selectGuestClaimRecovery,
   type TypedGuestClaimRecovery,
-  verifyAndDeleteVerifiedDraft,
 } from "./guestClaimRecovery";
 import {
   buildPortableGenerationConfiguration,
@@ -67,10 +67,12 @@ import { hydrateCloudProject } from "./portableProjectMapper";
 import { projectToCreationDraft, type CreationDraft, type GenerationQuote } from "./contracts";
 import { automaticQuoteRetryDelay } from "./quoteRecovery";
 import { cleanupExpiredGuestDrafts, getGuestAsset, getGuestDraft, markClaimCheckpoint, putGuestAsset, saveGuestDraft } from "./guestDraftStore";
-import { claimGuestAssets, mirrorProductImages } from "./creatorAssets";
+import { claimGuestAssets } from "./creatorAssets";
 import { buildGuestClaimSnapshot } from "./guestClaimSnapshot";
 import {
   hasUnclaimedCreatorAssets,
+  mergeClaimedCreatorProject,
+  persistGuestClaimedCreatorProject,
   syncCreatorProjectWithOwnedRemoteImages,
 } from "./creatorProjectAssets";
 import { SaveStatusIndicator, type SaveLifecycleState } from "./SaveStatusIndicator";
@@ -952,33 +954,26 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
     if (!checkpoint) throw new Error("The local campaign could not be prepared for secure recovery.");
 
     const claimed = await claimGuestAssets({ snapshot, blobs });
-    const recovery = await verifyAndDeleteVerifiedDraft(projectForClaim.id, claimed.receipt);
-    if (recovery.state !== "verified") {
-      throw new Error("MovPrompt could not verify your claimed campaign. Your local draft is unchanged.");
-    }
     const cloudProject = await hydrateCloudProject(claimed.receipt.project);
     if (!cloudProject) throw new Error("The saved campaign could not be restored after secure claim.");
     const claimedAssets = new Map(claimed.assets.map((asset) => [asset.localAssetId, asset]));
-    let images = projectForClaim.product.images.map((image) => {
+    const images = projectForClaim.product.images.map((image) => {
       const secure = claimedAssets.get(image.id);
       return secure
         ? { ...image, assetKey: undefined, storagePath: secure.storagePath, mimeType: secure.mimeType, checksum: secure.checksum, url: secure.url }
         : image;
     });
-    if (images.some((image) => image.source === "url" && !image.storagePath)) {
-      images = await mirrorProductImages(cloudProject.id, images);
-    }
-    // The canonical receipt proves the original guest configuration. This
-    // follow-up immutable version adds only server-issued storage paths and
-    // fresh in-memory previews, never untrusted storage coordinates.
-    return syncCreatorProject({
-      ...projectForClaim,
-      id: cloudProject.id,
-      versionId: cloudProject.versionId,
-      versionNumber: cloudProject.versionNumber,
-      createdAt: cloudProject.createdAt,
-      product: { ...projectForClaim.product, images },
-    }, user.id);
+    const claimedProject = mergeClaimedCreatorProject(projectForClaim, cloudProject, images);
+
+    // For link imports, remote mirroring and the immutable source version are
+    // a required part of the claim. IndexedDB is cleared only after both have
+    // succeeded, so a transient upstream failure keeps the exact URL draft
+    // and checkpoint available for the existing Retry action.
+    return persistBeforeVerifiedDraftCleanup({
+      draftId: projectForClaim.id,
+      receipt: claimed.receipt,
+      persist: () => persistGuestClaimedCreatorProject(claimedProject, user.id),
+    });
   };
 
   const handleAuthGateChange = (open: boolean) => {

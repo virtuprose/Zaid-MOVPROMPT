@@ -1,9 +1,10 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { CreationDraft } from "./contracts";
 import {
   createMemoryGuestDraftStorage,
   getGuestDraft,
+  loadGuestDraft,
   markClaimCheckpoint,
   getGuestAsset,
   putGuestAsset,
@@ -13,6 +14,7 @@ import {
 import {
   recoverFailedGuestClaim,
   getGuestClaimRecoveryCopy,
+  persistBeforeVerifiedDraftCleanup,
   selectGuestClaimRecovery,
   verifyAndDeleteVerifiedDraft,
   verifyCanonicalReceipt,
@@ -78,6 +80,55 @@ describe("guest claim recovery", () => {
     await expect(verifyAndDeleteVerifiedDraft(DRAFT_ID, receipt())).resolves.toMatchObject({ state: "verified" });
     await expect(getGuestAsset(localBlobKey)).resolves.toBeNull();
     await expect(verifyAndDeleteVerifiedDraft(DRAFT_ID, receipt())).resolves.toEqual({ state: "missing" });
+  });
+
+  it("keeps a guest link draft and its local asset checkpoint through a mirror failure, then clears it only after retry persistence", async () => {
+    setGuestDraftStorageForTests(createMemoryGuestDraftStorage());
+    const localBlobKey = await putGuestAsset(DRAFT_ID, new File(["brand mark"], "mark.png", { type: "image/png" }));
+    const linkDraft = {
+      ...draft(),
+      product: {
+        ...draft().product,
+        sourceType: "product_link" as const,
+        sourceUrl: "https://shop.example.test/coffee",
+        images: [{ id: "remote-image", name: "Coffee product", url: "https://cdn.example.test/coffee.jpg", source: "url" as const }],
+      },
+      assetKeys: [localBlobKey],
+    };
+    await saveGuestDraft(linkDraft);
+    await markClaimCheckpoint(DRAFT_ID, {
+      pendingGenerationId: INTENT_ID,
+      snapshotDigest: "b".repeat(64),
+      configuration,
+      assetManifest: [],
+    });
+    const mirror = vi.fn().mockRejectedValue(new Error("temporary mirror outage"));
+
+    await expect(persistBeforeVerifiedDraftCleanup({
+      draftId: DRAFT_ID,
+      receipt: receipt({ assetManifest: [] }),
+      persist: mirror,
+    })).rejects.toThrow("temporary mirror outage");
+
+    const afterFailure = await getGuestDraft(DRAFT_ID);
+    const storedAfterFailure = await loadGuestDraft(DRAFT_ID);
+    expect(mirror).toHaveBeenCalledTimes(1);
+    expect(afterFailure).toMatchObject({
+      pendingGenerationId: INTENT_ID,
+      product: { sourceUrl: "https://shop.example.test/coffee", images: [{ url: "https://cdn.example.test/coffee.jpg" }] },
+    });
+    expect(storedAfterFailure).toMatchObject({ draft: { claimCheckpoint: { snapshotDigest: "b".repeat(64) } } });
+    await expect(getGuestAsset(localBlobKey)).resolves.toMatchObject({ key: localBlobKey });
+
+    const retry = vi.fn().mockResolvedValue({ versionId: "99999999-9999-4999-8999-999999999999" });
+    await expect(persistBeforeVerifiedDraftCleanup({
+      draftId: DRAFT_ID,
+      receipt: receipt({ assetManifest: [] }),
+      persist: retry,
+    })).resolves.toEqual({ versionId: "99999999-9999-4999-8999-999999999999" });
+    expect(retry).toHaveBeenCalledTimes(1);
+    await expect(getGuestDraft(DRAFT_ID)).resolves.toBeNull();
+    await expect(getGuestAsset(localBlobKey)).resolves.toBeNull();
   });
 
   it("retains local data and gives the later UI a generic wrong-account recovery state", async () => {
