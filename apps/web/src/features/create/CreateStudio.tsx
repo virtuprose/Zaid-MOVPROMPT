@@ -48,6 +48,11 @@ import {
   sanitizeCreatorProjectOutput,
 } from "./creatorProjectOutput";
 import {
+  getGuestClaimRecoveryCopy,
+  selectGuestClaimRecovery,
+  type TypedGuestClaimRecovery,
+} from "./guestClaimRecovery";
+import {
   buildPortableGenerationConfiguration,
   getLocalCreatorProject,
   loadCreatorProjects,
@@ -235,7 +240,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
   );
   const [searchParams] = useSearchParams();
   const { projectId: routeProjectId, draftId: routeDraftId } = useParams();
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const userId = user?.id;
   const portablePlatform = isFeatureEnabled("portableAuth");
   const localDemoGeneration = isFeatureEnabled("localDemoGeneration");
@@ -270,6 +275,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
   );
   const [productUrl, setProductUrl] = useState(initialProject?.product.sourceUrl ?? homepageHandoff.sourceUrl);
   const [sourceError, setSourceError] = useState("");
+  const [recovery, setRecovery] = useState<TypedGuestClaimRecovery | null>(null);
   const [sourceBusy, setSourceBusy] = useState(false);
   const [modeSwitching, setModeSwitching] = useState(false);
   const [rightsConfirmed, setRightsConfirmed] = useState(false);
@@ -293,6 +299,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
   const resumedGeneration = useRef(false);
   const startGenerationRef = useRef<(ratioOverride?: CreatorAspectRatio) => Promise<void>>(async () => undefined);
   const generateButtonRef = useRef<HTMLButtonElement | null>(null);
+  const recoveryActionRef = useRef<HTMLButtonElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const template = getCreatorTemplate(project.templateId);
   const projectDurationSeconds = project.scenes.reduce((sum, scene) => sum + scene.duration, 0);
@@ -307,6 +314,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
   const [quoteRetry, setQuoteRetry] = useState(0);
   const quoteAutoRetryCount = useRef(0);
   const activeScene = project.scenes.find((scene) => scene.id === activeSceneId) ?? project.scenes[0];
+  const recoveryCopy = recovery ? getGuestClaimRecoveryCopy(arabicUi ? "ar" : "en", recovery.state) : null;
   const hasRenderedVideo = hasRealCreatorVideo(project);
   const productPreviewImage = project.product.images[0]?.url || null;
   const isRtl = project.language === "ar" || project.language === "bilingual";
@@ -340,6 +348,22 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
     });
     return () => { active = false; };
   }, [requestedProject, userId]);
+
+  useEffect(() => {
+    const onOffline = () => {
+      const next = selectGuestClaimRecovery(projectToCreationDraft(project, rightsConfirmed), "network_offline");
+      setRecovery(next);
+      setSourceError(getGuestClaimRecoveryCopy(arabicUi ? "ar" : "en", next.state).message);
+    };
+    window.addEventListener("offline", onOffline);
+    return () => window.removeEventListener("offline", onOffline);
+  }, [arabicUi, project, rightsConfirmed]);
+
+  useEffect(() => {
+    if (!recovery) return;
+    const frame = window.requestAnimationFrame(() => recoveryActionRef.current?.focus());
+    return () => window.cancelAnimationFrame(frame);
+  }, [recovery]);
 
   useEffect(() => {
     let active = true;
@@ -660,6 +684,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
     }
     setSourceBusy(true);
     setSourceError("");
+    setRecovery(null);
     try {
       const kind = project.promotionKind;
       const scan = await portableCreatorApi.scan(kind, trimmed);
@@ -690,8 +715,9 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
         updateProjectSource(importedChanges);
       }
     } catch (error) {
-      const message = error instanceof Error ? error.message : "";
-      setSourceError(message.includes("no_image") ? `We couldn't find a clear ${project.promotionKind === "business" ? "business" : "product"} image on that page. Upload photos instead.` : "We couldn't read that page. Check the link or upload photos instead.");
+      const next = selectGuestClaimRecovery(projectToCreationDraft(project, rightsConfirmed), "import_failed");
+      setRecovery(next);
+      setSourceError(getGuestClaimRecoveryCopy(arabicUi ? "ar" : "en", next.state).message);
     } finally {
       setSourceBusy(false);
     }
@@ -708,6 +734,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
     }
     setSourceBusy(true);
     setSourceError("");
+    setRecovery(null);
     try {
       const assets = await Promise.all(selected.map(async (file) => {
         validateLocalImage(file);
@@ -731,7 +758,9 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
         title: replacesSample || project.title === "Untitled campaign" ? `${uploadedName} — ${template.name}` : project.title,
       });
     } catch (error) {
-      setSourceError(error instanceof Error ? error.message : "The images could not be uploaded. Try again.");
+      const next = selectGuestClaimRecovery(projectToCreationDraft(project, rightsConfirmed), "import_failed");
+      setRecovery(next);
+      setSourceError(getGuestClaimRecoveryCopy(arabicUi ? "ar" : "en", next.state).message);
     } finally {
       setSourceBusy(false);
     }
@@ -746,6 +775,45 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
     setStep(templateFirst.current ? "details" : "template");
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
+
+  const retryRecovery = () => {
+    if (!recovery) return;
+    setRecovery(null);
+    setSourceError("");
+    if (recovery.state === "claim_failed") {
+      void startGenerationRef.current();
+      return;
+    }
+    if (recovery.state === "import_failed") {
+      void scanSource();
+    }
+  };
+
+  const replaceRecoverySource = () => {
+    if (!recovery) return;
+    if (recovery.state === "session_mismatch") {
+      void signOut();
+      return;
+    }
+    setRecovery(null);
+    setSourceError("");
+    if (recovery.state === "claim_failed" || recovery.state === "import_failed") {
+      setSourceTab("upload");
+      setStep("source");
+      window.requestAnimationFrame(() => document.getElementById("product-files")?.focus());
+    }
+  };
+
+  const recoveryActions = recovery && recoveryCopy ? (
+    <div className="creator-actions-row" role="group" aria-label={recoveryCopy.message}>
+      <button ref={recoveryActionRef} className="creator-button creator-button-primary" type="button" onClick={retryRecovery}>
+        {recoveryCopy.primaryAction}
+      </button>
+      <button className="creator-button creator-button-secondary" type="button" onClick={replaceRecoverySource}>
+        {recoveryCopy.secondaryAction}
+      </button>
+    </div>
+  ) : null;
 
   const switchToAdvanced = async () => {
     if (modeSwitching) return;
@@ -857,8 +925,9 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
       claimedProject = await claimGuestProject(project);
       setProject(claimedProject);
     } catch (error) {
-      const detail = error instanceof Error ? error.message : tr("The private image upload did not complete.", "ما اكتمل رفع الصورة الخاصة.");
-      setSourceError(`${detail} ${tr("Your image and campaign settings are still saved in this browser. Select Generate video to retry.", "صورتك وإعدادات حملتك ما زالت محفوظة في هذا المتصفح. اختر توليد الفيديو للمحاولة مرة ثانية.")}`);
+      const next = selectGuestClaimRecovery(projectToCreationDraft(project, rightsConfirmed), "asset_claim_failed");
+      setRecovery(next);
+      setSourceError(getGuestClaimRecoveryCopy(arabicUi ? "ar" : "en", next.state).message);
       setSourceBusy(false);
       return;
     }
@@ -1286,6 +1355,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
               )}
               {sourceBusy && <p className="creator-field-help" role="status" style={{ marginTop: 12 }}>{tr("Preparing your images…", "جارٍ تجهيز الصور…")}</p>}
               {sourceError && <p id="source-error" className="creator-error" role="alert">{sourceError}</p>}
+              {recoveryActions}
               <div className="creator-actions-row"><button className="creator-button creator-button-quiet" type="button" onClick={() => setStep("template")}><ArrowLeft aria-hidden="true" /> {tr("Back", "رجوع")}</button><button className="creator-button creator-button-primary" type="button" onClick={continueFromSource} disabled={!project.product.images.length}>{tr("Review campaign", "راجع الحملة")} <ArrowRight aria-hidden="true" /></button></div>
             </section>
 
@@ -1320,6 +1390,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
               <div className="creator-check-row"><input id="preflight-audio" type="checkbox" checked={project.audio} onChange={(event) => updateProject({ audio: event.target.checked })} /><label htmlFor="preflight-audio">{tr("Generate music and sound for this version.", "ولّد موسيقى وصوت لهذه النسخة.")}</label></div>
               <div className="creator-check-row"><input id="rights" type="checkbox" checked={rightsConfirmed} onChange={(event) => setRightsConfirmed(event.target.checked)} /><label htmlFor="rights">{tr("I own these images or have permission to use them in advertising, and the campaign details above are accurate.", "أنا أملك هذه الصور أو عندي إذن لاستخدامها إعلانياً، ومعلومات الحملة أعلاه صحيحة.")}</label></div>
               {sourceError && <p className="creator-error" role="alert">{sourceError}</p>}
+              {recoveryActions}
               <div className="creator-actions-row"><button className="creator-button creator-button-quiet" type="button" onClick={() => setStep(templateFirst.current ? "source" : "template")}><ArrowLeft aria-hidden="true" /> {tr("Back", "رجوع")}</button><button ref={generateButtonRef} className="creator-button creator-button-primary" type="button" onClick={() => void startGeneration()} disabled={!project.product.name.trim() || !rightsConfirmed || (!simulatedGeneration && (!quoteLoaded || !quote)) || sourceBusy}><Sparkles aria-hidden="true" /> {simulatedGeneration ? tr("Prepare product preview", "جهّز معاينة المنتج") : tr("Generate video", "ولّد الفيديو")}</button></div>
             </section>
 

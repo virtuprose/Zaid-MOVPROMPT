@@ -60,6 +60,16 @@ export const en = {
   "auth.resetEmailDesc": "If an account exists, a secure reset link is on its way.",
   "auth.socialFailed": "Could not continue with {provider}",
   "auth.draftStillSaved": "Your campaign is still saved in this browser.",
+  "creator.recovery.claimFailed": "We couldn’t secure this image. Your campaign is still saved here.",
+  "creator.recovery.retryAsset": "Retry securing image",
+  "creator.recovery.replaceImage": "Replace image",
+  "creator.recovery.importFailed": "We couldn’t import that source. Your campaign is unchanged. Try again or upload images instead.",
+  "creator.recovery.retry": "Try again",
+  "creator.recovery.uploadInstead": "Upload images instead",
+  "creator.recovery.offline": "You’re offline. Your campaign is still saved in this browser. Reconnect, then try again.",
+  "creator.recovery.continueEditing": "Continue editing",
+  "creator.recovery.sessionMismatch": "This campaign belongs to a different signed-in account. We kept it private and did not change it.",
+  "creator.recovery.signOut": "Sign out and use another account",
 
   // Auth features
   "auth.feat.dop.title": "Exact draft recovery",

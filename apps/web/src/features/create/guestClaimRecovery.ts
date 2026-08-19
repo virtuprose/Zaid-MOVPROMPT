@@ -1,4 +1,6 @@
 import type { GuestClaimAssetManifest, GuestClaimReceipt } from "@movprompt/contracts";
+import { ar } from "@/i18n/translations/ar";
+import { en } from "@/i18n/translations/en";
 
 import {
   deleteVerifiedGuestDraft,
@@ -32,6 +34,39 @@ export type TypedGuestClaimRecovery = {
   draft: CreationDraft;
   localAssetId?: string;
 };
+
+export function getGuestClaimRecoveryCopy(
+  locale: "en" | "ar",
+  state: TypedGuestClaimRecovery["state"],
+): { message: string; primaryAction: string; secondaryAction: string } {
+  const translation = locale === "ar" ? ar : en;
+  if (state === "claim_failed") {
+    return {
+      message: translation["creator.recovery.claimFailed"],
+      primaryAction: translation["creator.recovery.retryAsset"],
+      secondaryAction: translation["creator.recovery.replaceImage"],
+    };
+  }
+  if (state === "import_failed") {
+    return {
+      message: translation["creator.recovery.importFailed"],
+      primaryAction: translation["creator.recovery.retry"],
+      secondaryAction: translation["creator.recovery.uploadInstead"],
+    };
+  }
+  if (state === "offline") {
+    return {
+      message: translation["creator.recovery.offline"],
+      primaryAction: translation["creator.recovery.retry"],
+      secondaryAction: translation["creator.recovery.continueEditing"],
+    };
+  }
+  return {
+    message: translation["creator.recovery.sessionMismatch"],
+    primaryAction: translation["creator.recovery.continueEditing"],
+    secondaryAction: translation["creator.recovery.signOut"],
+  };
+}
 
 /** Failure selection is pure: the caller retains every fact, local blob, and pending intent. */
 export function selectGuestClaimRecovery(

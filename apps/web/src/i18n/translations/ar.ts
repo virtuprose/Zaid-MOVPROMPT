@@ -62,6 +62,16 @@ export const ar: Record<TranslationKey, string> = {
   "auth.resetEmailDesc": "إذا كان الحساب موجوداً، راح نرسل رابط إعادة تعيين آمن.",
   "auth.socialFailed": "تعذرت المتابعة مع {provider}",
   "auth.draftStillSaved": "حملتك ما زالت محفوظة في هذا المتصفح.",
+  "creator.recovery.claimFailed": "لم نتمكن من تأمين هذه الصورة. حملتك ما زالت محفوظة هنا.",
+  "creator.recovery.retryAsset": "أعد تأمين الصورة",
+  "creator.recovery.replaceImage": "استبدل الصورة",
+  "creator.recovery.importFailed": "لم نتمكن من استيراد هذا المصدر. حملتك لم تتغيّر. حاول مرة أخرى أو ارفع صوراً بدلاً من ذلك.",
+  "creator.recovery.retry": "حاول مرة أخرى",
+  "creator.recovery.uploadInstead": "ارفع صوراً بدلاً من ذلك",
+  "creator.recovery.offline": "أنت غير متصل بالإنترنت. حملتك ما زالت محفوظة في هذا المتصفح. اتصل بالإنترنت ثم حاول مرة أخرى.",
+  "creator.recovery.continueEditing": "تابع التعديل",
+  "creator.recovery.sessionMismatch": "هذه الحملة تخص حساباً مسجلاً آخر. أبقيناها خاصة ولم نغيّرها.",
+  "creator.recovery.signOut": "سجّل الخروج واستخدم حساباً آخر",
 
   // Auth features
   "auth.feat.dop.title": "استرجاع المسودة بالكامل",
