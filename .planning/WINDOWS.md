@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 2
+open_count: 4
 waived_count: 0
 fixed_count: 0
-total_count: 2
-last_updated: 2026-08-19T19:49:20.865Z
+total_count: 4
+last_updated: 2026-08-19T20:23:02.830Z
 ---
 
 # Broken Windows Ledger
@@ -17,6 +17,8 @@ last_updated: 2026-08-19T19:49:20.865Z
 |----|-------|------|------|------|-------------|--------|--------|-------------|-------------|
 | 1 | 02 | unrun-verify | apps/api/src/auth-provider-stubs.test.ts |  | PostgreSQL callback replay cases skipped because MOVPROMPT_TEST_DATABASE_URL and Docker are unavailable in this execution environment. | open |  | 2026-08-19T19:33:12.375Z |  |
 | 2 | 02 | unrun-verify | apps/api/src/guest-claim-service.postgres.test.ts |  | Disposable PostgreSQL guest-claim replay and owner-isolation suite skipped because MOVPROMPT_TEST_DATABASE_URL is unset. | open |  | 2026-08-19T19:49:20.865Z |  |
+| 3 | 02 | unrun-verify | apps/api/src/creator-routes.postgres.test.ts |  | Source-change PostgreSQL replay/concurrency test skipped because MOVPROMPT_TEST_DATABASE_URL is not configured. | open |  | 2026-08-19T20:23:02.743Z |  |
+| 4 | 02 | deviation | apps/web/src/features/create/AuthGateDialog.test.tsx |  | Full web suite has a pre-existing order-dependent locale test failure; isolated test passes. | open |  | 2026-08-19T20:23:02.830Z |  |
 
 ````json
 [
@@ -42,6 +44,30 @@ last_updated: 2026-08-19T19:49:20.865Z
     "status": "open",
     "reason": "",
     "recorded_at": "2026-08-19T19:49:20.865Z",
+    "resolved_at": null
+  },
+  {
+    "id": 3,
+    "kind": "unrun-verify",
+    "phase": "02",
+    "file": "apps/api/src/creator-routes.postgres.test.ts",
+    "line": null,
+    "description": "Source-change PostgreSQL replay/concurrency test skipped because MOVPROMPT_TEST_DATABASE_URL is not configured.",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-08-19T20:23:02.743Z",
+    "resolved_at": null
+  },
+  {
+    "id": 4,
+    "kind": "deviation",
+    "phase": "02",
+    "file": "apps/web/src/features/create/AuthGateDialog.test.tsx",
+    "line": null,
+    "description": "Full web suite has a pre-existing order-dependent locale test failure; isolated test passes.",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-08-19T20:23:02.830Z",
     "resolved_at": null
   }
 ]
