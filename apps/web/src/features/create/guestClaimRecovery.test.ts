@@ -12,6 +12,7 @@ import {
 } from "./guestDraftStore";
 import {
   recoverFailedGuestClaim,
+  selectGuestClaimRecovery,
   verifyAndDeleteVerifiedDraft,
   verifyCanonicalReceipt,
   type CanonicalClaimReceipt,
@@ -84,5 +85,16 @@ describe("guest claim recovery", () => {
 
     expect(recoverFailedGuestClaim((await getGuestDraft(DRAFT_ID))!, "wrong_account")).toMatchObject({ state: "wrong_account" });
     expect(await getGuestDraft(DRAFT_ID)).toMatchObject({ pendingGenerationId: INTENT_ID });
+  });
+
+  it("maps failures to a single explicit recovery action without changing the draft", () => {
+    const original = draft();
+    const offline = selectGuestClaimRecovery(original, "network_offline");
+    const failedAsset = selectGuestClaimRecovery(original, "asset_claim_failed", { localAssetId: ASSET_ID });
+
+    expect(offline).toEqual({ state: "offline", action: "retry", draft: original });
+    expect(failedAsset).toEqual({ state: "claim_failed", action: "retry_asset", localAssetId: ASSET_ID, draft: original });
+    expect(offline.draft).toBe(original);
+    expect(failedAsset.draft).toBe(original);
   });
 });

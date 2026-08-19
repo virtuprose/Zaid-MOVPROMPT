@@ -80,6 +80,20 @@ describe("creator project output truth", () => {
     expect(hasRealCreatorVideo(repaired)).toBe(true);
   });
 
+  it("does not project a previous source output as current after replacement or reload", () => {
+    const replaced = sanitizeCreatorProjectOutput({
+      ...airPodsProject(),
+      videoUrl: "https://objects.example.test/projects/airpods/previous-output.mp4",
+      sourceFingerprint: "new-source-fingerprint",
+      outputSourceFingerprint: "previous-source-fingerprint",
+    });
+
+    expect(replaced.videoUrl).toBeNull();
+    expect(replaced.renderRunId).toBeNull();
+    expect(replaced.status).toBe("ready");
+    expect(replaced.product.name).toBe("AirPods Max");
+  });
+
   it("invalidates the old render binding while preserving every user-controlled campaign field", () => {
     const project = { ...airPodsProject(), videoUrl: "https://objects.example.test/projects/old/output.mp4" };
     const invalidated = invalidateCreatorProjectOutput(project);
