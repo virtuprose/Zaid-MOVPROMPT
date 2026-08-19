@@ -1,0 +1,46 @@
+import { existsSync } from "node:fs";
+import { resolve } from "node:path";
+import { describe, expect, it } from "vitest";
+
+import { CREATOR_TEMPLATES } from "./templates";
+import { TEMPLATE_POSTERS, VERIFIED_TEMPLATE_VIDEOS } from "./templateMedia";
+
+describe("truthful template media catalog", () => {
+  it("covers every template with an explicit local poster mapping", () => {
+    expect(Object.keys(TEMPLATE_POSTERS).sort()).toEqual(CREATOR_TEMPLATES.map((template) => template.id).sort());
+    for (const template of CREATOR_TEMPLATES) {
+      expect(existsSync(resolve("public", template.poster.slice(1))), template.poster).toBe(true);
+    }
+  });
+
+  it("does not reuse static screenshots that contain baked-in play controls", () => {
+    const misleadingPosters = new Set([
+      "/homepage/template-creator-proof.png",
+      "/homepage/template-in-motion.png",
+      "/homepage/template-launch-story.png",
+      "/homepage/template-product-reveal.png",
+      "/homepage/template-texture-study.png",
+    ]);
+    expect(Object.values(TEMPLATE_POSTERS).some((poster) => misleadingPosters.has(poster))).toBe(false);
+  });
+
+  it("offers motion only for inspected, unique, template-specific clips", () => {
+    const playable = CREATOR_TEMPLATES.filter((template) => template.previewVideo);
+    expect(playable).toHaveLength(11);
+    expect(new Set(playable.map((template) => template.previewVideo)).size).toBe(playable.length);
+    expect(Object.keys(VERIFIED_TEMPLATE_VIDEOS).sort()).toEqual(playable.map((template) => template.id).sort());
+    for (const template of playable) {
+      expect(template.poster).toBe(`/template-previews/${template.id}.jpg`);
+      expect(existsSync(resolve("public", template.previewVideo!.slice(1))), template.previewVideo!).toBe(true);
+    }
+  });
+
+  it("gives all fifty cards a unique factual code and crop treatment", () => {
+    expect(new Set(CREATOR_TEMPLATES.map((template) => template.mediaCode)).size).toBe(50);
+    expect(new Set(CREATOR_TEMPLATES.map((template) => template.posterPosition)).size).toBe(50);
+    for (const [index, template] of CREATOR_TEMPLATES.entries()) {
+      expect(template.mediaCode).toBe(`T${String(index + 1).padStart(2, "0")}`);
+      expect(template.poster).toMatch(/^\/(?:create|homepage|presets|template-previews)\//);
+    }
+  });
+});

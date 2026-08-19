@@ -10,7 +10,12 @@ describe("source scanner security", () => {
     expect(isPublicAddress("192.168.1.1")).toBe(false);
     expect(isPublicAddress("203.0.113.5")).toBe(false);
     expect(isPublicAddress("::1")).toBe(false);
+    expect(isPublicAddress("::127.0.0.1")).toBe(false);
+    expect(isPublicAddress("::ffff:127.0.0.1")).toBe(false);
+    expect(isPublicAddress("::ffff:7f00:1")).toBe(false);
     expect(isPublicAddress("fd00::1")).toBe(false);
+    expect(isPublicAddress("fec0::1")).toBe(false);
+    expect(isPublicAddress("64:ff9b::7f00:1")).toBe(false);
     expect(isPublicAddress("2606:4700:4700::1111")).toBe(true);
     expect(isPublicAddress("8.8.8.8")).toBe(true);
   });

@@ -10,6 +10,7 @@ GRANT SELECT, INSERT ON
   creator_project_assets,
   generation_quotes,
   render_runs,
+  render_attempts,
   exports,
   credit_accounts,
   credit_ledger,
@@ -95,6 +96,26 @@ VALUES
     '22222000-0000-4000-8000-000000000002', 10
   );
 
+INSERT INTO render_attempts
+  (id, render_run_id, project_id, project_version_id, user_id, attempt_number, provider, provider_request_id)
+VALUES
+  (
+    '11111101-0000-4000-8000-000000000001',
+    '11111100-0000-4000-8000-000000000001',
+    '11000000-0000-4000-8000-000000000001',
+    '11100000-0000-4000-8000-000000000001',
+    '10000000-0000-4000-8000-000000000001',
+    0, 'rls-probe', 'rls-owner-a-attempt'
+  ),
+  (
+    '22222201-0000-4000-8000-000000000002',
+    '22222200-0000-4000-8000-000000000002',
+    '22000000-0000-4000-8000-000000000002',
+    '22200000-0000-4000-8000-000000000002',
+    '20000000-0000-4000-8000-000000000002',
+    0, 'rls-probe', 'rls-owner-b-attempt'
+  );
+
 INSERT INTO credit_accounts (user_id, balance)
 VALUES
   ('10000000-0000-4000-8000-000000000001', 10),
@@ -176,6 +197,7 @@ BEGIN
     'creator_project_assets',
     'generation_quotes',
     'render_runs',
+    'render_attempts',
     'exports',
     'credit_accounts',
     'credit_ledger',
@@ -212,4 +234,4 @@ $$;
 RESET ROLE;
 ROLLBACK;
 
-\echo 'Two-user PostgreSQL RLS isolation probe passed for projects, versions, assets, quotes, runs, credits, exports and notifications.'
+\echo 'Two-user PostgreSQL RLS isolation probe passed for projects, versions, assets, quotes, runs, attempts, credits, exports and notifications.'

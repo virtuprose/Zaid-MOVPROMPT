@@ -4,6 +4,7 @@ import {
   type CapabilityKind,
   type PublicCapability,
 } from "@movprompt/contracts";
+import { VERCEL_GATEWAY_SEEDANCE_OUTPUT_HOSTS } from "./vercel-gateway-seedance.js";
 
 type ServerCapabilitySpec = {
   alias: CapabilityAlias;
@@ -162,6 +163,51 @@ function isEnabled(value: string | undefined): boolean {
   return value?.trim().toLowerCase() === "true";
 }
 
+function adapterIsReady(
+  adapterId: string | undefined,
+  providerModelId: string | undefined,
+  environment: Readonly<Record<string, string | undefined>>,
+): boolean {
+  if (adapterId?.trim() === "byteplus-modelark") {
+    return isEnabled(environment.MOVPROMPT_PROVIDER_BYTEPLUS_READY);
+  }
+  if (adapterId?.trim() === "vercel-ai-gateway") {
+    const requiredEnvironment = [
+      "AI_GATEWAY_API_KEY",
+      "VERCEL_AI_GATEWAY_BASE_URL",
+      "PROVIDER_OUTPUT_ALLOWED_HOSTS",
+      "S3_ENDPOINT",
+      "S3_REGION",
+      "S3_ACCESS_KEY_ID",
+      "S3_SECRET_ACCESS_KEY",
+      "S3_ASSETS_BUCKET",
+      "S3_OUTPUTS_BUCKET",
+      "FFMPEG_PATH",
+      "FFPROBE_PATH",
+      "MOVPROMPT_QUALITY_MODEL_ID",
+    ] as const;
+    const qualityModelId = environment.MOVPROMPT_QUALITY_MODEL_ID?.trim();
+    const configuredOutputHosts = new Set(
+      (environment.PROVIDER_OUTPUT_ALLOWED_HOSTS ?? "")
+        .split(",")
+        .map((host) => host.trim().toLowerCase())
+        .filter(Boolean),
+    );
+    const verifiedOutputHostConfigured = VERCEL_GATEWAY_SEEDANCE_OUTPUT_HOSTS
+      .some((host) => configuredOutputHosts.has(host));
+    return Boolean(
+      isEnabled(environment.MOVPROMPT_PROVIDER_VERCEL_GATEWAY_READY) &&
+      providerModelId?.trim() === "bytedance/seedance-2.5" &&
+      environment.VERCEL_AI_GATEWAY_BASE_URL?.trim() === "https://ai-gateway.vercel.sh/v4/ai" &&
+      qualityModelId &&
+      /^google\/gemini-[a-z0-9.-]+$/u.test(qualityModelId) &&
+      verifiedOutputHostConfigured &&
+      requiredEnvironment.every((key) => environment[key]?.trim()),
+    );
+  }
+  return true;
+}
+
 /**
  * Capabilities are fail-closed: they are unavailable unless all three
  * server-only environment values are explicitly present.
@@ -176,7 +222,9 @@ export function createCapabilityRegistryFromEnvironment(
     const adapterId = environment[`${prefix}_ADAPTER_ID`];
     const providerModelId = environment[`${prefix}_MODEL_ID`];
     configuration[spec.alias] = {
-      enabled: isEnabled(environment[`${prefix}_ENABLED`]),
+      enabled:
+        isEnabled(environment[`${prefix}_ENABLED`]) &&
+        adapterIsReady(adapterId, providerModelId, environment),
       ...(adapterId === undefined ? {} : { adapterId }),
       ...(providerModelId === undefined ? {} : { providerModelId }),
     };

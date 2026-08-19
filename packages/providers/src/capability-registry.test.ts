@@ -59,4 +59,96 @@ describe("CapabilityRegistry", () => {
       "capability_unavailable",
     );
   });
+
+  it("does not advertise BytePlus until the full provider and quality pipeline is ready", () => {
+    const base = {
+      MOVPROMPT_CAPABILITY_VIDEO_CINEMATIC_ENABLED: "true",
+      MOVPROMPT_CAPABILITY_VIDEO_CINEMATIC_ADAPTER_ID: "byteplus-modelark",
+      MOVPROMPT_CAPABILITY_VIDEO_CINEMATIC_MODEL_ID: "dreamina-seedance-2-0-260128",
+    };
+    expect(createCapabilityRegistryFromEnvironment(base).listPublic()
+      .find((item) => item.alias === "video.cinematic")?.available).toBe(false);
+    expect(createCapabilityRegistryFromEnvironment({
+      ...base,
+      MOVPROMPT_PROVIDER_BYTEPLUS_READY: "true",
+    }).listPublic().find((item) => item.alias === "video.cinematic")?.available).toBe(true);
+  });
+
+  it("does not advertise Vercel Gateway until the worker pipeline is explicitly ready", () => {
+    const base = {
+      MOVPROMPT_CAPABILITY_VIDEO_PRODUCT_FIDELITY_ENABLED: "true",
+      MOVPROMPT_CAPABILITY_VIDEO_PRODUCT_FIDELITY_ADAPTER_ID: "vercel-ai-gateway",
+      MOVPROMPT_CAPABILITY_VIDEO_PRODUCT_FIDELITY_MODEL_ID: "bytedance/seedance-2.5",
+    };
+    expect(createCapabilityRegistryFromEnvironment(base).listPublic()
+      .find((item) => item.alias === "video.product_fidelity")?.available).toBe(false);
+    expect(createCapabilityRegistryFromEnvironment({
+      ...base,
+      MOVPROMPT_PROVIDER_VERCEL_GATEWAY_READY: "true",
+      AI_GATEWAY_API_KEY: "secret",
+      VERCEL_AI_GATEWAY_BASE_URL: "https://ai-gateway.vercel.sh/v4/ai",
+      PROVIDER_OUTPUT_ALLOWED_HOSTS: "ark-acg-ap-southeast-1.tos-ap-southeast-1.volces.com",
+      S3_ENDPOINT: "https://storage.example.test",
+      S3_REGION: "auto",
+      S3_ACCESS_KEY_ID: "access",
+      S3_SECRET_ACCESS_KEY: "secret",
+      S3_ASSETS_BUCKET: "creator-assets",
+      S3_OUTPUTS_BUCKET: "creator-outputs",
+      FFMPEG_PATH: "ffmpeg",
+      FFPROBE_PATH: "ffprobe",
+      MOVPROMPT_QUALITY_MODEL_ID: "google/gemini-3.6-flash",
+    }).listPublic().find((item) => item.alias === "video.product_fidelity")?.available).toBe(true);
+
+    expect(createCapabilityRegistryFromEnvironment({
+      ...base,
+      MOVPROMPT_CAPABILITY_VIDEO_PRODUCT_FIDELITY_MODEL_ID: "bytedance/seedance-2.0",
+      MOVPROMPT_PROVIDER_VERCEL_GATEWAY_READY: "true",
+      AI_GATEWAY_API_KEY: "secret",
+      VERCEL_AI_GATEWAY_BASE_URL: "https://ai-gateway.vercel.sh/v4/ai",
+      PROVIDER_OUTPUT_ALLOWED_HOSTS: "ark-acg-ap-southeast-1.tos-ap-southeast-1.volces.com",
+      S3_ENDPOINT: "https://storage.example.test",
+      S3_REGION: "auto",
+      S3_ACCESS_KEY_ID: "access",
+      S3_SECRET_ACCESS_KEY: "secret",
+      S3_ASSETS_BUCKET: "creator-assets",
+      S3_OUTPUTS_BUCKET: "creator-outputs",
+      FFMPEG_PATH: "ffmpeg",
+      FFPROBE_PATH: "ffprobe",
+      MOVPROMPT_QUALITY_MODEL_ID: "google/gemini-3.6-flash",
+    }).listPublic().find((item) => item.alias === "video.product_fidelity")?.available).toBe(false);
+
+    expect(createCapabilityRegistryFromEnvironment({
+      ...base,
+      MOVPROMPT_PROVIDER_VERCEL_GATEWAY_READY: "true",
+      AI_GATEWAY_API_KEY: "secret",
+      VERCEL_AI_GATEWAY_BASE_URL: "https://ai-gateway.vercel.sh/v4/ai",
+      PROVIDER_OUTPUT_ALLOWED_HOSTS: "ark-acg-ap-southeast-1.tos-ap-southeast-1.volces.com",
+      S3_ENDPOINT: "https://storage.example.test",
+      S3_REGION: "auto",
+      S3_ACCESS_KEY_ID: "access",
+      S3_SECRET_ACCESS_KEY: "secret",
+      S3_ASSETS_BUCKET: "creator-assets",
+      S3_OUTPUTS_BUCKET: "creator-outputs",
+      FFMPEG_PATH: "ffmpeg",
+      FFPROBE_PATH: "ffprobe",
+      MOVPROMPT_QUALITY_MODEL_ID: "openai/gpt-5.4",
+    }).listPublic().find((item) => item.alias === "video.product_fidelity")?.available).toBe(false);
+
+    expect(createCapabilityRegistryFromEnvironment({
+      ...base,
+      MOVPROMPT_PROVIDER_VERCEL_GATEWAY_READY: "true",
+      AI_GATEWAY_API_KEY: "secret",
+      VERCEL_AI_GATEWAY_BASE_URL: "https://proxy.example.test/v4/ai",
+      PROVIDER_OUTPUT_ALLOWED_HOSTS: "ark-acg-ap-southeast-1.tos-ap-southeast-1.volces.com",
+      S3_ENDPOINT: "https://storage.example.test",
+      S3_REGION: "auto",
+      S3_ACCESS_KEY_ID: "access",
+      S3_SECRET_ACCESS_KEY: "secret",
+      S3_ASSETS_BUCKET: "creator-assets",
+      S3_OUTPUTS_BUCKET: "creator-outputs",
+      FFMPEG_PATH: "ffmpeg",
+      FFPROBE_PATH: "ffprobe",
+      MOVPROMPT_QUALITY_MODEL_ID: "google/gemini-3.6-flash",
+    }).listPublic().find((item) => item.alias === "video.product_fidelity")?.available).toBe(false);
+  });
 });

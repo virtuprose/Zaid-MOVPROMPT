@@ -6,6 +6,7 @@ export type OwnedAssetRecord = CreatorAsset & {
   userId: string;
   bucket: string;
   originalFilename?: string;
+  sourceUrlHash?: string;
 };
 
 export type CreateAssetRecord = OwnedAssetRecord & {
@@ -20,12 +21,20 @@ export interface AssetRepository {
   findOwned(userId: string, projectId: string, assetId: string): Promise<OwnedAssetRecord | null>;
 }
 
-type SourceMetadata = { originalFilename?: string };
+type SourceMetadata = { originalFilename?: string; sourceUrlHash?: string };
 
 function originalFilename(value: unknown): string | undefined {
   if (!value || typeof value !== "object") return undefined;
   const candidate = (value as SourceMetadata).originalFilename;
   return typeof candidate === "string" && candidate.trim() ? candidate : undefined;
+}
+
+function sourceUrlHash(value: unknown): string | undefined {
+  if (!value || typeof value !== "object") return undefined;
+  const candidate = (value as SourceMetadata).sourceUrlHash;
+  return typeof candidate === "string" && /^[a-f0-9]{64}$/.test(candidate)
+    ? candidate
+    : undefined;
 }
 
 export function createDrizzleAssetRepository(db: Database): AssetRepository {
@@ -61,9 +70,10 @@ export function createDrizzleAssetRepository(db: Database): AssetRepository {
           ...(record.width === undefined ? {} : { width: record.width }),
           ...(record.height === undefined ? {} : { height: record.height }),
           ...(record.durationMs === undefined ? {} : { durationMs: record.durationMs }),
-          sourceMetadata: record.originalFilename
-            ? { originalFilename: record.originalFilename }
-            : {},
+          sourceMetadata: {
+            ...(record.originalFilename ? { originalFilename: record.originalFilename } : {}),
+            ...(record.sourceUrlHash ? { sourceUrlHash: record.sourceUrlHash } : {}),
+          },
         })
         .onConflictDoNothing());
 
@@ -108,6 +118,7 @@ export function createDrizzleAssetRepository(db: Database): AssetRepository {
       const parsedKind = CreatorAssetKindSchema.safeParse(asset.kind);
       if (!parsedKind.success) return null;
       const filename = originalFilename(asset.sourceMetadata);
+      const remoteSourceUrlHash = sourceUrlHash(asset.sourceMetadata);
       return {
         id: asset.id,
         projectId: asset.projectId,
@@ -119,6 +130,7 @@ export function createDrizzleAssetRepository(db: Database): AssetRepository {
         sizeBytes: asset.sizeBytes,
         checksumSha256: asset.checksumSha256,
         ...(filename ? { originalFilename: filename } : {}),
+        ...(remoteSourceUrlHash ? { sourceUrlHash: remoteSourceUrlHash } : {}),
       };
     },
   };

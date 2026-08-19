@@ -1,4 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
+import { isFeatureEnabled } from "@/config/features";
+import { portableCreatorApi } from "@/lib/api/portableApiClient";
 import type { Attachment } from "./ingest";
 import type { TasteProfile } from "./tasteProfile";
 
@@ -9,7 +11,7 @@ export type LockedSpec = {
   duration_seconds?: number;
   aspect_ratio?: string;
   audio?: "silent" | "sfx" | "music" | "dialogue" | "full";
-  resolution?: "720p" | "1080p" | "4k";
+  resolution?: "480p" | "720p" | "1080p" | "4k";
   style?: "photoreal" | "cinematic-film" | "stylized" | "anime";
 };
 
@@ -31,7 +33,7 @@ export type Breakdown = {
   color_palette?: string;
   environment?: string;
   duration_hint?: string;
-  resolution?: "720p" | "1080p" | "4k";
+  resolution?: "480p" | "720p" | "1080p" | "4k";
   aspect_ratio?: string;
   film_emulation?: string;
   negative_prompt?: string;
@@ -237,7 +239,6 @@ export async function generateReferenceImageStream(
   const images: GeneratedImage[] = [];
   let mode = input.mode as string;
   let buf = "";
-  // eslint-disable-next-line no-constant-condition
   while (true) {
     const { done, value } = await reader.read();
     if (done) break;
@@ -595,6 +596,7 @@ export type VideoJob = {
   prompt: string;
   video_url?: string | null;
   error?: string | null;
+  processing_stage?: "preparing" | "rendering" | "securing_output" | "quality_review" | "ready" | "cancelling" | "failed" | "cancelled";
   fal_request_id?: string | null;
   fal_status_url?: string | null;
   fal_response_url?: string | null;
@@ -709,6 +711,28 @@ export async function cancelVideoJob(jobId: string): Promise<VideoJob> {
 }
 
 export async function startCreatorGeneration(input: { projectId: string; projectVersionId: string; quoteId: string; idempotencyKey: string; mode: "template" | "advanced"; prompt: string; capability: "video.cinematic" | "video.product_fidelity"; options: VideoOptions; referenceImages?: string[]; metadata?: Record<string, unknown>; rightsAttested: boolean; }): Promise<{ runId: string; job: VideoJob }> {
+  if (!input.rightsAttested) {
+    throw new Error("Confirm that you have permission to use the supplied assets before generating.");
+  }
+  if (isFeatureEnabled("portableAuth")) {
+    const run = await portableCreatorApi.startRender({
+      projectId: input.projectId,
+      projectVersionId: input.projectVersionId,
+      quoteId: input.quoteId,
+      rightsAttested: true,
+    }, input.idempotencyKey);
+    return {
+      runId: run.id,
+      job: {
+        id: run.id,
+        status: run.status === "processing" ? "processing" : "queued",
+        provider: run.capability,
+        prompt: input.prompt,
+        video_url: null,
+        error: null,
+      },
+    };
+  }
   const { data, error } = await supabase.functions.invoke("start-generation", { body: { project_id: input.projectId, project_version_id: input.projectVersionId, quote_id: input.quoteId, idempotency_key: input.idempotencyKey, mode: input.mode, prompt: input.prompt, capability: input.capability, options: input.options, reference_image_urls: input.referenceImages, metadata: input.metadata, rights_attested: input.rightsAttested } });
   if (error) throw error;
   if (!data?.run?.id || !data?.job?.id) throw new Error("The render operation could not be created.");
@@ -716,6 +740,28 @@ export async function startCreatorGeneration(input: { projectId: string; project
 }
 
 export async function pollCreatorGeneration(runId: string): Promise<VideoJob> {
+  if (isFeatureEnabled("portableAuth")) {
+    const run = await portableCreatorApi.renderStatus(runId);
+    const status: VideoJob["status"] = run.status === "completed"
+      ? "completed"
+      : run.status === "failed" || run.status === "cancelled"
+        ? "failed"
+        : run.status === "processing" || run.status === "cancelling"
+          ? "processing"
+          : "queued";
+    const videoUrl = status === "completed" && run.outputAvailable
+      ? await portableCreatorApi.outputDownload(run.projectId, run.id)
+      : null;
+    return {
+      id: run.id,
+      status,
+      provider: run.capability,
+      prompt: "",
+      video_url: videoUrl,
+      error: run.error?.message ?? run.error?.code ?? (run.status === "cancelled" ? "Generation was cancelled." : null),
+      processing_stage: run.processingStage,
+    };
+  }
   const { data, error } = await supabase.functions.invoke("generation-status", { body: { run_id: runId } });
   if (error) throw error;
   if (!data?.job) throw new Error("The render job is still being prepared.");
@@ -723,6 +769,9 @@ export async function pollCreatorGeneration(runId: string): Promise<VideoJob> {
 }
 
 export async function cancelCreatorGeneration(runId: string) {
+  if (isFeatureEnabled("portableAuth")) {
+    return portableCreatorApi.cancelRender(runId, `render-cancel:${runId}`);
+  }
   const { data, error } = await supabase.functions.invoke("cancel-generation", { body: { run_id: runId } });
   if (error) throw error;
   return data;

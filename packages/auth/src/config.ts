@@ -2,6 +2,7 @@ export interface AuthEnvironment {
   baseUrl: string;
   secret: string;
   trustedOrigins: string[];
+  requireEmailVerification: boolean;
   google?: {
     clientId: string;
     clientSecret: string;
@@ -11,6 +12,18 @@ export interface AuthEnvironment {
     clientSecret: string;
     appBundleIdentifier?: string;
   };
+}
+
+function booleanSetting(
+  env: NodeJS.ProcessEnv,
+  key: string,
+  fallback: boolean,
+): boolean {
+  const value = env[key]?.trim().toLowerCase();
+  if (!value) return fallback;
+  if (value === "true") return true;
+  if (value === "false") return false;
+  throw new Error(`${key} must be true or false`);
 }
 
 function optionalPair(
@@ -62,6 +75,11 @@ export function authEnvironmentFromEnv(env: NodeJS.ProcessEnv = process.env): Au
     baseUrl,
     secret,
     trustedOrigins: [...trustedOrigins],
+    requireEmailVerification: booleanSetting(
+      env,
+      "AUTH_REQUIRE_EMAIL_VERIFICATION",
+      env.APP_ENV?.trim().toLowerCase() !== "local",
+    ),
     google,
     apple: appleCredentials
       ? {

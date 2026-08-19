@@ -9,6 +9,8 @@ import type { AuthGateway } from "./auth-gateway.js";
 import { createApi } from "./app.js";
 import type { CreatorRepository } from "./creator-repository.js";
 import { loadApiConfig } from "./config.js";
+import { ApiHttpError } from "./errors.js";
+import type { SourceScanner } from "./source-scanner.js";
 
 const USER_ID = "11111111-1111-4111-8111-111111111111";
 const OTHER_ID = "22222222-2222-4222-8222-222222222222";
@@ -63,7 +65,11 @@ const project: CreatorProjectRecord = {
   title: "Northfield campaign",
   mode: "template",
   status: "ready",
-  currentAcceptedVersionId: VERSION_ID,
+  currentWorkingVersionId: VERSION_ID,
+  currentAcceptedVersionId: null,
+  latestRenderRunId: null,
+  latestRenderProjectVersionId: null,
+  latestRenderRunStatus: null,
   deletedAt: null,
   createdAt: "2026-08-12T08:00:00.000Z",
   updatedAt: "2026-08-12T08:00:00.000Z",
@@ -92,6 +98,21 @@ const template: PublicTemplate = {
   previewAvailable: false,
   posterAvailable: false,
   qualityStatus: "development",
+  dialectPolicy: {
+    arabicDialect: "kuwaiti",
+    locale: "ar-KW",
+    register: "conversational",
+    crossDialectFallback: false,
+  },
+  qualityPolicy: {
+    tier: "premium",
+    acceptanceScore: 85,
+    internalRetryLimit: 2,
+    hardGates: ["valid_media", "kuwaiti_dialect_when_arabic"],
+    scoredDimensions: ["technical", "product_identity", "dialect_fidelity"],
+  },
+  capabilityPolicy: ["video.product_fidelity", "video.cinematic"],
+  tags: ["premium", "product"],
   scenes: [],
 };
 
@@ -130,6 +151,80 @@ describe("portable creator API", () => {
       templates: [{ slug: "luxury-product-reveal", qualityStatus: "development" }],
       requestId: "request-template-list",
     });
+  });
+
+  it("retries one transient source-scan failure through the complete scanner boundary", async () => {
+    const scanner: SourceScanner = {
+      scan: vi
+        .fn()
+        .mockRejectedValueOnce(new ApiHttpError({
+          code: "source_scan_failed",
+          message: "Temporary upstream failure.",
+          status: 422,
+          retryable: true,
+        }))
+        .mockResolvedValueOnce({
+          kind: "product",
+          canonicalUrl: "https://www.apple.com/airpods-max/",
+          facts: [{ field: "name", value: "AirPods Max 2", provenance: "imported" }],
+          imageCandidates: ["https://www.apple.com/airpods-max.jpg"],
+          warnings: ["Review and confirm every imported fact before generation."],
+          scannedAt: "2026-08-14T19:00:00.000Z",
+          requestId: "request-source-retry",
+        }),
+    };
+    const app = createApi({
+      config,
+      creatorRepository: repository(),
+      authGateway: auth(null),
+      sourceScanner: scanner,
+    });
+    const response = await app.request("/api/v1/product-scans", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-request-id": "request-source-retry",
+      },
+      body: JSON.stringify({ url: "https://www.apple.com/airpods-max/" }),
+    });
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      facts: [{ field: "name", value: "AirPods Max 2" }],
+    });
+    expect(scanner.scan).toHaveBeenCalledTimes(2);
+    expect(scanner.scan).toHaveBeenNthCalledWith(2, {
+      url: "https://www.apple.com/airpods-max/",
+      kind: "product",
+      requestId: "request-source-retry",
+    });
+  });
+
+  it("never retries a non-retryable source security rejection", async () => {
+    const scanner: SourceScanner = {
+      scan: vi.fn(async () => {
+        throw new ApiHttpError({
+          code: "source_url_blocked",
+          message: "Private address blocked.",
+          status: 400,
+          retryable: false,
+        });
+      }),
+    };
+    const app = createApi({
+      config,
+      creatorRepository: repository(),
+      authGateway: auth(null),
+      sourceScanner: scanner,
+    });
+    const response = await app.request("/api/v1/product-scans", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ url: "http://127.0.0.1/private" }),
+    });
+
+    expect(response.status).toBe(400);
+    expect(scanner.scan).toHaveBeenCalledTimes(1);
   });
 
   it("claims a draft only when its stable idempotency key matches", async () => {

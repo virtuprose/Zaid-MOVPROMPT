@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { IdempotencyKeySchema, RequestIdSchema } from "./api.js";
-import { JsonValueSchema } from "./generation.js";
+import { JsonValueSchema, RenderRunStatusSchema } from "./generation.js";
 
 export const CreationModeSchema = z.enum(["template", "advanced"]);
 export type CreationMode = z.infer<typeof CreationModeSchema>;
@@ -80,6 +80,25 @@ export const PublicTemplateSchema = z
     previewAvailable: z.boolean(),
     posterAvailable: z.boolean(),
     qualityStatus: z.enum(["development", "review", "approved"]),
+    dialectPolicy: z
+      .object({
+        arabicDialect: z.literal("kuwaiti"),
+        locale: z.literal("ar-KW"),
+        register: z.enum(["polished", "conversational"]),
+        crossDialectFallback: z.literal(false),
+      })
+      .strict(),
+    qualityPolicy: z
+      .object({
+        tier: z.literal("premium"),
+        acceptanceScore: z.number().int().min(1).max(100),
+        internalRetryLimit: z.number().int().min(0).max(3),
+        hardGates: z.array(z.string().trim().min(1)),
+        scoredDimensions: z.array(z.string().trim().min(1)),
+      })
+      .strict(),
+    capabilityPolicy: z.array(z.string().trim().min(1)),
+    tags: z.array(z.string().trim().min(1)),
     scenes: z.array(
       z.object({
         id: z.string().trim().min(1).max(120),
@@ -135,7 +154,11 @@ export const CreatorProjectSchema = z
     title: z.string().trim().min(1).max(160),
     mode: CreationModeSchema,
     status: ProjectStatusSchema,
+    currentWorkingVersionId: z.uuid().nullable(),
     currentAcceptedVersionId: z.uuid().nullable(),
+    latestRenderRunId: z.uuid().nullable(),
+    latestRenderProjectVersionId: z.uuid().nullable(),
+    latestRenderRunStatus: RenderRunStatusSchema.nullable(),
     deletedAt: z.iso.datetime().nullable(),
     createdAt: z.iso.datetime(),
     updatedAt: z.iso.datetime(),

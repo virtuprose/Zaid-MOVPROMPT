@@ -128,6 +128,46 @@ function localized(value: Record<string, string>, fallback: string): { en: strin
   return { en, ar };
 }
 
+function dialectPolicy(value: unknown): PublicTemplate["dialectPolicy"] {
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    const policy = value as Record<string, unknown>;
+    return {
+      arabicDialect: "kuwaiti",
+      locale: "ar-KW",
+      register: policy.register === "polished" ? "polished" : "conversational",
+      crossDialectFallback: false,
+    };
+  }
+  return {
+    arabicDialect: "kuwaiti",
+    locale: "ar-KW",
+    register: "conversational",
+    crossDialectFallback: false,
+  };
+}
+
+function qualityPolicy(value: unknown): PublicTemplate["qualityPolicy"] {
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    const policy = value as Record<string, unknown>;
+    return {
+      tier: "premium",
+      acceptanceScore:
+        typeof policy.acceptanceScore === "number" ? policy.acceptanceScore : 85,
+      internalRetryLimit:
+        typeof policy.internalRetryLimit === "number" ? policy.internalRetryLimit : 2,
+      hardGates: strings(policy.hardGates),
+      scoredDimensions: strings(policy.scoredDimensions),
+    };
+  }
+  return {
+    tier: "premium",
+    acceptanceScore: 85,
+    internalRetryLimit: 2,
+    hardGates: [],
+    scoredDimensions: [],
+  };
+}
+
 function templatePublic(row: {
   id: string;
   slug: string;
@@ -180,6 +220,10 @@ function templatePublic(row: {
       quality === "approved" || quality === "review" || quality === "development"
         ? quality
         : "development",
+    dialectPolicy: dialectPolicy(row.recipe.dialectPolicy),
+    qualityPolicy: qualityPolicy(row.recipe.qualityPolicy),
+    capabilityPolicy: strings(row.recipe.capabilityPolicy),
+    tags: strings(row.recipe.tags),
     scenes: templateScenes(row.recipe.scenes),
   };
 }
@@ -212,17 +256,36 @@ async function loadProject(
     .limit(1);
   if (!project) return null;
 
-  const [currentVersion] = project.currentAcceptedVersionId
+  const workingVersionId = project.currentWorkingVersionId ?? project.currentAcceptedVersionId;
+  const [currentVersion] = workingVersionId
     ? await db
         .select()
         .from(schema.creatorProjectVersions)
         .where(
           and(
-            eq(schema.creatorProjectVersions.id, project.currentAcceptedVersionId),
+            eq(schema.creatorProjectVersions.id, workingVersionId),
             eq(schema.creatorProjectVersions.projectId, project.id),
             eq(schema.creatorProjectVersions.userId, userId),
           ),
         )
+        .limit(1)
+    : [undefined];
+  const [latestRenderRun] = workingVersionId
+    ? await db
+        .select({
+          id: schema.renderRuns.id,
+          projectVersionId: schema.renderRuns.projectVersionId,
+          status: schema.renderRuns.status,
+        })
+        .from(schema.renderRuns)
+        .where(
+          and(
+            eq(schema.renderRuns.projectId, project.id),
+            eq(schema.renderRuns.projectVersionId, workingVersionId),
+            eq(schema.renderRuns.userId, userId),
+          ),
+        )
+        .orderBy(desc(schema.renderRuns.createdAt), desc(schema.renderRuns.id))
         .limit(1)
     : [undefined];
   const [counts] = await db
@@ -252,7 +315,11 @@ async function loadProject(
     title: project.title,
     mode: project.mode,
     status: project.status,
+    currentWorkingVersionId: workingVersionId ?? null,
     currentAcceptedVersionId: project.currentAcceptedVersionId,
+    latestRenderRunId: latestRenderRun?.id ?? null,
+    latestRenderProjectVersionId: latestRenderRun?.projectVersionId ?? null,
+    latestRenderRunStatus: latestRenderRun?.status ?? null,
     deletedAt: project.deletedAt?.toISOString() ?? null,
     createdAt: project.createdAt.toISOString(),
     updatedAt: project.updatedAt.toISOString(),
@@ -313,7 +380,6 @@ export function createDrizzleCreatorRepository(db: Database): CreatorRepository 
         schema.videoTemplates,
         and(
           eq(schema.videoTemplates.id, schema.videoTemplateVersions.templateId),
-          eq(schema.videoTemplates.currentPublishedVersionId, schema.videoTemplateVersions.id),
           eq(schema.videoTemplates.publishingState, "published"),
         ),
       )
@@ -390,13 +456,14 @@ export function createDrizzleCreatorRepository(db: Database): CreatorRepository 
             )
             .limit(1);
           if (existing) {
-            const [version] = existing.currentAcceptedVersionId
+            const existingVersionId = existing.currentWorkingVersionId ?? existing.currentAcceptedVersionId;
+            const [version] = existingVersionId
               ? await tx
                   .select()
                   .from(schema.creatorProjectVersions)
                   .where(
                     and(
-                      eq(schema.creatorProjectVersions.id, existing.currentAcceptedVersionId),
+                      eq(schema.creatorProjectVersions.id, existingVersionId),
                       eq(schema.creatorProjectVersions.projectId, existing.id),
                       eq(schema.creatorProjectVersions.userId, userId),
                     ),
@@ -416,11 +483,16 @@ export function createDrizzleCreatorRepository(db: Database): CreatorRepository 
               .innerJoin(
                 schema.videoTemplates,
                 and(
-                  eq(schema.videoTemplates.currentPublishedVersionId, schema.videoTemplateVersions.id),
+                  eq(schema.videoTemplates.id, schema.videoTemplateVersions.templateId),
                   eq(schema.videoTemplates.publishingState, "published"),
                 ),
               )
-              .where(eq(schema.videoTemplateVersions.id, input.templateVersionId))
+              .where(
+                and(
+                  eq(schema.videoTemplateVersions.id, input.templateVersionId),
+                  isNotNull(schema.videoTemplateVersions.publishedAt),
+                ),
+              )
               .limit(1);
             if (!template) throw new CreatorRepositoryError("template_not_found");
           }
@@ -455,7 +527,7 @@ export function createDrizzleCreatorRepository(db: Database): CreatorRepository 
 
           await tx
             .update(schema.creatorProjects)
-            .set({ currentAcceptedVersionId: version.id, updatedAt: new Date() })
+            .set({ currentWorkingVersionId: version.id, updatedAt: new Date() })
             .where(and(eq(schema.creatorProjects.id, project.id), eq(schema.creatorProjects.userId, userId)));
 
           return project.id;
@@ -641,7 +713,12 @@ export function createDrizzleCreatorRepository(db: Database): CreatorRepository 
         if (!version) throw new Error("project_version_insert_failed");
         await tx
           .update(schema.creatorProjects)
-          .set({ mode: input.mode, status: "ready", updatedAt: new Date() })
+          .set({
+            mode: input.mode,
+            status: "ready",
+            currentWorkingVersionId: version.id,
+            updatedAt: new Date(),
+          })
           .where(and(eq(schema.creatorProjects.id, projectId), eq(schema.creatorProjects.userId, userId)));
         return versionPublic(version);
       });
@@ -668,20 +745,27 @@ export function createDrizzleCreatorRepository(db: Database): CreatorRepository 
     async acceptVersion(userId, projectId, versionId) {
       return withUserTransaction(db, userId, async (tx) => {
         const [version] = await tx
-          .select({ id: schema.creatorProjectVersions.id })
-          .from(schema.creatorProjectVersions)
+          .select({ id: schema.renderRuns.projectVersionId })
+          .from(schema.renderRuns)
           .where(
             and(
-              eq(schema.creatorProjectVersions.id, versionId),
-              eq(schema.creatorProjectVersions.projectId, projectId),
-              eq(schema.creatorProjectVersions.userId, userId),
+              eq(schema.renderRuns.projectVersionId, versionId),
+              eq(schema.renderRuns.projectId, projectId),
+              eq(schema.renderRuns.userId, userId),
+              eq(schema.renderRuns.status, "completed"),
             ),
           )
+          .orderBy(desc(schema.renderRuns.completedAt), desc(schema.renderRuns.createdAt))
           .limit(1);
         if (!version) throw new CreatorRepositoryError("project_not_found");
         const [updated] = await tx
           .update(schema.creatorProjects)
-          .set({ currentAcceptedVersionId: versionId, updatedAt: new Date() })
+          .set({
+            currentWorkingVersionId: versionId,
+            currentAcceptedVersionId: versionId,
+            status: "completed",
+            updatedAt: new Date(),
+          })
           .where(
             and(
               eq(schema.creatorProjects.id, projectId),

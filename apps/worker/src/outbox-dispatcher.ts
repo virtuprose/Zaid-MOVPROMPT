@@ -13,6 +13,7 @@ const RenderStartOutboxPayloadSchema = z
     quoteId: z.uuid(),
     capabilityAlias: CapabilityAliasSchema,
     configurationHash: z.string().regex(/^[a-f0-9]{64}$/),
+    qualityAttempt: z.number().int().min(0).max(3).optional(),
   })
   .strict();
 
@@ -275,7 +276,9 @@ export class OutboxDispatcher {
     try {
       // A null result means pg-boss already has this singleton. Delivery is
       // therefore satisfied; the render handler is idempotent as a second floor.
-      await this.#queue.enqueueGeneration(payload, { singletonKey: `submit:${parsed.data.runId}` });
+      await this.#queue.enqueueGeneration(payload, {
+        singletonKey: `submit:${parsed.data.runId}:${parsed.data.qualityAttempt ?? 0}`,
+      });
       const completed = await this.#repository.complete(job.id, this.#workerId, this.#now());
       if (!completed) {
         this.#logger.warn("render_outbox_lease_lost_after_enqueue", { outboxJobId: job.id });

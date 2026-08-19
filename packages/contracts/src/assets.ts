@@ -28,6 +28,16 @@ export const CreateAssetUploadRequestSchema = z
 
 export type CreateAssetUploadRequest = z.infer<typeof CreateAssetUploadRequestSchema>;
 
+export const MirrorRemoteImageRequestSchema = z
+  .object({
+    kind: z.enum(["product", "reference"]),
+    url: z.url().max(2_048),
+    originalFilename: z.string().trim().min(1).max(255).optional(),
+  })
+  .strict();
+
+export type MirrorRemoteImageRequest = z.infer<typeof MirrorRemoteImageRequestSchema>;
+
 export const AssetRouteParametersSchema = z
   .object({
     projectId: z.uuid(),
@@ -87,6 +97,14 @@ export const SignedAssetDownloadResponseSchema = z
   .strict();
 
 export type SignedAssetDownloadResponse = z.infer<typeof SignedAssetDownloadResponseSchema>;
+
+/**
+ * A remotely sourced image is usable only after the API has fetched, verified,
+ * and copied it into MovPrompt-owned private storage.
+ */
+export const MirroredAssetResponseSchema = SignedAssetDownloadResponseSchema;
+
+export type MirroredAssetResponse = z.infer<typeof MirroredAssetResponseSchema>;
 
 export const AssetReadyResponseSchema = z
   .object({

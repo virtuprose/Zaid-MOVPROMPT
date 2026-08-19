@@ -61,7 +61,7 @@ describe("render outbox dispatcher", () => {
         idempotencyKey: `render.start:${(job.payload as ReturnType<typeof validPayload>).runId}`,
         requestId: job.id,
       }),
-      { singletonKey: `submit:${(job.payload as ReturnType<typeof validPayload>).runId}` },
+      { singletonKey: `submit:${(job.payload as ReturnType<typeof validPayload>).runId}:0` },
     );
     expect(repository.complete).toHaveBeenCalledWith(
       job.id,

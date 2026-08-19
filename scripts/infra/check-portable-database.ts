@@ -41,6 +41,7 @@ const requiredTables = [
   "notifications",
   "audit_logs",
   "outbox_jobs",
+  "render_attempts",
 ] as const;
 
 try {

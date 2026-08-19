@@ -28,6 +28,8 @@ export type RightsAttestation = {
 export type CampaignSettings = {
   market: CreatorMarket;
   language: CreatorLanguage;
+  arabicDialect: "kuwaiti";
+  dialectRegister: "polished" | "conversational";
   vertical: BusinessVertical;
   goal: CampaignGoal;
   presenterMode: PresenterMode;
@@ -83,12 +85,13 @@ export type ApprovedCapability =
   | "media.moderate";
 
 export interface GenerationQuote {
-  quoteId: string;
+  quoteId: string | null;
   capability: ApprovedCapability;
   credits: number;
   entitlementEligible: boolean;
   expiresAt: string;
   breakdown: Array<{ label: string; credits: number }>;
+  estimateOnly?: boolean;
 }
 
 export const GUEST_DRAFT_TTL_MS = 7 * 24 * 60 * 60 * 1000;
@@ -109,6 +112,8 @@ export function projectToCreationDraft(
     campaign: {
       market: project.market,
       language: project.language,
+      arabicDialect: project.arabicDialect,
+      dialectRegister: project.dialectRegister,
       vertical: project.vertical,
       goal: project.goal,
       presenterMode: project.presenterMode,

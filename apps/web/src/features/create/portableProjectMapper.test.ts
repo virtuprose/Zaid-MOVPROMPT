@@ -19,7 +19,7 @@ const project: CreatorProject = {
   whatsapp: "",
   product: {
     sourceType: "upload",
-    sourceUrl: "",
+    sourceUrl: "https://shop.example.test/product?token=private",
     name: "Northfield No. 07",
     description: "Premium fragrance",
     price: "12.500",
@@ -30,18 +30,27 @@ const project: CreatorProject = {
         name: "bottle.jpg",
         url: "https://signed.example.test/private?expires=soon",
         storagePath: "users/owner/projects/project/assets/product/image/hash",
+        mimeType: "image/jpeg",
         source: "upload",
+      },
+      {
+        id: "77777777-7777-4777-8777-777777777777",
+        name: "remote.png",
+        url: "https://cdn.example.test/product.png?signature=short-lived",
+        source: "url",
       },
     ],
   },
   language: "en",
+  arabicDialect: "kuwaiti",
+  dialectRegister: "conversational",
   market: "KW",
   offer: "",
   cta: "Order on WhatsApp",
   brandColor: "#d49737",
   logoUrl: "",
   aspectRatio: "9:16",
-  resolution: "1080p",
+  resolution: "720p",
   subtitles: true,
   audio: true,
   scenes: [{ id: "scene-1", title: "Reveal", purpose: "Hook", duration: 3, headline: "New", direction: "Reveal the product." }],
@@ -58,6 +67,10 @@ describe("portable project mapping", () => {
     const stable = stableProjectConfiguration(project);
     expect(stable.product.images[0].storagePath).toBe(project.product.images[0].storagePath);
     expect(stable.product.images[0].url).toBe("");
+    expect(stable.product.images[1].url).toBe("");
+    expect(stable.product.sourceUrl).toBe("");
+    expect(stable.jobId).toBeNull();
+    expect(stable.renderRunId).toBeNull();
     expect(stable.videoUrl).toBeNull();
   });
 
@@ -66,8 +79,12 @@ describe("portable project mapping", () => {
       id: "44444444-4444-4444-8444-444444444444",
       title: "Cloud title",
       mode: "template",
-      status: "review",
-      currentAcceptedVersionId: "55555555-5555-4555-8555-555555555555",
+      status: "ready",
+      currentWorkingVersionId: "55555555-5555-4555-8555-555555555555",
+      currentAcceptedVersionId: "77777777-7777-4777-8777-777777777777",
+      latestRenderRunId: "66666666-6666-4666-8666-666666666666",
+      latestRenderProjectVersionId: "55555555-5555-4555-8555-555555555555",
+      latestRenderRunStatus: "processing",
       deletedAt: null,
       createdAt: "2026-08-12T09:00:00.000Z",
       updatedAt: "2026-08-12T09:10:00.000Z",
@@ -92,7 +109,9 @@ describe("portable project mapping", () => {
       versionId: "55555555-5555-4555-8555-555555555555",
       versionNumber: 3,
       title: "Cloud title",
-      status: "review",
+      status: "generating",
+      renderRunId: "66666666-6666-4666-8666-666666666666",
+      jobId: "66666666-6666-4666-8666-666666666666",
     });
   });
 });

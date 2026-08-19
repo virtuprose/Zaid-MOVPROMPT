@@ -1,5 +1,6 @@
 import {
   PrivateObjectStorage,
+  type PutPrivateObjectRequest,
   type SignUploadRequest,
   type SignedDownload,
   type SignedUpload,
@@ -20,7 +21,9 @@ export interface AssetStorageGateway {
     key: string;
     downloadFilename?: string;
   }): Promise<SignedDownload>;
+  put(input: PutPrivateObjectRequest): Promise<{ bucket: string; key: string }>;
   head(bucket: string, key: string): Promise<AssetObjectHead>;
+  checkBuckets(): Promise<void>;
 }
 
 export function createAssetStorageGateway(storage: PrivateObjectStorage): AssetStorageGateway {
@@ -29,6 +32,13 @@ export function createAssetStorageGateway(storage: PrivateObjectStorage): AssetS
     outputsBucket: storage.outputsBucket,
     signUpload: (input) => storage.signUpload(input),
     signDownload: (input) => storage.signDownload(input),
+    put: (input) => storage.put(input),
+    async checkBuckets() {
+      await Promise.all([
+        storage.checkBucket(storage.assetsBucket),
+        storage.checkBucket(storage.outputsBucket),
+      ]);
+    },
     async head(bucket, key) {
       const result = await storage.head(bucket, key);
       return {

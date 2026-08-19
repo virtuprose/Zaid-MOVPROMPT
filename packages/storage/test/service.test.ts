@@ -1,7 +1,23 @@
-import { describe, expect, it } from "vitest";
+import { HeadBucketCommand, type S3Client } from "@aws-sdk/client-s3";
+import { describe, expect, it, vi } from "vitest";
 import { PrivateObjectStorage } from "../src/service.js";
 
 describe("PrivateObjectStorage signed uploads", () => {
+  it("probes only configured private buckets", async () => {
+    const send = vi.fn(async () => ({}));
+    const storage = new PrivateObjectStorage({
+      region: "us-east-1",
+      accessKeyId: "test-access-key",
+      secretAccessKey: "test-secret-key",
+      assetsBucket: "creator-assets",
+      outputsBucket: "creator-outputs",
+    }, { send } as unknown as S3Client);
+
+    await storage.checkBucket("creator-assets");
+    expect(send).toHaveBeenCalledWith(expect.any(HeadBucketCommand));
+    await expect(storage.checkBucket("attacker-bucket")).rejects.toThrow("not allowed");
+  });
+
   it("returns the declared content type as a required browser upload header", async () => {
     const storage = new PrivateObjectStorage({
       endpoint: "http://127.0.0.1:9000",

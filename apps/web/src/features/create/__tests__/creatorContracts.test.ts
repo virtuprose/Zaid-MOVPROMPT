@@ -3,9 +3,9 @@ import { projectToCreationDraft } from "../contracts";
 import { createDraftProject, CREATOR_TEMPLATES } from "../templates";
 
 describe("creator contracts", () => {
-  it("keeps the twelve commerce concepts and the first service recipe available during development", () => {
-    expect(CREATOR_TEMPLATES).toHaveLength(13);
-    expect(new Set(CREATOR_TEMPLATES.map((template) => template.id)).size).toBe(13);
+  it("keeps all fifty Kuwait category recipes available during development", () => {
+    expect(CREATOR_TEMPLATES).toHaveLength(50);
+    expect(new Set(CREATOR_TEMPLATES.map((template) => template.id)).size).toBe(50);
     expect(CREATOR_TEMPLATES.some((template) => template.id === "salon-booking-offer")).toBe(true);
     for (const template of CREATOR_TEMPLATES) {
       expect(template.languages).toEqual(expect.arrayContaining(["en", "ar", "bilingual"]));
@@ -20,7 +20,8 @@ describe("creator contracts", () => {
     const draft = projectToCreationDraft(project, true, "auth_required");
     expect(draft.pendingGenerationId).toBe("stable-generation-intent");
     expect(draft.acceptedQuote).toBeUndefined();
-    expect(draft.campaign).toMatchObject({ vertical: "ecommerce", goal: "launch", presenterMode: "none" });
+    expect(draft.campaign).toMatchObject({ vertical: "retail", goal: "offer", presenterMode: "none" });
+    expect(draft.campaign).toMatchObject({ arabicDialect: "kuwaiti", dialectRegister: "conversational" });
     expect(new Date(draft.expiresAt).getTime() - new Date(draft.updatedAt).getTime()).toBe(7 * 24 * 60 * 60 * 1000);
   });
 
@@ -38,6 +39,43 @@ describe("creator contracts", () => {
       location: "Salmiya",
       bookingUrl: "https://example.test/book",
       whatsapp: "+96550000000",
+    });
+  });
+
+  it("keeps imported product settings in IndexedDB without persisting any preview video", () => {
+    const project = createDraftProject("luxury-product-reveal");
+    project.product = {
+      sourceType: "product_link",
+      sourceUrl: "https://www.apple.com/airpods-max/",
+      name: "AirPods Max",
+      description: "Over-ear headphones",
+      price: "199.900",
+      brand: "Apple",
+      images: [{ id: "airpods", name: "AirPods Max", url: "https://images.example.test/airpods-max.png", source: "url" }],
+    };
+    project.language = "bilingual";
+    project.goal = "whatsapp_orders";
+    project.cta = "Order on WhatsApp";
+    project.offer = "Free delivery";
+    project.aspectRatio = "4:5";
+    project.resolution = "480p";
+    project.audio = false;
+    project.subtitles = true;
+    project.videoUrl = "/presets/hero-shot.mp4";
+
+    const draft = projectToCreationDraft(project, true);
+
+    expect("videoUrl" in draft).toBe(false);
+    expect(draft.product.images.map((image) => image.url)).toEqual(["https://images.example.test/airpods-max.png"]);
+    expect(draft.campaign).toMatchObject({
+      language: "bilingual",
+      goal: "whatsapp_orders",
+      cta: "Order on WhatsApp",
+      offer: "Free delivery",
+      aspectRatio: "4:5",
+      resolution: "480p",
+      audio: false,
+      subtitles: true,
     });
   });
 });

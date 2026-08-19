@@ -14,10 +14,15 @@ export type ProviderReference = {
 
 export type ProviderGenerationRequest = {
   operationId: string;
+  /** Trusted immutable run ownership; never populated from client JSON. */
+  userId: string;
+  projectId: string;
   capability: CapabilityAlias;
   prompt: string;
   durationSeconds?: number;
   aspectRatio?: "9:16" | "1:1" | "4:5" | "16:9";
+  resolution?: "480p" | "720p";
+  generateAudio?: boolean;
   references: ProviderReference[];
   idempotencyKey: string;
 };
@@ -34,6 +39,12 @@ export type ProviderOperation = {
   outputUrl?: string;
   errorCode?: string;
   errorMessage?: string;
+  telemetry?: {
+    providerCostMicrousd?: number;
+    providerLatencyMs?: number;
+    /** Flat, explicitly whitelisted counters/routing facts only. */
+    usage?: Record<string, string | number | boolean | null>;
+  };
 };
 
 export interface ProviderAdapter {

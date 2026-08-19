@@ -1,9 +1,11 @@
+import { createHash } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
 import type { AuthGateway } from "./auth-gateway.js";
 import { createApi } from "./app.js";
 import type { AssetRepository, OwnedAssetRecord } from "./asset-repository.js";
 import type { AssetStorageGateway } from "./asset-storage.js";
 import { loadApiConfig } from "./config.js";
+import type { RemoteImageFetcher } from "./remote-image-fetcher.js";
 
 const USER_ID = "11111111-1111-4111-8111-111111111111";
 const OTHER_USER_ID = "22222222-2222-4222-8222-222222222222";
@@ -67,6 +69,7 @@ function repository(options: {
 function storage(): AssetStorageGateway {
   return {
     assetsBucket: "creator-assets",
+    outputsBucket: "creator-outputs",
     signUpload: vi.fn(async (input) => ({
       method: "PUT" as const,
       url: "https://storage.example.test/upload?signature=private",
@@ -87,6 +90,7 @@ function storage(): AssetStorageGateway {
       key: input.key,
       expiresInSeconds: 900,
     })),
+    put: vi.fn(async (input) => ({ bucket: input.bucket, key: input.key })),
     head: vi.fn(async () => ({
       contentLength: 1_024,
       contentType: "image/jpeg",
@@ -188,6 +192,76 @@ describe("private asset API", () => {
     expect(secondBody.asset).toEqual(firstBody.asset);
   });
 
+  it("accepts an authenticated image body only after size, type and checksum verification", async () => {
+    const bytes = new Uint8Array(1_024);
+    bytes.set([0xff, 0xd8, 0xff, 0xe0]);
+    const checksumSha256 = createHash("sha256").update(bytes).digest("hex");
+    const asset = {
+      ...ownedAsset(),
+      checksumSha256,
+      objectKey: `users/${USER_ID}/projects/${PROJECT_ID}/assets/product/${ASSET_ID}/${checksumSha256}`,
+    };
+    const objectStorage = storage();
+    objectStorage.head = vi.fn(async () => ({
+      contentLength: bytes.byteLength,
+      contentType: "image/jpeg",
+      checksumSha256,
+    }));
+    const app = createApi({
+      config,
+      authGateway: authGateway(),
+      assetRepository: repository({ asset }),
+      assetStorage: objectStorage,
+    });
+
+    const response = await app.request(
+      `/api/v1/projects/${PROJECT_ID}/assets/${ASSET_ID}/content`,
+      {
+        method: "PUT",
+        headers: { "content-type": "image/jpeg" },
+        body: bytes,
+      },
+    );
+
+    expect(response.status).toBe(201);
+    await expect(response.json()).resolves.toMatchObject({
+      asset: { id: ASSET_ID, checksumSha256 },
+      download: { method: "GET" },
+    });
+    expect(objectStorage.put).toHaveBeenCalledWith(expect.objectContaining({
+      body: bytes,
+      contentType: "image/jpeg",
+      metadata: { "sha256-hex": checksumSha256 },
+    }));
+  });
+
+  it("rejects image bytes that do not match the declared checksum", async () => {
+    const bytes = new Uint8Array(1_024);
+    bytes.set([0xff, 0xd8, 0xff, 0xe0]);
+    const objectStorage = storage();
+    const app = createApi({
+      config,
+      authGateway: authGateway(),
+      assetRepository: repository(),
+      assetStorage: objectStorage,
+    });
+
+    const response = await app.request(
+      `/api/v1/projects/${PROJECT_ID}/assets/${ASSET_ID}/content`,
+      {
+        method: "PUT",
+        headers: { "content-type": "image/jpeg" },
+        body: bytes,
+      },
+    );
+
+    expect(response.status).toBe(409);
+    await expect(response.json()).resolves.toMatchObject({
+      error: { code: "asset_integrity_mismatch", retryable: false },
+    });
+    expect(objectStorage.put).not.toHaveBeenCalled();
+  });
+
   it("does not reveal a project owned by another account", async () => {
     const objectStorage = storage();
     const app = createApi({
@@ -217,6 +291,170 @@ describe("private asset API", () => {
       error: { code: "project_not_found", retryable: false },
     });
     expect(objectStorage.signUpload).not.toHaveBeenCalled();
+  });
+
+  it("mirrors a verified remote image into owner-scoped private storage", async () => {
+    const bytes = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0x01]);
+    const checksumSha256 = createHash("sha256").update(bytes).digest("hex");
+    const remoteImageFetcher: RemoteImageFetcher = {
+      fetch: vi.fn(async () => ({
+        canonicalUrl: "https://cdn.example.test/products/perfume.jpg",
+        bytes,
+        mimeType: "image/jpeg" as const,
+        checksumSha256,
+        originalFilename: "perfume.jpg",
+      })),
+    };
+    const objectStorage = storage();
+    objectStorage.head = vi.fn(async () => ({
+      contentLength: bytes.byteLength,
+      contentType: "image/jpeg",
+      checksumSha256,
+    }));
+    const repo = repository();
+    const app = createApi({
+      config,
+      authGateway: authGateway(),
+      assetRepository: repo,
+      assetStorage: objectStorage,
+      remoteImageFetcher,
+    });
+
+    const response = await app.request(`/api/v1/projects/${PROJECT_ID}/assets/mirror`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "idempotency-key": "asset-mirror-perfume-1",
+        "x-request-id": "request-assets-mirror-1",
+      },
+      body: JSON.stringify({
+        kind: "product",
+        url: "https://cdn.example.test/products/perfume.jpg#preview",
+        originalFilename: "perfume.jpg",
+      }),
+    });
+
+    expect(response.status).toBe(201);
+    const responseText = await response.text();
+    expect(responseText).not.toContain("cdn.example.test");
+    expect(JSON.parse(responseText)).toMatchObject({
+      asset: {
+        projectId: PROJECT_ID,
+        kind: "product",
+        mimeType: "image/jpeg",
+        sizeBytes: bytes.byteLength,
+        checksumSha256,
+      },
+      download: { method: "GET", expiresInSeconds: 900 },
+      requestId: "request-assets-mirror-1",
+    });
+    expect(remoteImageFetcher.fetch).toHaveBeenCalledWith(
+      "https://cdn.example.test/products/perfume.jpg",
+    );
+    expect(repo.createOrFind).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: USER_ID,
+        projectId: PROJECT_ID,
+        sourceUrlHash: createHash("sha256")
+          .update("https://cdn.example.test/products/perfume.jpg")
+          .digest("hex"),
+      }),
+    );
+    expect(objectStorage.put).toHaveBeenCalledWith(
+      expect.objectContaining({
+        bucket: "creator-assets",
+        body: bytes,
+        contentType: "image/jpeg",
+        metadata: { "sha256-hex": checksumSha256 },
+      }),
+    );
+  });
+
+  it("does not fetch or store a remote image for a project owned by another account", async () => {
+    const remoteImageFetcher: RemoteImageFetcher = {
+      fetch: vi.fn(),
+    };
+    const objectStorage = storage();
+    const app = createApi({
+      config,
+      authGateway: authGateway(OTHER_USER_ID),
+      assetRepository: repository({ projectOwned: false }),
+      assetStorage: objectStorage,
+      remoteImageFetcher,
+    });
+    const response = await app.request(`/api/v1/projects/${PROJECT_ID}/assets/mirror`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "idempotency-key": "asset-mirror-cross-owner",
+      },
+      body: JSON.stringify({
+        kind: "product",
+        url: "https://cdn.example.test/products/private.jpg",
+      }),
+    });
+
+    expect(response.status).toBe(404);
+    await expect(response.json()).resolves.toMatchObject({
+      error: { code: "project_not_found", retryable: false },
+    });
+    expect(remoteImageFetcher.fetch).not.toHaveBeenCalled();
+    expect(objectStorage.put).not.toHaveBeenCalled();
+  });
+
+  it("rejects reuse of a mirror idempotency key for a different remote URL", async () => {
+    const bytes = new Uint8Array([0xff, 0xd8, 0xff, 0xe0]);
+    const checksumSha256 = createHash("sha256").update(bytes).digest("hex");
+    let persisted: OwnedAssetRecord | undefined;
+    const repo: AssetRepository = {
+      isProjectOwned: vi.fn(async () => true),
+      createOrFind: vi.fn(async (record) => {
+        persisted ??= record;
+        return persisted;
+      }),
+      findOwned: vi.fn(async () => persisted ?? null),
+    };
+    const remoteImageFetcher: RemoteImageFetcher = {
+      fetch: vi.fn(async (url) => ({
+        canonicalUrl: url,
+        bytes,
+        mimeType: "image/jpeg" as const,
+        checksumSha256,
+        originalFilename: "product.jpg",
+      })),
+    };
+    const objectStorage = storage();
+    objectStorage.head = vi.fn(async () => ({
+      contentLength: bytes.byteLength,
+      contentType: "image/jpeg",
+      checksumSha256,
+    }));
+    const app = createApi({
+      config,
+      authGateway: authGateway(),
+      assetRepository: repo,
+      assetStorage: objectStorage,
+      remoteImageFetcher,
+    });
+    const request = (url: string) => app.request(
+      `/api/v1/projects/${PROJECT_ID}/assets/mirror`,
+      {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "idempotency-key": "asset-mirror-immutable-source",
+        },
+        body: JSON.stringify({ kind: "product", url }),
+      },
+    );
+
+    expect((await request("https://cdn.example.test/product-a.jpg")).status).toBe(201);
+    const conflict = await request("https://cdn.example.test/product-b.jpg");
+    expect(conflict.status).toBe(409);
+    await expect(conflict.json()).resolves.toMatchObject({
+      error: { code: "idempotency_conflict", retryable: false },
+    });
+    expect(objectStorage.put).toHaveBeenCalledTimes(1);
   });
 
   it("requires an authenticated Better Auth session", async () => {

@@ -1,19 +1,29 @@
 import {
   CreditSummaryResponseSchema,
+  FeatureFlagsResponseSchema,
+  GenerationQuoteResponseSchema,
+  OutputDownloadResponseSchema,
   ProjectListResponseSchema,
   ProjectResponseSchema,
   ProjectVersionResponseSchema,
+  RenderRunListResponseSchema,
+  RenderRunResponseSchema,
   SourceScanResponseSchema,
   SignedAssetDownloadResponseSchema,
   TemplateListResponseSchema,
   TemplateResponseSchema,
   type ClaimDraftRequest,
+  type CreateGenerationQuoteRequest,
   type CreateProjectVersionRequest,
   type CreatorProjectRecord,
   type CreditSummaryResponse,
+  type GenerationQuoteResponse,
+  type FeatureFlagsResponse,
   type ProjectVersion,
+  type PublicRenderRun,
   type PublicTemplate,
   type SourceScanResponse,
+  type StartRenderRunRequest,
 } from "@movprompt/contracts";
 import { z } from "zod";
 
@@ -79,6 +89,10 @@ async function request<T>(path: string, schema: z.ZodType<T>, options: RequestOp
 }
 
 export const portableCreatorApi = {
+  async featureFlags(): Promise<FeatureFlagsResponse> {
+    return request("/api/v1/feature-flags", FeatureFlagsResponseSchema);
+  },
+
   async listTemplates(filters: { vertical?: string; goal?: string; language?: string } = {}): Promise<PublicTemplate[]> {
     const query = new URLSearchParams();
     if (filters.vertical) query.set("vertical", filters.vertical);
@@ -151,6 +165,65 @@ export const portableCreatorApi = {
       idempotencyKey,
     });
     return result.version;
+  },
+
+  async generationQuote(input: CreateGenerationQuoteRequest): Promise<GenerationQuoteResponse["quote"]> {
+    const result = await request("/api/v1/generation-quotes", GenerationQuoteResponseSchema, {
+      method: "POST",
+      body: input,
+    });
+    return result.quote;
+  },
+
+  async startRender(input: StartRenderRunRequest, idempotencyKey: string): Promise<PublicRenderRun> {
+    const result = await request("/api/v1/render-runs", RenderRunResponseSchema, {
+      method: "POST",
+      body: input,
+      idempotencyKey,
+    });
+    return result.run;
+  },
+
+  async renderStatus(runId: string): Promise<PublicRenderRun> {
+    const result = await request(`/api/v1/render-runs/${encodeURIComponent(runId)}`, RenderRunResponseSchema);
+    return result.run;
+  },
+
+  async listRenders(filters: { projectId?: string; limit?: number } = {}): Promise<PublicRenderRun[]> {
+    const query = new URLSearchParams();
+    if (filters.projectId) query.set("projectId", filters.projectId);
+    if (filters.limit) query.set("limit", String(filters.limit));
+    const result = await request(
+      `/api/v1/render-runs${query.size ? `?${query}` : ""}`,
+      RenderRunListResponseSchema,
+    );
+    return result.runs;
+  },
+
+  async retryRenderOutput(runId: string, idempotencyKey: string): Promise<PublicRenderRun> {
+    const result = await request(
+      `/api/v1/render-runs/${encodeURIComponent(runId)}/retry-output`,
+      RenderRunResponseSchema,
+      { method: "POST", body: {}, idempotencyKey },
+    );
+    return result.run;
+  },
+
+  async cancelRender(runId: string, idempotencyKey: string): Promise<PublicRenderRun> {
+    const result = await request(`/api/v1/render-runs/${encodeURIComponent(runId)}/cancel`, RenderRunResponseSchema, {
+      method: "POST",
+      body: {},
+      idempotencyKey,
+    });
+    return result.run;
+  },
+
+  async outputDownload(projectId: string, runId: string): Promise<string> {
+    const result = await request(
+      `/api/v1/projects/${encodeURIComponent(projectId)}/render-runs/${encodeURIComponent(runId)}/output`,
+      OutputDownloadResponseSchema,
+    );
+    return result.download.url;
   },
 
   async assetDownload(projectId: string, assetId: string): Promise<string> {

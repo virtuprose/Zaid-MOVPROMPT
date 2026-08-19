@@ -15,8 +15,17 @@ required_variables=(
   CORS_ALLOWED_ORIGINS
   VITE_API_ORIGIN
   VITE_FEATURE_PORTABLE_AUTH
+  VITE_AUTH_REQUIRE_EMAIL_VERIFICATION
+  VITE_FEATURE_GUEST_CREATOR
+  VITE_FEATURE_WORKSPACE_SHELL
+  VITE_FEATURE_PROJECTS
+  VITE_FEATURE_ADVANCED_MODE
+  VITE_FEATURE_EXPORT_PIPELINE
+  VITE_FEATURE_LOCAL_DEMO_GENERATION
   FEATURE_AUTHENTICATION
   FEATURE_ASSETS
+  FEATURE_TEMPLATE_MODE
+  FEATURE_ADVANCED_MODE
   FEATURE_GENERATION
   FEATURE_EXPORTS
   FEATURE_BILLING
@@ -42,6 +51,7 @@ required_variables=(
   BETTER_AUTH_URL
   BETTER_AUTH_SECRET
   BETTER_AUTH_TRUSTED_ORIGINS
+  AUTH_REQUIRE_EMAIL_VERIFICATION
   GOOGLE_CLIENT_ID
   GOOGLE_CLIENT_SECRET
   APPLE_CLIENT_ID
@@ -114,13 +124,33 @@ if [[ "${DATABASE_SSL}" != "require" ]]; then
   exit 1
 fi
 
-for boolean_variable in VITE_FEATURE_PORTABLE_AUTH FEATURE_AUTHENTICATION FEATURE_ASSETS FEATURE_GENERATION FEATURE_EXPORTS FEATURE_BILLING S3_FORCE_PATH_STYLE SMTP_SECURE WORKER_SMOKE_TEST_ON_START; do
+for boolean_variable in VITE_FEATURE_PORTABLE_AUTH VITE_AUTH_REQUIRE_EMAIL_VERIFICATION VITE_FEATURE_GUEST_CREATOR VITE_FEATURE_WORKSPACE_SHELL VITE_FEATURE_PROJECTS VITE_FEATURE_ADVANCED_MODE VITE_FEATURE_EXPORT_PIPELINE VITE_FEATURE_LOCAL_DEMO_GENERATION FEATURE_AUTHENTICATION FEATURE_ASSETS FEATURE_TEMPLATE_MODE FEATURE_ADVANCED_MODE FEATURE_GENERATION FEATURE_EXPORTS FEATURE_BILLING AUTH_REQUIRE_EMAIL_VERIFICATION S3_FORCE_PATH_STYLE SMTP_SECURE WORKER_SMOKE_TEST_ON_START; do
   boolean_value="${!boolean_variable}"
   if [[ "${boolean_value}" != "true" && "${boolean_value}" != "false" ]]; then
     echo "${boolean_variable} must be true or false." >&2
     exit 1
   fi
 done
+
+if [[ "${VITE_AUTH_REQUIRE_EMAIL_VERIFICATION}" != "${AUTH_REQUIRE_EMAIL_VERIFICATION}" ]]; then
+  echo "VITE_AUTH_REQUIRE_EMAIL_VERIFICATION must match AUTH_REQUIRE_EMAIL_VERIFICATION." >&2
+  exit 1
+fi
+
+if [[ "${VITE_FEATURE_LOCAL_DEMO_GENERATION}" != "false" ]]; then
+  echo "VITE_FEATURE_LOCAL_DEMO_GENERATION must be false outside local development." >&2
+  exit 1
+fi
+
+if [[ "${VITE_FEATURE_ADVANCED_MODE}" != "${FEATURE_ADVANCED_MODE}" ]]; then
+  echo "VITE_FEATURE_ADVANCED_MODE must match FEATURE_ADVANCED_MODE." >&2
+  exit 1
+fi
+
+if [[ "${VITE_FEATURE_EXPORT_PIPELINE}" != "${FEATURE_EXPORTS}" ]]; then
+  echo "VITE_FEATURE_EXPORT_PIPELINE must match FEATURE_EXPORTS." >&2
+  exit 1
+fi
 
 if [[ "${FEATURE_ASSETS}" == "true" && "${FEATURE_AUTHENTICATION}" != "true" ]]; then
   echo "FEATURE_ASSETS=true requires FEATURE_AUTHENTICATION=true." >&2
@@ -132,12 +162,21 @@ if [[ "${FEATURE_GENERATION}" == "true" ]]; then
     echo "FEATURE_GENERATION=true requires FEATURE_AUTHENTICATION=true." >&2
     exit 1
   fi
+  if [[ "${FEATURE_ASSETS}" != "true" ]]; then
+    echo "FEATURE_GENERATION=true requires FEATURE_ASSETS=true." >&2
+    exit 1
+  fi
+  if [[ ! "${WORKER_HEARTBEAT_INTERVAL_SECONDS:-}" =~ ^[0-9]+$ || "${WORKER_HEARTBEAT_INTERVAL_SECONDS}" -lt 1 ]]; then
+    echo "WORKER_HEARTBEAT_INTERVAL_SECONDS must be a positive integer." >&2
+    exit 1
+  fi
+  if [[ ! "${WORKER_HEARTBEAT_MAX_AGE_SECONDS:-}" =~ ^[0-9]+$ || "${WORKER_HEARTBEAT_MAX_AGE_SECONDS}" -le "${WORKER_HEARTBEAT_INTERVAL_SECONDS}" ]]; then
+    echo "WORKER_HEARTBEAT_MAX_AGE_SECONDS must be greater than WORKER_HEARTBEAT_INTERVAL_SECONDS." >&2
+    exit 1
+  fi
   generation_variables=(
     GENERATION_PRICING_VERSION
     GENERATION_QUOTE_TTL_SECONDS
-    GENERATION_VIDEO_CINEMATIC_CREDITS_PER_SECOND
-    GENERATION_VIDEO_PRODUCT_FIDELITY_CREDITS_PER_SECOND
-    GENERATION_IMAGE_PRODUCT_CREDITS_PER_IMAGE
   )
   for variable_name in "${generation_variables[@]}"; do
     if [[ -z "${!variable_name:-}" ]]; then
@@ -145,6 +184,113 @@ if [[ "${FEATURE_GENERATION}" == "true" ]]; then
       exit 1
     fi
   done
+
+  generation_boolean_variables=(
+    GENERATION_STARTER_ONLY
+    MOVPROMPT_PROVIDER_VERCEL_GATEWAY_READY
+    MOVPROMPT_CAPABILITY_VIDEO_CINEMATIC_ENABLED
+    MOVPROMPT_CAPABILITY_VIDEO_PRODUCT_FIDELITY_ENABLED
+    MOVPROMPT_CAPABILITY_IMAGE_PRODUCT_ENABLED
+    VERCEL_GATEWAY_SEEDANCE_GENERATE_AUDIO
+  )
+  for variable_name in "${generation_boolean_variables[@]}"; do
+    variable_value="${!variable_name:-}"
+    if [[ "${variable_value}" != "true" && "${variable_value}" != "false" ]]; then
+      echo "FEATURE_GENERATION=true requires ${variable_name} to be true or false." >&2
+      exit 1
+    fi
+  done
+
+  if [[ "${MOVPROMPT_CAPABILITY_VIDEO_CINEMATIC_ENABLED}" != "true" || "${MOVPROMPT_CAPABILITY_VIDEO_PRODUCT_FIDELITY_ENABLED}" != "true" ]]; then
+    echo "FEATURE_GENERATION=true requires both installed video capabilities to be enabled." >&2
+    exit 1
+  fi
+
+  if [[ "${MOVPROMPT_CAPABILITY_IMAGE_PRODUCT_ENABLED}" == "true" ]]; then
+    echo "image.product must remain disabled until a production image adapter and quality gate are installed." >&2
+    exit 1
+  fi
+
+  if [[ "${MOVPROMPT_PROVIDER_VERCEL_GATEWAY_READY}" != "true" ]]; then
+    echo "FEATURE_GENERATION=true requires MOVPROMPT_PROVIDER_VERCEL_GATEWAY_READY=true after staging acceptance evidence." >&2
+    exit 1
+  fi
+
+  video_capability_prefixes=(
+    MOVPROMPT_CAPABILITY_VIDEO_CINEMATIC
+    MOVPROMPT_CAPABILITY_VIDEO_PRODUCT_FIDELITY
+  )
+  enabled_video_capability_count=0
+  for capability_prefix in "${video_capability_prefixes[@]}"; do
+    enabled_variable="${capability_prefix}_ENABLED"
+    adapter_variable="${capability_prefix}_ADAPTER_ID"
+    model_variable="${capability_prefix}_MODEL_ID"
+    if [[ "${!enabled_variable}" == "true" ]]; then
+      enabled_video_capability_count=$((enabled_video_capability_count + 1))
+      if [[ "${!adapter_variable:-}" != "vercel-ai-gateway" ]]; then
+        echo "${adapter_variable} must be vercel-ai-gateway for the installed production adapter." >&2
+        exit 1
+      fi
+      if [[ "${!model_variable:-}" != "bytedance/seedance-2.5" ]]; then
+        echo "${model_variable} must be exactly bytedance/seedance-2.5." >&2
+        exit 1
+      fi
+
+      pricing_prefix="GENERATION_VIDEO_${capability_prefix#MOVPROMPT_CAPABILITY_VIDEO_}"
+      for resolution in 480P 720P; do
+        pricing_variable="${pricing_prefix}_${resolution}_CREDITS_PER_SECOND"
+        pricing_value="${!pricing_variable:-}"
+        if [[ ! "${pricing_value}" =~ ^[0-9]+$ || "${pricing_value}" -lt 1 ]]; then
+          echo "${enabled_variable}=true requires positive integer ${pricing_variable}." >&2
+          exit 1
+        fi
+      done
+    fi
+  done
+
+  provider_variables=(
+    PROVIDER_OUTPUT_ALLOWED_HOSTS
+    AI_GATEWAY_API_KEY
+    VERCEL_AI_GATEWAY_BASE_URL
+    MOVPROMPT_QUALITY_MODEL_ID
+    FFPROBE_PATH
+    FFMPEG_PATH
+  )
+  for variable_name in "${provider_variables[@]}"; do
+    if [[ -z "${!variable_name:-}" || "${!variable_name}" == *REQUIRED_* || "${!variable_name}" == *example.invalid* ]]; then
+      echo "FEATURE_GENERATION=true requires ${variable_name}." >&2
+      exit 1
+    fi
+  done
+
+  if [[ "${VERCEL_AI_GATEWAY_BASE_URL}" != "https://ai-gateway.vercel.sh/v4/ai" ]]; then
+    echo "VERCEL_AI_GATEWAY_BASE_URL must be the audited https://ai-gateway.vercel.sh/v4/ai endpoint." >&2
+    exit 1
+  fi
+
+  if [[ ! "${MOVPROMPT_QUALITY_MODEL_ID}" =~ ^google/gemini-[a-z0-9.-]+$ ]]; then
+    echo "MOVPROMPT_QUALITY_MODEL_ID must be an explicit Google Gemini Gateway model slug." >&2
+    exit 1
+  fi
+
+  IFS=',' read -r -a provider_output_hosts <<< "${PROVIDER_OUTPUT_ALLOWED_HOSTS}"
+  for provider_output_host in "${provider_output_hosts[@]}"; do
+    provider_output_host="${provider_output_host//[[:space:]]/}"
+    if [[ -z "${provider_output_host}" || "${provider_output_host}" == *'*'* || "${provider_output_host}" == *'/'* || "${provider_output_host}" == *':'* || "${provider_output_host}" == "localhost" || "${provider_output_host}" =~ ^[0-9.]+$ ]]; then
+      echo "PROVIDER_OUTPUT_ALLOWED_HOSTS must contain exact public hostnames without schemes, paths, ports or wildcards." >&2
+      exit 1
+    fi
+  done
+
+  if [[ "${VERCEL_GATEWAY_SEEDANCE_RESOLUTION_TIER:-}" != "480p" && "${VERCEL_GATEWAY_SEEDANCE_RESOLUTION_TIER:-}" != "720p" ]]; then
+    echo "VERCEL_GATEWAY_SEEDANCE_RESOLUTION_TIER must be 480p or 720p." >&2
+    exit 1
+  fi
+
+  if [[ "${FFPROBE_PATH}" != "ffprobe" || "${FFMPEG_PATH}" != "ffmpeg" ]]; then
+    echo "Container generation requires FFPROBE_PATH=ffprobe and FFMPEG_PATH=ffmpeg." >&2
+    exit 1
+  fi
 fi
 
 if [[ "${VITE_FEATURE_PORTABLE_AUTH}" == "true" && "${FEATURE_AUTHENTICATION}" != "true" ]]; then

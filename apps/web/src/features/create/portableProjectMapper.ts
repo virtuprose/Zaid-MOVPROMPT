@@ -1,19 +1,43 @@
 import type { CreatorProjectRecord } from "@movprompt/contracts";
 
 import { portableCreatorApi } from "@/lib/api/portableApiClient";
-import type { CreatorProject } from "./types";
+import { sanitizeCreatorProjectOutput } from "./creatorProjectOutput";
+import { normalizeCreatorResolution, type CreatorProject } from "./types";
+
+function recoveredProjectStatus(input: CreatorProjectRecord): CreatorProject["status"] {
+  if (input.status === "trashed") return "draft";
+  if (input.latestRenderProjectVersionId !== input.currentWorkingVersionId) return input.status;
+  if (["submitting", "queued", "processing", "cancelling"].includes(input.latestRenderRunStatus ?? "")) {
+    return "generating";
+  }
+  if (input.latestRenderRunStatus === "completed") return "completed";
+  if (input.latestRenderRunStatus === "failed" || input.latestRenderRunStatus === "cancelled") return "failed";
+  return input.status;
+}
 
 export function stableProjectConfiguration(project: CreatorProject): CreatorProject {
   return {
     ...project,
+    versionId: undefined,
+    versionNumber: undefined,
+    status: "ready",
+    logoUrl: "",
     product: {
       ...project.product,
+      sourceUrl: "",
       images: project.product.images.map((image) => ({
         ...image,
-        url: image.storagePath ? "" : image.source === "url" ? image.url : "",
+        url: "",
+        assetKey: undefined,
       })),
     },
     videoUrl: null,
+    jobId: null,
+    renderRunId: null,
+    lastError: null,
+    pendingGenerationId: null,
+    pendingQuoteCredits: null,
+    updatedAt: project.createdAt,
   };
 }
 
@@ -22,23 +46,31 @@ export function projectFromCloud(input: CreatorProjectRecord): CreatorProject | 
   if (!configured || typeof configured !== "object" || Array.isArray(configured)) return null;
   const candidate = configured as unknown as CreatorProject;
   if (!candidate.product || !Array.isArray(candidate.scenes)) return null;
-  return {
+  const currentRenderRunId = input.latestRenderProjectVersionId === input.currentWorkingVersionId
+    ? input.latestRenderRunId
+    : null;
+  return sanitizeCreatorProjectOutput({
     ...candidate,
     id: input.id,
     versionId: input.currentVersion?.id,
     versionNumber: input.currentVersion?.versionNumber,
     title: input.title,
-    status: input.status === "trashed" ? "draft" : input.status,
+    status: recoveredProjectStatus(input),
+    renderRunId: currentRenderRunId,
+    jobId: currentRenderRunId,
+    resolution: normalizeCreatorResolution((candidate as CreatorProject & { resolution?: unknown }).resolution),
     promotionKind: candidate.promotionKind ?? "product",
     vertical: candidate.vertical ?? "ecommerce",
     goal: candidate.goal ?? "launch",
     presenterMode: candidate.presenterMode ?? "none",
+    arabicDialect: "kuwaiti",
+    dialectRegister: candidate.dialectRegister ?? "conversational",
     location: candidate.location ?? "",
     bookingUrl: candidate.bookingUrl ?? "",
     whatsapp: candidate.whatsapp ?? "",
     createdAt: input.createdAt,
     updatedAt: input.updatedAt,
-  };
+  });
 }
 
 export async function hydrateCloudProject(input: CreatorProjectRecord): Promise<CreatorProject | null> {

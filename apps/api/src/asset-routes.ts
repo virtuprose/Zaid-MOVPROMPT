@@ -4,8 +4,10 @@ import {
   AssetRouteParametersSchema,
   CreateAssetUploadRequestSchema,
   IdempotencyKeySchema,
+  MirrorRemoteImageRequestSchema,
   type AssetReadyResponse,
   type CreatorAsset,
+  type MirroredAssetResponse,
   type SignedAssetDownloadResponse,
   type SignedAssetUploadResponse,
 } from "@movprompt/contracts";
@@ -15,6 +17,7 @@ import type { AuthGateway } from "./auth-gateway.js";
 import type { AssetRepository, OwnedAssetRecord } from "./asset-repository.js";
 import type { AssetStorageGateway } from "./asset-storage.js";
 import { ApiHttpError } from "./errors.js";
+import type { RemoteImageFetcher } from "./remote-image-fetcher.js";
 import type { ApiEnvironment } from "./request-context.js";
 
 export type AssetRouteServices = {
@@ -22,9 +25,16 @@ export type AssetRouteServices = {
   auth?: AuthGateway;
   repository?: AssetRepository;
   storage?: AssetStorageGateway;
+  remoteImages?: RemoteImageFetcher;
 };
 
-function requireServices(services: AssetRouteServices): Required<Omit<AssetRouteServices, "enabled">> {
+type RequiredAssetServices = {
+  auth: AuthGateway;
+  repository: AssetRepository;
+  storage: AssetStorageGateway;
+};
+
+function requireServices(services: AssetRouteServices): RequiredAssetServices {
   if (!services.enabled || !services.auth || !services.repository || !services.storage) {
     throw new ApiHttpError({
       code: "asset_service_unavailable",
@@ -101,7 +111,8 @@ function assertSameAssetIntent(existing: OwnedAssetRecord, requested: OwnedAsset
     existing.objectKey !== requested.objectKey ||
     existing.mimeType !== requested.mimeType ||
     existing.sizeBytes !== requested.sizeBytes ||
-    existing.checksumSha256 !== requested.checksumSha256
+    existing.checksumSha256 !== requested.checksumSha256 ||
+    (existing.sourceUrlHash ?? null) !== (requested.sourceUrlHash ?? null)
   ) {
     throw new ApiHttpError({
       code: "idempotency_conflict",
@@ -177,6 +188,116 @@ async function findOwnedAsset(
     });
   }
   return asset;
+}
+
+const MAX_BROWSER_IMAGE_BYTES = 12 * 1024 * 1024;
+
+function hasExpectedImageSignature(bytes: Uint8Array, mimeType: string): boolean {
+  if (mimeType === "image/jpeg") {
+    return bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
+  }
+  if (mimeType === "image/png") {
+    const signature = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+    return bytes.length >= signature.length && signature.every((value, index) => bytes[index] === value);
+  }
+  if (mimeType === "image/webp") {
+    return bytes.length >= 12 &&
+      String.fromCharCode(...bytes.subarray(0, 4)) === "RIFF" &&
+      String.fromCharCode(...bytes.subarray(8, 12)) === "WEBP";
+  }
+  return false;
+}
+
+async function readVerifiedImageBody(request: Request, asset: OwnedAssetRecord): Promise<Uint8Array> {
+  if (asset.sizeBytes > MAX_BROWSER_IMAGE_BYTES) {
+    throw new ApiHttpError({
+      code: "asset_too_large",
+      message: "Product images must be 12 MB or smaller.",
+      status: 413,
+      retryable: false,
+    });
+  }
+  const contentType = request.headers.get("content-type")?.split(";", 1)[0]?.trim().toLowerCase();
+  if (contentType !== asset.mimeType.toLowerCase()) {
+    throw new ApiHttpError({
+      code: "asset_integrity_mismatch",
+      message: "The uploaded image type does not match the saved asset metadata.",
+      status: 409,
+      retryable: false,
+    });
+  }
+  const declaredLength = request.headers.get("content-length");
+  if (declaredLength && Number(declaredLength) !== asset.sizeBytes) {
+    throw new ApiHttpError({
+      code: "asset_integrity_mismatch",
+      message: "The uploaded image size does not match the saved asset metadata.",
+      status: 409,
+      retryable: false,
+    });
+  }
+  if (!request.body) {
+    throw new ApiHttpError({
+      code: "invalid_asset_content",
+      message: "The image upload body is empty.",
+      status: 400,
+      retryable: false,
+    });
+  }
+
+  const reader = request.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > asset.sizeBytes || total > MAX_BROWSER_IMAGE_BYTES) {
+        throw new ApiHttpError({
+          code: "asset_too_large",
+          message: "The image upload is larger than the declared file.",
+          status: 413,
+          retryable: false,
+        });
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  if (total !== asset.sizeBytes) {
+    throw new ApiHttpError({
+      code: "asset_integrity_mismatch",
+      message: "The uploaded image did not arrive completely.",
+      status: 409,
+      retryable: true,
+    });
+  }
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  if (!hasExpectedImageSignature(bytes, contentType)) {
+    throw new ApiHttpError({
+      code: "invalid_asset_content",
+      message: "The uploaded file is not a valid JPG, PNG or WebP image.",
+      status: 422,
+      retryable: false,
+    });
+  }
+  const checksum = createHash("sha256").update(bytes).digest("hex");
+  if (checksum !== asset.checksumSha256) {
+    throw new ApiHttpError({
+      code: "asset_integrity_mismatch",
+      message: "The uploaded image checksum does not match the selected file.",
+      status: 409,
+      retryable: false,
+    });
+  }
+  return bytes;
 }
 
 export function registerAssetRoutes(
@@ -272,6 +393,174 @@ export function registerAssetRoutes(
         url: signedUpload.url,
         headers: signedUpload.headers,
         expiresInSeconds: signedUpload.expiresInSeconds,
+      },
+      requestId: context.get("requestId"),
+    };
+    context.header("cache-control", "private, no-store");
+    return context.json(response, 201);
+  });
+
+  app.put("/api/v1/projects/:projectId/assets/:assetId/content", async (context) => {
+    const { auth, repository, storage } = requireServices(services);
+    const userId = await requireUserId(auth, context.req.raw.headers);
+    const { projectId, assetId } = AssetRouteParametersSchema.parse({
+      projectId: context.req.param("projectId"),
+      assetId: context.req.param("assetId"),
+    });
+    const asset = await findOwnedAsset(repository, userId, projectId, assetId!);
+    const bytes = await readVerifiedImageBody(context.req.raw, asset);
+
+    try {
+      await storage.put({
+        bucket: asset.bucket,
+        key: asset.objectKey,
+        body: bytes,
+        contentType: asset.mimeType,
+        metadata: { "sha256-hex": asset.checksumSha256 },
+      });
+    } catch {
+      throw new ApiHttpError({
+        code: "storage_unavailable",
+        message: "Private storage could not save the uploaded image. Try again.",
+        status: 503,
+        retryable: true,
+      });
+    }
+    await verifyStoredObject(storage, asset);
+
+    let signedDownload;
+    try {
+      signedDownload = await storage.signDownload({
+        bucket: asset.bucket,
+        key: asset.objectKey,
+        ...(asset.originalFilename ? { downloadFilename: asset.originalFilename } : {}),
+      });
+    } catch {
+      throw new ApiHttpError({
+        code: "storage_unavailable",
+        message: "The image was saved, but its preview is temporarily unavailable.",
+        status: 503,
+        retryable: true,
+      });
+    }
+
+    const response: SignedAssetDownloadResponse = {
+      asset: publicAsset(asset),
+      download: {
+        method: "GET",
+        url: signedDownload.url,
+        expiresInSeconds: signedDownload.expiresInSeconds,
+      },
+      requestId: context.get("requestId"),
+    };
+    context.header("cache-control", "private, no-store");
+    return context.json(response, 201);
+  });
+
+  app.post("/api/v1/projects/:projectId/assets/mirror", async (context) => {
+    const { auth, repository, storage } = requireServices(services);
+    const userId = await requireUserId(auth, context.req.raw.headers);
+    const { projectId } = AssetRouteParametersSchema.parse({
+      projectId: context.req.param("projectId"),
+    });
+    const input = MirrorRemoteImageRequestSchema.parse(await parseJson(context.req.raw));
+    const idempotencyKey = IdempotencyKeySchema.parse(
+      context.req.header("idempotency-key") ?? "",
+    );
+
+    // Resolve ownership before any outbound request so callers cannot use this
+    // endpoint as either an SSRF primitive or a cross-account existence oracle.
+    if (!(await repository.isProjectOwned(userId, projectId))) {
+      throw new ApiHttpError({
+        code: "project_not_found",
+        message: "The requested project was not found.",
+        status: 404,
+        retryable: false,
+      });
+    }
+    if (!services.remoteImages) {
+      throw new ApiHttpError({
+        code: "remote_image_service_unavailable",
+        message: "Secure product image import is not available in this environment.",
+        status: 503,
+        retryable: true,
+      });
+    }
+
+    const normalizedSourceUrl = new URL(input.url);
+    normalizedSourceUrl.hash = "";
+    const sourceUrlHash = createHash("sha256")
+      .update(normalizedSourceUrl.toString())
+      .digest("hex");
+    const fetched = await services.remoteImages.fetch(normalizedSourceUrl.toString());
+    const assetId = deterministicAssetId(userId, projectId, idempotencyKey);
+    const objectKey = objectKeys.creatorAsset({
+      userId,
+      projectId,
+      assetId,
+      kind: input.kind,
+      checksumSha256: fetched.checksumSha256,
+    });
+    const intendedRecord: OwnedAssetRecord = {
+      id: assetId,
+      projectId,
+      userId,
+      kind: input.kind,
+      bucket: storage.assetsBucket,
+      objectKey,
+      mimeType: fetched.mimeType,
+      sizeBytes: fetched.bytes.byteLength,
+      checksumSha256: fetched.checksumSha256,
+      originalFilename: input.originalFilename ?? fetched.originalFilename,
+      // Persist only a hash for idempotency. Remote URLs may contain signed
+      // query parameters and must never become durable project data.
+      sourceUrlHash,
+    };
+    const assetRecord = await repository.createOrFind(intendedRecord);
+    assertSameAssetIntent(assetRecord, intendedRecord);
+
+    try {
+      await storage.put({
+        bucket: assetRecord.bucket,
+        key: assetRecord.objectKey,
+        body: fetched.bytes,
+        contentType: assetRecord.mimeType,
+        metadata: { "sha256-hex": assetRecord.checksumSha256 },
+      });
+    } catch {
+      throw new ApiHttpError({
+        code: "storage_unavailable",
+        message: "Private storage could not save the imported image.",
+        status: 503,
+        retryable: true,
+      });
+    }
+    await verifyStoredObject(storage, assetRecord);
+
+    let signedDownload;
+    try {
+      signedDownload = await storage.signDownload({
+        bucket: assetRecord.bucket,
+        key: assetRecord.objectKey,
+        ...(assetRecord.originalFilename
+          ? { downloadFilename: assetRecord.originalFilename }
+          : {}),
+      });
+    } catch {
+      throw new ApiHttpError({
+        code: "storage_unavailable",
+        message: "Private storage could not create a download URL for the imported image.",
+        status: 503,
+        retryable: true,
+      });
+    }
+
+    const response: MirroredAssetResponse = {
+      asset: publicAsset(assetRecord),
+      download: {
+        method: "GET",
+        url: signedDownload.url,
+        expiresInSeconds: signedDownload.expiresInSeconds,
       },
       requestId: context.get("requestId"),
     };

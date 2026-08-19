@@ -9,6 +9,7 @@ import {
   creditLedger,
   eq,
   outboxJobs,
+  renderAttempts,
   renderRuns,
   users,
   type Database,
@@ -123,7 +124,7 @@ describePostgres("render worker PostgreSQL lifecycle", () => {
     expect(await dispatcher.dispatchOnce()).toBe(1);
     expect(enqueueGeneration).toHaveBeenCalledWith(
       expect.objectContaining({ renderRunId: run.id, userId: ids.userId }),
-      { singletonKey: `submit:${run.id}` },
+      { singletonKey: `submit:${run.id}:0` },
     );
     const [outbox] = await db
       .select()
@@ -168,6 +169,26 @@ describePostgres("render worker PostgreSQL lifecycle", () => {
   it("charges only after acceptance, then records terminal failure and refunds once", async () => {
     const service = createGenerationService(db);
     const ids = await fixture();
+    const acceptedVersionId = ids.projectVersionId;
+    const failedVersionId = randomUUID();
+    await db.insert(creatorProjectVersions).values({
+      id: failedVersionId,
+      projectId: ids.projectId,
+      userId: ids.userId,
+      parentVersionId: acceptedVersionId,
+      mode: "advanced",
+      versionNumber: 2,
+      configuration: { prompt: "A new visual direction that may fail.", durationSeconds: 5 },
+    });
+    await db
+      .update(creatorProjects)
+      .set({
+        status: "completed",
+        currentWorkingVersionId: acceptedVersionId,
+        currentAcceptedVersionId: acceptedVersionId,
+      })
+      .where(eq(creatorProjects.id, ids.projectId));
+    const generationIds = { ...ids, projectVersionId: failedVersionId };
     const configuration = { prompt: "Premium perfume rotating under a soft rim light.", durationSeconds: 5 };
     const quote = await service.createQuote({
       userId: ids.userId,
@@ -179,7 +200,7 @@ describePostgres("render worker PostgreSQL lifecycle", () => {
       expiresAt: new Date(Date.now() + 60_000),
     });
     const run = await service.startRender({
-      ...ids,
+      ...generationIds,
       quoteId: quote.id,
       capabilityAlias: quote.capabilityAlias,
       idempotencyKey: `generation:${randomUUID()}`,
@@ -189,24 +210,25 @@ describePostgres("render worker PostgreSQL lifecycle", () => {
       renderRunId: run.id,
       userId: ids.userId,
       projectId: ids.projectId,
-      projectVersionId: ids.projectVersionId,
+      projectVersionId: failedVersionId,
       quoteId: quote.id,
       capability: "video.cinematic",
       idempotencyKey: `render.start:${run.id}`,
       requestId: randomUUID(),
     };
 
-    let operation: ProviderOperation = { providerRequestId: "provider-request-1", status: "processing" };
+    const providerRequestId = `provider-${run.id}`;
+    let operation: ProviderOperation = { providerRequestId, status: "processing" };
     const provider: ProviderAdapter = {
       id: "test-provider",
       capability: "video.cinematic",
       submit: vi.fn(async () => ({
-        providerRequestId: "provider-request-1",
+        providerRequestId,
         status: "queued",
         acceptedAt: new Date().toISOString(),
       })),
       getStatus: vi.fn(async () => operation),
-      cancel: vi.fn(async () => ({ providerRequestId: "provider-request-1", status: "cancelled" })),
+      cancel: vi.fn(async () => ({ providerRequestId, status: "cancelled" })),
     };
     const capabilityRegistry = new CapabilityRegistry({
       "video.cinematic": {
@@ -229,7 +251,7 @@ describePostgres("render worker PostgreSQL lifecycle", () => {
     expect((await db.select().from(creditAccounts).where(eq(creditAccounts.userId, ids.userId)))[0]?.balance).toBe(60);
 
     operation = {
-      providerRequestId: "provider-request-1",
+      providerRequestId,
       status: "failed",
       errorCode: "invalid_provider_output",
     };
@@ -239,7 +261,141 @@ describePostgres("render worker PostgreSQL lifecycle", () => {
     const [settledRun] = await db.select().from(renderRuns).where(eq(renderRuns.id, run.id));
     expect(settledRun?.status).toBe("failed");
     expect(settledRun?.refundStatus).toBe("refunded");
+    const [failedProject] = await db.select().from(creatorProjects).where(eq(creatorProjects.id, ids.projectId));
+    expect(failedProject).toMatchObject({
+      status: "failed",
+      currentWorkingVersionId: failedVersionId,
+      currentAcceptedVersionId: acceptedVersionId,
+    });
     expect((await db.select().from(creditAccounts).where(eq(creditAccounts.userId, ids.userId)))[0]?.balance).toBe(100);
     expect(await db.select().from(creditLedger).where(eq(creditLedger.userId, ids.userId))).toHaveLength(2);
+  });
+
+  it("records a rejected candidate and submits a durable quality retry without charging twice", async () => {
+    const service = createGenerationService(db);
+    const ids = await fixture();
+    const configuration = { prompt: "Premium perfume rotating under a soft rim light.", durationSeconds: 5 };
+    const quote = await service.createQuote({
+      userId: ids.userId,
+      capabilityAlias: "video.cinematic",
+      credits: 40,
+      entitlementEligible: false,
+      breakdown: [{ label: "accepted premium output", credits: 40 }],
+      configuration,
+      expiresAt: new Date(Date.now() + 60_000),
+    });
+    const run = await service.startRender({
+      ...ids,
+      quoteId: quote.id,
+      capabilityAlias: quote.capabilityAlias,
+      idempotencyKey: `generation:${randomUUID()}`,
+      configuration,
+    });
+    const job: GenerationJobPayload = {
+      renderRunId: run.id,
+      userId: ids.userId,
+      projectId: ids.projectId,
+      projectVersionId: ids.projectVersionId,
+      quoteId: quote.id,
+      capability: "video.cinematic",
+      idempotencyKey: `render.start:${run.id}`,
+      requestId: randomUUID(),
+    };
+
+    let providerRequestId = `provider-quality-${run.id}-0`;
+    let operation: ProviderOperation = { providerRequestId, status: "processing" };
+    let submission = 0;
+    const provider: ProviderAdapter = {
+      id: "quality-provider",
+      capability: "video.cinematic",
+      submit: vi.fn(async () => {
+        providerRequestId = `provider-quality-${run.id}-${submission}`;
+        submission += 1;
+        operation = { providerRequestId, status: "processing" };
+        return { providerRequestId, status: "queued", acceptedAt: new Date().toISOString() };
+      }),
+      getStatus: vi.fn(async () => operation),
+      cancel: vi.fn(async () => ({ providerRequestId, status: "cancelled" })),
+    };
+    const capabilityRegistry = new CapabilityRegistry({
+      "video.cinematic": {
+        enabled: true,
+        adapterId: provider.id,
+        providerModelId: "server-private-quality-model",
+      },
+    });
+    const adapterRegistry = new ProviderAdapterRegistry();
+    adapterRegistry.register(provider);
+    let reviewNumber = 0;
+    const handler = createGenerationLifecycleHandler({
+      store: createDatabaseRenderLifecycleStore(db),
+      billing: createDatabaseGenerationBilling(db),
+      capabilityRegistry,
+      adapterRegistry,
+      outputPersister: {
+        persist: vi.fn(async ({ attemptNumber }) => ({
+          bucket: "creator-outputs",
+          objectKey: `${ids.userId}/${run.id}/candidate-${attemptNumber}.mp4`,
+        })),
+      },
+      outputQualityReviewer: {
+        review: vi.fn(async () => {
+          reviewNumber += 1;
+          return reviewNumber === 1
+            ? {
+                status: "retry",
+                score: 72,
+                failedDimensions: ["product_identity"],
+                retryDirective: "Lock the bottle label to the confirmed packshot.",
+              }
+            : { status: "accepted", score: 95, failedDimensions: [] };
+        }),
+      },
+      scheduleReconciliation: vi.fn(async () => undefined),
+    });
+
+    await handler.handle(job, context());
+    operation = {
+      providerRequestId: `provider-quality-${run.id}-0`,
+      status: "completed",
+      outputUrl: "https://provider.example/candidate-0.mp4",
+    };
+    await handler.handle(job, context());
+
+    const [retrying] = await db.select().from(renderRuns).where(eq(renderRuns.id, run.id));
+    expect(retrying).toMatchObject({
+      status: "submitting",
+      qualityAttempt: 1,
+      providerRequestId: null,
+      chargedCredits: 40,
+    });
+    expect((await db.select().from(renderAttempts).where(eq(renderAttempts.renderRunId, run.id)))[0]).toMatchObject({
+      attemptNumber: 0,
+      status: "quality_rejected",
+      qualityScore: 72,
+    });
+    expect(
+      (await db.select().from(outboxJobs).where(eq(outboxJobs.idempotencyKey, `render.quality_retry:${run.id}:1`)))[0]
+        ?.status,
+    ).toBe("pending");
+
+    await handler.handle(job, context());
+    operation = {
+      providerRequestId: `provider-quality-${run.id}-1`,
+      status: "completed",
+      outputUrl: "https://provider.example/candidate-1.mp4",
+    };
+    await handler.handle(job, context());
+
+    const [completed] = await db.select().from(renderRuns).where(eq(renderRuns.id, run.id));
+    expect(completed).toMatchObject({ status: "completed", qualityAttempt: 1, chargedCredits: 40 });
+    const [completedProject] = await db.select().from(creatorProjects).where(eq(creatorProjects.id, ids.projectId));
+    expect(completedProject).toMatchObject({
+      status: "completed",
+      currentWorkingVersionId: ids.projectVersionId,
+      currentAcceptedVersionId: ids.projectVersionId,
+    });
+    expect(await db.select().from(renderAttempts).where(eq(renderAttempts.renderRunId, run.id))).toHaveLength(2);
+    expect(await db.select().from(creditLedger).where(eq(creditLedger.userId, ids.userId))).toHaveLength(1);
   });
 });

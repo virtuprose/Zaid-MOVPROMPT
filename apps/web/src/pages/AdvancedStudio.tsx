@@ -6,27 +6,20 @@ import {
   Check,
   CheckCircle2,
   ChevronRight,
-  CircleGauge,
   Expand,
   Focus,
   Frame,
   ImagePlus,
-  Lightbulb,
   Loader2,
   Maximize2,
   Mic2,
-  MoreVertical,
   Move3D,
-  Pause,
-  Play,
-  Plus,
   RotateCcw,
   Settings2,
   ShieldCheck,
   Sparkles,
   SunMedium,
   Upload,
-  Volume2,
   WandSparkles,
   Waves,
 } from "lucide-react";
@@ -34,7 +27,19 @@ import type { LucideIcon } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { Seo } from "@/components/Seo";
+import { isFeatureEnabled } from "@/config/features";
+import {
+  advancedCampaignRecipe,
+  buildAdvancedGenerationConfiguration,
+  buildAdvancedProjectConfiguration,
+  providerCanvasRatio,
+  type AdvancedReferenceConfiguration,
+  type AdvancedStudioConfigurationInput,
+} from "@/features/create/advancedStudioConfig";
+import { persistPortableAdvancedProject } from "@/features/create/advancedProjectStore";
 import { useAuth } from "@/hooks/useAuth";
+import { useLanguage } from "@/i18n/LanguageContext";
+import { PortableApiError, portableCreatorApi } from "@/lib/api/portableApiClient";
 import { startCreatorGeneration } from "@/lib/director/api";
 import { supabase } from "@/integrations/supabase/client";
 import type { Json } from "@/integrations/supabase/types";
@@ -42,11 +47,26 @@ import { cn } from "@/lib/utils";
 import { AuthGateDialog } from "@/features/create/AuthGateDialog";
 import { CreatorShell } from "@/features/create/CreatorShell";
 import { GUEST_DRAFT_TTL_MS, type ApprovedCapability, type CreationDraft, type GenerationQuote } from "@/features/create/contracts";
-import { getGuestAsset, getGuestDraft, putGuestAsset, saveGuestDraft } from "@/features/create/guestDraftStore";
-import type { CreatorAspectRatio } from "@/features/create/types";
+import { claimGuestImage } from "@/features/create/creatorAssets";
+import { deleteGuestDraft, getGuestAsset, getGuestDraft, putGuestAsset, saveGuestDraft } from "@/features/create/guestDraftStore";
+import { normalizeCreatorResolution, type CreatorAspectRatio, type CreatorResolution } from "@/features/create/types";
+import { automaticQuoteRetryDelay } from "@/features/create/quoteRecovery";
 
 type DirectorOption<T extends string> = { id: T; label: string; icon: LucideIcon };
-type ReferenceAsset = { id: string; name: string; url: string; assetKey?: string; role: "Style" | "Lighting" | "Setting" | "Motion" };
+type ReferenceAsset = {
+  id: string;
+  name: string;
+  url: string;
+  assetKey?: string;
+  objectKey?: string;
+  mimeType?: string;
+  role: "Style" | "Lighting" | "Setting" | "Motion";
+};
+
+type StudioQuote = Omit<GenerationQuote, "quoteId"> & {
+  quoteId: string | null;
+  estimateOnly?: boolean;
+};
 
 const CAMERA_OPTIONS: Array<DirectorOption<"push-in" | "orbit" | "handheld" | "static">> = [
   { id: "push-in", label: "Push in", icon: Focus },
@@ -66,6 +86,13 @@ const LIGHTING_OPTIONS = ["Studio rim", "Soft daylight", "Golden hour", "Night c
 const FIDELITY_OPTIONS = ["Exact", "Strong", "Flexible"] as const;
 const MOTION_OPTIONS = ["Calm", "Natural", "Dynamic"] as const;
 const RATIOS: CreatorAspectRatio[] = ["9:16", "1:1", "4:5", "16:9"];
+const DIRECTION_PRESETS = [
+  { label: "Hero", instruction: "Centered product hero composition with deliberate negative space and a premium commercial finish." },
+  { label: "Creator", instruction: "Natural creator-led framing with credible human scale, direct eye line and product-forward blocking." },
+  { label: "Lifestyle", instruction: "Contextual lifestyle composition with a believable Kuwait setting and restrained editorial movement." },
+  { label: "Macro", instruction: "Tactile macro detail study that preserves exact product materials, label and proportions." },
+] as const;
+const REFERENCE_ROLES: ReferenceAsset["role"][] = ["Style", "Lighting", "Setting", "Motion"];
 
 function readSetting<T>(draft: CreationDraft | null, key: string, fallback: T): T {
   return (draft?.advanced?.renderSettings?.[key] as T | undefined) ?? fallback;
@@ -73,6 +100,34 @@ function readSetting<T>(draft: CreationDraft | null, key: string, fallback: T): 
 
 export default function AdvancedStudio() {
   const { user } = useAuth();
+  const { locale } = useLanguage();
+  const arabicUi = locale === "ar";
+  const tr = useCallback(
+    (english: string, arabic: string) => arabicUi ? arabic : english,
+    [arabicUi],
+  );
+  const portablePlatform = isFeatureEnabled("portableAuth");
+  const cameraLabel = (id: (typeof CAMERA_OPTIONS)[number]["id"], fallback: string) => arabicUi
+    ? ({ "push-in": "اقتراب", orbit: "دوران", handheld: "يدوي", static: "ثابت" } as const)[id]
+    : fallback;
+  const shotLabel = (id: (typeof SHOT_OPTIONS)[number]["id"], fallback: string) => arabicUi
+    ? ({ macro: "ماكرو", close: "قريبة", medium: "متوسطة", wide: "واسعة" } as const)[id]
+    : fallback;
+  const motionLabel = (value: (typeof MOTION_OPTIONS)[number]) => arabicUi
+    ? ({ Calm: "هادئ", Natural: "طبيعي", Dynamic: "حيوي" } as const)[value]
+    : value;
+  const lightingLabel = (value: (typeof LIGHTING_OPTIONS)[number]) => arabicUi
+    ? ({ "Studio rim": "إضاءة استوديو جانبية", "Soft daylight": "ضوء نهار ناعم", "Golden hour": "الساعة الذهبية", "Night contrast": "تباين ليلي" } as const)[value]
+    : value;
+  const fidelityLabel = (value: (typeof FIDELITY_OPTIONS)[number]) => arabicUi
+    ? ({ Exact: "مطابقة تامة", Strong: "مطابقة قوية", Flexible: "مرنة" } as const)[value]
+    : value;
+  const directionLabel = (index: number) => arabicUi
+    ? (["بطولي", "صانع محتوى", "أسلوب حياة", "ماكرو"][index] ?? DIRECTION_PRESETS[index]?.label ?? "")
+    : DIRECTION_PRESETS[index]?.label ?? "";
+  const referenceRoleLabel = (role: ReferenceAsset["role"]) => arabicUi
+    ? ({ Style: "أسلوب", Lighting: "إضاءة", Setting: "مكان", Motion: "حركة" } as const)[role]
+    : role;
   const [searchParams] = useSearchParams();
   const requestedDraft = searchParams.get("draft");
   const fromTemplate = searchParams.get("from") === "template";
@@ -82,6 +137,7 @@ export default function AdvancedStudio() {
   const [prompt, setPrompt] = useState("");
   const [duration, setDuration] = useState(8);
   const [ratio, setRatio] = useState<CreatorAspectRatio>("9:16");
+  const [resolution, setResolution] = useState<CreatorResolution>("720p");
   const [capability, setCapability] = useState<ApprovedCapability>("video.cinematic");
   const [cameraMove, setCameraMove] = useState<(typeof CAMERA_OPTIONS)[number]["id"]>("push-in");
   const [shotType, setShotType] = useState<(typeof SHOT_OPTIONS)[number]["id"]>("macro");
@@ -96,36 +152,149 @@ export default function AdvancedStudio() {
   const [sourceDraft, setSourceDraft] = useState<CreationDraft | null>(null);
   const [references, setReferences] = useState<ReferenceAsset[]>([]);
   const [selectedDirection, setSelectedDirection] = useState(0);
-  const [previewPlaying, setPreviewPlaying] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [hydrated, setHydrated] = useState(!requestedDraft);
   const resumed = useRef(false);
   const generateRef = useRef<() => Promise<void>>(async () => undefined);
-  const [quote, setQuote] = useState<GenerationQuote | null>(null);
+  const previewRef = useRef<HTMLElement | null>(null);
+  const [quote, setQuote] = useState<StudioQuote | null>(null);
   const [quoteLoaded, setQuoteLoaded] = useState(false);
   const [quoteError, setQuoteError] = useState("");
+  const [quoteFailure, setQuoteFailure] = useState<{ retryable: boolean; requestId?: string } | null>(null);
+  const [quoteRetry, setQuoteRetry] = useState(0);
+  const quoteAutoRetryCount = useRef(0);
+  const [priceNotice, setPriceNotice] = useState("");
+  const [cloudProjectId, setCloudProjectId] = useState<string | null>(null);
 
-  const productImage = sourceDraft?.product.images[0]?.url || "/create/sample-kinza.jpg";
-  const projectName = sourceDraft?.product.name ? `${sourceDraft.product.name} Campaign` : "Untitled direction";
+  const productImage = sourceDraft?.product.images[0]?.url ?? null;
+  const projectName = sourceDraft?.product.name
+    ? `${sourceDraft.product.name} ${tr("Campaign", "حملة")}`
+    : tr("Untitled direction", "اتجاه بدون عنوان");
   const templatePath = requestedDraft ? `/create?draft=${encodeURIComponent(draftId)}` : "/create";
-  const directionImages = [productImage, "/homepage/hero-creator.png", "/homepage/hero-lifestyle.png", "/homepage/template-texture-study.png"];
-  const directionLabels = ["Hero", "Creator", "Lifestyle", "Macro"];
+  // Direction cards describe prompt presets. Until a real product is attached,
+  // they must not masquerade stock campaign artwork as the user's output.
+  const directionImages = DIRECTION_PRESETS.map(() => productImage);
+  const directionLabels = DIRECTION_PRESETS.map((item) => item.label);
+  const selectedDirectionSpec = DIRECTION_PRESETS[selectedDirection] ?? DIRECTION_PRESETS[0];
+
+  const directorPrompt = useCallback(() => [
+    prompt.trim(),
+    `Visual direction: ${selectedDirectionSpec.label}. ${selectedDirectionSpec.instruction}`,
+    `Camera: ${cameraMove}. Shot: ${shotType}. Motion: ${motion.toLowerCase()}. Lighting: ${lighting}.`,
+    `Product fidelity: ${fidelity}. ${fidelity === "Exact" ? "Keep the supplied product shape, label, colours and proportions unchanged." : "Respect the supplied product identity."}`,
+  ].filter(Boolean).join("\n\n"), [cameraMove, fidelity, lighting, motion, prompt, selectedDirectionSpec, shotType]);
+
+  const studioConfigurationInput = useCallback((
+    resolvedPrompt: string,
+    resolvedReferences: ReferenceAsset[] = references,
+    resolvedSource: CreationDraft | null = sourceDraft,
+  ): AdvancedStudioConfigurationInput => {
+    const productReferences: AdvancedReferenceConfiguration[] = (resolvedSource?.product.images ?? []).flatMap((image) =>
+      image.storagePath
+        ? [{
+            id: image.id,
+            name: image.name,
+            role: "Style" as const,
+            objectKey: image.storagePath,
+            mimeType: /\.webp$/i.test(image.name) ? "image/webp" : /\.png$/i.test(image.name) ? "image/png" : "image/jpeg",
+          }]
+        : [],
+    );
+    return {
+      prompt: resolvedPrompt,
+      capability,
+      duration,
+      ratio,
+      resolution,
+      audio,
+      cameraMove,
+      shotType,
+      motion,
+      lighting,
+      fidelity,
+      selectedDirection,
+      selectedDirectionLabel: selectedDirectionSpec.label,
+      ...(resolvedSource?.templateVersionId
+        ? { sourceTemplateVersionId: resolvedSource.templateVersionId }
+        : {}),
+      references: [
+        ...productReferences,
+        ...resolvedReferences.map((reference) => ({
+          id: reference.id,
+          name: reference.name,
+          role: reference.role,
+          ...(reference.objectKey ? { objectKey: reference.objectKey } : {}),
+          ...(reference.mimeType ? { mimeType: reference.mimeType } : {}),
+        })),
+      ],
+    };
+  }, [audio, cameraMove, capability, duration, fidelity, lighting, motion, ratio, references, resolution, selectedDirection, selectedDirectionSpec.label, shotType, sourceDraft]);
 
   useEffect(() => {
     let active = true;
+    let automaticRetryTimer: number | null = null;
     setQuoteLoaded(false);
     setQuoteError("");
-    void supabase.functions.invoke("generation-quote", { body: { capability, duration_seconds: duration } }).then(({ data, error }) => {
-      if (!active) return;
-      if (!error && data?.quoteId) setQuote(data as GenerationQuote);
-      else {
+    setQuoteFailure(null);
+    const timer = window.setTimeout(() => {
+      const quotePromise = portablePlatform
+        ? portableCreatorApi.generationQuote({
+            capability,
+            configuration: buildAdvancedGenerationConfiguration(
+              studioConfigurationInput("Advanced video direction price estimate."),
+            ),
+          })
+        : supabase.functions.invoke("generation-quote", { body: { capability, duration_seconds: duration } })
+            .then(({ data, error }) => {
+              if (error || !data?.quoteId) throw error ?? new Error("generation_quote_unavailable");
+              return data as StudioQuote;
+            });
+      void quotePromise.then((nextQuote) => {
+        if (!active) return;
+        quoteAutoRetryCount.current = 0;
+        setQuote(nextQuote);
+      }).catch((error: unknown) => {
+        if (!active) return;
         setQuote(null);
-        setQuoteError("Live pricing is unavailable. Your direction is saved, but generation is temporarily disabled.");
-      }
-      setQuoteLoaded(true);
-    });
-    return () => { active = false; };
-  }, [capability, duration, user?.id]);
+        const portableError = error instanceof PortableApiError ? error : null;
+        const retryable = portableError?.retryable ?? true;
+        const retryDelay = automaticQuoteRetryDelay(quoteAutoRetryCount.current, retryable);
+        const shouldRetryAutomatically = retryDelay !== null;
+        const message = portableError?.code === "worker_unavailable"
+          ? tr("Generation is temporarily paused. Your direction is saved.", "التوليد متوقف مؤقتاً. اتجاهك محفوظ.")
+          : portableError?.code === "pricing_unavailable"
+            ? tr("We couldn’t confirm the current price. Try again.", "ما قدرنا نؤكد السعر الحالي. حاول مرة ثانية.")
+            : tr("Video generation is temporarily unavailable.", "توليد الفيديو غير متوفر مؤقتاً.");
+        setQuoteError(shouldRetryAutomatically
+          ? `${message} ${tr("Retrying automatically…", "جارٍ إعادة المحاولة تلقائياً…")}`
+          : message);
+        setQuoteFailure({
+          retryable,
+          ...(portableError?.requestId ? { requestId: portableError.requestId } : {}),
+        });
+        if (retryDelay !== null) {
+          quoteAutoRetryCount.current += 1;
+          automaticRetryTimer = window.setTimeout(() => {
+            if (active) setQuoteRetry((value) => value + 1);
+          }, retryDelay);
+        }
+      }).finally(() => {
+        if (active) setQuoteLoaded(true);
+      });
+    }, 250);
+    return () => {
+      active = false;
+      window.clearTimeout(timer);
+      if (automaticRetryTimer !== null) window.clearTimeout(automaticRetryTimer);
+    };
+  }, [capability, duration, portablePlatform, quoteRetry, studioConfigurationInput, tr, user?.id]);
+
+  const retryQuote = useCallback(() => {
+    quoteAutoRetryCount.current = 0;
+    setQuoteRetry((value) => value + 1);
+  }, []);
+
+  useEffect(() => setPriceNotice(""), [audio, capability, duration, ratio, resolution]);
 
   useEffect(() => {
     if (!requestedDraft) return;
@@ -139,19 +308,48 @@ export default function AdvancedStudio() {
       setCapability(draft.advanced?.capability || "video.cinematic");
       setDuration(Number(readSetting(draft, "duration", 8)));
       setRatio(readSetting(draft, "ratio", draft.campaign.aspectRatio));
+      setResolution(normalizeCreatorResolution(readSetting(draft, "resolution", draft.campaign.resolution)));
       setCameraMove(readSetting(draft, "camera", "push-in"));
       setShotType(readSetting(draft, "shot", "macro"));
       setMotion(readSetting(draft, "motion", "Natural"));
       setLighting(readSetting(draft, "lighting", "Studio rim"));
       setFidelity(readSetting(draft, "fidelity", "Exact"));
+      setSelectedDirection(Math.min(3, Math.max(0, Number(readSetting(draft, "direction", 0)))));
       setAudio(readSetting(draft, "audio", draft.campaign.audio));
       setRights(Boolean(draft.rightsAttestation?.confirmed));
       setPendingId(draft.pendingGenerationId || null);
+      setCloudProjectId(readSetting<string | null>(draft, "cloudProjectId", null));
+      const referenceMetadata = readSetting<Array<{
+        key: string;
+        id?: string;
+        name?: string;
+        role?: ReferenceAsset["role"];
+        objectKey?: string;
+        mimeType?: string;
+      }>>(draft, "referenceMetadata", []);
       const hydratedReferences = await Promise.all((draft.advanced?.references || []).slice(0, 4).map(async (reference, index) => {
         const stored = await getGuestAsset(reference);
+        const metadata = referenceMetadata.find((item) => item.key === reference);
+        const role = metadata?.role && REFERENCE_ROLES.includes(metadata.role)
+          ? metadata.role
+          : (index === 0 ? "Style" : index === 1 ? "Lighting" : "Setting") as ReferenceAsset["role"];
         return stored
-          ? { id: reference, name: stored.name, url: URL.createObjectURL(stored.blob), assetKey: reference, role: (index === 0 ? "Style" : index === 1 ? "Lighting" : "Setting") as ReferenceAsset["role"] }
-          : { id: reference, name: `Reference ${index + 1}`, url: reference, role: (index === 0 ? "Style" : index === 1 ? "Lighting" : "Setting") as ReferenceAsset["role"] };
+          ? {
+              id: metadata?.id || reference,
+              name: metadata?.name || stored.name,
+              url: URL.createObjectURL(stored.blob),
+              assetKey: reference,
+              mimeType: metadata?.mimeType || stored.mimeType,
+              role,
+            }
+          : {
+              id: metadata?.id || reference,
+              name: metadata?.name || `Reference ${index + 1}`,
+              url: reference,
+              ...(metadata?.objectKey ? { objectKey: metadata.objectKey } : {}),
+              ...(metadata?.mimeType ? { mimeType: metadata.mimeType } : {}),
+              role,
+            };
       }));
       setReferences(hydratedReferences.filter((reference) => /^blob:|^https?:|^\//.test(reference.url)));
       setHydrated(true);
@@ -161,7 +359,7 @@ export default function AdvancedStudio() {
   const makeDraft = useCallback((status: CreationDraft["status"]): CreationDraft => {
     const now = new Date();
     const product = sourceDraft?.product ?? { sourceType: null, sourceUrl: "", name: "Advanced video", description: "", price: "", brand: "", images: [] };
-    const campaign = sourceDraft?.campaign ?? { market: "KW", language: "en", vertical: "ecommerce", goal: "launch", presenterMode: "none", location: "", bookingUrl: "", whatsapp: "", offer: "", cta: "Learn more", brandColor: "#d49737", aspectRatio: "9:16", resolution: "1080p", subtitles: false, audio: true };
+    const campaign = advancedCampaignRecipe(sourceDraft, ratio, resolution, audio);
     return {
       id: draftId,
       mode: "advanced",
@@ -169,12 +367,32 @@ export default function AdvancedStudio() {
       templateVersionId: sourceDraft?.templateVersionId,
       product,
       assetKeys: [...(sourceDraft?.assetKeys ?? []), ...references.flatMap((reference) => reference.assetKey ? [reference.assetKey] : [])],
-      campaign: { ...campaign, aspectRatio: ratio, audio },
+      campaign,
       advanced: {
         capability,
         prompt,
-        references: references.map((reference) => reference.assetKey || reference.url),
-        renderSettings: { duration, ratio, camera: cameraMove, shot: shotType, motion, lighting, fidelity, audio },
+        references: references.map((reference) => reference.assetKey || reference.objectKey || reference.url),
+        renderSettings: {
+          duration,
+          ratio,
+          resolution,
+          camera: cameraMove,
+          shot: shotType,
+          motion,
+          lighting,
+          fidelity,
+          audio,
+          direction: selectedDirection,
+          ...(cloudProjectId ? { cloudProjectId } : {}),
+          referenceMetadata: references.map((reference) => ({
+            key: reference.assetKey || reference.objectKey || reference.url,
+            id: reference.id,
+            name: reference.name,
+            role: reference.role,
+            ...(reference.objectKey ? { objectKey: reference.objectKey } : {}),
+            ...(reference.mimeType ? { mimeType: reference.mimeType } : {}),
+          })),
+        },
       },
       rightsAttestation: { confirmed: rights, confirmedAt: rights ? now.toISOString() : undefined, version: "2026-08-11" },
       pendingGenerationId: pendingId || undefined,
@@ -183,7 +401,7 @@ export default function AdvancedStudio() {
       updatedAt: now.toISOString(),
       expiresAt: new Date(now.getTime() + GUEST_DRAFT_TTL_MS).toISOString(),
     };
-  }, [audio, cameraMove, capability, draftId, duration, fidelity, lighting, motion, pendingId, prompt, ratio, references, rights, shotType, sourceDraft]);
+  }, [audio, cameraMove, capability, cloudProjectId, draftId, duration, fidelity, lighting, motion, pendingId, prompt, ratio, references, resolution, rights, selectedDirection, shotType, sourceDraft]);
 
   useEffect(() => {
     if (!hydrated || (!prompt.trim() && !sourceDraft?.product.images.length && !references.length)) return;
@@ -191,17 +409,19 @@ export default function AdvancedStudio() {
     return () => window.clearTimeout(timer);
   }, [hydrated, makeDraft, prompt, references.length, sourceDraft?.product.images.length]);
 
-  const directorPrompt = () => [
-    prompt.trim(),
-    `Camera: ${cameraMove}. Shot: ${shotType}. Motion: ${motion.toLowerCase()}. Lighting: ${lighting}.`,
-    `Product fidelity: ${fidelity}. ${fidelity === "Exact" ? "Keep the supplied product shape, label, colours and proportions unchanged." : "Respect the supplied product identity."}`,
-  ].filter(Boolean).join("\n\n");
+  const cycleReferenceRole = (id: string) => {
+    setReferences((current) => current.map((reference) => {
+      if (reference.id !== id) return reference;
+      const index = REFERENCE_ROLES.indexOf(reference.role);
+      return { ...reference, role: REFERENCE_ROLES[(index + 1) % REFERENCE_ROLES.length]! };
+    }));
+  };
 
   const improveDirection = () => {
     const product = sourceDraft?.product.name || "the product";
     const improved = `A premium ${shotType} product shot of ${product}. ${cameraMove === "push-in" ? "Slow cinematic push-in" : `${cameraMove} camera movement`}, ${motion.toLowerCase()} pacing, ${lighting.toLowerCase()} lighting. Keep the product label, shape and colours exact.`;
     setPrompt(improved);
-    toast.success("Direction prepared. You can edit every word before generating.");
+    toast.success(tr("Direction prepared. You can edit every word before generating.", "تم تجهيز الاتجاه. تقدر تعدّل كل كلمة قبل التوليد."));
   };
 
   const addReferences = async (files: FileList | null) => {
@@ -209,28 +429,96 @@ export default function AdvancedStudio() {
     const selected = Array.from(files).slice(0, Math.max(0, 4 - references.length));
     try {
       const next = await Promise.all(selected.map(async (file, index) => {
-        if (!file.type.startsWith("image/") || file.size > 12 * 1024 * 1024) throw new Error("Use JPG, PNG or WebP images up to 12 MB.");
+        if (!file.type.startsWith("image/") || file.size > 12 * 1024 * 1024) throw new Error(tr("Use JPG, PNG or WebP images up to 12 MB.", "استخدم صور JPG أو PNG أو WebP بحجم أقصى 12 ميجابايت."));
         const assetKey = await putGuestAsset(draftId, file);
-        return { id: crypto.randomUUID(), name: file.name, url: URL.createObjectURL(file), assetKey, role: (index === 0 ? "Style" : "Lighting") as ReferenceAsset["role"] };
+        return { id: crypto.randomUUID(), name: file.name, url: URL.createObjectURL(file), assetKey, mimeType: file.type, role: (index === 0 ? "Style" : "Lighting") as ReferenceAsset["role"] };
       }));
       setReferences((current) => [...current, ...next].slice(0, 4));
-      toast.success(`${next.length} visual reference${next.length === 1 ? "" : "s"} added.`);
+      toast.success(arabicUi ? `تمت إضافة ${next.length} من المراجع البصرية.` : `${next.length} visual reference${next.length === 1 ? "" : "s"} added.`);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "The references could not be added.");
+      toast.error(error instanceof Error ? error.message : tr("The references could not be added.", "تعذرت إضافة المراجع."));
     }
+  };
+
+  const claimPortableAssets = async (
+    projectId: string,
+    currentSource: CreationDraft | null,
+    currentReferences: ReferenceAsset[],
+  ) => {
+    let uploaded = false;
+    const productImages = await Promise.all((currentSource?.product.images ?? []).map(async (image) => {
+      if (!image.assetKey || image.storagePath) return image;
+      const stored = await getGuestAsset(image.assetKey);
+      if (!stored) {
+        throw new Error(tr(
+          `The local copy of ${image.name} is no longer available. Add it again to continue.`,
+          `النسخة المحلية من ${image.name} لم تعد متاحة. أضفها مرة ثانية للمتابعة.`,
+        ));
+      }
+      const claimed = await claimGuestImage({
+        userId: user!.id,
+        projectId,
+        assetId: image.id,
+        name: stored.name,
+        blob: stored.blob,
+        contentType: stored.mimeType,
+        kind: "product",
+      });
+      uploaded = true;
+      return {
+        ...image,
+        id: claimed.assetId,
+        storagePath: claimed.storagePath,
+        checksum: claimed.checksum,
+        url: claimed.url,
+        assetKey: undefined,
+      };
+    }));
+    const securedSource = currentSource
+      ? { ...currentSource, product: { ...currentSource.product, images: productImages } }
+      : currentSource;
+    const securedReferences = await Promise.all(currentReferences.map(async (reference) => {
+      if (!reference.assetKey || reference.objectKey) return reference;
+      const stored = await getGuestAsset(reference.assetKey);
+      if (!stored) {
+        throw new Error(tr(
+          `The local copy of ${reference.name} is no longer available. Add it again to continue.`,
+          `النسخة المحلية من ${reference.name} لم تعد متاحة. أضفها مرة ثانية للمتابعة.`,
+        ));
+      }
+      const claimed = await claimGuestImage({
+        userId: user!.id,
+        projectId,
+        assetId: reference.id,
+        name: stored.name,
+        blob: stored.blob,
+        contentType: stored.mimeType,
+        kind: "reference",
+      });
+      uploaded = true;
+      return {
+        ...reference,
+        id: claimed.assetId,
+        objectKey: claimed.storagePath,
+        mimeType: stored.mimeType,
+        url: claimed.url,
+        assetKey: undefined,
+      };
+    }));
+    return { source: securedSource, references: securedReferences, uploaded };
   };
 
   const generate = async () => {
     if (!prompt.trim()) {
-      toast.error("Describe the shot or choose Improve direction first.");
+      toast.error(tr("Describe the shot or choose Improve direction first.", "اكتب وصف اللقطة أو اختر تحسين الاتجاه أولاً."));
       return;
     }
     if (!rights) {
-      toast.error("Confirm that you have permission to use these assets.");
+      toast.error(tr("Confirm that you have permission to use these assets.", "أكد أن عندك صلاحية استخدام هذه المواد."));
       return;
     }
     if (!quoteLoaded || !quote) {
-      toast.error(quoteError || "Live pricing is still loading. Try again in a moment.");
+      toast.error(quoteError || tr("Live pricing is still loading. Try again in a moment.", "جارٍ تحميل السعر المباشر. حاول بعد لحظات."));
       return;
     }
     const operationId = pendingId || crypto.randomUUID();
@@ -242,20 +530,106 @@ export default function AdvancedStudio() {
     }
     setSubmitting(true);
     try {
-      const now = new Date().toISOString();
       const title = sourceDraft?.product.name || prompt.slice(0, 64) || "Advanced video";
+      if (portablePlatform) {
+        const saveVersion = async (
+          currentDraftId: string,
+          currentSource: CreationDraft | null,
+          currentReferences: ReferenceAsset[],
+          operationSuffix: string,
+        ) => persistPortableAdvancedProject({
+          draftId: currentDraftId,
+          title,
+          ...(currentSource?.templateVersionId
+            ? { sourceTemplateVersionId: currentSource.templateVersionId }
+            : {}),
+          configuration: buildAdvancedProjectConfiguration(
+            studioConfigurationInput(directorPrompt(), currentReferences, currentSource),
+          ),
+          productRecipe: currentSource?.product ?? {},
+          campaignRecipe: advancedCampaignRecipe(currentSource, ratio, resolution, audio),
+          operationId: `${operationId}:${operationSuffix}`,
+        });
+
+        const hasLocalAssets = Boolean(
+          sourceDraft?.product.images.some((image) => image.assetKey && !image.storagePath)
+          || references.some((reference) => reference.assetKey && !reference.objectKey),
+        );
+        let saved = await saveVersion(cloudProjectId || draftId, sourceDraft, references, hasLocalAssets ? "claim" : "final");
+        setCloudProjectId(saved.project.id);
+        const secured = await claimPortableAssets(saved.project.id, sourceDraft, references);
+        if (secured.uploaded) {
+          saved = await saveVersion(saved.project.id, secured.source, secured.references, "final");
+          setSourceDraft(secured.source);
+          setReferences(secured.references);
+        }
+        if (
+          capability === "video.product_fidelity"
+          && secured.source?.product.images.length
+          && !secured.source.product.images.some((image) => image.storagePath)
+        ) {
+          throw new Error(tr(
+            "Product-fidelity generation needs a securely uploaded product image. Download the selected image and upload it to continue.",
+            "توليد مطابقة المنتج يحتاج صورة منتج مرفوعة بشكل آمن. نزّل الصورة المختارة وارفعها للمتابعة.",
+          ));
+        }
+        const authoritativeQuote = await portableCreatorApi.generationQuote({
+          capability,
+          projectVersionId: saved.version.id,
+        });
+        if (!authoritativeQuote.quoteId) {
+          throw new Error(tr("The confirmed generation price could not be saved.", "تعذر حفظ سعر التوليد المؤكد."));
+        }
+        if (authoritativeQuote.credits !== quote.credits) {
+          setQuote({
+            quoteId: authoritativeQuote.quoteId,
+            capability: authoritativeQuote.capability,
+            credits: authoritativeQuote.credits,
+            entitlementEligible: authoritativeQuote.entitlementEligible,
+            expiresAt: authoritativeQuote.expiresAt,
+            breakdown: authoritativeQuote.breakdown,
+            estimateOnly: authoritativeQuote.estimateOnly,
+          });
+          setPriceNotice(tr(
+            `The price changed from ${quote.credits} to ${authoritativeQuote.credits} credits. Review it, then select Generate direction again.`,
+            `تغيّر السعر من ${quote.credits} إلى ${authoritativeQuote.credits} رصيد. راجعه، ثم اختر توليد الاتجاه مرة ثانية.`,
+          ));
+          setSubmitting(false);
+          return;
+        }
+        const run = await portableCreatorApi.startRender({
+          projectId: saved.project.id,
+          projectVersionId: saved.version.id,
+          quoteId: authoritativeQuote.quoteId,
+          rightsAttested: true,
+        }, operationId);
+        try {
+          await deleteGuestDraft(draftId);
+        } catch {
+          toast.warning(tr(
+            "Your render started, but the browser copy of this draft could not be cleared.",
+            "بدأ التوليد، لكن تعذر حذف نسخة المسودة من المتصفح.",
+          ));
+        }
+        toast.success(tr("Direction queued. You can follow it in your project.", "تم وضع الاتجاه في قائمة التوليد. تقدر تتابعه في مشروعك."));
+        window.location.assign(`/projects/${encodeURIComponent(saved.project.id)}?run=${encodeURIComponent(run.id)}`);
+        return;
+      }
+
+      const now = new Date().toISOString();
       const { error: projectError } = await supabase.from("creator_projects").upsert({ id: draftId, user_id: user.id, title, mode: "advanced", status: "ready", updated_at: now });
       if (projectError) throw projectError;
-      const configuration = { id: draftId, versionId, mode: "advanced", prompt: directorPrompt(), capability, duration, ratio, cameraMove, shotType, motion, lighting, fidelity, sourceTemplateVersionId: sourceDraft?.templateVersionId, rightsAttestation: { confirmed: true, confirmedAt: now } };
-      const { error: versionError } = await supabase.from("creator_project_versions").upsert({ id: versionId, project_id: draftId, user_id: user.id, mode: "advanced", version_number: 1, configuration: configuration as unknown as Json, product_recipe: (sourceDraft?.product ?? {}) as unknown as Json, campaign_recipe: (sourceDraft?.campaign ?? { ratio }) as unknown as Json });
+      const configuration = { id: draftId, versionId, mode: "advanced", prompt: directorPrompt(), capability, duration, ratio, providerRatio: providerCanvasRatio(ratio), resolution, audio, references: references.map((reference) => reference.assetKey || reference.objectKey || reference.url), cameraMove, shotType, motion, lighting, fidelity, selectedDirection, sourceTemplateVersionId: sourceDraft?.templateVersionId, rightsAttestation: { confirmed: true, confirmedAt: now } };
+      const { error: versionError } = await supabase.from("creator_project_versions").upsert({ id: versionId, project_id: draftId, user_id: user.id, mode: "advanced", version_number: 1, configuration: configuration as unknown as Json, product_recipe: (sourceDraft?.product ?? {}) as unknown as Json, campaign_recipe: ({ ...(sourceDraft?.campaign ?? {}), aspectRatio: ratio, audio, resolution }) as unknown as Json });
       if (versionError) throw versionError;
       await supabase.from("creator_projects").update({ current_accepted_version_id: versionId }).eq("id", draftId).eq("user_id", user.id);
       const referenceImages = [...(sourceDraft?.product.images.map((image) => image.url) ?? []), ...references.map((reference) => reference.url)];
-      const generation = await startCreatorGeneration({ projectId: draftId, projectVersionId: versionId, quoteId: quote.quoteId, idempotencyKey: operationId, mode: "advanced", prompt: directorPrompt(), capability: capability as "video.cinematic" | "video.product_fidelity", options: { duration, aspect_ratio: ratio, resolution: "1080p", audio }, referenceImages, rightsAttested: true, metadata: { advanced_flow: true, camera_move: cameraMove, shot_type: shotType, motion, lighting, product_fidelity: fidelity, source_template_version_id: sourceDraft?.templateVersionId } });
-      toast.success("Direction queued. You can follow it in Advanced History.");
-      window.location.assign(`/advanced/history?run=${encodeURIComponent(generation.runId)}`);
+      if (!quote.quoteId) throw new Error("The confirmed generation price is unavailable.");
+      const generation = await startCreatorGeneration({ projectId: draftId, projectVersionId: versionId, quoteId: quote.quoteId, idempotencyKey: operationId, mode: "advanced", prompt: directorPrompt(), capability: capability as "video.cinematic" | "video.product_fidelity", options: { duration, aspect_ratio: providerCanvasRatio(ratio), resolution, audio }, referenceImages, rightsAttested: true, metadata: { advanced_flow: true, requested_aspect_ratio: ratio, provider_aspect_ratio: providerCanvasRatio(ratio), resolution, camera_move: cameraMove, shot_type: shotType, motion, lighting, product_fidelity: fidelity, visual_direction: selectedDirectionSpec.label, source_template_version_id: sourceDraft?.templateVersionId } });
+      toast.success(tr("Direction queued. You can follow it in Projects.", "تم وضع الاتجاه في قائمة التوليد. تقدر تتابعه في المشاريع."));
+      window.location.assign(`/projects?run=${encodeURIComponent(generation.runId)}`);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "The render could not be started.");
+      toast.error(error instanceof Error ? error.message : tr("The render could not be started.", "تعذر بدء التوليد."));
       setSubmitting(false);
     }
   };
@@ -268,121 +642,139 @@ export default function AdvancedStudio() {
   }, [pendingId, prompt, resume, rights, user]);
 
   if (!hydrated) {
-    return <CreatorShell><div className="advanced-loading" role="status"><Loader2 className="animate-spin" aria-hidden="true" /><span>Restoring your studio…</span></div></CreatorShell>;
+    return <CreatorShell><div className="advanced-loading" role="status"><Loader2 className="animate-spin" aria-hidden="true" /><span>{tr("Restoring your studio…", "جارٍ استعادة الاستوديو…")}</span></div></CreatorShell>;
   }
 
   return (
-    <CreatorShell studio={{ title: projectName, templatePath, onExport: () => toast("Export becomes available after your first direction is ready.") }}>
-      <Seo title={`${projectName} · Advanced Studio · MovPrompt`} description="Direct an AI video with visual references, camera controls and product-safe generation." path="/advanced" noindex />
+    <CreatorShell studio={{ title: projectName, templatePath }}>
+      <Seo title={`${projectName} · ${tr("Advanced Studio", "الاستوديو المتقدم")} · MovPrompt`} description={tr("Direct an AI video with visual references, camera controls and product-safe generation.", "وجّه فيديو بالذكاء الاصطناعي باستخدام مراجع بصرية وتحكم بالكاميرا مع حماية شكل المنتج.")} path="/advanced" noindex />
+      <h1 className="sr-only">{tr("Advanced Studio", "الاستوديو المتقدم")}</h1>
       <div className="advanced-studio">
         {fromTemplate && sourceDraft && (
           <div className="advanced-handoff" role="status">
             <CheckCircle2 aria-hidden="true" />
-            <span><strong>Template moved into Advanced</strong><small>Product, campaign and brand settings are preserved.</small></span>
-            <Link to={templatePath}><ArrowLeft aria-hidden="true" /> Return to Template</Link>
+            <span><strong>{tr("Template moved into Advanced", "تم نقل القالب إلى الوضع المتقدم")}</strong><small>{tr("Product, campaign and brand settings are preserved.", "تم الحفاظ على إعدادات المنتج والحملة والعلامة.")}</small></span>
+            <Link to={templatePath}><ArrowLeft aria-hidden="true" /> {tr("Return to Template", "العودة إلى القالب")}</Link>
           </div>
         )}
 
-        <aside className="advanced-assets" aria-label="Project assets">
-          <div className="advanced-column-head"><h1>Assets</h1><button type="button" aria-label="Manage assets"><Settings2 aria-hidden="true" /></button></div>
+        <aside className="advanced-assets" aria-label={tr("Project assets", "مواد المشروع")}>
+          <div className="advanced-column-head"><h2>{tr("Assets", "المواد")}</h2></div>
           <section className="advanced-asset-section" aria-labelledby="advanced-product-title">
-            <div className="advanced-section-label"><h2 id="advanced-product-title">Product</h2><ChevronRight aria-hidden="true" /></div>
-            <div className="advanced-product-asset">
-              <span className="advanced-asset-check"><Check aria-hidden="true" /></span>
-              <img src={productImage} alt={sourceDraft?.product.name || "Sample product"} />
-              <span><strong>{sourceDraft?.product.name || "Sample product"}</strong><small>{sourceDraft?.product.brand || "Primary product"}</small><small>{sourceDraft?.product.images[0]?.name || "Product reference"}</small></span>
-              <button type="button" aria-label="Product asset options"><MoreVertical aria-hidden="true" /></button>
-            </div>
+            <div className="advanced-section-label"><h2 id="advanced-product-title">{tr("Product", "المنتج")}</h2><ChevronRight aria-hidden="true" /></div>
+            {productImage ? (
+              <div className="advanced-product-asset">
+                <span className="advanced-asset-check"><Check aria-hidden="true" /></span>
+                <img src={productImage} alt={sourceDraft?.product.name || tr("Product reference", "مرجع المنتج")} />
+                <span><strong>{sourceDraft?.product.name || tr("Imported product", "المنتج المستورد")}</strong><small>{sourceDraft?.product.brand || tr("Primary product", "المنتج الرئيسي")}</small><small>{sourceDraft?.product.images[0]?.name || tr("Product reference", "مرجع المنتج")}</small></span>
+              </div>
+            ) : (
+              <div className="advanced-product-empty" role="status">
+                <ImagePlus aria-hidden="true" />
+                <span><strong>{tr("No product attached", "ما تمت إضافة منتج")}</strong><small>{tr("Add the real product before generating.", "أضف المنتج الحقيقي قبل التوليد.")}</small></span>
+                <Link to="/create">{tr("Add in Template Mode", "أضف في وضع القوالب")}</Link>
+              </div>
+            )}
           </section>
 
           <section className="advanced-asset-section" aria-labelledby="advanced-references-title">
-            <div className="advanced-section-label"><span><h2 id="advanced-references-title">Visual references</h2><small>Guide style, lighting or setting.</small></span><i>{references.length}</i></div>
+            <div className="advanced-section-label"><span><h2 id="advanced-references-title">{tr("Visual references", "المراجع البصرية")}</h2><small>{tr("Guide style, lighting or setting.", "وجّه الأسلوب أو الإضاءة أو المكان.")}</small></span><i>{references.length}</i></div>
             <div className="advanced-reference-grid">
-              {references.map((reference, index) => (
-                <button key={reference.id} type="button" className="advanced-reference" title={`${reference.role}: ${reference.name}`} onClick={() => setSelectedDirection(Math.min(index, 3))}>
-                  <img src={reference.url} alt={`${reference.role} reference: ${reference.name}`} />
-                  <span>{reference.role}</span>
+              {references.map((reference) => (
+                <button key={reference.id} type="button" className="advanced-reference" title={`${referenceRoleLabel(reference.role)}: ${reference.name}`} onClick={() => cycleReferenceRole(reference.id)} aria-label={tr(`${reference.name}. Role: ${reference.role}. Activate to change role.`, `${reference.name}. الدور: ${referenceRoleLabel(reference.role)}. اضغط لتغيير الدور.`)}>
+                  <img src={reference.url} alt={tr(`${reference.role} reference: ${reference.name}`, `مرجع ${referenceRoleLabel(reference.role)}: ${reference.name}`)} />
+                  <span>{referenceRoleLabel(reference.role)}</span>
                 </button>
               ))}
-              {!references.length && ["/homepage/template-texture-study.png", "/homepage/hero-product.png", "/homepage/hero-lifestyle.png"].map((url, index) => (
-                <button key={url} type="button" className="advanced-reference is-suggestion" onClick={() => toast("Upload this visual as a reference to use it in generation.")}>
-                  <img src={url} alt="Suggested visual reference" />
-                  <span>{index === 0 ? "Style" : index === 1 ? "Lighting" : "Setting"}</span>
-                </button>
+              {!references.length && (["Style", "Lighting", "Setting"] as const).map((role) => (
+                <div key={role} className="advanced-reference is-suggestion" aria-hidden="true">
+                  <ImagePlus />
+                  <span>{tr(`${referenceRoleLabel(role)} slot`, `خانة ${referenceRoleLabel(role)}`)}</span>
+                </div>
               ))}
             </div>
-            <label className="advanced-add-media"><Upload aria-hidden="true" /><span>Add media</span><input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={(event) => void addReferences(event.target.files)} /></label>
+            <label className="advanced-add-media"><Upload aria-hidden="true" /><span>{tr("Add media", "إضافة مادة")}</span><input type="file" accept="image/jpeg,image/png,image/webp" multiple aria-label={tr("Add visual references", "إضافة مراجع بصرية")} onChange={(event) => void addReferences(event.target.files)} /></label>
           </section>
 
-          <button className="advanced-rail-row" type="button" onClick={() => toast("Your template brand colour and product identity are already connected.")}><span><ShieldCheck aria-hidden="true" /> Brand kit</span><ChevronRight aria-hidden="true" /></button>
-          <button className="advanced-rail-row" type="button" onClick={() => toast("Character references can be added as visual references.")}><span><Plus aria-hidden="true" /> Characters</span><ChevronRight aria-hidden="true" /></button>
+          <div className="advanced-rail-row" role="status"><span>{productImage ? <ShieldCheck aria-hidden="true" /> : <ImagePlus aria-hidden="true" />} {productImage ? (sourceDraft?.product.brand ? `${tr("Brand", "العلامة")}: ${sourceDraft.product.brand}` : tr("Product reference attached", "تم إرفاق مرجع المنتج")) : tr("Add a product image to protect its identity", "أضف صورة المنتج لحماية هويته")}</span></div>
+          {sourceDraft?.campaign.cta && <div className="advanced-rail-row" role="status"><span><Sparkles aria-hidden="true" /> {tr("CTA", "الدعوة للإجراء")}: {sourceDraft.campaign.cta}</span></div>}
         </aside>
 
-        <main className="advanced-main">
-          <section className="advanced-preview" aria-label="Direction preview">
+        <section className="advanced-main" aria-label={tr("Creative direction workspace", "مساحة توجيه الإبداع")}>
+          <section ref={previewRef} className="advanced-preview" aria-label={tr("Direction preview", "معاينة الاتجاه")}>
             <div className="advanced-preview-badge">{ratio}</div>
-            <button className="advanced-preview-expand" type="button" aria-label="Open full-screen preview"><Maximize2 aria-hidden="true" /></button>
+            <button className="advanced-preview-expand" type="button" aria-label={tr("Open full-screen preview", "فتح المعاينة بكامل الشاشة")} onClick={() => void previewRef.current?.requestFullscreen?.()}><Maximize2 aria-hidden="true" /></button>
             <div className="advanced-preview-media" data-ratio={ratio}>
-              <img src={directionImages[selectedDirection]} alt={`${directionLabels[selectedDirection]} direction preview`} />
+              {productImage ? (
+                <img src={productImage} alt={tr(`${sourceDraft?.product.name || "Product"} reference with ${directionLabels[selectedDirection]} selected`, `مرجع ${sourceDraft?.product.name || "المنتج"} مع اختيار اتجاه ${directionLabel(selectedDirection)}`)} />
+              ) : (
+                <div className="advanced-preview-empty" role="status"><ImagePlus aria-hidden="true" /><strong>{tr("Your direction preview starts here", "تبدأ معاينة اتجاهك هنا")}</strong><span>{tr("Add a product or reference, or write a prompt. No sample output is shown.", "أضف منتجاً أو مرجعاً، أو اكتب توجيهاً. لا نعرض نتيجة تجريبية.")}</span></div>
+              )}
             </div>
-            <div className="advanced-player" aria-label="Preview controls">
-              <button type="button" onClick={() => setPreviewPlaying((playing) => !playing)} aria-label={previewPlaying ? "Pause preview" : "Play preview"}>{previewPlaying ? <Pause aria-hidden="true" /> : <Play aria-hidden="true" />}</button>
-              <span>00:04 / 00:{String(duration).padStart(2, "0")}</span>
-              <span className="advanced-player-track"><i /></span>
-              <button type="button" aria-label="Preview volume"><Volume2 aria-hidden="true" /></button>
-              <span>100%</span>
-              <button type="button" aria-label="Show safe zones"><Frame aria-hidden="true" /></button>
-            </div>
+            <div className="advanced-player" role="group" aria-label={tr("Direction preview details", "تفاصيل معاينة الاتجاه")}><span>{directionLabel(selectedDirection)} · {productImage ? tr("product reference", "مرجع المنتج") : tr("direction setup", "إعداد الاتجاه")}</span><span>{productImage ? tr("Not generated yet", "لم يتم التوليد بعد") : tr("Awaiting your media", "بانتظار موادك")}</span></div>
           </section>
 
           <section className="advanced-composer" aria-labelledby="advanced-prompt-label">
-            <label id="advanced-prompt-label" htmlFor="advanced-prompt">Direct this shot</label>
-            <textarea id="advanced-prompt" value={prompt} onChange={(event) => setPrompt(event.target.value)} maxLength={8000} placeholder="Describe the subject, action, camera and light. Or use Improve direction." aria-describedby="advanced-prompt-help" />
+            <label id="advanced-prompt-label" htmlFor="advanced-prompt">{tr("Direct this shot", "وجّه هذه اللقطة")}</label>
+            <textarea id="advanced-prompt" value={prompt} onChange={(event) => setPrompt(event.target.value)} maxLength={8000} placeholder={tr("Describe the subject, action, camera and light. Or use Improve direction.", "صف العنصر والحركة والكاميرا والإضاءة، أو استخدم تحسين الاتجاه.")} aria-describedby="advanced-prompt-help" />
             <div className="advanced-composer-actions">
               <div className="advanced-prompt-tools">
-                <button type="button" onClick={() => setPrompt((current) => `${current}${current ? " " : ""}@Product`)}>@Product</button>
-                <button type="button" disabled={!references.length} onClick={() => setPrompt((current) => `${current}${current ? " " : ""}@Reference1`)}>@Reference 1</button>
-                <button type="button" onClick={improveDirection}><WandSparkles aria-hidden="true" /> Improve direction</button>
+                <button type="button" disabled={!productImage} title={!productImage ? tr("Add a product before mentioning it in the direction.", "أضف منتجاً قبل الإشارة إليه في التوجيه.") : undefined} onClick={() => setPrompt((current) => `${current}${current ? " " : ""}@Product`)}>@{tr("Product", "المنتج")}</button>
+                <button type="button" disabled={!references.length} onClick={() => setPrompt((current) => `${current}${current ? " " : ""}@Reference1`)}>@{tr("Reference 1", "المرجع 1")}</button>
+                <button type="button" onClick={improveDirection}><WandSparkles aria-hidden="true" /> {tr("Improve direction", "تحسين الاتجاه")}</button>
               </div>
-              <button className="advanced-settings-trigger" type="button" onClick={() => setSettingsOpen((open) => !open)} aria-expanded={settingsOpen} aria-controls="advanced-quick-settings" aria-label="Quick render settings"><Settings2 aria-hidden="true" /></button>
-              <button className="advanced-generate" type="button" onClick={() => void generate()} disabled={submitting || !quoteLoaded || !quote}>{submitting ? <Loader2 className="animate-spin" aria-hidden="true" /> : <Sparkles aria-hidden="true" />} Generate direction</button>
+              <button className="advanced-settings-trigger" type="button" onClick={() => setSettingsOpen((open) => !open)} aria-expanded={settingsOpen} aria-controls="advanced-quick-settings" aria-label={tr("Quick render settings", "إعدادات التوليد السريعة")}><Settings2 aria-hidden="true" /></button>
+              <button
+                className="advanced-generate"
+                type="button"
+                onClick={() => void generate()}
+                disabled={submitting || !quoteLoaded || !quote || !prompt.trim() || !rights}
+                title={!prompt.trim()
+                  ? tr("Describe the shot before generating.", "صف اللقطة قبل التوليد.")
+                  : !rights
+                    ? tr("Confirm asset permission before generating.", "أكد صلاحية استخدام المواد قبل التوليد.")
+                    : undefined}
+              >
+                {submitting ? <Loader2 className="animate-spin" aria-hidden="true" /> : <Sparkles aria-hidden="true" />} {tr("Generate direction", "توليد الاتجاه")}
+              </button>
             </div>
             <div className="advanced-composer-meta">
-              <label><input type="checkbox" checked={rights} onChange={(event) => setRights(event.target.checked)} /><span>I have permission to use these assets</span></label>
-              <span id="advanced-prompt-help">{quote ? `${quote.credits} credits · usually 2–5 minutes` : quoteLoaded ? "Live pricing unavailable · generation disabled" : "Checking live price…"}</span>
+              <label><input type="checkbox" checked={rights} onChange={(event) => setRights(event.target.checked)} /><span>{tr("I have permission to use these assets", "عندي صلاحية استخدام هذه المواد")}</span></label>
+              <span id="advanced-prompt-help" className="advanced-price-status" role="status" aria-live="polite">{priceNotice || (quote ? (arabicUi ? `${quote.credits} رصيد · عادةً من دقيقتين إلى 5 دقائق` : `${quote.credits} credits · usually 2–5 minutes`) : quoteLoaded ? quoteError || tr("Video generation is temporarily unavailable.", "توليد الفيديو غير متوفر مؤقتاً.") : tr("Checking live price…", "جارٍ التحقق من السعر…"))}{quoteLoaded && !quote && quoteFailure?.retryable && <button type="button" onClick={retryQuote}>{tr("Retry price", "أعد محاولة السعر")}</button>}{quoteFailure?.requestId && <details><summary>{tr("Support details", "تفاصيل الدعم")}</summary><code>{quoteFailure.requestId}</code></details>}</span>
             </div>
             {settingsOpen && (
               <div id="advanced-quick-settings" className="advanced-quick-settings">
-                <label>Duration<select value={duration} onChange={(event) => setDuration(Number(event.target.value))}>{[5, 8, 10, 15].map((seconds) => <option key={seconds} value={seconds}>{seconds} seconds</option>)}</select></label>
-                <label>Format<select value={ratio} onChange={(event) => setRatio(event.target.value as CreatorAspectRatio)}>{RATIOS.map((item) => <option key={item}>{item}</option>)}</select></label>
+                <label>{tr("Duration", "المدة")}<select value={duration} onChange={(event) => setDuration(Number(event.target.value))}>{[5, 8, 10, 15].map((seconds) => <option key={seconds} value={seconds}>{seconds} {tr("seconds", "ثوانٍ")}</option>)}</select></label>
+                <label>{tr("Format", "المقاس")}<select value={ratio} onChange={(event) => setRatio(event.target.value as CreatorAspectRatio)}>{RATIOS.map((item) => <option key={item}>{item}</option>)}</select>{ratio === "4:5" && <small>{tr("Generated on a 3:4 canvas, then safely cropped to 4:5.", "يتم التوليد على مساحة 3:4 ثم القص الآمن إلى 4:5.")}</small>}</label>
+                <label>{tr("Quality", "الجودة")}<select value={resolution} onChange={(event) => setResolution(normalizeCreatorResolution(event.target.value))}><option value="720p">720p · {tr("Recommended", "موصى بها")}</option><option value="480p">480p · {tr("Faster preview", "معاينة أسرع")}</option></select></label>
               </div>
             )}
           </section>
 
           <section className="advanced-directions" aria-labelledby="advanced-directions-title">
-            <div className="advanced-directions-head"><h2 id="advanced-directions-title">Directions</h2><span>Version 3 <CircleGauge aria-hidden="true" /></span></div>
+            <div className="advanced-directions-head"><h2 id="advanced-directions-title">{tr("Starting directions", "اتجاهات البداية")}</h2><span>{tr("Applied to your prompt", "تُطبق على توجيهك")}</span></div>
             <div className="advanced-directions-grid">
               {directionImages.map((image, index) => (
-                <button key={`${image}-${directionLabels[index]}`} type="button" className={cn("advanced-direction-card", selectedDirection === index && "is-selected")} onClick={() => setSelectedDirection(index)} aria-pressed={selectedDirection === index}>
-                  <img src={image} alt="" />
-                  <span>{String(index + 1).padStart(2, "0")} {directionLabels[index]}</span>
+                <button key={directionLabels[index]} type="button" className={cn("advanced-direction-card", selectedDirection === index && "is-selected")} onClick={() => setSelectedDirection(index)} aria-pressed={selectedDirection === index}>
+                  {image ? <img src={image} alt="" /> : <span className="advanced-direction-placeholder"><ImagePlus aria-hidden="true" />{tr("No sample output", "لا توجد نتيجة تجريبية")}</span>}
+                  <span>{String(index + 1).padStart(2, "0")} {directionLabel(index)}</span>
                   {selectedDirection === index && <i><Check aria-hidden="true" /></i>}
                 </button>
               ))}
             </div>
           </section>
-        </main>
+        </section>
 
-        <aside className="advanced-director" aria-label="Director controls">
-          <div className="advanced-column-head"><span><h2>Director</h2><small>Shape the shot visually.</small></span><button type="button" onClick={() => { setCameraMove("push-in"); setShotType("macro"); setMotion("Natural"); setLighting("Studio rim"); setFidelity("Exact"); }}><RotateCcw aria-hidden="true" /> Reset</button></div>
-          <fieldset className="advanced-control-group"><legend>Camera</legend><div className="advanced-visual-options">{CAMERA_OPTIONS.map((option) => { const Icon = option.icon; return <button key={option.id} type="button" className={cn(cameraMove === option.id && "is-selected")} onClick={() => setCameraMove(option.id)} aria-pressed={cameraMove === option.id}><Icon aria-hidden="true" /><span>{option.label}</span></button>; })}</div></fieldset>
-          <fieldset className="advanced-control-group"><legend>Shot</legend><div className="advanced-visual-options">{SHOT_OPTIONS.map((option) => { const Icon = option.icon; return <button key={option.id} type="button" className={cn(shotType === option.id && "is-selected")} onClick={() => setShotType(option.id)} aria-pressed={shotType === option.id}><Icon aria-hidden="true" /><span>{option.label}</span></button>; })}</div></fieldset>
-          <fieldset className="advanced-control-group"><legend>Motion</legend><div className="advanced-segmented">{MOTION_OPTIONS.map((option) => <button key={option} type="button" className={cn(motion === option && "is-selected")} onClick={() => setMotion(option)} aria-pressed={motion === option}>{option}</button>)}</div><input className="advanced-motion-range" type="range" min="0" max="2" step="1" value={MOTION_OPTIONS.indexOf(motion)} onChange={(event) => setMotion(MOTION_OPTIONS[Number(event.target.value)])} aria-label="Motion intensity" /></fieldset>
-          <details className="advanced-control-disclosure"><summary><span><SunMedium aria-hidden="true" /> Lighting</span><span>{lighting}<ChevronRight aria-hidden="true" /></span></summary><div className="advanced-detail-options">{LIGHTING_OPTIONS.map((option) => <button key={option} type="button" className={cn(lighting === option && "is-selected")} onClick={() => setLighting(option)}>{option}</button>)}</div></details>
-          <details className="advanced-control-disclosure"><summary><span><ShieldCheck aria-hidden="true" /> Product fidelity</span><span>{fidelity}<ChevronRight aria-hidden="true" /></span></summary><div className="advanced-detail-options">{FIDELITY_OPTIONS.map((option) => <button key={option} type="button" className={cn(fidelity === option && "is-selected")} onClick={() => setFidelity(option)}>{option}</button>)}</div></details>
-          <details className="advanced-control-disclosure"><summary><span><Mic2 aria-hidden="true" /> Audio</span><span>{audio ? "On" : "Off"}<ChevronRight aria-hidden="true" /></span></summary><div className="advanced-detail-options"><button type="button" className={cn(audio && "is-selected")} onClick={() => setAudio(true)}>Audio on</button><button type="button" className={cn(!audio && "is-selected")} onClick={() => setAudio(false)}>Silent</button></div></details>
-          <details className="advanced-control-disclosure advanced-expert-settings"><summary><span><Settings2 aria-hidden="true" /> Expert settings</span><ChevronRight aria-hidden="true" /></summary><label>Creative capability<select value={capability} onChange={(event) => setCapability(event.target.value as ApprovedCapability)}><option value="video.cinematic">Cinematic direction</option><option value="video.product_fidelity">Product fidelity</option></select></label></details>
-          <div className="advanced-render-strip"><span><Move3D aria-hidden="true" /> {duration}s</span><span><Frame aria-hidden="true" /> {ratio}</span><span><ImagePlus aria-hidden="true" /> 1080p</span><button type="button" onClick={() => setSettingsOpen(true)} aria-label="Edit render settings"><Settings2 aria-hidden="true" /></button></div>
+        <aside className="advanced-director" aria-label={tr("Director controls", "أدوات المخرج")}>
+          <div className="advanced-column-head"><span><h2>{tr("Director", "المخرج")}</h2><small>{tr("Shape the shot visually.", "شكّل اللقطة بصرياً.")}</small></span><button type="button" onClick={() => { setCameraMove("push-in"); setShotType("macro"); setMotion("Natural"); setLighting("Studio rim"); setFidelity("Exact"); }}><RotateCcw aria-hidden="true" /> {tr("Reset", "إعادة")}</button></div>
+          <fieldset className="advanced-control-group"><legend>{tr("Camera", "الكاميرا")}</legend><div className="advanced-visual-options">{CAMERA_OPTIONS.map((option) => { const Icon = option.icon; return <button key={option.id} type="button" className={cn(cameraMove === option.id && "is-selected")} onClick={() => setCameraMove(option.id)} aria-pressed={cameraMove === option.id}><Icon aria-hidden="true" /><span>{cameraLabel(option.id, option.label)}</span></button>; })}</div></fieldset>
+          <fieldset className="advanced-control-group"><legend>{tr("Shot", "اللقطة")}</legend><div className="advanced-visual-options">{SHOT_OPTIONS.map((option) => { const Icon = option.icon; return <button key={option.id} type="button" className={cn(shotType === option.id && "is-selected")} onClick={() => setShotType(option.id)} aria-pressed={shotType === option.id}><Icon aria-hidden="true" /><span>{shotLabel(option.id, option.label)}</span></button>; })}</div></fieldset>
+          <fieldset className="advanced-control-group"><legend>{tr("Motion", "الحركة")}</legend><div className="advanced-segmented">{MOTION_OPTIONS.map((option) => <button key={option} type="button" className={cn(motion === option && "is-selected")} onClick={() => setMotion(option)} aria-pressed={motion === option}>{motionLabel(option)}</button>)}</div><input className="advanced-motion-range" type="range" min="0" max="2" step="1" value={MOTION_OPTIONS.indexOf(motion)} onChange={(event) => setMotion(MOTION_OPTIONS[Number(event.target.value)])} aria-label={tr("Motion intensity", "قوة الحركة")} /></fieldset>
+          <details className="advanced-control-disclosure"><summary><span><SunMedium aria-hidden="true" /> {tr("Lighting", "الإضاءة")}</span><span>{lightingLabel(lighting)}<ChevronRight aria-hidden="true" /></span></summary><div className="advanced-detail-options">{LIGHTING_OPTIONS.map((option) => <button key={option} type="button" className={cn(lighting === option && "is-selected")} onClick={() => setLighting(option)}>{lightingLabel(option)}</button>)}</div></details>
+          <details className="advanced-control-disclosure"><summary><span><ShieldCheck aria-hidden="true" /> {tr("Product fidelity", "مطابقة المنتج")}</span><span>{fidelityLabel(fidelity)}<ChevronRight aria-hidden="true" /></span></summary><div className="advanced-detail-options">{FIDELITY_OPTIONS.map((option) => <button key={option} type="button" className={cn(fidelity === option && "is-selected")} onClick={() => setFidelity(option)}>{fidelityLabel(option)}</button>)}</div></details>
+          <details className="advanced-control-disclosure"><summary><span><Mic2 aria-hidden="true" /> {tr("Audio", "الصوت")}</span><span>{audio ? tr("On", "مفعّل") : tr("Off", "متوقف")}<ChevronRight aria-hidden="true" /></span></summary><div className="advanced-detail-options"><button type="button" className={cn(audio && "is-selected")} onClick={() => setAudio(true)}>{tr("Audio on", "تشغيل الصوت")}</button><button type="button" className={cn(!audio && "is-selected")} onClick={() => setAudio(false)}>{tr("Silent", "صامت")}</button></div></details>
+          <details className="advanced-control-disclosure advanced-expert-settings"><summary><span><Settings2 aria-hidden="true" /> {tr("Expert settings", "إعدادات الخبراء")}</span><ChevronRight aria-hidden="true" /></summary><label>{tr("Creative capability", "القدرة الإبداعية")}<select value={capability} onChange={(event) => setCapability(event.target.value as ApprovedCapability)}><option value="video.cinematic">{tr("Cinematic direction", "اتجاه سينمائي")}</option><option value="video.product_fidelity">{tr("Product fidelity", "مطابقة المنتج")}</option></select></label></details>
+          <div className="advanced-render-strip"><span><Move3D aria-hidden="true" /> {duration}{tr("s", "ث")}</span><span><Frame aria-hidden="true" /> {ratio}</span><span><ImagePlus aria-hidden="true" /> {resolution}</span><button type="button" onClick={() => setSettingsOpen(true)} aria-label={tr("Edit render settings", "تعديل إعدادات التوليد")}><Settings2 aria-hidden="true" /></button></div>
         </aside>
       </div>
       <AuthGateDialog open={authOpen} onOpenChange={setAuthOpen} returnPath={`/advanced?draft=${encodeURIComponent(draftId)}&resume=generate`} />

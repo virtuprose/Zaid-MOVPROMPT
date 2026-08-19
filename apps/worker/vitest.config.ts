@@ -10,6 +10,9 @@ export default defineConfig({
       "@movprompt/db": fileURLToPath(
         new URL("../../packages/db/src/index.ts", import.meta.url),
       ),
+      "@movprompt/creative-engine": fileURLToPath(
+        new URL("../../packages/creative-engine/src/index.ts", import.meta.url),
+      ),
       "@movprompt/providers": fileURLToPath(
         new URL("../../packages/providers/src/index.ts", import.meta.url),
       ),

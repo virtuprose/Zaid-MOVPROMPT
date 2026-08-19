@@ -1,6 +1,7 @@
 import {
   DeleteObjectCommand,
   GetObjectCommand,
+  HeadBucketCommand,
   HeadObjectCommand,
   PutObjectCommand,
   S3Client,
@@ -53,6 +54,64 @@ export interface SignedDownload {
   bucket: string;
   key: string;
   expiresInSeconds: number;
+}
+
+export interface PutPrivateObjectRequest {
+  bucket: string;
+  key: string;
+  body: Uint8Array;
+  contentType: string;
+  metadata?: Record<string, string>;
+}
+
+export interface GetPrivateObjectRequest {
+  bucket: string;
+  key: string;
+  /** Hard allocation/streaming limit enforced even without Content-Length. */
+  maxBytes: number;
+}
+
+export interface PrivateObjectBytes {
+  body: Uint8Array;
+  contentType?: string;
+  checksumSha256?: string;
+}
+
+const MAX_SERVER_READ_BYTES = 64 * 1024 * 1024;
+
+function assertServerReadLimit(value: number): number {
+  if (!Number.isSafeInteger(value) || value < 1 || value > MAX_SERVER_READ_BYTES) {
+    throw new Error("Private object read limit must be between 1 byte and 64 MiB");
+  }
+  return value;
+}
+
+async function boundedBodyBytes(body: unknown, maxBytes: number): Promise<Uint8Array> {
+  if (!body || typeof body !== "object" || !(Symbol.asyncIterator in body)) {
+    throw new Error("Private object body is not readable");
+  }
+  const chunks: Uint8Array[] = [];
+  let totalBytes = 0;
+  try {
+    for await (const raw of body as AsyncIterable<Uint8Array | string>) {
+      const chunk = typeof raw === "string" ? Buffer.from(raw) : new Uint8Array(raw);
+      totalBytes += chunk.byteLength;
+      if (totalBytes > maxBytes) throw new Error("Private object exceeds the configured read limit");
+      chunks.push(chunk);
+    }
+  } catch (error) {
+    const destroy = (body as { destroy?: (error?: Error) => void }).destroy;
+    if (typeof destroy === "function") destroy.call(body, error instanceof Error ? error : undefined);
+    throw error;
+  }
+  if (!totalBytes) throw new Error("Private object body is empty");
+  const bytes = new Uint8Array(totalBytes);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return bytes;
 }
 
 function requireEnv(env: NodeJS.ProcessEnv, key: string): string {
@@ -121,6 +180,11 @@ export class PrivateObjectStorage {
       });
   }
 
+  async checkBucket(bucket: string): Promise<void> {
+    if (!this.allowedBuckets.has(bucket)) throw new Error("Storage bucket is not allowed");
+    await this.client.send(new HeadBucketCommand({ Bucket: bucket }));
+  }
+
   async signUpload(input: SignUploadRequest): Promise<SignedUpload> {
     this.assertBucket(input.bucket);
     const key = assertStorageKey(input.key);
@@ -171,6 +235,61 @@ export class PrivateObjectStorage {
     });
     const url = await getSignedUrl(this.client, command, { expiresIn: expiresInSeconds });
     return { method: "GET", url, bucket: input.bucket, key, expiresInSeconds };
+  }
+
+  /**
+   * Server-side writes used by trusted workers. Browser uploads continue to
+   * use signUpload so untrusted clients never receive storage credentials.
+   */
+  async put(input: PutPrivateObjectRequest): Promise<{ bucket: string; key: string }> {
+    this.assertBucket(input.bucket);
+    const key = assertStorageKey(input.key);
+    if (!input.body.byteLength) throw new Error("Object body must not be empty");
+    const contentType = input.contentType.trim().toLowerCase();
+    if (!contentType || contentType.length > 255) throw new Error("Invalid object content type");
+    const metadata = Object.fromEntries(
+      Object.entries(input.metadata ?? {}).map(([name, value]) => {
+        const normalizedName = name.trim().toLowerCase();
+        const normalizedValue = value.trim();
+        if (!/^[a-z0-9][a-z0-9-]{0,63}$/.test(normalizedName) || !normalizedValue || normalizedValue.length > 1_024) {
+          throw new Error("Invalid object metadata");
+        }
+        return [normalizedName, normalizedValue];
+      }),
+    );
+    await this.client.send(new PutObjectCommand({
+      Bucket: input.bucket,
+      Key: key,
+      Body: input.body,
+      ContentLength: input.body.byteLength,
+      ContentType: contentType,
+      Metadata: metadata,
+    }));
+    return { bucket: input.bucket, key };
+  }
+
+  /** Trusted worker read that never exposes a signed storage URL. */
+  async get(input: GetPrivateObjectRequest): Promise<PrivateObjectBytes> {
+    this.assertBucket(input.bucket);
+    const key = assertStorageKey(input.key);
+    const maxBytes = assertServerReadLimit(input.maxBytes);
+    const object = await this.client.send(new GetObjectCommand({ Bucket: input.bucket, Key: key }));
+    const declaredLength = object.ContentLength;
+    if (declaredLength !== undefined && declaredLength > maxBytes) {
+      const destroy = (object.Body as { destroy?: (error?: Error) => void } | undefined)?.destroy;
+      if (typeof destroy === "function") {
+        destroy.call(object.Body, new Error("Private object exceeds the configured read limit"));
+      }
+      throw new Error("Private object exceeds the configured read limit");
+    }
+    const body = await boundedBodyBytes(object.Body, maxBytes);
+    const contentType = object.ContentType?.split(";", 1)[0]?.trim().toLowerCase();
+    const checksumSha256 = object.Metadata?.["sha256-hex"]?.trim().toLowerCase();
+    return {
+      body,
+      ...(contentType ? { contentType } : {}),
+      ...(checksumSha256 ? { checksumSha256 } : {}),
+    };
   }
 
   async head(bucket: string, key: string): Promise<HeadObjectCommandOutput> {

@@ -1,9 +1,11 @@
 import type { ClaimDraftRequest, CreatorProjectRecord } from "@movprompt/contracts";
+import { ENGINE_VERSION, getCreativeTemplate, type CreativeBrief } from "@movprompt/creative-engine";
 
 import { isFeatureEnabled } from "@/config/features";
 import { PortableApiError, portableCreatorApi } from "@/lib/api/portableApiClient";
+import { sanitizeCreatorProjectOutput } from "./creatorProjectOutput";
 import { hydrateCloudProject, stableProjectConfiguration } from "./portableProjectMapper";
-import type { CreatorProject } from "./types";
+import { normalizeCreatorResolution, type CreatorProject } from "./types";
 
 const STORAGE_KEY = "movprompt.creator-projects.v2";
 const CHANGE_EVENT = "movprompt:creator-projects-changed";
@@ -15,14 +17,20 @@ function storageKey(userId?: string | null) {
 function readLocal(userId?: string | null): CreatorProject[] {
   try {
     const parsed = JSON.parse(localStorage.getItem(storageKey(userId)) || "[]");
-    return Array.isArray(parsed) ? parsed : [];
+    return Array.isArray(parsed)
+      ? parsed.map((project) => sanitizeCreatorProjectOutput({ ...project, resolution: normalizeCreatorResolution(project?.resolution) }))
+      : [];
   } catch {
     return [];
   }
 }
 
 function writeLocal(projects: CreatorProject[], userId?: string | null) {
-  localStorage.setItem(storageKey(userId), JSON.stringify(projects.slice(0, 24)));
+  // Signed output URLs are short-lived capabilities, not project data. Keep
+  // them in the active React state only and refresh from the owned render when
+  // a project is reopened.
+  const cacheable = projects.slice(0, 24).map((project) => ({ ...project, videoUrl: null }));
+  localStorage.setItem(storageKey(userId), JSON.stringify(cacheable));
   window.dispatchEvent(new Event(CHANGE_EVENT));
 }
 
@@ -35,7 +43,7 @@ export function getLocalCreatorProject(id: string, userId?: string | null) {
 }
 
 export function saveLocalCreatorProject(project: CreatorProject, userId?: string | null) {
-  const next = { ...project, updatedAt: new Date().toISOString() };
+  const next = sanitizeCreatorProjectOutput({ ...project, updatedAt: new Date().toISOString() });
   const projects = readLocal(userId).filter((item) => item.id !== next.id);
   writeLocal([next, ...projects], userId);
   return next;
@@ -54,7 +62,49 @@ export function subscribeToCreatorProjects(callback: () => void) {
   };
 }
 
-function generationConfiguration(project: CreatorProject) {
+export function buildPortableGenerationConfiguration(project: CreatorProject) {
+  const template = getCreativeTemplate(project.templateId);
+  const templateScenes = new Map(template.scenes.map((scene) => [scene.id, scene]));
+  const scenes = project.scenes.map((scene, index) => {
+    const source = templateScenes.get(scene.id) ?? template.scenes[index] ?? template.scenes[0]!;
+    return {
+      ...source,
+      id: scene.id,
+      duration: scene.duration,
+      headline: {
+        en: scene.headline || source.headline.en,
+        ar: scene.headlineAr || source.headline.ar,
+      },
+      voiceover: {
+        en: scene.voiceover || source.voiceover.en,
+        ar: scene.voiceoverAr || source.voiceover.ar,
+      },
+      direction: scene.direction || source.direction,
+    };
+  });
+  const creativeBrief: CreativeBrief = {
+    engineVersion: ENGINE_VERSION,
+    templateId: template.id,
+    market: "KW",
+    language: project.language,
+    arabicDialect: project.language === "en" ? null : "kuwaiti",
+    dialectRegister: project.dialectRegister,
+    tone: template.tone,
+    vertical: project.vertical,
+    goal: project.goal,
+    product: {
+      name: project.product.name || "Confirmed business",
+      brand: project.product.brand,
+      description: project.product.description,
+      price: project.product.price,
+      offer: project.offer,
+      callToAction: project.cta,
+      whatsapp: project.whatsapp,
+      location: project.location,
+    },
+    scenes,
+    qualityPolicy: template.qualityPolicy,
+  };
   return {
     prompt: [
       `Create a ${project.aspectRatio} campaign for ${project.product.name || "the confirmed business"}.`,
@@ -67,9 +117,33 @@ function generationConfiguration(project: CreatorProject) {
       .join("\n"),
     durationSeconds: project.scenes.reduce((sum, scene) => sum + scene.duration, 0),
     aspectRatio: project.aspectRatio,
+    resolution: project.resolution,
+    audio: project.audio,
+    creativeBrief,
     references: project.product.images.flatMap((image) =>
+      image.storagePath && image.mimeType
+        ? [{ objectKey: image.storagePath, mimeType: image.mimeType }]
+        : [],
+    ),
+  };
+}
+
+export function portableProductRecipe(project: CreatorProject): ClaimDraftRequest["productRecipe"] {
+  return {
+    sourceType: project.product.sourceType,
+    name: project.product.name,
+    description: project.product.description,
+    price: project.product.price,
+    brand: project.product.brand,
+    images: project.product.images.flatMap((image) =>
       image.storagePath
-        ? [{ objectKey: image.storagePath, mimeType: "image/jpeg" }]
+        ? [{
+            assetId: image.id,
+            name: image.name,
+            objectKey: image.storagePath,
+            ...(image.mimeType ? { mimeType: image.mimeType } : {}),
+            ...(image.checksum ? { checksumSha256: image.checksum } : {}),
+          }]
         : [],
     ),
   };
@@ -78,16 +152,28 @@ function generationConfiguration(project: CreatorProject) {
 function portableConfiguration(project: CreatorProject): ClaimDraftRequest["configuration"] {
   return {
     creatorProject: stableProjectConfiguration(project),
-    generation: generationConfiguration(project),
+    generation: buildPortableGenerationConfiguration(project),
   };
 }
 
-async function portableTemplateVersionId(templateId: string): Promise<string> {
+export async function resolvePortableTemplateVersionId(templateId: string): Promise<string> {
   return (await portableCreatorApi.getTemplate(templateId)).versionId;
 }
 
 function portableCreatorEnabled() {
   return isFeatureEnabled("portableAuth");
+}
+
+function canonicalJson(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`;
+  if (value && typeof value === "object") {
+    return `{${Object.entries(value)
+      .filter(([, item]) => item !== undefined)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([key, item]) => `${JSON.stringify(key)}:${canonicalJson(item)}`)
+      .join(",")}}`;
+  }
+  return JSON.stringify(value);
 }
 
 export async function syncCreatorProject(project: CreatorProject, userId?: string | null) {
@@ -107,14 +193,14 @@ export async function syncCreatorProject(project: CreatorProject, userId?: strin
     existing = null;
   }
   if (!existing) {
-    const templateVersionId = await portableTemplateVersionId(project.templateId);
+    const templateVersionId = await resolvePortableTemplateVersionId(project.templateId);
     const claimed = await portableCreatorApi.claimDraft({
       draftId: project.id,
       title: project.title,
       mode: "template",
       templateVersionId,
       configuration: portableConfiguration(project),
-      productRecipe: project.product,
+      productRecipe: portableProductRecipe(project),
       campaignRecipe: {
         promotionKind: project.promotionKind,
         vertical: project.vertical,
@@ -122,6 +208,8 @@ export async function syncCreatorProject(project: CreatorProject, userId?: strin
         presenterMode: project.presenterMode,
         market: project.market,
         language: project.language,
+        arabicDialect: project.arabicDialect,
+        dialectRegister: project.dialectRegister,
         location: project.location,
         bookingUrl: project.bookingUrl,
         whatsapp: project.whatsapp,
@@ -149,7 +237,22 @@ export async function syncCreatorProject(project: CreatorProject, userId?: strin
     title: project.title,
   };
 
-  const templateVersionId = await portableTemplateVersionId(projectForSave.templateId);
+  const templateVersionId = await resolvePortableTemplateVersionId(projectForSave.templateId);
+  const nextConfiguration = portableConfiguration(projectForSave);
+  if (
+    existing.currentVersion &&
+    canonicalJson(existing.currentVersion.configuration) === canonicalJson(nextConfiguration)
+  ) {
+    return saveLocalCreatorProject(
+      {
+        ...canonicalProject,
+        ...projectForSave,
+        versionId: existing.currentVersion.id,
+        versionNumber: existing.currentVersion.versionNumber,
+      },
+      userId,
+    );
+  }
   const operationKey = `project-save:${projectForSave.id}:${projectForSave.updatedAt.replace(/[^A-Za-z0-9]/g, "")}`;
   const version = await portableCreatorApi.createVersion(
     projectForSave.id,
@@ -157,8 +260,8 @@ export async function syncCreatorProject(project: CreatorProject, userId?: strin
       parentVersionId: projectForSave.versionId ?? null,
       templateVersionId,
       mode: "template",
-      configuration: portableConfiguration(projectForSave),
-      productRecipe: projectForSave.product,
+      configuration: nextConfiguration,
+      productRecipe: portableProductRecipe(projectForSave),
       campaignRecipe: {
         promotionKind: projectForSave.promotionKind,
         vertical: projectForSave.vertical,
@@ -166,6 +269,8 @@ export async function syncCreatorProject(project: CreatorProject, userId?: strin
         presenterMode: projectForSave.presenterMode,
         market: projectForSave.market,
         language: projectForSave.language,
+        arabicDialect: projectForSave.arabicDialect,
+        dialectRegister: projectForSave.dialectRegister,
         location: projectForSave.location,
         bookingUrl: projectForSave.bookingUrl,
         whatsapp: projectForSave.whatsapp,

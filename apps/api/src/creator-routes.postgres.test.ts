@@ -106,6 +106,37 @@ describePostgres("portable creator HTTP ownership", () => {
       project: { id: firstProject.project.id },
     });
 
+    const version = await app.request(`/api/v1/projects/${firstProject.project.id}/versions`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "idempotency-key": `project-save:${randomUUID()}`,
+        "x-test-user": firstUserId,
+      },
+      body: JSON.stringify({
+        mode: "template",
+        configuration: { generation: { prompt: "Updated Kuwait campaign", references: [] } },
+        productRecipe: { name: "Private product" },
+        campaignRecipe: { market: "KW", language: "bilingual" },
+        changeReason: "Campaign draft updated",
+      }),
+    });
+    expect(version.status).toBe(201);
+    const createdVersion = (await version.json()) as { version: { id: string } };
+    const currentProject = await app.request(`/api/v1/projects/${firstProject.project.id}`, {
+      headers: { "x-test-user": firstUserId },
+    });
+    await expect(currentProject.json()).resolves.toMatchObject({
+      project: {
+        currentWorkingVersionId: createdVersion.version.id,
+        currentAcceptedVersionId: null,
+        currentVersion: { id: createdVersion.version.id, versionNumber: 2 },
+        latestRenderRunId: null,
+        latestRenderProjectVersionId: null,
+        latestRenderRunStatus: null,
+      },
+    });
+
     const crossUserRead = await app.request(`/api/v1/projects/${firstProject.project.id}`, {
       headers: { "x-test-user": secondUserId },
     });

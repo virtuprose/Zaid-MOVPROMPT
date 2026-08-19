@@ -10,6 +10,7 @@ export type AuthUser = User & {
   role?: "user" | "admin";
   name?: string;
   image?: string | null;
+  emailVerified?: boolean;
 };
 export type AuthSession = Session | { user: AuthUser; session: Record<string, unknown> };
 

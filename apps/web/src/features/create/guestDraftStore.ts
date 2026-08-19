@@ -5,6 +5,14 @@ const DATABASE_VERSION = 1;
 const DRAFTS = "drafts";
 const ASSETS = "assets";
 
+export const DRAFT_SAVE_EVENT = "movprompt:guest-draft-save-state";
+
+export type DraftSaveEventDetail = {
+  draftId: string;
+  state: "saving" | "saved" | "error";
+  savedAt?: string;
+};
+
 type StoredAsset = {
   key: string;
   draftId: string;
@@ -43,8 +51,21 @@ function transact<T>(storeName: string, mode: IDBTransactionMode, work: (store: 
 }
 
 export async function saveGuestDraft(draft: CreationDraft) {
-  await transact(DRAFTS, "readwrite", (store) => store.put(draft));
-  return draft;
+  window.dispatchEvent(new CustomEvent<DraftSaveEventDetail>(DRAFT_SAVE_EVENT, {
+    detail: { draftId: draft.id, state: "saving" },
+  }));
+  try {
+    await transact(DRAFTS, "readwrite", (store) => store.put(draft));
+    window.dispatchEvent(new CustomEvent<DraftSaveEventDetail>(DRAFT_SAVE_EVENT, {
+      detail: { draftId: draft.id, state: "saved", savedAt: new Date().toISOString() },
+    }));
+    return draft;
+  } catch (error) {
+    window.dispatchEvent(new CustomEvent<DraftSaveEventDetail>(DRAFT_SAVE_EVENT, {
+      detail: { draftId: draft.id, state: "error" },
+    }));
+    throw error;
+  }
 }
 
 export async function getGuestDraft(id: string) {

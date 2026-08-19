@@ -48,7 +48,16 @@ export class PgBossWorker {
     this.#config = options.config;
     this.#handlers = options.handlers;
     this.#logger = options.logger ?? jsonWorkerLogger;
-    this.#boss = options.boss ?? new PgBoss(options.config.databaseUrl);
+    this.#boss =
+      options.boss ??
+      new PgBoss({
+        connectionString: options.config.databaseUrl,
+        schema: "pgboss",
+        // The database migration creates and locks down the dedicated schema.
+        // Keeping schema creation out of the runtime worker avoids granting the
+        // worker broad CREATE permission on the application database.
+        createSchema: false,
+      });
     this.#boss.on("error", (error) => {
       this.#logger.error("pg_boss_error", {
         workerId: this.#config.workerId,

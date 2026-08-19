@@ -112,6 +112,21 @@ function noStore(context: { header(name: string, value: string): void }) {
   context.header("cache-control", "private, no-store");
 }
 
+async function scanSourceWithOneRetry(
+  scanner: SourceScanner,
+  input: Parameters<SourceScanner["scan"]>[0],
+) {
+  try {
+    return await scanner.scan(input);
+  } catch (error) {
+    // One retry is reserved for transient upstream/network failures. Calling
+    // scan again restarts URL parsing, DNS resolution, public-IP checks,
+    // address pinning and redirect validation from the beginning.
+    if (!(error instanceof ApiHttpError) || !error.retryable) throw error;
+    return scanner.scan(input);
+  }
+}
+
 export function registerCreatorRoutes(
   app: Hono<ApiEnvironment>,
   services: CreatorRouteServices,
@@ -327,8 +342,15 @@ export function registerCreatorRoutes(
         });
       }
       const { url } = SourceScanRequestSchema.parse(await parseJson(context.req.raw));
-      const body = await services.scanner.scan({ url, kind, requestId: context.get("requestId") });
-      context.header("cache-control", "public, max-age=300");
+      const body = await scanSourceWithOneRetry(services.scanner, {
+        url,
+        kind,
+        requestId: context.get("requestId"),
+      });
+      // Imported business facts and URLs can be campaign-sensitive. Never put
+      // a POST result in a shared proxy cache; scanner-side safe caching can be
+      // introduced later with a normalized URL key and explicit abuse limits.
+      noStore(context);
       return context.json(body);
     });
   }

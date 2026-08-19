@@ -34,8 +34,19 @@ export function generationRuntimeFingerprint(
       };
     }),
     generateAudio: normalizedBoolean(environment.VERCEL_GATEWAY_SEEDANCE_GENERATE_AUDIO),
+    videoResolutionTier: environment.VERCEL_GATEWAY_SEEDANCE_RESOLUTION_TIER?.trim() || "",
     outputHosts: normalizedList(environment.PROVIDER_OUTPUT_ALLOWED_HOSTS),
     qualityModel: environment.MOVPROMPT_QUALITY_MODEL_ID?.trim() || "",
+    pricing: {
+      version: environment.GENERATION_PRICING_VERSION?.trim() || "",
+      quoteTtlSeconds: environment.GENERATION_QUOTE_TTL_SECONDS?.trim() || "",
+      cinematic480p: environment.GENERATION_VIDEO_CINEMATIC_480P_CREDITS_PER_SECOND?.trim() || "",
+      cinematic720p: environment.GENERATION_VIDEO_CINEMATIC_720P_CREDITS_PER_SECOND?.trim() || "",
+      productFidelity480p:
+        environment.GENERATION_VIDEO_PRODUCT_FIDELITY_480P_CREDITS_PER_SECOND?.trim() || "",
+      productFidelity720p:
+        environment.GENERATION_VIDEO_PRODUCT_FIDELITY_720P_CREDITS_PER_SECOND?.trim() || "",
+    },
     storage: {
       endpoint: environment.S3_ENDPOINT?.trim() || "",
       region: environment.S3_REGION?.trim() || "auto",

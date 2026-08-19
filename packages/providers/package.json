@@ -23,7 +23,8 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@movprompt/contracts": "workspace:*"
+    "@movprompt/contracts": "workspace:*",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "typescript": "^5.9.3",

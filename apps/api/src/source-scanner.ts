@@ -62,19 +62,26 @@ export function isPublicAddress(address: string): boolean {
     ].some(([base, prefix]) => inV4Range(normalized, base as string, prefix as number));
   }
   if (version === 6) {
+    // Fail closed for IPv4-compatible/mapped spellings. Dotted mapped values
+    // can be checked safely; hexadecimal mapped forms are rejected rather
+    // than risking a private IPv4 address bypass such as ::ffff:7f00:1.
+    if (normalized.startsWith("::ffff:")) {
+      const mapped = normalized.slice("::ffff:".length);
+      return isIP(mapped) === 4 ? isPublicAddress(mapped) : false;
+    }
     if (
       normalized === "::" ||
       normalized === "::1" ||
+      normalized.startsWith("::") ||
       normalized.startsWith("fc") ||
       normalized.startsWith("fd") ||
       /^fe[89ab]/.test(normalized) ||
+      /^fe[c-f]/.test(normalized) ||
       normalized.startsWith("ff") ||
+      normalized.startsWith("64:ff9b:") ||
       normalized.startsWith("2001:db8")
     ) {
       return false;
-    }
-    if (normalized.startsWith("::ffff:")) {
-      return isPublicAddress(normalized.slice("::ffff:".length));
     }
     return true;
   }
