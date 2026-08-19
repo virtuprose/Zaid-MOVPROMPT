@@ -229,6 +229,50 @@ export function createOpenApiDocument(version: string) {
           },
         },
       },
+      "/api/v1/projects/{projectId}/assets/{assetId}/content": {
+        put: {
+          operationId: "uploadProjectImageContent",
+          description:
+            "Streams an authenticated JPG, PNG or WebP through the API, verifies its declared size, magic bytes and SHA-256 checksum, and stores it privately before returning a signed preview URL.",
+          security: [{ cookieAuth: [] }],
+          responses: {
+            "201": { description: "Verified private image and short-lived preview URL." },
+            "401": { description: "Authentication required." },
+            "404": { description: "Project asset not found for the current user." },
+            "409": { description: "Uploaded bytes do not match the declared asset." },
+          },
+        },
+      },
+      "/api/v1/projects/{projectId}/assets/mirror": {
+        post: {
+          operationId: "mirrorRemoteProjectImage",
+          description:
+            "Downloads a public JPG, PNG or WebP through the SSRF-hardened server boundary, verifies up to 12 MB, and copies it into owner-scoped private storage.",
+          security: [{ cookieAuth: [] }],
+          parameters: [
+            {
+              name: "projectId",
+              in: "path",
+              required: true,
+              schema: { type: "string", format: "uuid" },
+            },
+            {
+              name: "Idempotency-Key",
+              in: "header",
+              required: true,
+              schema: { type: "string", minLength: 8, maxLength: 200 },
+            },
+          ],
+          responses: {
+            "201": { description: "Verified private asset and short-lived download URL." },
+            "400": { description: "Invalid, private or otherwise blocked source URL." },
+            "401": { description: "Authentication required." },
+            "404": { description: "Project not found for the current user." },
+            "413": { description: "Remote image exceeds 12 MB." },
+            "415": { description: "Unsupported MIME type or invalid image signature." },
+          },
+        },
+      },
       "/api/v1/projects/{projectId}/assets/{assetId}/complete": {
         post: {
           operationId: "confirmAssetUpload",
@@ -292,6 +336,18 @@ export function createOpenApiDocument(version: string) {
         },
       },
       "/api/v1/render-runs": {
+        get: {
+          operationId: "listRenderRuns",
+          security: [{ cookieAuth: [] }],
+          parameters: [
+            { name: "projectId", in: "query", required: false, schema: { type: "string", format: "uuid" } },
+            { name: "limit", in: "query", required: false, schema: { type: "integer", minimum: 1, maximum: 100, default: 50 } },
+          ],
+          responses: {
+            "200": { description: "Owner-scoped durable render history, newest first." },
+            "401": { description: "Authentication required." },
+          },
+        },
         post: {
           operationId: "startRenderRun",
           security: [{ cookieAuth: [] }],
@@ -307,7 +363,7 @@ export function createOpenApiDocument(version: string) {
             "202": { description: "Existing or newly queued durable render run." },
             "401": { description: "Authentication required." },
             "402": { description: "Insufficient credits." },
-            "409": { description: "Expired, changed or conflicting quote." },
+            "409": { description: "Expired/changed quote, idempotency conflict or active-render limit." },
             "503": { description: "Approved generation capability unavailable." },
           },
         },
@@ -344,6 +400,28 @@ export function createOpenApiDocument(version: string) {
             "401": { description: "Authentication required." },
             "404": { description: "Render not found for the current user." },
             "409": { description: "Render cannot be cancelled in its current state." },
+          },
+        },
+      },
+      "/api/v1/render-runs/{id}/retry-output": {
+        post: {
+          operationId: "retryRenderOutputPersistence",
+          description: "Reconciles an existing accepted provider operation without submitting or charging for a new generation.",
+          security: [{ cookieAuth: [] }],
+          parameters: [
+            { name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+            {
+              name: "Idempotency-Key",
+              in: "header",
+              required: true,
+              schema: { type: "string", minLength: 8, maxLength: 200 },
+            },
+          ],
+          responses: {
+            "202": { description: "Existing provider output reconciliation was queued once." },
+            "401": { description: "Authentication required." },
+            "404": { description: "Render not found for the current user." },
+            "409": { description: "The existing operation has no recoverable output." },
           },
         },
       },

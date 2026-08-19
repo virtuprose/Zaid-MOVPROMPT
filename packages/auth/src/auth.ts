@@ -3,6 +3,7 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 
 import type { AuthEnvironment } from "./config.js";
+import { createAuthProvisioningHooks, createAuthUserProvisioner } from "./provisioning.js";
 
 export interface AuthEmail {
   type: "verify-email" | "reset-password";
@@ -37,6 +38,9 @@ function dispatchEmail(sender: AuthEmailSender, email: AuthEmail): void {
  */
 export function createMovPromptAuth(input: CreateAuthInput) {
   const { environment } = input;
+  const provisioningHooks = createAuthProvisioningHooks(createAuthUserProvisioner(input.db, {
+    requireEmailVerificationForStarter: environment.requireEmailVerification,
+  }));
   const socialProviders = {
     ...(environment.google ? { google: environment.google } : {}),
     ...(environment.apple ? { apple: environment.apple } : {}),
@@ -58,6 +62,7 @@ export function createMovPromptAuth(input: CreateAuthInput) {
       },
       transaction: true,
     }),
+    databaseHooks: provisioningHooks,
     user: {
       modelName: "users",
       additionalFields: {
@@ -100,7 +105,7 @@ export function createMovPromptAuth(input: CreateAuthInput) {
     },
     emailAndPassword: {
       enabled: true,
-      requireEmailVerification: true,
+      requireEmailVerification: environment.requireEmailVerification,
       minPasswordLength: 10,
       maxPasswordLength: 128,
       revokeSessionsOnPasswordReset: true,
@@ -115,8 +120,8 @@ export function createMovPromptAuth(input: CreateAuthInput) {
       },
     },
     emailVerification: {
-      sendOnSignUp: true,
-      sendOnSignIn: true,
+      sendOnSignUp: environment.requireEmailVerification,
+      sendOnSignIn: environment.requireEmailVerification,
       autoSignInAfterVerification: true,
       expiresIn: 60 * 60,
       sendVerificationEmail: async ({ user, url }) => {

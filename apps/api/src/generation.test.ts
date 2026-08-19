@@ -1,6 +1,7 @@
 import type {
   GenerationQuoteResponse,
   PublicRenderRun,
+  RenderRunListResponse,
   RenderRunResponse,
 } from "@movprompt/contracts";
 import { describe, expect, it, vi } from "vitest";
@@ -8,7 +9,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { AuthGateway, AuthenticatedSession } from "./auth-gateway.js";
 import { createApi } from "./app.js";
 import { loadApiConfig } from "./config.js";
-import type { GenerationApiService } from "./generation-service.js";
+import { GenerationApplicationError, type GenerationApiService } from "./generation-service.js";
 
 const userId = "00000000-0000-4000-8000-000000000001";
 const projectId = "00000000-0000-4000-8000-000000000002";
@@ -44,6 +45,7 @@ function publicRun(status: PublicRenderRun["status"] = "submitting"): PublicRend
     chargedCredits: 0,
     starterEntitlementUsed: true,
     status,
+    processingStage: status === "completed" ? "ready" : status === "cancelled" ? "cancelled" : "rendering",
     outputAvailable: false,
     error: null,
     createdAt: "2026-08-12T08:00:00.000Z",
@@ -68,6 +70,8 @@ function generationService(): GenerationApiService {
     })),
     startRender: vi.fn(async () => publicRun()),
     getRender: vi.fn(async () => publicRun("processing")),
+    listRenders: vi.fn(async () => [publicRun("processing")]),
+    retryRenderOutput: vi.fn(async () => publicRun("processing")),
     cancelRender: vi.fn(async () => publicRun("cancelled")),
   };
 }
@@ -83,6 +87,11 @@ function app(currentSession: AuthenticatedSession | null, generation = generatio
       }),
       authGateway: authGateway(currentSession),
       generationService: generation,
+      generationAvailability: {
+        evaluate: vi.fn(async () => generation.isAvailable()
+          ? { status: "ready", reason: null, retryable: false }
+          : { status: "unavailable", reason: "capability_unavailable", retryable: true }),
+      },
     }),
     generation,
   };
@@ -104,6 +113,35 @@ describe("generation API routes", () => {
     const body = (await response.json()) as GenerationQuoteResponse;
     expect(body.quote).toMatchObject({ quoteId: null, estimateOnly: true, credits: 80 });
     expect(generation.createQuote).toHaveBeenCalledWith(expect.any(Object), null);
+  });
+
+  it("returns an authenticated immutable project-version quote", async () => {
+    const generation = generationService();
+    generation.createQuote = vi.fn(async () => ({
+      quoteId,
+      capability: "video.cinematic",
+      credits: 80,
+      entitlementEligible: true,
+      configurationHash: "b".repeat(64),
+      pricingVersion: "test-v1",
+      expiresAt: "2026-08-12T08:15:00.000Z",
+      breakdown: [{ label: "8 seconds of 720p generated video", credits: 80 }],
+      estimateOnly: false,
+    }));
+    const response = await app(session, generation).app.request("/api/v1/generation-quotes", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ capability: "video.cinematic", projectVersionId }),
+    });
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      quote: { quoteId, estimateOnly: false, entitlementEligible: true },
+    });
+    expect(generation.createQuote).toHaveBeenCalledWith(
+      expect.objectContaining({ projectVersionId }),
+      session,
+    );
   });
 
   it("requires authentication and a valid idempotency key before starting", async () => {
@@ -148,6 +186,47 @@ describe("generation API routes", () => {
     expect(((await cancelled.json()) as RenderRunResponse).run.status).toBe("cancelled");
   });
 
+  it("lists every owner-scoped render and retries output persistence without a new start", async () => {
+    const { app: api, generation } = app(session);
+    const listed = await api.request("/api/v1/render-runs?limit=50");
+    expect(listed.status).toBe(200);
+    expect(((await listed.json()) as RenderRunListResponse).runs).toHaveLength(1);
+    expect(generation.listRenders).toHaveBeenCalledWith(userId, undefined, 50);
+
+    const retried = await api.request(`/api/v1/render-runs/${runId}/retry-output`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "idempotency-key": `render-output-recovery:${runId}` },
+      body: "{}",
+    });
+    expect(retried.status).toBe(202);
+    expect(((await retried.json()) as RenderRunResponse).run.processingStage).toBe("rendering");
+    expect(generation.retryRenderOutput).toHaveBeenCalledWith(
+      userId,
+      runId,
+      `render-output-recovery:${runId}`,
+    );
+    expect(generation.startRender).not.toHaveBeenCalled();
+  });
+
+  it("returns a conflict when the project already has an active render", async () => {
+    const generation = generationService();
+    generation.startRender = vi.fn(async () => {
+      throw new GenerationApplicationError(
+        "project_render_active",
+        "This project already has an active render.",
+      );
+    });
+    const response = await app(session, generation).app.request("/api/v1/render-runs", {
+      method: "POST",
+      headers: { "content-type": "application/json", "idempotency-key": "render-limit-key" },
+      body: JSON.stringify({ projectId, projectVersionId, quoteId, rightsAttested: true }),
+    });
+    expect(response.status).toBe(409);
+    await expect(response.json()).resolves.toMatchObject({
+      error: { code: "project_render_active", retryable: false },
+    });
+  });
+
   it("fails closed when the runtime has no approved capability or pricing", async () => {
     const unavailable = generationService();
     unavailable.isAvailable = () => false;
@@ -161,7 +240,7 @@ describe("generation API routes", () => {
     });
     expect(response.status).toBe(503);
     await expect(response.json()).resolves.toMatchObject({
-      error: { code: "generation_service_unavailable", retryable: true },
+      error: { code: "capability_unavailable", retryable: true },
     });
   });
 });

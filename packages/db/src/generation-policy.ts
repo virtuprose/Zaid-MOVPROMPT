@@ -34,6 +34,8 @@ export class GenerationDomainError extends Error {
       | "project_version_not_found"
       | "starter_entitlement_unavailable"
       | "insufficient_credits"
+      | "project_render_active"
+      | "user_render_limit_reached"
       | "idempotency_conflict"
       | "render_not_found"
       | "render_not_chargeable"

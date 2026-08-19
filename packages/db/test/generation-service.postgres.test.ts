@@ -80,6 +80,12 @@ describePostgres("generation service PostgreSQL transactions", () => {
     expect(second.id).toBe(first.id);
     const jobs = await db.select().from(outboxJobs).where(eq(outboxJobs.idempotencyKey, `render.start:${first.id}`));
     expect(jobs).toHaveLength(1);
+    const [project] = await db.select().from(creatorProjects).where(eq(creatorProjects.id, ids.projectId));
+    expect(project).toMatchObject({
+      status: "generating",
+      currentWorkingVersionId: ids.projectVersionId,
+      currentAcceptedVersionId: null,
+    });
 
     await expect(service.startRender({ ...input, configuration: { ...configuration, duration: 10 } })).rejects.toMatchObject({
       code: "quote_configuration_mismatch",
@@ -311,6 +317,62 @@ describePostgres("generation service PostgreSQL transactions", () => {
       (await db.select().from(creditReservations).where(eq(creditReservations.renderRunId, firstRun.id)))[0]?.status,
     ).toBe("released");
     expect((await db.select().from(creditAccounts).where(eq(creditAccounts.userId, ids.userId)))[0]?.balance).toBe(100);
+  });
+
+  it("allows one active render per project and at most two per user", async () => {
+    const service = createGenerationService(db);
+    const firstProject = await fixture(1_000);
+    const addProject = async () => {
+      const projectId = randomUUID();
+      const projectVersionId = randomUUID();
+      await db.insert(creatorProjects).values({
+        id: projectId,
+        userId: firstProject.userId,
+        title: `Concurrent project ${projectId}`,
+      });
+      await db.insert(creatorProjectVersions).values({
+        id: projectVersionId,
+        projectId,
+        userId: firstProject.userId,
+        mode: "template",
+        versionNumber: 1,
+        configuration: { fixture: true },
+      });
+      return { userId: firstProject.userId, projectId, projectVersionId };
+    };
+    const secondProject = await addProject();
+    const thirdProject = await addProject();
+    const start = async (
+      ids: { userId: string; projectId: string; projectVersionId: string },
+      label: string,
+    ) => {
+      const configuration = { duration: 4, label };
+      const quote = await service.createQuote({
+        userId: ids.userId,
+        capabilityAlias: "video.cinematic",
+        credits: 10,
+        entitlementEligible: false,
+        breakdown: [{ label, credits: 10 }],
+        configuration,
+        expiresAt: new Date(Date.now() + 60_000),
+      });
+      return service.startRender({
+        ...ids,
+        quoteId: quote.id,
+        idempotencyKey: `generation:${randomUUID()}`,
+        capabilityAlias: quote.capabilityAlias,
+        configuration,
+      });
+    };
+
+    await start(firstProject, "first-project-first-render");
+    await expect(start(firstProject, "first-project-second-render")).rejects.toMatchObject({
+      code: "project_render_active",
+    } satisfies Partial<GenerationDomainError>);
+    await start(secondProject, "second-project-first-render");
+    await expect(start(thirdProject, "third-project-first-render")).rejects.toMatchObject({
+      code: "user_render_limit_reached",
+    } satisfies Partial<GenerationDomainError>);
   });
 
   it("reserves, consumes and restores the starter entitlement without ledger writes", async () => {

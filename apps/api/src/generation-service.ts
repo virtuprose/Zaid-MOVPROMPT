@@ -14,8 +14,10 @@ import {
 } from "@movprompt/db";
 import {
   CapabilityResolutionError,
+  VERCEL_GATEWAY_SEEDANCE_ADAPTER_ID,
   type CapabilityRegistry,
 } from "@movprompt/providers";
+import { assertOwnedProjectKey } from "@movprompt/storage";
 
 import type { AuthenticatedSession } from "./auth-gateway.js";
 import type {
@@ -50,6 +52,7 @@ export class GenerationApplicationError extends Error {
       | "capability_unavailable"
       | "unapproved_capability"
       | "invalid_generation_configuration"
+      | "invalid_generation_reference"
       | "project_version_not_found"
       | "template_version_not_found"
       | "quote_not_found"
@@ -58,9 +61,12 @@ export class GenerationApplicationError extends Error {
       | "quote_price_changed"
       | "starter_entitlement_unavailable"
       | "insufficient_credits"
+      | "project_render_active"
+      | "user_render_limit_reached"
       | "idempotency_conflict"
       | "render_not_found"
       | "render_not_cancellable"
+      | "render_output_not_recoverable"
       | "provider_acceptance_in_progress",
     message: string = code,
   ) {
@@ -83,6 +89,8 @@ export interface GenerationApiService {
     idempotencyKey: string;
   }): Promise<PublicRenderRun>;
   getRender(userId: string, runId: string): Promise<PublicRenderRun>;
+  listRenders(userId: string, projectId: string | undefined, limit: number): Promise<PublicRenderRun[]>;
+  retryRenderOutput(userId: string, runId: string, idempotencyKey: string): Promise<PublicRenderRun>;
   cancelRender(userId: string, runId: string, idempotencyKey: string): Promise<PublicRenderRun>;
 }
 
@@ -92,6 +100,8 @@ type GenerationApiServiceOptions = {
   pricing: GenerationPricing;
   capabilities: CapabilityRegistry;
   now?: () => Date;
+  starterOnly?: boolean;
+  starterEligibilityRequiresEmailVerification?: boolean;
 };
 
 function generationConfiguration(configuration: JsonObject): GenerationConfiguration {
@@ -142,6 +152,7 @@ function publicRun(run: OwnedRenderRun): PublicRenderRun {
     chargedCredits: run.chargedCredits,
     starterEntitlementUsed: run.starterEntitlementUsed,
     status: run.status,
+    processingStage: run.processingStage,
     outputAvailable: Boolean(run.outputBucket && run.outputObjectKey),
     error: run.errorCode
       ? {
@@ -176,6 +187,8 @@ function mapDomainError(error: unknown): never {
       "quote_configuration_mismatch",
       "starter_entitlement_unavailable",
       "insufficient_credits",
+      "project_render_active",
+      "user_render_limit_reached",
       "idempotency_conflict",
       "render_not_found",
     ]);
@@ -187,6 +200,8 @@ function mapDomainError(error: unknown): never {
           | "quote_configuration_mismatch"
           | "starter_entitlement_unavailable"
           | "insufficient_credits"
+          | "project_render_active"
+          | "user_render_limit_reached"
           | "idempotency_conflict"
           | "render_not_found",
         error.message,
@@ -216,9 +231,11 @@ async function eligibleForStarter(input: {
   repository: GenerationRepository;
   session: AuthenticatedSession | null;
   template: PublishedTemplateVersion | null;
+  requireEmailVerification: boolean;
 }): Promise<boolean> {
   return Boolean(
-    input.session?.user.emailVerified &&
+    input.session &&
+      (!input.requireEmailVerification || input.session.user.emailVerified) &&
       input.template?.starterRenderEligible &&
       (await input.repository.hasAvailableStarterEntitlement(input.session.user.id)),
   );
@@ -253,6 +270,61 @@ export function createGenerationApiService(options: GenerationApiServiceOptions)
     return run;
   }
 
+  async function assertOwnedGenerationReferences(
+    userId: string,
+    version: OwnedProjectVersion,
+    capability: CapabilityAlias,
+    configuration: GenerationConfiguration,
+  ): Promise<void> {
+    if (capability === "video.product_fidelity" && configuration.references.length === 0) {
+      throw new GenerationApplicationError(
+        "invalid_generation_reference",
+        "Product-fidelity generation requires at least one saved product or reference image.",
+      );
+    }
+    if (!configuration.references.length) return;
+
+    const supportedMimes = new Set(["image/jpeg", "image/png", "image/webp"]);
+    const keys = [...new Set(configuration.references.map((reference) => reference.objectKey))];
+    for (const reference of configuration.references) {
+      try {
+        assertOwnedProjectKey(reference.objectKey, userId, version.projectId);
+      } catch {
+        throw new GenerationApplicationError(
+          "invalid_generation_reference",
+          "A generation reference is outside this project’s private asset namespace.",
+        );
+      }
+      if (!supportedMimes.has(reference.mimeType.toLowerCase())) {
+        throw new GenerationApplicationError(
+          "invalid_generation_reference",
+          "A generation reference has an unsupported image type.",
+        );
+      }
+    }
+
+    const assets = await options.repository.findOwnedReferenceAssets(
+      userId,
+      version.projectId,
+      keys,
+    );
+    const byKey = new Map(assets.map((asset) => [asset.objectKey, asset]));
+    for (const reference of configuration.references) {
+      const asset = byKey.get(reference.objectKey);
+      if (
+        !asset ||
+        !asset.checksumSha256 ||
+        asset.sizeBytes < 1 ||
+        asset.mimeType.toLowerCase() !== reference.mimeType.toLowerCase()
+      ) {
+        throw new GenerationApplicationError(
+          "invalid_generation_reference",
+          "A generation reference is not an available asset owned by this project.",
+        );
+      }
+    }
+  }
+
   return {
     isAvailable() {
       return options.capabilities
@@ -270,6 +342,7 @@ export function createGenerationApiService(options: GenerationApiServiceOptions)
         if (!session) throw new GenerationApplicationError("authentication_required");
         const version = await loadOwnedVersion(session.user.id, request.projectVersionId);
         const configuration = generationConfiguration(version.configuration);
+        await assertOwnedGenerationReferences(session.user.id, version, request.capability, configuration);
         const template = await publishedTemplate(options.repository, version.templateVersionId);
         const price = options.pricing.price(
           request.capability,
@@ -280,6 +353,7 @@ export function createGenerationApiService(options: GenerationApiServiceOptions)
           repository: options.repository,
           session,
           template,
+          requireEmailVerification: options.starterEligibilityRequiresEmailVerification !== false,
         });
         const binding = boundConfiguration({
           capability: request.capability,
@@ -326,6 +400,7 @@ export function createGenerationApiService(options: GenerationApiServiceOptions)
         repository: options.repository,
         session,
         template,
+        requireEmailVerification: options.starterEligibilityRequiresEmailVerification !== false,
       });
       const binding = boundConfiguration({
         capability: request.capability,
@@ -353,11 +428,20 @@ export function createGenerationApiService(options: GenerationApiServiceOptions)
       }
       const quote = await options.repository.findOwnedQuote(input.userId, input.quoteId);
       if (!quote) throw new GenerationApplicationError("quote_not_found");
+      if (options.starterOnly && !quote.entitlementEligible) {
+        throw new GenerationApplicationError(
+          "starter_entitlement_unavailable",
+          options.starterEligibilityRequiresEmailVerification === false
+            ? "Generation is currently limited to accounts with an unused starter render."
+            : "Generation is currently limited to verified accounts with an unused starter render.",
+        );
+      }
       const capability = CapabilityAliasSchema.safeParse(quote.capabilityAlias);
       if (!capability.success) throw new GenerationApplicationError("unapproved_capability");
       assertCapability(capability.data);
       const template = await publishedTemplate(options.repository, version.templateVersionId);
       const configuration = generationConfiguration(version.configuration);
+      await assertOwnedGenerationReferences(input.userId, version, capability.data, configuration);
       const binding = boundConfiguration({
         capability: capability.data,
         pricingVersion: options.pricing.version,
@@ -402,14 +486,64 @@ export function createGenerationApiService(options: GenerationApiServiceOptions)
       return publicRun(await getOwnedRender(userId, runId));
     },
 
+    async listRenders(userId, projectId, limit) {
+      return (await options.repository.listOwnedRuns(userId, projectId, limit)).map(publicRun);
+    },
+
+    async retryRenderOutput(userId, runId, idempotencyKey) {
+      const run = await getOwnedRender(userId, runId);
+      if (run.status === "completed") return publicRun(run);
+      const message = run.errorMessage ?? "";
+      const recoverableFailure = run.status === "failed" && Boolean(
+        run.providerRequestId &&
+        !run.outputObjectKey &&
+        (
+          run.errorCode === "provider_output_host_not_allowed" ||
+          run.errorCode === "provider_output_unavailable" ||
+          (run.errorCode === "provider_operation_failed" && (
+            message.startsWith("provider_output_host_not_allowed:") ||
+            message === "fetch failed"
+          ))
+        ),
+      );
+      const retryableProcessing = run.status === "processing" && Boolean(run.providerRequestId && !run.outputObjectKey);
+      if (!recoverableFailure && !retryableProcessing) {
+        throw new GenerationApplicationError(
+          "render_output_not_recoverable",
+          "This render cannot be recovered from its existing provider operation.",
+        );
+      }
+      const recovered = await options.repository.requestOutputRecovery(
+        userId,
+        runId,
+        idempotencyKey,
+        now(),
+      );
+      if (!recovered) throw new GenerationApplicationError("render_not_found");
+      return publicRun(recovered);
+    },
+
     async cancelRender(userId, runId, _idempotencyKey) {
       const run = await getOwnedRender(userId, runId);
       if (run.status === "cancelled" || run.status === "cancelling") return publicRun(run);
       if (run.status === "completed" || run.status === "failed") {
         throw new GenerationApplicationError("render_not_cancellable");
       }
+      if (
+        (run.status === "queued" || run.status === "processing") &&
+        run.provider === VERCEL_GATEWAY_SEEDANCE_ADAPTER_ID
+      ) {
+        throw new GenerationApplicationError(
+          "render_not_cancellable",
+          "AI Gateway does not currently expose a confirmed request-cancellation operation for this render.",
+        );
+      }
       if (run.status === "submitting") {
-        if (run.providerRequestId || run.chargedAt) {
+        // The worker records the provider identity before issuing the billable
+        // start call. Even without a request ID yet, that marker means a
+        // provider acceptance may be in flight; releasing the hold here could
+        // refund a render that the provider has already accepted.
+        if (run.provider || run.providerRequestId || run.chargedAt) {
           throw new GenerationApplicationError(
             "provider_acceptance_in_progress",
             "Provider acceptance is in progress. Refresh the run before trying cancellation again.",

@@ -1,4 +1,4 @@
-import { and, eq, gt, sql } from "drizzle-orm";
+import { and, eq, gt, inArray, sql } from "drizzle-orm";
 
 import type { Database } from "./client.js";
 import type { UserScopedTransaction } from "./user-transaction.js";
@@ -9,6 +9,7 @@ import {
   hashGenerationConfiguration,
 } from "./generation-policy.js";
 import {
+  creatorProjects,
   creatorProjectVersions,
   creditAccounts,
   creditLedger,
@@ -16,6 +17,7 @@ import {
   entitlements,
   generationQuotes,
   outboxJobs,
+  renderAttempts,
   renderRuns,
   type JsonObject,
 } from "./schema.js";
@@ -234,6 +236,11 @@ export function createGenerationService(db: Database): GenerationService {
           throw new GenerationDomainError("quote_capability_mismatch");
         }
 
+        // Serialize active-render admission per user, independently of quote
+        // idempotency and credit-account locking. This keeps the project/user
+        // concurrency limits correct for starter entitlements and paid credit.
+        await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtextextended(${`render-concurrency:${input.userId}`}, 0))`);
+
         let starterEntitlementUsed = false;
         if (quote.entitlementEligible) {
           const [reservedEntitlement] = await tx
@@ -288,6 +295,29 @@ export function createGenerationService(db: Database): GenerationService {
           if (!account || account.balance - reservedCredits < quote.credits) {
             throw new GenerationDomainError("insufficient_credits");
           }
+        }
+
+        const activeStatuses = ["submitting", "queued", "processing", "cancelling"] as const;
+        const activeRuns = await tx
+          .select({ projectId: renderRuns.projectId })
+          .from(renderRuns)
+          .where(
+            and(
+              eq(renderRuns.userId, input.userId),
+              inArray(renderRuns.status, activeStatuses),
+            ),
+          );
+        if (activeRuns.some((activeRun) => activeRun.projectId === input.projectId)) {
+          throw new GenerationDomainError(
+            "project_render_active",
+            "This project already has an active render.",
+          );
+        }
+        if (activeRuns.length >= 2) {
+          throw new GenerationDomainError(
+            "user_render_limit_reached",
+            "This account already has two active renders.",
+          );
         }
 
         const [run] = await tx
@@ -358,6 +388,22 @@ export function createGenerationService(db: Database): GenerationService {
           })
           .onConflictDoNothing({ target: outboxJobs.idempotencyKey });
 
+        const [project] = await tx
+          .update(creatorProjects)
+          .set({
+            status: "generating",
+            currentWorkingVersionId: input.projectVersionId,
+            updatedAt: now,
+          })
+          .where(
+            and(
+              eq(creatorProjects.id, input.projectId),
+              eq(creatorProjects.userId, input.userId),
+            ),
+          )
+          .returning({ id: creatorProjects.id });
+        if (!project) throw new GenerationDomainError("project_version_not_found");
+
         return run;
       });
     },
@@ -386,13 +432,44 @@ export function createGenerationService(db: Database): GenerationService {
           }
           return run;
         }
-        if (run.status !== "submitting" || run.chargedAt) {
+        if (run.provider && run.provider !== provider) {
+          throw new GenerationDomainError(
+            "idempotency_conflict",
+            "render submission was started by a different provider",
+          );
+        }
+        if (run.status !== "submitting" || (run.chargedAt && run.qualityAttempt === 0)) {
           throw new GenerationDomainError("render_submission_not_recordable");
         }
 
+        await tx
+          .insert(renderAttempts)
+          .values({
+            renderRunId: run.id,
+            projectId: run.projectId,
+            projectVersionId: run.projectVersionId,
+            userId: run.userId,
+            attemptNumber: run.qualityAttempt,
+            provider,
+            providerRequestId,
+            status: "submitted",
+            createdAt: now,
+            updatedAt: now,
+          })
+          .onConflictDoNothing({
+            target: [renderAttempts.renderRunId, renderAttempts.userId, renderAttempts.attemptNumber],
+          });
+
         const [updated] = await tx
           .update(renderRuns)
-          .set({ provider, providerRequestId, updatedAt: now })
+          .set({
+            provider,
+            providerRequestId,
+            processingStage: "rendering",
+            errorCode: null,
+            errorMessage: null,
+            updatedAt: now,
+          })
           .where(and(eq(renderRuns.id, run.id), eq(renderRuns.userId, input.userId)))
           .returning();
         if (!updated) throw new Error("provider submission update did not return a row");
@@ -422,6 +499,20 @@ export function createGenerationService(db: Database): GenerationService {
               "idempotency_conflict",
               "render was already accepted with a different provider request",
             );
+          }
+          if (run.status === "submitting") {
+            const [updated] = await tx
+              .update(renderRuns)
+              .set({
+                status: "queued",
+                processingStage: "rendering",
+                providerAcceptedAt: now,
+                updatedAt: now,
+              })
+              .where(and(eq(renderRuns.id, run.id), eq(renderRuns.userId, input.userId)))
+              .returning();
+            if (!updated) throw new Error("quality retry acceptance update did not return a row");
+            return updated;
           }
           return run;
         }
@@ -537,6 +628,7 @@ export function createGenerationService(db: Database): GenerationService {
             chargedAt: now,
             providerAcceptedAt: now,
             status: "queued",
+            processingStage: "rendering",
             updatedAt: now,
           })
           .where(and(eq(renderRuns.id, run.id), eq(renderRuns.userId, input.userId)))
@@ -631,6 +723,7 @@ export function createGenerationService(db: Database): GenerationService {
           .update(renderRuns)
           .set({
             status: terminalStatus,
+            processingStage: terminalStatus === "cancelled" ? "cancelled" : "failed",
             errorCode: terminalStatus === "failed" ? reason : run.errorCode,
             updatedAt: now,
           })

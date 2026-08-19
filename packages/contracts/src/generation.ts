@@ -19,6 +19,8 @@ export const GenerationConfigurationSchema = z
     prompt: z.string().trim().min(1).max(8_000),
     durationSeconds: z.number().int().min(1).max(60).optional(),
     aspectRatio: z.enum(["9:16", "1:1", "4:5", "16:9"]).optional(),
+    resolution: z.enum(["480p", "720p"]).default("720p"),
+    audio: z.boolean().default(true),
     references: z
       .array(
         z
@@ -109,6 +111,8 @@ export const RenderRunParametersSchema = z.object({ id: z.uuid() }).strict();
 
 export const CancelRenderRunRequestSchema = z.object({}).strict();
 
+export const RetryRenderOutputRequestSchema = z.object({}).strict();
+
 export const RenderRunStatusSchema = z.enum([
   "submitting",
   "queued",
@@ -118,6 +122,19 @@ export const RenderRunStatusSchema = z.enum([
   "cancelling",
   "cancelled",
 ]);
+
+export const RenderProcessingStageSchema = z.enum([
+  "preparing",
+  "rendering",
+  "securing_output",
+  "quality_review",
+  "ready",
+  "cancelling",
+  "failed",
+  "cancelled",
+]);
+
+export type RenderProcessingStage = z.infer<typeof RenderProcessingStageSchema>;
 
 export const PublicRenderRunSchema = z
   .object({
@@ -130,6 +147,7 @@ export const PublicRenderRunSchema = z
     chargedCredits: z.number().int().nonnegative(),
     starterEntitlementUsed: z.boolean(),
     status: RenderRunStatusSchema,
+    processingStage: RenderProcessingStageSchema,
     outputAvailable: z.boolean(),
     error: z
       .object({
@@ -154,3 +172,19 @@ export const RenderRunResponseSchema = z
   .strict();
 
 export type RenderRunResponse = z.infer<typeof RenderRunResponseSchema>;
+
+export const RenderRunListQuerySchema = z
+  .object({
+    projectId: z.uuid().optional(),
+    limit: z.coerce.number().int().min(1).max(100).default(50),
+  })
+  .strict();
+
+export const RenderRunListResponseSchema = z
+  .object({
+    runs: z.array(PublicRenderRunSchema),
+    requestId: RequestIdSchema,
+  })
+  .strict();
+
+export type RenderRunListResponse = z.infer<typeof RenderRunListResponseSchema>;
