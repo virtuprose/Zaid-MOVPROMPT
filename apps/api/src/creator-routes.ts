@@ -10,6 +10,8 @@ import {
   IdempotencyKeySchema,
   ProjectListQuerySchema,
   ProjectRouteParametersSchema,
+  ReplaceProjectSourceRequestSchema,
+  ReplaceProjectSourceResponseSchema,
   SourceScanRequestSchema,
   TemplateListQuerySchema,
   type CreditSummaryResponse,
@@ -18,6 +20,7 @@ import {
   type ProjectResponse,
   type ProjectVersionListResponse,
   type ProjectVersionResponse,
+  type ReplaceProjectSourceResponse,
   type TemplateListResponse,
   type TemplateResponse,
 } from "@movprompt/contracts";
@@ -30,6 +33,7 @@ import { ApiHttpError } from "./errors.js";
 import { GuestClaimServiceError, type GuestClaimService } from "./guest-claim-service.js";
 import type { ApiEnvironment } from "./request-context.js";
 import type { SourceScanner } from "./source-scanner.js";
+import { createSourceChangeService } from "./source-change-service.js";
 import type { RequestRateLimiter } from "./request-rate-limiter.js";
 
 export type CreatorRouteServices = {
@@ -415,6 +419,26 @@ export function registerCreatorRoutes(
       };
       noStore(context);
       return context.json(body, 201);
+    } catch (error) {
+      mapRepositoryError(error);
+    }
+  });
+
+  app.post("/api/v1/projects/:projectId/source", async (context) => {
+    const repository = requireRepository(services);
+    const userId = await requireUserId(services, context.req.raw.headers);
+    const { projectId } = ProjectRouteParametersSchema.parse({ projectId: context.req.param("projectId") });
+    const idempotencyKey = IdempotencyKeySchema.parse(context.req.header("idempotency-key") ?? "");
+    const input = ReplaceProjectSourceRequestSchema.parse(await parseJson(context.req.raw));
+    try {
+      const result = await createSourceChangeService({ repository }).replace({ userId, projectId, idempotencyKey, input });
+      const body: ReplaceProjectSourceResponse = {
+        version: result.version,
+        sourceFingerprint: result.sourceFingerprint,
+        requestId: context.get("requestId"),
+      };
+      noStore(context);
+      return context.json(ReplaceProjectSourceResponseSchema.parse(body), 201);
     } catch (error) {
       mapRepositoryError(error);
     }

@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 import { createDatabase, schema } from "@movprompt/db";
+import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import type { AuthGateway } from "./auth-gateway.js";
@@ -167,5 +168,84 @@ describePostgres("portable creator HTTP ownership", () => {
       headers: { "x-test-user": secondUserId },
     });
     await expect(secondUserProjects.json()).resolves.toMatchObject({ projects: [] });
+  });
+
+  it("replays concurrent source replacement once, preserves accepted history, and clears stale output", async () => {
+    const localDraftId = randomUUID();
+    const sourceAssetId = randomUUID();
+    const sourceOperationKey = `source-change:${randomUUID()}`;
+    const creatorRepository = createDrizzleCreatorRepository(database.db);
+    const app = createApi({
+      config: loadApiConfig({ APP_ENV: "test", API_PORT: "3001", FEATURE_AUTHENTICATION: "true", FEATURE_TEMPLATE_MODE: "true" }),
+      authGateway: auth,
+      creatorRepository,
+      guestClaimService: createGuestClaimService({ repository: createGuestClaimRepository({ db: database.db }) }),
+    });
+    const claim = await app.request("/api/v1/drafts/claim", {
+      method: "POST",
+      headers: { "content-type": "application/json", "idempotency-key": randomUUID(), "x-test-user": firstUserId },
+      body: JSON.stringify({
+        draftId: localDraftId,
+        pendingGenerationId: randomUUID(),
+        snapshotDigest: "d".repeat(64),
+        assetManifest: [],
+        title: "Coffee campaign",
+        mode: "template",
+        configuration: { creatorProject: { videoUrl: "https://old.example.test/output.mp4", renderRunId: "old-run", jobId: "old-job" } },
+        productRecipe: { name: "Coffee" },
+        campaignRecipe: { market: "KW", language: "en" },
+      }),
+    });
+    const claimed = (await claim.json()) as { claim: { project: { id: string; currentVersion: { id: string } } } };
+    const projectId = claimed.claim.project.id;
+    const parentVersionId = claimed.claim.project.currentVersion.id;
+    await database.db.insert(schema.creatorProjectAssets).values({
+      id: sourceAssetId,
+      projectId,
+      userId: firstUserId,
+      kind: "product",
+      bucket: "private",
+      objectKey: `users/${firstUserId}/projects/${projectId}/assets/product/${sourceAssetId}/coffee.png`,
+      mimeType: "image/png",
+      sizeBytes: 12,
+      checksumSha256: "e".repeat(64),
+    });
+    await database.db.update(schema.creatorProjects).set({ currentAcceptedVersionId: parentVersionId }).where(eq(schema.creatorProjects.id, projectId));
+
+    const body = JSON.stringify({
+      parentVersionId,
+      mode: "template",
+      configuration: { creatorProject: { videoUrl: "https://old.example.test/output.mp4", renderRunId: "old-run", jobId: "old-job" } },
+      productRecipe: { name: "Coffee", images: [{ assetId: sourceAssetId, checksum: "e".repeat(64) }] },
+      campaignRecipe: { market: "KW", language: "en" },
+      source: { type: "upload", name: "Coffee", description: "Gift set", price: "12.500", brand: "Northfield", assetIds: [sourceAssetId] },
+    });
+    const request = () => app.request(`/api/v1/projects/${projectId}/source`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "idempotency-key": sourceOperationKey, "x-test-user": firstUserId },
+      body,
+    });
+    const [first, replay] = await Promise.all([request(), request()]);
+    expect(first.status).toBe(201);
+    expect(replay.status).toBe(201);
+    const firstVersion = (await first.json()) as { version: { id: string; configuration: { creatorProject: { videoUrl: null; renderRunId: null; jobId: null } } }; sourceFingerprint: string };
+    const replayVersion = (await replay.json()) as { version: { id: string } };
+    expect(replayVersion.version.id).toBe(firstVersion.version.id);
+    expect(firstVersion.sourceFingerprint).toMatch(/^[a-f0-9]{64}$/);
+    expect(firstVersion.version.configuration.creatorProject).toMatchObject({ videoUrl: null, renderRunId: null, jobId: null });
+
+    const current = await app.request(`/api/v1/projects/${projectId}`, { headers: { "x-test-user": firstUserId } });
+    await expect(current.json()).resolves.toMatchObject({
+      project: { currentWorkingVersionId: firstVersion.version.id, currentAcceptedVersionId: parentVersionId },
+    });
+    const history = await app.request(`/api/v1/projects/${projectId}/versions`, { headers: { "x-test-user": firstUserId } });
+    await expect(history.json()).resolves.toMatchObject({ versions: expect.arrayContaining([{ id: parentVersionId }, { id: firstVersion.version.id }]) });
+
+    const crossOwner = await app.request(`/api/v1/projects/${projectId}/source`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "idempotency-key": `source-change:${randomUUID()}`, "x-test-user": secondUserId },
+      body,
+    });
+    expect(crossOwner.status).toBe(404);
   });
 });

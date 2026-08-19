@@ -10,6 +10,7 @@ import type {
   CreatorProjectRecord,
   ProjectVersion,
   PublicTemplate,
+  ReplaceProjectSourceRequest,
 } from "@movprompt/contracts";
 import {
   canonicalizeGenerationConfiguration,
@@ -24,6 +25,7 @@ import {
   desc,
   eq,
   ilike,
+  inArray,
   isNotNull,
   isNull,
   sql,
@@ -71,6 +73,15 @@ export interface CreatorRepository {
     input: CreateProjectVersionRequest,
     idempotencyKey: string,
   ): Promise<ProjectVersion>;
+  replaceSource(input: {
+    userId: string;
+    projectId: string;
+    parentVersionId: string;
+    idempotencyKey: string;
+    sourceFingerprint: string;
+    sourceAssetIds: string[];
+    input: Omit<ReplaceProjectSourceRequest, "source" | "parentVersionId"> & { parentVersionId: string };
+  }): Promise<ProjectVersion>;
   listVersions(userId: string, projectId: string): Promise<ProjectVersion[]>;
   acceptVersion(userId: string, projectId: string, versionId: string): Promise<CreatorProjectRecord>;
   creditSummary(userId: string): Promise<{
@@ -719,6 +730,106 @@ export function createDrizzleCreatorRepository(db: Database): CreatorRepository 
             currentWorkingVersionId: version.id,
             updatedAt: new Date(),
           })
+          .where(and(eq(schema.creatorProjects.id, projectId), eq(schema.creatorProjects.userId, userId)));
+        return versionPublic(version);
+      });
+    },
+
+    async replaceSource({ userId, projectId, parentVersionId, idempotencyKey, sourceFingerprint, sourceAssetIds, input }) {
+      await ensurePublishedTemplateVersion(input.templateVersionId);
+      return withUserTransaction(db, userId, async (tx) => {
+        await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${`${userId}:${projectId}:version`}, 0))`);
+        const [project] = await tx
+          .select({ id: schema.creatorProjects.id })
+          .from(schema.creatorProjects)
+          .where(and(eq(schema.creatorProjects.id, projectId), eq(schema.creatorProjects.userId, userId), isNull(schema.creatorProjects.deletedAt)))
+          .limit(1);
+        if (!project) throw new CreatorRepositoryError("project_not_found");
+
+        const [existingVersion] = await tx
+          .select()
+          .from(schema.creatorProjectVersions)
+          .where(and(
+            eq(schema.creatorProjectVersions.userId, userId),
+            eq(schema.creatorProjectVersions.projectId, projectId),
+            eq(schema.creatorProjectVersions.operationKey, idempotencyKey),
+          ))
+          .limit(1);
+        if (existingVersion) {
+          const requested = canonicalizeGenerationConfiguration({
+            parentVersionId,
+            templateVersionId: input.templateVersionId ?? null,
+            mode: input.mode,
+            configuration: input.configuration,
+            productRecipe: input.productRecipe,
+            campaignRecipe: input.campaignRecipe,
+            changeReason: "Source replaced",
+          });
+          const persisted = canonicalizeGenerationConfiguration({
+            parentVersionId: existingVersion.parentVersionId,
+            templateVersionId: existingVersion.templateVersionId,
+            mode: existingVersion.mode,
+            configuration: existingVersion.configuration,
+            productRecipe: existingVersion.productRecipe,
+            campaignRecipe: existingVersion.campaignRecipe,
+            changeReason: existingVersion.changeReason,
+          });
+          if (requested !== persisted) throw new CreatorRepositoryError("idempotency_conflict");
+          return versionPublic(existingVersion);
+        }
+
+        const [parent] = await tx
+          .select({ id: schema.creatorProjectVersions.id })
+          .from(schema.creatorProjectVersions)
+          .where(and(
+            eq(schema.creatorProjectVersions.id, parentVersionId),
+            eq(schema.creatorProjectVersions.projectId, projectId),
+            eq(schema.creatorProjectVersions.userId, userId),
+          ))
+          .limit(1);
+        if (!parent) throw new CreatorRepositoryError("parent_version_not_found");
+
+        const uniqueAssetIds = [...new Set(sourceAssetIds)];
+        const ownedAssets = await tx
+          .select({ id: schema.creatorProjectAssets.id })
+          .from(schema.creatorProjectAssets)
+          .where(and(
+            eq(schema.creatorProjectAssets.projectId, projectId),
+            eq(schema.creatorProjectAssets.userId, userId),
+            inArray(schema.creatorProjectAssets.id, uniqueAssetIds),
+          ));
+        // Treat missing, stale, and cross-owner asset references identically.
+        if (ownedAssets.length !== uniqueAssetIds.length) throw new CreatorRepositoryError("project_not_found");
+
+        const [last] = await tx
+          .select({ versionNumber: schema.creatorProjectVersions.versionNumber })
+          .from(schema.creatorProjectVersions)
+          .where(and(eq(schema.creatorProjectVersions.projectId, projectId), eq(schema.creatorProjectVersions.userId, userId)))
+          .orderBy(desc(schema.creatorProjectVersions.versionNumber))
+          .limit(1);
+        const [version] = await tx
+          .insert(schema.creatorProjectVersions)
+          .values({
+            projectId,
+            userId,
+            parentVersionId,
+            mode: input.mode,
+            versionNumber: (last?.versionNumber ?? 0) + 1,
+            ...(input.templateVersionId ? { templateVersionId: input.templateVersionId } : {}),
+            configuration: input.configuration,
+            productRecipe: input.productRecipe,
+            campaignRecipe: input.campaignRecipe,
+            changeReason: "Source replaced",
+            operationKey: idempotencyKey,
+          })
+          .returning();
+        if (!version) throw new Error("project_version_insert_failed");
+        if (String((version.configuration as Record<string, unknown>).sourceFingerprint) !== sourceFingerprint) {
+          throw new Error("source_fingerprint_persistence_failed");
+        }
+        await tx
+          .update(schema.creatorProjects)
+          .set({ mode: input.mode, status: "ready", currentWorkingVersionId: version.id, updatedAt: new Date() })
           .where(and(eq(schema.creatorProjects.id, projectId), eq(schema.creatorProjects.userId, userId)));
         return versionPublic(version);
       });

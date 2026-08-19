@@ -227,6 +227,36 @@ export const CreateProjectVersionRequestSchema = z
   .strict();
 export type CreateProjectVersionRequest = z.infer<typeof CreateProjectVersionRequestSchema>;
 
+const SourceReplacementFactsSchema = z
+  .object({
+    type: z.enum(["product_link", "business_link", "upload"]),
+    name: z.string().trim().max(240),
+    description: z.string().trim().max(4_000),
+    price: z.string().trim().max(120),
+    brand: z.string().trim().max(240),
+    assetIds: z.array(z.uuid()).min(1).max(5),
+  })
+  .strict();
+
+/** A source replacement is distinct from an ordinary campaign edit: it invalidates current output. */
+export const ReplaceProjectSourceRequestSchema = z
+  .object({
+    parentVersionId: z.uuid(),
+    templateVersionId: z.uuid().optional(),
+    mode: CreationModeSchema,
+    configuration: JsonObjectSchema,
+    productRecipe: JsonObjectSchema.default({}),
+    campaignRecipe: JsonObjectSchema.default({}),
+    source: SourceReplacementFactsSchema,
+  })
+  .strict();
+export type ReplaceProjectSourceRequest = z.infer<typeof ReplaceProjectSourceRequestSchema>;
+
+export const ReplaceProjectSourceResponseSchema = z
+  .object({ version: ProjectVersionSchema, sourceFingerprint: z.string().regex(/^[a-f0-9]{64}$/), requestId: RequestIdSchema })
+  .strict();
+export type ReplaceProjectSourceResponse = z.infer<typeof ReplaceProjectSourceResponseSchema>;
+
 export const AcceptProjectVersionRequestSchema = z
   .object({ versionId: z.uuid() })
   .strict();
