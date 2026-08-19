@@ -3,28 +3,37 @@
 set -euo pipefail
 
 admin_url="${MOVPROMPT_PHASE2_ADMIN_DATABASE_URL:-}"
+psql_bin="${PSQL:-psql}"
+root_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+rls_script="$root_dir/scripts/infra/check-rls-isolation.sql"
+
 if [[ -z "$admin_url" ]]; then
   echo "MOVPROMPT_PHASE2_ADMIN_DATABASE_URL is required." >&2
   exit 1
 fi
+if ! command -v "$psql_bin" >/dev/null 2>&1; then
+  echo "psql is required for Phase 2 migration validation." >&2
+  exit 1
+fi
 
-read -r admin_host admin_database < <(node -e '
-const input = process.argv[1];
-const parsed = new URL(input);
+read -r admin_protocol admin_host admin_database < <(node -e '
+const parsed = new URL(process.argv[1]);
 const database = parsed.pathname.startsWith("/") ? parsed.pathname.slice(1) : parsed.pathname;
-console.log(`${parsed.hostname.toLowerCase()} ${database.toLowerCase()}`);
+console.log(`${parsed.protocol.toLowerCase()} ${parsed.hostname.toLowerCase()} ${database.toLowerCase()}`);
 ' "$admin_url")
 
+if [[ "$admin_protocol" != "postgresql:" && "$admin_protocol" != "postgres:" ]]; then
+  echo "Phase 2 migration validation requires a PostgreSQL URL." >&2
+  exit 1
+fi
 if [[ "$admin_host" != "127.0.0.1" && "$admin_host" != "localhost" ]]; then
   echo "Phase 2 migration validation only permits a local PostgreSQL administrative endpoint." >&2
   exit 1
 fi
-
 if [[ "$admin_database" != "postgres" ]]; then
   echo "The administrative endpoint must target the postgres database." >&2
   exit 1
 fi
-
 if [[ "$admin_url" =~ (production|staging|development|prod|stage|dev) ]]; then
   echo "Refusing an administrative endpoint that contains a shared-environment marker." >&2
   exit 1
@@ -35,33 +44,38 @@ if [[ ! "$database_name" =~ ^movprompt_phase2_test_[a-z0-9_]+$ ]]; then
   echo "Generated disposable database name is invalid." >&2
   exit 1
 fi
-
 database_url="$(node -e '
 const parsed = new URL(process.argv[1]);
 parsed.pathname = `/${process.argv[2]}`;
 process.stdout.write(parsed.toString());
 ' "$admin_url" "$database_name")"
 
+assert_generated_target() {
+  local target_name
+  target_name="$(node -e 'const parsed = new URL(process.argv[1]); process.stdout.write(parsed.pathname.slice(1));' "$database_url")"
+  [[ "$database_name" =~ ^movprompt_phase2_test_[a-z0-9_]+$ ]] && [[ "$target_name" == "$database_name" ]]
+}
 drop_database() {
-  psql "$admin_url" -v ON_ERROR_STOP=1 -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '${database_name}' AND pid <> pg_backend_pid();" >/dev/null 2>&1 || true
-  psql "$admin_url" -v ON_ERROR_STOP=1 -c "DROP DATABASE IF EXISTS \"${database_name}\";" >/dev/null 2>&1 || true
+  assert_generated_target || { echo "Refusing to drop a non-generated database target." >&2; return; }
+  "$psql_bin" "$admin_url" -v ON_ERROR_STOP=1 -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '${database_name}' AND pid <> pg_backend_pid();" >/dev/null 2>&1 || true
+  "$psql_bin" "$admin_url" -v ON_ERROR_STOP=1 -c "DROP DATABASE IF EXISTS \"${database_name}\";" >/dev/null 2>&1 || true
 }
 trap drop_database EXIT
 
-server_version="$(psql "$admin_url" -v ON_ERROR_STOP=1 -Atc 'SHOW server_version_num')"
+server_version="$($psql_bin "$admin_url" -v ON_ERROR_STOP=1 -Atc 'SHOW server_version_num')"
 if (( server_version < 170000 || server_version >= 180000 )); then
   echo "Phase 2 migration validation requires PostgreSQL 17; found server version ${server_version}." >&2
   exit 1
 fi
-
-psql "$admin_url" -v ON_ERROR_STOP=1 -c "CREATE DATABASE \"${database_name}\";" >/dev/null
+assert_generated_target || { echo "Generated target validation failed." >&2; exit 1; }
+"$psql_bin" "$admin_url" -v ON_ERROR_STOP=1 -c "CREATE DATABASE \"${database_name}\";" >/dev/null
 DATABASE_URL_DIRECT="$database_url" bun run db:migrate >/dev/null
 DATABASE_URL_DIRECT="$database_url" bun scripts/infra/check-portable-database.ts >/dev/null
 
 assert_query() {
   local description="$1"
   local statement="$2"
-  if [[ "$(psql "$database_url" -v ON_ERROR_STOP=1 -Atc "$statement")" != "1" ]]; then
+  if [[ "$("$psql_bin" "$database_url" -v ON_ERROR_STOP=1 -Atc "$statement")" != "1" ]]; then
     echo "Migration invariant failed: ${description}" >&2
     exit 1
   fi
@@ -79,4 +93,5 @@ assert_query "request rate limit function exists" "SELECT EXISTS (SELECT 1 FROM 
 assert_query "rate limit table only persists hashed subjects" "SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'request_rate_limits' AND column_name = 'subject_hash')::int;"
 
 DATABASE_URL_DIRECT="$database_url" bun run db:migrate >/dev/null
+"$psql_bin" "$database_url" -v ON_ERROR_STOP=1 -f "$rls_script" >/dev/null
 echo "Phase 2 migration validation passed on a disposable PostgreSQL 17 database."
