@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 
 describe("email verification policy", () => {
-  it("defaults to requiring verification", async () => {
+  it("defaults to deferred verification for the first private-beta campaign", async () => {
     vi.stubEnv("VITE_AUTH_REQUIRE_EMAIL_VERIFICATION", "");
     vi.resetModules();
     const { isEmailVerificationRequired } = await import("./authPolicy");
-    expect(isEmailVerificationRequired()).toBe(true);
+    expect(isEmailVerificationRequired()).toBe(false);
   });
 
   it("can defer verification for a private beta", async () => {
@@ -15,4 +15,3 @@ describe("email verification policy", () => {
     expect(isEmailVerificationRequired()).toBe(false);
   });
 });
-
