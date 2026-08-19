@@ -68,7 +68,8 @@ import { hydrateCloudProject } from "./portableProjectMapper";
 import { projectToCreationDraft, type CreationDraft, type GenerationQuote } from "./contracts";
 import { automaticQuoteRetryDelay } from "./quoteRecovery";
 import { cleanupExpiredGuestDrafts, getGuestAsset, getGuestDraft, loadGuestDraft, markClaimCheckpoint, putGuestAsset, saveGuestDraft } from "./guestDraftStore";
-import { claimGuestAssets } from "./creatorAssets";
+import { claimGuestAssets, GuestClaimAssetFailure, type GuestClaimProgress as GuestClaimProgressState } from "./creatorAssets";
+import { GuestClaimProgress } from "./GuestClaimProgress";
 import { buildGuestClaimSnapshot } from "./guestClaimSnapshot";
 import {
   hasUnclaimedCreatorAssets,
@@ -209,6 +210,11 @@ async function checksumForBlob(blob: Blob): Promise<string> {
     .join("");
 }
 
+function isAbortError(error: unknown): boolean {
+  return error instanceof DOMException && error.name === "AbortError"
+    || error instanceof Error && error.name === "AbortError";
+}
+
 function Progress({ current, steps, label }: { current: CreatorStep; steps: Array<{ id: CreatorStep; label: string }>; label: string }) {
   const currentIndex = steps.findIndex((step) => step.id === current);
   return (
@@ -253,7 +259,7 @@ function stepForLoadedProject(project: CreatorProject): CreatorStep {
 
 export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
   const navigate = useNavigate();
-  const { locale } = useLanguage();
+  const { locale, t } = useLanguage();
   const arabicUi = locale === "ar";
   const tr = useCallback(
     (english: string, arabic: string) => arabicUi ? arabic : english,
@@ -298,6 +304,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
   const [sourceError, setSourceError] = useState("");
   const [recovery, setRecovery] = useState<TypedGuestClaimRecovery | null>(null);
   const [sourceBusy, setSourceBusy] = useState(false);
+  const [claimProgress, setClaimProgress] = useState<GuestClaimProgressState | null>(null);
   const [modeSwitching, setModeSwitching] = useState(false);
   const [rightsConfirmed, setRightsConfirmed] = useState(false);
   const [authGateOpen, setAuthGateOpen] = useState(false);
@@ -318,6 +325,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
   const saveTimer = useRef<number | null>(null);
   const generationCancelled = useRef(false);
   const generationSubmission = useRef(false);
+  const activeClaimController = useRef<AbortController | null>(null);
   const resumedGeneration = useRef(false);
   const startGenerationRef = useRef<(ratioOverride?: CreatorAspectRatio) => Promise<void>>(async () => undefined);
   const generateButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -881,7 +889,11 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
     }, 520);
   };
 
-  const claimGuestProject = async (candidate: CreatorProject) => {
+  const claimGuestProject = async (candidate: CreatorProject, options: {
+    signal: AbortSignal;
+    onProgress: (progress: GuestClaimProgressState) => void;
+  }) => {
+    if (options.signal.aborted) throw new DOMException("The private campaign claim was cancelled.", "AbortError");
     if (!user || qaMode) return candidate;
     const loadedGuestDraft = await loadGuestDraft(candidate.id);
     if (!("draft" in loadedGuestDraft) || !loadedGuestDraft.draft.pendingGenerationId) {
@@ -973,7 +985,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
         blob = stored.blob;
         mimeType = stored.mimeType.toLowerCase();
       } else {
-        const response = await fetch(image.url, { credentials: "same-origin" });
+        const response = await fetch(image.url, { credentials: "same-origin", signal: options.signal });
         if (!response.ok) throw new Error(`The bundled sample image ${image.name} could not be loaded.`);
         blob = await response.blob();
         mimeType = blob.type.toLowerCase();
@@ -1017,7 +1029,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
     });
     if (!checkpoint) throw new Error("The local campaign could not be prepared for secure recovery.");
 
-    const claimed = await claimGuestAssets({ snapshot, blobs });
+    const claimed = await claimGuestAssets({ snapshot, blobs, signal: options.signal, onProgress: options.onProgress });
     const cloudProject = await hydrateCloudProject(claimed.receipt.project);
     if (!cloudProject) throw new Error("The saved campaign could not be restored after secure claim.");
     const claimedAssets = new Map(claimed.assets.map((asset) => [asset.localAssetId, asset]));
@@ -1047,6 +1059,18 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
     if (!open) window.setTimeout(() => generateButtonRef.current?.focus(), 0);
   };
 
+  const cancelGuestClaim = () => {
+    const controller = activeClaimController.current;
+    if (!controller) return;
+    controller.abort();
+    if (activeClaimController.current === controller) activeClaimController.current = null;
+    setClaimProgress(null);
+    setSourceBusy(false);
+    setSourceError("");
+    setAuthGateCancellation(t("auth.cancelled"));
+    window.setTimeout(() => generateButtonRef.current?.focus(), 0);
+  };
+
   const startGeneration = async (ratioOverride?: CreatorAspectRatio) => {
     if (!project.product.images.length) {
       setSourceError(`Add at least one ${project.promotionKind === "business" ? "business or service" : "product"} image before generating.`);
@@ -1071,16 +1095,36 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
       return;
     }
     setSourceBusy(true);
+    const controller = new AbortController();
+    const showsClaimProgress = Boolean(user && !qaMode);
+    if (showsClaimProgress) {
+      activeClaimController.current = controller;
+      setClaimProgress({ stage: "creating" });
+      setAuthGateCancellation("");
+    }
     let claimedProject: CreatorProject;
     try {
-      claimedProject = await claimGuestProject(project);
+      claimedProject = await claimGuestProject(project, {
+        signal: controller.signal,
+        onProgress: (progress) => {
+          if (activeClaimController.current === controller) setClaimProgress(progress);
+        },
+      });
       setProject(claimedProject);
     } catch (error) {
-      const next = selectGuestClaimRecovery(projectToCreationDraft(project, rightsConfirmed), "asset_claim_failed");
+      if (isAbortError(error)) return;
+      const next = selectGuestClaimRecovery(
+        projectToCreationDraft(project, rightsConfirmed),
+        "asset_claim_failed",
+        error instanceof GuestClaimAssetFailure ? { localAssetId: error.localAssetId } : {},
+      );
       setRecovery(next);
       setSourceError(getGuestClaimRecoveryCopy(arabicUi ? "ar" : "en", next.state).message);
       setSourceBusy(false);
       return;
+    } finally {
+      if (activeClaimController.current === controller) activeClaimController.current = null;
+      setClaimProgress(null);
     }
     let renderProject = claimedProject;
     if (ratioOverride && ratioOverride !== claimedProject.aspectRatio) {
@@ -1300,6 +1344,27 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
       setPreviewPlaying(false);
     }
   };
+
+  if (claimProgress) {
+    return (
+      <CreatorShell qaMode={qaMode}>
+        <Seo title="Securing your campaign · MovPrompt" description="MovPrompt is securing your campaign and images privately." noindex />
+        <GuestClaimProgress
+          progress={claimProgress}
+          copy={{
+            heading: t("creator.claim.heading"),
+            detail: t("creator.claim.detail"),
+            creating: t("creator.claim.stage.create"),
+            asset: (current, total) => t("creator.claim.stage.asset").replace("{current}", String(current)).replace("{total}", String(total)),
+            verifying: t("creator.claim.stage.verify"),
+            cancel: tr("Cancel and keep editing", "إلغاء ومتابعة التعديل"),
+          }}
+          onCancel={cancelGuestClaim}
+        />
+        <p className="sr-only" role="status" aria-live="polite" aria-atomic="true">{authGateCancellation}</p>
+      </CreatorShell>
+    );
+  }
 
   if (step === "generating") {
     return (

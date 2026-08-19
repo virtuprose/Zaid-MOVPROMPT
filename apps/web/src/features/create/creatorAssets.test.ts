@@ -204,6 +204,142 @@ describe("creator remote product image mirroring", () => {
     expect(blobs.get(failedAssetId)).toBeInstanceOf(Blob);
   });
 
+  it("reports factual private-claim stages in server checkpoint order and forwards one signal to every request", async () => {
+    const projectId = "22222222-2222-4222-8222-222222222222";
+    const pendingGenerationId = "33333333-3333-4333-8333-333333333333";
+    const firstAssetId = "44444444-4444-4444-8444-444444444444";
+    const secondAssetId = "55555555-5555-4555-8555-555555555555";
+    const firstBlob = new Blob([new Uint8Array([0xff, 0xd8, 0xff, 0xe0])], { type: "image/jpeg" });
+    const secondBlob = new Blob([new Uint8Array([0xff, 0xd8, 0xff, 0xe1])], { type: "image/jpeg" });
+    const checksums = await Promise.all([firstBlob, secondBlob].map(async (blob) => Array.from(
+      new Uint8Array(await crypto.subtle.digest("SHA-256", await blob.arrayBuffer())),
+    ).map((value) => value.toString(16).padStart(2, "0")).join("")));
+    const asset = (id: string, checksum: string) => ({
+      id,
+      projectId,
+      kind: "product",
+      objectKey: `users/u/projects/${projectId}/assets/product/${id}/${checksum}`,
+      mimeType: "image/jpeg",
+      sizeBytes: 4,
+      checksumSha256: checksum,
+    });
+    const operation = (nextAsset: { localAssetId: string; ordinal: number } | null) => ({
+      operation: {
+        id: "66666666-6666-4666-8666-666666666666",
+        projectId,
+        draftId: "77777777-7777-4777-8777-777777777777",
+        pendingGenerationId,
+        snapshotDigest: "a".repeat(64),
+        status: "securing",
+        nextAsset: nextAsset && {
+          id: nextAsset.ordinal === 0 ? "88888888-8888-4888-8888-888888888888" : "99999999-9999-4999-8999-999999999999",
+          localAssetId: nextAsset.localAssetId,
+          ordinal: nextAsset.ordinal,
+          status: "pending",
+        },
+      },
+      requestId: "claim-operation-request",
+    });
+    const responseQueue = [
+      operation({ localAssetId: firstAssetId, ordinal: 0 }),
+      { asset: asset(firstAssetId, checksums[0]!), upload: { method: "PUT", url: "https://storage.example.test/upload-1", headers: {}, expiresInSeconds: 900 }, requestId: "reserve-1" },
+      { asset: asset(firstAssetId, checksums[0]!), download: { method: "GET", url: "https://storage.example.test/download-1", expiresInSeconds: 900 }, requestId: "content-1" },
+      { asset: asset(firstAssetId, checksums[0]!), status: "ready", requestId: "complete-1" },
+      operation({ localAssetId: secondAssetId, ordinal: 1 }),
+      { asset: asset(secondAssetId, checksums[1]!), upload: { method: "PUT", url: "https://storage.example.test/upload-2", headers: {}, expiresInSeconds: 900 }, requestId: "reserve-2" },
+      { asset: asset(secondAssetId, checksums[1]!), download: { method: "GET", url: "https://storage.example.test/download-2", expiresInSeconds: 900 }, requestId: "content-2" },
+      { asset: asset(secondAssetId, checksums[1]!), status: "ready", requestId: "complete-2" },
+      operation(null),
+    ];
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL, _request?: RequestInit) => {
+      const body = responseQueue.shift();
+      return body
+        ? new Response(JSON.stringify(body), { status: 201, headers: { "content-type": "application/json" } })
+        : new Response(JSON.stringify({ error: { message: "finalize deliberately stops this stage-order test" } }), { status: 500, headers: { "content-type": "application/json" } });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const controller = new AbortController();
+    const progress: string[] = [];
+
+    await expect(claimGuestAssets({
+      snapshot: {
+        draftId: "77777777-7777-4777-8777-777777777777",
+        pendingGenerationId,
+        snapshotDigest: "a".repeat(64),
+        assetManifest: [
+          { localAssetId: firstAssetId, ordinal: 0, kind: "product", mimeType: "image/jpeg", sizeBytes: 4, checksumSha256: checksums[0]! },
+          { localAssetId: secondAssetId, ordinal: 1, kind: "product", mimeType: "image/jpeg", sizeBytes: 4, checksumSha256: checksums[1]! },
+        ],
+        title: "Coffee campaign",
+        mode: "template",
+        configuration: {},
+        productRecipe: {},
+        campaignRecipe: {},
+      },
+      blobs: new Map([[firstAssetId, firstBlob], [secondAssetId, secondBlob]]),
+      signal: controller.signal,
+      onProgress: (stage) => progress.push(stage.stage === "asset" ? `${stage.stage}:${stage.current}/${stage.total}` : stage.stage),
+    })).rejects.toThrow("finalize deliberately stops this stage-order test");
+
+    expect(progress).toEqual(["creating", "asset:1/2", "asset:2/2", "verifying"]);
+    expect(fetchMock).toHaveBeenCalledTimes(10);
+    for (const [, request] of fetchMock.mock.calls) {
+      expect(request).toMatchObject({ signal: controller.signal });
+    }
+  });
+
+  it("stops an aborted claim before finalization and retains caller-owned blobs for an idempotent retry", async () => {
+    const projectId = "22222222-2222-4222-8222-222222222222";
+    const pendingGenerationId = "33333333-3333-4333-8333-333333333333";
+    const assetId = "44444444-4444-4444-8444-444444444444";
+    const blob = new Blob([new Uint8Array([0xff, 0xd8, 0xff, 0xe0])], { type: "image/jpeg" });
+    const checksum = Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", await blob.arrayBuffer())))
+      .map((value) => value.toString(16).padStart(2, "0"))
+      .join("");
+    const controller = new AbortController();
+    const blobs = new Map([[assetId, blob]]);
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL, request?: RequestInit) => {
+      if (fetchMock.mock.calls.length === 1) {
+        return new Response(JSON.stringify({
+          operation: {
+            id: "66666666-6666-4666-8666-666666666666",
+            projectId,
+            draftId: "77777777-7777-4777-8777-777777777777",
+            pendingGenerationId,
+            snapshotDigest: "a".repeat(64),
+            status: "securing",
+            nextAsset: { id: "88888888-8888-4888-8888-888888888888", localAssetId: assetId, ordinal: 0, status: "pending" },
+          },
+          requestId: "start-request",
+        }), { status: 201, headers: { "content-type": "application/json" } });
+      }
+      expect(request?.signal).toBe(controller.signal);
+      controller.abort();
+      throw new DOMException("The operation was aborted.", "AbortError");
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(claimGuestAssets({
+      snapshot: {
+        draftId: "77777777-7777-4777-8777-777777777777",
+        pendingGenerationId,
+        snapshotDigest: "a".repeat(64),
+        assetManifest: [{ localAssetId: assetId, ordinal: 0, kind: "product", mimeType: "image/jpeg", sizeBytes: 4, checksumSha256: checksum }],
+        title: "Coffee campaign",
+        mode: "template",
+        configuration: {},
+        productRecipe: {},
+        campaignRecipe: {},
+      },
+      blobs,
+      signal: controller.signal,
+    })).rejects.toMatchObject({ name: "AbortError" });
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(String(fetchMock.mock.calls.at(-1)?.[0])).not.toContain("/finalize");
+    expect(blobs.get(assetId)).toBe(blob);
+  });
+
   it("calls the authenticated mirror endpoint and returns only the private stored asset", async () => {
     const fetchMock = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) =>
       new Response(JSON.stringify({

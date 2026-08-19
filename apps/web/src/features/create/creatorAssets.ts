@@ -14,6 +14,25 @@ import type { CreatorAsset } from "./types";
 
 type CreatorImageMimeType = NonNullable<CreatorAsset["mimeType"]>;
 
+/** Factual browser-visible checkpoints emitted only at durable claim boundaries. */
+export type GuestClaimProgress =
+  | { stage: "creating" }
+  | { stage: "asset"; localAssetId: string; current: number; total: number }
+  | { stage: "verifying" };
+
+function abortError(): DOMException {
+  return new DOMException("The private campaign claim was cancelled.", "AbortError");
+}
+
+function assertNotAborted(signal?: AbortSignal): void {
+  if (signal?.aborted) throw signal.reason instanceof Error ? signal.reason : abortError();
+}
+
+function isAbortError(error: unknown): boolean {
+  return error instanceof DOMException && error.name === "AbortError"
+    || error instanceof Error && error.name === "AbortError";
+}
+
 function parseCreatorImageMimeType(value: string): CreatorImageMimeType {
   if (value === "image/jpeg" || value === "image/png" || value === "image/webp") return value;
   throw new Error("MovPrompt received an unsupported image type from storage. Your local draft is unchanged.");
@@ -46,6 +65,7 @@ async function reservePrivateAsset(
   projectId: string,
   idempotencyKey: string,
   body: string,
+  signal?: AbortSignal,
 ): Promise<Response> {
   const request = () => fetch(
     `${apiOrigin()}/api/v1/projects/${projectId}/assets/upload-url`,
@@ -57,14 +77,18 @@ async function reservePrivateAsset(
         "idempotency-key": idempotencyKey,
       },
       body,
+      signal,
     },
   );
+  assertNotAborted(signal);
   const first = await request();
   // A newly claimed project can become visible to a second pooled database
   // connection a fraction later. Retry the same idempotent reservation once;
   // every other failure remains fail-closed and surfaces immediately.
   if (first.status !== 404) return first;
+  assertNotAborted(signal);
   await new Promise((resolve) => window.setTimeout(resolve, 120));
+  assertNotAborted(signal);
   return request();
 }
 
@@ -86,9 +110,12 @@ export type ClaimedGuestAsset = {
 
 async function requestClaimOperation(
   pendingGenerationId: string,
+  signal?: AbortSignal,
 ): Promise<ReturnType<typeof GuestClaimOperationResponseSchema.parse>["operation"]> {
+  assertNotAborted(signal);
   const response = await fetch(`${apiOrigin()}/api/v1/drafts/claim/${pendingGenerationId}`, {
     credentials: "include",
+    signal,
   });
   return GuestClaimOperationResponseSchema.parse(await jsonResponse(response)).operation;
 }
@@ -102,7 +129,9 @@ async function secureClaimAsset(input: {
   sizeBytes: number;
   checksumSha256: string;
   blob: Blob;
+  signal?: AbortSignal;
 }): Promise<ClaimedGuestAsset> {
+  assertNotAborted(input.signal);
   if (input.blob.size !== input.sizeBytes || input.blob.type !== input.mimeType || await sha256(input.blob) !== input.checksumSha256) {
     throw new Error("local_asset_integrity_mismatch");
   }
@@ -118,6 +147,7 @@ async function secureClaimAsset(input: {
         checksumSha256: input.checksumSha256,
       },
     }),
+    input.signal,
   );
   const upload = SignedAssetUploadResponseSchema.parse(await jsonResponse(uploadResponse));
   if (
@@ -136,6 +166,7 @@ async function secureClaimAsset(input: {
       credentials: "include",
       headers: { "content-type": upload.asset.mimeType },
       body: input.blob,
+      signal: input.signal,
     },
   );
   // A signed preview may exist only in this response. Claim recovery stores neither it nor the object key.
@@ -147,6 +178,7 @@ async function secureClaimAsset(input: {
       credentials: "include",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ pendingGenerationId: input.pendingGenerationId, localAssetId: input.localAssetId }),
+      signal: input.signal,
     },
   );
   const ready = AssetReadyResponseSchema.parse(await jsonResponse(completed));
@@ -171,7 +203,11 @@ async function secureClaimAsset(input: {
 export async function claimGuestAssets(input: {
   snapshot: GuestClaimSnapshot;
   blobs: ReadonlyMap<string, Blob>;
+  signal?: AbortSignal;
+  onProgress?: (progress: GuestClaimProgress) => void;
 }): Promise<{ receipt: GuestClaimReceipt; assets: ClaimedGuestAsset[] }> {
+  assertNotAborted(input.signal);
+  input.onProgress?.({ stage: "creating" });
   const started = await fetch(`${apiOrigin()}/api/v1/drafts/claim/start`, {
     method: "POST",
     credentials: "include",
@@ -180,16 +216,24 @@ export async function claimGuestAssets(input: {
       "idempotency-key": input.snapshot.pendingGenerationId,
     },
     body: JSON.stringify(input.snapshot),
+    signal: input.signal,
   });
   let operation = GuestClaimOperationResponseSchema.parse(await jsonResponse(started)).operation;
   const manifest = new Map(input.snapshot.assetManifest.map((asset) => [asset.localAssetId, asset]));
   const securedAssets = new Map<string, ClaimedGuestAsset>();
 
   while (operation.nextAsset) {
+    assertNotAborted(input.signal);
     const checkpoint = operation.nextAsset;
     const asset = manifest.get(checkpoint.localAssetId);
     const blob = asset ? input.blobs.get(asset.localAssetId) : undefined;
     if (!asset || !blob) throw new GuestClaimAssetFailure(checkpoint.localAssetId, new Error("local_asset_missing"));
+    input.onProgress?.({
+      stage: "asset",
+      localAssetId: checkpoint.localAssetId,
+      current: checkpoint.ordinal + 1,
+      total: input.snapshot.assetManifest.length,
+    });
     try {
       const secured = await secureClaimAsset({
         projectId: operation.projectId,
@@ -200,14 +244,18 @@ export async function claimGuestAssets(input: {
         sizeBytes: asset.sizeBytes,
         checksumSha256: asset.checksumSha256,
         blob,
+        signal: input.signal,
       });
       securedAssets.set(secured.localAssetId, secured);
     } catch (error) {
+      if (isAbortError(error)) throw error;
       throw new GuestClaimAssetFailure(checkpoint.localAssetId, error);
     }
-    operation = await requestClaimOperation(input.snapshot.pendingGenerationId);
+    operation = await requestClaimOperation(input.snapshot.pendingGenerationId, input.signal);
   }
 
+  assertNotAborted(input.signal);
+  input.onProgress?.({ stage: "verifying" });
   const finalized = await fetch(
     `${apiOrigin()}/api/v1/drafts/claim/${input.snapshot.pendingGenerationId}/finalize`,
     {
@@ -218,6 +266,7 @@ export async function claimGuestAssets(input: {
         "idempotency-key": input.snapshot.pendingGenerationId,
       },
       body: JSON.stringify({}),
+      signal: input.signal,
     },
   );
   const receipt = GuestClaimResponseSchema.parse(await jsonResponse(finalized)).claim;
@@ -225,10 +274,11 @@ export async function claimGuestAssets(input: {
   // already verified by an earlier attempt. Refresh their signed previews
   // from the owned endpoint while retaining only stable metadata in projects.
   for (const asset of receipt.assetManifest) {
+    assertNotAborted(input.signal);
     if (securedAssets.has(asset.localAssetId)) continue;
     const response = await fetch(
       `${apiOrigin()}/api/v1/projects/${receipt.project.id}/assets/${asset.localAssetId}/download-url`,
-      { credentials: "include" },
+      { credentials: "include", signal: input.signal },
     );
     const download = SignedAssetDownloadResponseSchema.parse(await jsonResponse(response));
     securedAssets.set(asset.localAssetId, {
