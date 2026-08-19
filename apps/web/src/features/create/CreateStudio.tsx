@@ -51,6 +51,7 @@ import {
   getGuestClaimRecoveryCopy,
   persistBeforeVerifiedDraftCleanup,
   selectGuestClaimRecovery,
+  type CanonicalClaimReceipt,
   type TypedGuestClaimRecovery,
 } from "./guestClaimRecovery";
 import {
@@ -66,7 +67,7 @@ import {
 import { hydrateCloudProject } from "./portableProjectMapper";
 import { projectToCreationDraft, type CreationDraft, type GenerationQuote } from "./contracts";
 import { automaticQuoteRetryDelay } from "./quoteRecovery";
-import { cleanupExpiredGuestDrafts, getGuestAsset, getGuestDraft, markClaimCheckpoint, putGuestAsset, saveGuestDraft } from "./guestDraftStore";
+import { cleanupExpiredGuestDrafts, getGuestAsset, getGuestDraft, loadGuestDraft, markClaimCheckpoint, putGuestAsset, saveGuestDraft } from "./guestDraftStore";
 import { claimGuestAssets } from "./creatorAssets";
 import { buildGuestClaimSnapshot } from "./guestClaimSnapshot";
 import {
@@ -882,8 +883,71 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
 
   const claimGuestProject = async (candidate: CreatorProject) => {
     if (!user || qaMode) return candidate;
-    const guestDraft = await getGuestDraft(candidate.id);
-    if (!guestDraft?.pendingGenerationId) return syncCreatorProject(candidate, user.id);
+    const loadedGuestDraft = await loadGuestDraft(candidate.id);
+    if (!("draft" in loadedGuestDraft) || !loadedGuestDraft.draft.pendingGenerationId) {
+      return syncCreatorProject(candidate, user.id);
+    }
+    const guestDraft = loadedGuestDraft.draft;
+
+    const createSourcePersistence = (claimCheckpoint: NonNullable<typeof guestDraft.claimCheckpoint>) => ({
+      fromResult: (persisted: CreatorProject) => {
+        if (!persisted.versionId || !persisted.versionNumber) {
+          throw new Error("MovPrompt could not verify the saved imported images. Your local draft is unchanged.");
+        }
+        return {
+          pendingGenerationId: claimCheckpoint.pendingGenerationId,
+          snapshotDigest: claimCheckpoint.snapshotDigest,
+          projectId: persisted.id,
+          versionId: persisted.versionId,
+          versionNumber: persisted.versionNumber,
+          ...(persisted.sourceFingerprint ? { sourceFingerprint: persisted.sourceFingerprint } : {}),
+        };
+      },
+      reuse: async (completion: {
+        projectId: string;
+        versionId: string;
+        versionNumber: number;
+        sourceFingerprint?: string;
+      }) => {
+        const cloud = await portableCreatorApi.getProject(completion.projectId);
+        const persisted = await hydrateCloudProject(cloud);
+        if (
+          !persisted
+          || persisted.id !== completion.projectId
+          || persisted.versionId !== completion.versionId
+          || persisted.versionNumber !== completion.versionNumber
+          || (completion.sourceFingerprint && persisted.sourceFingerprint !== completion.sourceFingerprint)
+        ) {
+          throw new Error("MovPrompt could not verify the saved imported images. Your local draft is unchanged.");
+        }
+        return persisted;
+      },
+    });
+
+    // A source version can succeed just before IndexedDB cleanup is interrupted
+    // (for example, a browser storage fault). Its receipt is bound to this
+    // pending intent, so reuse that exact immutable version before considering
+    // another guest-claim or source-replacement request.
+    const sourceCheckpoint = guestDraft.claimCheckpoint;
+    if (sourceCheckpoint?.sourcePersistence) {
+      const receipt = {
+        status: "ready",
+        draftId: guestDraft.id,
+        pendingGenerationId: guestDraft.pendingGenerationId,
+        snapshotDigest: sourceCheckpoint.snapshotDigest,
+        assetManifest: sourceCheckpoint.assetManifest,
+        project: {} as CanonicalClaimReceipt["project"],
+        version: { configuration: sourceCheckpoint.configuration } as CanonicalClaimReceipt["version"],
+      } satisfies CanonicalClaimReceipt;
+      return persistBeforeVerifiedDraftCleanup({
+        draftId: candidate.id,
+        receipt,
+        persist: async () => {
+          throw new Error("MovPrompt could not verify the saved imported images. Your local draft is unchanged.");
+        },
+        sourcePersistence: createSourcePersistence(sourceCheckpoint),
+      });
+    }
 
     // The local IDs become the immutable asset identities accepted by the
     // server. Bundled samples did not originate in IndexedDB, so give them a
@@ -973,6 +1037,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
       draftId: projectForClaim.id,
       receipt: claimed.receipt,
       persist: () => persistGuestClaimedCreatorProject(claimedProject, user.id),
+      sourcePersistence: createSourcePersistence(checkpoint.claimCheckpoint!),
     });
   };
 

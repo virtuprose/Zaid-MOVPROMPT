@@ -131,6 +131,92 @@ describe("guest claim recovery", () => {
     await expect(getGuestAsset(localBlobKey)).resolves.toBeNull();
   });
 
+  it("reuses one completed source version when IndexedDB cleanup fails after persistence", async () => {
+    const base = createMemoryGuestDraftStorage();
+    let failCleanupOnce = true;
+    const deleteDraftAndAssets = vi.fn(async (id: string) => {
+      if (failCleanupOnce) {
+        failCleanupOnce = false;
+        throw new Error("indexeddb cleanup interrupted");
+      }
+      await base.deleteDraftAndAssets(id);
+    });
+    setGuestDraftStorageForTests({ ...base, deleteDraftAndAssets });
+    await saveGuestDraft(draft());
+    await markClaimCheckpoint(DRAFT_ID, {
+      pendingGenerationId: INTENT_ID,
+      snapshotDigest: "b".repeat(64),
+      configuration,
+      assetManifest: manifest,
+    });
+
+    const persisted = {
+      id: "44444444-4444-4444-8444-444444444444",
+      versionId: "55555555-5555-4555-8555-555555555555",
+      versionNumber: 2,
+      sourceFingerprint: "c".repeat(64),
+    };
+    let sourceVersions = 0;
+    let workingVersionTransitions = 0;
+    const sourcePersistence = {
+      fromResult: (result: typeof persisted) => ({
+        pendingGenerationId: INTENT_ID,
+        snapshotDigest: "b".repeat(64),
+        projectId: result.id,
+        versionId: result.versionId,
+        versionNumber: result.versionNumber,
+        sourceFingerprint: result.sourceFingerprint,
+      }),
+      reuse: vi.fn().mockResolvedValue(persisted),
+    };
+    const persist = vi.fn(async () => {
+      sourceVersions += 1;
+      workingVersionTransitions += 1;
+      return persisted;
+    });
+
+    await expect(persistBeforeVerifiedDraftCleanup({
+      draftId: DRAFT_ID,
+      receipt: receipt(),
+      persist,
+      sourcePersistence,
+    })).rejects.toThrow("indexeddb cleanup interrupted");
+    expect(sourceVersions).toBe(1);
+    expect(workingVersionTransitions).toBe(1);
+    await expect(loadGuestDraft(DRAFT_ID)).resolves.toMatchObject({
+      draft: {
+        claimCheckpoint: {
+          sourcePersistence: {
+            projectId: persisted.id,
+            versionId: persisted.versionId,
+            versionNumber: 2,
+          },
+        },
+      },
+    });
+
+    const replayPersist = vi.fn(async () => {
+      sourceVersions += 1;
+      workingVersionTransitions += 1;
+      return persisted;
+    });
+    await expect(persistBeforeVerifiedDraftCleanup({
+      draftId: DRAFT_ID,
+      receipt: receipt(),
+      persist: replayPersist,
+      sourcePersistence,
+    })).resolves.toEqual(persisted);
+
+    expect(replayPersist).not.toHaveBeenCalled();
+    expect(sourcePersistence.reuse).toHaveBeenCalledWith(expect.objectContaining({
+      projectId: persisted.id,
+      versionId: persisted.versionId,
+    }));
+    expect(sourceVersions).toBe(1);
+    expect(workingVersionTransitions).toBe(1);
+    await expect(getGuestDraft(DRAFT_ID)).resolves.toBeNull();
+  });
+
   it("retains local data and gives the later UI a generic wrong-account recovery state", async () => {
     setGuestDraftStorageForTests(createMemoryGuestDraftStorage());
     await saveGuestDraft(draft());

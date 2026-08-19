@@ -6,7 +6,9 @@ import {
   deleteVerifiedGuestDraft,
   loadGuestDraft,
   markGuestDraftCleanupEligible,
+  markGuestDraftSourcePersistence,
   type GuestClaimCheckpoint,
+  type GuestSourcePersistence,
   type StoredGuestDraft,
 } from "./guestDraftStore";
 import type { CreationDraft } from "./contracts";
@@ -138,6 +140,10 @@ export async function persistBeforeVerifiedDraftCleanup<T>(input: {
   draftId: string;
   receipt: CanonicalClaimReceipt;
   persist: () => Promise<T>;
+  sourcePersistence?: {
+    fromResult: (result: T) => Omit<GuestSourcePersistence, "completedAt">;
+    reuse: (completion: GuestSourcePersistence) => Promise<T>;
+  };
 }): Promise<T> {
   const recovery = await loadGuestClaimRecovery(input.draftId);
   if (recovery.state !== "recoverable") {
@@ -148,10 +154,33 @@ export async function persistBeforeVerifiedDraftCleanup<T>(input: {
     throw new Error("MovPrompt could not verify the saved campaign. Your local draft is unchanged.");
   }
 
-  // Deliberately await persistence before the only destructive step. A retry
-  // can safely replay a completed server claim, while the original link and
-  // local checkpoint remain available if mirroring or version creation fails.
-  const result = await input.persist();
+  const completedSource = recovery.draft.claimCheckpoint?.sourcePersistence;
+  let result: T;
+  if (input.sourcePersistence && completedSource) {
+    const matchesClaim = completedSource.pendingGenerationId === input.receipt.pendingGenerationId
+      && completedSource.snapshotDigest === input.receipt.snapshotDigest;
+    if (!matchesClaim) {
+      throw new Error("MovPrompt could not verify the saved campaign. Your local draft is unchanged.");
+    }
+    // The immutable source version already exists. A retry after local cleanup
+    // failed must resolve that exact version, not invoke source replacement
+    // against the now-advanced working version.
+    result = await input.sourcePersistence.reuse(completedSource);
+  } else {
+    // Deliberately await persistence before the only destructive step. A retry
+    // can safely replay a completed server claim, while the original link and
+    // local checkpoint remain available if mirroring or version creation fails.
+    result = await input.persist();
+    if (input.sourcePersistence) {
+      const marked = await markGuestDraftSourcePersistence(
+        input.draftId,
+        input.sourcePersistence.fromResult(result),
+      );
+      if (!marked) {
+        throw new Error("MovPrompt could not record the saved campaign. Your local draft is unchanged.");
+      }
+    }
+  }
   const cleaned = await verifyAndDeleteVerifiedDraft(input.draftId, input.receipt);
   if (cleaned.state !== "verified") {
     throw new Error("MovPrompt could not verify the saved campaign. Your local draft is unchanged.");

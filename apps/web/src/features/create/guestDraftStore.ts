@@ -21,7 +21,23 @@ export type GuestClaimCheckpoint = {
   snapshotDigest: string;
   configuration: unknown;
   assetManifest: GuestClaimAssetManifest;
+  /**
+   * Written only after the owned source version exists and before local
+   * IndexedDB cleanup. This is the client-side receipt that makes a reload
+   * after a cleanup interruption a reuse operation, never a new version.
+   */
+  sourcePersistence?: GuestSourcePersistence;
   cleanupEligibleAt?: string;
+};
+
+export type GuestSourcePersistence = {
+  pendingGenerationId: string;
+  snapshotDigest: string;
+  projectId: string;
+  versionId: string;
+  versionNumber: number;
+  sourceFingerprint?: string;
+  completedAt: string;
 };
 
 export type StoredGuestDraft = CreationDraft & {
@@ -269,6 +285,38 @@ export async function markGuestDraftCleanupEligible(id: string, pendingGeneratio
   const savedAt = now().toISOString();
   await storage().putDraft({ ...loaded.draft, updatedAt: savedAt, claimCheckpoint: { ...checkpoint, cleanupEligibleAt: savedAt } });
   return true;
+}
+
+/**
+ * Records the exact immutable source version before any local cleanup. The
+ * pending intent and snapshot digest bind the marker to one guest claim, so a
+ * later retry cannot accidentally reuse it for changed campaign facts.
+ */
+export async function markGuestDraftSourcePersistence(
+  id: string,
+  completion: Omit<GuestSourcePersistence, "completedAt">,
+): Promise<StoredGuestDraft | null> {
+  const loaded = await loadGuestDraft(id);
+  if (!("draft" in loaded)) return null;
+  const checkpoint = loaded.draft.claimCheckpoint;
+  if (
+    !checkpoint
+    || checkpoint.pendingGenerationId !== completion.pendingGenerationId
+    || checkpoint.snapshotDigest !== completion.snapshotDigest
+  ) {
+    return null;
+  }
+  const savedAt = now().toISOString();
+  const next: GuestSourcePersistence = {
+    ...completion,
+    completedAt: savedAt,
+  };
+  await storage().putDraft({
+    ...loaded.draft,
+    updatedAt: savedAt,
+    claimCheckpoint: { ...checkpoint, sourcePersistence: next },
+  });
+  return await storage().getDraft(id);
 }
 
 /** Deletes a local draft only after its exact canonical receipt was verified. Safe to replay. */
