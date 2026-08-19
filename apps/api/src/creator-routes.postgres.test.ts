@@ -7,6 +7,8 @@ import type { AuthGateway } from "./auth-gateway.js";
 import { createApi } from "./app.js";
 import { loadApiConfig } from "./config.js";
 import { createDrizzleCreatorRepository } from "./creator-repository.js";
+import { createGuestClaimRepository } from "./guest-claim-repository.js";
+import { createGuestClaimService } from "./guest-claim-service.js";
 
 const integrationUrl = process.env.MOVPROMPT_TEST_DATABASE_URL;
 const describePostgres = integrationUrl ? describe.sequential : describe.skip;
@@ -16,6 +18,7 @@ describePostgres("portable creator HTTP ownership", () => {
   const firstUserId = randomUUID();
   const secondUserId = randomUUID();
   const draftId = randomUUID();
+  const pendingGenerationId = randomUUID();
 
   beforeAll(async () => {
     database = createDatabase({
@@ -62,6 +65,7 @@ describePostgres("portable creator HTTP ownership", () => {
   };
 
   it("claims once, hides the project from another account, and prevents a second claim", async () => {
+    const creatorRepository = createDrizzleCreatorRepository(database.db);
     const app = createApi({
       config: loadApiConfig({
         APP_ENV: "test",
@@ -70,10 +74,16 @@ describePostgres("portable creator HTTP ownership", () => {
         FEATURE_TEMPLATE_MODE: "true",
       }),
       authGateway: auth,
-      creatorRepository: createDrizzleCreatorRepository(database.db),
+      creatorRepository,
+      guestClaimService: createGuestClaimService({
+        repository: createGuestClaimRepository({ db: database.db }),
+      }),
     });
     const body = JSON.stringify({
       draftId,
+      pendingGenerationId,
+      snapshotDigest: "a".repeat(64),
+      assetManifest: [],
       title: "Private campaign",
       mode: "template",
       configuration: { generation: { prompt: "Create a Kuwait campaign", references: [] } },
@@ -84,29 +94,29 @@ describePostgres("portable creator HTTP ownership", () => {
       method: "POST",
       headers: {
         "content-type": "application/json",
-        "idempotency-key": draftId,
+        "idempotency-key": pendingGenerationId,
         "x-test-user": firstUserId,
       },
       body,
     });
     expect(first.status).toBe(201);
-    const firstProject = (await first.json()) as { project: { id: string } };
+    const firstProject = (await first.json()) as { claim: { project: { id: string } } };
 
     const repeated = await app.request("/api/v1/drafts/claim", {
       method: "POST",
       headers: {
         "content-type": "application/json",
-        "idempotency-key": draftId,
+        "idempotency-key": pendingGenerationId,
         "x-test-user": firstUserId,
       },
       body,
     });
     expect(repeated.status).toBe(201);
     await expect(repeated.json()).resolves.toMatchObject({
-      project: { id: firstProject.project.id },
+      claim: { project: { id: firstProject.claim.project.id } },
     });
 
-    const version = await app.request(`/api/v1/projects/${firstProject.project.id}/versions`, {
+    const version = await app.request(`/api/v1/projects/${firstProject.claim.project.id}/versions`, {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -123,7 +133,7 @@ describePostgres("portable creator HTTP ownership", () => {
     });
     expect(version.status).toBe(201);
     const createdVersion = (await version.json()) as { version: { id: string } };
-    const currentProject = await app.request(`/api/v1/projects/${firstProject.project.id}`, {
+    const currentProject = await app.request(`/api/v1/projects/${firstProject.claim.project.id}`, {
       headers: { "x-test-user": firstUserId },
     });
     await expect(currentProject.json()).resolves.toMatchObject({
@@ -137,7 +147,7 @@ describePostgres("portable creator HTTP ownership", () => {
       },
     });
 
-    const crossUserRead = await app.request(`/api/v1/projects/${firstProject.project.id}`, {
+    const crossUserRead = await app.request(`/api/v1/projects/${firstProject.claim.project.id}`, {
       headers: { "x-test-user": secondUserId },
     });
     expect(crossUserRead.status).toBe(404);
@@ -146,7 +156,7 @@ describePostgres("portable creator HTTP ownership", () => {
       method: "POST",
       headers: {
         "content-type": "application/json",
-        "idempotency-key": draftId,
+        "idempotency-key": pendingGenerationId,
         "x-test-user": secondUserId,
       },
       body,
