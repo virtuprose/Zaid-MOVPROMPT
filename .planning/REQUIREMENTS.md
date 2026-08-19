@@ -25,10 +25,10 @@ Requirements for the first production release. A requirement is complete only af
 - [ ] **AUTH-04**: Private-beta user can complete the first campaign without an email-verification interruption and sees a dashboard reminder to verify later.
 - [ ] **AUTH-05**: User can reset a forgotten password and return safely to the intended MovPrompt route.
 - [ ] **AUTH-06**: Cancelled authentication returns the user to the unchanged campaign.
-- [ ] **AUTH-07**: Successful authentication restores the exact template, sources, facts, language, campaign settings, rights decision, and pending generation intent.
-- [ ] **AUTH-08**: Repeated authentication callbacks create at most one project, one run, and one charge.
+- [x] **AUTH-07**: Successful authentication restores the exact template, sources, facts, language, campaign settings, rights decision, and pending generation intent.
+- [x] **AUTH-08**: Repeated authentication callbacks create at most one project, one run, and one charge.
 - [ ] **AUTH-09**: Guest drafts and local media expire after seven days and cannot be claimed or viewed by a different account.
-- [ ] **AUTH-10**: Authenticated projects use PostgreSQL and private object storage as their source of truth; browser storage is only a recoverable cache.
+- [x] **AUTH-10**: Authenticated projects use PostgreSQL and private object storage as their source of truth; browser storage is only a recoverable cache.
 
 ### Business and Product Sources
 
@@ -193,10 +193,10 @@ Deferred until the beginner Kuwait launch is stable and measured.
 | AUTH-04 | Phase 2 | Pending |
 | AUTH-05 | Phase 2 | Pending |
 | AUTH-06 | Phase 2 | Pending |
-| AUTH-07 | Phase 2 | Pending |
-| AUTH-08 | Phase 2 | Pending |
+| AUTH-07 | Phase 2 | Complete |
+| AUTH-08 | Phase 2 | Complete |
 | AUTH-09 | Phase 2 | Pending |
-| AUTH-10 | Phase 2 | Pending |
+| AUTH-10 | Phase 2 | Complete |
 | SOURCE-01 | Phase 3 | Pending |
 | SOURCE-02 | Phase 3 | Pending |
 | SOURCE-03 | Phase 3 | Pending |
