@@ -92,6 +92,19 @@ human_verification:
 |---|---|---|---|
 | Phase 2 migrations, schema invariants, and RLS | `MOVPROMPT_PHASE2_ADMIN_DATABASE_URL=postgresql://127.0.0.1:55432/postgres bash scripts/infra/validate-phase2-migrations.sh` | Fresh PostgreSQL 17 database migrated twice; portable DB and RLS checks passed; disposable database removed | ✓ PASS |
 
+## Integrated Workspace Gate
+
+The final merged Phase 2 tree passed `bun install --frozen-lockfile`, repository lint with 0 errors (20 existing Fast Refresh warnings), every workspace typecheck, every workspace test, every workspace build, and the web bundle gate.
+
+- Web: 40 files / 144 tests passed.
+- API: 80 passed / 12 environment-gated PostgreSQL tests skipped in the generic run.
+- Worker: 67 passed / 9 environment-gated tests skipped.
+- DB: 6 passed / 12 environment-gated tests skipped.
+- Auth: 8 passed / 3 environment-gated tests skipped.
+- Contracts 8, storage 6, providers 20, and creative engine 16 tests passed.
+- Web initial bundle: 246,965 gzip bytes against a 307,200-byte limit.
+- PostgreSQL-gated Phase 2 behavior is covered separately by the successful disposable PostgreSQL 17 probe above.
+
 ## Requirements Coverage
 
 | Requirement | Status | Evidence |
