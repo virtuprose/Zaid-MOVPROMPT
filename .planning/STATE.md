@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 02
 current_phase_name: Guest, Authentication, and Data Integrity
 status: executing
-stopped_at: Completed 02-01-PLAN.md
-last_updated: "2026-08-19T16:57:37.230Z"
+stopped_at: Completed 02-02-PLAN.md
+last_updated: "2026-08-19T19:15:29.304Z"
 last_activity: 2026-08-19
 last_activity_desc: Phase 01 verified complete; transitioned to Phase 2
 progress:
   total_phases: 2
   completed_phases: 1
   total_plans: 11
-  completed_plans: 4
+  completed_plans: 5
 ---
 
 # Project State
@@ -32,7 +32,7 @@ Plan: 2 of 8
 Status: Ready to execute
 Last activity: 2026-08-19 — Phase 02 execution started
 
-Progress: [████░░░░░░] 36%
+Progress: [█████░░░░░] 45%
 
 ## Performance Metrics
 
@@ -54,6 +54,7 @@ Progress: [████░░░░░░] 36%
 | Plan | Duration | Tasks | Files |
 |------|----------|-------|-------|
 | Phase 02 P01 | 18min | 3 tasks | 14 files |
+| Phase 02 P02 | 11 min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -68,6 +69,8 @@ Full decisions are recorded in `.planning/PROJECT.md`.
 - Existing React/Hono/PostgreSQL/Better Auth/pg-boss/S3 architecture is completed, not replaced.
 - [Phase ?]: Guest claim projects remain non-ready until every required asset checkpoint is verified and an immutable version is persisted.
 - [Phase ?]: Guest claim replay is enforced by global draft uniqueness, owner-plus-intent uniqueness, and advisory locks.
+- [Phase 02]: Guest draft expiry remains fixed from first save; ordinary edits only update the snapshot.
+- [Phase 02]: Local guest data is deleted only after exact canonical configuration and ordered asset-manifest verification.
 
 ### Pending Todos
 
@@ -90,6 +93,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-08-19T16:57:37.223Z
-Stopped at: Completed 02-01-PLAN.md
+Last session: 2026-08-19T19:15:29.296Z
+Stopped at: Completed 02-02-PLAN.md
 Resume file: None
