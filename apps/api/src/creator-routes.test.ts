@@ -10,6 +10,7 @@ import { createApi } from "./app.js";
 import type { CreatorRepository } from "./creator-repository.js";
 import { loadApiConfig } from "./config.js";
 import { ApiHttpError } from "./errors.js";
+import type { GuestClaimService } from "./guest-claim-service.js";
 import type { SourceScanner } from "./source-scanner.js";
 
 const USER_ID = "11111111-1111-4111-8111-111111111111";
@@ -18,6 +19,7 @@ const DRAFT_ID = "33333333-3333-4333-8333-333333333333";
 const PROJECT_ID = "44444444-4444-4444-8444-444444444444";
 const VERSION_ID = "55555555-5555-4555-8555-555555555555";
 const TEMPLATE_VERSION_ID = "66666666-6666-4666-8666-666666666666";
+const PENDING_GENERATION_ID = "77777777-7777-4777-8777-777777777777";
 
 const config = loadApiConfig({
   APP_ENV: "test",
@@ -140,6 +142,19 @@ function repository(): CreatorRepository {
   };
 }
 
+function guestClaimService(): GuestClaimService {
+  return {
+    claimGuestDraft: vi.fn(async ({ snapshot }) => ({
+      status: "ready",
+      draftId: snapshot.draftId,
+      pendingGenerationId: snapshot.pendingGenerationId,
+      snapshotDigest: snapshot.snapshotDigest,
+      project,
+      version,
+    })),
+  };
+}
+
 describe("portable creator API", () => {
   it("serves the public published template catalog without authentication", async () => {
     const app = createApi({ config, creatorRepository: repository(), authGateway: auth(null) });
@@ -229,15 +244,24 @@ describe("portable creator API", () => {
 
   it("claims a draft only when its stable idempotency key matches", async () => {
     const repo = repository();
-    const app = createApi({ config, creatorRepository: repo, authGateway: auth() });
+    const claims = guestClaimService();
+    const app = createApi({
+      config,
+      creatorRepository: repo,
+      authGateway: auth(),
+      guestClaimService: claims,
+    });
     const response = await app.request("/api/v1/drafts/claim", {
       method: "POST",
       headers: {
         "content-type": "application/json",
-        "idempotency-key": DRAFT_ID,
+        "idempotency-key": PENDING_GENERATION_ID,
       },
       body: JSON.stringify({
         draftId: DRAFT_ID,
+        pendingGenerationId: PENDING_GENERATION_ID,
+        snapshotDigest: "a".repeat(64),
+        assetManifest: [],
         title: "Northfield campaign",
         mode: "template",
         templateVersionId: TEMPLATE_VERSION_ID,
@@ -247,17 +271,26 @@ describe("portable creator API", () => {
       }),
     });
     expect(response.status).toBe(201);
-    expect(repo.claimDraft).toHaveBeenCalledTimes(1);
+    expect(claims.claimGuestDraft).toHaveBeenCalledTimes(1);
   });
 
   it("rejects a mismatched claim key before writing", async () => {
     const repo = repository();
-    const app = createApi({ config, creatorRepository: repo, authGateway: auth() });
+    const claims = guestClaimService();
+    const app = createApi({
+      config,
+      creatorRepository: repo,
+      authGateway: auth(),
+      guestClaimService: claims,
+    });
     const response = await app.request("/api/v1/drafts/claim", {
       method: "POST",
       headers: { "content-type": "application/json", "idempotency-key": "another-operation-key" },
       body: JSON.stringify({
         draftId: DRAFT_ID,
+        pendingGenerationId: PENDING_GENERATION_ID,
+        snapshotDigest: "a".repeat(64),
+        assetManifest: [],
         title: "Northfield campaign",
         mode: "template",
         configuration: {},
@@ -266,7 +299,7 @@ describe("portable creator API", () => {
       }),
     });
     expect(response.status).toBe(409);
-    expect(repo.claimDraft).not.toHaveBeenCalled();
+    expect(claims.claimGuestDraft).not.toHaveBeenCalled();
   });
 
   it("never lets a session select another user's project", async () => {

@@ -1,9 +1,10 @@
 import {
   AcceptProjectVersionRequestSchema,
-  ClaimDraftRequestSchema,
   CreditSummaryResponseSchema,
   CreateProjectVersionRequestSchema,
   EmptyMutationRequestSchema,
+  GuestClaimResponseSchema,
+  GuestClaimSnapshotSchema,
   IdempotencyKeySchema,
   ProjectListQuerySchema,
   ProjectRouteParametersSchema,
@@ -24,6 +25,7 @@ import type { AssetStorageGateway } from "./asset-storage.js";
 import type { AuthGateway } from "./auth-gateway.js";
 import { CreatorRepositoryError, type CreatorRepository } from "./creator-repository.js";
 import { ApiHttpError } from "./errors.js";
+import { GuestClaimServiceError, type GuestClaimService } from "./guest-claim-service.js";
 import type { ApiEnvironment } from "./request-context.js";
 import type { SourceScanner } from "./source-scanner.js";
 
@@ -33,6 +35,7 @@ export type CreatorRouteServices = {
   repository?: CreatorRepository;
   storage?: AssetStorageGateway;
   scanner?: SourceScanner;
+  guestClaimService?: GuestClaimService;
 };
 
 function requireRepository(services: CreatorRouteServices): CreatorRepository {
@@ -57,6 +60,18 @@ function requireAuth(services: CreatorRouteServices): AuthGateway {
     });
   }
   return services.auth;
+}
+
+function requireGuestClaimService(services: CreatorRouteServices): GuestClaimService {
+  if (!services.enabled || !services.guestClaimService) {
+    throw new ApiHttpError({
+      code: "guest_claim_service_unavailable",
+      message: "Campaign recovery is not available in this environment.",
+      status: 503,
+      retryable: true,
+    });
+  }
+  return services.guestClaimService;
 }
 
 async function requireUserId(services: CreatorRouteServices, headers: Headers): Promise<string> {
@@ -163,26 +178,35 @@ export function registerCreatorRoutes(
   });
 
   app.post("/api/v1/drafts/claim", async (context) => {
-    const repository = requireRepository(services);
+    const claimService = requireGuestClaimService(services);
     const userId = await requireUserId(services, context.req.raw.headers);
     const idempotencyKey = IdempotencyKeySchema.parse(context.req.header("idempotency-key") ?? "");
-    const input = ClaimDraftRequestSchema.parse(await parseJson(context.req.raw));
-    if (idempotencyKey !== input.draftId) {
+    const snapshot = GuestClaimSnapshotSchema.parse(await parseJson(context.req.raw));
+    if (idempotencyKey !== snapshot.pendingGenerationId) {
       throw new ApiHttpError({
         code: "idempotency_conflict",
-        message: "The draft ID must be used as the stable claim operation key.",
+        message: "The pending generation ID must be used as the stable claim operation key.",
         status: 409,
         retryable: false,
       });
     }
     try {
-      const body: ProjectResponse = {
-        project: await repository.claimDraft(userId, input),
+      const claim = await claimService.claimGuestDraft({ userId, snapshot });
+      const body = GuestClaimResponseSchema.parse({
+        claim,
         requestId: context.get("requestId"),
-      };
+      });
       noStore(context);
       return context.json(body, 201);
     } catch (error) {
+      if (error instanceof GuestClaimServiceError) {
+        throw new ApiHttpError({
+          code: "guest_claim_conflict",
+          message: "This campaign claim cannot be completed.",
+          status: 409,
+          retryable: error.retryable,
+        });
+      }
       mapRepositoryError(error);
     }
   });

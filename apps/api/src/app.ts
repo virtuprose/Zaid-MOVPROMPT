@@ -15,6 +15,7 @@ import { loadApiConfig } from "./config.js";
 import { ApiHttpError } from "./errors.js";
 import type { CreatorRepository } from "./creator-repository.js";
 import { registerCreatorRoutes } from "./creator-routes.js";
+import type { GuestClaimService } from "./guest-claim-service.js";
 import { registerGenerationRoutes } from "./generation-routes.js";
 import type { GenerationApiService } from "./generation-service.js";
 import type { GenerationAvailabilityService } from "./generation-availability.js";
@@ -38,6 +39,7 @@ export type CreateApiOptions = {
   assetStorage?: AssetStorageGateway;
   remoteImageFetcher?: RemoteImageFetcher;
   creatorRepository?: CreatorRepository;
+  guestClaimService?: GuestClaimService;
   sourceScanner?: SourceScanner;
   generationService?: GenerationApiService;
   generationAvailability?: GenerationAvailabilityService;
@@ -180,6 +182,7 @@ export function createApi(options: CreateApiOptions = {}) {
     enabled: config.featureFlags.templateMode && Boolean(options.creatorRepository),
     ...(options.authGateway ? { auth: options.authGateway } : {}),
     ...(options.creatorRepository ? { repository: options.creatorRepository } : {}),
+    ...(options.guestClaimService ? { guestClaimService: options.guestClaimService } : {}),
     ...(options.assetStorage ? { storage: options.assetStorage } : {}),
     ...(options.sourceScanner ? { scanner: options.sourceScanner } : {}),
   });
