@@ -128,14 +128,16 @@ function positiveInteger(value: string | undefined, fallback: number, label: str
 }
 
 export function objectStorageConfigFromEnv(env: NodeJS.ProcessEnv = process.env): ObjectStorageConfig {
+  const endpoint = env.S3_ENDPOINT?.trim();
+  const previewsBucket = env.S3_PREVIEWS_BUCKET?.trim();
   return {
-    endpoint: env.S3_ENDPOINT?.trim() || undefined,
+    ...(endpoint ? { endpoint } : {}),
     region: env.S3_REGION?.trim() || "auto",
     accessKeyId: requireEnv(env, "S3_ACCESS_KEY_ID"),
     secretAccessKey: requireEnv(env, "S3_SECRET_ACCESS_KEY"),
     assetsBucket: requireEnv(env, "S3_ASSETS_BUCKET"),
     outputsBucket: requireEnv(env, "S3_OUTPUTS_BUCKET"),
-    previewsBucket: env.S3_PREVIEWS_BUCKET?.trim() || undefined,
+    ...(previewsBucket ? { previewsBucket } : {}),
     forcePathStyle: env.S3_FORCE_PATH_STYLE === "true",
     uploadUrlTtlSeconds: positiveInteger(env.S3_UPLOAD_URL_TTL_SECONDS, 900, "S3_UPLOAD_URL_TTL_SECONDS"),
     downloadUrlTtlSeconds: positiveInteger(
@@ -149,7 +151,7 @@ export function objectStorageConfigFromEnv(env: NodeJS.ProcessEnv = process.env)
 export class PrivateObjectStorage {
   readonly assetsBucket: string;
   readonly outputsBucket: string;
-  readonly previewsBucket?: string;
+  readonly previewsBucket: string | undefined;
 
   private readonly client: S3Client;
   private readonly uploadUrlTtlSeconds: number;
@@ -168,9 +170,9 @@ export class PrivateObjectStorage {
     this.client =
       client ??
       new S3Client({
-        endpoint: config.endpoint,
+        ...(config.endpoint ? { endpoint: config.endpoint } : {}),
         region: config.region,
-      credentials: {
+        credentials: {
           accessKeyId: config.accessKeyId,
           secretAccessKey: config.secretAccessKey,
         },

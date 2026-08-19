@@ -51,7 +51,7 @@ export function databaseConfigFromEnv(env: NodeJS.ProcessEnv = process.env): Dat
 
   return {
     url,
-    maxConnections,
+    ...(maxConnections !== undefined ? { maxConnections } : {}),
     ssl: env.DATABASE_SSL === "require" ? "require" : false,
     applicationName: env.DATABASE_APPLICATION_NAME?.trim() || "movprompt",
   };

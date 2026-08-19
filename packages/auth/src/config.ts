@@ -80,12 +80,16 @@ export function authEnvironmentFromEnv(env: NodeJS.ProcessEnv = process.env): Au
       "AUTH_REQUIRE_EMAIL_VERIFICATION",
       env.APP_ENV?.trim().toLowerCase() !== "local",
     ),
-    google,
-    apple: appleCredentials
+    ...(google ? { google } : {}),
+    ...(appleCredentials
       ? {
-          ...appleCredentials,
-          appBundleIdentifier: env.APPLE_APP_BUNDLE_IDENTIFIER?.trim() || undefined,
+          apple: {
+            ...appleCredentials,
+            ...(env.APPLE_APP_BUNDLE_IDENTIFIER?.trim()
+              ? { appBundleIdentifier: env.APPLE_APP_BUNDLE_IDENTIFIER.trim() }
+              : {}),
+          },
         }
-      : undefined,
+      : {}),
   };
 }
