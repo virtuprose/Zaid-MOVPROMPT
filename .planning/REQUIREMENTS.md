@@ -9,13 +9,13 @@ Requirements for the first production release. A requirement is complete only af
 
 ### Runtime and Product Truth
 
-- [ ] **TRUTH-01**: User sees generation as available only when the API, worker, approved capability, authoritative pricing, private storage, media tools, and quality reviewer are simultaneously healthy.
-- [ ] **TRUTH-02**: User sees a specific recoverable availability message when generation is paused, without losing the draft or project.
-- [ ] **TRUTH-03**: User never sees sample, template-preview, direction, or source media presented as their generated output.
-- [ ] **TRUTH-04**: User sees real generation stages derived from persisted server state rather than a simulated progress percentage.
-- [ ] **TRUTH-05**: Operator can stop new quotes and submissions with one server-side kill switch without interrupting already accepted runs.
-- [ ] **TRUTH-06**: API and worker refuse generation when their capability, pricing, storage, or runtime fingerprints disagree.
-- [ ] **TRUTH-07**: User can refresh or close the browser during generation and return to the correct project, stage, and result.
+- [x] **TRUTH-01**: User sees generation as available only when the API, worker, approved capability, authoritative pricing, private storage, media tools, and quality reviewer are simultaneously healthy.
+- [x] **TRUTH-02**: User sees a specific recoverable availability message when generation is paused, without losing the draft or project.
+- [x] **TRUTH-03**: User never sees sample, template-preview, direction, or source media presented as their generated output.
+- [x] **TRUTH-04**: User sees real generation stages derived from persisted server state rather than a simulated progress percentage.
+- [x] **TRUTH-05**: Operator can stop new quotes and submissions with one server-side kill switch without interrupting already accepted runs.
+- [x] **TRUTH-06**: API and worker refuse generation when their capability, pricing, storage, or runtime fingerprints disagree.
+- [x] **TRUTH-07**: User can refresh or close the browser during generation and return to the correct project, stage, and result.
 
 ### Accounts and Guest Drafts
 
@@ -55,10 +55,10 @@ Requirements for the first production release. A requirement is complete only af
 
 ### Pricing, Generation, and Quality
 
-- [ ] **GEN-01**: Guest and authenticated user receive an expiring server quote bound to the complete project-version configuration.
-- [ ] **GEN-02**: Changing any cost- or output-affecting field invalidates the old quote and requires a refreshed confirmation.
-- [ ] **GEN-03**: User can submit one generation from repeated clicks without duplicate projects, runs, entitlements, reservations, or charges.
-- [ ] **GEN-04**: One private-beta starter render is granted idempotently and is consumed only after an approved provider accepts the request.
+- [x] **GEN-01**: Guest and authenticated user receive an expiring server quote bound to the complete project-version configuration.
+- [x] **GEN-02**: Changing any cost- or output-affecting field invalidates the old quote and requires a refreshed confirmation.
+- [x] **GEN-03**: User can submit one generation from repeated clicks without duplicate projects, runs, entitlements, reservations, or charges.
+- [x] **GEN-04**: One private-beta starter render is granted idempotently and is consumed only after an approved provider accepts the request.
 - [ ] **GEN-05**: Durable worker submits, polls, reconciles, and completes generation independently of the browser.
 - [ ] **GEN-06**: Successful provider output is copied into MovPrompt-owned private storage before the run can complete.
 - [ ] **GEN-07**: Output is validated for container, codec, dimensions, duration, audio policy, full decode, and safe output origin.
@@ -180,13 +180,13 @@ Deferred until the beginner Kuwait launch is stable and measured.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| TRUTH-01 | Phase 1 | Pending |
-| TRUTH-02 | Phase 1 | Pending |
-| TRUTH-03 | Phase 1 | Pending |
-| TRUTH-04 | Phase 1 | Pending |
-| TRUTH-05 | Phase 1 | Pending |
-| TRUTH-06 | Phase 1 | Pending |
-| TRUTH-07 | Phase 1 | Pending |
+| TRUTH-01 | Phase 1 | Complete |
+| TRUTH-02 | Phase 1 | Complete |
+| TRUTH-03 | Phase 1 | Complete |
+| TRUTH-04 | Phase 1 | Complete |
+| TRUTH-05 | Phase 1 | Complete |
+| TRUTH-06 | Phase 1 | Complete |
+| TRUTH-07 | Phase 1 | Complete |
 | AUTH-01 | Phase 2 | Pending |
 | AUTH-02 | Phase 2 | Pending |
 | AUTH-03 | Phase 2 | Pending |
@@ -214,10 +214,10 @@ Deferred until the beginner Kuwait launch is stable and measured.
 | CREATE-08 | Phase 3 | Pending |
 | CREATE-09 | Phase 3 | Pending |
 | CREATE-10 | Phase 3 | Pending |
-| GEN-01 | Phase 1 | Pending |
-| GEN-02 | Phase 1 | Pending |
-| GEN-03 | Phase 1 | Pending |
-| GEN-04 | Phase 1 | Pending |
+| GEN-01 | Phase 1 | Complete |
+| GEN-02 | Phase 1 | Complete |
+| GEN-03 | Phase 1 | Complete |
+| GEN-04 | Phase 1 | Complete |
 | GEN-05 | Phase 4 | Pending |
 | GEN-06 | Phase 4 | Pending |
 | GEN-07 | Phase 4 | Pending |
@@ -288,6 +288,7 @@ Deferred until the beginner Kuwait launch is stable and measured.
 | OPS-09 | Phase 10 | Pending |
 
 **Coverage:**
+
 - v1 requirements: 106 total
 - Mapped to phases: 106
 - Unmapped: 0 ✓
