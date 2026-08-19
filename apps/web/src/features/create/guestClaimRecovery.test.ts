@@ -12,6 +12,7 @@ import {
 } from "./guestDraftStore";
 import {
   recoverFailedGuestClaim,
+  getGuestClaimRecoveryCopy,
   selectGuestClaimRecovery,
   verifyAndDeleteVerifiedDraft,
   verifyCanonicalReceipt,
@@ -96,5 +97,18 @@ describe("guest claim recovery", () => {
     expect(failedAsset).toEqual({ state: "claim_failed", action: "retry_asset", localAssetId: ASSET_ID, draft: original });
     expect(offline.draft).toBe(original);
     expect(failedAsset.draft).toBe(original);
+  });
+
+  it("uses the exact bilingual recovery copy without exposing storage details", () => {
+    expect(getGuestClaimRecoveryCopy("en", "claim_failed")).toEqual({
+      message: "We couldn’t secure this image. Your campaign is still saved here.",
+      primaryAction: "Retry securing image",
+      secondaryAction: "Replace image",
+    });
+    expect(getGuestClaimRecoveryCopy("ar", "import_failed")).toEqual({
+      message: "لم نتمكن من استيراد هذا المصدر. حملتك لم تتغيّر. حاول مرة أخرى أو ارفع صوراً بدلاً من ذلك.",
+      primaryAction: "حاول مرة أخرى",
+      secondaryAction: "ارفع صوراً بدلاً من ذلك",
+    });
   });
 });
