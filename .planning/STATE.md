@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 02
 current_phase_name: Guest, Authentication, and Data Integrity
 status: executing
-stopped_at: Completed 02-03-PLAN.md
-last_updated: "2026-08-19T19:34:40.571Z"
+stopped_at: Completed 02-04-PLAN.md
+last_updated: "2026-08-19T19:49:40.356Z"
 last_activity: 2026-08-19
 last_activity_desc: Phase 01 verified complete; transitioned to Phase 2
 progress:
   total_phases: 2
   completed_phases: 1
   total_plans: 11
-  completed_plans: 6
+  completed_plans: 7
 ---
 
 # Project State
@@ -28,11 +28,11 @@ See: `.planning/PROJECT.md` (updated 2026-08-17)
 ## Current Position
 
 Phase: 02 (Guest, Authentication, and Data Integrity) — EXECUTING
-Plan: 3 of 8
+Plan: 4 of 8
 Status: Ready to execute
 Last activity: 2026-08-19 — Phase 02 execution started
 
-Progress: [██████░░░░] 55%
+Progress: [██████░░░░] 64%
 
 ## Performance Metrics
 
@@ -56,6 +56,7 @@ Progress: [██████░░░░] 55%
 | Phase 02 P01 | 18min | 3 tasks | 14 files |
 | Phase 02 P02 | 11 min | 2 tasks | 5 files |
 | Phase 02-guest-authentication-and-data-integrity P03 | 11min | 3 tasks | 15 files |
+| Phase 02 P04 | 10min | 3 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -74,6 +75,9 @@ Full decisions are recorded in `.planning/PROJECT.md`.
 - [Phase 02]: Local guest data is deleted only after exact canonical configuration and ordered asset-manifest verification.
 - [Phase ?]: First-campaign verification is fixed to deferred_until_after_first_campaign; social visibility is server-derived only.
 - [Phase ?]: OAuth callback fixtures are test-only injected adapters that reject production loading.
+- [Phase ?]: Guest claim lifecycle is explicit: start, resume per server checkpoint, then idempotent finalization.
+- [Phase ?]: The immutable local manifest asset ID is also the private object asset ID, avoiding browser-side ID translation.
+- [Phase ?]: Signed previews remain response-only; ordered checksum manifests are the browser cleanup authority.
 
 ### Pending Todos
 
@@ -96,6 +100,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-08-19T19:34:40.564Z
-Stopped at: Completed 02-03-PLAN.md
+Last session: 2026-08-19T19:49:40.349Z
+Stopped at: Completed 02-04-PLAN.md
 Resume file: None
