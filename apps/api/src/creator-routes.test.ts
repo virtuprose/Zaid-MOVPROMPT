@@ -151,6 +151,7 @@ function guestClaimService(): GuestClaimService {
       snapshotDigest: snapshot.snapshotDigest,
       project,
       version,
+      assetManifest: snapshot.assetManifest,
     })),
     startClaim: vi.fn(async ({ snapshot }) => ({
       id: "99999999-9999-4999-8999-999999999999",
@@ -169,7 +170,15 @@ function guestClaimService(): GuestClaimService {
     resumeClaim: vi.fn(),
     markAssetVerified: vi.fn(),
     markAssetFailed: vi.fn(),
-    finalizeClaim: vi.fn(),
+    finalizeClaim: vi.fn(async ({ pendingGenerationId }) => ({
+      status: "ready" as const,
+      draftId: DRAFT_ID,
+      pendingGenerationId,
+      snapshotDigest: "a".repeat(64),
+      project,
+      version,
+      assetManifest: [],
+    })),
   };
 }
 
@@ -365,6 +374,31 @@ describe("portable creator API", () => {
       },
     });
     expect(claims.startClaim).toHaveBeenCalledWith({ userId: USER_ID, snapshot });
+  });
+
+  it("returns the server-owned ordered asset manifest only after finalization", async () => {
+    const claims = guestClaimService();
+    const app = createApi({
+      config,
+      creatorRepository: repository(),
+      authGateway: auth(),
+      guestClaimService: claims,
+    });
+
+    const response = await app.request(`/api/v1/drafts/claim/${PENDING_GENERATION_ID}/finalize`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "idempotency-key": PENDING_GENERATION_ID,
+      },
+      body: JSON.stringify({}),
+    });
+
+    expect(response.status).toBe(201);
+    await expect(response.json()).resolves.toMatchObject({
+      claim: { pendingGenerationId: PENDING_GENERATION_ID, assetManifest: [] },
+    });
+    expect(claims.finalizeClaim).toHaveBeenCalledWith({ userId: USER_ID, pendingGenerationId: PENDING_GENERATION_ID });
   });
 
   it("never lets a session select another user's project", async () => {
