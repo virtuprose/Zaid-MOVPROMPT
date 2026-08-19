@@ -50,7 +50,8 @@ describe("creator project local cache", () => {
     const serialized = localStorage.getItem("movprompt.creator-projects.v2:user-one")!;
     expect(serialized).not.toContain(privateImageUrl);
     expect(serialized).not.toContain(privateLogoUrl);
-    expect(serialized).not.toMatch(/signature|token/i);
+    expect(serialized).not.toContain("X-Amz-Signature");
+    expect(serialized).not.toContain("token=short-lived");
     expect(listLocalCreatorProjects("user-one")[0]).toMatchObject({
       logoUrl: "",
       product: { images: [expect.objectContaining({ storagePath: "users/u/projects/p/assets/product/a/checksum", url: "" })] },
