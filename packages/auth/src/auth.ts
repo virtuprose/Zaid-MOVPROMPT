@@ -20,14 +20,24 @@ export interface CreateAuthInput {
   sendEmail: AuthEmailSender;
 }
 
-function dispatchEmail(sender: AuthEmailSender, email: AuthEmail): void {
-  // Authentication responses must not reveal email-provider latency.
-  void sender(email).catch((error: unknown) => {
-    console.error("Failed to enqueue authentication email", {
-      type: email.type,
-      error: error instanceof Error ? error.message : "unknown_error",
-    });
-  });
+export class AuthenticationEmailDeliveryError extends Error {
+  constructor(readonly type: AuthEmail["type"]) {
+    super("MovPrompt could not send the authentication email. Please try again.");
+    this.name = "AuthenticationEmailDeliveryError";
+  }
+}
+
+/**
+ * Better Auth must only acknowledge an email action after the configured
+ * delivery boundary accepted it. This prevents a rejected SMTP request from
+ * becoming an unusable but apparently successful reset or verification flow.
+ */
+export async function dispatchAuthenticationEmail(sender: AuthEmailSender, email: AuthEmail): Promise<void> {
+  try {
+    await sender(email);
+  } catch {
+    throw new AuthenticationEmailDeliveryError(email.type);
+  }
 }
 
 /**
@@ -113,7 +123,7 @@ export function createMovPromptAuth(input: CreateAuthInput) {
       revokeSessionsOnPasswordReset: true,
       resetPasswordTokenExpiresIn: 60 * 60,
       sendResetPassword: async ({ user, url }) => {
-        dispatchEmail(input.sendEmail, {
+        await dispatchAuthenticationEmail(input.sendEmail, {
           type: "reset-password",
           to: user.email,
           name: user.name,
@@ -127,7 +137,7 @@ export function createMovPromptAuth(input: CreateAuthInput) {
       autoSignInAfterVerification: true,
       expiresIn: 60 * 60,
       sendVerificationEmail: async ({ user, url }) => {
-        dispatchEmail(input.sendEmail, {
+        await dispatchAuthenticationEmail(input.sendEmail, {
           type: "verify-email",
           to: user.email,
           name: user.name,
