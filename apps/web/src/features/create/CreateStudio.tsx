@@ -1339,7 +1339,6 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
           }}
           onCancel={cancelGuestClaim}
         />
-        <p className="sr-only" role="status" aria-live="polite" aria-atomic="true">{authGateCancellation}</p>
       </CreatorShell>
     );
   }
