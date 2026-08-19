@@ -7,7 +7,12 @@ import { Readable } from "node:stream";
 import type { SourceScanResponse } from "@movprompt/contracts";
 
 import { ApiHttpError } from "./errors.js";
-import { createPublicRemoteRequestPolicy, parsePublicHttpUrl } from "./network-media-policy.js";
+import {
+  createPublicRemoteRequestPolicy,
+  defaultResolvePublicHost,
+  parsePublicHttpUrl,
+  pinnedNodeFetch as sharedPinnedNodeFetch,
+} from "./network-media-policy.js";
 
 const MAX_HTML_BYTES = 2 * 1024 * 1024;
 const MAX_REDIRECTS = 3;
@@ -222,8 +227,8 @@ function priceFact(html: string): string | null {
 }
 
 export function createSourceScanner(options: SourceScannerOptions = {}): SourceScanner {
-  const fetcher = options.fetch ?? pinnedNodeFetch;
-  const resolveHost = options.resolveHost ?? defaultResolveHost;
+  const fetcher = options.fetch ?? sharedPinnedNodeFetch;
+  const resolveHost = options.resolveHost ?? defaultResolvePublicHost;
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const policy = createPublicRemoteRequestPolicy({ fetch: fetcher, resolveHost, timeoutMs });
 
