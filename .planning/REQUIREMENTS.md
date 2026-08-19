@@ -19,7 +19,7 @@ Requirements for the first production release. A requirement is complete only af
 
 ### Accounts and Guest Drafts
 
-- [ ] **AUTH-01**: Guest can configure a complete campaign before creating an account.
+- [x] **AUTH-01**: Guest can configure a complete campaign before creating an account.
 - [x] **AUTH-02**: User can create an account or sign in with email and password only when Generate is selected.
 - [x] **AUTH-03**: Google and Apple sign-in appear only when correctly configured and recover the same pending campaign.
 - [x] **AUTH-04**: Private-beta user can complete the first campaign without an email-verification interruption and sees a dashboard reminder to verify later.
@@ -187,7 +187,7 @@ Deferred until the beginner Kuwait launch is stable and measured.
 | TRUTH-05 | Phase 1 | Complete |
 | TRUTH-06 | Phase 1 | Complete |
 | TRUTH-07 | Phase 1 | Complete |
-| AUTH-01 | Phase 2 | Pending |
+| AUTH-01 | Phase 2 | Complete |
 | AUTH-02 | Phase 2 | Complete |
 | AUTH-03 | Phase 2 | Complete |
 | AUTH-04 | Phase 2 | Complete |
