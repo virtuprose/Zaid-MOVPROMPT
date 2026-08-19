@@ -181,4 +181,83 @@ describePostgres("guest claim service PostgreSQL boundary", () => {
     expect(otherOwnerBody.error.message).not.toContain("Kuwait campaign");
     expect(otherOwnerBody.error.message).not.toContain(firstUserId);
   });
+
+  it("serializes a claim lifecycle and refuses finalization until every asset is verified", async () => {
+    const lifecycleSnapshot = {
+      ...snapshot,
+      draftId: randomUUID(),
+      pendingGenerationId: randomUUID(),
+      snapshotDigest: "c".repeat(64),
+      assetManifest: [{
+        localAssetId: randomUUID(),
+        ordinal: 0,
+        kind: "product" as const,
+        mimeType: "image/jpeg",
+        sizeBytes: 128,
+        checksumSha256: "d".repeat(64),
+      }],
+    };
+    const service = createGuestClaimService({
+      repository: createGuestClaimRepository({ db: database.db }),
+    });
+
+    const [first, replay] = await Promise.all([
+      service.startClaim({ userId: firstUserId, snapshot: lifecycleSnapshot }),
+      service.startClaim({ userId: firstUserId, snapshot: lifecycleSnapshot }),
+    ]);
+    expect(replay.id).toBe(first.id);
+    expect(first.status).toBe("securing");
+
+    await expect(service.finalizeClaim({ userId: firstUserId, pendingGenerationId: lifecycleSnapshot.pendingGenerationId }))
+      .rejects.toMatchObject({ code: "assets_pending" });
+    await service.markAssetVerified({
+      userId: firstUserId,
+      pendingGenerationId: lifecycleSnapshot.pendingGenerationId,
+      localAssetId: lifecycleSnapshot.assetManifest[0]!.localAssetId,
+      bucket: "movprompt-assets",
+      objectKey: `users/${firstUserId}/projects/${first.projectId}/assets/product/claim-asset/${"d".repeat(64)}`,
+    });
+
+    const receipt = await service.finalizeClaim({
+      userId: firstUserId,
+      pendingGenerationId: lifecycleSnapshot.pendingGenerationId,
+    });
+    expect(receipt).toMatchObject({
+      status: "ready",
+      pendingGenerationId: lifecycleSnapshot.pendingGenerationId,
+      project: { id: first.projectId, status: "ready" },
+    });
+  });
+
+  it("keeps failed asset claims resumable without exposing a ready project", async () => {
+    const lifecycleSnapshot = {
+      ...snapshot,
+      draftId: randomUUID(),
+      pendingGenerationId: randomUUID(),
+      snapshotDigest: "e".repeat(64),
+      assetManifest: [{
+        localAssetId: randomUUID(),
+        ordinal: 0,
+        kind: "reference" as const,
+        mimeType: "image/png",
+        sizeBytes: 256,
+        checksumSha256: "f".repeat(64),
+      }],
+    };
+    const service = createGuestClaimService({
+      repository: createGuestClaimRepository({ db: database.db }),
+    });
+    const started = await service.startClaim({ userId: firstUserId, snapshot: lifecycleSnapshot });
+
+    await service.markAssetFailed({
+      userId: firstUserId,
+      pendingGenerationId: lifecycleSnapshot.pendingGenerationId,
+      localAssetId: lifecycleSnapshot.assetManifest[0]!.localAssetId,
+      code: "checksum_mismatch",
+    });
+    await expect(service.finalizeClaim({ userId: firstUserId, pendingGenerationId: lifecycleSnapshot.pendingGenerationId }))
+      .rejects.toMatchObject({ code: "assets_pending" });
+    await expect(service.resumeClaim({ userId: firstUserId, pendingGenerationId: lifecycleSnapshot.pendingGenerationId }))
+      .resolves.toMatchObject({ id: started.id, status: "failed", nextAsset: { status: "failed" } });
+  });
 });
