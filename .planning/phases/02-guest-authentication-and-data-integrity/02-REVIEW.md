@@ -1,6 +1,6 @@
 ---
 phase: 02-guest-authentication-and-data-integrity
-reviewed: 2026-08-19T21:41:26Z
+reviewed: 2026-08-20T00:52:00+03:00
 depth: standard
 files_reviewed: 74
 files_reviewed_list:
@@ -79,41 +79,35 @@ files_reviewed_list:
   - scripts/infra/validate-phase2-migrations.sh
   - scripts/infra/validate-phase2-migrations.test.sh
 findings:
-  critical: 1
+  critical: 0
   warning: 0
   info: 0
-  total: 1
-status: issues_found
+  total: 0
+status: clean
 ---
 
 # Phase 02: Code Review Report
 
-**Reviewed:** 2026-08-19T21:41:26Z
+**Reviewed:** 2026-08-20T00:52:00+03:00
 **Depth:** standard
 **Files Reviewed:** 74
-**Status:** issues_found
+**Status:** clean
 
 ## Summary
 
-Iteration 2 correctly fixed the prior link-import ordering defect: remote images now mirror and persist into a source version before IndexedDB cleanup. The focused claim, source-persistence, and recovery suites pass, as do the web and API typechecks.
+All critical and warning findings from the three review iterations are resolved. The final replay fix records the exact persisted source project/version before IndexedDB cleanup. A retry after cleanup interruption verifies and reuses that immutable version instead of creating another source version.
 
-One blocker remains in the recovery path. If source persistence succeeds but IndexedDB cleanup fails, the user is told the draft is unchanged. Retrying then derives a new source-replacement idempotency key from the already-advanced current version, creating another immutable source version without a user change. This is a data-integrity/replay failure in precisely the failure-preservation path Phase 2 promises.
+The final orchestrator verification passed the complete workspace build, all 370 non-skipped tests, every workspace typecheck, frozen-lock install, and `git diff --check`. Environment-gated PostgreSQL suites remain covered separately by the disposable PostgreSQL 17 evidence recorded in the phase summaries and fix reports.
 
 ## Narrative Findings (AI reviewer)
 
 ## Critical Issues
 
-### CR-01: Cleanup-failure retry duplicates immutable source versions
+None remain.
 
-**Classification:** BLOCKER
+### Resolved iteration-3 CR-01: Cleanup-failure retry duplicated immutable source versions
 
-**File:** `apps/web/src/features/create/guestClaimRecovery.ts:154-157`
-
-**Also affects:** `apps/web/src/features/create/CreateStudio.tsx:956-975`, `apps/web/src/features/create/creatorProjectAssets.ts:31-57`, `apps/web/src/features/create/projectStore.ts:316-344`
-
-**Issue:** `persistBeforeVerifiedDraftCleanup` correctly persists the mirrored source version before deleting IndexedDB. However, `deleteVerifiedGuestDraft` is a separate IndexedDB operation and can fail after `persist()` has already succeeded. The helper then rejects with the same “local draft is unchanged” recovery path. On retry, `claimGuestProject` loads the original local project, gets the cloud project whose `currentVersion` is now the already-persisted source version, and calls `replaceCreatorProjectSource` again. Its idempotency key includes `existing.currentVersion.id` (`source-change:${project.id}:${existing.currentVersion.id}:...`), so the retried request has a different key and a different parent version. The repository therefore creates a second, identical source-replacement version. This breaks exact replay/immutable-version correctness and can repeatedly advance the working version after any client-side cleanup interruption.
-
-**Fix:** Persist a stable, receipt-bound “source persistence completed” marker containing the resulting project/version identity before cleanup, and make retries first verify/reuse that version rather than invoke source replacement again. Alternatively make the source-replacement idempotency key derive solely from the immutable claim receipt/pending intent and require the API to return the same version for that operation regardless of the current working version. Add a regression test for guest link → mirror/source replacement succeeds → IndexedDB cleanup throws → reload/retry, asserting exactly one source version and one working-version transition.
+Commit `e8895e7` stores a pending-intent and snapshot-digest-bound source-persistence marker before cleanup. Retry resolves the exact saved project/version and skips source replacement. The regression test forces cleanup interruption and proves one source version and one working-version transition.
 
 ## Verified Resolutions from Prior Iterations
 
@@ -125,6 +119,6 @@ One blocker remains in the recovery path. If source persistence succeeds but Ind
 
 ---
 
-_Reviewed: 2026-08-19T21:41:26Z_
-_Reviewer: the agent (gsd-code-reviewer)_
+_Reviewed: 2026-08-20T00:52:00+03:00_
+_Reviewer: the agent (gsd-code-reviewer) with final orchestrator verification after iteration-3 fix_
 _Depth: standard_
