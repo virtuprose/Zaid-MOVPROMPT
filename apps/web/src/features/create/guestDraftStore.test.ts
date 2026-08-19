@@ -5,6 +5,7 @@ import {
   createMemoryGuestDraftStorage,
   getGuestAsset,
   getGuestDraft,
+  loadGuestDraft,
   putGuestAsset,
   saveGuestDraft,
   setGuestDraftClockForTests,
@@ -93,5 +94,20 @@ describe("guest draft storage", () => {
     expect(afterCancel).toMatchObject({ pendingGenerationId: intent, expiresAt: EXPIRES_AT, assetKeys: [assetKey] });
 
     await expect(loadGuestClaimRecovery(draft.id)).resolves.toMatchObject({ state: "recoverable", draft: afterCancel });
+  });
+
+  it("keeps the complete JSON/blob set at day six and expires both together at the seven-day boundary", async () => {
+    setGuestDraftStorageForTests(createMemoryGuestDraftStorage());
+    const draft = createDraft();
+    setGuestDraftClockForTests(() => new Date("2026-08-25T07:59:59.999Z"));
+    const assetKey = await putGuestAsset(draft.id, new File(["image bytes"], "coffee.png", { type: "image/png" }));
+    await saveGuestDraft({ ...draft, assetKeys: [assetKey] });
+
+    expect(await loadGuestDraft(draft.id)).toMatchObject({ state: "available" });
+    expect(await getGuestAsset(assetKey)).not.toBeNull();
+
+    setGuestDraftClockForTests(() => new Date(EXPIRES_AT));
+    await expect(loadGuestDraft(draft.id)).resolves.toEqual({ state: "expired" });
+    await expect(getGuestAsset(assetKey)).resolves.toBeNull();
   });
 });
