@@ -1,4 +1,5 @@
-import { CheckCircle2, CircleAlert, Clock3, FileImage, PencilLine, RefreshCw, ShieldCheck, Sparkles } from "lucide-react";
+import { CheckCircle2, CircleAlert, Clock3, PencilLine, RefreshCw, Sparkles } from "lucide-react";
+import type { RefObject } from "react";
 
 import type { CampaignFactField } from "@movprompt/contracts";
 import { cn } from "@/lib/utils";
@@ -19,6 +20,7 @@ type CampaignReviewStepProps = {
   sourceError?: string;
   sourceBusy?: boolean;
   requestId?: string;
+  generateButtonRef?: RefObject<HTMLButtonElement | null>;
   onEdit: (target: CampaignReviewEditTarget) => void;
   onRightsChange?: (confirmed: boolean) => void;
   onRetryQuote?: () => void;
@@ -88,6 +90,7 @@ export function CampaignReviewStep({
   sourceError,
   sourceBusy = false,
   requestId,
+  generateButtonRef,
   onEdit,
   onRightsChange,
   onRetryQuote,
@@ -163,7 +166,7 @@ export function CampaignReviewStep({
       {sourceError && <p className="creator-error" role="alert">{sourceError}</p>}
       <div className="creator-review-actions">
         <p>{canGenerate ? copy(arabic, "Everything is ready. Create your account only when you generate.", "كل شيء جاهز. أنشئ حسابك فقط عند الإنشاء.") : missingRights ? copy(arabic, "Confirm your rights to generate this campaign.", "أكد حقوقك لإنشاء هذه الحملة.") : quoteState === "ready" ? copy(arabic, "Your campaign is being prepared. Keep this page open.", "جارٍ تجهيز حملتك. أبق هذه الصفحة مفتوحة.") : quoteStateMessage(arabic, quoteState)}</p>
-        <button type="button" className="creator-button creator-button-primary" onClick={onGenerate} disabled={!canGenerate}>
+        <button ref={generateButtonRef} type="button" className="creator-button creator-button-primary" onClick={onGenerate} disabled={!canGenerate}>
           {sourceBusy ? <RefreshCw className="animate-spin" aria-hidden="true" /> : <Sparkles aria-hidden="true" />}
           {copy(arabic, "Generate campaign", "أنشئ الحملة")}
         </button>

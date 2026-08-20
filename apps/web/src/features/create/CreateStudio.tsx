@@ -1758,6 +1758,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
                   sourceError={sourceError}
                   sourceBusy={sourceBusy}
                   requestId={quoteFailure?.requestId}
+                  generateButtonRef={generateButtonRef}
                   arabic={arabicUi}
                   onEdit={editCampaignReview}
                   onRightsChange={setRightsConfirmed}
