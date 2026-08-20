@@ -383,3 +383,98 @@ describe("generation reference ownership", () => {
     expect(createQuote).not.toHaveBeenCalled();
   });
 });
+
+describe("template quote eligibility", () => {
+  const templateVersionId = "11111111-1111-4111-8111-111111111111";
+
+  function quoteConfiguration(goal = "launch") {
+    return {
+      prompt: "Create a faithful campaign for the confirmed product.",
+      durationSeconds: 8,
+      aspectRatio: "9:16" as const,
+      resolution: "720p" as const,
+      audio: true,
+      references: [],
+      creativeBrief: {
+        market: "KW",
+        language: "en",
+        goal,
+        product: {
+          name: "Confirmed product",
+          brand: "Confirmed brand",
+          callToAction: "Shop now",
+        },
+      },
+    };
+  }
+
+  function eligibleTemplate() {
+    return {
+      id: templateVersionId,
+      durationSeconds: 8,
+      starterRenderEligible: true,
+      eligibility: {
+        goals: ["launch"],
+        supportedLanguages: ["en", "ar", "bilingual"],
+        supportedRatios: ["9:16", "1:1", "4:5", "16:9"],
+        supportedMarkets: ["KW"],
+        requiredInputs: ["subject_name", "call_to_action"],
+        capabilityPolicy: ["video.product_fidelity"],
+      },
+    };
+  }
+
+  function quoteApi(template = eligibleTemplate()) {
+    const repo = repository(ownedRun());
+    repo.findPublishedTemplateVersion = vi.fn(async () => template);
+    return {
+      repo,
+      api: createGenerationApiService({
+        repository: repo,
+        generation: {
+          createQuote: vi.fn(async () => ({} as never)),
+          startRender: vi.fn(async () => ({} as never)),
+          releaseRenderReservation: vi.fn(async () => ({} as never)),
+        },
+        pricing: createGenerationPricingFromEnvironment({
+          GENERATION_PRICING_VERSION: "test-v1",
+          GENERATION_QUOTE_TTL_SECONDS: "900",
+          GENERATION_VIDEO_PRODUCT_FIDELITY_720P_CREDITS_PER_SECOND: "10",
+        }),
+        capabilities: new CapabilityRegistry({
+          "video.product_fidelity": {
+            enabled: true,
+            adapterId: "vercel-ai-gateway",
+            providerModelId: "bytedance/seedance-2.5",
+          },
+        }),
+      }),
+    };
+  }
+
+  it("returns a configuration-bound estimate only for a matching published template", async () => {
+    const { api } = quoteApi();
+
+    await expect(api.createQuote({
+      capability: "video.product_fidelity",
+      templateVersionId,
+      configuration: quoteConfiguration(),
+    }, null)).resolves.toMatchObject({
+      quoteId: null,
+      credits: 80,
+      estimateOnly: true,
+    });
+  });
+
+  it("rejects a catalog-ineligible goal before returning an estimate or credits", async () => {
+    const { api } = quoteApi();
+
+    await expect(api.createQuote({
+      capability: "video.product_fidelity",
+      templateVersionId,
+      configuration: quoteConfiguration("bookings"),
+    }, null)).rejects.toMatchObject({
+      code: "template_configuration_ineligible",
+    } satisfies Partial<GenerationApplicationError>);
+  });
+});

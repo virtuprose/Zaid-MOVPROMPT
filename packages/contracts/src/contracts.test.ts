@@ -8,6 +8,7 @@ import {
   GenerationJobPayloadSchema,
   CreateGenerationQuoteRequestSchema,
   StartRenderRunRequestSchema,
+  TemplateQuoteEligibilitySchema,
 } from "./index.js";
 
 describe("public contracts", () => {
@@ -121,6 +122,30 @@ describe("public contracts", () => {
         rightsAttested: true,
       }),
     ).toThrow();
+  });
+
+  it("keeps catalog eligibility bounded and excludes pricing authority", () => {
+    expect(TemplateQuoteEligibilitySchema.parse({
+      goals: ["launch"],
+      supportedLanguages: ["en", "ar", "bilingual"],
+      supportedRatios: ["9:16", "1:1", "4:5", "16:9"],
+      supportedMarkets: ["KW"],
+      requiredInputs: ["subject_name", "primary_reference", "call_to_action"],
+      capabilityPolicy: ["video.product_fidelity"],
+    })).toMatchObject({
+      goals: ["launch"],
+      requiredInputs: ["subject_name", "primary_reference", "call_to_action"],
+    });
+
+    expect(() => TemplateQuoteEligibilitySchema.parse({
+      goals: ["launch"],
+      supportedLanguages: ["en"],
+      supportedRatios: ["9:16"],
+      supportedMarkets: ["KW"],
+      requiredInputs: ["subject_name"],
+      capabilityPolicy: ["video.product_fidelity"],
+      credits: 1,
+    })).toThrow();
   });
 
 });
