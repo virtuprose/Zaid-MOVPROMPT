@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 03
 current_phase_name: product-and-service-golden-paths
 status: executing
-stopped_at: Phase 3 UI-SPEC approved
-last_updated: "2026-08-20T13:22:52.004Z"
+stopped_at: Completed Phase 03 Plan 01 normalized campaign-source contracts
+last_updated: "2026-08-20T13:38:30.000Z"
 last_activity: 2026-08-20
-last_activity_desc: Phase 03 execution started
+last_activity_desc: Phase 03 Plan 01 normalized source and provenance contracts complete
 progress:
   total_phases: 3
   completed_phases: 2
   total_plans: 19
-  completed_plans: 11
+  completed_plans: 12
 ---
 
 # Project State
@@ -28,9 +28,9 @@ See: `.planning/PROJECT.md` (updated 2026-08-17)
 ## Current Position
 
 Phase: 03 (product-and-service-golden-paths) — EXECUTING
-Plan: 1 of 8
+Plan: 2 of 8
 Status: Executing Phase 03
-Last activity: 2026-08-20 — Phase 03 execution started
+Last activity: 2026-08-20 — Phase 03 Plan 01 normalized source and provenance contracts complete
 
 Progress: [██████████] 100%
 
@@ -38,7 +38,7 @@ Progress: [██████████] 100%
 
 **Velocity:**
 
-- Total plans completed: 3
+- Total plans completed: 12
 - Average duration: -
 - Total execution time: 0 hours
 
@@ -61,6 +61,7 @@ Progress: [██████████] 100%
 | Phase 02 P06 | 12m | 3 tasks | 18 files |
 | Phase 02 P07 | 17m | 3 tasks | 14 files |
 | Phase 02-guest-authentication-and-data-integrity P08 | 7m | 3 tasks | 15 files |
+| Phase 03 P01 | 11m | 3 tasks | 15 files |
 
 ## Accumulated Context
 
@@ -93,6 +94,8 @@ Full decisions are recorded in `.planning/PROJECT.md`.
 - [Phase ?]: Social auth controls fail closed until the public server capability enables them.
 - [Phase ?]: First-campaign email verification is a non-blocking private-beta reminder.
 - [Phase ?]: Rendered browser evidence records unavailable live-stack routes as open, never as passing.
+- [Phase 03]: CampaignSource plus its ConfirmedFact collection is the one normalized product/service anchor; legacy product fields derive a compatibility source only.
+- [Phase 03]: Campaign fact provenance transitions are explicit and immutable: imported values become confirmed only when selected, while edits remain manual.
 
 ### Pending Todos
 
@@ -116,5 +119,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-08-20T09:33:10.756Z
-Stopped at: Phase 3 UI-SPEC approved
-Resume file: .planning/phases/03-product-and-service-golden-paths/03-UI-SPEC.md
+Stopped at: Completed Phase 03 Plan 01 normalized campaign-source contracts
+Resume file: .planning/phases/03-product-and-service-golden-paths/03-02-PLAN.md

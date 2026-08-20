@@ -121,7 +121,7 @@ Plans:
 Plans:
 **Wave 1**
 
-- [ ] 03-01-PLAN.md — Normalize source facts, provenance, persistence, and source-first/template-first convergence.
+- [x] 03-01-PLAN.md — Normalize source facts, provenance, persistence, and source-first/template-first convergence.
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -310,7 +310,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 1. Production Truth Foundation | 3/3 | Complete    | 2026-08-19 |
 | 2. Guest, Authentication, and Data Integrity | 8/8 | In Progress|  |
-| 3. Product and Service Golden Paths | 0/8 | Not started | - |
+| 3. Product and Service Golden Paths | 1/8 | In Progress | 2026-08-20 |
 | 4. Durable Generation and Accepted Quality | 0/3 | Not started | - |
 | 5. Projects and Immutable Version Recovery | 0/2 | Not started | - |
 | 6. Guided Editor and Social Campaign Pack | 0/3 | Not started | - |

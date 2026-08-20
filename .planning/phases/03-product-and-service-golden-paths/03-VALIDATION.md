@@ -38,9 +38,9 @@ created: 2026-08-20
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| 03-01-01 | 01 | 1 | SOURCE-01, SOURCE-02 | T-03-01 | Manual product uses the shared source/fact anchor. | unit/contracts | `bun run --cwd apps/web test -- src/features/create/campaignFacts.test.ts -t "manual product tracer" && bun run --cwd packages/contracts test -- contracts` | ❌ W0 | ⬜ pending |
-| 03-01-02 | 01 | 1 | SOURCE-01, SOURCE-02, SOURCE-03 | T-03-01, T-03-02 | Every source kind retains fact provenance and stable media identity. | unit/contracts | `bun run --cwd apps/web test -- src/features/create/campaignFacts.test.ts && bun run --cwd packages/contracts test -- contracts` | ❌ W0 | ⬜ pending |
-| 03-01-03 | 01 | 1 | CREATE-02, CREATE-03 | T-03-03 | Source-first/template-first serialize identical normalized intent. | unit/contracts | `bun run --cwd apps/web test -- src/features/create/campaignDraft.test.ts && bun run --cwd packages/creative-engine test -- types` | ❌ W0 | ⬜ pending |
+| 03-01-01 | 01 | 1 | SOURCE-01, SOURCE-02 | T-03-01 | Manual product uses the shared source/fact anchor. | unit/contracts | `bun run --cwd apps/web test -- src/features/create/campaignFacts.test.ts -t "manual product tracer" && bun run --cwd packages/contracts test -- creator` | ✅ | ✅ green |
+| 03-01-02 | 01 | 1 | SOURCE-01, SOURCE-02, SOURCE-03 | T-03-01, T-03-02 | Every source kind retains fact provenance and stable media identity. | unit/contracts | `bun run --cwd apps/web test -- src/features/create/campaignFacts.test.ts && bun run --cwd packages/contracts test -- creator` | ✅ | ✅ green |
+| 03-01-03 | 01 | 1 | CREATE-02, CREATE-03 | T-03-03 | Source-first/template-first serialize identical normalized intent. | unit/contracts | `bun run --cwd apps/web test -- src/features/create/campaignDraft.test.ts && bun run --cwd packages/creative-engine test -- types` | ✅ | ✅ green |
 | 03-02-01 | 02 | 2 | SOURCE-01, SOURCE-02, SOURCE-03, CREATE-01 | T-03-01, T-03-02 | Product link reaches provenance-aware review. | component | `bun run --cwd apps/web test -- src/features/create/GoldenPathFlow.test.tsx -t "product link to confirmed facts"` | ❌ W0 | ⬜ pending |
 | 03-02-02 | 02 | 2 | SOURCE-01, SOURCE-02, SOURCE-03 | T-03-02 | Service/manual/upload/footage share exact fact review. | component | `bun run --cwd apps/web test -- src/features/create/FactReviewStep.test.tsx` | ❌ W0 | ⬜ pending |
 | 03-02-03 | 02 | 2 | CREATE-10 | T-03-08 | Bilingual source errors preserve the draft. | component | `bun run --cwd apps/web test -- src/features/create/GoldenPathStates.test.tsx src/features/create/FactReviewStep.test.tsx` | ❌ W0 | ⬜ pending |
@@ -69,9 +69,9 @@ created: 2026-08-20
 
 ## Wave 0 Requirements
 
-- [ ] `packages/contracts/src/contracts.test.ts` — normalized CampaignSource variants, ConfirmedFact provenance, and unsafe-input rejection.
-- [ ] `apps/web/src/features/create/campaignFacts.test.ts` — provenance transitions and normalized product/service fact validation.
-- [ ] `apps/web/src/features/create/campaignDraft.test.ts` — source-first/template-first convergence and guest/auth/project-version round trip.
+- [x] `packages/contracts/src/creator.test.ts` — normalized CampaignSource variants and unsafe-input rejection.
+- [x] `apps/web/src/features/create/campaignFacts.test.ts` — provenance transitions and normalized product/service fact validation.
+- [x] `apps/web/src/features/create/campaignDraft.test.ts` — source-first/template-first convergence and guest/auth/project-version round trip.
 - [ ] `apps/api/src/generation-service.test.ts` and `generation.test.ts` — catalog eligibility, configuration-bound quotes, expiry/change and presenter negative API cases.
 - [ ] `apps/api/src/guest-claim-service.postgres.test.ts` — guest presenter manifest, rights, replay and private footage claim cases.
 - [ ] `apps/web/src/features/create/templateQuoteState.test.ts` — idle/loading/ready/unavailable/expired/changed quote lifecycle with no fallback price.
