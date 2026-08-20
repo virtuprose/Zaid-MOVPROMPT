@@ -1,10 +1,11 @@
 ---
 phase: 03-product-and-service-golden-paths
-reviewed: 2026-08-21T01:38:00+03:00
+reviewed: 2026-08-21T02:01:00+03:00
 depth: standard
-files_reviewed: 73
+files_reviewed: 75
 files_reviewed_list:
   - apps/api/src/app.ts
+  - apps/api/src/asset-content-verifier.ts
   - apps/api/src/asset-repository.ts
   - apps/api/src/asset-routes.ts
   - apps/api/src/asset-storage.ts
@@ -59,6 +60,7 @@ files_reviewed_list:
   - apps/web/src/features/create/templateQuoteState.ts
   - apps/web/src/features/create/templateRecommendations.test.ts
   - apps/web/src/features/create/templateRecommendations.ts
+  - apps/web/src/features/create/templates.test.ts
   - apps/web/src/features/create/templates.ts
   - apps/web/src/features/create/types.ts
   - apps/web/src/features/create/useTemplateQuotes.ts
@@ -66,6 +68,8 @@ files_reviewed_list:
   - apps/web/src/i18n/translations/en.ts
   - apps/web/src/lib/api/portableApiClient.ts
   - apps/worker/src/abandoned-claim-cleanup.ts
+  - apps/worker/src/reference-frame-preparer.ts
+  - apps/worker/src/render-lifecycle.ts
   - packages/contracts/src/assets.ts
   - packages/contracts/src/creator.test.ts
   - packages/contracts/src/creator.ts
@@ -75,79 +79,62 @@ files_reviewed_list:
   - packages/db/migrations/0018_add_footage_asset_kind.sql
   - packages/db/migrations/0019_tighten_footage_verification.sql
   - packages/db/src/schema.ts
+  - packages/db/test/footage-migration.postgres.test.ts
+  - packages/storage/src/service.ts
   - scripts/infra/check-phase3-evidence-redaction.mjs
   - scripts/infra/run-phase3-provisioned-uat.ts
 findings:
-  critical: 3
-  warning: 1
+  critical: 2
+  warning: 0
   info: 0
-  total: 4
+  total: 2
 status: issues_found
 ---
 
-# Phase 03: Final Code Re-Review
+# Phase 03: Final Independent Post-Fix Code Review
 
 **Reviewed:** 2026-08-21
 **Depth:** standard
-**Files reviewed:** 73
+**Files Reviewed:** 75
 **Status:** issues_found
 
 ## Summary
 
-This review covered the original 63-file Phase 03 scope plus the new verifier, API, contract, schema, migration, and test files introduced by commits `e263c95`, `6dcb8a5`, `bdeba36`, `5082bf3`, and `98e9972`.
+This re-review independently checked the complete Phase 03 scope and the third-pass changes in commits `18f2a9e`, `4ec5417`, `671fbd8`, `5163ece`, and `baf9de2`. The direct-upload route now reads stored bytes, protected clinic/practitioner/transformation templates fail closed, the WebM migration preserves legacy rows, and image-reference MIME checks fail closed.
 
-The iteration-2 changes do close the previously reported direct-footage validation gap, server-side template capability selection, withdrawn-spokesperson state, and synchronous quote invalidation. The Advanced handoff fix works for assets that declare a video MIME type, but it is not fail-closed for legacy or malformed assets with no MIME type. More importantly, the implementation still permits unverified/counterfeit semantic inputs for safety-sensitive templates, allows arbitrary bytes through the direct signed-image path, and has a migration that can fail on legal existing rows.
+However, two release-blocking defects remain. The new image verifier accepts structurally incomplete files as valid images, and the visible AI UGC/uploaded-spokesperson controls never reach the worker's provider request. Both contradict the claimed trusted-media and presenter behavior.
 
-Focused regression runs passed: API 39 passed / 6 PostgreSQL-gated skipped; web 13 passed. The provisioned PostgreSQL and rendered-browser UAT remain evidence blockers, not findings in this report.
+Focused read-only verification passed:
+
+- API assets and generation service: 47 tests.
+- Web template/project-store: 12 tests.
+- PostgreSQL 17 footage migration compatibility: 1 test.
+- A direct verifier probe accepted a PNG signature plus IHDR-only payload with no CRC, IDAT, or IEND chunks.
 
 ## Narrative Findings (AI reviewer)
 
-## Blockers
+## Critical Issues
 
-### CR-01: Direct signed image uploads are marked ready without server-side byte validation
-
-**Classification:** BLOCKER
-
-**File:** `apps/api/src/asset-routes.ts:161-201, 720-746`
-
-**Issue:** The public upload-url route supplies a direct signed PUT path. On its completion path, `verifyStoredObject` verifies only S3-controlled length, caller-chosen MIME metadata, and a checksum supplied by the same caller. Unlike the proxy upload path at lines 522-554, completion never reads image bytes or verifies a JPEG/PNG/WebP signature/decoder. A client can therefore PUT arbitrary bytes with an image content type and matching checksum, complete the claim, and create a generation reference that passes `assertOwnedGenerationReferences` because that later check also trusts the recorded MIME/checksum.
-
-**Fix:** Make completion re-read every direct-uploaded image through a bounded storage read and validate the image signature (preferably decode it and derive dimensions) before `markAssetVerified`. Centralize the image and footage verification behind one server verifier, and add an API test that performs a signed-path completion with arbitrary bytes labelled `image/png` and expects `422 invalid_asset_content`.
-
-### CR-02: Safety- and truth-critical template requirements collapse to ordinary non-empty strings or any reference
+### CR-01: Image verification accepts truncated, non-decodable image payloads
 
 **Classification:** BLOCKER
 
-**File:** `apps/api/src/generation-service.ts:205-260, 462-489`
+**File:** `apps/api/src/asset-content-verifier.ts:77-103, 122-148`
 
-**Issue:** `hasRequiredInput` treats `verified_clinic_identity`, `confirmed_service`, `approved_claims`, `verified_qualification`, and `approved_transcript` exactly like any non-empty `subjectName`. It also treats every `consented_*` requirement as any image reference. Thus a clinic campaign can claim a made-up business name is a verified clinic and an arbitrary price is approved; a practitioner template can pass `consented_person_reference` with an unrelated product image; and a salon before/after template can pass both consented before/after inputs with one arbitrary image. The subsequent template eligibility check relies entirely on this function, so quote and render submission accept these configurations.
+**Issue:** The direct-upload completion path now hashes and inspects object bytes, but `verifyPng` accepts a PNG containing only the signature and IHDR fields; it does not verify the IHDR CRC, require an IDAT chunk, or require IEND. `verifyJpeg` similarly returns as soon as it sees a start-of-frame marker without requiring a scan or end marker, and `verifyWebp` does not validate RIFF/chunk boundaries. The verifier therefore marks malformed bytes as a verified image. A direct runtime probe of a 33-byte signature-plus-IHDR-only PNG returned `{ width: 1, height: 1 }`. Cinematic-reference resolution can then issue a provider URL for this malformed media; the provider, rather than MovPrompt, discovers the defect after an attempted render.
 
-**Fix:** Add immutable, typed fact/provenance and consent records to the project version (for example `verifiedClinicIdentity`, `confirmedService`, `approvedClaims`, `verifiedQualification`, and consent records keyed to distinct asset IDs). Resolve each `TemplateRequiredInput` against its specific record and source asset, not a generic name/reference count. Disable clinic, practitioner, and real-transformation template versions until those checks are present, and add negative quote/start tests for every protected input.
+**Fix:** Use a real bounded image decoder for JPG/PNG/WebP (or pass the bounded source through FFmpeg/ImageMagick and verify a decoded frame) before `updateVerifiedImage`/claim completion. Preserve the checksum and dimension checks, but require complete decodability. Add direct-upload and mirrored-image tests for an IHDR-only PNG, SOF-only JPEG, and truncated WebP, all expecting `422 invalid_asset_content`.
 
-### CR-03: Migration 0019 can prevent deployment when existing WebM footage rows exist
+### CR-02: Selected presenters are authorised but never sent to the rendering pipeline
 
-**Classification:** BLOCKER
+**Files:** `apps/web/src/features/create/projectStore.ts:175-191`, `apps/api/src/campaign-eligibility.ts:91-145`, `apps/worker/src/render-lifecycle.ts:960-1011`
 
-**File:** `packages/db/migrations/0019_tighten_footage_verification.sql:3-27`
+**Issue:** Template Mode persists the selected `presenter` only inside `templateQuoteContext`/campaign recipe. The server correctly validates its eligibility, but `buildPortableGenerationConfiguration` deliberately excludes footage from `generation.references`, and the worker creates `ProviderGenerationRequest` from only `configuration.references`, prompt, audio, duration, ratio, and resolution. It never reads or maps `presenter` or an uploaded spokesperson asset into a provider request. AI UGC has the same issue: the `presenter.ai_ugc` capability is checked only for eligibility while the render itself uses the video capability. Consequently, a user can select “AI UGC presenter” or “Uploaded spokesperson,” receive a quote, and pay for a render in which that selected presenter has no pipeline effect.
 
-**Issue:** Migration `0018` explicitly permitted `video/webm` for footage. Migration `0019` drops that constraint and immediately adds a stricter validated constraint that excludes WebM. PostgreSQL validates existing rows when adding this check constraint, so a database containing any previously valid WebM footage asset or guest-claim asset will reject the migration outright. This violates the phase requirement to preserve existing user data and makes a production rollout non-deployable for affected databases.
-
-**Fix:** Add a pre-migration audit and a preservation path: keep existing rows readable/quarantined with an explicit legacy state, while rejecting only new WebM uploads; or add the constraint `NOT VALID`, reconcile/convert or retire affected assets through a user-visible migration flow, then validate it after no incompatible rows remain. Test migration against fixtures containing legacy WebM asset and guest-claim rows.
-
-## Warnings
-
-### WR-01: The Advanced-handoff and image-required preflight remain fail-open for assets with no MIME type
-
-**Classification:** WARNING
-
-**Files:** `apps/web/src/features/create/projectStore.ts:23-29`, `apps/web/src/features/create/templates.ts:72-75`, `apps/web/src/features/create/CreateStudio.tsx:1364`
-
-**Issue:** The fix filters values only when `mimeType` explicitly starts with `video/`; an asset with `mimeType: undefined` is still passed into Advanced image references and is counted as an image reference for a template. `CreatorAsset.mimeType` is optional, so retained legacy/local data can contain an uploaded MOV without that field. This does not meet the stated “only still-image references” contract and can restore the original media-type confusion for incomplete metadata.
-
-**Fix:** Fail closed for uploaded/cloud assets: include them only when their MIME type is an allowed image MIME. Permit MIME-less data only for an explicit safe sample fixture if needed. Apply the same predicate in `imageReferencesForAdvancedHandoff`, `hasCreatorImageReference`, and the legacy `referenceImages` mapping; add a test with a MIME-less uploaded asset and a MIME-less sample asset.
+**Fix:** Either implement an explicit provider-backed presenter contract end to end (including a server-owned cast/avatar reference or verified footage-reference role and provider capability), or remove/disable both presenter modes in Template Mode until the pipeline supports them. Add integration tests proving that a selected supported presenter produces the expected provider request, and that unavailable presenter plumbing rejects quote/start before any charge or provider submission.
 
 ---
 
-_Reviewed: 2026-08-21T01:38:00+03:00_
-_Reviewer: gsd-code-reviewer_
+_Reviewed: 2026-08-21T02:01:00+03:00_
+_Reviewer: the agent (gsd-code-reviewer)_
 _Depth: standard_
