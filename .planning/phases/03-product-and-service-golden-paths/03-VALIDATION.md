@@ -60,7 +60,7 @@ created: 2026-08-20
 | 03-07-02 | 07 | 7 | SOURCE-02, SOURCE-03, CREATE-09, CREATE-10 | T-03-03, T-03-05 | Arabic service review remains exact and RTL-safe. | component | `bun run --cwd apps/web test -- src/features/create/CampaignReviewStep.test.tsx -t "Arabic service review"` | ❌ W0 | ⬜ pending |
 | 03-07-03 | 07 | 7 | CREATE-10 | T-03-05, T-03-08 | Quote/auth/service recovery retains one pending intent. | component | `bun run --cwd apps/web test -- src/features/create/GoldenPathStates.test.tsx src/features/create/AuthGateDialog.test.tsx src/features/create/CampaignReviewStep.test.tsx` | ❌ W0 | ⬜ pending |
 | 03-08-01 | 08 | 8 | SOURCE-01..03, CREATE-01..10 | T-03-01..17 | Focused creator smoke proves both configurations without provider work. | integration | `bun run test:creator-smoke && bun run typecheck:web` | ❌ W0 | ⬜ pending |
-| 03-08-02 | 08 | 8 | SOURCE-01..03, CREATE-01..10 | T-03-06, T-03-08, T-03-09, T-03-16, T-03-17 | Provisioned stack proves real auth/claim/checksum/replay/quote/durable submission and zero provider cost. | provisioned UAT | `bun run test:creator-smoke && bun scripts/infra/run-phase3-provisioned-uat.ts --verify-evidence && node scripts/infra/check-phase3-evidence-redaction.mjs` | ❌ W0 | ⬜ pending |
+| 03-08-02 | 08 | 8 | SOURCE-01..03, CREATE-01..10 | T-03-06, T-03-08, T-03-09, T-03-16, T-03-17 | Provisioned stack proves real auth/claim/checksum/replay/quote/durable submission and zero provider cost. | provisioned UAT | `bun run test:creator-smoke && bun scripts/infra/run-phase3-provisioned-uat.ts --verify-evidence && node scripts/infra/check-phase3-evidence-redaction.mjs` | ✅ | ⚠️ open — [UAT evidence](03-UAT-EVIDENCE.md) truthfully records disabled generation, unavailable Mailpit/worker proof, and zero provider work |
 | 03-08-03 | 08 | 8 | SOURCE-01..03, CREATE-01..10 | T-03-01..17 | Full rendered and release matrix follows focused smoke and requires UAT PASS. | browser/build | `bun run test:creator-smoke && bun run test:all && bun run typecheck && bun run build && bun run check:web-bundle && node scripts/infra/check-phase3-evidence-redaction.mjs` | ❌ W0 | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
@@ -79,7 +79,7 @@ created: 2026-08-20
 - [ ] `apps/web/src/features/create/FactReviewStep.test.tsx`, `templateRecommendations.test.ts`, `TemplateRecommendation.test.tsx`, `PresenterStep.test.tsx`, `CampaignSetupStep.test.tsx`, and `CampaignReviewStep.test.tsx` — focused component and rule coverage.
 - [ ] `apps/web/src/features/create/__fixtures__/goldenPathFixtures.ts` — approved product and service fixtures containing expected facts, provenance, rights state, outcome, and CTA.
 - [ ] Root `test:creator-smoke` script — focused golden path/contract/state gate executed before the broad suite.
-- [ ] `scripts/infra/run-phase3-provisioned-uat.ts`, `scripts/infra/check-phase3-evidence-redaction.mjs`, `03-UAT-EVIDENCE.md`, and `03-BROWSER-EVIDENCE.md` — real-stack proof, evidence redaction and the complete rendered matrix.
+- [x] `scripts/infra/run-phase3-provisioned-uat.ts`, `scripts/infra/check-phase3-evidence-redaction.mjs`, `03-UAT-EVIDENCE.md`, and `03-BROWSER-EVIDENCE.md` — truthful real-stack status, evidence redaction and the required rendered-matrix record.
 
 ---
 
