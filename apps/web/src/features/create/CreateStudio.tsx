@@ -41,7 +41,7 @@ import { TemplateGrid } from "./TemplateGrid";
 import { OutcomeStep } from "./OutcomeStep";
 import { TemplateRecommendations } from "./TemplateRecommendationCards";
 import type { RecommendationSelection } from "./templateRecommendations";
-import { CREATOR_TEMPLATES, createDraftProject, getCreatorTemplate } from "./templates";
+import { CREATOR_TEMPLATES, createDraftProject, getCreatorTemplate, templateRequiresSourceMedia } from "./templates";
 import {
   completeLocalProductPreview,
   hasRealCreatorVideo,
@@ -1235,8 +1235,13 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
   };
 
   const startGeneration = async (ratioOverride?: CreatorAspectRatio) => {
-    if (!project.product.images.length) {
-      setSourceError(`Add at least one ${project.promotionKind === "business" ? "business or service" : "product"} image before generating.`);
+    const source = campaignSourceForProject(project);
+    const sourceName = campaignFactValue(source, source.subject === "product" ? "name" : "service_name").trim() || project.product.name.trim();
+    const requiresSourceMedia = templateRequiresSourceMedia(project.templateId);
+    if (!sourceName || (requiresSourceMedia && !project.product.images.length)) {
+      setSourceError(requiresSourceMedia
+        ? `Add the required ${project.promotionKind === "business" ? "business or service" : "product"} details and media before generating.`
+        : `Add the required ${project.promotionKind === "business" ? "business or service" : "product"} details before generating.`);
       setStep("source");
       return;
     }

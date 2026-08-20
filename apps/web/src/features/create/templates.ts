@@ -23,6 +23,7 @@ export const CREATOR_TEMPLATES: CreatorTemplate[] = CREATIVE_TEMPLATE_CATALOG.ma
     tags: [...template.tags],
     verticals: [...template.verticals],
     goals: [...template.goals],
+    requiredInputs: [...template.requiredInputs],
     dialectRegister: template.dialectRegister,
     qualityStatus: template.qualityStatus,
     scenes: template.scenes.map((scene) => ({
@@ -44,6 +45,29 @@ export const CREATOR_TEMPLATES: CreatorTemplate[] = CREATIVE_TEMPLATE_CATALOG.ma
     })),
   };
 });
+
+const REFERENCE_REQUIRED_INPUTS = new Set([
+  "primary_reference",
+  "product_image",
+  "product_reference",
+  "real_work_reference",
+  "real_room_reference",
+  "real_shade_reference",
+  "real_dish_media",
+  "real_facility_media",
+  "all_box_item_references",
+  "all_bundle_item_references",
+  "consented_before_video",
+  "consented_after_video",
+  "consented_customer_video",
+  "consented_founder_reference",
+  "consented_person_reference",
+]);
+
+/** Keep the browser preflight aligned with the recipe rather than assuming every campaign needs a photo. */
+export function templateRequiresSourceMedia(templateId: string | null | undefined) {
+  return getCreatorTemplate(templateId).requiredInputs.some((input) => REFERENCE_REQUIRED_INPUTS.has(input));
+}
 
 export const SAMPLE_PRODUCT = {
   sourceType: "sample" as const,

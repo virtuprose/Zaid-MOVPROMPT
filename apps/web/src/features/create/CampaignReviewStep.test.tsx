@@ -103,4 +103,31 @@ describe("CampaignReviewStep", () => {
     expect(screen.getByRole("button", { name: "حدّث السعر" })).toBeVisible();
     expect(screen.getByRole("button", { name: "أنشئ الحملة" })).toBeDisabled();
   });
+
+  it("does not require media for a manual service template whose recipe only needs confirmed facts", () => {
+    const project = createDraftProject("clinic-service-explainer");
+    project.promotionKind = "business";
+    project.product = { ...project.product, name: "Skin consultation" };
+    project.source = {
+      kind: "service_manual",
+      subject: "service",
+      assetKeys: [],
+      facts: [{ field: "service_name", value: "Skin consultation", provenance: "manual" }],
+    };
+    const onGenerate = vi.fn();
+
+    render(
+      <CampaignReviewStep
+        project={project}
+        rightsConfirmed
+        quote={{ quoteId: "quote-service", capability: "video.product_fidelity", credits: 120, entitlementEligible: false, expiresAt: new Date(Date.now() + 60_000).toISOString(), breakdown: [], configurationHash: "service", pricingVersion: "test", estimateOnly: false }}
+        quoteState="ready"
+        onEdit={vi.fn()}
+        onGenerate={onGenerate}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Generate campaign" }));
+    expect(onGenerate).toHaveBeenCalledOnce();
+  });
 });

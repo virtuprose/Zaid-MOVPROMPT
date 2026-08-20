@@ -69,6 +69,8 @@ export type CreatorTemplate = {
   tags: string[];
   verticals: BusinessVertical[];
   goals: CampaignGoal[];
+  /** Inputs the immutable template recipe requires before a render can start. */
+  requiredInputs: string[];
   dialectRegister: "polished" | "conversational";
   qualityStatus: "development" | "review" | "approved";
   scenes: CreatorScene[];
