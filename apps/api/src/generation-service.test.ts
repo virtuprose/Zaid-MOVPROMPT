@@ -223,6 +223,7 @@ describe("starter-only private beta", () => {
       configuration: {
         prompt: "Create a product-faithful private-beta campaign.",
         durationSeconds: 8,
+        aspectRatio: "9:16",
         resolution: "720p",
         audio: false,
         references: [],
