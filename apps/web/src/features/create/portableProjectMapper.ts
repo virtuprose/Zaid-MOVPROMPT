@@ -2,6 +2,7 @@ import type { CreatorProjectRecord } from "@movprompt/contracts";
 
 import { portableCreatorApi } from "@/lib/api/portableApiClient";
 import { sanitizeCreatorProjectOutput } from "./creatorProjectOutput";
+import { projectWithCampaignSource } from "./sourceFacts";
 import { normalizeCreatorResolution, type CreatorProject } from "./types";
 
 function recoveredProjectStatus(input: CreatorProjectRecord): CreatorProject["status"] {
@@ -17,7 +18,7 @@ function recoveredProjectStatus(input: CreatorProjectRecord): CreatorProject["st
 
 export function stableProjectConfiguration(project: CreatorProject): CreatorProject {
   return {
-    ...project,
+    ...projectWithCampaignSource(project),
     versionId: undefined,
     versionNumber: undefined,
     status: "ready",
@@ -49,7 +50,7 @@ export function projectFromCloud(input: CreatorProjectRecord): CreatorProject | 
   const currentRenderRunId = input.latestRenderProjectVersionId === input.currentWorkingVersionId
     ? input.latestRenderRunId
     : null;
-  return sanitizeCreatorProjectOutput({
+  return sanitizeCreatorProjectOutput(projectWithCampaignSource({
     ...candidate,
     id: input.id,
     versionId: input.currentVersion?.id,
@@ -70,7 +71,7 @@ export function projectFromCloud(input: CreatorProjectRecord): CreatorProject | 
     whatsapp: candidate.whatsapp ?? "",
     createdAt: input.createdAt,
     updatedAt: input.updatedAt,
-  });
+  }));
 }
 
 export async function hydrateCloudProject(input: CreatorProjectRecord): Promise<CreatorProject | null> {

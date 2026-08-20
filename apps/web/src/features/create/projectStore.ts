@@ -5,6 +5,7 @@ import { isFeatureEnabled } from "@/config/features";
 import { PortableApiError, portableCreatorApi } from "@/lib/api/portableApiClient";
 import { sanitizeCreatorProjectOutput } from "./creatorProjectOutput";
 import { hydrateCloudProject, stableProjectConfiguration } from "./portableProjectMapper";
+import { campaignFactValue, campaignSourceForProject } from "./sourceFacts";
 import { normalizeCreatorResolution, type CreatorProject } from "./types";
 
 const STORAGE_KEY = "movprompt.creator-projects.v2";
@@ -89,6 +90,14 @@ export function subscribeToCreatorProjects(callback: () => void) {
 }
 
 export function buildPortableGenerationConfiguration(project: CreatorProject) {
+  const campaignSource = campaignSourceForProject(project);
+  const sourceName = campaignFactValue(campaignSource, campaignSource.subject === "service" ? "service_name" : "name") || "Confirmed business";
+  const sourceDescription = campaignFactValue(campaignSource, "description");
+  const sourceBrand = campaignFactValue(campaignSource, "brand");
+  const sourcePrice = campaignFactValue(campaignSource, "price");
+  const sourceOffer = campaignFactValue(campaignSource, "offer");
+  const sourceWhatsapp = campaignFactValue(campaignSource, "whatsapp");
+  const sourceLocation = campaignFactValue(campaignSource, "location");
   const template = getCreativeTemplate(project.templateId);
   const templateScenes = new Map(template.scenes.map((scene) => [scene.id, scene]));
   const scenes = project.scenes.map((scene, index) => {
@@ -119,23 +128,23 @@ export function buildPortableGenerationConfiguration(project: CreatorProject) {
     vertical: project.vertical,
     goal: project.goal,
     product: {
-      name: project.product.name || "Confirmed business",
-      brand: project.product.brand,
-      description: project.product.description,
-      price: project.product.price,
-      offer: project.offer,
+      name: sourceName,
+      brand: sourceBrand,
+      description: sourceDescription,
+      price: sourcePrice,
+      offer: sourceOffer,
       callToAction: project.cta,
-      whatsapp: project.whatsapp,
-      location: project.location,
+      whatsapp: sourceWhatsapp,
+      location: sourceLocation,
     },
     scenes,
     qualityPolicy: template.qualityPolicy,
   };
   return {
     prompt: [
-      `Create a ${project.aspectRatio} campaign for ${project.product.name || "the confirmed business"}.`,
-      project.product.description,
-      project.offer ? `Offer: ${project.offer}.` : "Do not invent an offer.",
+      `Create a ${project.aspectRatio} campaign for ${sourceName}.`,
+      sourceDescription,
+      sourceOffer ? `Offer: ${sourceOffer}.` : "Do not invent an offer.",
       `Call to action: ${project.cta}.`,
       ...project.scenes.map((scene, index) => `${index + 1}. ${scene.direction} On-screen copy: ${scene.headline}.`),
     ]
@@ -155,12 +164,14 @@ export function buildPortableGenerationConfiguration(project: CreatorProject) {
 }
 
 export function portableProductRecipe(project: CreatorProject): ClaimDraftRequest["productRecipe"] {
+  const source = campaignSourceForProject(project);
   return {
-    sourceType: project.product.sourceType,
-    name: project.product.name,
-    description: project.product.description,
-    price: project.product.price,
-    brand: project.product.brand,
+    sourceType: source.kind,
+    subject: source.subject,
+    name: campaignFactValue(source, source.subject === "service" ? "service_name" : "name"),
+    description: campaignFactValue(source, "description"),
+    price: campaignFactValue(source, "price"),
+    brand: campaignFactValue(source, "brand"),
     images: project.product.images.flatMap((image) =>
       image.storagePath
         ? [{
@@ -183,6 +194,7 @@ export function portableConfiguration(project: CreatorProject): ClaimDraftReques
 }
 
 export function portableCampaignRecipe(project: CreatorProject): ClaimDraftRequest["campaignRecipe"] {
+  const source = campaignSourceForProject(project);
   return {
     promotionKind: project.promotionKind,
     vertical: project.vertical,
@@ -192,10 +204,10 @@ export function portableCampaignRecipe(project: CreatorProject): ClaimDraftReque
     language: project.language,
     arabicDialect: project.arabicDialect,
     dialectRegister: project.dialectRegister,
-    location: project.location,
-    bookingUrl: project.bookingUrl,
-    whatsapp: project.whatsapp,
-    offer: project.offer,
+    location: campaignFactValue(source, "location"),
+    bookingUrl: campaignFactValue(source, "booking_url"),
+    whatsapp: campaignFactValue(source, "whatsapp"),
+    offer: campaignFactValue(source, "offer"),
     cta: project.cta,
     aspectRatio: project.aspectRatio,
     resolution: project.resolution,

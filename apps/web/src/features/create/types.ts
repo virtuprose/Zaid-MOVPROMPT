@@ -149,7 +149,10 @@ export const CAMPAIGN_GOAL_OPTIONS: Array<{
   { value: "launch", label: "Launch something new", defaultCta: "Shop now" },
   { value: "offer", label: "Promote an offer", defaultCta: "Shop now" },
   { value: "demonstration", label: "Explain how it works", defaultCta: "Learn more" },
+  { value: "education", label: "Educate your audience", defaultCta: "Learn more" },
+  { value: "announcement", label: "Make an announcement", defaultCta: "Learn more" },
   { value: "trust", label: "Build trust", defaultCta: "Learn more" },
+  { value: "brand_story", label: "Tell your brand story", defaultCta: "Visit store" },
 ];
 
 export function getCampaignGoalOption(goal: CampaignGoal) {

@@ -7,6 +7,7 @@ import type {
   CreatorResolution,
 } from "./types";
 import type { BusinessVertical, CampaignGoal, CampaignSource, PresenterMode } from "@movprompt/contracts";
+import { campaignSourceForProject } from "./sourceFacts";
 
 export type CreationMode = "template" | "advanced";
 export type DraftStatus =
@@ -110,7 +111,7 @@ export function projectToCreationDraft(
     status,
     templateVersionId: project.templateId,
     product: project.product,
-    source: project.source,
+    source: campaignSourceForProject(project),
     assetKeys: project.product.images.flatMap((image) => image.assetKey ? [image.assetKey] : []),
     campaign: {
       market: project.market,

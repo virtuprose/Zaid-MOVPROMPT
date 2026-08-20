@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { CampaignGoalSchema } from "@movprompt/contracts";
 
 export const ENGINE_VERSION = "gcc-campaign-engine-2026.08" as const;
 
@@ -70,7 +71,7 @@ export const CreativeTemplateRecipeSchema = z
     localizedDescription: LocalizedCopySchema,
     outcome: z.string().min(1).max(240),
     verticals: z.array(z.enum(["salon", "clinic", "retail", "ecommerce"])).min(1),
-    goals: z.array(z.enum(["whatsapp_orders", "bookings", "launch", "offer", "demonstration", "trust"])).min(1),
+    goals: z.array(CampaignGoalSchema).min(1),
     durationSeconds: z.number().int().min(3).max(60),
     supportedLanguages: z.array(z.enum(["ar", "en", "bilingual"])).min(1),
     supportedRatios: z.array(z.enum(["9:16", "1:1", "4:5", "16:9"])).min(1),
@@ -103,7 +104,7 @@ export const CreativeBriefSchema = z
     dialectRegister: DialectRegisterSchema,
     tone: CampaignToneSchema,
     vertical: z.enum(["salon", "clinic", "retail", "ecommerce"]),
-    goal: z.enum(["whatsapp_orders", "bookings", "launch", "offer", "demonstration", "trust"]),
+    goal: CampaignGoalSchema,
     product: z
       .object({
         name: z.string().min(1).max(240),

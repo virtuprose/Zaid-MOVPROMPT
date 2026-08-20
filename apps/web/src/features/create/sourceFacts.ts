@@ -5,6 +5,7 @@ import {
   type ConfirmedFact,
   type CampaignSource,
 } from "@movprompt/contracts";
+import type { CreatorProject } from "./types";
 
 /** Parse at every browser boundary so campaign facts cannot acquire display URLs or duplicate fields. */
 export function normalizeCampaignSource(source: CampaignSource): CampaignSource {
@@ -115,4 +116,53 @@ export function factsForReview(source: CampaignSource, goal: CampaignGoal): Camp
     if (fact) return { field, state: "present", fact };
     return { field, state: required.has(field) ? "required_missing" : "not_added" };
   });
+}
+
+function sourceKindForLegacyProject(project: CreatorProject): CampaignSource["kind"] {
+  if (project.product.sourceType === "product_link") return "product_url";
+  if (project.product.sourceType === "business_link") return "business_url";
+  if (project.product.sourceType === "upload") return "product_upload";
+  if (project.product.sourceType === "sample") return "service_manual";
+  return project.promotionKind === "business" ? "service_manual" : "product_upload";
+}
+
+function legacyFacts(project: CreatorProject): ConfirmedFact[] {
+  const sourceIsService = project.promotionKind === "business";
+  const values: Array<[CampaignFactField, string]> = [
+    [sourceIsService ? "service_name" : "name", project.product.name],
+    ["description", project.product.description],
+    ["brand", project.product.brand],
+    ["price", project.product.price],
+    ["offer", project.offer],
+    ["location", project.location],
+    ["booking_url", project.bookingUrl],
+    ["whatsapp", project.whatsapp],
+    ["brand_color", project.brandColor],
+  ];
+  return values
+    .filter(([, value]) => Boolean(value.trim()))
+    .map(([field, value]) => ({ field, value: value.trim(), provenance: "manual" }));
+}
+
+/**
+ * Compatibility edge for projects created before Phase 3. New source truth
+ * always wins; legacy fields are used only to produce one deterministic anchor
+ * while old saved projects are progressively rewritten.
+ */
+export function campaignSourceForProject(project: CreatorProject): CampaignSource {
+  if (project.source) return normalizeCampaignSource(project.source);
+  return normalizeCampaignSource({
+    kind: sourceKindForLegacyProject(project),
+    subject: project.promotionKind === "business" ? "service" : "product",
+    assetKeys: project.product.images.flatMap((image) => image.storagePath || image.assetKey ? [image.storagePath ?? image.assetKey!] : []),
+    facts: legacyFacts(project),
+  });
+}
+
+export function projectWithCampaignSource(project: CreatorProject): CreatorProject {
+  return { ...project, source: campaignSourceForProject(project) };
+}
+
+export function campaignFactValue(source: CampaignSource, field: CampaignFactField): string {
+  return source.facts.find((fact) => fact.field === field)?.value ?? "";
 }

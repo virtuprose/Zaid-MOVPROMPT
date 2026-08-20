@@ -93,7 +93,10 @@ const toneByGoal: Record<CampaignGoal, TemplateMediaTone> = {
   launch: "vivid",
   offer: "warm",
   demonstration: "cool",
+  education: "cool",
+  announcement: "vivid",
   trust: "neutral",
+  brand_story: "soft",
 };
 
 const goalLabels: Record<CampaignGoal, { en: string; ar: string }> = {
@@ -102,7 +105,10 @@ const goalLabels: Record<CampaignGoal, { en: string; ar: string }> = {
   launch: { en: "Launch", ar: "إطلاق" },
   offer: { en: "Offer", ar: "عرض" },
   demonstration: { en: "Demo", ar: "شرح" },
+  education: { en: "Education", ar: "معلومة" },
+  announcement: { en: "Announcement", ar: "إعلان" },
   trust: { en: "Trust", ar: "ثقة" },
+  brand_story: { en: "Brand story", ar: "قصة العلامة" },
 };
 
 export function templateGoalLabel(goal: CampaignGoal, locale: "en" | "ar") {

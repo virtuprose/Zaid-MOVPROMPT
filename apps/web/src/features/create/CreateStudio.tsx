@@ -114,7 +114,10 @@ const ARABIC_GOAL_LABELS: Record<CreatorProject["goal"], string> = {
   launch: "إطلاق جديد",
   offer: "ترويج عرض",
   demonstration: "شرح المنتج أو الخدمة",
+  education: "محتوى توعوي",
+  announcement: "إعلان",
   trust: "بناء الثقة",
+  brand_story: "قصة العلامة التجارية",
 };
 
 const ARABIC_CTA_LABELS: Record<string, string> = {

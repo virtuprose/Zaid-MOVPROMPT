@@ -7,9 +7,10 @@ import {
   type StoryArc,
   type TemplateSceneRecipe,
 } from "./types.js";
+import type { CampaignGoal } from "@movprompt/contracts";
 
 type Vertical = "salon" | "clinic" | "retail" | "ecommerce";
-type Goal = "whatsapp_orders" | "bookings" | "launch" | "offer" | "demonstration" | "trust";
+type Goal = CampaignGoal;
 
 type TemplateSpec = {
   id: string;

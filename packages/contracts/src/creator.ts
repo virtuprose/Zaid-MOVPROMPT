@@ -24,7 +24,10 @@ export const CampaignGoalSchema = z.enum([
   "launch",
   "offer",
   "demonstration",
+  "education",
+  "announcement",
   "trust",
+  "brand_story",
 ]);
 export type CampaignGoal = z.infer<typeof CampaignGoalSchema>;
 
