@@ -74,6 +74,22 @@ describe("portable project mapping", () => {
     expect(stable.videoUrl).toBeNull();
   });
 
+  it("replaces guest-local source keys with verified private object keys at the cloud boundary", () => {
+    const withGuestKey = {
+      ...project,
+      source: {
+        kind: "product_upload" as const,
+        subject: "product" as const,
+        assetKeys: ["guest-draft/local-image"],
+        facts: [{ field: "name" as const, value: "Northfield No. 07", provenance: "manual" as const }],
+      },
+    };
+    const stable = stableProjectConfiguration(withGuestKey);
+
+    expect(stable.source?.assetKeys).toEqual([project.product.images[0]!.storagePath]);
+    expect(stable.source?.assetKeys).not.toContain("guest-draft/local-image");
+  });
+
   it("uses the server project and version IDs as canonical cloud identity", () => {
     const cloud = projectFromCloud({
       id: "44444444-4444-4444-8444-444444444444",

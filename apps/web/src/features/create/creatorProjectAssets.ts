@@ -1,5 +1,6 @@
 import { mirrorProductImages } from "./creatorAssets";
 import { replaceCreatorProjectSource, syncCreatorProject } from "./projectStore";
+import { campaignSourceForProject } from "./sourceFacts";
 import type { CreatorProject } from "./types";
 
 export function hasUnclaimedCreatorAssets(project: CreatorProject): boolean {
@@ -13,6 +14,7 @@ export function mergeClaimedCreatorProject(
   cloudProject: CreatorProject,
   images: CreatorProject["product"]["images"],
 ): CreatorProject {
+  const claimedSourceAssetKeys = images.flatMap((image) => image.storagePath ? [image.storagePath] : []);
   return {
     ...localProject,
     id: cloudProject.id,
@@ -20,6 +22,7 @@ export function mergeClaimedCreatorProject(
     versionNumber: cloudProject.versionNumber,
     createdAt: cloudProject.createdAt,
     product: { ...localProject.product, images },
+    source: { ...campaignSourceForProject(localProject), assetKeys: claimedSourceAssetKeys },
   };
 }
 

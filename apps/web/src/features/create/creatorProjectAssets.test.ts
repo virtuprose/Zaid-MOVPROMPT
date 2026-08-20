@@ -89,6 +89,7 @@ describe("authenticated creator image persistence", () => {
         sourceUrl: "https://www.apple.com/airpods-max/",
         images: [{ storagePath: verifiedImages[0]!.storagePath }],
       },
+      source: { assetKeys: [verifiedImages[0]!.storagePath] },
     });
     expect(hasUnclaimedCreatorAssets(local)).toBe(true);
     expect(hasUnclaimedCreatorAssets(merged)).toBe(false);

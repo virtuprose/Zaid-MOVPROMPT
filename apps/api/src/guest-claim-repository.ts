@@ -100,6 +100,25 @@ function assetManifest(assets: AssetRow[]): GuestClaimAssetManifest {
   })));
 }
 
+function isJsonObject(value: unknown): value is JsonObject {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+/**
+ * Guest drafts use IndexedDB IDs only to bind browser blobs to a claim operation.
+ * Once those bytes are verified, every persisted campaign source must point at
+ * the private object keys chosen by the server, never those local IDs.
+ */
+function configurationWithClaimedSourceAssetKeys(configuration: JsonObject, assets: AssetRow[]): JsonObject {
+  const next = structuredClone(configuration);
+  const creatorProject = next.creatorProject;
+  if (!isJsonObject(creatorProject) || !isJsonObject(creatorProject.source)) return next;
+  creatorProject.source.assetKeys = assets
+    .filter((asset) => ["product", "reference", "footage"].includes(asset.kind) && Boolean(asset.objectKey))
+    .map((asset) => asset.objectKey!);
+  return next;
+}
+
 function versionPublic(row: typeof schema.creatorProjectVersions.$inferSelect): ProjectVersion {
   return ProjectVersionSchema.parse({
     id: row.id,
@@ -334,7 +353,7 @@ export function createGuestClaimRepository(dependencies: { db: Database }): Gues
           mode: snapshot.mode,
           versionNumber: 1,
           ...(snapshot.templateVersionId ? { templateVersionId: snapshot.templateVersionId } : {}),
-          configuration: snapshot.configuration,
+          configuration: configurationWithClaimedSourceAssetKeys(snapshot.configuration, assets),
           productRecipe: snapshot.productRecipe,
           campaignRecipe: snapshot.campaignRecipe,
           changeReason: "Guest draft claimed after authentication",

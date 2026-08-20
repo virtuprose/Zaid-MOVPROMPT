@@ -213,6 +213,11 @@ describePostgres("guest claim service PostgreSQL boundary", () => {
         sizeBytes: 128,
         checksumSha256: "d".repeat(64),
       }],
+      configuration: {
+        creatorProject: {
+          source: { assetKeys: ["guest-local-product-id"] },
+        },
+      },
     };
     const service = createGuestClaimService({
       repository: createGuestClaimRepository({ db: database.db }),
@@ -243,6 +248,13 @@ describePostgres("guest claim service PostgreSQL boundary", () => {
       status: "ready",
       pendingGenerationId: lifecycleSnapshot.pendingGenerationId,
       project: { id: first.projectId, status: "ready" },
+    });
+    expect(receipt.version.configuration).toMatchObject({
+      creatorProject: {
+        source: {
+          assetKeys: [`users/${firstUserId}/projects/${first.projectId}/assets/product/${lifecycleSnapshot.assetManifest[0]!.localAssetId}/${"d".repeat(64)}`],
+        },
+      },
     });
   });
 

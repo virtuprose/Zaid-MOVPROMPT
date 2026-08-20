@@ -17,8 +17,15 @@ function recoveredProjectStatus(input: CreatorProjectRecord): CreatorProject["st
 }
 
 export function stableProjectConfiguration(project: CreatorProject): CreatorProject {
+  const source = campaignSourceForProject(project);
+  const persistedSource = {
+    ...source,
+    // A cloud configuration may only contain verified private object keys.
+    // Guest-local IndexedDB IDs are claim transport metadata, not durable facts.
+    assetKeys: project.product.images.flatMap((image) => image.storagePath ? [image.storagePath] : []),
+  };
   return {
-    ...projectWithCampaignSource(project),
+    ...projectWithCampaignSource({ ...project, source: persistedSource }),
     versionId: undefined,
     versionNumber: undefined,
     status: "ready",
