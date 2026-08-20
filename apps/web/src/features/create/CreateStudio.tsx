@@ -77,6 +77,7 @@ import { SourceChoiceStep, type SourceChoice, type SourceSubject } from "./Sourc
 import { CampaignSetupStep } from "./CampaignSetupStep";
 import type { CampaignSetupField } from "./campaignSetupRules";
 import type { PresenterCompatibility } from "./PresenterChoice";
+import { CampaignReviewStep, type CampaignReviewEditTarget } from "./CampaignReviewStep";
 import { buildGuestClaimSnapshot } from "./guestClaimSnapshot";
 import {
   hasUnclaimedCreatorAssets,
@@ -394,6 +395,9 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
     configuration: buildPortableGenerationConfiguration(project),
   });
   const quote = templateQuote.status === "ready" ? templateQuote.quote : null;
+  // A quote can expire between the hook timer and a user click; never hand an
+  // expired browser quote to auth recovery or the claim/submission path.
+  const currentQuote = quote && new Date(quote.expiresAt).getTime() > Date.now() ? quote : null;
   const quoteLoaded = simulatedGeneration || !portablePlatform || !["idle", "loading"].includes(templateQuote.status);
   const quoteFailure = portablePlatform && !simulatedGeneration ? templateQuote.failure ?? null : null;
   const quoteError = templateQuote.status === "expired"
@@ -1162,6 +1166,15 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
     if (!open) window.setTimeout(() => generateButtonRef.current?.focus(), 0);
   };
 
+  const editCampaignReview = (target: CampaignReviewEditTarget) => {
+    setCampaignSetupReady(false);
+    if (target === "details") {
+      setStep("details");
+      return;
+    }
+    setStep(target);
+  };
+
   const cancelGuestClaim = () => {
     const controller = activeClaimController.current;
     if (!controller) return;
@@ -1184,13 +1197,13 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
       setSourceError("Confirm that you have permission to use these images and that the campaign facts are accurate.");
       return;
     }
-    if (!simulatedGeneration && (!quoteLoaded || !quote)) {
+    if (!simulatedGeneration && (!quoteLoaded || !currentQuote)) {
       setSourceError(quoteError || "Live pricing is still loading. Try again in a moment.");
       return;
     }
     if (!simulatedGeneration && !user) {
       const pendingGenerationId = project.pendingGenerationId || crypto.randomUUID();
-      const pendingProject = { ...project, pendingGenerationId, pendingQuoteCredits: quote!.credits };
+      const pendingProject = { ...project, pendingGenerationId, pendingQuoteCredits: currentQuote!.credits };
       setProject(pendingProject);
       await saveGuestDraft(projectToCreationDraft(pendingProject, true, "auth_required"));
       setAuthGateCancellation("");
@@ -1246,7 +1259,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
         return;
       }
     }
-    let confirmedQuote = quote;
+    let confirmedQuote = currentQuote;
     if (portablePlatform) {
       try {
         if (!renderProject.versionId) throw new Error("The saved project version is not ready for generation.");
@@ -1258,11 +1271,11 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
         if (!authoritativeQuote.quoteId) {
           throw new Error("The confirmed generation price could not be saved.");
         }
-        if (authoritativeQuote.credits !== quote!.credits) {
+        if (authoritativeQuote.credits !== currentQuote!.credits) {
           setProject({ ...renderProject, pendingQuoteCredits: authoritativeQuote.credits });
           setSourceError(tr(
-            `The generation price changed from ${quote!.credits} to ${authoritativeQuote.credits} credits. Review the confirmed price, then select Generate video again.`,
-            `تغيّر سعر التوليد من ${quote!.credits} إلى ${authoritativeQuote.credits} رصيد. راجع السعر المؤكد، ثم اختر توليد الفيديو مرة ثانية.`,
+            `The generation price changed from ${currentQuote!.credits} to ${authoritativeQuote.credits} credits. Review the confirmed price, then select Generate video again.`,
+            `تغيّر سعر التوليد من ${currentQuote!.credits} إلى ${authoritativeQuote.credits} رصيد. راجع السعر المؤكد، ثم اختر توليد الفيديو مرة ثانية.`,
           ));
           setSourceBusy(false);
           return;
@@ -1312,19 +1325,19 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
   startGenerationRef.current = startGeneration;
 
   useEffect(() => {
-    if (simulatedGeneration || !user || !shouldResumeGeneration || draftRestoring || !quoteLoaded || !quote || resumedGeneration.current) return;
+    if (simulatedGeneration || !user || !shouldResumeGeneration || draftRestoring || !quoteLoaded || !currentQuote || resumedGeneration.current) return;
     if (!project.pendingGenerationId || !rightsConfirmed || !project.product.images.length || step !== "details") return;
-    if (project.pendingQuoteCredits != null && project.pendingQuoteCredits !== quote.credits) {
+    if (project.pendingQuoteCredits != null && project.pendingQuoteCredits !== currentQuote.credits) {
       resumedGeneration.current = true;
       setSourceError(tr(
-        `The generation price changed from ${project.pendingQuoteCredits} to ${quote.credits} credits. Review the new price, then select Generate video again.`,
-        `تغيّر سعر التوليد من ${project.pendingQuoteCredits} إلى ${quote.credits} رصيد. راجع السعر الجديد، ثم اختر توليد الفيديو مرة ثانية.`,
+        `The generation price changed from ${project.pendingQuoteCredits} to ${currentQuote.credits} credits. Review the new price, then select Generate video again.`,
+        `تغيّر سعر التوليد من ${project.pendingQuoteCredits} إلى ${currentQuote.credits} رصيد. راجع السعر الجديد، ثم اختر توليد الفيديو مرة ثانية.`,
       ));
       return;
     }
     resumedGeneration.current = true;
     void startGenerationRef.current();
-  }, [draftRestoring, project.pendingGenerationId, project.pendingQuoteCredits, project.product.images.length, quote, quoteLoaded, rightsConfirmed, shouldResumeGeneration, simulatedGeneration, step, tr, user]);
+  }, [currentQuote, draftRestoring, project.pendingGenerationId, project.pendingQuoteCredits, project.product.images.length, quoteLoaded, rightsConfirmed, shouldResumeGeneration, simulatedGeneration, step, tr, user]);
 
   const cancelGeneration = async () => {
     if ((project.jobId || project.renderRunId) && !simulatedGeneration) {
@@ -1736,27 +1749,37 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
                 presenterCompatibility={presenterCompatibility}
                 arabic={arabicUi}
               />
-              {campaignSetupReady && <div className="creator-campaign-final-review" aria-labelledby="campaign-heading">
-                <h2 id="campaign-heading">{tr("Review before creating", "راجع قبل الإنشاء")}</h2>
-                <p>{tr("Your campaign settings are saved. Confirm your rights, then create this version.", "إعدادات حملتك محفوظة. أكّد الحقوق ثم أنشئ هذه النسخة.")}</p>
-                <div className="creator-check-row"><input id="rights" type="checkbox" checked={rightsConfirmed} onChange={(event) => setRightsConfirmed(event.target.checked)} /><label htmlFor="rights">{tr("Confirm that you have permission to use these images and that the campaign facts are accurate.", "أكّد أن لديك إذناً لاستخدام هذه الصور وأن معلومات الحملة دقيقة.")}</label></div>
-                {sourceError && <p className="creator-error" role="alert">{sourceError}</p>}
+              {campaignSetupReady && <>
+                <CampaignReviewStep
+                  project={project}
+                  rightsConfirmed={rightsConfirmed}
+                  quote={quote}
+                  quoteState={simulatedGeneration ? "ready" : templateQuote.status === "idle" ? "loading" : templateQuote.status}
+                  sourceError={sourceError}
+                  sourceBusy={sourceBusy}
+                  requestId={quoteFailure?.requestId}
+                  arabic={arabicUi}
+                  onEdit={editCampaignReview}
+                  onRightsChange={setRightsConfirmed}
+                  onRetryQuote={retryQuote}
+                  onGenerate={() => void startGeneration()}
+                />
                 {recoveryActions}
-                <div className="creator-actions-row"><button className="creator-button creator-button-quiet" type="button" onClick={() => setStep(templateFirst.current ? "source" : "template")}><ArrowLeft aria-hidden="true" /> {tr("Back", "رجوع")}</button><button ref={generateButtonRef} className="creator-button creator-button-primary" type="button" onClick={() => void startGeneration()} disabled={!project.product.name.trim() || !rightsConfirmed || (!simulatedGeneration && (!quoteLoaded || !quote)) || sourceBusy}><Sparkles aria-hidden="true" /> {simulatedGeneration ? tr("Prepare product preview", "جهّز معاينة المنتج") : tr("Generate video", "ولّد الفيديو")}</button></div>
-              </div>}
+                <div className="creator-actions-row creator-review-back-action"><button className="creator-button creator-button-quiet" type="button" onClick={() => setCampaignSetupReady(false)}><ArrowLeft aria-hidden="true" /> {tr("Back to campaign settings", "العودة لإعدادات الحملة")}</button></div>
+              </>}
             </section>
 
             <aside className="creator-panel creator-panel-pad creator-generation-summary" aria-label={tr("Generation summary", "ملخص التوليد")}>
               <p className="creator-kicker">{tr("Ready to create", "جاهز للإنشاء")}</p>
               <div className="creator-product-image" style={{ borderRadius: 14, overflow: "hidden" }}><SourceMediaPreview asset={project.product.images[0]} alt={project.product.name} /></div>
               <div className="creator-summary-list" style={{ marginTop: 16 }}><div className="creator-summary-row"><span>{tr("Template", "القالب")}</span><strong>{arabicUi ? template.nameAr : template.name}</strong></div><div className="creator-summary-row"><span>{tr("Campaign goal", "هدف الحملة")}</span><strong>{arabicUi ? ARABIC_GOAL_LABELS[project.goal] : getCampaignGoalOption(project.goal).label}</strong></div><div className="creator-summary-row"><span>{tr("Call to action", "الدعوة للإجراء")}</span><strong>{arabicUi ? ARABIC_CTA_LABELS[project.cta] ?? project.cta : project.cta}</strong></div>{project.product.price && <div className="creator-summary-row"><span>{tr("Price", "السعر")}</span><strong>{project.product.price} {MARKET_META[project.market].currency}</strong></div>}{project.offer && <div className="creator-summary-row"><span>{tr("Offer", "العرض")}</span><strong>{project.offer}</strong></div>}<div className="creator-summary-row"><span>{tr("Market", "السوق")}</span><strong>{MARKET_META[project.market].label}</strong></div><div className="creator-summary-row"><span>{tr("Campaign language", "لغة الحملة")}</span><strong>{project.language === "bilingual" ? tr("Kuwaiti Arabic + English", "عربي كويتي + إنجليزي") : project.language === "ar" ? tr("Kuwaiti Arabic", "عربي كويتي") : tr("English", "الإنجليزية")}</strong></div><div className="creator-summary-row"><span>{tr("Format", "المقاس")}</span><strong>{project.aspectRatio} · {project.resolution}</strong></div><div className="creator-summary-row"><span>{tr("Subtitles", "الترجمة المكتوبة")}</span><strong>{project.subtitles ? tr("Included", "مشمولة") : tr("Off", "متوقفة")}</strong></div><div className="creator-summary-row"><span>{tr("Audio", "الصوت")}</span><strong>{project.audio ? tr("Included", "مشمول") : tr("Off", "متوقف")}</strong></div></div>
-              <div className="creator-cost-box" aria-live="polite">
+              {!campaignSetupReady && <div className="creator-cost-box" aria-live="polite">
                 {quote ? <>
                   <small>{quote.entitlementEligible ? tr("Your first video", "فيديوك الأول") : tr("Confirmed generation price", "سعر التوليد المؤكد")}</small>
                   <strong>{quote.entitlementEligible ? tr("Included · 0 credits for this render", "مشمول · 0 رصيد لهذا التوليد") : tr(`${quote.credits} credits`, `${quote.credits} رصيد`)}</strong>
                   <span className="creator-cost-meta"><Clock3 aria-hidden="true" /> {tr(`Video length: ${projectDurationSeconds} seconds · estimated processing: 2–5 minutes`, `مدة الفيديو: ${projectDurationSeconds} ثانية · وقت المعالجة المتوقع: 2–5 دقائق`)}</span>
                 </> : simulatedGeneration ? <><small>{localDemoGeneration ? tr("Client preview", "معاينة للعميل") : tr("Development preview", "معاينة تطوير")}</small><strong>{tr("No AI credits charged · preview workflow only", "ما ينخصم رصيد ذكاء اصطناعي · مسار معاينة فقط")}</strong></> : <><small>{tr("Generation availability", "توفر التوليد")}</small><strong>{quoteLoaded ? quoteError || tr("Video generation is temporarily unavailable.", "توليد الفيديو غير متوفر مؤقتاً.") : tr("Confirming the current price…", "جارٍ تأكيد السعر الحالي…")}</strong>{quoteLoaded && quoteFailure?.retryable && <button className="creator-cost-retry" type="button" onClick={retryQuote}><RefreshCw aria-hidden="true" /> {tr("Retry price", "أعد محاولة السعر")}</button>}{quoteFailure?.requestId && <details className="creator-support-details"><summary>{tr("Support details", "تفاصيل الدعم")}</summary><code>{tr("Request ID", "رقم الطلب")}: {quoteFailure.requestId}</code></details>}</>}
-              </div>
+              </div>}
             </aside>
           </div>
         )}
