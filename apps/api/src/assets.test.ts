@@ -15,6 +15,10 @@ const OTHER_USER_ID = "22222222-2222-4222-8222-222222222222";
 const PROJECT_ID = "33333333-3333-4333-8333-333333333333";
 const ASSET_ID = "44444444-4444-4444-8444-444444444444";
 const CHECKSUM = "a".repeat(64);
+const VALID_PNG = new Uint8Array(Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9WlL3AAAAABJRU5ErkJggg==",
+  "base64",
+));
 
 const config = loadApiConfig({
   APP_ENV: "test",
@@ -69,6 +73,10 @@ function repository(options: {
     updateVerifiedFootage: vi.fn(async ({ durationMs }) => {
       const asset = options.asset === undefined ? ownedAsset() : options.asset;
       return asset ? { ...asset, durationMs } : null;
+    }),
+    updateVerifiedImage: vi.fn(async ({ width, height }) => {
+      const asset = options.asset === undefined ? ownedAsset() : options.asset;
+      return asset ? { ...asset, width, height } : null;
     }),
   };
 }
@@ -232,18 +240,19 @@ describe("private asset API", () => {
   });
 
   it("accepts an authenticated image body only after size, type and checksum verification", async () => {
-    const bytes = new Uint8Array(1_024);
-    bytes.set([0xff, 0xd8, 0xff, 0xe0]);
+    const bytes = VALID_PNG;
     const checksumSha256 = createHash("sha256").update(bytes).digest("hex");
     const asset = {
       ...ownedAsset(),
+      mimeType: "image/png",
+      sizeBytes: bytes.byteLength,
       checksumSha256,
       objectKey: `users/${USER_ID}/projects/${PROJECT_ID}/assets/product/${ASSET_ID}/${checksumSha256}`,
     };
     const objectStorage = storage();
     objectStorage.head = vi.fn(async () => ({
       contentLength: bytes.byteLength,
-      contentType: "image/jpeg",
+      contentType: "image/png",
       checksumSha256,
     }));
     const repo = repository({ asset });
@@ -258,7 +267,7 @@ describe("private asset API", () => {
       `/api/v1/projects/${PROJECT_ID}/assets/${ASSET_ID}/content`,
       {
         method: "PUT",
-        headers: { "content-type": "image/jpeg" },
+        headers: { "content-type": "image/png" },
         body: bytes,
       },
     );
@@ -270,9 +279,10 @@ describe("private asset API", () => {
     });
     expect(objectStorage.put).toHaveBeenCalledWith(expect.objectContaining({
       body: bytes,
-      contentType: "image/jpeg",
+      contentType: "image/png",
       metadata: { "sha256-hex": checksumSha256 },
     }));
+    expect(repo.updateVerifiedImage).toHaveBeenCalledWith(expect.objectContaining({ width: 1, height: 1 }));
   });
 
   it("accepts owner-scoped MP4 footage only after the shared server verifier derives its duration", async () => {
@@ -318,12 +328,13 @@ describe("private asset API", () => {
   });
 
   it("advances only the matching guest-claim checkpoint after private object verification", async () => {
-    const bytes = new Uint8Array(1_024);
-    bytes.set([0xff, 0xd8, 0xff, 0xe0]);
+    const bytes = VALID_PNG;
     const checksumSha256 = createHash("sha256").update(bytes).digest("hex");
     const asset = {
       ...ownedAsset(),
       id: ASSET_ID,
+      mimeType: "image/png",
+      sizeBytes: bytes.byteLength,
       checksumSha256,
       objectKey: `users/${USER_ID}/projects/${PROJECT_ID}/assets/product/${ASSET_ID}/${checksumSha256}`,
     };
@@ -331,9 +342,10 @@ describe("private asset API", () => {
     const objectStorage = storage();
     objectStorage.head = vi.fn(async () => ({
       contentLength: bytes.byteLength,
-      contentType: "image/jpeg",
+      contentType: "image/png",
       checksumSha256,
     }));
+    objectStorage.get = vi.fn(async () => ({ body: bytes, contentType: "image/png", checksumSha256 }));
     const app = createApi({
       config,
       authGateway: authGateway(),
@@ -362,6 +374,42 @@ describe("private asset API", () => {
       bucket: "creator-assets",
       objectKey: asset.objectKey,
     });
+  });
+
+  it("rejects arbitrary bytes labelled image/png on direct-upload completion", async () => {
+    const bytes = new TextEncoder().encode("not an image");
+    const checksumSha256 = createHash("sha256").update(bytes).digest("hex");
+    const asset: OwnedAssetRecord = {
+      ...ownedAsset(),
+      mimeType: "image/png",
+      sizeBytes: bytes.byteLength,
+      checksumSha256,
+      objectKey: `users/${USER_ID}/projects/${PROJECT_ID}/assets/product/${ASSET_ID}/${checksumSha256}`,
+    };
+    const claims = guestClaimService();
+    const objectStorage = storage();
+    objectStorage.head = vi.fn(async () => ({ contentLength: bytes.byteLength, contentType: "image/png", checksumSha256 }));
+    objectStorage.get = vi.fn(async () => ({ body: bytes, contentType: "image/png", checksumSha256 }));
+    const app = createApi({
+      config,
+      authGateway: authGateway(),
+      assetRepository: repository({ asset }),
+      assetStorage: objectStorage,
+      guestClaimService: claims,
+    });
+
+    const response = await app.request(`/api/v1/projects/${PROJECT_ID}/assets/${ASSET_ID}/complete`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        pendingGenerationId: "66666666-6666-4666-8666-666666666666",
+        localAssetId: ASSET_ID,
+      }),
+    });
+
+    expect(response.status).toBe(422);
+    await expect(response.json()).resolves.toMatchObject({ error: { code: "invalid_asset_content" } });
+    expect(claims.markAssetVerified).not.toHaveBeenCalled();
   });
 
   it("rejects direct-upload footage that only mimics an MP4 header before a guest claim can advance", async () => {
@@ -482,13 +530,13 @@ describe("private asset API", () => {
   });
 
   it("mirrors a verified remote image into owner-scoped private storage", async () => {
-    const bytes = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0x01]);
+    const bytes = VALID_PNG;
     const checksumSha256 = createHash("sha256").update(bytes).digest("hex");
     const remoteImageFetcher: RemoteImageFetcher = {
       fetch: vi.fn(async () => ({
         canonicalUrl: "https://cdn.example.test/products/perfume.jpg",
         bytes,
-        mimeType: "image/jpeg" as const,
+        mimeType: "image/png" as const,
         checksumSha256,
         originalFilename: "perfume.jpg",
       })),
@@ -496,7 +544,7 @@ describe("private asset API", () => {
     const objectStorage = storage();
     objectStorage.head = vi.fn(async () => ({
       contentLength: bytes.byteLength,
-      contentType: "image/jpeg",
+      contentType: "image/png",
       checksumSha256,
     }));
     const repo = repository();
@@ -530,7 +578,7 @@ describe("private asset API", () => {
       asset: {
         projectId: PROJECT_ID,
         kind: "product",
-        mimeType: "image/jpeg",
+        mimeType: "image/png",
         sizeBytes: bytes.byteLength,
         checksumSha256,
       },
@@ -553,7 +601,7 @@ describe("private asset API", () => {
       expect.objectContaining({
         bucket: "creator-assets",
         body: bytes,
-        contentType: "image/jpeg",
+        contentType: "image/png",
         metadata: { "sha256-hex": checksumSha256 },
       }),
     );
@@ -618,7 +666,7 @@ describe("private asset API", () => {
   });
 
   it("rejects reuse of a mirror idempotency key for a different remote URL", async () => {
-    const bytes = new Uint8Array([0xff, 0xd8, 0xff, 0xe0]);
+    const bytes = VALID_PNG;
     const checksumSha256 = createHash("sha256").update(bytes).digest("hex");
     let persisted: OwnedAssetRecord | undefined;
     const repo: AssetRepository = {
@@ -633,7 +681,7 @@ describe("private asset API", () => {
       fetch: vi.fn(async (url) => ({
         canonicalUrl: url,
         bytes,
-        mimeType: "image/jpeg" as const,
+        mimeType: "image/png" as const,
         checksumSha256,
         originalFilename: "product.jpg",
       })),
@@ -641,7 +689,7 @@ describe("private asset API", () => {
     const objectStorage = storage();
     objectStorage.head = vi.fn(async () => ({
       contentLength: bytes.byteLength,
-      contentType: "image/jpeg",
+      contentType: "image/png",
       checksumSha256,
     }));
     const app = createApi({

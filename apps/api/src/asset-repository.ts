@@ -26,6 +26,13 @@ export interface AssetRepository {
     assetId: string;
     durationMs: number;
   }): Promise<OwnedAssetRecord | null>;
+  updateVerifiedImage?(input: {
+    userId: string;
+    projectId: string;
+    assetId: string;
+    width: number;
+    height: number;
+  }): Promise<OwnedAssetRecord | null>;
 }
 
 type SourceMetadata = { originalFilename?: string; sourceUrlHash?: string };
@@ -152,6 +159,21 @@ export function createDrizzleAssetRepository(db: Database): AssetRepository {
           eq(schema.creatorProjectAssets.projectId, projectId),
           eq(schema.creatorProjectAssets.userId, userId),
           eq(schema.creatorProjectAssets.kind, "footage"),
+        ))
+        .returning({ id: schema.creatorProjectAssets.id }));
+      if (!updated) return null;
+      return this.findOwned(userId, projectId, assetId);
+    },
+
+    async updateVerifiedImage({ userId, projectId, assetId, width, height }) {
+      const [updated] = await withUserTransaction(db, userId, (tx) => tx
+        .update(schema.creatorProjectAssets)
+        .set({ width, height })
+        .where(and(
+          eq(schema.creatorProjectAssets.id, assetId),
+          eq(schema.creatorProjectAssets.projectId, projectId),
+          eq(schema.creatorProjectAssets.userId, userId),
+          ne(schema.creatorProjectAssets.kind, "footage"),
         ))
         .returning({ id: schema.creatorProjectAssets.id }));
       if (!updated) return null;
