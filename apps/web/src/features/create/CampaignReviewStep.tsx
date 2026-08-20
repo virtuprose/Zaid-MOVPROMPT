@@ -105,7 +105,8 @@ export function CampaignReviewStep({
       ? copy(arabic, "Uploaded spokesperson", "متحدث مرفوع")
       : copy(arabic, "No presenter", "بدون مقدم");
   const quoteFresh = quoteState === "ready" && quote && new Date(quote.expiresAt).getTime() > Date.now();
-  const canGenerate = Boolean(quoteFresh && rightsConfirmed && !sourceBusy);
+  const hasRequiredSource = Boolean(project.product.name.trim() && project.product.images.length);
+  const canGenerate = Boolean(quoteFresh && rightsConfirmed && hasRequiredSource && !sourceBusy);
   const missingRights = !rightsConfirmed;
   const goal = getCampaignGoalOption(project.goal).label;
 
@@ -165,7 +166,7 @@ export function CampaignReviewStep({
 
       {sourceError && <p className="creator-error" role="alert">{sourceError}</p>}
       <div className="creator-review-actions">
-        <p>{canGenerate ? copy(arabic, "Everything is ready. Create your account only when you generate.", "كل شيء جاهز. أنشئ حسابك فقط عند الإنشاء.") : missingRights ? copy(arabic, "Confirm your rights to generate this campaign.", "أكد حقوقك لإنشاء هذه الحملة.") : quoteState === "ready" ? copy(arabic, "Your campaign is being prepared. Keep this page open.", "جارٍ تجهيز حملتك. أبق هذه الصفحة مفتوحة.") : quoteStateMessage(arabic, quoteState)}</p>
+        <p>{canGenerate ? copy(arabic, "Everything is ready. Create your account only when you generate.", "كل شيء جاهز. أنشئ حسابك فقط عند الإنشاء.") : !hasRequiredSource ? copy(arabic, "Add the required source details before generating. Your campaign is saved.", "أضف تفاصيل المصدر المطلوبة قبل الإنشاء. حملتك محفوظة.") : missingRights ? copy(arabic, "Confirm your rights to generate this campaign.", "أكد حقوقك لإنشاء هذه الحملة.") : quoteState === "ready" ? copy(arabic, "Your campaign is being prepared. Keep this page open.", "جارٍ تجهيز حملتك. أبق هذه الصفحة مفتوحة.") : quoteStateMessage(arabic, quoteState)}</p>
         <button ref={generateButtonRef} type="button" className="creator-button creator-button-primary" onClick={onGenerate} disabled={!canGenerate}>
           {sourceBusy ? <RefreshCw className="animate-spin" aria-hidden="true" /> : <Sparkles aria-hidden="true" />}
           {copy(arabic, "Generate campaign", "أنشئ الحملة")}
