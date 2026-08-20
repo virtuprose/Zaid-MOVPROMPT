@@ -92,7 +92,7 @@ export const GOLDEN_PRODUCT_PATH: GoldenPathFixture = {
       description: "A concentrated oud fragrance for evening gifting.",
       price: "19.900",
       brand: "Sadu Reserve",
-      images: [{ id: "golden-sadu-image", name: "Sadu Reserve Oud", url: "blob:golden-sadu", assetKey: productSource.assetKeys[0]!, source: "url" }],
+      images: [{ id: "golden-sadu-image", name: "Sadu Reserve Oud", url: "blob:golden-sadu", assetKey: productSource.assetKeys[0]!, mimeType: "image/webp", source: "url" }],
     },
   },
 };
@@ -137,7 +137,7 @@ export const GOLDEN_SERVICE_PATH: GoldenPathFixture = {
       description: "Private hair and beauty appointments in Salmiya.",
       price: "15.000",
       brand: "Noura Salon",
-      images: [{ id: "golden-noura-image", name: "Noura Salon", url: "blob:golden-noura", assetKey: serviceSource.assetKeys[0]!, source: "upload" }],
+      images: [{ id: "golden-noura-image", name: "Noura Salon", url: "blob:golden-noura", assetKey: serviceSource.assetKeys[0]!, mimeType: "image/webp", source: "upload" }],
     },
   },
 };

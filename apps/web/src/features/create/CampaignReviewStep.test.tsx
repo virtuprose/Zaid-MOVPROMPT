@@ -15,7 +15,7 @@ describe("CampaignReviewStep", () => {
       description: "A concentrated parfum extract.",
       brand: "Northfield",
       price: "12.500",
-      images: [{ id: "amber", name: "amber.jpg", url: "https://example.test/amber.jpg", source: "url" }],
+      images: [{ id: "amber", name: "amber.jpg", url: "https://example.test/amber.jpg", mimeType: "image/jpeg", source: "url" }],
     };
     project.source = {
       kind: "product_url",
