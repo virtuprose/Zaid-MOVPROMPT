@@ -314,7 +314,14 @@ describe("generation reference ownership", () => {
   const ownedKey = `users/${userId}/projects/${projectId}/assets/product/44444444-4444-4444-8444-444444444444/${checksum}`;
 
   function quoteService(objectKey: string, configuredMime: string, persistedMime = configuredMime) {
-    const createQuote = vi.fn(async () => ({} as never));
+    const createQuote = vi.fn(async () => ({
+      id: "66666666-6666-4666-8666-666666666666",
+      credits: 80,
+      entitlementEligible: false,
+      configurationHash: "a".repeat(64),
+      expiresAt: new Date("2026-08-20T18:00:00.000Z"),
+      breakdown: [{ label: "test", credits: 80 }],
+    } as never));
     const repo: GenerationRepository = {
       findOwnedProjectVersion: vi.fn(async () => ({
         id: versionId,
@@ -685,7 +692,14 @@ describe("presenter eligibility", () => {
     aiUgcAvailable?: boolean;
   }) {
     const repo = repository(ownedRun());
-    const createQuote = vi.fn(async () => ({} as never));
+    const createQuote = vi.fn(async () => ({
+      id: "66666666-6666-4666-8666-666666666666",
+      credits: 80,
+      entitlementEligible: false,
+      configurationHash: "a".repeat(64),
+      expiresAt: new Date("2026-08-20T18:00:00.000Z"),
+      breakdown: [{ label: "Seedance render", credits: 80 }],
+    } as never));
     const startRender = vi.fn(async () => ({} as never));
     repo.findOwnedProjectVersion = vi.fn(async () => ({
       id: versionId,
@@ -742,5 +756,43 @@ describe("presenter eligibility", () => {
       .rejects.toMatchObject({ code: "presenter_configuration_ineligible" });
     expect(twin.createQuote).not.toHaveBeenCalled();
     expect(twin.startRender).not.toHaveBeenCalled();
+  });
+
+  it("accepts verified footage for a quote and repeats denial before render reservation", async () => {
+    const valid = presenterApi({
+      presenter: {
+        mode: "uploaded_spokesperson",
+        assetId,
+        rights: { version: "person-media-rights-v1", assetId, personMediaRightsAttested: true },
+      },
+      footage: {
+        id: assetId,
+        mimeType: "video/mp4",
+        sizeBytes: 4_096,
+        checksumSha256: "a".repeat(64),
+        durationMs: 10_000,
+      },
+    });
+    await expect(valid.api.createQuote({ capability: "video.cinematic", projectVersionId: versionId }, session))
+      .resolves.toMatchObject({ quoteId: "66666666-6666-4666-8666-666666666666" });
+
+    const deniedStart = presenterApi({ presenter: { mode: "digital_twin" } });
+    deniedStart.repo.findOwnedQuote = vi.fn(async () => ({
+      id: "77777777-7777-4777-8777-777777777777",
+      templateVersionId,
+      capabilityAlias: "video.cinematic",
+      credits: 80,
+      entitlementEligible: false,
+      configurationHash: "a".repeat(64),
+      expiresAt: new Date("2026-08-20T18:00:00.000Z"),
+    }));
+    await expect(deniedStart.api.startRender({
+      userId,
+      projectId,
+      projectVersionId: versionId,
+      quoteId: "77777777-7777-4777-8777-777777777777",
+      idempotencyKey: "presenter-denied-start",
+    })).rejects.toMatchObject({ code: "presenter_configuration_ineligible" });
+    expect(deniedStart.startRender).not.toHaveBeenCalled();
   });
 });
