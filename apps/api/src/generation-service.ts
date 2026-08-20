@@ -165,6 +165,27 @@ function httpDestination(value: unknown): string {
   }
 }
 
+/**
+ * These recipes make compliance, consent, or factual-verification promises
+ * that the current immutable project-version contract cannot prove. A product
+ * name, arbitrary image, or caller-authored JSON is never a substitute for a
+ * verified clinic record, qualification, transcript, or person-media consent.
+ * Keep the affected template versions fail-closed until dedicated server-owned
+ * provenance and consent records are introduced.
+ */
+const UNSUPPORTED_PROTECTED_TEMPLATE_INPUTS = new Set<TemplateRequiredInput>([
+  "verified_clinic_identity",
+  "confirmed_service",
+  "approved_claims",
+  "verified_qualification",
+  "approved_transcript",
+  "consented_before_video",
+  "consented_after_video",
+  "consented_customer_video",
+  "consented_founder_reference",
+  "consented_person_reference",
+]);
+
 function eligibilityContext(configuration: GenerationConfiguration, root: JsonObject) {
   const creativeBrief = objectValue(configuration.creativeBrief);
   const product = objectValue(creativeBrief?.product);
@@ -203,6 +224,7 @@ function eligibilityContext(configuration: GenerationConfiguration, root: JsonOb
 }
 
 function hasRequiredInput(required: TemplateRequiredInput, context: ReturnType<typeof eligibilityContext>): boolean {
+  if (UNSUPPORTED_PROTECTED_TEMPLATE_INPUTS.has(required)) return false;
   const hasReference = context.references > 0;
   const hasSubject = Boolean(context.subjectName);
   switch (required) {
@@ -471,6 +493,12 @@ export function createGenerationApiService(options: GenerationApiServiceOptions)
       throw new GenerationApplicationError(
         "template_configuration_ineligible",
         "This template is not available for the current campaign configuration.",
+      );
+    }
+    if (eligibility.requiredInputs.some((required) => UNSUPPORTED_PROTECTED_TEMPLATE_INPUTS.has(required))) {
+      throw new GenerationApplicationError(
+        "template_configuration_ineligible",
+        "This template is temporarily unavailable until its required verification records are supported.",
       );
     }
     const context = eligibilityContext(input.configuration, input.root);

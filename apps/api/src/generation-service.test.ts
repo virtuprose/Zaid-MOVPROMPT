@@ -793,6 +793,62 @@ describe("template quote rejection", () => {
     })).rejects.toMatchObject({ code: "template_configuration_ineligible" });
     expect(startRender).not.toHaveBeenCalled();
   });
+
+  for (const protectedInput of [
+    "verified_clinic_identity",
+    "confirmed_service",
+    "approved_claims",
+    "verified_qualification",
+    "approved_transcript",
+    "consented_before_video",
+    "consented_after_video",
+    "consented_customer_video",
+    "consented_founder_reference",
+    "consented_person_reference",
+  ] as const) {
+    it(`fails closed for protected ${protectedInput} on quote and render submission`, async () => {
+      const template = publishedTemplate({ requiredInputs: [protectedInput] });
+      const { api, createQuote, repo, startRender } = apiFor(template);
+
+      await expect(api.createQuote({
+        capability: "video.cinematic",
+        templateVersionId,
+        configuration,
+      }, null)).rejects.toMatchObject({ code: "template_configuration_ineligible" });
+      expect(createQuote).not.toHaveBeenCalled();
+
+      const boundConfiguration = {
+        capability: "video.cinematic",
+        pricingVersion: "test-v1",
+        templateVersionId,
+        generation: configuration,
+      };
+      repo.findOwnedProjectVersion = vi.fn(async () => ({
+        id: versionId,
+        projectId,
+        templateVersionId,
+        configuration: { generation: configuration },
+      }));
+      repo.findOwnedQuote = vi.fn(async () => ({
+        id: "55555555-5555-4555-8555-555555555555",
+        templateVersionId,
+        capabilityAlias: "video.cinematic",
+        credits: 80,
+        entitlementEligible: false,
+        configurationHash: hashGenerationConfiguration(boundConfiguration),
+        expiresAt: new Date("2026-08-20T18:00:00.000Z"),
+      }));
+
+      await expect(api.startRender({
+        userId,
+        projectId,
+        projectVersionId: versionId,
+        quoteId: "55555555-5555-4555-8555-555555555555",
+        idempotencyKey: `protected-${protectedInput}`,
+      })).rejects.toMatchObject({ code: "template_configuration_ineligible" });
+      expect(startRender).not.toHaveBeenCalled();
+    });
+  }
 });
 
 describe("presenter eligibility", () => {
