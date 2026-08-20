@@ -83,4 +83,39 @@ describe("PresenterChoice", () => {
     expect(screen.queryByRole("radio", { name: "Uploaded spokesperson" })).not.toBeInTheDocument();
     expect(screen.getByText(/Add a verified video in Source/i)).toBeVisible();
   });
+
+  it("clears the authoritative spokesperson selection when consent is withdrawn and stays cleared after reload", () => {
+    const onChange = vi.fn();
+    const { rerender } = render(
+      <PresenterChoice
+        value={{
+          mode: "uploaded_spokesperson",
+          assetId: footage.id,
+          rights: {
+            version: "person-media-rights-v1",
+            assetId: footage.id,
+            personMediaRightsAttested: true,
+          },
+        }}
+        compatibility={{ aiUgc: false, uploadedSpokesperson: true }}
+        eligibleFootage={[footage]}
+        onChange={onChange}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("checkbox", { name: /permission to use this exact footage/i }));
+    expect(onChange).toHaveBeenLastCalledWith({ mode: "none" });
+    expect(screen.getByRole("radio", { name: "No presenter" })).toBeChecked();
+
+    rerender(
+      <PresenterChoice
+        value={{ mode: "none" }}
+        compatibility={{ aiUgc: false, uploadedSpokesperson: true }}
+        eligibleFootage={[footage]}
+        onChange={onChange}
+      />,
+    );
+    expect(screen.getByRole("radio", { name: "No presenter" })).toBeChecked();
+    expect(screen.queryByRole("checkbox", { name: /permission to use this exact footage/i })).not.toBeInTheDocument();
+  });
 });

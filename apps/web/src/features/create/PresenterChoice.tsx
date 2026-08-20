@@ -23,7 +23,7 @@ function copy(arabic: boolean, english: string, arabicText: string) {
 
 function isEligibleFootage(asset: CreatorAsset) {
   return Boolean(
-    asset.mimeType && /^video\/(mp4|quicktime|webm)$/i.test(asset.mimeType)
+    asset.mimeType && /^video\/(mp4|quicktime)$/i.test(asset.mimeType)
     && asset.storagePath
     && /^[a-f0-9]{64}$/i.test(asset.checksum ?? "")
     && Boolean(asset.durationMs && asset.durationMs > 0 && asset.durationMs <= 10 * 60 * 1_000),
@@ -84,7 +84,14 @@ export function PresenterChoice({
   const updateUploadedPresenter = (assetId: string, attested: boolean) => {
     setSelectedAssetId(assetId);
     setRightsAttested(attested);
-    if (!assetId || !attested) return;
+    if (!assetId || !attested) {
+      // Consent is part of the persisted presenter identity. Removing it must
+      // immediately clear the authoritative selection, not merely hide the
+      // acknowledgement in local component state.
+      setSelectedMode("none");
+      onChange({ mode: "none" });
+      return;
+    }
     onChange({
       mode: "uploaded_spokesperson",
       assetId,
