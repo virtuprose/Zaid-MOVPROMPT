@@ -139,6 +139,7 @@ export function CampaignReviewStep({
           <dl className="creator-review-list">
             <div><dt>{copy(arabic, "Template", "القالب")}</dt><dd className="creator-review-capitalize">{templateName}</dd></div>
             <div><dt>{copy(arabic, "Result", "النتيجة")}</dt><dd>{arabic ? ({ whatsapp_orders: "طلبات واتساب", bookings: "الحجوزات", launch: "إطلاق جديد", offer: "ترويج عرض", demonstration: "شرح المنتج أو الخدمة", education: "محتوى توعوي", announcement: "إعلان", trust: "بناء الثقة", brand_story: "قصة العلامة التجارية" }[project.goal]) : goal}</dd></div>
+            <div><dt>{copy(arabic, "Call to action", "الدعوة للإجراء")}</dt><dd>{project.cta}</dd></div>
             {sourceFacts.map(({ field, fact }) => fact && <div key={field}><dt>{FACT_LABELS[field][arabic ? "ar" : "en"]}</dt><dd><span dir={valueDirection(fact.value)} className={cn(valueDirection(fact.value) && "creator-review-direction-value")}>{field === "price" ? `${fact.value} KWD` : fact.value}</span><small>{provenanceCopy(arabic, fact.provenance)}</small></dd></div>)}
           </dl>
         </section>

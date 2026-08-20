@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { projectToCreationDraft } from "../contracts";
 import { createDraftProject, CREATOR_TEMPLATES } from "../templates";
-import { GOLDEN_PRODUCT_PATH, GOLDEN_SERVICE_PATH, createGoldenPathProject } from "../__fixtures__/goldenPathFixtures";
+import { GOLDEN_PRODUCT_PATH, GOLDEN_SERVICE_PATH, canonicalGoldenPathIntent, createGoldenPathProject } from "../__fixtures__/goldenPathFixtures";
 
 describe("creator contracts", () => {
   it("keeps all fifty Kuwait category recipes available during development", () => {
@@ -84,9 +84,7 @@ describe("creator contracts", () => {
     const sourceFirst = createGoldenPathProject(GOLDEN_PRODUCT_PATH);
     const templateFirst = createGoldenPathProject({ ...GOLDEN_PRODUCT_PATH, entry: "template_first" });
 
-    expect(projectToCreationDraft(sourceFirst, true, "auth_required")).toMatchObject(
-      projectToCreationDraft(templateFirst, true, "auth_required"),
-    );
+    expect(canonicalGoldenPathIntent(sourceFirst, true)).toEqual(canonicalGoldenPathIntent(templateFirst, true));
   });
 
   it("retains a stable service pending intent through auth cancellation and callback replay", () => {
