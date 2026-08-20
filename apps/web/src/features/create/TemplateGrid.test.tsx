@@ -99,4 +99,22 @@ describe("TemplateGrid", () => {
     expect(screen.getByRole("region", { name: "اتجاهات حملات إضافية" })).toBeVisible();
     view.unmount();
   });
+
+  it("keeps static directions free of player-shaped timing chrome", () => {
+    languageState.locale = "en";
+    const staticTemplate = CREATOR_TEMPLATES.find((template) => !template.previewVideo)!;
+    const view = render(
+      <MemoryRouter>
+        <TemplateGrid onSelect={vi.fn()} />
+      </MemoryRouter>,
+    );
+
+    const directions = screen.getByRole("region", { name: "More campaign directions" });
+    const staticCard = within(directions).getByRole("button", { name: `Choose ${staticTemplate.name} template` }).closest("article")!;
+    expect(within(staticCard).queryByRole("button", { name: /Play .* preview/ })).not.toBeInTheDocument();
+    expect(within(staticCard).getByRole("link", { name: `View ${staticTemplate.name} details` })).toBeVisible();
+    expect(staticCard.querySelector(".creator-template-duration")).toBeNull();
+    expect(staticCard.querySelector("video")).toBeNull();
+    view.unmount();
+  });
 });
