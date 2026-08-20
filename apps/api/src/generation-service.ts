@@ -149,6 +149,7 @@ function stringValue(value: unknown): string {
 function eligibilityContext(configuration: GenerationConfiguration, root: JsonObject) {
   const creativeBrief = objectValue(configuration.creativeBrief);
   const product = objectValue(creativeBrief?.product);
+  const quoteContext = objectValue(configuration.templateQuoteContext);
   const creatorProject = objectValue(root.creatorProject);
   return {
     goal: stringValue(creativeBrief?.goal),
@@ -162,7 +163,9 @@ function eligibilityContext(configuration: GenerationConfiguration, root: JsonOb
     price: stringValue(product?.price),
     location: stringValue(product?.location),
     whatsapp: stringValue(product?.whatsapp),
-    bookingDestination: stringValue(creatorProject?.bookingUrl) || stringValue(product?.whatsapp),
+    bookingDestination: stringValue(creatorProject?.bookingUrl)
+      || stringValue(quoteContext?.bookingUrl)
+      || stringValue(product?.whatsapp),
   };
 }
 

@@ -32,7 +32,7 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/compone
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { isFeatureEnabled } from "@/config/features";
-import { PortableApiError, portableCreatorApi } from "@/lib/api/portableApiClient";
+import { portableCreatorApi } from "@/lib/api/portableApiClient";
 import { cancelCreatorGeneration, cancelVideoJob, pollCreatorGeneration, pollVideoJob, startCreatorGeneration } from "@/lib/director/api";
 import { cn } from "@/lib/utils";
 import { CreatorShell } from "./CreatorShell";
@@ -64,8 +64,7 @@ import {
   syncCreatorProject,
 } from "./projectStore";
 import { hydrateCloudProject } from "./portableProjectMapper";
-import { projectToCreationDraft, type CreationDraft, type GenerationQuote } from "./contracts";
-import { automaticQuoteRetryDelay } from "./quoteRecovery";
+import { projectToCreationDraft, type CreationDraft } from "./contracts";
 import { cleanupExpiredGuestDrafts, getGuestAsset, getGuestDraft, loadGuestDraft, markClaimCheckpoint, putGuestAsset, saveGuestDraft } from "./guestDraftStore";
 import { claimGuestAssets, GuestClaimAssetFailure, type GuestClaimProgress as GuestClaimProgressState } from "./creatorAssets";
 import { GuestClaimProgress } from "./GuestClaimProgress";
@@ -80,6 +79,7 @@ import {
   syncCreatorProjectWithOwnedRemoteImages,
 } from "./creatorProjectAssets";
 import { SaveStatusIndicator, type SaveLifecycleState } from "./SaveStatusIndicator";
+import { useTemplateQuotes } from "./useTemplateQuotes";
 import { applyImportedFacts, campaignFactValue, campaignSourceForProject, confirmCampaignFacts, editFact, normalizeCampaignSource } from "./sourceFacts";
 import {
   CAMPAIGN_GOAL_OPTIONS,
@@ -378,16 +378,27 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const template = getCreatorTemplate(project.templateId);
   const projectDurationSeconds = project.scenes.reduce((sum, scene) => sum + scene.duration, 0);
-  const [quote, setQuote] = useState<GenerationQuote | null>(null);
-  const [quoteLoaded, setQuoteLoaded] = useState(false);
-  const [quoteError, setQuoteError] = useState("");
-  const [quoteFailure, setQuoteFailure] = useState<{
-    code: string;
-    retryable: boolean;
-    requestId?: string;
-  } | null>(null);
-  const [quoteRetry, setQuoteRetry] = useState(0);
-  const quoteAutoRetryCount = useRef(0);
+  const templateQuote = useTemplateQuotes({
+    enabled: portablePlatform && !simulatedGeneration,
+    templateId: template.id,
+    configuration: buildPortableGenerationConfiguration(project),
+  });
+  const quote = templateQuote.status === "ready" ? templateQuote.quote : null;
+  const quoteLoaded = simulatedGeneration || !portablePlatform || !["idle", "loading"].includes(templateQuote.status);
+  const quoteFailure = portablePlatform && !simulatedGeneration ? templateQuote.failure ?? null : null;
+  const quoteError = templateQuote.status === "expired"
+      ? tr("The confirmed price expired. Refresh it before generating.", "انتهت صلاحية السعر المؤكد. حدّثه قبل التوليد.")
+      : templateQuote.status === "changed"
+        ? tr("Your campaign changed. Confirm the current price again.", "تغيّرت حملتك. أكد السعر الحالي مرة ثانية.")
+        : quoteFailure?.code === "worker_unavailable"
+          ? tr("Generation is temporarily paused. Your project is saved.", "التوليد متوقف مؤقتاً. مشروعك محفوظ.")
+          : quoteFailure?.code === "pricing_unavailable"
+            ? tr("We couldn’t confirm the current price. Try again.", "ما قدرنا نؤكد السعر الحالي. حاول مرة ثانية.")
+            : quoteFailure
+              ? tr("Video generation is temporarily unavailable.", "توليد الفيديو غير متوفر مؤقتاً.")
+              : !portablePlatform && !simulatedGeneration
+                ? tr("Video generation is temporarily unavailable.", "توليد الفيديو غير متوفر مؤقتاً.")
+                : "";
   const activeScene = project.scenes.find((scene) => scene.id === activeSceneId) ?? project.scenes[0];
   const recoveryCopy = recovery ? getGuestClaimRecoveryCopy(arabicUi ? "ar" : "en", recovery.state) : null;
   const hasRenderedVideo = hasRealCreatorVideo(project);
@@ -440,87 +451,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
     return () => window.cancelAnimationFrame(frame);
   }, [recovery]);
 
-  useEffect(() => {
-    let active = true;
-    let automaticRetryTimer: number | null = null;
-    setQuoteLoaded(false);
-    setQuoteError("");
-    setQuoteFailure(null);
-    if (simulatedGeneration) {
-      setQuote(null);
-      setQuoteLoaded(true);
-      return () => { active = false; };
-    }
-    if (portablePlatform) {
-      const timer = window.setTimeout(() => {
-        void resolvePortableTemplateVersionId(template.id)
-          .then((templateVersionId) => portableCreatorApi.generationQuote({
-            capability: "video.product_fidelity",
-            templateVersionId,
-            configuration: buildPortableGenerationConfiguration(project),
-          }))
-          .then((nextQuote) => {
-            if (!active) return;
-            quoteAutoRetryCount.current = 0;
-            setQuote({ ...nextQuote, quoteId: nextQuote.quoteId ?? null });
-          })
-          .catch((error: unknown) => {
-            if (!active) return;
-            setQuote(null);
-            const portableError = error instanceof PortableApiError ? error : null;
-            const code = portableError?.code ?? "pricing_unavailable";
-            const retryable = portableError?.retryable ?? true;
-            const retryDelay = automaticQuoteRetryDelay(quoteAutoRetryCount.current, retryable);
-            const shouldRetryAutomatically = retryDelay !== null;
-            const message = code === "worker_unavailable"
-              ? tr("Generation is temporarily paused. Your project is saved.", "التوليد متوقف مؤقتاً. مشروعك محفوظ.")
-              : code === "pricing_unavailable"
-                ? tr("We couldn’t confirm the current price. Try again.", "ما قدرنا نؤكد السعر الحالي. حاول مرة ثانية.")
-                : tr("Video generation is temporarily unavailable.", "توليد الفيديو غير متوفر مؤقتاً.");
-            setQuoteError(shouldRetryAutomatically
-              ? `${message} ${tr("Retrying automatically…", "جارٍ إعادة المحاولة تلقائياً…")}`
-              : message);
-            setQuoteFailure({
-              code,
-              retryable,
-              ...(portableError?.requestId ? { requestId: portableError.requestId } : {}),
-            });
-            if (retryDelay !== null) {
-              quoteAutoRetryCount.current += 1;
-              automaticRetryTimer = window.setTimeout(() => {
-                if (active) setQuoteRetry((value) => value + 1);
-              }, retryDelay);
-            }
-          })
-          .finally(() => {
-            if (active) setQuoteLoaded(true);
-          });
-      }, 250);
-      return () => {
-        active = false;
-        window.clearTimeout(timer);
-        if (automaticRetryTimer !== null) window.clearTimeout(automaticRetryTimer);
-      };
-    }
-    void Promise.resolve({ data: null, error: new Error("Legacy creator pricing is retired.") }).then(({ data, error }) => {
-      if (!active) return;
-      if (!error && data?.quoteId) setQuote(data as GenerationQuote);
-      else {
-        setQuote(null);
-        setQuoteError("Live pricing is unavailable. You can keep editing, but generation is temporarily disabled.");
-      }
-      setQuoteLoaded(true);
-    });
-    return () => {
-      active = false;
-      if (automaticRetryTimer !== null) window.clearTimeout(automaticRetryTimer);
-    };
-  }, [portablePlatform, project, projectDurationSeconds, quoteRetry, simulatedGeneration, template.duration, template.id, tr, user?.id]);
-
-  const retryQuote = useCallback(() => {
-    quoteAutoRetryCount.current = 0;
-    setQuoteRetry((value) => value + 1);
-  }, []);
+  const retryQuote = templateQuote.retry;
 
   const persist = useCallback((next: CreatorProject) => {
     if (saveTimer.current) window.clearTimeout(saveTimer.current);
@@ -1255,15 +1186,11 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
           capability: "video.product_fidelity",
           projectVersionId: renderProject.versionId,
         });
-        const authoritativeQuote: GenerationQuote = {
-          ...authoritativeQuoteResponse,
-          quoteId: authoritativeQuoteResponse.quoteId ?? null,
-        };
+        const authoritativeQuote = authoritativeQuoteResponse;
         if (!authoritativeQuote.quoteId) {
           throw new Error("The confirmed generation price could not be saved.");
         }
         if (authoritativeQuote.credits !== quote!.credits) {
-          setQuote(authoritativeQuote);
           setProject({ ...renderProject, pendingQuoteCredits: authoritativeQuote.credits });
           setSourceError(tr(
             `The generation price changed from ${quote!.credits} to ${authoritativeQuote.credits} credits. Review the confirmed price, then select Generate video again.`,
@@ -1273,7 +1200,6 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
           return;
         }
         confirmedQuote = authoritativeQuote;
-        setQuote(authoritativeQuote);
       } catch (error) {
         setSourceError(error instanceof Error ? error.message : "The confirmed generation price is unavailable. Your project remains saved.");
         setSourceBusy(false);

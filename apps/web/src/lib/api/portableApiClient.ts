@@ -181,12 +181,16 @@ export const portableCreatorApi = {
     return result;
   },
 
-  async generationQuote(input: CreateGenerationQuoteRequest): Promise<GenerationQuoteResponse["quote"]> {
+  async generationQuote(
+    input: CreateGenerationQuoteRequest,
+    options: Pick<RequestOptions, "signal"> = {},
+  ): Promise<GenerationQuoteResponse["quote"] & { requestId: string }> {
     const result = await request("/api/v1/generation-quotes", GenerationQuoteResponseSchema, {
       method: "POST",
       body: input,
+      ...options,
     });
-    return result.quote;
+    return { ...result.quote, requestId: result.requestId };
   },
 
   async startRender(input: StartRenderRunRequest, idempotencyKey: string): Promise<PublicRenderRun> {

@@ -154,6 +154,14 @@ export function buildPortableGenerationConfiguration(project: CreatorProject) {
     aspectRatio: project.aspectRatio,
     resolution: project.resolution,
     audio: project.audio,
+    templateQuoteContext: {
+      market: project.market,
+      language: project.language,
+      goal: project.goal,
+      presenterMode: project.presenterMode,
+      bookingUrl: project.bookingUrl,
+      subtitles: project.subtitles,
+    },
     creativeBrief,
     references: project.product.images.flatMap((image) =>
       image.storagePath && image.mimeType
