@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import { TemplateRecommendations } from "./TemplateRecommendations.tsx";
+import { TemplateRecommendations } from "./TemplateRecommendationCards";
 import { CREATOR_TEMPLATES } from "./templates";
 
 const props = {
@@ -45,5 +45,53 @@ describe("TemplateRecommendations", () => {
       template: expect.objectContaining({ goals: expect.arrayContaining(["launch"]) }),
       quote: expect.objectContaining({ quoteId: "quote-1" }),
     }));
+  });
+
+  it("shows one actionable empty result without a confirmed source", () => {
+    render(<TemplateRecommendations {...props} hasSource={false} onSelect={vi.fn()} />);
+
+    expect(screen.getByText("No template fits this setup yet")).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Use this template" })).not.toBeInTheDocument();
+  });
+
+  it("offers a quote retry without showing a fallback credit price", () => {
+    render(
+      <TemplateRecommendations
+        {...props}
+        quoteStateForTemplate={() => ({
+          status: "unavailable",
+          key: "quoted-template",
+          quote: null,
+          retryable: true,
+          failure: { code: "pricing_unavailable", retryable: true },
+          retry: vi.fn(),
+        } as never)}
+        onSelect={vi.fn()}
+      />,
+    );
+
+    expect(screen.getAllByText("Price unavailable").length).toBeGreaterThan(0);
+    expect(screen.getAllByRole("button", { name: "Retry price" }).length).toBeGreaterThan(0);
+    expect(screen.queryByText("42 credits")).not.toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "Use this template" })[0]).toBeDisabled();
+  });
+
+  it("asks the customer to review a changed quote instead of substituting a price", () => {
+    render(
+      <TemplateRecommendations
+        {...props}
+        quoteStateForTemplate={() => ({
+          status: "changed",
+          key: "quoted-template",
+          quote: null,
+          retryable: true,
+          retry: vi.fn(),
+        } as never)}
+        onSelect={vi.fn()}
+      />,
+    );
+
+    expect(screen.getAllByText("Price updated").length).toBeGreaterThan(0);
+    expect(screen.getAllByRole("button", { name: "Review new price" }).length).toBeGreaterThan(0);
   });
 });

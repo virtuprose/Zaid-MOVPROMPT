@@ -33,4 +33,18 @@ describe("template recommendations", () => {
 
     expect(recommendations).toEqual([]);
   });
+
+  it("handles every outcome without inventing a template", () => {
+    for (const goal of ["whatsapp_orders", "bookings", "launch", "offer", "demonstration", "education", "announcement", "trust", "brand_story"] as const) {
+      const recommendations = recommendTemplates(CREATOR_TEMPLATES, {
+        goal,
+        vertical: "retail",
+        language: "en",
+        aspectRatio: "9:16",
+        hasSource: true,
+      });
+      expect(recommendations).toHaveLength(Math.min(3, recommendations.length));
+      expect(recommendations.every((recommendation) => recommendation.template.goals.includes(goal))).toBe(true);
+    }
+  });
 });
