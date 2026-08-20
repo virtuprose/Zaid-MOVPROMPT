@@ -5,9 +5,10 @@ import {
   type GuestClaimOperation,
   type GuestClaimRepository,
 } from "./guest-claim-repository.js";
+import { CampaignEligibilityError, type CampaignEligibilityService } from "./campaign-eligibility.js";
 
 export class GuestClaimServiceError extends Error {
-  constructor(readonly code: "conflict" | "assets_pending" | "not_found", readonly retryable: boolean) {
+  constructor(readonly code: "conflict" | "assets_pending" | "not_found" | "presenter_configuration_ineligible", readonly retryable: boolean) {
     super(code);
     this.name = "GuestClaimServiceError";
   }
@@ -29,14 +30,24 @@ function mapError(error: unknown): never {
     if (error.code === "not_found") throw new GuestClaimServiceError("not_found", false);
     throw new GuestClaimServiceError("conflict", false);
   }
+  if (error instanceof CampaignEligibilityError) {
+    throw new GuestClaimServiceError("presenter_configuration_ineligible", false);
+  }
   throw error;
 }
 
-export function createGuestClaimService(dependencies: { repository: GuestClaimRepository }): GuestClaimService {
-  const { repository } = dependencies;
+export function createGuestClaimService(dependencies: {
+  repository: GuestClaimRepository;
+  campaignEligibility?: CampaignEligibilityService;
+}): GuestClaimService {
+  const { repository, campaignEligibility } = dependencies;
+  async function assertEligibility(snapshot: GuestClaimSnapshot): Promise<void> {
+    await campaignEligibility?.assertGuestClaim({ snapshot });
+  }
   return {
     async startClaim(input) {
       try {
+        await assertEligibility(input.snapshot);
         return await repository.start(input);
       } catch (error) {
         return mapError(error);
@@ -88,6 +99,7 @@ export function createGuestClaimService(dependencies: { repository: GuestClaimRe
 
     async claimGuestDraft({ userId, snapshot }) {
       try {
+        await assertEligibility(snapshot);
         await repository.start({ userId, snapshot });
         return await this.finalizeClaim({ userId, pendingGenerationId: snapshot.pendingGenerationId });
       } catch (error) {

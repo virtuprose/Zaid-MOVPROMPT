@@ -1,6 +1,8 @@
 import { createHash } from "node:crypto";
 import {
+  PresenterModeSchema,
   TemplateQuoteEligibilitySchema,
+  type PresenterMode,
   type TemplateQuoteEligibility,
 } from "@movprompt/contracts";
 import {
@@ -27,6 +29,16 @@ export type PublishedTemplateVersion = {
   durationSeconds: number;
   starterRenderEligible: boolean;
   eligibility: TemplateQuoteEligibility | null;
+  supportedLanguages: string[];
+  presenterModes: PresenterMode[];
+};
+
+export type OwnedPresenterFootageAsset = {
+  id: string;
+  mimeType: string;
+  sizeBytes: number;
+  checksumSha256: string | null;
+  durationMs: number | null;
 };
 
 export type OwnedGenerationQuote = {
@@ -77,6 +89,11 @@ export interface GenerationRepository {
     projectId: string,
     objectKeys: string[],
   ): Promise<OwnedReferenceAsset[]>;
+  findOwnedPresenterFootageAsset(
+    userId: string,
+    projectId: string,
+    assetId: string,
+  ): Promise<OwnedPresenterFootageAsset | null>;
   findPublishedTemplateVersion(templateVersionId: string): Promise<PublishedTemplateVersion | null>;
   hasAvailableStarterEntitlement(userId: string): Promise<boolean>;
   findOwnedQuote(userId: string, quoteId: string): Promise<OwnedGenerationQuote | null>;
@@ -97,6 +114,13 @@ function starterEligible(recipe: JsonObject): boolean {
 
 function strings(value: unknown): string[] {
   return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
+}
+
+function presenterModes(recipe: JsonObject, inputSchema: JsonObject): PresenterMode[] {
+  const candidates = [...strings(recipe.presenterModes), ...strings(inputSchema.presenterModes)];
+  return [...new Set(candidates)]
+    .map((candidate) => PresenterModeSchema.safeParse(candidate))
+    .flatMap((candidate) => candidate.success ? [candidate.data] : []);
 }
 
 function quoteEligibility(input: {
@@ -177,12 +201,41 @@ export function createDrizzleGenerationRepository(db: Database): GenerationRepos
         : []);
     },
 
+    async findOwnedPresenterFootageAsset(userId, projectId, assetId) {
+      const [asset] = await withUserTransaction(db, userId, (tx) => tx
+        .select({
+          id: schema.creatorProjectAssets.id,
+          mimeType: schema.creatorProjectAssets.mimeType,
+          sizeBytes: schema.creatorProjectAssets.sizeBytes,
+          checksumSha256: schema.creatorProjectAssets.checksumSha256,
+          durationMs: schema.creatorProjectAssets.durationMs,
+        })
+        .from(schema.creatorProjectAssets)
+        .innerJoin(
+          schema.creatorProjects,
+          and(
+            eq(schema.creatorProjects.id, schema.creatorProjectAssets.projectId),
+            eq(schema.creatorProjects.userId, schema.creatorProjectAssets.userId),
+          ),
+        )
+        .where(and(
+          eq(schema.creatorProjectAssets.id, assetId),
+          eq(schema.creatorProjectAssets.projectId, projectId),
+          eq(schema.creatorProjectAssets.userId, userId),
+          eq(schema.creatorProjectAssets.kind, "footage"),
+          ne(schema.creatorProjects.status, "trashed"),
+        ))
+        .limit(1));
+      return asset ?? null;
+    },
+
     async findPublishedTemplateVersion(templateVersionId) {
       const [version] = await db
         .select({
           id: schema.videoTemplateVersions.id,
           durationSeconds: schema.videoTemplateVersions.durationSeconds,
           recipe: schema.videoTemplateVersions.recipe,
+          inputSchema: schema.videoTemplateVersions.inputSchema,
           supportedLanguages: schema.videoTemplateVersions.supportedLanguages,
           supportedRatios: schema.videoTemplateVersions.supportedRatios,
           supportedMarkets: schema.videoTemplateVersions.supportedMarkets,
@@ -208,6 +261,8 @@ export function createDrizzleGenerationRepository(db: Database): GenerationRepos
             durationSeconds: version.durationSeconds,
             starterRenderEligible: starterEligible(version.recipe),
             eligibility: quoteEligibility(version),
+            supportedLanguages: version.supportedLanguages,
+            presenterModes: presenterModes(version.recipe, version.inputSchema),
           }
         : null;
     },

@@ -15,6 +15,7 @@ import type { ApiConfig } from "./config.js";
 import { createSmtpAuthEmailSender, smtpEmailConfigFromEnv } from "./email.js";
 import { createGenerationPricingFromEnvironment } from "./generation-pricing.js";
 import { createDrizzleGenerationRepository } from "./generation-repository.js";
+import { createCampaignEligibilityService } from "./campaign-eligibility.js";
 import { createGenerationApiService } from "./generation-service.js";
 import { createGenerationAvailabilityService } from "./generation-availability.js";
 import { createDrizzleCreatorRepository } from "./creator-repository.js";
@@ -95,9 +96,14 @@ export function createRuntimeServices(
 
   const capabilities = createCapabilityRegistryFromEnvironment(environment);
   const pricing = createGenerationPricingFromEnvironment(environment);
+  const generationRepository = createDrizzleGenerationRepository(database.db);
+  const campaignEligibility = createCampaignEligibilityService({
+    templates: generationRepository,
+    capabilities,
+  });
   const generationService = assetsEnabled
     ? createGenerationApiService({
-        repository: createDrizzleGenerationRepository(database.db),
+        repository: generationRepository,
         generation: createGenerationService(database.db),
         pricing,
         capabilities,
@@ -109,6 +115,7 @@ export function createRuntimeServices(
   const creatorRepository = createDrizzleCreatorRepository(database.db);
   const guestClaimService = createGuestClaimService({
     repository: createGuestClaimRepository({ db: database.db }),
+    campaignEligibility,
   });
   if (!assetsEnabled) {
     return {

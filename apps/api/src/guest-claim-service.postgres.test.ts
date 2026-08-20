@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 import { createDatabase, schema } from "@movprompt/db";
+import { CapabilityRegistry } from "@movprompt/providers";
 import { and, eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
@@ -8,6 +9,8 @@ import type { AuthGateway } from "./auth-gateway.js";
 import { createApi } from "./app.js";
 import { loadApiConfig } from "./config.js";
 import { createDrizzleCreatorRepository } from "./creator-repository.js";
+import { createCampaignEligibilityService } from "./campaign-eligibility.js";
+import { createDrizzleGenerationRepository } from "./generation-repository.js";
 import { createGuestClaimRepository } from "./guest-claim-repository.js";
 import { createGuestClaimService } from "./guest-claim-service.js";
 
@@ -65,9 +68,10 @@ describePostgres("guest claim service PostgreSQL boundary", () => {
     },
   };
 
-  function app() {
+  function app(presenterAvailable = true) {
     const creatorRepository = createDrizzleCreatorRepository(database.db);
     const claimRepository = createGuestClaimRepository({ db: database.db });
+    const generationRepository = createDrizzleGenerationRepository(database.db);
     return createApi({
       config: loadApiConfig({
         APP_ENV: "test",
@@ -77,7 +81,19 @@ describePostgres("guest claim service PostgreSQL boundary", () => {
       }),
       authGateway: auth,
       creatorRepository,
-      guestClaimService: createGuestClaimService({ repository: claimRepository }),
+      guestClaimService: createGuestClaimService({
+        repository: claimRepository,
+        campaignEligibility: createCampaignEligibilityService({
+          templates: generationRepository,
+          capabilities: new CapabilityRegistry({
+            "presenter.ai_ugc": {
+              enabled: presenterAvailable,
+              adapterId: "test-presenter-adapter",
+              providerModelId: "test-presenter-model",
+            },
+          }),
+        }),
+      }),
     });
   }
 
@@ -302,5 +318,125 @@ describePostgres("guest claim service PostgreSQL boundary", () => {
       eq(schema.guestClaimAssets.localAssetId, lifecycleSnapshot.assetManifest[0]!.localAssetId),
     ));
     expect(asset).toMatchObject({ status: "securing", errorMetadata: { cleanup: { state: "leased" } } });
+  });
+
+  it("enforces presenter eligibility before project visibility", async () => {
+    const footageAssetId = randomUUID();
+    const base = {
+      ...snapshot,
+      draftId: randomUUID(),
+      pendingGenerationId: randomUUID(),
+      snapshotDigest: "f".repeat(64),
+      templateVersionId: "10000000-0000-4000-8000-000000000101",
+      campaignRecipe: {
+        language: "en",
+        presenter: {
+          mode: "uploaded_spokesperson",
+          assetId: footageAssetId,
+          rights: {
+            version: "person-media-rights-v1",
+            assetId: footageAssetId,
+            personMediaRightsAttested: true,
+          },
+        },
+      },
+      assetManifest: [{
+        localAssetId: footageAssetId,
+        ordinal: 0,
+        kind: "footage" as const,
+        mimeType: "video/mp4",
+        sizeBytes: 4_096,
+        checksumSha256: "a".repeat(64),
+        durationMs: 10_000,
+      }],
+    };
+
+    const valid = await app().request("/api/v1/drafts/claim/start", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "idempotency-key": base.pendingGenerationId,
+        "x-test-user": firstUserId,
+      },
+      body: JSON.stringify(base),
+    });
+    expect(valid.status).toBe(201);
+
+    const invalidCases = [
+      {
+        ...base,
+        draftId: randomUUID(),
+        pendingGenerationId: randomUUID(),
+        snapshotDigest: "b".repeat(64),
+        campaignRecipe: {
+          language: "en",
+          presenter: {
+            mode: "uploaded_spokesperson",
+            assetId: footageAssetId,
+            rights: {
+              version: "person-media-rights-v1",
+              assetId: randomUUID(),
+              personMediaRightsAttested: true,
+            },
+          },
+        },
+      },
+      {
+        ...base,
+        draftId: randomUUID(),
+        pendingGenerationId: randomUUID(),
+        snapshotDigest: "c".repeat(64),
+        assetManifest: [{ ...base.assetManifest[0], kind: "product" as const, mimeType: "image/jpeg", durationMs: undefined }],
+      },
+      {
+        ...base,
+        draftId: randomUUID(),
+        pendingGenerationId: randomUUID(),
+        snapshotDigest: "d".repeat(64),
+        campaignRecipe: { language: "en", presenter: { mode: "digital_twin" } },
+      },
+    ];
+
+    for (const invalid of invalidCases) {
+      const response = await app().request("/api/v1/drafts/claim/start", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "idempotency-key": invalid.pendingGenerationId,
+          "x-test-user": firstUserId,
+        },
+        body: JSON.stringify(invalid),
+      });
+      expect(response.status).toBe(409);
+      await expect(response.json()).resolves.toMatchObject({
+        error: { code: "presenter_configuration_ineligible" },
+      });
+      const [created] = await database.db.select({ id: schema.creatorProjects.id })
+        .from(schema.creatorProjects)
+        .where(eq(schema.creatorProjects.clientDraftId, invalid.draftId));
+      expect(created).toBeUndefined();
+    }
+
+    const disabledAiUgc = {
+      ...base,
+      draftId: randomUUID(),
+      pendingGenerationId: randomUUID(),
+      snapshotDigest: "e".repeat(64),
+      assetManifest: [],
+      campaignRecipe: { language: "en", presenter: { mode: "ai_ugc" } },
+    };
+    const disabledResponse = await app(false).request("/api/v1/drafts/claim/start", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "idempotency-key": disabledAiUgc.pendingGenerationId,
+        "x-test-user": firstUserId,
+      },
+      body: JSON.stringify(disabledAiUgc),
+    });
+    expect(disabledResponse.status).toBe(409);
+    await expect(disabledResponse.json()).resolves.toMatchObject({
+      error: { code: "presenter_configuration_ineligible" },
+    });
   });
 });
