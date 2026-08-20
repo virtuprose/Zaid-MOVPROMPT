@@ -260,4 +260,35 @@ describe("generation API routes", () => {
     });
     expect(generation.startRender).not.toHaveBeenCalled();
   });
+
+  it("returns a non-billable HTTP rejection for a booking template with only WhatsApp", async () => {
+    const generation = generationService();
+    generation.createQuote = vi.fn(async () => {
+      throw new GenerationApplicationError("template_configuration_ineligible");
+    });
+    generation.startRender = vi.fn(async () => {
+      throw new GenerationApplicationError("template_configuration_ineligible");
+    });
+    const api = app(session, generation).app;
+
+    const quoteResponse = await api.request("/api/v1/generation-quotes", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ capability: "video.cinematic", projectVersionId }),
+    });
+    expect(quoteResponse.status).toBe(400);
+    await expect(quoteResponse.json()).resolves.toMatchObject({
+      error: { code: "template_configuration_ineligible", retryable: false },
+    });
+
+    const startResponse = await api.request("/api/v1/render-runs", {
+      method: "POST",
+      headers: { "content-type": "application/json", "idempotency-key": "booking-whatsapp-reject" },
+      body: JSON.stringify({ projectId, projectVersionId, quoteId, rightsAttested: true }),
+    });
+    expect(startResponse.status).toBe(400);
+    await expect(startResponse.json()).resolves.toMatchObject({
+      error: { code: "template_configuration_ineligible", retryable: false },
+    });
+  });
 });
