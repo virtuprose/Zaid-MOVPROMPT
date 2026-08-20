@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 
 import type { TemplateQuote } from "./templateQuoteState";
 import { campaignFactValue, campaignSourceForProject, factsForReview } from "./sourceFacts";
-import { templateRequiresSourceMedia } from "./templates";
+import { hasCreatorImageReference, templateRequiresSourceMedia } from "./templates";
 import { getCampaignGoalOption, MARKET_META, type CreatorProject } from "./types";
 
 export type CampaignReviewEditTarget = "source" | "facts" | "template" | "details";
@@ -108,7 +108,7 @@ export function CampaignReviewStep({
   const quoteFresh = quoteState === "ready" && quote && new Date(quote.expiresAt).getTime() > Date.now();
   const primaryName = campaignFactValue(source, source.subject === "product" ? "name" : "service_name").trim() || project.product.name.trim();
   const requiresSourceMedia = templateRequiresSourceMedia(project.templateId);
-  const hasRequiredSource = Boolean(primaryName && (!requiresSourceMedia || project.product.images.length));
+  const hasRequiredSource = Boolean(primaryName && (!requiresSourceMedia || hasCreatorImageReference(project.product.images)));
   const canGenerate = Boolean(quoteFresh && rightsConfirmed && hasRequiredSource && !sourceBusy);
   const missingRights = !rightsConfirmed;
   const goal = getCampaignGoalOption(project.goal).label;

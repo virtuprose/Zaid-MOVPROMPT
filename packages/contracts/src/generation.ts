@@ -39,7 +39,12 @@ export type GenerationConfiguration = z.infer<typeof GenerationConfigurationSche
 
 export const CreateGenerationQuoteRequestSchema = z
   .object({
-    capability: CapabilityAliasSchema,
+    /**
+     * Template quotes resolve their capability from the published immutable
+     * template policy. This remains optional only for Advanced versions that
+     * do not use a template, where the server validates it separately.
+     */
+    capability: CapabilityAliasSchema.optional(),
     templateVersionId: z.uuid().optional(),
     projectVersionId: z.uuid().optional(),
     configuration: GenerationConfigurationSchema.optional(),

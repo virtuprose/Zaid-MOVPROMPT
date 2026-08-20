@@ -42,6 +42,7 @@ function repository(run: OwnedRenderRun): GenerationRepository {
   return {
     findOwnedProjectVersion: vi.fn(async () => null),
     findOwnedReferenceAssets: vi.fn(async () => []),
+    findOwnedPresenterFootageAsset: vi.fn(async () => null),
     findPublishedTemplateVersion: vi.fn(async () => null),
     hasAvailableStarterEntitlement: vi.fn(async () => false),
     findOwnedQuote: vi.fn(async () => null),
@@ -190,7 +191,7 @@ describe("starter-only private beta", () => {
         supportedRatios: ["9:16", "1:1", "4:5", "16:9"],
         supportedMarkets: ["KW"],
         requiredInputs: [],
-        capabilityPolicy: ["video.product_fidelity"],
+        capabilityPolicy: ["video.cinematic"],
       },
     }));
     repo.hasAvailableStarterEntitlement = vi.fn(async () => true);
@@ -205,9 +206,15 @@ describe("starter-only private beta", () => {
         GENERATION_PRICING_VERSION: "test-v1",
         GENERATION_QUOTE_TTL_SECONDS: "900",
         GENERATION_VIDEO_PRODUCT_FIDELITY_720P_CREDITS_PER_SECOND: "10",
+        GENERATION_VIDEO_CINEMATIC_720P_CREDITS_PER_SECOND: "10",
       }),
       capabilities: new CapabilityRegistry({
         "video.product_fidelity": {
+          enabled: true,
+          adapterId: "vercel-ai-gateway",
+          providerModelId: "bytedance/seedance-2.5",
+        },
+        "video.cinematic": {
           enabled: true,
           adapterId: "vercel-ai-gateway",
           providerModelId: "bytedance/seedance-2.5",
@@ -218,7 +225,6 @@ describe("starter-only private beta", () => {
     });
 
     const quote = await api.createQuote({
-      capability: "video.product_fidelity",
       templateVersionId,
       configuration: {
         prompt: "Create a product-faithful private-beta campaign.",
@@ -342,6 +348,7 @@ describe("generation reference ownership", () => {
         sizeBytes: 2048,
         checksumSha256: checksum,
       }]),
+      findOwnedPresenterFootageAsset: vi.fn(async () => null),
       findPublishedTemplateVersion: vi.fn(async () => null),
       hasAvailableStarterEntitlement: vi.fn(async () => false),
       findOwnedQuote: vi.fn(async () => null),
@@ -445,7 +452,7 @@ describe("template quote eligibility", () => {
         supportedRatios: ["9:16", "1:1", "4:5", "16:9"],
         supportedMarkets: ["KW"],
         requiredInputs: ["subject_name", "call_to_action"],
-        capabilityPolicy: ["video.product_fidelity"],
+        capabilityPolicy: ["video.cinematic"],
       },
     };
   }
@@ -466,9 +473,15 @@ describe("template quote eligibility", () => {
           GENERATION_PRICING_VERSION: "test-v1",
           GENERATION_QUOTE_TTL_SECONDS: "900",
           GENERATION_VIDEO_PRODUCT_FIDELITY_720P_CREDITS_PER_SECOND: "10",
+          GENERATION_VIDEO_CINEMATIC_720P_CREDITS_PER_SECOND: "10",
         }),
         capabilities: new CapabilityRegistry({
           "video.product_fidelity": {
+            enabled: true,
+            adapterId: "vercel-ai-gateway",
+            providerModelId: "bytedance/seedance-2.5",
+          },
+          "video.cinematic": {
             enabled: true,
             adapterId: "vercel-ai-gateway",
             providerModelId: "bytedance/seedance-2.5",
@@ -490,6 +503,86 @@ describe("template quote eligibility", () => {
       credits: 80,
       estimateOnly: true,
     });
+  });
+
+  it("chooses the published service-template capability for guest quotes instead of the browser preference", async () => {
+    const { api } = quoteApi();
+
+    await expect(api.createQuote({
+      capability: "video.product_fidelity",
+      templateVersionId,
+      configuration: quoteConfiguration(),
+    }, null)).resolves.toMatchObject({
+      capability: "video.cinematic",
+      estimateOnly: true,
+    });
+  });
+
+  it("chooses product fidelity only when the immutable template requires a reference image", async () => {
+    const productTemplate = {
+      ...eligibleTemplate(),
+      eligibility: {
+        ...eligibleTemplate().eligibility!,
+        requiredInputs: ["product_image", "subject_name", "call_to_action"],
+        capabilityPolicy: ["video.cinematic", "video.product_fidelity"],
+      },
+    };
+    const { api } = quoteApi(productTemplate);
+
+    await expect(api.createQuote({
+      templateVersionId,
+      configuration: {
+        ...quoteConfiguration(),
+        references: [{ objectKey: "guest-reference", mimeType: "image/jpeg" }],
+      },
+    }, null)).resolves.toMatchObject({ capability: "video.product_fidelity" });
+  });
+
+  it("uses the stored template policy for authenticated project-version quotes", async () => {
+    const projectId = randomUUID();
+    const versionId = randomUUID();
+    const repo = repository(ownedRun());
+    const storedQuote = vi.fn(async () => ({
+      id: randomUUID(),
+      credits: 80,
+      entitlementEligible: false,
+      configurationHash: "a".repeat(64),
+      expiresAt: new Date("2026-08-20T18:00:00.000Z"),
+      breakdown: [{ label: "test", credits: 80 }],
+    } as never));
+    repo.findOwnedProjectVersion = vi.fn(async () => ({
+      id: versionId,
+      projectId,
+      templateVersionId,
+      configuration: { generation: quoteConfiguration() },
+    }));
+    repo.findPublishedTemplateVersion = vi.fn(async () => eligibleTemplate());
+    const api = createGenerationApiService({
+      repository: repo,
+      generation: {
+        createQuote: storedQuote,
+        startRender: vi.fn(async () => ({} as never)),
+        releaseRenderReservation: vi.fn(async () => ({} as never)),
+      },
+      pricing: createGenerationPricingFromEnvironment({
+        GENERATION_PRICING_VERSION: "test-v1",
+        GENERATION_QUOTE_TTL_SECONDS: "900",
+        GENERATION_VIDEO_CINEMATIC_720P_CREDITS_PER_SECOND: "10",
+      }),
+      capabilities: new CapabilityRegistry({
+        "video.cinematic": {
+          enabled: true,
+          adapterId: "vercel-ai-gateway",
+          providerModelId: "bytedance/seedance-2.5",
+        },
+      }),
+    });
+
+    await expect(api.createQuote({ projectVersionId: versionId }, {
+      user: { id: randomUUID(), email: "owner@example.test", emailVerified: true, name: "Owner", role: "user" },
+      session: { id: "session" },
+    })).resolves.toMatchObject({ capability: "video.cinematic", estimateOnly: false });
+    expect(storedQuote).toHaveBeenCalledWith(expect.objectContaining({ capabilityAlias: "video.cinematic" }));
   });
 
   it("rejects a catalog-ineligible goal before returning an estimate or credits", async () => {

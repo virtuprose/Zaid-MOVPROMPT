@@ -1,7 +1,7 @@
 import { CREATIVE_TEMPLATE_CATALOG } from "@movprompt/creative-engine";
 
 import { templateMediaFor } from "./templateMedia";
-import { getCampaignGoalOption, type CreatorProject, type CreatorTemplate } from "./types";
+import { getCampaignGoalOption, type CreatorAsset, type CreatorProject, type CreatorTemplate } from "./types";
 
 const ACCENTS = ["#c99946", "#77a989", "#d49737", "#b78452", "#a68b69", "#d1763d", "#c08a86", "#8d796a", "#6f8fa8", "#7a88b5"] as const;
 
@@ -67,6 +67,11 @@ const REFERENCE_REQUIRED_INPUTS = new Set([
 /** Keep the browser preflight aligned with the recipe rather than assuming every campaign needs a photo. */
 export function templateRequiresSourceMedia(templateId: string | null | undefined) {
   return getCreatorTemplate(templateId).requiredInputs.some((input) => REFERENCE_REQUIRED_INPUTS.has(input));
+}
+
+/** Footage has its own presenter pathway and must never satisfy an image-only template input. */
+export function hasCreatorImageReference(assets: CreatorAsset[]) {
+  return assets.some((asset) => !asset.mimeType || asset.mimeType.toLowerCase().startsWith("image/"));
 }
 
 export const SAMPLE_PRODUCT = {

@@ -41,7 +41,7 @@ import { TemplateGrid } from "./TemplateGrid";
 import { OutcomeStep } from "./OutcomeStep";
 import { TemplateRecommendations } from "./TemplateRecommendationCards";
 import type { RecommendationSelection } from "./templateRecommendations";
-import { CREATOR_TEMPLATES, createDraftProject, getCreatorTemplate, templateRequiresSourceMedia } from "./templates";
+import { CREATOR_TEMPLATES, createDraftProject, getCreatorTemplate, hasCreatorImageReference, templateRequiresSourceMedia } from "./templates";
 import {
   completeLocalProductPreview,
   hasRealCreatorVideo,
@@ -1238,7 +1238,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
     const source = campaignSourceForProject(project);
     const sourceName = campaignFactValue(source, source.subject === "product" ? "name" : "service_name").trim() || project.product.name.trim();
     const requiresSourceMedia = templateRequiresSourceMedia(project.templateId);
-    if (!sourceName || (requiresSourceMedia && !project.product.images.length)) {
+    if (!sourceName || (requiresSourceMedia && !hasCreatorImageReference(project.product.images))) {
       setSourceError(requiresSourceMedia
         ? `Add the required ${project.promotionKind === "business" ? "business or service" : "product"} details and media before generating.`
         : `Add the required ${project.promotionKind === "business" ? "business or service" : "product"} details before generating.`);
@@ -1316,7 +1316,6 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
       try {
         if (!renderProject.versionId) throw new Error("The saved project version is not ready for generation.");
         const authoritativeQuoteResponse = await portableCreatorApi.generationQuote({
-          capability: "video.product_fidelity",
           projectVersionId: renderProject.versionId,
         });
         const authoritativeQuote = authoritativeQuoteResponse;
@@ -1361,7 +1360,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
     if (generationSubmission.current) return;
     generationSubmission.current = true;
     try {
-      const generation = await startCreatorGeneration({ projectId: renderProject.id, projectVersionId: renderProject.versionId!, quoteId: confirmedQuote.quoteId, idempotencyKey: renderProject.pendingGenerationId || crypto.randomUUID(), mode: "template", prompt: buildTemplatePrompt(renderProject), capability: "video.product_fidelity", options: { aspect_ratio: renderProject.aspectRatio === "4:5" ? "3:4" : renderProject.aspectRatio, duration: Math.min(15, template.duration), resolution: renderProject.resolution, audio: renderProject.audio }, referenceImages: renderProject.product.images.map((image) => image.url), rightsAttested: rightsConfirmed, metadata: { creator_project_id: renderProject.id, template_id: renderProject.templateId, language: renderProject.language, market: renderProject.market } });
+      const generation = await startCreatorGeneration({ projectId: renderProject.id, projectVersionId: renderProject.versionId!, quoteId: confirmedQuote.quoteId, idempotencyKey: renderProject.pendingGenerationId || crypto.randomUUID(), mode: "template", prompt: buildTemplatePrompt(renderProject), capability: confirmedQuote.capability as "video.cinematic" | "video.product_fidelity", options: { aspect_ratio: renderProject.aspectRatio === "4:5" ? "3:4" : renderProject.aspectRatio, duration: Math.min(15, template.duration), resolution: renderProject.resolution, audio: renderProject.audio }, referenceImages: renderProject.product.images.filter((image) => !image.mimeType || image.mimeType.startsWith("image/")).map((image) => image.url), rightsAttested: rightsConfirmed, metadata: { creator_project_id: renderProject.id, template_id: renderProject.templateId, language: renderProject.language, market: renderProject.market } });
       setProject((current) => ({ ...current, jobId: generation.job.id, renderRunId: generation.runId, status: "generating" }));
       setGenerationStage("preparing");
       setGenerationMessage("Your campaign is queued securely");
@@ -1378,7 +1377,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
 
   useEffect(() => {
     if (simulatedGeneration || !user || !shouldResumeGeneration || draftRestoring || !quoteLoaded || !currentQuote || resumedGeneration.current) return;
-    if (!project.pendingGenerationId || !rightsConfirmed || !project.product.images.length || step !== "details") return;
+    if (!project.pendingGenerationId || !rightsConfirmed || (templateRequiresSourceMedia(project.templateId) && !hasCreatorImageReference(project.product.images)) || step !== "details") return;
     if (project.pendingQuoteCredits != null && project.pendingQuoteCredits !== currentQuote.credits) {
       resumedGeneration.current = true;
       setSourceError(tr(
@@ -1389,7 +1388,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
     }
     resumedGeneration.current = true;
     void startGenerationRef.current();
-  }, [currentQuote, draftRestoring, project.pendingGenerationId, project.pendingQuoteCredits, project.product.images.length, quoteLoaded, rightsConfirmed, shouldResumeGeneration, simulatedGeneration, step, tr, user]);
+  }, [currentQuote, draftRestoring, project.pendingGenerationId, project.pendingQuoteCredits, project.product.images, project.templateId, quoteLoaded, rightsConfirmed, shouldResumeGeneration, simulatedGeneration, step, tr, user]);
 
   const cancelGeneration = async () => {
     if ((project.jobId || project.renderRunId) && !simulatedGeneration) {

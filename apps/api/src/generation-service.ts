@@ -261,6 +261,76 @@ function hasRequiredInput(required: TemplateRequiredInput, context: ReturnType<t
   }
 }
 
+const IMAGE_REFERENCE_REQUIRED_INPUTS = new Set<TemplateRequiredInput>([
+  "product_image",
+  "primary_reference",
+  "product_reference",
+  "real_work_reference",
+  "real_room_reference",
+  "real_shade_reference",
+  "real_dish_media",
+  "real_facility_media",
+  "all_box_item_references",
+  "all_bundle_item_references",
+  "consented_before_video",
+  "consented_after_video",
+  "consented_customer_video",
+  "consented_founder_reference",
+  "consented_person_reference",
+]);
+
+/**
+ * A template is the authority for beginner capability selection. Browser
+ * requests intentionally cannot turn a service campaign into product-fidelity
+ * or select a provider through a different semantic capability.
+ */
+function resolveTemplateCapability(input: {
+  template: PublishedTemplateVersion | null;
+  requestedCapability?: CapabilityAlias;
+  configuration: GenerationConfiguration;
+}): CapabilityAlias {
+  if (!input.template) {
+    if (!input.requestedCapability) {
+      throw new GenerationApplicationError(
+        "invalid_generation_configuration",
+        "Advanced generation requires an approved creative capability.",
+      );
+    }
+    return input.requestedCapability;
+  }
+
+  const eligibility = input.template.eligibility;
+  if (!eligibility) {
+    throw new GenerationApplicationError(
+      "template_configuration_ineligible",
+      "This template is not available for the current campaign configuration.",
+    );
+  }
+  const requiresImage = eligibility.requiredInputs.some((required) =>
+    IMAGE_REFERENCE_REQUIRED_INPUTS.has(required),
+  );
+  const allowsProductFidelity = eligibility.capabilityPolicy.includes("video.product_fidelity");
+  const allowsCinematic = eligibility.capabilityPolicy.includes("video.cinematic");
+
+  if (requiresImage) {
+    if (allowsProductFidelity) return "video.product_fidelity";
+    if (allowsCinematic) return "video.cinematic";
+  } else if (allowsCinematic) {
+    // A manual/service campaign has no image reference. It must use a
+    // non-image capability explicitly allowed by its published template.
+    return "video.cinematic";
+  } else if (input.configuration.references.length > 0 && allowsProductFidelity) {
+    return "video.product_fidelity";
+  }
+
+  throw new GenerationApplicationError(
+    "template_configuration_ineligible",
+    requiresImage
+      ? "This template requires a confirmed product or reference image."
+      : "This template has no supported capability for the selected campaign inputs.",
+  );
+}
+
 function publicRun(run: OwnedRenderRun): PublicRenderRun {
   const capability = CapabilityAliasSchema.safeParse(run.capabilityAlias);
   if (!capability.success) {
@@ -523,7 +593,6 @@ export function createGenerationApiService(options: GenerationApiServiceOptions)
     },
 
     async createQuote(request, session) {
-      assertCapability(request.capability);
       const pricingVersion = options.pricing.version;
       const quotedAt = now();
       const expiresAt = new Date(quotedAt.getTime() + options.pricing.quoteTtlSeconds * 1_000);
@@ -532,17 +601,23 @@ export function createGenerationApiService(options: GenerationApiServiceOptions)
         if (!session) throw new GenerationApplicationError("authentication_required");
         const version = await loadOwnedVersion(session.user.id, request.projectVersionId);
         const configuration = generationConfiguration(version.configuration);
-        await assertOwnedPresenterEligibility(session.user.id, version);
-        await assertOwnedGenerationReferences(session.user.id, version, request.capability, configuration);
         const template = await publishedTemplate(options.repository, version.templateVersionId);
+        const capability = resolveTemplateCapability({
+          template,
+          ...(request.capability ? { requestedCapability: request.capability } : {}),
+          configuration,
+        });
+        assertCapability(capability);
+        await assertOwnedPresenterEligibility(session.user.id, version);
+        await assertOwnedGenerationReferences(session.user.id, version, capability, configuration);
         assertTemplateEligibility({
           template,
-          capability: request.capability,
+          capability,
           configuration,
           root: version.configuration,
         });
         const price = options.pricing.price(
-          request.capability,
+          capability,
           configuration,
           template?.durationSeconds,
         );
@@ -553,7 +628,7 @@ export function createGenerationApiService(options: GenerationApiServiceOptions)
           requireEmailVerification: options.starterEligibilityRequiresEmailVerification !== false,
         });
         const binding = boundConfiguration({
-          capability: request.capability,
+          capability,
           pricingVersion,
           templateVersionId: version.templateVersionId,
           configuration,
@@ -562,7 +637,7 @@ export function createGenerationApiService(options: GenerationApiServiceOptions)
           const quote = await options.generation.createQuote({
             userId: session.user.id,
             ...(version.templateVersionId ? { templateVersionId: version.templateVersionId } : {}),
-            capabilityAlias: request.capability,
+            capabilityAlias: capability,
             credits: price.credits,
             entitlementEligible,
             breakdown: price.breakdown,
@@ -572,7 +647,7 @@ export function createGenerationApiService(options: GenerationApiServiceOptions)
           });
           return {
             quoteId: quote.id,
-            capability: request.capability,
+            capability,
             credits: quote.credits,
             entitlementEligible: quote.entitlementEligible,
             configurationHash: quote.configurationHash,
@@ -588,14 +663,20 @@ export function createGenerationApiService(options: GenerationApiServiceOptions)
 
       const configuration = request.configuration!;
       const template = await publishedTemplate(options.repository, request.templateVersionId);
+      const capability = resolveTemplateCapability({
+        template,
+        ...(request.capability ? { requestedCapability: request.capability } : {}),
+        configuration,
+      });
+      assertCapability(capability);
       assertTemplateEligibility({
         template,
-        capability: request.capability,
+        capability,
         configuration,
         root: configuration as JsonObject,
       });
       const price = options.pricing.price(
-        request.capability,
+        capability,
         configuration,
         template?.durationSeconds,
       );
@@ -606,14 +687,14 @@ export function createGenerationApiService(options: GenerationApiServiceOptions)
         requireEmailVerification: options.starterEligibilityRequiresEmailVerification !== false,
       });
       const binding = boundConfiguration({
-        capability: request.capability,
+        capability,
         pricingVersion,
         templateVersionId: request.templateVersionId ?? null,
         configuration,
       });
       return {
         quoteId: null,
-        capability: request.capability,
+        capability,
         credits: price.credits,
         entitlementEligible,
         configurationHash: hashGenerationConfiguration(binding),
