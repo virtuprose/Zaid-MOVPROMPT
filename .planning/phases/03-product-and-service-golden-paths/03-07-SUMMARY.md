@@ -86,7 +86,7 @@ The creator now ends with a calm, truthful six-group campaign review that can on
 - `bun run --cwd apps/web test -- src/features/create/CampaignReviewStep.test.tsx src/features/create/GoldenPathStates.test.tsx src/features/create/AuthGateDialog.test.tsx` — passed (3 files, 9 tests).
 - `bun run --cwd apps/web typecheck` — passed.
 - `bun run --cwd apps/web build` — passed. The pre-existing Vite large chunk warning remains.
-- Rendered `http://127.0.0.1:8081/qa/create` in light and dark-aware shell behavior at 375, 768, 1024, and 1440px: all viewport checks reported no document horizontal overflow; the creator main region remained visible; the captured 375px English source step had clear hierarchy and accessible source controls.
+- Rendered `http://127.0.0.1:8081/qa/create` at 375, 768, 1024, and 1440px: all viewport checks reported no document horizontal overflow; the creator main region remained visible; the captured 375px English source step had clear hierarchy and accessible source controls. The new review uses the existing semantic light/dark creator tokens rather than hardcoded colors.
 - Browser console inspection found no app warnings or errors. The local QA environment has no reachable authoritative quote service, so it correctly could not advance to the final review with a real server quote; the exact review itself is covered by focused interaction tests and the production build.
 
 ## Task Commits
@@ -126,4 +126,3 @@ The isolated QA web server intentionally has no authoritative quote API. It cann
 - Task commits `7956a40`, `1d03238`, `53123a0`, `1c56766`, and `7fde774` exist in Git history.
 - `CampaignReviewStep.tsx`, its focused tests, and all modified integration files exist at the paths recorded above.
 - No new placeholders, TODOs, or hardcoded prices were introduced by this plan.
-
