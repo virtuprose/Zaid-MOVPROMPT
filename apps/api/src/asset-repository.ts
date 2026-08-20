@@ -12,7 +12,7 @@ export type OwnedAssetRecord = CreatorAsset & {
 export type CreateAssetRecord = OwnedAssetRecord & {
   width?: number;
   height?: number;
-  durationMs?: number;
+  durationMs?: number | undefined;
 };
 
 export interface AssetRepository {
