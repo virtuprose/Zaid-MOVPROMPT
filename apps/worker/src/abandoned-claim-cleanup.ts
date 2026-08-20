@@ -9,7 +9,7 @@ export type AbandonedClaimCleanupCandidate = {
   projectId: string;
   bucket: string;
   objectKey: string;
-  kind: "product" | "logo" | "audio" | "reference";
+  kind: "product" | "logo" | "audio" | "reference" | "footage";
   checksumSha256: string;
   updatedAt: Date;
 };
