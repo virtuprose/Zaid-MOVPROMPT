@@ -1,5 +1,5 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter, useLocation } from "react-router-dom";
 import type { AuthCapability } from "@movprompt/contracts";
 
@@ -68,5 +68,20 @@ describe("AuthGateDialog provider truth", () => {
     renderGate("en", { ...baseCapability, configuredProviders: ["google", "apple"] });
     expect(await screen.findByRole("button", { name: "Continue with Google" })).toBeVisible();
     expect(screen.getByRole("button", { name: "Continue with Apple" })).toBeVisible();
+  });
+
+  it("reports cancellation through the existing dialog close action without clearing the return intent", () => {
+    const onOpenChange = vi.fn();
+    localStorage.setItem("movprompt-lang", "en");
+    render(
+      <MemoryRouter initialEntries={["/create"]}>
+        <LanguageProvider>
+          <AuthGateDialog open onOpenChange={onOpenChange} returnPath="/create?draft=draft-1&resume=generate" authCapability={{ emailPassword: true, configuredProviders: [], firstCampaignVerificationPolicy: "deferred_until_after_first_campaign" }} />
+        </LanguageProvider>
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Close" }));
+    expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 });

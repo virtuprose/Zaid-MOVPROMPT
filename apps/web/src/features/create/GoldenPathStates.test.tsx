@@ -3,6 +3,8 @@ import { describe, expect, it, vi } from "vitest";
 
 import { FactReviewStep } from "./FactReviewStep";
 import { SourceChoiceStep } from "./SourceChoiceStep";
+import { CampaignReviewStep } from "./CampaignReviewStep";
+import { createDraftProject } from "./templates";
 
 describe("golden path source recovery states", () => {
   it("keeps the complete Arabic link draft visible and offers a single retry after a scan failure", () => {
@@ -58,5 +60,36 @@ describe("golden path source recovery states", () => {
     expect(screen.getByRole("alert")).toHaveTextContent("Add booking link to continue.");
     expect(screen.getByLabelText("Business or service name")).toHaveValue("Noura Salon");
     expect(screen.getByLabelText("WhatsApp number")).toHaveValue("+96550000000");
+  });
+
+  it("keeps the exact review available through quote and service outages without enabling Generate", () => {
+    const project = createDraftProject("luxury-product-reveal");
+    project.product = {
+      ...project.product,
+      name: "Amber No. 7",
+      images: [{ id: "amber", name: "amber.jpg", url: "https://example.test/amber.jpg", source: "upload" }],
+    };
+    const retry = vi.fn();
+
+    render(
+      <CampaignReviewStep
+        project={project}
+        rightsConfirmed
+        quote={null}
+        quoteState="unavailable"
+        sourceError="Generation is temporarily paused. Your campaign is saved and ready to continue."
+        requestId="req_review_1"
+        onEdit={vi.fn()}
+        onRetryQuote={retry}
+        onGenerate={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("Amber No. 7")).toBeVisible();
+    expect(screen.getAllByText("We couldn’t confirm the current price. Your campaign is saved.")).not.toHaveLength(0);
+    expect(screen.getByRole("button", { name: "Generate campaign" })).toBeDisabled();
+    fireEvent.click(screen.getByRole("button", { name: "Refresh price" }));
+    expect(retry).toHaveBeenCalledOnce();
+    expect(screen.getByText("Generation is temporarily paused. Your campaign is saved and ready to continue.")).toBeVisible();
   });
 });
