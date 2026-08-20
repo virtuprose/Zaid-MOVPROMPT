@@ -154,6 +154,17 @@ function stringValue(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
 }
 
+function httpDestination(value: unknown): string {
+  const candidate = stringValue(value);
+  if (!candidate) return "";
+  try {
+    const url = new URL(candidate);
+    return url.protocol === "https:" || url.protocol === "http:" ? url.href : "";
+  } catch {
+    return "";
+  }
+}
+
 function eligibilityContext(configuration: GenerationConfiguration, root: JsonObject) {
   const creativeBrief = objectValue(configuration.creativeBrief);
   const product = objectValue(creativeBrief?.product);
@@ -171,8 +182,22 @@ function eligibilityContext(configuration: GenerationConfiguration, root: JsonOb
     price: stringValue(product?.price),
     location: stringValue(product?.location),
     whatsapp: stringValue(product?.whatsapp),
-    bookingDestination: stringValue(creatorProject?.bookingUrl)
-      || stringValue(quoteContext?.bookingUrl)
+    // A booking requirement means a real booking URL. WhatsApp ordering is a
+    // distinct outcome and must never silently satisfy a booking-only recipe.
+    bookingDestination: httpDestination(creatorProject?.bookingUrl)
+      || httpDestination(quoteContext?.bookingUrl)
+      || httpDestination(product?.bookingUrl),
+    orderOrBookingDestination: httpDestination(creatorProject?.bookingUrl)
+      || httpDestination(quoteContext?.bookingUrl)
+      || httpDestination(product?.bookingUrl)
+      || stringValue(creatorProject?.whatsapp)
+      || stringValue(quoteContext?.whatsapp)
+      || stringValue(product?.whatsapp),
+    deliveryDestination: httpDestination(creatorProject?.bookingUrl)
+      || httpDestination(quoteContext?.bookingUrl)
+      || httpDestination(product?.bookingUrl)
+      || stringValue(creatorProject?.whatsapp)
+      || stringValue(quoteContext?.whatsapp)
       || stringValue(product?.whatsapp),
   };
 }
@@ -223,9 +248,11 @@ function hasRequiredInput(required: TemplateRequiredInput, context: ReturnType<t
     case "salon_location":
       return Boolean(context.location);
     case "booking_destination":
-    case "order_or_booking_destination":
-    case "delivery_destination":
       return Boolean(context.bookingDestination);
+    case "order_or_booking_destination":
+      return Boolean(context.orderOrBookingDestination);
+    case "delivery_destination":
+      return Boolean(context.deliveryDestination);
     case "whatsapp":
       return Boolean(context.whatsapp);
     case "confirmed_price":

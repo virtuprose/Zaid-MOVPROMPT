@@ -598,6 +598,60 @@ describe("template quote rejection", () => {
     expect(createQuote).not.toHaveBeenCalled();
   });
 
+  it("rejects WhatsApp-only booking templates for quote and submission", async () => {
+    const bookingTemplate = publishedTemplate({
+      goals: ["launch"],
+      requiredInputs: ["subject_name", "booking_destination"],
+    });
+    const whatsappOnly = {
+      ...configuration,
+      templateQuoteContext: { bookingUrl: "", whatsapp: "+965 50000000" },
+      creativeBrief: {
+        ...configuration.creativeBrief,
+        product: { ...configuration.creativeBrief.product, whatsapp: "+965 50000000" },
+      },
+    };
+    const { api, createQuote, repo, startRender } = apiFor(bookingTemplate);
+
+    await expect(api.createQuote({
+      capability: "video.cinematic",
+      templateVersionId,
+      configuration: whatsappOnly,
+    }, null)).rejects.toMatchObject({ code: "template_configuration_ineligible" });
+    expect(createQuote).not.toHaveBeenCalled();
+
+    const boundConfiguration = {
+      capability: "video.cinematic",
+      pricingVersion: "test-v1",
+      templateVersionId,
+      generation: whatsappOnly,
+    };
+    repo.findOwnedProjectVersion = vi.fn(async () => ({
+      id: versionId,
+      projectId,
+      templateVersionId,
+      configuration: { generation: whatsappOnly },
+    }));
+    repo.findOwnedQuote = vi.fn(async () => ({
+      id: "55555555-5555-4555-8555-555555555555",
+      templateVersionId,
+      capabilityAlias: "video.cinematic",
+      credits: 80,
+      entitlementEligible: false,
+      configurationHash: hashGenerationConfiguration(boundConfiguration),
+      expiresAt: new Date("2026-08-20T18:00:00.000Z"),
+    }));
+
+    await expect(api.startRender({
+      userId,
+      projectId,
+      projectVersionId: versionId,
+      quoteId: "55555555-5555-4555-8555-555555555555",
+      idempotencyKey: "booking-whatsapp-only",
+    })).rejects.toMatchObject({ code: "template_configuration_ineligible" });
+    expect(startRender).not.toHaveBeenCalled();
+  });
+
   it("rejects an owned project configuration that contradicts the published language policy", async () => {
     const { api, createQuote, repo } = apiFor();
     repo.findOwnedProjectVersion = vi.fn(async () => ({
