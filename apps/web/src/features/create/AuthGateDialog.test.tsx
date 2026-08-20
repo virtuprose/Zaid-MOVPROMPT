@@ -12,10 +12,9 @@ function LocationProbe() {
 }
 
 function renderGate(locale: "en" | "ar" = "en", authCapability?: AuthCapability | null) {
-  localStorage.setItem("movprompt-lang", locale);
   return render(
     <MemoryRouter initialEntries={["/create"]}>
-      <LanguageProvider>
+      <LanguageProvider initialLocale={locale}>
         <AuthGateDialog open onOpenChange={() => undefined} returnPath="/create?draft=draft-1&resume=generate" authCapability={authCapability} />
         <LocationProbe />
       </LanguageProvider>
@@ -27,6 +26,8 @@ describe("AuthGateDialog provider truth", () => {
   afterEach(() => {
     cleanup();
     localStorage.removeItem("movprompt-lang");
+    document.documentElement.dir = "ltr";
+    document.documentElement.lang = "en";
   });
 
   it("shows email as the primary local path and no dead social controls", () => {
@@ -44,6 +45,10 @@ describe("AuthGateDialog provider truth", () => {
   });
 
   it("localizes the entire handoff in Arabic", () => {
+    // The full suite can leave another test's persisted English preference in
+    // the shared browser storage. This handoff is explicitly Arabic, so its
+    // render must not depend on that ambient value or test execution order.
+    localStorage.setItem("movprompt-lang", "en");
     renderGate("ar");
 
     expect(screen.getByRole("heading", { name: "حملتك جاهزة للإنشاء" })).toBeVisible();

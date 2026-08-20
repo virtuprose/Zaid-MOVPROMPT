@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useEffect, useCallback, type React
 import { en, type TranslationKey } from "./translations/en";
 import { ar } from "./translations/ar";
 
-type Locale = "en" | "ar";
+export type Locale = "en" | "ar";
 
 interface LanguageContextValue {
   locale: Locale;
@@ -16,8 +16,14 @@ const LanguageContext = createContext<LanguageContextValue | null>(null);
 
 const STORAGE_KEY = "movprompt-lang";
 
-export const LanguageProvider = ({ children }: { children: ReactNode }) => {
+/**
+ * `initialLocale` makes an embedded surface deterministic when its language is
+ * already known (for example, a focused test harness). The application omits
+ * it and continues to restore the visitor's persisted interface preference.
+ */
+export const LanguageProvider = ({ children, initialLocale }: { children: ReactNode; initialLocale?: Locale }) => {
   const [locale, setLocaleState] = useState<Locale>(() => {
+    if (initialLocale) return initialLocale;
     const saved = localStorage.getItem(STORAGE_KEY);
     return saved === "ar" ? "ar" : "en";
   });
