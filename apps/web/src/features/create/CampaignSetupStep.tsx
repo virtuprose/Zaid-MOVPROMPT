@@ -1,4 +1,4 @@
-import { useId, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 
 import type { CreatorAspectRatio, CreatorLanguage, CreatorProject, CreatorResolution } from "./types";
 import { PresenterChoice, type PresenterCompatibility } from "./PresenterChoice";
@@ -43,6 +43,12 @@ export function CampaignSetupStep({
   const presenter = project.presenter ?? (project.presenterMode === "ai_ugc" ? { mode: "ai_ugc" as const } : { mode: "none" as const });
   const effectiveQuoteState = localQuoteRefresh && quoteState === "ready" ? "loading" : quoteState;
   const activeErrors = useMemo(() => Object.values(errors).filter(Boolean), [errors]);
+
+  // A configuration edit is pending only until the quote hook reports its next state.
+  // Without this reset, a previous ready quote leaves the UI in a permanent loading state.
+  useEffect(() => {
+    setLocalQuoteRefresh(false);
+  }, [quoteState]);
 
   const apply = (field: CampaignSetupField, changes: Partial<CreatorProject>) => {
     setLocalQuoteRefresh(true);

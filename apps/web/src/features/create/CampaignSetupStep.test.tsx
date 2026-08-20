@@ -58,4 +58,18 @@ describe("CampaignSetupStep", () => {
     expect(screen.queryByLabelText("رقم واتساب")).not.toBeInTheDocument();
     expect(screen.getByLabelText("السعر")).toHaveValue("9.000");
   });
+
+  it("returns to a ready price after the quote hook resolves an edited campaign", () => {
+    const project = createDraftProject("luxury-product-reveal");
+    const { rerender } = render(<CampaignSetupStep project={project} quoteState="ready" onChange={vi.fn()} onContinue={vi.fn()} />);
+
+    fireEvent.change(screen.getByLabelText("Campaign language"), { target: { value: "ar" } });
+    expect(screen.getByText("Confirming the current price…")).toBeVisible();
+
+    rerender(<CampaignSetupStep project={{ ...project, language: "ar" }} quoteState="loading" onChange={vi.fn()} onContinue={vi.fn()} />);
+    expect(screen.getByText("Confirming the current price…")).toBeVisible();
+
+    rerender(<CampaignSetupStep project={{ ...project, language: "ar" }} quoteState="ready" onChange={vi.fn()} onContinue={vi.fn()} />);
+    expect(screen.getByText("The current price is ready to review.")).toBeVisible();
+  });
 });
