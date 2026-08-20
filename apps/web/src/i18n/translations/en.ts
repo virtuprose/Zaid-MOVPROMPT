@@ -841,6 +841,15 @@ export const en = {
   "learn.faq.a3": "In the Library, up in the top bar. Every successful take is filed away with its source frame and the model that made it.",
   "learn.faq.q4": "How do I take the tour again?",
   "learn.faq.a4": "Open your profile menu, top right, and choose \"Take the tour\". It's always there when you need a refresher.",
+
+  // Guided campaign setup
+  "creator.campaign.setup": "Set up your campaign",
+  "creator.campaign.noPresenter": "No presenter",
+  "creator.campaign.aiUgc": "AI UGC presenter",
+  "creator.campaign.uploadedSpokesperson": "Uploaded spokesperson",
+  "creator.campaign.priceConfirming": "Confirming the current price…",
+  "creator.campaign.priceUnavailable": "We couldn’t confirm the current price. Your edits are saved; try again.",
+  "creator.campaign.continueReview": "Continue to review",
 } as const;
 
 export type TranslationKey = keyof typeof en;

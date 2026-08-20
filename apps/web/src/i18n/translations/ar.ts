@@ -843,4 +843,13 @@ export const ar: Record<TranslationKey, string> = {
   "learn.faq.a3": "افتح المكتبة من الشريط العلوي. كل توليد ناجح يُحفظ تلقائياً مع الصورة المصدر والنموذج.",
   "learn.faq.q4": "كيف أرى الجولة مرة أخرى؟",
   "learn.faq.a4": "افتح قائمة الملف الشخصي (أعلى اليمين) واختر \"ابدأ الجولة\". يمكنك إعادة تشغيلها في أي وقت.",
+
+  // Guided campaign setup
+  "creator.campaign.setup": "جهّز حملتك",
+  "creator.campaign.noPresenter": "بدون مقدّم",
+  "creator.campaign.aiUgc": "مقدّم محتوى UGC بالذكاء الاصطناعي",
+  "creator.campaign.uploadedSpokesperson": "متحدث تم رفعه",
+  "creator.campaign.priceConfirming": "جارٍ تأكيد السعر الحالي…",
+  "creator.campaign.priceUnavailable": "تعذر تأكيد السعر الحالي. تعديلاتك محفوظة؛ حاول مرة ثانية.",
+  "creator.campaign.continueReview": "المتابعة للمراجعة",
 };

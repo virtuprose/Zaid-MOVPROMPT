@@ -269,6 +269,17 @@
 .creator-progress-step.is-current { color: hsl(var(--creator-ink)); }
 .creator-progress-step.is-current span, .creator-progress-step.is-done span { border-color: hsl(var(--creator-action)); background: hsl(var(--creator-action)); color: hsl(var(--creator-action-ink)); }
 
+@media (min-width: 1101px) {
+  .creator-progress { min-width: 500px; }
+}
+
+@media (min-width: 801px) and (max-width: 1100px) {
+  .creator-progress { min-width: 0; gap: 5px; }
+  .creator-progress-step { gap: 5px; }
+  .creator-progress-step::after { width: 18px; }
+  .creator-progress-step-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
+}
+
 .creator-claim-page {
   min-height: calc(100vh - 68px);
   padding: 48px 24px;
@@ -1005,7 +1016,9 @@
   .creator-page-head { display: block; margin-bottom: 24px; }
   .creator-mode-handoff { align-items: flex-start; flex-wrap: wrap; }
   .creator-mode-handoff .creator-button { width: 100%; margin-inline-start: 0; }
-  .creator-progress { min-width: 0; justify-content: flex-start; margin-top: 20px; overflow-x: auto; }
+  .creator-progress { min-width: 0; justify-content: flex-start; gap: 4px; margin-top: 20px; overflow: hidden; }
+  .creator-progress-step { gap: 4px; }
+  .creator-progress-step::after { width: 18px; }
   .creator-progress-current-step { display: block; margin-top: 20px; color: hsl(var(--creator-ink)); font-size: 12px; font-weight: 700; line-height: 1.4; }
   .creator-progress-wrap .creator-progress { margin-top: 9px; }
   .creator-progress-step-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
@@ -1125,4 +1138,64 @@
 
 @media (prefers-reduced-motion: reduce) {
   .creator-app *, .creator-app *::before, .creator-app *::after { scroll-behavior: auto !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+}
+
+/* Progressive campaign setup — shared semantic creator tokens keep this calm in both themes. */
+.creator-campaign-setup { display: grid; gap: 28px; }
+.creator-campaign-setup-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; padding-bottom: 22px; border-bottom: 1px solid hsl(var(--creator-line)); }
+.creator-campaign-setup-head h2 { margin: 4px 0 8px; color: hsl(var(--creator-ink)); font-family: var(--creator-display, inherit); font-size: clamp(28px, 3vw, 38px); line-height: 1.03; letter-spacing: -0.045em; }
+.creator-campaign-setup-head p { max-width: 620px; margin: 0; color: hsl(var(--creator-muted)); font-size: 14px; line-height: 1.55; }
+.creator-setup-complete-summary { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; max-width: 270px; }
+.creator-setup-complete-summary span { min-height: 30px; display: inline-flex; align-items: center; padding-inline: 10px; border: 1px solid hsl(var(--creator-line)); border-radius: 999px; color: hsl(var(--creator-muted)); font-size: 11px; font-weight: 700; }
+.creator-campaign-section { display: grid; gap: 18px; scroll-margin-top: 92px; }
+.creator-campaign-section-head { display: grid; grid-template-columns: 30px minmax(0, 1fr); gap: 12px; align-items: start; }
+.creator-campaign-section-head > span { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 50%; background: hsl(var(--creator-action) / 0.13); color: hsl(var(--creator-action)); font-size: 11px; font-weight: 800; letter-spacing: 0.04em; }
+.creator-campaign-section h3 { margin: 1px 0 3px; color: hsl(var(--creator-ink)); font-size: 17px; line-height: 1.25; letter-spacing: -0.02em; }
+.creator-campaign-section-head p { margin: 0; color: hsl(var(--creator-muted)); font-size: 13px; line-height: 1.5; }
+.creator-money-input { display: flex; align-items: center; border: 1px solid hsl(var(--creator-line)); border-radius: 10px; background: hsl(var(--creator-panel)); overflow: hidden; }
+.creator-money-input .creator-input { min-width: 0; border: 0; border-radius: 0; background: transparent; }
+.creator-money-input:focus-within { outline: 2px solid hsl(var(--creator-action)); outline-offset: 2px; }
+.creator-money-input span { padding-inline: 12px; color: hsl(var(--creator-muted)); font-size: 12px; font-weight: 800; }
+.creator-field-error { margin: 6px 0 0; color: hsl(var(--creator-danger, 0 70% 48%)); font-size: 12px; line-height: 1.4; }
+.creator-campaign-error-summary { display: grid; gap: 4px; padding: 14px 16px; border: 1px solid hsl(var(--creator-danger, 0 70% 48%) / 0.4); border-radius: 12px; background: hsl(var(--creator-danger, 0 70% 48%) / 0.08); color: hsl(var(--creator-ink)); font-size: 13px; line-height: 1.45; }
+.creator-campaign-error-summary:focus { outline: 2px solid hsl(var(--creator-action)); outline-offset: 2px; }
+.creator-campaign-preserved { margin: 0; padding: 12px 14px; border-inline-start: 3px solid hsl(var(--creator-action)); background: hsl(var(--creator-action) / 0.07); }
+.creator-ratio-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.creator-campaign-toggles { display: grid; gap: 10px; }
+.creator-campaign-pricing { min-height: 44px; display: flex; align-items: center; padding: 0 14px; border-radius: 10px; background: hsl(var(--creator-action) / 0.09); color: hsl(var(--creator-ink)); font-size: 13px; font-weight: 700; }
+.creator-campaign-actions { display: flex; justify-content: flex-end; padding-top: 4px; }
+.creator-campaign-actions .creator-button { min-height: 46px; min-width: 184px; }
+.creator-presenter-choice { min-width: 0; margin: 0; padding: 0; border: 0; }
+.creator-presenter-options { display: grid; grid-template-columns: repeat(auto-fit, minmax(185px, 1fr)); gap: 10px; margin-top: 12px; }
+.creator-presenter-option { min-height: 92px; display: flex; gap: 10px; align-items: flex-start; padding: 14px; border: 1px solid hsl(var(--creator-line)); border-radius: 12px; background: hsl(var(--creator-panel)); cursor: pointer; transition: border-color 160ms ease, background-color 160ms ease, box-shadow 160ms ease; }
+.creator-presenter-option:hover { border-color: hsl(var(--creator-action) / 0.7); }
+.creator-presenter-option.is-selected { border-color: hsl(var(--creator-action)); background: hsl(var(--creator-action) / 0.08); box-shadow: 0 0 0 1px hsl(var(--creator-action) / 0.15); }
+.creator-presenter-option input { width: 20px; height: 20px; flex: 0 0 20px; margin: 1px 0 0; accent-color: hsl(var(--creator-action)); }
+.creator-presenter-option strong, .creator-presenter-option small { display: block; }
+.creator-presenter-option strong { color: hsl(var(--creator-ink)); font-size: 14px; line-height: 1.3; }
+.creator-presenter-option small { margin-top: 4px; color: hsl(var(--creator-muted)); font-size: 12px; line-height: 1.4; }
+.creator-presenter-unavailable { margin: 12px 0 0; }
+.creator-presenter-confirmation { display: grid; gap: 9px; margin-top: 14px; padding: 14px; border: 1px solid hsl(var(--creator-line)); border-radius: 12px; background: hsl(var(--creator-soft)); }
+.creator-presenter-confirmation > label:first-child { color: hsl(var(--creator-ink)); font-size: 13px; font-weight: 700; }
+.creator-campaign-final-review { display: grid; gap: 14px; margin-top: 24px; padding-top: 24px; border-top: 1px solid hsl(var(--creator-line)); }
+.creator-campaign-final-review h2 { margin: 0; color: hsl(var(--creator-ink)); font-size: 20px; letter-spacing: -0.025em; }
+.creator-campaign-final-review > p { margin: -7px 0 0; color: hsl(var(--creator-muted)); font-size: 14px; line-height: 1.5; }
+.creator-campaign-setup :is(button, input, select):focus-visible { outline: 2px solid hsl(var(--creator-action)); outline-offset: 2px; }
+
+@media (max-width: 800px) {
+  .creator-campaign-setup { gap: 24px; }
+  .creator-campaign-setup-head { display: grid; gap: 14px; }
+  .creator-setup-complete-summary { justify-content: flex-start; max-width: none; }
+  .creator-campaign-actions { position: sticky; z-index: 8; bottom: 10px; margin-inline: -8px; padding: 10px 8px; background: hsl(var(--creator-panel) / 0.96); border-top: 1px solid hsl(var(--creator-line)); }
+  .creator-campaign-actions .creator-button { width: 100%; }
+}
+
+@media (max-width: 520px) {
+  .creator-ratio-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .creator-presenter-options { grid-template-columns: 1fr; }
+  .creator-presenter-option { min-height: 82px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .creator-presenter-option { transition: none; }
 }
