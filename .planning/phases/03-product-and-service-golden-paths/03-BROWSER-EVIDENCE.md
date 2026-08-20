@@ -25,6 +25,13 @@ No provider submission, provider request, provider attempt, or paid cost was mad
 - `bun run test:all`, `bun run typecheck`, `bun run build`, and `bun run check:web-bundle` are release gates, not substitutes for a rendered browser matrix.
 - The approved UI contract and focused component tests cover labelled controls, associated errors, explicit progress, dialog focus recovery, RTL values, reduced-motion styling, and the 44px action contract. These are implementation evidence only until observed in a browser.
 
+## Automated release-gate result
+
+- Focused creator smoke: 3 files and 12 tests passed.
+- Full workspace suite: web 180 tests passed; API 89 passed with 13 environment-guarded skips; worker 67 passed with 9 environment-guarded skips; shared package suites passed.
+- Workspace typecheck, web production build, and web bundle check passed. The initial JavaScript gzip total remained within the configured 300 KiB limit.
+- Evidence redaction check passed for both Phase 3 evidence artifacts.
+
 ## Required follow-up
 
 1. Run the creator in a browser at 375, 768, 1024, and 1440 widths in English/light and Arabic/dark.
