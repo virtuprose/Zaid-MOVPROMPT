@@ -640,3 +640,107 @@ describe("template quote rejection", () => {
     expect(startRender).not.toHaveBeenCalled();
   });
 });
+
+describe("presenter eligibility", () => {
+  const userId = "11111111-1111-4111-8111-111111111111";
+  const projectId = "22222222-2222-4222-8222-222222222222";
+  const versionId = "33333333-3333-4333-8333-333333333333";
+  const templateVersionId = "44444444-4444-4444-8444-444444444444";
+  const assetId = "55555555-5555-4555-8555-555555555555";
+  const baseConfiguration = {
+    generation: {
+      prompt: "Create a consent-safe presenter campaign.",
+      durationSeconds: 8,
+      aspectRatio: "9:16" as const,
+      resolution: "720p" as const,
+      audio: true,
+      references: [],
+      templateQuoteContext: { market: "KW", language: "en", goal: "launch" },
+      creativeBrief: { market: "KW", language: "en", goal: "launch", product: { name: "Confirmed item", callToAction: "Shop now" } },
+    },
+  };
+  const template = {
+    id: templateVersionId,
+    durationSeconds: 8,
+    starterRenderEligible: false,
+    eligibility: {
+      goals: ["launch"],
+      supportedLanguages: ["en"],
+      supportedRatios: ["9:16"],
+      supportedMarkets: ["KW"],
+      requiredInputs: ["subject_name", "call_to_action"],
+      capabilityPolicy: ["video.cinematic"],
+    },
+    supportedLanguages: ["en"],
+    presenterModes: ["none", "uploaded_spokesperson", "ai_ugc"] as const,
+  };
+  const session = {
+    user: { id: userId, email: "owner@example.test", emailVerified: true, name: "Owner", role: "user" as const },
+    session: { id: "session" },
+  };
+
+  function presenterApi(input: {
+    presenter: unknown;
+    footage?: { id: string; mimeType: string; sizeBytes: number; checksumSha256: string | null; durationMs: number | null } | null;
+    aiUgcAvailable?: boolean;
+  }) {
+    const repo = repository(ownedRun());
+    const createQuote = vi.fn(async () => ({} as never));
+    const startRender = vi.fn(async () => ({} as never));
+    repo.findOwnedProjectVersion = vi.fn(async () => ({
+      id: versionId,
+      projectId,
+      templateVersionId,
+      configuration: baseConfiguration,
+      campaignRecipe: { language: "en", presenter: input.presenter },
+    }));
+    repo.findPublishedTemplateVersion = vi.fn(async () => template);
+    repo.findOwnedPresenterFootageAsset = vi.fn(async () => input.footage ?? null);
+    const api = createGenerationApiService({
+      repository: repo,
+      generation: {
+        createQuote,
+        startRender,
+        releaseRenderReservation: vi.fn(async () => ({} as never)),
+      },
+      pricing: createGenerationPricingFromEnvironment({
+        GENERATION_PRICING_VERSION: "test-v1",
+        GENERATION_QUOTE_TTL_SECONDS: "900",
+        GENERATION_VIDEO_CINEMATIC_720P_CREDITS_PER_SECOND: "10",
+      }),
+      capabilities: new CapabilityRegistry({
+        "video.cinematic": { enabled: true, adapterId: "vercel-ai-gateway", providerModelId: "bytedance/seedance-2.5" },
+        "presenter.ai_ugc": { enabled: input.aiUgcAvailable === true, adapterId: "presenter-adapter", providerModelId: "presenter-model" },
+      }),
+    });
+    return { api, repo, createQuote, startRender };
+  }
+
+  it("rejects missing or foreign-equivalent spokesperson footage before quote persistence", async () => {
+    const { api, repo, createQuote } = presenterApi({
+      presenter: {
+        mode: "uploaded_spokesperson",
+        assetId,
+        rights: { version: "person-media-rights-v1", assetId, personMediaRightsAttested: true },
+      },
+      footage: null,
+    });
+    await expect(api.createQuote({ capability: "video.cinematic", projectVersionId: versionId }, session))
+      .rejects.toMatchObject({ code: "presenter_configuration_ineligible" });
+    expect(repo.findOwnedPresenterFootageAsset).toHaveBeenCalledWith(userId, projectId, assetId);
+    expect(createQuote).not.toHaveBeenCalled();
+  });
+
+  it("rejects disabled AI UGC and Digital Twin configuration before a reservation can start", async () => {
+    const ai = presenterApi({ presenter: { mode: "ai_ugc" }, aiUgcAvailable: false });
+    await expect(ai.api.createQuote({ capability: "video.cinematic", projectVersionId: versionId }, session))
+      .rejects.toMatchObject({ code: "presenter_configuration_ineligible" });
+    expect(ai.createQuote).not.toHaveBeenCalled();
+
+    const twin = presenterApi({ presenter: { mode: "digital_twin" } });
+    await expect(twin.api.createQuote({ capability: "video.cinematic", projectVersionId: versionId }, session))
+      .rejects.toMatchObject({ code: "presenter_configuration_ineligible" });
+    expect(twin.createQuote).not.toHaveBeenCalled();
+    expect(twin.startRender).not.toHaveBeenCalled();
+  });
+});

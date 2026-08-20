@@ -243,4 +243,21 @@ describe("generation API routes", () => {
       error: { code: "capability_unavailable", retryable: true },
     });
   });
+
+  it("returns one non-disclosing presenter eligibility error without starting a render", async () => {
+    const generation = generationService();
+    generation.createQuote = vi.fn(async () => {
+      throw new GenerationApplicationError("presenter_configuration_ineligible");
+    });
+    const response = await app(session, generation).app.request("/api/v1/generation-quotes", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ capability: "video.cinematic", projectVersionId }),
+    });
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({
+      error: { code: "presenter_configuration_ineligible", message: "The selected presenter cannot be used for this campaign." },
+    });
+    expect(generation.startRender).not.toHaveBeenCalled();
+  });
 });
