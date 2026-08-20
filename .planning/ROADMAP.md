@@ -116,13 +116,16 @@ Plans:
 4. Template-first and source-first entry converge on the same draft and every launch option truthfully states inputs, preview type, duration, format, and quote.
 5. Every screen has one clear task/action and usable loading, empty, validation, offline, error, and success states at mobile and desktop sizes.
 
-**Plans:** 3 plans
+**Plans:** 6 plans
 
 Plans:
 
-- [ ] 03-01: Normalize product/service source facts, provenance, and campaign contract across all entry points.
-- [ ] 03-02: Complete beginner outcome, recommendation, presenter, campaign, and review screens with truthful media/cost states.
-- [ ] 03-03: Prove product and service golden paths in English, Arabic, and bilingual browser E2E scenarios.
+- [ ] 03-01-PLAN.md — Normalize source facts, provenance, persistence, and source-first/template-first convergence.
+- [ ] 03-02-PLAN.md — Complete product, service, upload, footage, and manual source review with bilingual recovery states.
+- [ ] 03-03-PLAN.md — Deliver outcomes, deterministic recommendations, explicit eligibility, and truthful template previews.
+- [ ] 03-04-PLAN.md — Deliver capability-gated presenter choice and Kuwait campaign setup without expert terminology.
+- [ ] 03-05-PLAN.md — Deliver exact product/service review, honest quote states, and Generate-time auth recovery.
+- [ ] 03-06-PLAN.md — Prove both golden paths through automated integration and rendered accessibility evidence.
 
 ### Phase 4: Durable Generation and Accepted Quality
 
@@ -283,7 +286,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 1. Production Truth Foundation | 3/3 | Complete    | 2026-08-19 |
 | 2. Guest, Authentication, and Data Integrity | 8/8 | In Progress|  |
-| 3. Product and Service Golden Paths | 0/3 | Not started | - |
+| 3. Product and Service Golden Paths | 0/6 | Not started | - |
 | 4. Durable Generation and Accepted Quality | 0/3 | Not started | - |
 | 5. Projects and Immutable Version Recovery | 0/2 | Not started | - |
 | 6. Guided Editor and Social Campaign Pack | 0/3 | Not started | - |
