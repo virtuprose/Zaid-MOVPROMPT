@@ -1,3 +1,4 @@
+import { useRef, type KeyboardEvent, type MutableRefObject } from "react";
 import { FileUp, Globe2, Link2, Loader2, PencilLine, X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -70,6 +71,26 @@ function text(arabic: boolean, english: string, arabicText: string) {
   return arabic ? arabicText : english;
 }
 
+function selectWithRadioKeys<T extends string>(
+  event: KeyboardEvent<HTMLButtonElement>,
+  values: readonly T[],
+  current: T,
+  refs: MutableRefObject<Array<HTMLButtonElement | null>>,
+  onChange: (value: T) => void,
+) {
+  const currentIndex = values.indexOf(current);
+  let nextIndex: number | null = null;
+  if (event.key === "ArrowRight" || event.key === "ArrowDown") nextIndex = (currentIndex + 1) % values.length;
+  if (event.key === "ArrowLeft" || event.key === "ArrowUp") nextIndex = (currentIndex - 1 + values.length) % values.length;
+  if (event.key === "Home") nextIndex = 0;
+  if (event.key === "End") nextIndex = values.length - 1;
+  if (nextIndex === null) return;
+  event.preventDefault();
+  const next = values[nextIndex]!;
+  onChange(next);
+  refs.current[nextIndex]?.focus();
+}
+
 /**
  * A controlled source entry surface. It has no persistence or network logic;
  * CreateStudio owns scanning, guest drafts, aborts, and recovery.
@@ -92,6 +113,8 @@ export function SourceChoiceStep({
   retryLabel,
   onBack,
 }: SourceChoiceStepProps) {
+  const sourceChoiceRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const subjectRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const isLink = value === "product_link" || value === "business_link";
   const linkLabel = value === "business_link"
     ? text(arabic, "Business or service link", "رابط النشاط أو الخدمة")
@@ -118,11 +141,14 @@ export function SourceChoiceStep({
             return (
               <button
                 key={choice.value}
+                ref={(node) => { sourceChoiceRefs.current[SOURCE_CHOICES.indexOf(choice)] = node; }}
                 className={cn("creator-source-choice-card", selected && "is-selected")}
                 type="button"
                 role="radio"
                 aria-checked={selected}
+                tabIndex={selected ? 0 : -1}
                 onClick={() => onChoiceChange(choice.value)}
+                onKeyDown={(event) => selectWithRadioKeys(event, SOURCE_CHOICES.map((item) => item.value), value, sourceChoiceRefs, onChoiceChange)}
               >
                 <span className="creator-source-choice-icon"><Icon aria-hidden="true" /></span>
                 <span className="creator-source-choice-copy">
@@ -142,14 +168,17 @@ export function SourceChoiceStep({
             {([
               ["product", text(arabic, "A product", "منتج")],
               ["service", text(arabic, "A business or service", "نشاط أو خدمة")],
-            ] as const).map(([nextSubject, label]) => (
+            ] as const).map(([nextSubject, label], index, subjects) => (
               <button
                 key={nextSubject}
+                ref={(node) => { subjectRefs.current[index] = node; }}
                 className={cn("creator-source-subject-option", subject === nextSubject && "is-selected")}
                 type="button"
                 role="radio"
                 aria-checked={subject === nextSubject}
+                tabIndex={subject === nextSubject ? 0 : -1}
                 onClick={() => onSubjectChange(nextSubject)}
+                onKeyDown={(event) => selectWithRadioKeys(event, subjects.map(([option]) => option), subject, subjectRefs, onSubjectChange)}
               >
                 {label}
               </button>
