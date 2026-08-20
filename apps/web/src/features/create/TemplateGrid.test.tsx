@@ -42,7 +42,8 @@ describe("TemplateGrid", () => {
     );
 
     expect(view.container.querySelectorAll("video")).toHaveLength(0);
-    expect(screen.getAllByText("Template direction")).toHaveLength(12);
+    expect(screen.getAllByText("Template direction")).toHaveLength(1);
+    expect(screen.getAllByText("Motion preview")).toHaveLength(11);
     expect(view.container.querySelectorAll(".creator-template-media[data-media-tone]")).toHaveLength(12);
     expect(view.container.querySelectorAll<HTMLImageElement>(".creator-template-media img")[0]?.style.objectPosition).toBeTruthy();
     const previewButtons = screen.getAllByRole("button", { name: /Play .* preview/ });

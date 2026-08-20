@@ -270,8 +270,8 @@ function TemplateCard({ template, selected, onSelect, onPreview, locale }: { tem
           <div className="creator-template-media" data-media-tone={template.mediaTone}>
             <img src={template.poster} alt="" loading="lazy" style={{ objectPosition: template.posterPosition }} />
             <span className="creator-template-direction" aria-hidden="true"><b>{template.mediaCode}</b><span>{templateGoalLabel(goal, locale)}</span></span>
-            <span className="creator-template-media-kind" aria-hidden="true">{ar ? "اتجاه القالب" : "Template direction"}</span>
-            <span className="creator-template-duration">{template.duration}s</span>
+            <span className="creator-template-media-kind" aria-hidden="true">{template.previewVideo ? (ar ? "معاينة حركة" : "Motion preview") : (ar ? "اتجاه القالب" : "Template direction")}</span>
+            {template.previewVideo ? <span className="creator-template-duration">{template.duration}s</span> : null}
           </div>
           <div className="creator-template-copy">
             <span className="creator-template-eyebrow">{template.eyebrow}</span>
