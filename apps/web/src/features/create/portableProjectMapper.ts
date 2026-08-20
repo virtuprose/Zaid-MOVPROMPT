@@ -5,6 +5,12 @@ import { sanitizeCreatorProjectOutput } from "./creatorProjectOutput";
 import { campaignSourceForProject, projectWithCampaignSource } from "./sourceFacts";
 import { normalizeCreatorResolution, type CreatorProject } from "./types";
 
+function isDurableCreatorObjectKey(value: string): boolean {
+  // Guest draft IDs share the CampaignSource assetKeys shape, but only a
+  // private storage namespace may cross the cloud persistence boundary.
+  return value.startsWith("creator-assets/") || value.startsWith("users/");
+}
+
 function recoveredProjectStatus(input: CreatorProjectRecord): CreatorProject["status"] {
   if (input.status === "trashed") return "draft";
   if (input.latestRenderProjectVersionId !== input.currentWorkingVersionId) return input.status;
@@ -18,11 +24,15 @@ function recoveredProjectStatus(input: CreatorProjectRecord): CreatorProject["st
 
 export function stableProjectConfiguration(project: CreatorProject): CreatorProject {
   const source = campaignSourceForProject(project);
+  const durableSourceAssetKeys = new Set([
+    ...source.assetKeys.filter(isDurableCreatorObjectKey),
+    ...project.product.images.flatMap((image) => image.storagePath ? [image.storagePath] : []),
+  ]);
   const persistedSource = {
     ...source,
     // A cloud configuration may only contain verified private object keys.
     // Guest-local IndexedDB IDs are claim transport metadata, not durable facts.
-    assetKeys: project.product.images.flatMap((image) => image.storagePath ? [image.storagePath] : []),
+    assetKeys: [...durableSourceAssetKeys],
   };
   return {
     ...projectWithCampaignSource({ ...project, source: persistedSource }),
