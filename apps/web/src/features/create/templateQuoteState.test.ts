@@ -4,6 +4,7 @@ import {
   beginTemplateQuote,
   createTemplateQuoteKey,
   expireTemplateQuote,
+  invalidateTemplateQuote,
   quoteForGeneration,
   resolveTemplateQuote,
   unavailableTemplateQuote,
@@ -76,5 +77,22 @@ describe("template quote state", () => {
     expect(quoteForGeneration(unavailable, new Date())).toBeNull();
     expect(quoteForGeneration(expired, new Date())).toBeNull();
     expect(quoteForGeneration(changed, new Date())).toBeNull();
+  });
+
+  it("invalidates a ready quote immediately for price, duration and ratio edits", () => {
+    const originalKey = createTemplateQuoteKey(templateVersionId, configuration);
+    const ready = resolveTemplateQuote(beginTemplateQuote(originalKey), quote, new Date("2026-08-20T14:00:00.000Z"));
+    const changedConfigurations = [
+      { ...configuration, creativeBrief: { ...configuration.creativeBrief, product: { ...configuration.creativeBrief.product, price: "9.500" } } },
+      { ...configuration, durationSeconds: 12 },
+      { ...configuration, aspectRatio: "1:1" as const },
+    ];
+
+    for (const changedConfiguration of changedConfigurations) {
+      const pending = invalidateTemplateQuote(createTemplateQuoteKey(templateVersionId, changedConfiguration));
+      expect(pending.status).toBe("loading");
+      expect(pending.key).not.toBe(ready.key);
+      expect(quoteForGeneration(pending, new Date("2026-08-20T14:00:00.000Z"))).toBeNull();
+    }
   });
 });

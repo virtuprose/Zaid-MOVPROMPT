@@ -4,9 +4,9 @@ import type { GenerationConfiguration } from "@movprompt/contracts";
 import { PortableApiError, portableCreatorApi } from "@/lib/api/portableApiClient";
 import { resolvePortableTemplateVersionId } from "./projectStore";
 import {
-  beginTemplateQuote,
   createTemplateQuoteKey,
   expireTemplateQuote,
+  invalidateTemplateQuote,
   idleTemplateQuoteState,
   resolveTemplateQuote,
   unavailableTemplateQuote,
@@ -39,15 +39,18 @@ export function useTemplateQuotes(input: UseTemplateQuotesInput) {
     const controller = new AbortController();
     const request = ++requestVersion.current;
     const configuration = configurationRef.current;
+    // Set loading before resolving the asynchronous immutable template ID.
+    // A previous price is never valid for a changed price, duration or ratio.
+    const pendingKey = createTemplateQuoteKey(`pending:${input.templateId}`, configuration);
+    setState(invalidateTemplateQuote(pendingKey));
     let expiryTimer: number | null = null;
     void (async () => {
       try {
         const templateVersionId = await resolvePortableTemplateVersionId(input.templateId);
         if (controller.signal.aborted || request !== requestVersion.current) return;
         const key = createTemplateQuoteKey(templateVersionId, configuration);
-        setState((current) => beginTemplateQuote(key, current.key));
+        setState(invalidateTemplateQuote(key));
         const quote = await portableCreatorApi.generationQuote({
-          capability: "video.product_fidelity",
           templateVersionId,
           configuration,
         }, { signal: controller.signal });

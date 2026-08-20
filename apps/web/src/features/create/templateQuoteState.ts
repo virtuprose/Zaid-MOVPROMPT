@@ -50,6 +50,20 @@ export function beginTemplateQuote(key: string, previousKey?: string | null): Te
   };
 }
 
+/**
+ * Configuration edits must remove the prior quote before any asynchronous
+ * template lookup starts. This keeps Review and Generate fail-closed while the
+ * replacement quote is loading.
+ */
+export function invalidateTemplateQuote(key: string): TemplateQuoteState {
+  return {
+    key,
+    status: "loading",
+    quote: null,
+    retryable: false,
+  };
+}
+
 export function resolveTemplateQuote(
   state: TemplateQuoteState,
   quote: TemplateQuote,
