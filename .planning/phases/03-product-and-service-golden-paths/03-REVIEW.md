@@ -1,14 +1,21 @@
 ---
 phase: 03-product-and-service-golden-paths
-reviewed: 2026-08-20T21:21:15Z
+reviewed: 2026-08-21T00:00:00+03:00
 depth: standard
-files_reviewed: 50
+files_reviewed: 63
 files_reviewed_list:
+  - apps/api/src/asset-routes.ts
+  - apps/api/src/assets.test.ts
   - apps/api/src/campaign-eligibility.ts
+  - apps/api/src/creator-repository.ts
+  - apps/api/src/creator-routes.test.ts
   - apps/api/src/generation-repository.ts
   - apps/api/src/generation-routes.ts
   - apps/api/src/generation-service.test.ts
   - apps/api/src/generation-service.ts
+  - apps/api/src/generation.test.ts
+  - apps/api/src/guest-claim-repository.ts
+  - apps/api/src/guest-claim-service.postgres.test.ts
   - apps/api/src/guest-claim-service.ts
   - apps/web/src/features/create/AuthGateDialog.test.tsx
   - apps/web/src/features/create/CampaignReviewStep.test.tsx
@@ -23,6 +30,7 @@ files_reviewed_list:
   - apps/web/src/features/create/OutcomeStep.tsx
   - apps/web/src/features/create/PresenterChoice.tsx
   - apps/web/src/features/create/PresenterStep.test.tsx
+  - apps/web/src/features/create/SourceChoiceStep.test.tsx
   - apps/web/src/features/create/SourceChoiceStep.tsx
   - apps/web/src/features/create/TemplateGrid.test.tsx
   - apps/web/src/features/create/TemplateGrid.tsx
@@ -34,6 +42,10 @@ files_reviewed_list:
   - apps/web/src/features/create/campaignSetupRules.ts
   - apps/web/src/features/create/contracts.ts
   - apps/web/src/features/create/creator.css
+  - apps/web/src/features/create/creatorAssets.ts
+  - apps/web/src/features/create/creatorProjectAssets.test.ts
+  - apps/web/src/features/create/creatorProjectAssets.ts
+  - apps/web/src/features/create/portableProjectMapper.test.ts
   - apps/web/src/features/create/portableProjectMapper.ts
   - apps/web/src/features/create/projectStore.ts
   - apps/web/src/features/create/sourceFacts.ts
@@ -41,6 +53,7 @@ files_reviewed_list:
   - apps/web/src/features/create/templateQuoteState.ts
   - apps/web/src/features/create/templateRecommendations.test.ts
   - apps/web/src/features/create/templateRecommendations.ts
+  - apps/web/src/features/create/templates.ts
   - apps/web/src/features/create/types.ts
   - apps/web/src/features/create/useTemplateQuotes.ts
   - apps/web/src/i18n/translations/ar.ts
@@ -56,95 +69,87 @@ files_reviewed_list:
   - scripts/infra/run-phase3-provisioned-uat.ts
 findings:
   critical: 3
-  warning: 5
+  warning: 2
   info: 0
-  total: 8
+  total: 5
 status: issues_found
 ---
 
 # Phase 03: Code Review Report
 
-**Reviewed:** 2026-08-20T21:21:15Z  
-**Depth:** standard  
-**Files Reviewed:** 50  
+**Reviewed:** 2026-08-21
+**Depth:** standard
+**Files reviewed:** 63 (the original 50-file scope plus every source/test file changed by fixes `472c016` through `9c8dc0d`)
 **Status:** issues_found
 
 ## Summary
 
-The Phase 3 implementation has solid owner-scoped repository patterns, quote hashing, and a fail-closed generation API. However, the user-visible source paths do not all reach that protected pipeline. Three defects prevent promised creation journeys from being correct: local video/footage uploads cannot be claimed, manual campaigns are blocked despite completing their required facts, and a WhatsApp number can satisfy a booking-only template requirement server-side.
+The fixes correctly improve booking versus WhatsApp validation, owner-scoped asset lookup, durable claimed asset keys, portable catalog fallback selection, and the template-card radio interaction. They do not yet complete the end-to-end safety and eligibility contracts. In particular, a direct S3 upload can claim arbitrary bytes as footage, a no-media/manual campaign is still forced through the image-only product-fidelity capability after authentication, and revoking the uploaded-spokesperson consent checkbox does not revoke the authoritative presenter selection.
 
-The provided UAT summaries honestly record that provisioned browser and real-stack evidence is still unavailable; this review does not classify that missing evidence itself as a code defect.
+The unprovisioned Phase 03 UAT remains an evidence blocker, as requested; it is not counted as a code finding here.
 
-## Critical Issues
+## Narrative Findings (AI reviewer)
 
-### CR-01: Accepted footage uploads cannot complete secure claim or reach generation
+## Blockers
 
-**Classification:** BLOCKER  
-**File:** `apps/web/src/features/create/CreateStudio.tsx:210-216, 813-860, 1085-1112`  
-**Issue:** The source UI explicitly accepts MP4 and MOV uploads, stores them as `real_footage`, and advertises footage as a valid campaign source. At authentication/claim time, however, every claimable asset is rejected unless its MIME type is JPEG, PNG, or WebP, and every manifest entry is forced to `kind: "product"`. A valid video therefore always fails after the user signs in. Even if that MIME check were removed, the footage contract requires verified `durationMs`, while the manifest never supplies it; the downstream generation reference guard accepts image MIME types only. The flow is consequently not merely untested: it is impossible to complete.
+### CR-01 — Footage is accepted from a direct upload using only caller-controlled metadata
 
-**Fix:** Split image and footage assets in the browser model and guest-claim manifest. Probe video duration before claim, emit `kind: "footage"` with the allowed video MIME, size, checksum, and duration, and extend secure upload/claim mapping to preserve it. Keep footage out of image-only provider references unless the selected capability supports it; use it only for the verified presenter/footage policy when appropriate. Add an integration test that uploads an MP4, performs guest claim, validates the resulting private footage asset, and either generates with a supported flow or returns a truthful capability-specific message.
+**Classification:** BLOCKER
 
-### CR-02: Manual source campaigns are blocked despite satisfying their stated fact requirements
+**Files:** `apps/api/src/asset-routes.ts:338-432`, `apps/api/src/asset-routes.ts:621-646`, `apps/api/src/campaign-eligibility.ts:55-65`, `packages/contracts/src/assets.ts:30-47`
 
-**Classification:** BLOCKER  
-**File:** `apps/web/src/features/create/CampaignReviewStep.tsx:107-109`; `apps/web/src/features/create/CreateStudio.tsx:1190-1194`  
-**Issue:** Fact review intentionally allows manual product and service sources to continue once goal-specific facts are present (for example, service name plus booking URL). Final review then unconditionally requires both a product name and at least one image, and `startGeneration` performs the same unconditional image check. A manually entered service campaign with all required booking facts can therefore never generate; it is sent back to Source with an image error. This contradicts the advertised “Enter details manually” source path and makes the UI’s fact validation misleading.
+**Issue:** The public `upload-url` endpoint lets an authenticated caller upload directly to storage. The later `complete` endpoint only compares S3 object length, content type, and the checksum supplied by that same caller; it never reads or parses the object. The proxy content endpoint does run `hasExpectedFootageSignature`, but that path is bypassed by the signed upload URL, and its MP4/MOV check is only the four-byte `ftyp` marker anyway. `durationMs` is likewise accepted from client metadata and `validFootage` trusts it. Therefore arbitrary bytes prefixed with an ISO-base-media marker, with a chosen checksum and claimed duration, can become a verified uploaded spokesperson asset.
 
-**Fix:** Replace the generic `product.images.length` gate with source/template eligibility that mirrors the server’s required-input policy. Require media only when the selected template/capability actually needs a reference; otherwise allow the valid manual campaign through to the authoritative quote/start flow. Add end-to-end component coverage for a manual service booking campaign and a manual product campaign, plus a negative case for templates that truly require an image.
+This breaks the claimed MP4/MOV/footage integrity boundary and means compatibility/consent gates are based on unverified media metadata rather than a decodable, duration-bounded video.
 
-### CR-03: A WhatsApp number satisfies booking-only template eligibility on the server
+**Fix:** Make completion server-verify every direct upload before `markAssetVerified`: stream the object to a bounded temporary file, run FFprobe (or a robust media parser), require a decodable allowed container/codec, obtain duration from the media itself, reject duration over ten minutes, and persist the verified MIME/duration/checksum. Apply equivalent validation to the proxy path through one shared verifier. Do not mark an asset verified from object headers alone. Add integration tests for a signed-upload arbitrary-byte payload, an `ftyp`-only fake MP4/MOV, a spoofed duration, and a valid MP4/MOV.
 
-**Classification:** BLOCKER  
-**File:** `apps/api/src/generation-service.ts:174-176, 225-228`  
-**Issue:** `bookingDestination` falls back from `bookingUrl` to `product.whatsapp`, then supplies that value for `booking_destination`, `order_or_booking_destination`, and `delivery_destination`. A direct API client can quote and start a booking-only template with no booking URL at all, simply by supplying a WhatsApp number. This defeats the template’s declared business-fact requirement and permits an incorrect CTA/destination to become a billable campaign.
+### CR-02 — Manual and footage-only campaigns still cannot obtain the authenticated quote
 
-**Fix:** Model booking, WhatsApp ordering, and delivery destinations separately. `booking_destination` must use only a validated booking URL; allow WhatsApp only for `whatsapp` or an explicitly WhatsApp-compatible `order_or_booking_destination` requirement. Add quote and start-render tests proving that booking templates reject WhatsApp-only configurations.
+**Classification:** BLOCKER
+
+**Files:** `apps/web/src/features/create/CampaignReviewStep.tsx:108-112`, `apps/web/src/features/create/CreateStudio.tsx:1314-1321`, `apps/web/src/features/create/projectStore.ts:172-178`, `apps/api/src/generation-service.ts:434-445`
+
+**Issue:** The review UI deliberately permits templates with no required source media, such as the clinic service explainer, and considers a footage upload to satisfy generic source-media requirements. After authentication, however, `CreateStudio` always requests the authoritative quote with `video.product_fidelity`. `buildPortableGenerationConfiguration` deliberately omits footage from its image-only `references`, while the generation service rejects every product-fidelity quote with no image reference. A manual/no-media service campaign and a footage-only campaign therefore appear eligible through review and authentication but fail at the confirmed-price step.
+
+The remediation for the original manual-source blocker only changed client-side eligibility; it did not make the server capability choice agree with the template's input/capability policy.
+
+**Fix:** Resolve the capability server-side from the immutable template version and its actual required inputs. Use an approved non-image-reference capability for templates that do not require a product/reference image, or explicitly require an image in those templates before review. Make the UI invoke the same template capability policy rather than hardcoding `video.product_fidelity`, and add full guest-to-authenticated API tests for manual service, image-only, and footage-only paths.
+
+### CR-03 — Removing spokesperson consent leaves the authoritative presenter selected
+
+**Classification:** BLOCKER
+
+**File:** `apps/web/src/features/create/PresenterChoice.tsx:84-97`
+
+**Issue:** `updateUploadedPresenter` updates local checkbox state and immediately returns when consent is unchecked or no asset is selected. It never calls `onChange` to remove the existing `uploaded_spokesperson` value. If a user had selected and attested footage, then clears the checkbox, the UI indicates that consent is absent while the project configuration still contains the previous presenter, asset ID, and `personMediaRightsAttested: true`. A subsequent render can therefore use the retained identity despite the visible consent revocation.
+
+**Fix:** On every invalidation (`!assetId || !attested`), call `onChange({ mode: "none" })` or an explicit non-renderable presenter state that removes the asset and rights record from the project. Drive checkbox state from the authoritative value after the change. Add tests that select verified footage, uncheck consent, persist/reload the draft, and assert both the render button and submitted configuration contain no uploaded spokesperson.
 
 ## Warnings
 
-### WR-01: Campaign setup remains indefinitely in a false “confirming price” state after any edit
+### WR-01 — A changed campaign can briefly present and use the previous quote
 
-**Classification:** WARNING  
-**File:** `apps/web/src/features/create/CampaignSetupStep.tsx:39, 44, 47-50, 139-140`  
-**Issue:** Every edit sets `localQuoteRefresh` to `true`, but no transition clears it. When the parent receives a new ready quote, `effectiveQuoteState` intentionally converts that ready state back to `loading` forever. The final review may still have a valid quote, but the setup screen continually reports that price confirmation is in progress, which is inaccurate and erodes trust in the price gate.
+**Classification:** WARNING
 
-**Fix:** Associate local refresh state with a configuration/quote key and clear it when the matching quote resolves, or derive the loading display solely from the authoritative quote state. Add a test covering edit → loading → fresh ready quote.
+**Files:** `apps/web/src/features/create/useTemplateQuotes.ts:39-57`, `apps/web/src/features/create/CampaignSetupStep.tsx:39-55`
 
-### WR-02: Uploaded spokesperson is permanently hidden even for verified footage and a compatible template
+**Issue:** After an input edit, the quote hook first awaits `resolvePortableTemplateVersionId` and only then sets quote state to loading. Until that await resolves, the shared quote state remains `ready` with the old quote. `CampaignSetupStep` masks this only inside its own screen with `localQuoteRefresh`; the review screen receives the raw quote state. A user can continue immediately after an economically relevant change and see/click Generate with the previous price until the asynchronous refresh catches up. The later authoritative quote prevents an unsafe charge, but the product can show a stale confirmed price and unexpectedly interrupt the flow after authentication.
 
-**Classification:** WARNING  
-**File:** `apps/web/src/features/create/CreateStudio.tsx:568-590`; `apps/web/src/features/create/PresenterChoice.tsx:113-125`  
-**Issue:** The UI always assigns `uploadedSpokesperson: false`, so the exact-footage consent control can never appear in the real create flow. The server-side eligibility service and `PresenterChoice` component support verified footage, but the phase’s advertised presenter option is not reachable. The focused unit test creates a manually verified fixture, so it cannot reveal this integration failure.
+**Fix:** Invalidate the shared quote synchronously when the configuration key changes, before any asynchronous template-ID resolution. Expose the pending state to both setup and review, disable Generate while it is pending, and add a test that changes price, duration, or ratio then immediately continues to review.
 
-**Fix:** Expose a server-projected template/asset compatibility result after claim and use it to enable `uploadedSpokesperson` only when the exact footage is verified and permitted. Add a create-flow test that verifies the control appears for eligible footage and remains absent otherwise.
+### WR-02 — Switching a template draft to Advanced Mode forwards footage as an image reference
 
-### WR-03: Guest-local asset IDs remain inside the persisted campaign source after secure claim
+**Classification:** WARNING
 
-**Classification:** WARNING  
-**File:** `apps/web/src/features/create/CreateStudio.tsx:840-843, 1143-1149`; `apps/web/src/features/create/portableProjectMapper.ts:19-34`; `apps/web/src/features/create/sourceFacts.ts:152-163`  
-**Issue:** Upload creates `source.assetKeys` from IndexedDB-local keys. After claim, image objects are updated with secure `storagePath` values, but the existing `source` object is retained unchanged. `stableProjectConfiguration` subsequently preserves that existing source while removing the local `assetKey` only from the image objects. The saved canonical source therefore contains stale browser-local identifiers rather than the durable object keys it claims to represent, impairing recovery, source provenance, and later source-asset checks.
+**File:** `apps/web/src/features/create/CreateStudio.tsx:1000-1008`
 
-**Fix:** On a verified claim receipt, rebuild `source.assetKeys` from the exact receipt/secure storage paths before writing a cloud version. Reject or migrate non-storage asset IDs at the persistence boundary. Add a round-trip test from guest upload through claim and cloud hydration that asserts source asset keys equal owned object keys only.
+**Issue:** The portable generation mapper correctly excludes footage from image-only references, but `switchToAdvanced` maps every `project.product.images` item into `advanced.references` without checking MIME type. A project with an uploaded spokesperson MOV/MP4 therefore sends its footage key into the Advanced image-reference handoff. That breaks the image-versus-footage separation fixed elsewhere and causes downstream Advanced validation/provider preparation to reject or misclassify the asset.
 
-### WR-04: Local fallback templates remain selectable while the published catalog is unavailable
-
-**Classification:** WARNING  
-**File:** `apps/web/src/features/create/TemplateGrid.tsx:41-44, 72-85, 100-102, 263-285`  
-**Issue:** When Portable Auth is active and the published catalog request fails, the component presents the local fallback catalog as an outage state but leaves every fallback card selectable. That selection can later fail during template-version resolution or quote creation, after the user has configured a campaign. It conflicts with the phase contract that unavailable combinations may be displayed truthfully but must be non-selectable.
-
-**Fix:** Make fallback cards preview-only in portable mode, with a clear retry action and disabled selection until a published template version is available. Preserve the selected published template only when it is already known to be valid. Add a test that catalog failure disables selection and a retry restores it.
-
-### WR-05: Source-selection radio groups are not keyboard-operable as radio groups
-
-**Classification:** WARNING  
-**File:** `apps/web/src/features/create/SourceChoiceStep.tsx:112-136, 138-158`  
-**Issue:** Buttons are given `role="radio"` inside `radiogroup`, but all remain in the tab order and no Arrow-key/roving-tabindex behavior is implemented. This is not the keyboard interaction required for the ARIA radio pattern, making a core creation decision harder to complete with keyboard-only navigation.
-
-**Fix:** Prefer native radio inputs styled as cards, or implement roving `tabIndex` with Arrow/Home/End keyboard handlers and focus movement. Add keyboard interaction tests for both source and subject groups.
+**Fix:** Filter Advanced visual references to verified `image/*` assets, and pass verified footage through a dedicated presenter/footage field only when the selected Advanced capability explicitly supports it. Add a handoff test containing one product image and one MOV asset and assert only the image is present in `advanced.references`.
 
 ---
 
-_Reviewed: 2026-08-20T21:21:15Z_  
-_Reviewer: the agent (gsd-code-reviewer)_  
+_Reviewed: 2026-08-21_
+_Reviewer: gsd-code-reviewer_
 _Depth: standard_
