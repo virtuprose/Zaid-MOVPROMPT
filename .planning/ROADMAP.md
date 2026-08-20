@@ -119,14 +119,36 @@ Plans:
 **Plans:** 8 plans
 
 Plans:
+**Wave 1**
 
 - [ ] 03-01-PLAN.md — Normalize source facts, provenance, persistence, and source-first/template-first convergence.
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 03-02-PLAN.md — Complete product, service, upload, footage, and manual source review with bilingual recovery states.
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 03-03-PLAN.md — Bind catalog eligibility to exact configuration-bound server quotes and quote lifecycle states.
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
 - [ ] 03-04-PLAN.md — Enforce presenter media, rights, template, language, capability, claim, quote, and submission rules server-side.
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
 - [ ] 03-05-PLAN.md — Deliver quote-aware outcomes, recommendations, eligibility disclosures, and truthful previews.
+
+**Wave 6** *(blocked on Wave 5 completion)*
+
 - [ ] 03-06-PLAN.md — Deliver capability-derived presenter choice and Kuwait campaign setup without expert terminology.
+
+**Wave 7** *(blocked on Wave 6 completion)*
+
 - [ ] 03-07-PLAN.md — Deliver exact product/service review, authoritative quote gates, and Generate-time auth recovery.
+
+**Wave 8** *(blocked on Wave 7 completion)*
+
 - [ ] 03-08-PLAN.md — Prove both golden paths through focused smoke, provisioned-stack UAT, and rendered accessibility evidence.
 
 ### Phase 4: Durable Generation and Accepted Quality
