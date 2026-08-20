@@ -108,6 +108,8 @@ export const PublicTemplateSchema = z
     supportedRatios: z.array(CampaignRatioSchema),
     supportedMarkets: z.array(z.literal("KW")),
     requiredInputs: z.array(z.string().trim().min(1).max(80)),
+    /** Server-projected presenter policy; it never exposes provider identities. */
+    presenterModes: z.array(PresenterModeSchema).default([]),
     starterRenderEligible: z.boolean(),
     previewAvailable: z.boolean(),
     posterAvailable: z.boolean(),

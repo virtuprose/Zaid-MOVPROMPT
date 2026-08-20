@@ -212,14 +212,52 @@ function validateLocalMedia(file: File) {
   const isImage = ["image/jpeg", "image/png", "image/webp"].includes(type);
   const isVideo = ["video/mp4", "video/quicktime"].includes(type);
   if (!isImage && !isVideo) throw new Error(`${file.name} must be a JPEG, PNG, WebP, MP4 or MOV file.`);
-  const byteLimit = isVideo ? 75 * 1024 * 1024 : 12 * 1024 * 1024;
-  if (file.size > byteLimit) throw new Error(`${file.name} is over ${isVideo ? "75" : "12"} MB.`);
+  const byteLimit = isVideo ? 50 * 1024 * 1024 : 12 * 1024 * 1024;
+  if (file.size > byteLimit) throw new Error(`${file.name} is over ${isVideo ? "50" : "12"} MB.`);
 }
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-function isClaimableImage(image: CreatorProject["product"]["images"][number]) {
-  return !image.storagePath && (Boolean(image.assetKey) || image.source === "sample");
+function isClaimableSourceAsset(asset: CreatorProject["product"]["images"][number]) {
+  return !asset.storagePath && (Boolean(asset.assetKey) || asset.source === "sample");
+}
+
+function isVerifiedSpokespersonFootage(asset: CreatorProject["product"]["images"][number]) {
+  return Boolean(
+    asset.storagePath
+      && /^video\/(mp4|quicktime)$/iu.test(asset.mimeType ?? "")
+      && /^[a-f0-9]{64}$/iu.test(asset.checksum ?? "")
+      && asset.durationMs
+      && asset.durationMs > 0
+      && asset.durationMs <= 10 * 60 * 1_000,
+  );
+}
+
+async function videoDurationMs(file: File): Promise<number> {
+  const objectUrl = URL.createObjectURL(file);
+  try {
+    const duration = await new Promise<number>((resolve, reject) => {
+      const video = document.createElement("video");
+      const timeout = window.setTimeout(() => reject(new Error("video_metadata_timeout")), 10_000);
+      video.preload = "metadata";
+      video.onloadedmetadata = () => {
+        window.clearTimeout(timeout);
+        resolve(video.duration);
+      };
+      video.onerror = () => {
+        window.clearTimeout(timeout);
+        reject(new Error("video_metadata_unavailable"));
+      };
+      video.src = objectUrl;
+    });
+    const milliseconds = Math.round(duration * 1_000);
+    if (!Number.isFinite(milliseconds) || milliseconds <= 0 || milliseconds > 10 * 60 * 1_000) {
+      throw new Error("video_duration_invalid");
+    }
+    return milliseconds;
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
 }
 
 async function checksumForBlob(blob: Blob): Promise<string> {
@@ -579,15 +617,16 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
           aiUgc: aiUgcAvailable
             && publishedTemplate.capabilityPolicy.includes("presenter.ai_ugc")
             && publishedTemplate.supportedLanguages.includes(project.language),
-          // Fail closed until the API projects a verified-footage policy.
-          uploadedSpokesperson: false,
+          uploadedSpokesperson: publishedTemplate.presenterModes.includes("uploaded_spokesperson")
+            && publishedTemplate.supportedLanguages.includes(project.language)
+            && project.product.images.some(isVerifiedSpokespersonFootage),
         });
       })
       .catch(() => {
         if (active) setPresenterCompatibility({ aiUgc: false, uploadedSpokesperson: false });
       });
     return () => { active = false; };
-  }, [portablePlatform, project.language, step, template.id]);
+  }, [portablePlatform, project.language, project.product.images, step, template.id]);
 
   useEffect(() => {
     if ((!project.jobId && !project.renderRunId) || step !== "generating" || simulatedGeneration) return;
@@ -825,11 +864,13 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
       const assets = await Promise.all(selected.map(async (file) => {
         validateLocalMedia(file);
         const assetKey = await putGuestAsset(project.id, file);
+        const mimeType = file.type.toLowerCase();
         return {
           id: crypto.randomUUID(),
           name: file.name,
           url: URL.createObjectURL(file),
-          mimeType: file.type.toLowerCase(),
+          mimeType,
+          ...(mimeType.startsWith("video/") ? { durationMs: await videoDurationMs(file) } : {}),
           assetKey,
           source: "upload" as const,
         };
@@ -1075,7 +1116,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
       ...candidate,
       product: {
         ...candidate.product,
-        images: candidate.product.images.map((image) => isClaimableImage(image) && !UUID_PATTERN.test(image.id)
+        images: candidate.product.images.map((image) => isClaimableSourceAsset(image) && !UUID_PATTERN.test(image.id)
           ? { ...image, id: crypto.randomUUID() }
           : image),
       },
@@ -1083,7 +1124,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
     const blobs = new Map<string, Blob>();
     const assetManifest: GuestClaimAssetManifest = [];
     for (const [ordinal, image] of projectForClaim.product.images.entries()) {
-      if (!isClaimableImage(image)) continue;
+      if (!isClaimableSourceAsset(image)) continue;
       let blob: Blob;
       let mimeType: string;
       if (image.assetKey) {
@@ -1097,18 +1138,24 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
         blob = await response.blob();
         mimeType = blob.type.toLowerCase();
       }
-      if (!["image/jpeg", "image/png", "image/webp"].includes(mimeType)) {
-        throw new Error(`${image.name} must be a JPEG, PNG or WebP image.`);
+      const footage = mimeType === "video/mp4" || mimeType === "video/quicktime";
+      if (!footage && !["image/jpeg", "image/png", "image/webp"].includes(mimeType)) {
+        throw new Error(`${image.name} must be a JPEG, PNG, WebP, MP4 or MOV file.`);
+      }
+      const durationMs = footage ? image.durationMs : undefined;
+      if (footage && (!durationMs || durationMs > 10 * 60 * 1_000)) {
+        throw new Error(`${image.name} needs a verified duration before it can be secured.`);
       }
       const checksumSha256 = await checksumForBlob(blob);
       blobs.set(image.id, blob);
       assetManifest.push({
         localAssetId: image.id,
         ordinal,
-        kind: "product",
+        kind: footage ? "footage" : "product",
         mimeType,
         sizeBytes: blob.size,
         checksumSha256,
+        ...(durationMs === undefined ? {} : { durationMs }),
       });
     }
 
@@ -1143,7 +1190,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
     const images = projectForClaim.product.images.map((image) => {
       const secure = claimedAssets.get(image.id);
       return secure
-        ? { ...image, assetKey: undefined, storagePath: secure.storagePath, mimeType: secure.mimeType, checksum: secure.checksum, url: secure.url }
+        ? { ...image, assetKey: undefined, storagePath: secure.storagePath, mimeType: secure.mimeType, checksum: secure.checksum, url: secure.url, ...(secure.durationMs === undefined ? {} : { durationMs: secure.durationMs }) }
         : image;
     });
     const claimedProject = mergeClaimedCreatorProject(projectForClaim, cloudProject, images);

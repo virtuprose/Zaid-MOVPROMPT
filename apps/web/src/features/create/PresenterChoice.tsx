@@ -25,7 +25,8 @@ function isEligibleFootage(asset: CreatorAsset) {
   return Boolean(
     asset.mimeType && /^video\/(mp4|quicktime|webm)$/i.test(asset.mimeType)
     && asset.storagePath
-    && /^[a-f0-9]{64}$/i.test(asset.checksum ?? ""),
+    && /^[a-f0-9]{64}$/i.test(asset.checksum ?? "")
+    && Boolean(asset.durationMs && asset.durationMs > 0 && asset.durationMs <= 10 * 60 * 1_000),
   );
 }
 

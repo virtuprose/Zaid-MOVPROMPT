@@ -97,6 +97,7 @@ const template: PublicTemplate = {
   supportedRatios: ["9:16", "1:1", "4:5", "16:9"],
   supportedMarkets: ["KW"],
   requiredInputs: ["product_image"],
+  presenterModes: ["none"],
   starterRenderEligible: true,
   previewAvailable: false,
   posterAvailable: false,

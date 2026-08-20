@@ -12,7 +12,7 @@ import {
 
 import type { CreatorAsset } from "./types";
 
-type CreatorImageMimeType = NonNullable<CreatorAsset["mimeType"]>;
+type CreatorSourceMimeType = NonNullable<CreatorAsset["mimeType"]>;
 
 /** Factual browser-visible checkpoints emitted only at durable claim boundaries. */
 export type GuestClaimProgress =
@@ -33,9 +33,9 @@ function isAbortError(error: unknown): boolean {
     || error instanceof Error && error.name === "AbortError";
 }
 
-function parseCreatorImageMimeType(value: string): CreatorImageMimeType {
-  if (value === "image/jpeg" || value === "image/png" || value === "image/webp") return value;
-  throw new Error("MovPrompt received an unsupported image type from storage. Your local draft is unchanged.");
+function parseCreatorSourceMimeType(value: string): CreatorSourceMimeType {
+  if (["image/jpeg", "image/png", "image/webp", "video/mp4", "video/quicktime"].includes(value)) return value;
+  throw new Error("MovPrompt received an unsupported source file from storage. Your local draft is unchanged.");
 }
 
 function apiOrigin(): string {
@@ -103,8 +103,10 @@ export class GuestClaimAssetFailure extends Error {
 export type ClaimedGuestAsset = {
   localAssetId: string;
   storagePath: string;
-  mimeType: CreatorImageMimeType;
+  kind: CreatorAssetKind;
+  mimeType: CreatorSourceMimeType;
   checksum: string;
+  durationMs?: number;
   url: string;
 };
 
@@ -128,6 +130,7 @@ async function secureClaimAsset(input: {
   mimeType: string;
   sizeBytes: number;
   checksumSha256: string;
+  durationMs?: number;
   blob: Blob;
   signal?: AbortSignal;
 }): Promise<ClaimedGuestAsset> {
@@ -145,6 +148,7 @@ async function secureClaimAsset(input: {
         mimeType: input.mimeType,
         sizeBytes: input.sizeBytes,
         checksumSha256: input.checksumSha256,
+        ...(input.durationMs === undefined ? {} : { durationMs: input.durationMs }),
       },
     }),
     input.signal,
@@ -188,8 +192,10 @@ async function secureClaimAsset(input: {
   return {
     localAssetId: ready.asset.id,
     storagePath: ready.asset.objectKey,
-    mimeType: parseCreatorImageMimeType(ready.asset.mimeType),
+    kind: ready.asset.kind,
+    mimeType: parseCreatorSourceMimeType(ready.asset.mimeType),
     checksum: ready.asset.checksumSha256,
+    ...(ready.asset.durationMs === undefined ? {} : { durationMs: ready.asset.durationMs }),
     // The URL remains in active component state only. projectStore removes it
     // before the project cache is written to durable browser storage.
     url: download.download.url,
@@ -243,6 +249,7 @@ export async function claimGuestAssets(input: {
         mimeType: asset.mimeType,
         sizeBytes: asset.sizeBytes,
         checksumSha256: asset.checksumSha256,
+        ...(asset.durationMs === undefined ? {} : { durationMs: asset.durationMs }),
         blob,
         signal: input.signal,
       });
@@ -284,8 +291,10 @@ export async function claimGuestAssets(input: {
     securedAssets.set(asset.localAssetId, {
       localAssetId: download.asset.id,
       storagePath: download.asset.objectKey,
-      mimeType: parseCreatorImageMimeType(download.asset.mimeType),
+      kind: download.asset.kind,
+      mimeType: parseCreatorSourceMimeType(download.asset.mimeType),
       checksum: download.asset.checksumSha256,
+      ...(download.asset.durationMs === undefined ? {} : { durationMs: download.asset.durationMs }),
       url: download.download.url,
     });
   }
@@ -330,7 +339,7 @@ export async function claimGuestImage(input: {
   return {
     assetId: upload.asset.id,
     storagePath: upload.asset.objectKey,
-    mimeType: parseCreatorImageMimeType(upload.asset.mimeType),
+    mimeType: parseCreatorSourceMimeType(upload.asset.mimeType),
     url: download.download.url,
     checksum,
   };
@@ -366,7 +375,7 @@ export async function mirrorProductImages(projectId: string, assets: CreatorAsse
       ...asset,
       id: result.asset.id,
       storagePath: result.asset.objectKey,
-      mimeType: parseCreatorImageMimeType(result.asset.mimeType),
+      mimeType: parseCreatorSourceMimeType(result.asset.mimeType),
       url: result.download.url,
       checksum: result.asset.checksumSha256,
     });

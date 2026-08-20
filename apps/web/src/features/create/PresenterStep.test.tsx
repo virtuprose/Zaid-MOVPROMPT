@@ -10,6 +10,7 @@ const footage = {
   mimeType: "video/quicktime",
   storagePath: "creator-assets/user/project/founder.mov",
   checksum: "a".repeat(64),
+  durationMs: 10_000,
   source: "upload" as const,
 };
 
@@ -67,5 +68,19 @@ describe("PresenterChoice", () => {
         personMediaRightsAttested: true,
       },
     });
+  });
+
+  it("keeps uploaded spokesperson unavailable until footage has server-verified duration metadata", () => {
+    render(
+      <PresenterChoice
+        value={{ mode: "none" }}
+        compatibility={{ aiUgc: false, uploadedSpokesperson: true }}
+        eligibleFootage={[{ ...footage, durationMs: undefined }]}
+        onChange={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByRole("radio", { name: "Uploaded spokesperson" })).not.toBeInTheDocument();
+    expect(screen.getByText(/Add a verified video in Source/i)).toBeVisible();
   });
 });

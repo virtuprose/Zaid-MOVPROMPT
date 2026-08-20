@@ -9,6 +9,7 @@ import type {
   CreateProjectVersionRequest,
   CreatorProjectRecord,
   ProjectVersion,
+  PresenterMode,
   PublicTemplate,
   ReplaceProjectSourceRequest,
 } from "@movprompt/contracts";
@@ -224,6 +225,9 @@ function templatePublic(row: {
     ),
     supportedMarkets: row.supportedMarkets.filter((item): item is "KW" => item === "KW"),
     requiredInputs: strings(row.recipe.requiredInputs),
+    presenterModes: strings(row.recipe.presenterModes).filter((item): item is PresenterMode =>
+      ["none", "ai_ugc", "uploaded_spokesperson", "digital_twin"].includes(item),
+    ),
     starterRenderEligible: row.recipe.starterRenderEligible === true,
     previewAvailable: Boolean(row.previewObjectKey),
     posterAvailable: Boolean(row.posterObjectKey),

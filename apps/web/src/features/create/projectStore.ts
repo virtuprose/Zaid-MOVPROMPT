@@ -169,8 +169,10 @@ export function buildPortableGenerationConfiguration(project: CreatorProject) {
       subtitles: project.subtitles,
     },
     creativeBrief,
+    // Footage is owner-verified for presenter eligibility. It is deliberately
+    // not sent as an image reference to a capability that accepts images only.
     references: project.product.images.flatMap((image) =>
-      image.storagePath && image.mimeType
+      image.storagePath && image.mimeType && image.mimeType.startsWith("image/")
         ? [{ objectKey: image.storagePath, mimeType: image.mimeType }]
         : [],
     ),

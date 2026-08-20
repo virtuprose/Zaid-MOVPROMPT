@@ -209,6 +209,7 @@ async function findOwnedAsset(
 }
 
 const MAX_BROWSER_IMAGE_BYTES = 12 * 1024 * 1024;
+const MAX_BROWSER_FOOTAGE_BYTES = 50 * 1024 * 1024;
 
 function hasExpectedImageSignature(bytes: Uint8Array, mimeType: string): boolean {
   if (mimeType === "image/jpeg") {
@@ -226,11 +227,21 @@ function hasExpectedImageSignature(bytes: Uint8Array, mimeType: string): boolean
   return false;
 }
 
-async function readVerifiedImageBody(request: Request, asset: OwnedAssetRecord): Promise<Uint8Array> {
-  if (asset.sizeBytes > MAX_BROWSER_IMAGE_BYTES) {
+function hasExpectedFootageSignature(bytes: Uint8Array, mimeType: string): boolean {
+  if (mimeType === "video/webm") {
+    return bytes.length >= 4 && bytes[0] === 0x1a && bytes[1] === 0x45 && bytes[2] === 0xdf && bytes[3] === 0xa3;
+  }
+  // ISO base media files (MP4 and QuickTime MOV) expose their ftyp box at byte 4.
+  return bytes.length >= 12 && String.fromCharCode(...bytes.subarray(4, 8)) === "ftyp";
+}
+
+async function readVerifiedAssetBody(request: Request, asset: OwnedAssetRecord): Promise<Uint8Array> {
+  const footage = asset.kind === "footage";
+  const byteLimit = footage ? MAX_BROWSER_FOOTAGE_BYTES : MAX_BROWSER_IMAGE_BYTES;
+  if (asset.sizeBytes > byteLimit) {
     throw new ApiHttpError({
       code: "asset_too_large",
-      message: "Product images must be 12 MB or smaller.",
+      message: footage ? "Footage must be 50 MB or smaller." : "Product images must be 12 MB or smaller.",
       status: 413,
       retryable: false,
     });
@@ -239,7 +250,7 @@ async function readVerifiedImageBody(request: Request, asset: OwnedAssetRecord):
   if (contentType !== asset.mimeType.toLowerCase()) {
     throw new ApiHttpError({
       code: "asset_integrity_mismatch",
-      message: "The uploaded image type does not match the saved asset metadata.",
+      message: "The uploaded file type does not match the saved asset metadata.",
       status: 409,
       retryable: false,
     });
@@ -248,7 +259,7 @@ async function readVerifiedImageBody(request: Request, asset: OwnedAssetRecord):
   if (declaredLength && Number(declaredLength) !== asset.sizeBytes) {
     throw new ApiHttpError({
       code: "asset_integrity_mismatch",
-      message: "The uploaded image size does not match the saved asset metadata.",
+      message: "The uploaded file size does not match the saved asset metadata.",
       status: 409,
       retryable: false,
     });
@@ -256,7 +267,7 @@ async function readVerifiedImageBody(request: Request, asset: OwnedAssetRecord):
   if (!request.body) {
     throw new ApiHttpError({
       code: "invalid_asset_content",
-      message: "The image upload body is empty.",
+      message: "The asset upload body is empty.",
       status: 400,
       retryable: false,
     });
@@ -270,10 +281,10 @@ async function readVerifiedImageBody(request: Request, asset: OwnedAssetRecord):
       const { done, value } = await reader.read();
       if (done) break;
       total += value.byteLength;
-      if (total > asset.sizeBytes || total > MAX_BROWSER_IMAGE_BYTES) {
+      if (total > asset.sizeBytes || total > byteLimit) {
         throw new ApiHttpError({
           code: "asset_too_large",
-          message: "The image upload is larger than the declared file.",
+          message: "The uploaded file is larger than the declared file.",
           status: 413,
           retryable: false,
         });
@@ -287,7 +298,7 @@ async function readVerifiedImageBody(request: Request, asset: OwnedAssetRecord):
   if (total !== asset.sizeBytes) {
     throw new ApiHttpError({
       code: "asset_integrity_mismatch",
-      message: "The uploaded image did not arrive completely.",
+      message: "The uploaded file did not arrive completely.",
       status: 409,
       retryable: true,
     });
@@ -298,10 +309,12 @@ async function readVerifiedImageBody(request: Request, asset: OwnedAssetRecord):
     bytes.set(chunk, offset);
     offset += chunk.byteLength;
   }
-  if (!hasExpectedImageSignature(bytes, contentType)) {
+  if (footage ? !hasExpectedFootageSignature(bytes, contentType) : !hasExpectedImageSignature(bytes, contentType)) {
     throw new ApiHttpError({
       code: "invalid_asset_content",
-      message: "The uploaded file is not a valid JPG, PNG or WebP image.",
+      message: footage
+        ? "The uploaded file is not a valid MP4, MOV or WebM video."
+        : "The uploaded file is not a valid JPG, PNG or WebP image.",
       status: 422,
       retryable: false,
     });
@@ -310,7 +323,7 @@ async function readVerifiedImageBody(request: Request, asset: OwnedAssetRecord):
   if (checksum !== asset.checksumSha256) {
     throw new ApiHttpError({
       code: "asset_integrity_mismatch",
-      message: "The uploaded image checksum does not match the selected file.",
+      message: "The uploaded file checksum does not match the selected file.",
       status: 409,
       retryable: false,
     });
@@ -427,7 +440,7 @@ export function registerAssetRoutes(
       assetId: context.req.param("assetId"),
     });
     const asset = await findOwnedAsset(repository, userId, projectId, assetId!);
-    const bytes = await readVerifiedImageBody(context.req.raw, asset);
+    const bytes = await readVerifiedAssetBody(context.req.raw, asset);
 
     try {
       await storage.put({

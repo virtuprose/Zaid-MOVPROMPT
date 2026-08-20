@@ -264,6 +264,43 @@ describe("private asset API", () => {
     }));
   });
 
+  it("accepts owner-scoped MP4 footage only with verified duration, signature and checksum", async () => {
+    const bytes = new Uint8Array([0, 0, 0, 24, 0x66, 0x74, 0x79, 0x70, 0x69, 0x73, 0x6f, 0x6d, 0, 0, 0, 0]);
+    const checksumSha256 = createHash("sha256").update(bytes).digest("hex");
+    const asset: OwnedAssetRecord = {
+      ...ownedAsset(),
+      kind: "footage",
+      objectKey: `users/${USER_ID}/projects/${PROJECT_ID}/assets/footage/${ASSET_ID}/${checksumSha256}`,
+      mimeType: "video/mp4",
+      sizeBytes: bytes.byteLength,
+      checksumSha256,
+      durationMs: 10_000,
+    };
+    const objectStorage = storage();
+    objectStorage.head = vi.fn(async () => ({
+      contentLength: bytes.byteLength,
+      contentType: "video/mp4",
+      checksumSha256,
+    }));
+    const app = createApi({
+      config,
+      authGateway: authGateway(),
+      assetRepository: repository({ asset }),
+      assetStorage: objectStorage,
+    });
+
+    const response = await app.request(
+      `/api/v1/projects/${PROJECT_ID}/assets/${ASSET_ID}/content`,
+      { method: "PUT", headers: { "content-type": "video/mp4" }, body: bytes },
+    );
+
+    expect(response.status).toBe(201);
+    await expect(response.json()).resolves.toMatchObject({
+      asset: { id: ASSET_ID, kind: "footage", durationMs: 10_000, checksumSha256 },
+    });
+    expect(objectStorage.put).toHaveBeenCalledWith(expect.objectContaining({ contentType: "video/mp4" }));
+  });
+
   it("advances only the matching guest-claim checkpoint after private object verification", async () => {
     const bytes = new Uint8Array(1_024);
     bytes.set([0xff, 0xd8, 0xff, 0xe0]);

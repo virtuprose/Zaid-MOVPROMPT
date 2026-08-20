@@ -24,6 +24,8 @@ export type CreatorAsset = {
   mimeType?: string;
   assetKey?: string;
   checksum?: string;
+  /** Verified local/video metadata is retained until guest claim completes. */
+  durationMs?: number;
   storagePath?: string;
   source: "upload" | "url" | "sample";
 };
