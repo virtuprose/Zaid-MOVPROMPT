@@ -35,7 +35,7 @@ function isAbortError(error: unknown): boolean {
 
 function parseCreatorSourceMimeType(value: string): CreatorSourceMimeType {
   if (["image/jpeg", "image/png", "image/webp", "video/mp4", "video/quicktime"].includes(value)) return value;
-  throw new Error("MovPrompt received an unsupported source file from storage. Your local draft is unchanged.");
+  throw new Error("MovPrompt received an unsupported image type or video type from storage. Your local draft is unchanged.");
 }
 
 function apiOrigin(): string {
