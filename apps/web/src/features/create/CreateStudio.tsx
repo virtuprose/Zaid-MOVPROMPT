@@ -38,7 +38,10 @@ import { cn } from "@/lib/utils";
 import { CreatorShell } from "./CreatorShell";
 import { AuthGateDialog } from "./AuthGateDialog";
 import { TemplateGrid } from "./TemplateGrid";
-import { createDraftProject, getCreatorTemplate } from "./templates";
+import { OutcomeStep } from "./OutcomeStep";
+import { TemplateRecommendations } from "./TemplateRecommendationCards";
+import type { RecommendationSelection } from "./templateRecommendations";
+import { CREATOR_TEMPLATES, createDraftProject, getCreatorTemplate } from "./templates";
 import {
   completeLocalProductPreview,
   hasRealCreatorVideo,
@@ -94,6 +97,7 @@ import {
   type CreatorProject,
   type CreatorScene,
   type CreatorStep,
+  type CreatorTemplate,
 } from "./types";
 
 const STEPS: Array<{ id: CreatorStep; label: string }> = [
@@ -348,6 +352,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
   const [sourceError, setSourceError] = useState("");
   const [recovery, setRecovery] = useState<TypedGuestClaimRecovery | null>(null);
   const [sourceBusy, setSourceBusy] = useState(false);
+  const [showAllTemplates, setShowAllTemplates] = useState(false);
   const [claimProgress, setClaimProgress] = useState<GuestClaimProgressState | null>(null);
   const [modeSwitching, setModeSwitching] = useState(false);
   const [rightsConfirmed, setRightsConfirmed] = useState(false);
@@ -379,7 +384,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
   const template = getCreatorTemplate(project.templateId);
   const projectDurationSeconds = project.scenes.reduce((sum, scene) => sum + scene.duration, 0);
   const templateQuote = useTemplateQuotes({
-    enabled: portablePlatform && !simulatedGeneration,
+    enabled: portablePlatform && !simulatedGeneration && step === "details",
     templateId: template.id,
     configuration: buildPortableGenerationConfiguration(project),
   });
@@ -642,6 +647,24 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
     setStep(project.product.images.length ? "details" : "source");
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
+
+  const selectRecommendedTemplate = (selection: RecommendationSelection) => {
+    selectTemplate(selection.template.id);
+    setProject((current) => ({
+      ...current,
+      pendingQuoteCredits: selection.quote.credits,
+      updatedAt: new Date().toISOString(),
+    }));
+  };
+
+  const recommendationConfigurationFor = useCallback((candidateTemplate: CreatorTemplate) => {
+    return buildPortableGenerationConfiguration({
+      ...project,
+      templateId: candidateTemplate.id,
+      dialectRegister: candidateTemplate.dialectRegister,
+      scenes: candidateTemplate.scenes.map((scene) => ({ ...scene })),
+    });
+  }, [project]);
 
   const chooseSourceChoice = (next: SourceChoice) => {
     setSourceChoice(next);
@@ -1574,7 +1597,35 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
           <CreatorProgress current={step} steps={flowSteps} label={tr("Step", "الخطوة")} arabic={arabicUi} />
         </header>
 
-        {step === "template" && <TemplateGrid selectedId={project.templateId} onSelect={selectTemplate} />}
+        {step === "template" && (
+          <section className="creator-template-flow" aria-label={tr("Choose a campaign result", "اختر نتيجة الحملة")}>
+            <OutcomeStep
+              value={project.goal}
+              arabic={arabicUi}
+              onChange={(goal) => {
+                updateProject({ goal });
+                setShowAllTemplates(false);
+              }}
+            />
+            <TemplateRecommendations
+              templates={CREATOR_TEMPLATES}
+              goal={project.goal}
+              vertical={project.vertical}
+              language={project.language}
+              aspectRatio={project.aspectRatio}
+              hasSource={Boolean(project.product.name.trim() || project.product.images.length)}
+              configurationForTemplate={recommendationConfigurationFor}
+              onSelect={selectRecommendedTemplate}
+              arabic={arabicUi}
+            />
+            <div className="creator-browse-templates">
+              <button className="creator-button creator-button-quiet" type="button" onClick={() => setShowAllTemplates((current) => !current)} aria-expanded={showAllTemplates}>
+                {showAllTemplates ? tr("Hide all templates", "إخفاء كل القوالب") : tr("Browse all templates", "استعرض كل القوالب")}
+              </button>
+            </div>
+            {showAllTemplates ? <TemplateGrid selectedId={project.templateId} onSelect={selectTemplate} /> : null}
+          </section>
+        )}
 
         {step === "source" && (
           <div className="creator-workspace creator-source-workspace">
