@@ -2,7 +2,7 @@ import { CampaignPresenterSchema, type CreatorProjectRecord } from "@movprompt/c
 
 import { portableCreatorApi } from "@/lib/api/portableApiClient";
 import { sanitizeCreatorProjectOutput } from "./creatorProjectOutput";
-import { projectWithCampaignSource } from "./sourceFacts";
+import { campaignSourceForProject, projectWithCampaignSource } from "./sourceFacts";
 import { normalizeCreatorResolution, type CreatorProject } from "./types";
 
 function recoveredProjectStatus(input: CreatorProjectRecord): CreatorProject["status"] {
