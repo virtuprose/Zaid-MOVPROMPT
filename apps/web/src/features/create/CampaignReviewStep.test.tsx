@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { CampaignReviewStep } from "./CampaignReviewStep";
-import { createDraftProject } from "./templates";
+import { createDraftProject, templateRequiresSourceMedia } from "./templates";
 
 describe("CampaignReviewStep", () => {
   it("renders an exact product review and routes each group to its owning step", () => {
@@ -129,5 +129,35 @@ describe("CampaignReviewStep", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Generate campaign" }));
     expect(onGenerate).toHaveBeenCalledOnce();
+  });
+
+  it("still blocks a manual product campaign when its selected template requires a visual reference", () => {
+    const project = createDraftProject("luxury-product-reveal");
+    project.product = { ...project.product, sourceType: "upload", name: "Oud oil", images: [] };
+    project.source = {
+      kind: "product_upload",
+      subject: "product",
+      assetKeys: [],
+      facts: [{ field: "name", value: "Oud oil", provenance: "manual" }],
+    };
+
+    render(
+      <CampaignReviewStep
+        project={project}
+        rightsConfirmed
+        quote={{ quoteId: "quote-product", capability: "video.product_fidelity", credits: 120, entitlementEligible: false, expiresAt: new Date(Date.now() + 60_000).toISOString(), breakdown: [], configurationHash: "product", pricingVersion: "test", estimateOnly: false }}
+        quoteState="ready"
+        onEdit={vi.fn()}
+        onGenerate={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "Generate campaign" })).toBeDisabled();
+    expect(screen.getByText("Add the required source details and media before generating. Your campaign is saved.")).toBeVisible();
+  });
+
+  it("derives the media requirement from the immutable template recipe", () => {
+    expect(templateRequiresSourceMedia("luxury-product-reveal")).toBe(true);
+    expect(templateRequiresSourceMedia("clinic-service-explainer")).toBe(false);
   });
 });
