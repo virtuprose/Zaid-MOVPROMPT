@@ -126,7 +126,7 @@ export type CreatorProject = {
   updatedAt: string;
 };
 
-export type CreatorStep = "template" | "source" | "details" | "generating" | "editor";
+export type CreatorStep = "template" | "source" | "facts" | "details" | "generating" | "editor";
 
 export const MARKET_META: Record<CreatorMarket, { label: string; currency: string }> = {
   KW: { label: "Kuwait", currency: "KWD" },

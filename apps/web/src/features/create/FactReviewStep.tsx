@@ -1,0 +1,132 @@
+import { CheckCircle2, PencilLine } from "lucide-react";
+import { useMemo, useRef, useState } from "react";
+import type { CampaignFactField, CampaignGoal, CampaignSource } from "@movprompt/contracts";
+
+import { cn } from "@/lib/utils";
+
+import { factsForReview, requiredFactsForOutcome } from "./sourceFacts";
+
+type FactReviewStepProps = {
+  source: CampaignSource;
+  goal: CampaignGoal;
+  arabic?: boolean;
+  onEdit: (field: CampaignFactField, value: string) => void;
+  onConfirm: (fields: CampaignFactField[]) => void;
+  onContinue: () => void;
+  onBack: () => void;
+};
+
+const FACT_META: Record<CampaignFactField, { en: string; ar: string; type?: "url" | "tel" }> = {
+  name: { en: "Product name", ar: "اسم المنتج" },
+  description: { en: "Description", ar: "الوصف" },
+  brand: { en: "Brand", ar: "العلامة التجارية" },
+  price: { en: "Price (KWD)", ar: "السعر (د.ك)" },
+  offer: { en: "Offer", ar: "العرض" },
+  location: { en: "Kuwait location", ar: "الموقع في الكويت" },
+  booking_url: { en: "Booking link", ar: "رابط الحجز", type: "url" },
+  whatsapp: { en: "WhatsApp number", ar: "رقم واتساب", type: "tel" },
+  logo: { en: "Logo", ar: "الشعار" },
+  brand_color: { en: "Brand colour", ar: "لون العلامة" },
+  service_name: { en: "Business or service name", ar: "اسم النشاط أو الخدمة" },
+  service_details: { en: "Service details", ar: "تفاصيل الخدمة" },
+  media: { en: "Photos or footage", ar: "الصور أو الفيديو" },
+};
+
+function copy(arabic: boolean, english: string, arabicText: string) {
+  return arabic ? arabicText : english;
+}
+
+function provenanceCopy(arabic: boolean, provenance: CampaignSource["facts"][number]["provenance"]) {
+  if (provenance === "imported") return copy(arabic, "Imported", "مستورد");
+  if (provenance === "user_confirmed") return copy(arabic, "Confirmed by you", "أكدته بنفسك");
+  return copy(arabic, "Added by you", "أضفته بنفسك");
+}
+
+/** A controlled fact editor; the parent applies exact source and legacy-project transitions. */
+export function FactReviewStep({ source, goal, arabic = false, onEdit, onConfirm, onContinue, onBack }: FactReviewStepProps) {
+  const [validation, setValidation] = useState<CampaignFactField[]>([]);
+  const fieldRefs = useRef(new Map<CampaignFactField, HTMLInputElement>());
+  const rows = useMemo(() => factsForReview(source, goal), [goal, source]);
+  const importedFields = source.facts.filter((fact) => fact.provenance === "imported").map((fact) => fact.field);
+  const required = new Set(requiredFactsForOutcome(goal, source.subject));
+  const summary = source.kind === "product_url"
+    ? copy(arabic, "Product link", "رابط المنتج")
+    : source.kind === "business_url"
+      ? copy(arabic, "Business or service link", "رابط النشاط أو الخدمة")
+      : source.kind === "real_footage"
+        ? copy(arabic, "Real footage", "فيديو حقيقي")
+        : source.kind === "product_upload"
+          ? copy(arabic, "Uploaded media", "وسائط مرفوعة")
+          : copy(arabic, "Entered manually", "معلومات مدخلة يدوياً");
+
+  const validateAndContinue = () => {
+    const missing = rows.filter((row) => row.state === "required_missing").map((row) => row.field);
+    setValidation(missing);
+    if (missing.length) {
+      fieldRefs.current.get(missing[0]!)?.focus();
+      return;
+    }
+    onContinue();
+  };
+
+  return (
+    <section className="creator-fact-review" aria-labelledby="fact-review-heading">
+      <div className="creator-source-choice-heading">
+        <p className="creator-kicker">{copy(arabic, "Review the facts", "راجع المعلومات")}</p>
+        <h2 id="fact-review-heading">{copy(arabic, "Check the details we’ll use", "تأكد من التفاصيل التي سنستخدمها")}</h2>
+        <p>{copy(arabic, "Correct anything that is wrong. Your changes stay visible and never replace the original silently.", "صحح أي معلومة غير دقيقة. تعديلاتك تبقى واضحة ولا تستبدل الأصل بدون علمك.")}</p>
+      </div>
+
+      <div className="creator-fact-source-summary" role="note">
+        <span>{copy(arabic, "Source", "المصدر")}</span>
+        <strong>{summary}</strong>
+      </div>
+
+      <div className="creator-fact-list">
+        {rows.map((row) => {
+          const meta = FACT_META[row.field];
+          const fact = row.fact;
+          const invalid = validation.includes(row.field);
+          const inputId = `campaign-fact-${row.field}`;
+          const errorId = `${inputId}-error`;
+          const stateLabel = fact ? provenanceCopy(arabic, fact.provenance) : copy(arabic, "Not added", "غير مضاف");
+          return (
+            <div key={row.field} className={cn("creator-fact-row", invalid && "has-error", !fact && "is-empty")}>
+              <div className="creator-fact-row-heading">
+                <label htmlFor={inputId}>{meta[arabic ? "ar" : "en"]}</label>
+                <span className={cn("creator-fact-provenance", fact?.provenance && `is-${fact.provenance}`)}>
+                  {fact?.provenance === "user_confirmed" ? <CheckCircle2 aria-hidden="true" /> : <PencilLine aria-hidden="true" />}
+                  {stateLabel}
+                </span>
+              </div>
+              <input
+                ref={(node) => { if (node) fieldRefs.current.set(row.field, node); }}
+                id={inputId}
+                className="creator-input"
+                value={fact?.value ?? ""}
+                type={meta.type ?? "text"}
+                inputMode={meta.type === "tel" ? "tel" : meta.type === "url" ? "url" : undefined}
+                aria-invalid={invalid || undefined}
+                aria-describedby={invalid ? errorId : undefined}
+                onChange={(event) => {
+                  onEdit(row.field, event.target.value);
+                  if (invalid) setValidation((current) => current.filter((field) => field !== row.field));
+                }}
+              />
+              {invalid && <p id={errorId} className="creator-field-error" role="alert">{copy(arabic, `Add ${meta.en.toLocaleLowerCase()} to continue.`, `أضف ${meta.ar} للمتابعة.`)}</p>}
+              {!fact && !required.has(row.field) && <p className="creator-field-help">{copy(arabic, "Optional — not added to this campaign.", "اختياري — غير مضاف لهذه الحملة.")}</p>}
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="creator-fact-review-actions">
+        <button className="creator-button creator-button-quiet" type="button" onClick={onBack}>{copy(arabic, "Back", "رجوع")}</button>
+        <div className="creator-actions-row">
+          {importedFields.length > 0 && <button className="creator-button creator-button-secondary" type="button" onClick={() => onConfirm(importedFields)}>{copy(arabic, "Confirm details", "أكد التفاصيل")}</button>}
+          <button className="creator-button creator-button-primary" type="button" onClick={validateAndContinue}>{copy(arabic, "Continue", "متابعة")}</button>
+        </div>
+      </div>
+    </section>
+  );
+}

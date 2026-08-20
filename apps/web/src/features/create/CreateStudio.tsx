@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   ArrowLeft,
@@ -26,7 +26,7 @@ import {
   WandSparkles,
 } from "lucide-react";
 import { toast } from "sonner";
-import type { GuestClaimAssetManifest, RenderProcessingStage } from "@movprompt/contracts";
+import type { CampaignFactField, CampaignSource, GuestClaimAssetManifest, RenderProcessingStage } from "@movprompt/contracts";
 import { Seo } from "@/components/Seo";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { useAuth } from "@/hooks/useAuth";
@@ -38,7 +38,7 @@ import { cn } from "@/lib/utils";
 import { CreatorShell } from "./CreatorShell";
 import { AuthGateDialog } from "./AuthGateDialog";
 import { TemplateGrid } from "./TemplateGrid";
-import { SAMPLE_PRODUCT, createDraftProject, getCreatorTemplate } from "./templates";
+import { createDraftProject, getCreatorTemplate } from "./templates";
 import {
   completeLocalProductPreview,
   hasRealCreatorVideo,
@@ -70,6 +70,8 @@ import { cleanupExpiredGuestDrafts, getGuestAsset, getGuestDraft, loadGuestDraft
 import { claimGuestAssets, GuestClaimAssetFailure, type GuestClaimProgress as GuestClaimProgressState } from "./creatorAssets";
 import { GuestClaimProgress } from "./GuestClaimProgress";
 import { CreatorProgress } from "./CreatorProgress";
+import { FactReviewStep } from "./FactReviewStep";
+import { SourceChoiceStep, type SourceChoice, type SourceSubject } from "./SourceChoiceStep";
 import { buildGuestClaimSnapshot } from "./guestClaimSnapshot";
 import {
   hasUnclaimedCreatorAssets,
@@ -78,6 +80,7 @@ import {
   syncCreatorProjectWithOwnedRemoteImages,
 } from "./creatorProjectAssets";
 import { SaveStatusIndicator, type SaveLifecycleState } from "./SaveStatusIndicator";
+import { applyImportedFacts, campaignFactValue, campaignSourceForProject, confirmCampaignFacts, editFact, normalizeCampaignSource } from "./sourceFacts";
 import {
   CAMPAIGN_GOAL_OPTIONS,
   CTA_OPTIONS,
@@ -95,6 +98,7 @@ import {
 const STEPS: Array<{ id: CreatorStep; label: string }> = [
   { id: "template", label: "Template" },
   { id: "source", label: "Source" },
+  { id: "facts", label: "Facts" },
   { id: "details", label: "Campaign" },
   { id: "generating", label: "Create" },
   { id: "editor", label: "Review" },
@@ -103,6 +107,7 @@ const STEPS: Array<{ id: CreatorStep; label: string }> = [
 const ARABIC_STEP_LABELS: Record<CreatorStep, string> = {
   template: "القالب",
   source: "المصدر",
+  facts: "المعلومات",
   details: "الحملة",
   generating: "الإنشاء",
   editor: "المراجعة",
@@ -238,6 +243,54 @@ function stepForLoadedProject(project: CreatorProject): CreatorStep {
   return project.product.images.length ? "details" : "source";
 }
 
+function sourceChoiceForProject(project: CreatorProject): SourceChoice {
+  const source = campaignSourceForProject(project);
+  if (source.kind === "product_url") return "product_link";
+  if (source.kind === "business_url") return "business_link";
+  if (source.kind === "service_manual") return "manual";
+  return "upload";
+}
+
+function sourceSubjectForProject(project: CreatorProject): SourceSubject {
+  return campaignSourceForProject(project).subject;
+}
+
+function productSourceTypeFor(source: CampaignSource): CreatorProject["product"]["sourceType"] {
+  if (source.kind === "product_url") return "product_link";
+  if (source.kind === "business_url") return "business_link";
+  if (source.kind === "product_upload" || source.kind === "real_footage") return "upload";
+  return null;
+}
+
+/** Keep the legacy display fields as a compatibility view of the one normalized fact source. */
+function projectWithSource(project: CreatorProject, source: CampaignSource, changes: Partial<CreatorProject> = {}): CreatorProject {
+  const subject = source.subject;
+  const name = campaignFactValue(source, subject === "service" ? "service_name" : "name");
+  const fact = (field: CampaignFactField) => campaignFactValue(source, field);
+  const nextProduct = {
+    ...project.product,
+    ...changes.product,
+    sourceType: productSourceTypeFor(source),
+    name,
+    description: fact("description"),
+    brand: fact("brand"),
+    price: fact("price"),
+  };
+  return {
+    ...project,
+    ...changes,
+    source,
+    promotionKind: subject === "service" ? "business" : "product",
+    product: nextProduct,
+    location: fact("location"),
+    bookingUrl: fact("booking_url"),
+    whatsapp: fact("whatsapp"),
+    offer: fact("offer"),
+    brandColor: fact("brand_color") || project.brandColor,
+    title: name ? `${name} — ${getCreatorTemplate(project.templateId).name}` : project.title,
+  };
+}
+
 export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
   const navigate = useNavigate();
   const { locale, t } = useLanguage();
@@ -278,9 +331,8 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
   const saveRevision = useRef(0);
   const sessionDraftId = useRef(project.id);
   const [step, setStep] = useState<CreatorStep>(() => normalizedInitialProject ? stepForLoadedProject(normalizedInitialProject) : "source");
-  const [sourceTab, setSourceTab] = useState<"product" | "business" | "upload">(
-    project.promotionKind === "business" ? "business" : "product",
-  );
+  const [sourceChoice, setSourceChoice] = useState<SourceChoice>(() => sourceChoiceForProject(project));
+  const [sourceSubject, setSourceSubject] = useState<SourceSubject>(() => sourceSubjectForProject(project));
   const [productUrl, setProductUrl] = useState(initialProject?.product.sourceUrl ?? homepageHandoff.sourceUrl);
   const [sourceError, setSourceError] = useState("");
   const [recovery, setRecovery] = useState<TypedGuestClaimRecovery | null>(null);
@@ -307,6 +359,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
   const generationCancelled = useRef(false);
   const generationSubmission = useRef(false);
   const activeClaimController = useRef<AbortController | null>(null);
+  const activeSourceScanController = useRef<AbortController | null>(null);
   const resumedGeneration = useRef(false);
   const startGenerationRef = useRef<(ratioOverride?: CreatorAspectRatio) => Promise<void>>(async () => undefined);
   const generateButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -537,7 +590,8 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
       }));
       setRightsConfirmed(Boolean(draft.rightsAttestation?.confirmed));
       setProductUrl(draft.product.sourceUrl);
-      setSourceTab(draft.product.sourceType === "business_link" ? "business" : draft.product.sourceType === "upload" ? "upload" : "product");
+      setSourceChoice(draft.source?.kind === "product_url" ? "product_link" : draft.source?.kind === "business_url" ? "business_link" : draft.source?.kind === "service_manual" ? "manual" : "upload");
+      setSourceSubject(draft.source?.subject ?? (draft.product.sourceType === "business_link" || draft.campaign.goal === "bookings" ? "service" : "product"));
       setStep(draft.product.images.length ? "details" : "source");
       setDraftRestoring(false);
       if (user && shouldResumeGeneration && draft.pendingGenerationId) {
@@ -641,106 +695,113 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
       scenes: nextTemplate.scenes.map((scene) => ({ ...scene })),
       title: project.product.name ? `${project.product.name} — ${nextTemplate.name}` : "Untitled campaign",
     });
-    setSourceTab(serviceTemplate ? "business" : "product");
+    setSourceSubject(serviceTemplate ? "service" : "product");
     setActiveSceneId(nextTemplate.scenes[0].id);
     setStep(project.product.images.length ? "details" : "source");
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const useSampleProduct = () => {
-    updateProjectSource({
-      promotionKind: "product",
-      product: { ...SAMPLE_PRODUCT, images: SAMPLE_PRODUCT.images.map((image) => ({ ...image })) },
-      title: `${SAMPLE_PRODUCT.name} — ${template.name}`,
+  const chooseSourceChoice = (next: SourceChoice) => {
+    setSourceChoice(next);
+    setSourceError("");
+    setRecovery(null);
+    if (next === "product_link") setSourceSubject("product");
+    if (next === "business_link") setSourceSubject("service");
+  };
+
+  const chooseSourceSubject = (next: SourceSubject) => {
+    setSourceSubject(next);
+    setSourceError("");
+    setRecovery(null);
+  };
+
+  const cancelSourceScan = () => {
+    activeSourceScanController.current?.abort();
+  };
+
+  const beginManualSource = () => {
+    const source = normalizeCampaignSource({
+      kind: "service_manual",
+      subject: sourceSubject,
+      assetKeys: [],
+      facts: [],
     });
-    setSourceTab("product");
-    setProductUrl("");
-    setSourceError("");
-  };
-
-  const chooseSourceTab = (next: "product" | "business" | "upload") => {
-    setSourceTab(next);
-    setSourceError("");
-    if (next === "business") {
-      updateProject({ promotionKind: "business", vertical: "salon", goal: "bookings", cta: "Book now" });
-    } else if (next === "product") {
-      updateProject({ promotionKind: "product", vertical: "ecommerce", goal: "launch", cta: project.cta === "Book now" ? "Shop now" : project.cta });
-    }
-  };
-
-  const handleSourceTabKey = (event: KeyboardEvent<HTMLDivElement>) => {
-    const tabs = ["product", "business", "upload"] as const;
-    const currentIndex = tabs.indexOf(sourceTab);
-    const nextIndex = event.key === "Home"
-      ? 0
-      : event.key === "End"
-        ? tabs.length - 1
-        : event.key === "ArrowRight"
-          ? (currentIndex + 1) % tabs.length
-          : event.key === "ArrowLeft"
-            ? (currentIndex - 1 + tabs.length) % tabs.length
-            : -1;
-    if (nextIndex < 0) return;
-    event.preventDefault();
-    const next = tabs[nextIndex]!;
-    chooseSourceTab(next);
-    window.requestAnimationFrame(() => document.getElementById(`source-${next}-tab`)?.focus());
+    updateProjectSource(projectWithSource(project, source, {
+      vertical: sourceSubject === "service" ? "salon" : "ecommerce",
+      goal: sourceSubject === "service" ? "bookings" : "launch",
+      cta: sourceSubject === "service" ? "Book now" : "Shop now",
+    }));
+    setStep("facts");
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const scanSource = async () => {
     const trimmed = productUrl.trim();
+    const kind = sourceChoice === "business_link" ? "business" : "product";
     if (!/^https?:\/\/\S+$/i.test(trimmed)) {
-      setSourceError(`Enter a complete ${project.promotionKind === "business" ? "business" : "product"} link beginning with http:// or https://.`);
+      setSourceError(tr(
+        `Enter a complete ${kind === "business" ? "business or service" : "product"} link beginning with http:// or https://.`,
+        "أدخل رابطاً كاملاً يبدأ بـ http:// أو https://.",
+      ));
       return;
     }
     setSourceBusy(true);
     setSourceError("");
     setRecovery(null);
+    const controller = new AbortController();
+    activeSourceScanController.current = controller;
     try {
-      const kind = project.promotionKind;
-      const scan = await portableCreatorApi.scan(kind, trimmed);
-      if (!scan.imageCandidates.length) throw new Error("no_image_found");
-      const fact = (field: string) => scan.facts.find((item) => item.field === field)?.value ?? "";
-      const name = fact("name") || (kind === "business" ? "Imported business" : "Imported product");
-      const sameImportedSource = project.product.sourceUrl === scan.canonicalUrl;
+      const scan = await portableCreatorApi.scan(kind, trimmed, controller.signal);
+      const sourceKind = kind === "business" ? "business_url" : "product_url";
+      const subject: SourceSubject = kind === "business" ? "service" : "product";
+      const mappedFacts = scan.facts.map((item) => (
+        subject === "service" && item.field === "name" ? { ...item, field: "service_name" as const } : item
+      ));
+      const nextSource = applyImportedFacts(normalizeCampaignSource({
+        kind: sourceKind,
+        subject,
+        assetKeys: [],
+        facts: [],
+      }), [
+        ...mappedFacts,
+        ...(scan.imageCandidates.length ? [{ field: "media" as const, value: `${scan.imageCandidates.length} image${scan.imageCandidates.length === 1 ? "" : "s"} found` }] : []),
+      ]);
+      const name = campaignFactValue(nextSource, subject === "service" ? "service_name" : "name") || (kind === "business" ? "Imported business" : "Imported product");
       const importedChanges: Partial<CreatorProject> = {
-        title: `${name} — ${template.name}`,
         product: {
+          ...project.product,
           sourceType: kind === "business" ? "business_link" : "product_link",
           sourceUrl: scan.canonicalUrl,
-          name,
-          description: fact("description"),
-          price: fact("price") || (sameImportedSource ? project.product.price : ""),
-          brand: fact("brand") || (sameImportedSource ? project.product.brand : ""),
           images: scan.imageCandidates.slice(0, 5).map((url, index) => ({ id: `url-${index}`, name: `${name} ${index + 1}`, url, source: "url" as const })),
         },
       };
+      const importedProject = projectWithSource(project, nextSource, importedChanges);
       if (!qaMode && user && portablePlatform) {
-        const importedProject = {
-          ...invalidateCreatorProjectOutput({ ...project, ...importedChanges }),
-          updatedAt: new Date().toISOString(),
-        };
-        const securedProject = await syncCreatorProjectWithOwnedRemoteImages(importedProject, user.id);
+        const securedProject = await syncCreatorProjectWithOwnedRemoteImages(invalidateCreatorProjectOutput({ ...importedProject, updatedAt: new Date().toISOString() }), user.id);
         setProject(securedProject);
       } else {
-        updateProjectSource(importedChanges);
+        updateProjectSource(importedProject);
       }
+      setSourceSubject(subject);
+      setStep("facts");
+      window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (error) {
+      if (isAbortError(error)) return;
       const next = selectGuestClaimRecovery(projectToCreationDraft(project, rightsConfirmed), "import_failed");
       setRecovery(next);
       setSourceError(getGuestClaimRecoveryCopy(arabicUi ? "ar" : "en", next.state).message);
     } finally {
+      activeSourceScanController.current = null;
       setSourceBusy(false);
     }
   };
 
   const uploadFiles = async (files: FileList | null) => {
     if (!files?.length) return;
-    const replacesSample = project.product.sourceType === "sample";
-    const retainedImages = replacesSample ? [] : project.product.images;
+    const retainedImages = project.product.images.filter((image) => image.source === "upload");
     const selected = Array.from(files).slice(0, Math.max(0, 5 - retainedImages.length));
     if (!selected.length) {
-      setSourceError("You can add up to five product photos.");
+      setSourceError(tr("You can add up to five photos.", "تقدر تضيف حتى خمس صور."));
       return;
     }
     setSourceBusy(true);
@@ -761,13 +822,28 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
       }));
       const images = [...retainedImages, ...assets].slice(0, 5);
       const uploadedName = selected[0].name.replace(/\.[^.]+$/, "");
-      const product = replacesSample
-        ? { ...project.product, sourceType: "upload" as const, sourceUrl: "", images, name: uploadedName, description: "", price: "", brand: "" }
-        : { ...project.product, sourceType: "upload" as const, sourceUrl: "", images, name: project.product.name || uploadedName };
-      updateProjectSource({
-        product,
-        title: replacesSample || project.title === "Untitled campaign" ? `${uploadedName} — ${template.name}` : project.title,
+      const source = normalizeCampaignSource({
+        kind: "product_upload",
+        subject: sourceSubject,
+        assetKeys: images.flatMap((image) => image.assetKey ? [image.assetKey] : []),
+        facts: sourceSubject === "product"
+          ? [
+              { field: "name", value: project.product.name || uploadedName, provenance: "manual" },
+              { field: "media", value: `${images.length} photo${images.length === 1 ? "" : "s"} added`, provenance: "manual" },
+            ]
+          : [
+              { field: "service_name", value: project.product.name || uploadedName, provenance: "manual" },
+              { field: "media", value: `${images.length} photo${images.length === 1 ? "" : "s"} added`, provenance: "manual" },
+            ],
       });
+      updateProjectSource(projectWithSource(project, source, {
+        product: { ...project.product, sourceType: "upload", sourceUrl: "", images },
+        vertical: sourceSubject === "service" ? "salon" : "ecommerce",
+        goal: sourceSubject === "service" ? "bookings" : "launch",
+        cta: sourceSubject === "service" ? "Book now" : "Shop now",
+      }));
+      setStep("facts");
+      window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (error) {
       const next = selectGuestClaimRecovery(projectToCreationDraft(project, rightsConfirmed), "import_failed");
       setRecovery(next);
@@ -778,10 +854,32 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
   };
 
   const continueFromSource = () => {
-    if (!project.product.images.length) {
-      setSourceError(`Add at least one ${project.promotionKind === "business" ? "business or service" : "product"} photo${project.promotionKind === "product" ? " or use the sample product" : ""} to continue.`);
-      return;
-    }
+    setSourceError("");
+    setStep("facts");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const updateCampaignFact = (field: CampaignFactField, value: string) => {
+    setProject((current) => {
+      const source = editFact(campaignSourceForProject(current), field, value);
+      return {
+        ...invalidateCreatorProjectOutput(projectWithSource(current, source)),
+        updatedAt: new Date().toISOString(),
+      };
+    });
+  };
+
+  const confirmSourceFacts = (fields: CampaignFactField[]) => {
+    setProject((current) => {
+      const source = confirmCampaignFacts(campaignSourceForProject(current), fields);
+      return {
+        ...projectWithSource(current, source),
+        updatedAt: new Date().toISOString(),
+      };
+    });
+  };
+
+  const continueFromFactReview = () => {
     setSourceError("");
     setStep(templateFirst.current ? "details" : "template");
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -809,9 +907,9 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
     setRecovery(null);
     setSourceError("");
     if (recovery.state === "claim_failed" || recovery.state === "import_failed") {
-      setSourceTab("upload");
+      setSourceChoice("upload");
       setStep("source");
-      window.requestAnimationFrame(() => document.getElementById("product-files")?.focus());
+      window.requestAnimationFrame(() => document.getElementById("campaign-source-files")?.focus());
     }
   };
 
@@ -1528,36 +1626,53 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
         {step === "template" && <TemplateGrid selectedId={project.templateId} onSelect={selectTemplate} />}
 
         {step === "source" && (
-          <div className="creator-workspace">
-            <section className="creator-panel creator-panel-pad" aria-labelledby="source-heading">
-              <div className="creator-panel-heading"><div><h2 id="source-heading">{tr("Campaign source", "مصدر الحملة")}</h2><p>{tr("Choose one starting point. We only use facts you review and approve.", "اختر نقطة بداية واحدة. نستخدم فقط المعلومات اللي تراجعها وتوافق عليها.")}</p></div><button className="creator-button creator-button-quiet" type="button" onClick={() => setStep("template")}><ArrowLeft aria-hidden="true" /> {tr("Change template", "غيّر القالب")}</button></div>
-              <div className="creator-source-tabs" role="tablist" aria-label={tr("Campaign source", "مصدر الحملة")} onKeyDown={handleSourceTabKey}>
-                <button id="source-product-tab" role="tab" aria-controls="source-link-panel" aria-selected={sourceTab === "product"} tabIndex={sourceTab === "product" ? 0 : -1} className={cn("creator-source-tab", sourceTab === "product" && "is-active")} type="button" onClick={() => chooseSourceTab("product")}>{tr("Product link", "رابط منتج")}</button>
-                <button id="source-business-tab" role="tab" aria-controls="source-link-panel" aria-selected={sourceTab === "business"} tabIndex={sourceTab === "business" ? 0 : -1} className={cn("creator-source-tab", sourceTab === "business" && "is-active")} type="button" onClick={() => chooseSourceTab("business")}>{tr("Business or service", "نشاط أو خدمة")}</button>
-                <button id="source-upload-tab" role="tab" aria-controls="source-upload-panel" aria-selected={sourceTab === "upload"} tabIndex={sourceTab === "upload" ? 0 : -1} className={cn("creator-source-tab", sourceTab === "upload" && "is-active")} type="button" onClick={() => chooseSourceTab("upload")}>{tr("Upload photos", "ارفع صور")}</button>
-              </div>
-
-              {sourceTab !== "upload" ? (
-                <div id="source-link-panel" role="tabpanel" aria-labelledby={sourceTab === "business" ? "source-business-tab" : "source-product-tab"} style={{ marginTop: 22 }}>
-                  <div className="creator-field"><label htmlFor="source-url">{sourceTab === "business" ? tr("Business or service website", "موقع النشاط أو الخدمة") : tr("Product page", "صفحة المنتج")}</label><div className="creator-input-row"><input id="source-url" className="creator-input" value={productUrl} onChange={(event) => setProductUrl(event.target.value)} placeholder={sourceTab === "business" ? "https://yoursalon.com" : "https://yourstore.com/product"} inputMode="url" aria-describedby={sourceError ? "source-error" : "source-url-help"} /><button className="creator-button creator-button-primary" type="button" onClick={scanSource} disabled={sourceBusy}>{sourceBusy ? <Loader2 className="animate-spin" aria-hidden="true" /> : <ArrowRight aria-hidden="true" />} {tr("Import", "استيراد")}</button></div><span id="source-url-help" className="creator-field-help">{sourceTab === "business" ? tr("We’ll look for the business name, description and public images. You will confirm location and booking details next.", "راح نبحث عن اسم النشاط ووصفه وصوره العامة. بعدها تأكد الموقع وتفاصيل الحجز.") : tr("We’ll look for the product name, description, price and up to five clear images.", "راح نبحث عن اسم المنتج ووصفه وسعره وحتى خمس صور واضحة.")}</span></div>
-                  {sourceTab === "product" && <div className="creator-upload-zone" style={{ minHeight: 150, marginTop: 20 }}><button className="creator-button creator-button-quiet" type="button" onClick={useSampleProduct}><Sparkles aria-hidden="true" /> {tr("Or try a sample product", "أو جرّب منتجاً نموذجياً")}</button></div>}
-                  {sourceTab === "business" && <div className="creator-import-note" role="note"><strong>{tr("Business facts stay locked", "معلومات النشاط تبقى ثابتة")}</strong><span>{tr("MovPrompt will not invent qualifications, prices, treatment results or service claims.", "MovPrompt ما راح يخترع مؤهلات أو أسعار أو نتائج علاج أو ادعاءات عن الخدمة.")}</span></div>}
-                </div>
-              ) : (
-                <div id="source-upload-panel" role="tabpanel" aria-labelledby="source-upload-tab" className="creator-upload-zone">
-                  <label htmlFor="product-files"><span className="creator-upload-icon"><Upload aria-hidden="true" /></span><strong>{tr("Drop product or business photos here", "اسحب صور المنتج أو النشاط هنا")}</strong><span>{tr("JPG, PNG or WebP · up to 5 images · 12 MB each", "JPG أو PNG أو WebP · حتى 5 صور · 12 MB لكل صورة")}</span></label>
-                  <input id="product-files" type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={(event) => void uploadFiles(event.target.files)} />
-                </div>
-              )}
-              {sourceBusy && <p className="creator-field-help" role="status" style={{ marginTop: 12 }}>{tr("Preparing your images…", "جارٍ تجهيز الصور…")}</p>}
-              {sourceError && <p id="source-error" className="creator-error" role="alert">{sourceError}</p>}
+          <div className="creator-workspace creator-source-workspace">
+            <section className="creator-panel creator-panel-pad">
+              <SourceChoiceStep
+                value={sourceChoice}
+                subject={sourceSubject}
+                url={productUrl}
+                busy={sourceBusy}
+                error={sourceError}
+                arabic={arabicUi}
+                onChoiceChange={chooseSourceChoice}
+                onSubjectChange={chooseSourceSubject}
+                onUrlChange={setProductUrl}
+                onImport={() => void scanSource()}
+                onCancel={cancelSourceScan}
+                onFiles={(files) => void uploadFiles(files)}
+                onManualStart={beginManualSource}
+                onBack={() => setStep(templateFirst.current ? "template" : "template")}
+              />
               {recoveryActions}
-              <div className="creator-actions-row"><button className="creator-button creator-button-quiet" type="button" onClick={() => setStep("template")}><ArrowLeft aria-hidden="true" /> {tr("Back", "رجوع")}</button><button className="creator-button creator-button-primary" type="button" onClick={continueFromSource} disabled={!project.product.images.length}>{tr("Review campaign", "راجع الحملة")} <ArrowRight aria-hidden="true" /></button></div>
+              {(sourceChoice === "product_link" || sourceChoice === "business_link") && project.product.images.length > 0 && (
+                <div className="creator-actions-row creator-source-continue"><button className="creator-button creator-button-secondary" type="button" onClick={continueFromSource}>{tr("Review saved details", "راجع التفاصيل المحفوظة")} <ArrowRight aria-hidden="true" /></button></div>
+              )}
             </section>
 
-            <aside className="creator-panel creator-product-card" aria-label={tr(`Imported ${project.promotionKind} preview`, "معاينة المصدر المستورد")}>
-              <div className="creator-product-image">{project.product.images[0] ? <img src={project.product.images[0].url} alt={project.product.name || tr(`Imported ${project.promotionKind}`, "المصدر المستورد")} /> : <div className="creator-empty" style={{ minHeight: "100%", border: 0, borderRadius: 0 }}><div><span className="creator-empty-icon"><FileImage aria-hidden="true" /></span><p>{project.promotionKind === "business" ? tr("Your selected business or service will appear here.", "النشاط أو الخدمة اللي اخترتها راح تظهر هنا.") : tr("Your selected product will appear here.", "المنتج اللي اخترته راح يظهر هنا.")}</p></div></div>}</div>
-              <div className="creator-product-copy"><p className="creator-kicker">{project.promotionKind === "business" ? tr("Business campaign", "حملة نشاط") : arabicUi ? template.nameAr : template.name}</p><h3>{project.product.name || (project.promotionKind === "business" ? tr("No business added yet", "ما أضفت نشاطاً للحين") : tr("No product added yet", "ما أضفت منتجاً للحين"))}</h3><p>{project.product.description || (project.promotionKind === "business" ? tr("Add a link or photos to prepare your booking campaign.", "أضف رابطاً أو صوراً لتجهيز حملة الحجوزات.") : tr("Add a link or photos to prepare your product campaign.", "أضف رابطاً أو صوراً لتجهيز حملة المنتج."))}</p>{project.product.images.length > 0 && <div className="creator-image-strip">{project.product.images.map((image) => <span className="creator-image-thumb" key={image.id}><img src={image.url} alt="" /></span>)}</div>}</div>
+            <aside className="creator-panel creator-product-card" aria-label={tr(`Selected ${project.promotionKind} preview`, "معاينة المصدر المحدد")}>
+              <div className="creator-product-image">{project.product.images[0] ? <img src={project.product.images[0].url} alt={project.product.name || tr(`Selected ${project.promotionKind}`, "المصدر المحدد")} /> : <div className="creator-empty" style={{ minHeight: "100%", border: 0, borderRadius: 0 }}><div><span className="creator-empty-icon"><FileImage aria-hidden="true" /></span><p>{sourceSubject === "service" ? tr("Your business or service media will appear here.", "وسائط نشاطك أو خدمتك راح تظهر هنا.") : tr("Your product media will appear here.", "وسائط منتجك راح تظهر هنا.")}</p></div></div>}</div>
+              <div className="creator-product-copy"><p className="creator-kicker">{sourceSubject === "service" ? tr("Business campaign", "حملة نشاط") : tr("Product campaign", "حملة منتج")}</p><h3>{project.product.name || (sourceSubject === "service" ? tr("Add your business details", "أضف تفاصيل نشاطك") : tr("Add your product details", "أضف تفاصيل منتجك"))}</h3><p>{tr("Only details you review are used in your campaign.", "نستخدم فقط التفاصيل التي تراجعها في حملتك.")}</p>{project.product.images.length > 0 && <div className="creator-image-strip">{project.product.images.map((image) => <span className="creator-image-thumb" key={image.id}><img src={image.url} alt="" /></span>)}</div>}</div>
+            </aside>
+          </div>
+        )}
+
+        {step === "facts" && (
+          <div className="creator-workspace creator-fact-workspace">
+            <section className="creator-panel creator-panel-pad">
+              <FactReviewStep
+                source={campaignSourceForProject(project)}
+                goal={project.goal}
+                arabic={arabicUi}
+                onEdit={updateCampaignFact}
+                onConfirm={confirmSourceFacts}
+                onContinue={continueFromFactReview}
+                onBack={() => setStep("source")}
+              />
+            </section>
+            <aside className="creator-panel creator-product-card" aria-label={tr("Campaign source preview", "معاينة مصدر الحملة")}>
+              <div className="creator-product-image">{project.product.images[0] ? <img src={project.product.images[0].url} alt={project.product.name || tr("Campaign source", "مصدر الحملة")} /> : <div className="creator-empty" style={{ minHeight: "100%", border: 0, borderRadius: 0 }}><div><span className="creator-empty-icon"><FileImage aria-hidden="true" /></span><p>{tr("You can add photos or footage later. Your facts are already saved.", "تقدر تضيف صوراً أو فيديو لاحقاً. معلوماتك محفوظة بالفعل.")}</p></div></div>}</div>
+              <div className="creator-product-copy"><p className="creator-kicker">{tr("Your reviewed source", "المصدر الذي راجعته")}</p><h3>{project.product.name || tr("Details ready to add", "التفاصيل جاهزة للإضافة")}</h3><p>{tr("Each label tells you where a detail came from.", "كل تسمية توضح مصدر المعلومة.")}</p></div>
             </aside>
           </div>
         )}
