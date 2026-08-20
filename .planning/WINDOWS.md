@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 3
+open_count: 4
 waived_count: 0
 fixed_count: 3
-total_count: 6
-last_updated: 2026-08-20T14:01:54.255Z
+total_count: 7
+last_updated: 2026-08-20T20:34:54.602Z
 ---
 
 # Broken Windows Ledger
@@ -21,6 +21,7 @@ last_updated: 2026-08-20T14:01:54.255Z
 | 4 | 02 | deviation | apps/web/src/features/create/AuthGateDialog.test.tsx |  | Full web suite has a pre-existing order-dependent locale test failure; isolated test passes. | open |  | 2026-08-19T20:23:02.830Z |  |
 | 5 | 02 | unrun-verify | .planning/phases/02-guest-authentication-and-data-integrity/02-BROWSER-EVIDENCE.md |  | Live API, provider, private-claim, and two-account browser matrix was unavailable at the observed local web origin. | open |  | 2026-08-19T20:58:50.652Z |  |
 | 6 | 03 | stub | apps/web/src/features/create/creatorAssets.ts | 37 | MP4/MOV source media is preserved in the guest draft but authenticated asset claiming currently accepts only JPEG, PNG, and WebP. | open |  | 2026-08-20T14:01:54.255Z |  |
+| 7 | 03 | unrun-verify | apps/web/src/features/create/CampaignSetupStep.tsx |  | Full-page campaign setup browser verification requires a live authoritative quote service; local QA correctly kept template selection disabled. | open |  | 2026-08-20T20:34:54.602Z |  |
 
 ````json
 [
@@ -94,6 +95,18 @@ last_updated: 2026-08-20T14:01:54.255Z
     "status": "open",
     "reason": "",
     "recorded_at": "2026-08-20T14:01:54.255Z",
+    "resolved_at": null
+  },
+  {
+    "id": 7,
+    "kind": "unrun-verify",
+    "phase": "03",
+    "file": "apps/web/src/features/create/CampaignSetupStep.tsx",
+    "line": null,
+    "description": "Full-page campaign setup browser verification requires a live authoritative quote service; local QA correctly kept template selection disabled.",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-08-20T20:34:54.602Z",
     "resolved_at": null
   }
 ]
