@@ -1,7 +1,7 @@
 const SAFE_SEGMENT = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
 const SHA256 = /^[a-f0-9]{64}$/;
 
-export type CreatorAssetKind = "product" | "logo" | "audio" | "reference";
+export type CreatorAssetKind = "product" | "logo" | "audio" | "reference" | "footage";
 
 function assertSegment(value: string, label: string): string {
   const normalized = value.trim();

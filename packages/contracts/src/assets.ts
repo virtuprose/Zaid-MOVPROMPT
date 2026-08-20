@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { RequestIdSchema } from "./api.js";
 
-export const CreatorAssetKindSchema = z.enum(["product", "logo", "audio", "reference"]);
+export const CreatorAssetKindSchema = z.enum(["product", "logo", "audio", "reference", "footage"]);
 
 export type CreatorAssetKind = z.infer<typeof CreatorAssetKindSchema>;
 
@@ -26,7 +26,25 @@ export const CreateAssetUploadRequestSchema = z
     kind: CreatorAssetKindSchema,
     metadata: AssetUploadMetadataSchema,
   })
-  .strict();
+  .strict()
+  .superRefine((request, context) => {
+    if (request.kind !== "footage") return;
+    const mimeType = request.metadata.mimeType.toLowerCase();
+    if (!new Set(["video/mp4", "video/quicktime", "video/webm"]).has(mimeType)) {
+      context.addIssue({
+        code: "custom",
+        path: ["metadata", "mimeType"],
+        message: "Footage must be an MP4, MOV, or WebM video.",
+      });
+    }
+    if (!request.metadata.durationMs || request.metadata.durationMs > 10 * 60 * 1_000) {
+      context.addIssue({
+        code: "custom",
+        path: ["metadata", "durationMs"],
+        message: "Footage must include a duration no longer than ten minutes.",
+      });
+    }
+  });
 
 export type CreateAssetUploadRequest = z.infer<typeof CreateAssetUploadRequestSchema>;
 
@@ -72,6 +90,7 @@ export const CreatorAssetSchema = z
     mimeType: z.string().min(1),
     sizeBytes: z.number().int().nonnegative(),
     checksumSha256: z.string().regex(/^[a-f0-9]{64}$/),
+    durationMs: z.number().int().positive().max(10 * 60 * 1_000).optional(),
   })
   .strict();
 

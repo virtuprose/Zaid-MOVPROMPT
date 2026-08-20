@@ -32,12 +32,40 @@ export const CampaignGoalSchema = z.enum([
 ]);
 export type CampaignGoal = z.infer<typeof CampaignGoalSchema>;
 
-export const PresenterModeSchema = z.enum([
-  "none",
-  "ai_ugc",
-  "uploaded_spokesperson",
-  "digital_twin",
+const PersonMediaRightsSchema = z
+  .object({
+    version: z.literal("person-media-rights-v1"),
+    assetId: z.uuid(),
+    personMediaRightsAttested: z.literal(true),
+  })
+  .strict();
+
+/**
+ * Beginner presenter data is intentionally capability-level only. Digital Twin
+ * and provider identity references stay in People Studio and never cross this
+ * campaign contract.
+ */
+export const CampaignPresenterSchema = z.discriminatedUnion("mode", [
+  z.object({ mode: z.literal("none") }).strict(),
+  z.object({ mode: z.literal("ai_ugc") }).strict(),
+  z.object({
+    mode: z.literal("uploaded_spokesperson"),
+    assetId: z.uuid(),
+    rights: PersonMediaRightsSchema,
+  })
+    .strict()
+    .superRefine((presenter, context) => {
+      if (presenter.rights.assetId !== presenter.assetId) {
+        context.addIssue({
+          code: "custom",
+          path: ["rights", "assetId"],
+          message: "Presenter rights must attest to the exact uploaded footage asset.",
+        });
+      }
+    }),
 ]);
+export type CampaignPresenter = z.infer<typeof CampaignPresenterSchema>;
+export const PresenterModeSchema = z.enum(["none", "ai_ugc", "uploaded_spokesperson"]);
 export type PresenterMode = z.infer<typeof PresenterModeSchema>;
 
 export const CampaignLanguageSchema = z.enum(["ar", "en", "bilingual"]);

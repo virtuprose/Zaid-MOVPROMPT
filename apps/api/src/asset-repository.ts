@@ -93,7 +93,8 @@ export function createDrizzleAssetRepository(db: Database): AssetRepository {
           objectKey: schema.creatorProjectAssets.objectKey,
           mimeType: schema.creatorProjectAssets.mimeType,
           sizeBytes: schema.creatorProjectAssets.sizeBytes,
-          checksumSha256: schema.creatorProjectAssets.checksumSha256,
+        checksumSha256: schema.creatorProjectAssets.checksumSha256,
+          durationMs: schema.creatorProjectAssets.durationMs,
           sourceMetadata: schema.creatorProjectAssets.sourceMetadata,
         })
         .from(schema.creatorProjectAssets)
@@ -129,6 +130,7 @@ export function createDrizzleAssetRepository(db: Database): AssetRepository {
         mimeType: asset.mimeType,
         sizeBytes: asset.sizeBytes,
         checksumSha256: asset.checksumSha256,
+        ...(asset.durationMs === null ? {} : { durationMs: asset.durationMs }),
         ...(filename ? { originalFilename: filename } : {}),
         ...(remoteSourceUrlHash ? { sourceUrlHash: remoteSourceUrlHash } : {}),
       };

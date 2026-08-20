@@ -20,8 +20,18 @@ export const GuestClaimAssetManifestEntrySchema = z
     mimeType: z.string().trim().min(1).max(255),
     sizeBytes: z.number().int().positive().max(50 * 1024 * 1024),
     checksumSha256: Sha256Schema,
+    durationMs: z.number().int().positive().max(10 * 60 * 1_000).optional(),
   })
-  .strict();
+  .strict()
+  .superRefine((asset, context) => {
+    if (asset.kind !== "footage") return;
+    if (!new Set(["video/mp4", "video/quicktime", "video/webm"]).has(asset.mimeType.toLowerCase())) {
+      context.addIssue({ code: "custom", path: ["mimeType"], message: "Footage must be a supported video type." });
+    }
+    if (!asset.durationMs) {
+      context.addIssue({ code: "custom", path: ["durationMs"], message: "Footage requires verified duration metadata." });
+    }
+  });
 export type GuestClaimAssetManifestEntry = z.infer<typeof GuestClaimAssetManifestEntrySchema>;
 
 export const GuestClaimAssetManifestSchema = z

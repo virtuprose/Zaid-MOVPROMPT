@@ -127,6 +127,13 @@
       "when": 1787171877000,
       "tag": "0017_force_phase2_owner_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1787304000000,
+      "tag": "0018_add_footage_asset_kind",
+      "breakpoints": true
     }
   ]
 }

@@ -118,6 +118,7 @@ function publicAsset(record: OwnedAssetRecord): CreatorAsset {
     mimeType: record.mimeType,
     sizeBytes: record.sizeBytes,
     checksumSha256: record.checksumSha256,
+    ...(record.durationMs === undefined ? {} : { durationMs: record.durationMs }),
   };
 }
 
@@ -392,6 +393,7 @@ export function registerAssetRoutes(
       ...(input.metadata.originalFilename
         ? { originalFilename: input.metadata.originalFilename }
         : {}),
+      ...(input.metadata.durationMs === undefined ? {} : { durationMs: input.metadata.durationMs }),
     };
     const assetRecord = await repository.createOrFind({
       ...intendedRecord,

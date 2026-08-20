@@ -96,6 +96,7 @@ function assetManifest(assets: AssetRow[]): GuestClaimAssetManifest {
     mimeType: asset.mimeType,
     sizeBytes: asset.sizeBytes,
     checksumSha256: asset.checksumSha256,
+    ...(asset.durationMs === null ? {} : { durationMs: asset.durationMs }),
   })));
 }
 
@@ -235,6 +236,7 @@ export function createGuestClaimRepository(dependencies: { db: Database }): Gues
             mimeType: asset.mimeType,
             sizeBytes: asset.sizeBytes,
             checksumSha256: asset.checksumSha256,
+            ...(asset.durationMs === undefined ? {} : { durationMs: asset.durationMs }),
           }))).returning();
         return operationPublic(operation, assets);
       }).catch((error) => {
@@ -270,14 +272,14 @@ export function createGuestClaimRepository(dependencies: { db: Database }): Gues
         if (asset.status === "securing" && hasActiveCleanupLease(asset.errorMetadata)) {
           throw new GuestClaimRepositoryError("cleanup_leased");
         }
-        if (!["product", "logo", "audio", "reference"].includes(asset.kind)) {
+        if (!["product", "logo", "audio", "reference", "footage"].includes(asset.kind)) {
           throw new GuestClaimRepositoryError("asset_invalid");
         }
         const expectedKey = objectKeys.creatorAsset({
           userId,
           projectId: operation.projectId,
           assetId: asset.localAssetId,
-          kind: asset.kind as "product" | "logo" | "audio" | "reference",
+          kind: asset.kind as "product" | "logo" | "audio" | "reference" | "footage",
           checksumSha256: asset.checksumSha256,
         });
         if (objectKey !== expectedKey || !bucket.trim()) throw new GuestClaimRepositoryError("asset_invalid");
@@ -349,6 +351,7 @@ export function createGuestClaimRepository(dependencies: { db: Database }): Gues
           mimeType: asset.mimeType,
           sizeBytes: asset.sizeBytes,
           checksumSha256: asset.checksumSha256,
+          ...(asset.durationMs === null ? {} : { durationMs: asset.durationMs }),
         }))).onConflictDoNothing();
         await tx.update(schema.creatorProjects).set({ status: "ready", currentWorkingVersionId: version.id, updatedAt: new Date() })
           .where(and(eq(schema.creatorProjects.id, operation.projectId), eq(schema.creatorProjects.userId, userId)));

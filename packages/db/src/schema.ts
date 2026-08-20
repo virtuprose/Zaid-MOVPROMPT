@@ -40,6 +40,7 @@ export const assetKind = pgEnum("asset_kind", [
   "logo",
   "audio",
   "reference",
+  "footage",
   "generated",
   "export",
 ]);
@@ -323,6 +324,16 @@ export const creatorProjectAssets = pgTable(
     }).onDelete("cascade"),
     check("creator_assets_size_nonnegative", sql`${table.sizeBytes} >= 0`),
     check(
+      "creator_assets_footage_metadata",
+      sql`${table.kind} <> 'footage' OR (
+        ${table.mimeType} IN ('video/mp4', 'video/quicktime', 'video/webm')
+        AND ${table.sizeBytes} > 0
+        AND ${table.durationMs} > 0
+        AND ${table.durationMs} <= 600000
+        AND ${table.checksumSha256} IS NOT NULL
+      )`,
+    ),
+    check(
       "creator_assets_sha256_format",
       sql`${table.checksumSha256} IS NULL OR ${table.checksumSha256} ~ '^[0-9a-f]{64}$'`,
     ),
@@ -394,6 +405,7 @@ export const guestClaimAssets = pgTable(
     mimeType: text("mime_type").notNull(),
     sizeBytes: bigint("size_bytes", { mode: "number" }).notNull(),
     checksumSha256: text("checksum_sha256").notNull(),
+    durationMs: integer("duration_ms"),
     errorCode: text("error_code"),
     errorMetadata: jsonb("error_metadata").$type<JsonObject>().notNull().default({}),
     verifiedAt: timestamp("verified_at", { withTimezone: true }),
@@ -411,6 +423,14 @@ export const guestClaimAssets = pgTable(
     }).onDelete("cascade"),
     check("guest_claim_assets_ordinal_range", sql`${table.ordinal} BETWEEN 0 AND 99`),
     check("guest_claim_assets_size_range", sql`${table.sizeBytes} > 0 AND ${table.sizeBytes} <= 52428800`),
+    check(
+      "guest_claim_assets_footage_metadata",
+      sql`${table.kind} <> 'footage' OR (
+        ${table.mimeType} IN ('video/mp4', 'video/quicktime', 'video/webm')
+        AND ${table.durationMs} > 0
+        AND ${table.durationMs} <= 600000
+      )`,
+    ),
     check("guest_claim_assets_checksum_format", sql`${table.checksumSha256} ~ '^[0-9a-f]{64}$'`),
     check("guest_claim_assets_storage_pair", sql`(${table.bucket} IS NULL) = (${table.objectKey} IS NULL)`),
     check(

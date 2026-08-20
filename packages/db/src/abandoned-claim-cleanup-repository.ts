@@ -10,7 +10,7 @@ export type AbandonedClaimCleanupCandidateRecord = {
   projectId: string;
   bucket: string;
   objectKey: string;
-  kind: "product" | "logo" | "audio" | "reference";
+  kind: "product" | "logo" | "audio" | "reference" | "footage";
   checksumSha256: string;
   updatedAt: Date;
 };
@@ -61,14 +61,14 @@ type CandidateRow = {
   projectId: string | null;
   bucket: string | null;
   objectKey: string | null;
-  kind: "product" | "logo" | "audio" | "reference" | "generated" | "export";
+  kind: "product" | "logo" | "audio" | "reference" | "footage" | "generated" | "export";
   checksumSha256: string;
   updatedAt: Date;
 };
 
 function toCandidate(row: CandidateRow): AbandonedClaimCleanupCandidateRecord | null {
   if (!row.projectId || !row.bucket || !row.objectKey) return null;
-  if (!(["product", "logo", "audio", "reference"] as const).includes(row.kind as "product" | "logo" | "audio" | "reference")) return null;
+  if (!(["product", "logo", "audio", "reference", "footage"] as const).includes(row.kind as "product" | "logo" | "audio" | "reference" | "footage")) return null;
   return {
     claimId: row.claimId,
     assetId: row.assetId,
@@ -76,7 +76,7 @@ function toCandidate(row: CandidateRow): AbandonedClaimCleanupCandidateRecord | 
     projectId: row.projectId,
     bucket: row.bucket,
     objectKey: row.objectKey,
-    kind: row.kind as "product" | "logo" | "audio" | "reference",
+    kind: row.kind as "product" | "logo" | "audio" | "reference" | "footage",
     checksumSha256: row.checksumSha256,
     updatedAt: row.updatedAt,
   };
