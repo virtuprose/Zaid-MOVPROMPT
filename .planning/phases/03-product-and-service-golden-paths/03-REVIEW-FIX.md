@@ -1,10 +1,10 @@
 ---
 phase: 03-product-and-service-golden-paths
-fixed_at: 2026-08-20T21:52:59Z
+fixed_at: 2026-08-21T01:26:00+03:00
 review_path: .planning/phases/03-product-and-service-golden-paths/03-REVIEW.md
-iteration: 1
-findings_in_scope: 8
-fixed: 8
+iteration: 2
+findings_in_scope: 13
+fixed: 13
 skipped: 0
 status: all_fixed
 verification_location: main checkout
@@ -12,109 +12,99 @@ verification_location: main checkout
 
 # Phase 03: Code Review Fix Report
 
-**Fixed at:** 2026-08-20T21:52:59Z  
+**Fixed at:** 2026-08-21T01:26:00+03:00
 **Source review:** [03-REVIEW.md](03-REVIEW.md)  
-**Iteration:** 1  
+**Iteration:** 2
 **Verification location:** Main checkout (`codex/production-rebuild`)
 
 ## Summary
 
-- Findings in scope: 8
-- Fixed: 8
+- Findings in scope: 13
+- Fixed: 13
 - Skipped: 0
 - Paid provider calls: none
 
-## Fixed Issues
+Iteration 1's eight findings remain fixed. This iteration closed the five re-review findings below.
 
-### CR-01: Accepted footage uploads cannot complete secure claim or reach generation
+## Iteration 2 Fixed Issues
 
-**Files modified:** `apps/api/src/asset-routes.ts`, `apps/api/src/creator-repository.ts`, `apps/web/src/features/create/CreateStudio.tsx`, `apps/web/src/features/create/creatorAssets.ts`, `apps/web/src/features/create/PresenterChoice.tsx`, `packages/contracts/src/creator.ts`, and focused tests.
+### CR-01: Footage completion trusted upload metadata instead of verified media bytes
 
-**Commits:** `d2c8168`, `c90e1b4`
+**Files modified:** `apps/api/src/footage-verifier.ts`, `apps/api/src/asset-routes.ts`, `apps/api/src/asset-repository.ts`, asset/claim contracts and schema migration `0019_tighten_footage_verification.sql`, plus focused tests.
 
-**Applied fix:** MP4/MOV claim manifests now retain footage kind, bounded verified duration, checksum, and MIME data; private asset handling preserves footage separately from image-only generation references. Presenter eligibility checks the exact owned footage asset before quote and render reservation. The client retains an actionable unsupported-media error while accepting the allowed video formats.
+**Commit:** `e263c95`
 
-### CR-02: Manual source campaigns are blocked despite satisfying their stated fact requirements
+**Applied fix:** Direct signed uploads and proxy uploads now use one bounded server-side verifier. It re-reads the private object where required, validates the stored checksum and ISO base-media signature, runs FFprobe against a temporary bounded file, permits only MP4/MOV plus supported video codecs, and persists the probe-derived duration only when it is at most ten minutes. Missing verifier tooling fails closed. Faked MP4 headers, spoofed checksums, unavailable FFprobe, and overlong media are covered by tests.
 
-**Files modified:** `apps/web/src/features/create/CampaignReviewStep.tsx`, `apps/web/src/features/create/CreateStudio.tsx`, `apps/web/src/features/create/templates.ts`, and focused tests.
+### CR-02: Beginner capability was browser-hardcoded rather than derived from template policy
 
-**Commits:** `84bb35c`, `ae59c60`
+**Files modified:** `apps/api/src/generation-service.ts`, `packages/contracts/src/generation.ts`, `apps/web/src/features/create/useTemplateQuotes.ts`, `CreateStudio.tsx`, review/template helpers, and focused API tests.
 
-**Applied fix:** The final-review and submit path now use the selected template's source-media requirement rather than an unconditional image requirement. Manual service campaigns with a fact-only recipe proceed; templates that genuinely require media remain blocked with an explicit reason.
+**Commits:** `6dcb8a5`, `5082bf3`
 
-### CR-03: A WhatsApp number satisfies booking-only template eligibility on the server
+**Applied fix:** Beginner template quotes now resolve their semantic video capability from the immutable published template policy. Manual/service templates select `video.cinematic` only when that policy permits it; image-required templates select product fidelity and remain blocked without an image. Authenticated project-version quotes apply the same server policy. The browser no longer sends a hardcoded template capability or any provider/model identifier.
 
-**Files modified:** `apps/api/src/generation-service.ts` and focused API tests.
+### CR-03: Withdrawn uploaded-spokesperson consent left a selected presenter in saved state
 
-**Commits:** `472c016`, `7cc2fb9`
+**Files modified:** `apps/web/src/features/create/PresenterChoice.tsx` and `PresenterStep.test.tsx`.
 
-**Applied fix:** Booking destination is now a validated booking URL only. WhatsApp remains eligible only for explicit WhatsApp/order-or-booking/delivery requirements, and quote plus render endpoints reject a booking-only configuration that provides WhatsApp alone.
+**Commit:** `bdeba36`
 
-### WR-01: Campaign setup remains indefinitely in a false confirming-price state
+**Applied fix:** Removing the acknowledgement immediately emits and persists `{ mode: "none" }`, returns the control to No presenter, and removes the consent UI. The reload path is covered by a controlled re-render test.
 
-**Files modified:** `apps/web/src/features/create/CampaignSetupStep.tsx` and focused tests.
+### WR-01: A stale generation quote could remain usable while template lookup was pending
 
-**Commit:** `96918f1`
+**Files modified:** `apps/web/src/features/create/useTemplateQuotes.ts`, `templateQuoteState.ts`, and focused tests.
 
-**Applied fix:** Local price-refresh state now yields to the matching authoritative ready quote after an edit, so the screen returns from “Confirming the current price” to a truthful ready state.
+**Commit:** `5082bf3`
 
-### WR-02: Uploaded spokesperson is permanently hidden for verified compatible footage
+**Applied fix:** The shared quote is synchronously set to loading and cleared before the asynchronous template-version lookup begins. Review and Generate therefore fail closed immediately after price, duration, or ratio changes.
 
-**Files modified:** `apps/web/src/features/create/CreateStudio.tsx`, `apps/web/src/features/create/PresenterChoice.tsx`, and focused tests.
+### WR-02: Advanced handoff placed MOV footage in image-reference inputs
 
-**Commit:** `d2c8168`
+**Files modified:** `apps/web/src/features/create/projectStore.ts`, `CreateStudio.tsx`, and focused tests.
 
-**Applied fix:** The create flow derives presenter compatibility from the selected template and securely verified footage. The uploaded-spokesperson option is available only for eligible footage and retains the exact-footage rights acknowledgement.
+**Commit:** `98e9972`
 
-### WR-03: Guest-local asset IDs remain inside the persisted campaign source after secure claim
+**Applied fix:** The Advanced handoff now passes only still-image references. Footage is deliberately omitted until Advanced has a dedicated supported footage field; the mixed image-and-MOV test proves that only the image survives the handoff.
 
-**Files modified:** `apps/api/src/guest-claim-repository.ts`, `apps/web/src/features/create/creatorProjectAssets.ts`, `apps/web/src/features/create/portableProjectMapper.ts`, and focused tests.
+## Iteration 1 Findings Still Fixed
 
-**Commits:** `234fcd9`, `cd479ed`, `9c8dc0d`
-
-**Applied fix:** Claim receipts rebuild source keys from owned private object keys. Cloud persistence now removes guest-local keys while retaining durable product and service/footage source keys, so source hydration round-trips without signed URLs or IndexedDB identifiers.
-
-### WR-04: Local fallback templates remain selectable while the published catalog is unavailable
-
-**Files modified:** `apps/web/src/features/create/TemplateGrid.tsx` and focused tests.
-
-**Commit:** `dd25ab8`
-
-**Applied fix:** Portable-mode fallback cards are preview-only during a catalog outage. Selection is disabled until a published catalog is available, with retry restoring the normal selection path.
-
-### WR-05: Source-selection radio groups are not keyboard-operable as radio groups
-
-**Files modified:** `apps/web/src/features/create/SourceChoiceStep.tsx` and focused tests.
-
-**Commit:** `2d78313`
-
-**Applied fix:** Source and subject groups now use roving tab order plus Arrow, Home, and End handling with focus movement, matching the ARIA radio-group interaction model.
+- CR-01: accepted footage claim persistence and presenter eligibility
+- CR-02: fact-only manual service campaigns where the template permits them
+- CR-03: booking URL distinct from WhatsApp eligibility
+- WR-01: campaign setup quote refresh state
+- WR-02: verified uploaded-spokesperson availability
+- WR-03: durable source keys after guest claim
+- WR-04: published catalog availability before template selection
+- WR-05: keyboard-operable source radio groups
 
 ## Verification Evidence
 
-Focused verification:
+Focused verification in the main checkout:
 
-- API review tests: 40 passed; 6 provisioned-PostgreSQL tests skipped by their environment guard.
-- Web review tests: 29 passed.
-- Contracts review tests: 12 passed.
-- The two contained corrections added during this resumed pass passed their focused tests and web typecheck.
+- API: 39 tests passed across footage verification, asset routes, and generation-service policy coverage.
+- Web: 13 tests passed across presenter consent, quote state, and Advanced-handoff coverage.
+- Contracts: 12 tests passed.
 
-Broader verification:
+Required broader verification:
 
-- `bun run --cwd apps/web test`: 52 files, 189 tests passed.
-- `bun run --cwd apps/api test`: 16 files, 92 tests passed; 13 provisioned/integration tests skipped.
-- `bun run --cwd apps/worker test`: 15 files, 67 tests passed; 9 provisioned/integration tests skipped.
-- `bun run --cwd packages/contracts test`: 2 files, 12 tests passed.
-- `bun run test:creator-smoke`: 3 files, 12 tests passed.
-- Typechecks passed for web, API, worker, and contracts.
-- `bun run build` passed. Vite reported existing large-chunk advice, not a build failure.
+- Web, API, worker, and contracts typechecks passed.
+- `apps/web` suite: 52 files, 192 tests passed.
+- `apps/api` suite: 17 files, 100 tests passed; 3 files / 13 tests skipped by their PostgreSQL environment guards.
+- `apps/worker` suite: 15 files, 67 tests passed; 2 files / 9 tests skipped by their PostgreSQL environment guards.
+- `packages/contracts` suite: 2 files, 12 tests passed.
+- Creator smoke: 3 files, 12 tests passed.
+- Production web build passed. Vite emitted existing large-chunk advisory warnings only.
+
+No disposable PostgreSQL database was created because the relevant provisioned tests are environment-gated; no existing database or user data was touched.
 
 ## Remaining Blockers
 
-No critical or warning review finding remains open. The provisioned PostgreSQL/browser UAT scenarios remain environment-gated and were not exercised in this code-review pass; they are Phase 03 release-evidence work, not a source-level review failure. No video provider call or paid generation was made.
+No critical or warning review finding remains open. The skipped provisioned PostgreSQL and browser UAT scenarios are release-evidence work and still require their documented dedicated environments. No provider calls or paid generations were made.
 
 ---
 
-_Fixed: 2026-08-20T21:52:59Z_  
+_Fixed: 2026-08-21T01:26:00+03:00_
 _Fixer: the agent (gsd-code-fixer)_  
-_Iteration: 1_
+_Iteration: 2_
