@@ -9,6 +9,7 @@ import {
   CreateGenerationQuoteRequestSchema,
   StartRenderRunRequestSchema,
   TemplateQuoteEligibilitySchema,
+  CampaignPresenterSchema,
 } from "./index.js";
 
 describe("public contracts", () => {
@@ -145,6 +146,59 @@ describe("public contracts", () => {
       requiredInputs: ["subject_name"],
       capabilityPolicy: ["video.product_fidelity"],
       credits: 1,
+    })).toThrow();
+  });
+
+  it("accepts one rights-attested footage presenter and excludes provider-backed identities", () => {
+    const assetId = "11111111-1111-4111-8111-111111111111";
+    expect(CampaignPresenterSchema.parse({
+      mode: "uploaded_spokesperson",
+      assetId,
+      rights: {
+        version: "person-media-rights-v1",
+        assetId,
+        personMediaRightsAttested: true,
+      },
+    })).toMatchObject({ mode: "uploaded_spokesperson", assetId });
+
+    expect(() => CampaignPresenterSchema.parse({
+      mode: "uploaded_spokesperson",
+      assetId,
+    })).toThrow();
+    expect(() => CampaignPresenterSchema.parse({
+      mode: "digital_twin",
+      providerIdentityId: "provider-only-id",
+    })).toThrow();
+    expect(() => CampaignPresenterSchema.parse({ mode: "ai_ugc", providerModelId: "hidden" })).toThrow();
+  });
+
+  it("requires bounded video metadata for a footage asset", () => {
+    expect(CreateAssetUploadRequestSchema.parse({
+      kind: "footage",
+      metadata: {
+        mimeType: "video/mp4",
+        sizeBytes: 4_096,
+        checksumSha256: "b".repeat(64),
+        durationMs: 12_000,
+      },
+    })).toMatchObject({ kind: "footage" });
+
+    expect(() => CreateAssetUploadRequestSchema.parse({
+      kind: "footage",
+      metadata: {
+        mimeType: "image/jpeg",
+        sizeBytes: 4_096,
+        checksumSha256: "b".repeat(64),
+        durationMs: 12_000,
+      },
+    })).toThrow();
+    expect(() => CreateAssetUploadRequestSchema.parse({
+      kind: "footage",
+      metadata: {
+        mimeType: "video/mp4",
+        sizeBytes: 4_096,
+        checksumSha256: "b".repeat(64),
+      },
     })).toThrow();
   });
 
