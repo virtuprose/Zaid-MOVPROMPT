@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { IdempotencyKeySchema, RequestIdSchema } from "./api.js";
+import { CapabilityAliasSchema } from "./capabilities.js";
 import { JsonValueSchema, RenderRunStatusSchema } from "./generation.js";
 
 export const CreationModeSchema = z.enum(["template", "advanced"]);
@@ -115,6 +116,68 @@ export const PublicTemplateSchema = z
   })
   .strict();
 export type PublicTemplate = z.infer<typeof PublicTemplateSchema>;
+
+/**
+ * Immutable catalog metadata that answers only whether a configuration fits a
+ * published template. Pricing deliberately lives outside this contract.
+ */
+export const TemplateRequiredInputSchema = z.enum([
+  "product_image",
+  "product_name",
+  "subject_name",
+  "primary_reference",
+  "product_reference",
+  "logo_or_brand_name",
+  "call_to_action",
+  "business_name",
+  "service_name",
+  "location",
+  "salon_location",
+  "booking_destination",
+  "order_or_booking_destination",
+  "delivery_destination",
+  "whatsapp",
+  "business_identity",
+  "restaurant_identity",
+  "verified_clinic_identity",
+  "confirmed_service",
+  "service_details",
+  "approved_claims",
+  "verified_qualification",
+  "confirmed_price",
+  "approved_price",
+  "real_work_reference",
+  "real_room_reference",
+  "real_shade_reference",
+  "real_dish_media",
+  "real_facility_media",
+  "all_box_item_references",
+  "all_bundle_item_references",
+  "confirmed_contents",
+  "confirmed_quantities",
+  "confirmed_shade_names",
+  "dimensions_if_relevant",
+  "consented_before_video",
+  "consented_after_video",
+  "consented_customer_video",
+  "approved_transcript",
+  "consented_founder_reference",
+  "confirmed_origin_facts",
+  "consented_person_reference",
+]);
+export type TemplateRequiredInput = z.infer<typeof TemplateRequiredInputSchema>;
+
+export const TemplateQuoteEligibilitySchema = z
+  .object({
+    goals: z.array(CampaignGoalSchema).min(1).max(12),
+    supportedLanguages: z.array(CampaignLanguageSchema).min(1).max(3),
+    supportedRatios: z.array(CampaignRatioSchema).min(1).max(4),
+    supportedMarkets: z.array(z.literal("KW")).min(1).max(1),
+    requiredInputs: z.array(TemplateRequiredInputSchema).max(16),
+    capabilityPolicy: z.array(CapabilityAliasSchema).min(1).max(12),
+  })
+  .strict();
+export type TemplateQuoteEligibility = z.infer<typeof TemplateQuoteEligibilitySchema>;
 
 export const TemplateListQuerySchema = z
   .object({

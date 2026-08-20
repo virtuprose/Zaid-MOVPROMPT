@@ -1,5 +1,9 @@
 import { createHash } from "node:crypto";
 import {
+  TemplateQuoteEligibilitySchema,
+  type TemplateQuoteEligibility,
+} from "@movprompt/contracts";
+import {
   hashGenerationConfiguration,
   schema,
   withUserTransaction,
@@ -22,6 +26,7 @@ export type PublishedTemplateVersion = {
   id: string;
   durationSeconds: number;
   starterRenderEligible: boolean;
+  eligibility: TemplateQuoteEligibility | null;
 };
 
 export type OwnedGenerationQuote = {
@@ -88,6 +93,27 @@ export interface GenerationRepository {
 
 function starterEligible(recipe: JsonObject): boolean {
   return recipe[STARTER_RECIPE_FLAG] === true;
+}
+
+function strings(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
+}
+
+function quoteEligibility(input: {
+  recipe: JsonObject;
+  supportedLanguages: string[];
+  supportedRatios: string[];
+  supportedMarkets: string[];
+}): TemplateQuoteEligibility | null {
+  const parsed = TemplateQuoteEligibilitySchema.safeParse({
+    goals: strings(input.recipe.goals),
+    supportedLanguages: input.supportedLanguages,
+    supportedRatios: input.supportedRatios,
+    supportedMarkets: input.supportedMarkets,
+    requiredInputs: strings(input.recipe.requiredInputs),
+    capabilityPolicy: strings(input.recipe.capabilityPolicy),
+  });
+  return parsed.success ? parsed.data : null;
 }
 
 export function createDrizzleGenerationRepository(db: Database): GenerationRepository {
@@ -157,6 +183,9 @@ export function createDrizzleGenerationRepository(db: Database): GenerationRepos
           id: schema.videoTemplateVersions.id,
           durationSeconds: schema.videoTemplateVersions.durationSeconds,
           recipe: schema.videoTemplateVersions.recipe,
+          supportedLanguages: schema.videoTemplateVersions.supportedLanguages,
+          supportedRatios: schema.videoTemplateVersions.supportedRatios,
+          supportedMarkets: schema.videoTemplateVersions.supportedMarkets,
         })
         .from(schema.videoTemplateVersions)
         .innerJoin(
@@ -178,6 +207,7 @@ export function createDrizzleGenerationRepository(db: Database): GenerationRepos
             id: version.id,
             durationSeconds: version.durationSeconds,
             starterRenderEligible: starterEligible(version.recipe),
+            eligibility: quoteEligibility(version),
           }
         : null;
     },

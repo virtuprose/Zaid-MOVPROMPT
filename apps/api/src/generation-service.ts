@@ -5,6 +5,7 @@ import {
   type CreateGenerationQuoteRequest,
   type GenerationConfiguration,
   type PublicRenderRun,
+  type TemplateRequiredInput,
 } from "@movprompt/contracts";
 import {
   GenerationDomainError,
@@ -55,6 +56,7 @@ export class GenerationApplicationError extends Error {
       | "invalid_generation_reference"
       | "project_version_not_found"
       | "template_version_not_found"
+      | "template_configuration_ineligible"
       | "quote_not_found"
       | "quote_expired"
       | "quote_configuration_mismatch"
@@ -132,6 +134,93 @@ function boundConfiguration(input: {
     templateVersionId: input.templateVersionId,
     generation: input.configuration,
   } as JsonObject;
+}
+
+function objectValue(value: unknown): Record<string, unknown> | null {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : null;
+}
+
+function stringValue(value: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function eligibilityContext(configuration: GenerationConfiguration, root: JsonObject) {
+  const creativeBrief = objectValue(configuration.creativeBrief);
+  const product = objectValue(creativeBrief?.product);
+  const creatorProject = objectValue(root.creatorProject);
+  return {
+    goal: stringValue(creativeBrief?.goal),
+    language: stringValue(creativeBrief?.language),
+    market: stringValue(creativeBrief?.market),
+    ratio: configuration.aspectRatio ?? "",
+    references: configuration.references.length,
+    subjectName: stringValue(product?.name),
+    brand: stringValue(product?.brand),
+    callToAction: stringValue(product?.callToAction),
+    price: stringValue(product?.price),
+    location: stringValue(product?.location),
+    whatsapp: stringValue(product?.whatsapp),
+    bookingDestination: stringValue(creatorProject?.bookingUrl) || stringValue(product?.whatsapp),
+  };
+}
+
+function hasRequiredInput(required: TemplateRequiredInput, context: ReturnType<typeof eligibilityContext>): boolean {
+  const hasReference = context.references > 0;
+  const hasSubject = Boolean(context.subjectName);
+  switch (required) {
+    case "product_image":
+    case "primary_reference":
+    case "product_reference":
+    case "real_work_reference":
+    case "real_room_reference":
+    case "real_shade_reference":
+    case "real_dish_media":
+    case "real_facility_media":
+    case "all_box_item_references":
+    case "all_bundle_item_references":
+    case "consented_before_video":
+    case "consented_after_video":
+    case "consented_customer_video":
+    case "consented_founder_reference":
+    case "consented_person_reference":
+      return hasReference;
+    case "product_name":
+    case "subject_name":
+    case "business_name":
+    case "service_name":
+    case "business_identity":
+    case "restaurant_identity":
+    case "verified_clinic_identity":
+    case "confirmed_service":
+    case "service_details":
+    case "approved_claims":
+    case "verified_qualification":
+    case "approved_transcript":
+    case "confirmed_origin_facts":
+    case "confirmed_contents":
+    case "confirmed_quantities":
+    case "confirmed_shade_names":
+    case "dimensions_if_relevant":
+      return hasSubject;
+    case "logo_or_brand_name":
+      return Boolean(context.brand);
+    case "call_to_action":
+      return Boolean(context.callToAction);
+    case "location":
+    case "salon_location":
+      return Boolean(context.location);
+    case "booking_destination":
+    case "order_or_booking_destination":
+    case "delivery_destination":
+      return Boolean(context.bookingDestination);
+    case "whatsapp":
+      return Boolean(context.whatsapp);
+    case "confirmed_price":
+    case "approved_price":
+      return Boolean(context.price);
+  }
 }
 
 function publicRun(run: OwnedRenderRun): PublicRenderRun {
@@ -258,6 +347,36 @@ export function createGenerationApiService(options: GenerationApiServiceOptions)
     }
   }
 
+  function assertTemplateEligibility(input: {
+    template: PublishedTemplateVersion | null;
+    capability: CapabilityAlias;
+    configuration: GenerationConfiguration;
+    root: JsonObject;
+  }): void {
+    if (!input.template) return;
+    const eligibility = input.template.eligibility;
+    if (!eligibility) {
+      throw new GenerationApplicationError(
+        "template_configuration_ineligible",
+        "This template is not available for the current campaign configuration.",
+      );
+    }
+    const context = eligibilityContext(input.configuration, input.root);
+    const matches =
+      eligibility.goals.includes(context.goal as never) &&
+      eligibility.supportedLanguages.includes(context.language as never) &&
+      eligibility.supportedRatios.includes(context.ratio as never) &&
+      eligibility.supportedMarkets.includes(context.market as "KW") &&
+      eligibility.capabilityPolicy.includes(input.capability) &&
+      eligibility.requiredInputs.every((required) => hasRequiredInput(required, context));
+    if (!matches) {
+      throw new GenerationApplicationError(
+        "template_configuration_ineligible",
+        "This template is not available for the current campaign configuration.",
+      );
+    }
+  }
+
   async function loadOwnedVersion(userId: string, projectVersionId: string): Promise<OwnedProjectVersion> {
     const version = await options.repository.findOwnedProjectVersion(userId, projectVersionId);
     if (!version) throw new GenerationApplicationError("project_version_not_found");
@@ -344,6 +463,12 @@ export function createGenerationApiService(options: GenerationApiServiceOptions)
         const configuration = generationConfiguration(version.configuration);
         await assertOwnedGenerationReferences(session.user.id, version, request.capability, configuration);
         const template = await publishedTemplate(options.repository, version.templateVersionId);
+        assertTemplateEligibility({
+          template,
+          capability: request.capability,
+          configuration,
+          root: version.configuration,
+        });
         const price = options.pricing.price(
           request.capability,
           configuration,
@@ -391,6 +516,12 @@ export function createGenerationApiService(options: GenerationApiServiceOptions)
 
       const configuration = request.configuration!;
       const template = await publishedTemplate(options.repository, request.templateVersionId);
+      assertTemplateEligibility({
+        template,
+        capability: request.capability,
+        configuration,
+        root: configuration as JsonObject,
+      });
       const price = options.pricing.price(
         request.capability,
         configuration,
@@ -442,6 +573,12 @@ export function createGenerationApiService(options: GenerationApiServiceOptions)
       const template = await publishedTemplate(options.repository, version.templateVersionId);
       const configuration = generationConfiguration(version.configuration);
       await assertOwnedGenerationReferences(input.userId, version, capability.data, configuration);
+      assertTemplateEligibility({
+        template,
+        capability: capability.data,
+        configuration,
+        root: version.configuration,
+      });
       const binding = boundConfiguration({
         capability: capability.data,
         pricingVersion: options.pricing.version,

@@ -183,6 +183,14 @@ describe("starter-only private beta", () => {
       id: templateVersionId,
       durationSeconds: 8,
       starterRenderEligible: true,
+      eligibility: {
+        goals: ["launch"],
+        supportedLanguages: ["en", "ar", "bilingual"],
+        supportedRatios: ["9:16", "1:1", "4:5", "16:9"],
+        supportedMarkets: ["KW"],
+        requiredInputs: [],
+        capabilityPolicy: ["video.product_fidelity"],
+      },
     }));
     repo.hasAvailableStarterEntitlement = vi.fn(async () => true);
     const api = createGenerationApiService({
@@ -217,6 +225,15 @@ describe("starter-only private beta", () => {
         resolution: "720p",
         audio: false,
         references: [],
+        creativeBrief: {
+          market: "KW",
+          language: "en",
+          goal: "launch",
+          product: {
+            name: "Confirmed product",
+            callToAction: "Shop now",
+          },
+        },
       },
     }, {
       user: {
