@@ -6,7 +6,7 @@ import type {
   CreatorProject,
   CreatorResolution,
 } from "./types";
-import type { BusinessVertical, CampaignGoal, PresenterMode } from "@movprompt/contracts";
+import type { BusinessVertical, CampaignGoal, CampaignSource, PresenterMode } from "@movprompt/contracts";
 
 export type CreationMode = "template" | "advanced";
 export type DraftStatus =
@@ -59,6 +59,8 @@ export interface CreationDraft {
   status: DraftStatus;
   templateVersionId?: string;
   product: CreatorProduct;
+  /** CampaignSource is the normalized fact/provenance anchor; product is legacy compatibility data. */
+  source?: CampaignSource;
   assetKeys: string[];
   campaign: CampaignSettings;
   advanced?: AdvancedSettings;
@@ -108,6 +110,7 @@ export function projectToCreationDraft(
     status,
     templateVersionId: project.templateId,
     product: project.product,
+    source: project.source,
     assetKeys: project.product.images.flatMap((image) => image.assetKey ? [image.assetKey] : []),
     campaign: {
       market: project.market,

@@ -296,23 +296,69 @@ export const SourceScanRequestSchema = z
   .object({ url: z.url().max(2_048) })
   .strict();
 
+export const CampaignFactFieldSchema = z.enum([
+  "name",
+  "description",
+  "brand",
+  "price",
+  "offer",
+  "location",
+  "booking_url",
+  "whatsapp",
+  "logo",
+  "brand_color",
+  "service_name",
+  "service_details",
+  "media",
+]);
+export type CampaignFactField = z.infer<typeof CampaignFactFieldSchema>;
+
+export const FactProvenanceSchema = z.enum(["imported", "user_confirmed", "manual"]);
+export type FactProvenance = z.infer<typeof FactProvenanceSchema>;
+
 export const ConfirmedFactSchema = z
   .object({
-    field: z.enum([
-      "name",
-      "description",
-      "price",
-      "offer",
-      "location",
-      "booking_url",
-      "whatsapp",
-      "logo",
-      "brand_color",
-    ]),
+    field: CampaignFactFieldSchema,
     value: z.string().trim().min(1).max(2_000),
-    provenance: z.enum(["imported", "user_confirmed", "manual"]),
+    provenance: FactProvenanceSchema,
   })
   .strict();
+export type ConfirmedFact = z.infer<typeof ConfirmedFactSchema>;
+
+const StableAssetKeySchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(1_024)
+  .refine((value) => !/^(?:blob:|https?:\/\/|data:)/iu.test(value), "Campaign sources store stable asset keys only.");
+
+/**
+ * The browser, claim, version, and quote boundaries share this source anchor.
+ * It intentionally contains only facts plus durable object identifiers: expiring
+ * source, preview, blob, and signed URLs never become campaign truth.
+ */
+export const CampaignSourceSchema = z
+  .object({
+    kind: CampaignSourceKindSchema,
+    subject: z.enum(["product", "service"]),
+    assetKeys: z.array(StableAssetKeySchema).max(16),
+    facts: z.array(ConfirmedFactSchema).max(24),
+  })
+  .strict()
+  .superRefine((source, context) => {
+    const seen = new Set<CampaignFactField>();
+    for (const [index, fact] of source.facts.entries()) {
+      if (seen.has(fact.field)) {
+        context.addIssue({
+          code: "custom",
+          path: ["facts", index, "field"],
+          message: "Each campaign fact may appear once.",
+        });
+      }
+      seen.add(fact.field);
+    }
+  });
+export type CampaignSource = z.infer<typeof CampaignSourceSchema>;
 
 export const SourceScanResponseSchema = z
   .object({

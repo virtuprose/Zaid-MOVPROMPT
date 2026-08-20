@@ -1,4 +1,4 @@
-import type { BusinessVertical, CampaignGoal, PresenterMode } from "@movprompt/contracts";
+import type { BusinessVertical, CampaignGoal, CampaignSource, PresenterMode } from "@movprompt/contracts";
 
 export type CreatorLanguage = "en" | "ar" | "bilingual";
 export type CreatorMarket = "KW" | "SA" | "AE" | "QA" | "BH" | "OM";
@@ -101,6 +101,8 @@ export type CreatorProject = {
   bookingUrl: string;
   whatsapp: string;
   product: CreatorProduct;
+  /** Normalized campaign truth. Legacy product fields remain a compatibility view during migration. */
+  source?: CampaignSource;
   language: CreatorLanguage;
   arabicDialect: "kuwaiti";
   dialectRegister: "polished" | "conversational";
