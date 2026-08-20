@@ -16,9 +16,18 @@ const PROJECT_ID = "33333333-3333-4333-8333-333333333333";
 const ASSET_ID = "44444444-4444-4444-8444-444444444444";
 const CHECKSUM = "a".repeat(64);
 const VALID_PNG = new Uint8Array(Buffer.from(
-  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9WlL3AAAAABJRU5ErkJggg==",
+  "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAACXBIWXMAAAABAAAAAQBPJcTWAAAAEElEQVR4nGP8wwACLGCSAQANBAECv1AVswAAAABJRU5ErkJggg==",
   "base64",
 ));
+const PNG_SIGNATURE_AND_IHDR_ONLY = new Uint8Array([
+  0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+  0x00, 0x00, 0x00, 0x0d,
+  0x49, 0x48, 0x44, 0x52,
+  0x00, 0x00, 0x00, 0x01,
+  0x00, 0x00, 0x00, 0x01,
+  0x08, 0x06, 0x00, 0x00, 0x00,
+  0x00, 0x00, 0x00, 0x00,
+]);
 
 const config = loadApiConfig({
   APP_ENV: "test",
@@ -282,7 +291,7 @@ describe("private asset API", () => {
       contentType: "image/png",
       metadata: { "sha256-hex": checksumSha256 },
     }));
-    expect(repo.updateVerifiedImage).toHaveBeenCalledWith(expect.objectContaining({ width: 1, height: 1 }));
+    expect(repo.updateVerifiedImage).toHaveBeenCalledWith(expect.objectContaining({ width: 2, height: 2 }));
   });
 
   it("accepts owner-scoped MP4 footage only after the shared server verifier derives its duration", async () => {
@@ -378,6 +387,42 @@ describe("private asset API", () => {
 
   it("rejects arbitrary bytes labelled image/png on direct-upload completion", async () => {
     const bytes = new TextEncoder().encode("not an image");
+    const checksumSha256 = createHash("sha256").update(bytes).digest("hex");
+    const asset: OwnedAssetRecord = {
+      ...ownedAsset(),
+      mimeType: "image/png",
+      sizeBytes: bytes.byteLength,
+      checksumSha256,
+      objectKey: `users/${USER_ID}/projects/${PROJECT_ID}/assets/product/${ASSET_ID}/${checksumSha256}`,
+    };
+    const claims = guestClaimService();
+    const objectStorage = storage();
+    objectStorage.head = vi.fn(async () => ({ contentLength: bytes.byteLength, contentType: "image/png", checksumSha256 }));
+    objectStorage.get = vi.fn(async () => ({ body: bytes, contentType: "image/png", checksumSha256 }));
+    const app = createApi({
+      config,
+      authGateway: authGateway(),
+      assetRepository: repository({ asset }),
+      assetStorage: objectStorage,
+      guestClaimService: claims,
+    });
+
+    const response = await app.request(`/api/v1/projects/${PROJECT_ID}/assets/${ASSET_ID}/complete`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        pendingGenerationId: "66666666-6666-4666-8666-666666666666",
+        localAssetId: ASSET_ID,
+      }),
+    });
+
+    expect(response.status).toBe(422);
+    await expect(response.json()).resolves.toMatchObject({ error: { code: "invalid_asset_content" } });
+    expect(claims.markAssetVerified).not.toHaveBeenCalled();
+  });
+
+  it("rejects a signature-and-IHDR-only image before a signed direct upload can advance a guest claim", async () => {
+    const bytes = PNG_SIGNATURE_AND_IHDR_ONLY;
     const checksumSha256 = createHash("sha256").update(bytes).digest("hex");
     const asset: OwnedAssetRecord = {
       ...ownedAsset(),
@@ -605,6 +650,39 @@ describe("private asset API", () => {
         metadata: { "sha256-hex": checksumSha256 },
       }),
     );
+  });
+
+  it("rejects a truncated mirrored image before it is persisted", async () => {
+    const bytes = PNG_SIGNATURE_AND_IHDR_ONLY;
+    const checksumSha256 = createHash("sha256").update(bytes).digest("hex");
+    const remoteImageFetcher: RemoteImageFetcher = {
+      fetch: vi.fn(async () => ({
+        canonicalUrl: "https://cdn.example.test/products/truncated.png",
+        bytes,
+        mimeType: "image/png" as const,
+        checksumSha256,
+        originalFilename: "truncated.png",
+      })),
+    };
+    const objectStorage = storage();
+    const app = createApi({
+      config,
+      authGateway: authGateway(),
+      assetRepository: repository(),
+      assetStorage: objectStorage,
+      remoteImageFetcher,
+      requestRateLimiter: rateLimiter(),
+    });
+
+    const response = await app.request(`/api/v1/projects/${PROJECT_ID}/assets/mirror`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "idempotency-key": "asset-mirror-truncated" },
+      body: JSON.stringify({ kind: "product", url: "https://cdn.example.test/products/truncated.png" }),
+    });
+
+    expect(response.status).toBe(422);
+    await expect(response.json()).resolves.toMatchObject({ error: { code: "invalid_asset_content" } });
+    expect(objectStorage.put).not.toHaveBeenCalled();
   });
 
   it("does not fetch or store a remote image for a project owned by another account", async () => {

@@ -1,7 +1,6 @@
 import { randomUUID } from "node:crypto";
 
 import { createDatabase, schema } from "@movprompt/db";
-import { CapabilityRegistry } from "@movprompt/providers";
 import { and, eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
@@ -68,7 +67,7 @@ describePostgres("guest claim service PostgreSQL boundary", () => {
     },
   };
 
-  function app(presenterAvailable = true) {
+  function app() {
     const creatorRepository = createDrizzleCreatorRepository(database.db);
     const claimRepository = createGuestClaimRepository({ db: database.db });
     const generationRepository = createDrizzleGenerationRepository(database.db);
@@ -83,16 +82,7 @@ describePostgres("guest claim service PostgreSQL boundary", () => {
       creatorRepository,
       guestClaimService: createGuestClaimService({
         repository: claimRepository,
-        campaignEligibility: createCampaignEligibilityService({
-          templates: generationRepository,
-          capabilities: new CapabilityRegistry({
-            "presenter.ai_ugc": {
-              enabled: presenterAvailable,
-              adapterId: "test-presenter-adapter",
-              providerModelId: "test-presenter-model",
-            },
-          }),
-        }),
+        campaignEligibility: createCampaignEligibilityService(),
       }),
     });
   }
@@ -363,7 +353,7 @@ describePostgres("guest claim service PostgreSQL boundary", () => {
       }],
     };
 
-    const valid = await app().request("/api/v1/drafts/claim/start", {
+    const unsupported = await app().request("/api/v1/drafts/claim/start", {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -372,7 +362,17 @@ describePostgres("guest claim service PostgreSQL boundary", () => {
       },
       body: JSON.stringify(base),
     });
-    expect(valid.status).toBe(201);
+    expect(unsupported.status).toBe(409);
+    await expect(unsupported.json()).resolves.toMatchObject({
+      error: {
+        code: "presenter_configuration_ineligible",
+        message: "Selected presenters are not available for rendering yet. Choose No presenter to continue.",
+      },
+    });
+    const [unsupportedProject] = await database.db.select({ id: schema.creatorProjects.id })
+      .from(schema.creatorProjects)
+      .where(eq(schema.creatorProjects.clientDraftId, base.draftId));
+    expect(unsupportedProject).toBeUndefined();
 
     const invalidCases = [
       {
@@ -437,7 +437,7 @@ describePostgres("guest claim service PostgreSQL boundary", () => {
       assetManifest: [],
       campaignRecipe: { language: "en", presenter: { mode: "ai_ugc" } },
     };
-    const disabledResponse = await app(false).request("/api/v1/drafts/claim/start", {
+    const disabledResponse = await app().request("/api/v1/drafts/claim/start", {
       method: "POST",
       headers: {
         "content-type": "application/json",

@@ -8,8 +8,12 @@ import {
 import { CampaignEligibilityError, type CampaignEligibilityService } from "./campaign-eligibility.js";
 
 export class GuestClaimServiceError extends Error {
-  constructor(readonly code: "conflict" | "assets_pending" | "not_found" | "presenter_configuration_ineligible", readonly retryable: boolean) {
-    super(code);
+  constructor(
+    readonly code: "conflict" | "assets_pending" | "not_found" | "presenter_configuration_ineligible",
+    readonly retryable: boolean,
+    message: string = code,
+  ) {
+    super(message);
     this.name = "GuestClaimServiceError";
   }
 }
@@ -31,7 +35,7 @@ function mapError(error: unknown): never {
     throw new GuestClaimServiceError("conflict", false);
   }
   if (error instanceof CampaignEligibilityError) {
-    throw new GuestClaimServiceError("presenter_configuration_ineligible", false);
+    throw new GuestClaimServiceError("presenter_configuration_ineligible", false, error.message);
   }
   throw error;
 }

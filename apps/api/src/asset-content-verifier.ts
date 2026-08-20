@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { spawn } from "node:child_process";
 
 import {
   createFootageVerifier,
@@ -7,7 +8,11 @@ import {
 } from "./footage-verifier.js";
 
 const MAX_IMAGE_BYTES = 12 * 1024 * 1024;
-const ALLOWED_IMAGE_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+const MAX_IMAGE_DIMENSION = 16_384;
+const MAX_IMAGE_PIXELS = 32 * 1024 * 1024;
+const IMAGE_DECODE_TIMEOUT_MS = 15_000;
+const MAX_IMAGE_DECODER_STDERR_BYTES = 64 * 1024;
+const MAX_IMAGE_DECODER_ALLOCATION_BYTES = 256 * 1024 * 1024;
 
 export class AssetContentVerificationError extends Error {
   constructor(
@@ -34,6 +39,11 @@ export type AssetContentVerifier = {
   }): Promise<VerifiedAssetContent>;
 };
 
+export type ImageDecoder = (input: {
+  bytes: Uint8Array;
+  mimeType: "image/jpeg" | "image/png" | "image/webp";
+}) => Promise<void>;
+
 function readUInt16BigEndian(bytes: Uint8Array, offset: number): number {
   return (bytes[offset]! << 8) | bytes[offset + 1]!;
 }
@@ -46,11 +56,24 @@ function readUInt32BigEndian(bytes: Uint8Array, offset: number): number {
 }
 
 function requireDimensions(width: number, height: number): { width: number; height: number } {
-  if (!Number.isInteger(width) || !Number.isInteger(height) || width < 1 || height < 1 || width > 65_535 || height > 65_535) {
+  if (
+    !Number.isInteger(width)
+    || !Number.isInteger(height)
+    || width < 1
+    || height < 1
+    || width > MAX_IMAGE_DIMENSION
+    || height > MAX_IMAGE_DIMENSION
+    || width * height > MAX_IMAGE_PIXELS
+  ) {
     throw new AssetContentVerificationError("invalid", "The uploaded image has invalid dimensions.");
   }
   return { width, height };
 }
+
+/**
+ * Header inspection applies explicit dimension bounds before decode. It is not
+ * proof of a valid image: every accepted image is decoded by FFmpeg below.
+ */
 
 function verifyJpeg(bytes: Uint8Array): { width: number; height: number } {
   if (bytes.length < 4 || bytes[0] !== 0xff || bytes[1] !== 0xd8 || bytes[2] !== 0xff) {
@@ -117,9 +140,12 @@ function verifyWebp(bytes: Uint8Array): { width: number; height: number } {
   throw new AssetContentVerificationError("invalid", "The uploaded WebP image could not be decoded.");
 }
 
-function verifyImage(input: { bytes: Uint8Array; mimeType: string; checksumSha256: string }): VerifiedAssetContent {
+function inspectImage(input: { bytes: Uint8Array; mimeType: string; checksumSha256: string }): {
+  mimeType: "image/jpeg" | "image/png" | "image/webp";
+  dimensions: { width: number; height: number };
+} {
   const mimeType = input.mimeType.trim().toLowerCase();
-  if (!ALLOWED_IMAGE_MIME_TYPES.has(mimeType)) {
+  if (mimeType !== "image/jpeg" && mimeType !== "image/png" && mimeType !== "image/webp") {
     throw new AssetContentVerificationError("invalid", "Images must be JPG, PNG or WebP files.");
   }
   if (!input.bytes.byteLength || input.bytes.byteLength > MAX_IMAGE_BYTES) {
@@ -129,14 +155,95 @@ function verifyImage(input: { bytes: Uint8Array; mimeType: string; checksumSha25
   if (checksum !== input.checksumSha256.trim().toLowerCase()) {
     throw new AssetContentVerificationError("invalid", "The uploaded image checksum does not match the saved asset.");
   }
-  if (mimeType === "image/jpeg") return verifyJpeg(input.bytes);
-  if (mimeType === "image/png") return verifyPng(input.bytes);
-  return verifyWebp(input.bytes);
+  if (mimeType === "image/jpeg") return { mimeType, dimensions: verifyJpeg(input.bytes) };
+  if (mimeType === "image/png") return { mimeType, dimensions: verifyPng(input.bytes) };
+  return { mimeType, dimensions: verifyWebp(input.bytes) };
+}
+
+/**
+ * Decode a bounded in-memory image through the same media toolchain used by
+ * production workers. Header signatures alone are not trusted because a
+ * truncated image can have a valid signature and dimensions but no pixels.
+ */
+function createFfmpegImageDecoder(): ImageDecoder {
+  return async ({ bytes }) => new Promise<void>((resolve, reject) => {
+    const ffmpegPath = process.env.FFMPEG_PATH?.trim() || "ffmpeg";
+    let settled = false;
+    let stderrBytes = 0;
+    const child = spawn(
+      ffmpegPath,
+      [
+        "-nostdin",
+        "-v", "error",
+        "-xerror",
+        "-threads", "1",
+        "-max_alloc", String(MAX_IMAGE_DECODER_ALLOCATION_BYTES),
+        "-i", "pipe:0",
+        "-map", "0:v:0",
+        "-frames:v", "1",
+        "-f", "null",
+        "-",
+      ],
+      { stdio: ["pipe", "ignore", "pipe"] },
+    );
+    const timeout = setTimeout(() => {
+      child.kill("SIGKILL");
+      finish(new AssetContentVerificationError("invalid", "The uploaded image could not be decoded within the allowed limit."));
+    }, IMAGE_DECODE_TIMEOUT_MS);
+
+    function finish(error?: AssetContentVerificationError): void {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeout);
+      if (error) reject(error);
+      else resolve();
+    }
+
+    child.stderr.on("data", (chunk: Uint8Array) => {
+      stderrBytes += chunk.byteLength;
+      if (stderrBytes > MAX_IMAGE_DECODER_STDERR_BYTES) {
+        child.kill("SIGKILL");
+        finish(new AssetContentVerificationError("invalid", "The uploaded image could not be decoded."));
+      }
+    });
+    child.once("error", (error: NodeJS.ErrnoException) => {
+      if (error.code === "ENOENT") {
+        finish(new AssetContentVerificationError("unavailable", "Image verification is temporarily unavailable."));
+        return;
+      }
+      finish(new AssetContentVerificationError("invalid", "The uploaded image could not be decoded."));
+    });
+    child.once("close", (code) => {
+      if (code === 0) {
+        finish();
+        return;
+      }
+      finish(new AssetContentVerificationError("invalid", "The uploaded image could not be decoded."));
+    });
+    child.stdin.once("error", () => {
+      // The close event converts a decoder-side stdin failure into the same
+      // non-disclosing invalid-media response.
+    });
+    child.stdin.end(bytes);
+  });
+}
+
+async function verifyImage(
+  input: { bytes: Uint8Array; mimeType: string; checksumSha256: string },
+  decodeImage: ImageDecoder,
+): Promise<VerifiedAssetContent> {
+  const inspected = inspectImage(input);
+  await decodeImage({ bytes: input.bytes, mimeType: inspected.mimeType });
+  return inspected.dimensions;
 }
 
 /** One server boundary validates all private upload bytes before a claim may advance. */
-export function createAssetContentVerifier(options: { footageVerifier?: FootageVerifier } = {}): AssetContentVerifier {
+export function createAssetContentVerifier(options: {
+  footageVerifier?: FootageVerifier;
+  imageDecoder?: ImageDecoder;
+} = {}): AssetContentVerifier {
   const footageVerifier = options.footageVerifier ?? createFootageVerifier();
+  const imageDecoder = options.imageDecoder ?? createFfmpegImageDecoder();
   return {
     async verify(input) {
       if (input.kind === "footage") {
@@ -157,7 +264,7 @@ export function createAssetContentVerifier(options: { footageVerifier?: FootageV
         }
         return {};
       }
-      return verifyImage(input);
+      return verifyImage(input, imageDecoder);
     },
   };
 }

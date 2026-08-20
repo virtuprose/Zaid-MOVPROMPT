@@ -462,10 +462,7 @@ async function eligibleForStarter(input: {
 
 export function createGenerationApiService(options: GenerationApiServiceOptions): GenerationApiService {
   const now = options.now ?? (() => new Date());
-  const campaignEligibility = options.campaignEligibility ?? createCampaignEligibilityService({
-    templates: options.repository,
-    capabilities: options.capabilities,
-  });
+  const campaignEligibility = options.campaignEligibility ?? createCampaignEligibilityService();
 
   function assertCapability(capability: CapabilityAlias): void {
     try {
@@ -606,7 +603,7 @@ export function createGenerationApiService(options: GenerationApiServiceOptions)
       if (error instanceof CampaignEligibilityError) {
         throw new GenerationApplicationError(
           "presenter_configuration_ineligible",
-          "The selected presenter cannot be used for this campaign.",
+          error.message,
         );
       }
       throw error;

@@ -235,7 +235,7 @@ export function registerCreatorRoutes(
       if (error instanceof GuestClaimServiceError) {
         throw new ApiHttpError({
           code: error.code === "presenter_configuration_ineligible" ? error.code : "guest_claim_conflict",
-          message: "This campaign claim cannot be completed.",
+          message: error.code === "presenter_configuration_ineligible" ? error.message : "This campaign claim cannot be completed.",
           status: 409,
           retryable: error.retryable,
         });
@@ -269,7 +269,7 @@ export function registerCreatorRoutes(
       if (error instanceof GuestClaimServiceError) {
         throw new ApiHttpError({
           code: error.code === "presenter_configuration_ineligible" ? error.code : "guest_claim_conflict",
-          message: "This campaign claim cannot be completed.",
+          message: error.code === "presenter_configuration_ineligible" ? error.message : "This campaign claim cannot be completed.",
           status: 409,
           retryable: error.retryable,
         });

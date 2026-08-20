@@ -223,17 +223,6 @@ function isClaimableSourceAsset(asset: CreatorProject["product"]["images"][numbe
   return !asset.storagePath && (Boolean(asset.assetKey) || asset.source === "sample");
 }
 
-function isVerifiedSpokespersonFootage(asset: CreatorProject["product"]["images"][number]) {
-  return Boolean(
-    asset.storagePath
-      && /^video\/(mp4|quicktime)$/iu.test(asset.mimeType ?? "")
-      && /^[a-f0-9]{64}$/iu.test(asset.checksum ?? "")
-      && asset.durationMs
-      && asset.durationMs > 0
-      && asset.durationMs <= 10 * 60 * 1_000,
-  );
-}
-
 async function videoDurationMs(file: File): Promise<number> {
   const objectUrl = URL.createObjectURL(file);
   try {
@@ -609,25 +598,11 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
       setPresenterCompatibility({ aiUgc: false, uploadedSpokesperson: false });
       return;
     }
-    let active = true;
-    void Promise.all([portableCreatorApi.getTemplate(template.id), portableCreatorApi.featureFlags()])
-      .then(([publishedTemplate, flags]) => {
-        if (!active) return;
-        const aiUgcAvailable = flags.capabilities.some((capability) => capability.alias === "presenter.ai_ugc" && capability.available);
-        setPresenterCompatibility({
-          aiUgc: aiUgcAvailable
-            && publishedTemplate.capabilityPolicy.includes("presenter.ai_ugc")
-            && publishedTemplate.supportedLanguages.includes(project.language),
-          uploadedSpokesperson: publishedTemplate.presenterModes.includes("uploaded_spokesperson")
-            && publishedTemplate.supportedLanguages.includes(project.language)
-            && project.product.images.some(isVerifiedSpokespersonFootage),
-        });
-      })
-      .catch(() => {
-        if (active) setPresenterCompatibility({ aiUgc: false, uploadedSpokesperson: false });
-      });
-    return () => { active = false; };
-  }, [portablePlatform, project.language, project.product.images, step, template.id]);
+    // The provider request contract currently supports prompt and image
+    // references only. Keep Template Mode honest until a server-owned
+    // presenter adapter is wired through API, worker and provider layers.
+    setPresenterCompatibility({ aiUgc: false, uploadedSpokesperson: false });
+  }, [portablePlatform, step]);
 
   useEffect(() => {
     if ((!project.jobId && !project.renderRunId) || step !== "generating" || simulatedGeneration) return;

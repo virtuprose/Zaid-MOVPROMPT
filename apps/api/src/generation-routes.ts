@@ -123,7 +123,7 @@ function applicationError(error: unknown): never {
     case "presenter_configuration_ineligible":
       throw new ApiHttpError({
         code: error.code,
-        message: "The selected presenter cannot be used for this campaign.",
+        message: error.message,
         status: 400,
       });
     case "project_version_not_found":

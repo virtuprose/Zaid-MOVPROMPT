@@ -8,6 +8,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { AuthGateway, AuthenticatedSession } from "./auth-gateway.js";
 import { createApi } from "./app.js";
+import { PRESENTER_RENDERING_UNAVAILABLE_MESSAGE } from "./campaign-eligibility.js";
 import { loadApiConfig } from "./config.js";
 import { GenerationApplicationError, type GenerationApiService } from "./generation-service.js";
 
@@ -244,10 +245,10 @@ describe("generation API routes", () => {
     });
   });
 
-  it("returns one non-disclosing presenter eligibility error without starting a render", async () => {
+  it("explains that an unsupported presenter cannot be rendered without starting a render", async () => {
     const generation = generationService();
     generation.createQuote = vi.fn(async () => {
-      throw new GenerationApplicationError("presenter_configuration_ineligible");
+      throw new GenerationApplicationError("presenter_configuration_ineligible", PRESENTER_RENDERING_UNAVAILABLE_MESSAGE);
     });
     const response = await app(session, generation).app.request("/api/v1/generation-quotes", {
       method: "POST",
@@ -256,7 +257,7 @@ describe("generation API routes", () => {
     });
     expect(response.status).toBe(400);
     await expect(response.json()).resolves.toMatchObject({
-      error: { code: "presenter_configuration_ineligible", message: "The selected presenter cannot be used for this campaign." },
+      error: { code: "presenter_configuration_ineligible", message: PRESENTER_RENDERING_UNAVAILABLE_MESSAGE },
     });
     expect(generation.startRender).not.toHaveBeenCalled();
   });

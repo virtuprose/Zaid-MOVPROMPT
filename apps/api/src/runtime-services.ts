@@ -97,10 +97,7 @@ export function createRuntimeServices(
   const capabilities = createCapabilityRegistryFromEnvironment(environment);
   const pricing = createGenerationPricingFromEnvironment(environment);
   const generationRepository = createDrizzleGenerationRepository(database.db);
-  const campaignEligibility = createCampaignEligibilityService({
-    templates: generationRepository,
-    capabilities,
-  });
+  const campaignEligibility = createCampaignEligibilityService();
   const generationService = assetsEnabled
     ? createGenerationApiService({
         repository: generationRepository,

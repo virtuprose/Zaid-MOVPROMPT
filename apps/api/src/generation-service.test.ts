@@ -948,8 +948,8 @@ describe("presenter eligibility", () => {
     expect(createQuote).not.toHaveBeenCalled();
   });
 
-  it("rejects disabled AI UGC and Digital Twin configuration before a reservation can start", async () => {
-    const ai = presenterApi({ presenter: { mode: "ai_ugc" }, aiUgcAvailable: false });
+  it("rejects AI UGC even when a generic capability flag is configured, and rejects unsupported identity types", async () => {
+    const ai = presenterApi({ presenter: { mode: "ai_ugc" }, aiUgcAvailable: true });
     await expect(ai.api.createQuote({ capability: "video.cinematic", projectVersionId: versionId }, session))
       .rejects.toMatchObject({ code: "presenter_configuration_ineligible" });
     expect(ai.createQuote).not.toHaveBeenCalled();
@@ -961,8 +961,8 @@ describe("presenter eligibility", () => {
     expect(twin.startRender).not.toHaveBeenCalled();
   });
 
-  it("accepts verified footage for a quote and repeats denial before render reservation", async () => {
-    const valid = presenterApi({
+  it("rejects selected presenters before a quote or render reservation until a provider adapter can honor them", async () => {
+    const unavailable = presenterApi({
       presenter: {
         mode: "uploaded_spokesperson",
         assetId,
@@ -976,11 +976,11 @@ describe("presenter eligibility", () => {
         durationMs: 10_000,
       },
     });
-    await expect(valid.api.createQuote({ capability: "video.cinematic", projectVersionId: versionId }, session))
-      .resolves.toMatchObject({ quoteId: "66666666-6666-4666-8666-666666666666" });
+    await expect(unavailable.api.createQuote({ capability: "video.cinematic", projectVersionId: versionId }, session))
+      .rejects.toMatchObject({ code: "presenter_configuration_ineligible" });
+    expect(unavailable.createQuote).not.toHaveBeenCalled();
 
-    const deniedStart = presenterApi({ presenter: { mode: "digital_twin" } });
-    deniedStart.repo.findOwnedQuote = vi.fn(async () => ({
+    unavailable.repo.findOwnedQuote = vi.fn(async () => ({
       id: "77777777-7777-4777-8777-777777777777",
       templateVersionId,
       capabilityAlias: "video.cinematic",
@@ -989,13 +989,13 @@ describe("presenter eligibility", () => {
       configurationHash: "a".repeat(64),
       expiresAt: new Date("2026-08-20T18:00:00.000Z"),
     }));
-    await expect(deniedStart.api.startRender({
+    await expect(unavailable.api.startRender({
       userId,
       projectId,
       projectVersionId: versionId,
       quoteId: "77777777-7777-4777-8777-777777777777",
       idempotencyKey: "presenter-denied-start",
     })).rejects.toMatchObject({ code: "presenter_configuration_ineligible" });
-    expect(deniedStart.startRender).not.toHaveBeenCalled();
+    expect(unavailable.startRender).not.toHaveBeenCalled();
   });
 });

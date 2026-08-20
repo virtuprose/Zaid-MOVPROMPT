@@ -3,16 +3,16 @@ import {
   type CampaignPresenter,
   type GuestClaimSnapshot,
 } from "@movprompt/contracts";
-import type { CapabilityRegistry } from "@movprompt/providers";
 import type { JsonObject } from "@movprompt/db";
 
-import type { GenerationRepository, OwnedPresenterFootageAsset, PublishedTemplateVersion } from "./generation-repository.js";
+import type { OwnedPresenterFootageAsset } from "./generation-repository.js";
 
-const FOOTAGE_MIME_TYPES = new Set(["video/mp4", "video/quicktime"]);
+export const PRESENTER_RENDERING_UNAVAILABLE_MESSAGE = "Selected presenters are not available for rendering yet. Choose No presenter to continue.";
+const PRESENTER_CONFIGURATION_INVALID_MESSAGE = "The selected presenter setup is invalid. Choose No presenter to continue.";
 
 export class CampaignEligibilityError extends Error {
-  constructor() {
-    super("presenter_configuration_ineligible");
+  constructor(message = "presenter_configuration_ineligible") {
+    super(message);
     this.name = "CampaignEligibilityError";
   }
 }
@@ -40,37 +40,8 @@ function presenter(configuration: JsonObject, campaignRecipe?: JsonObject): Camp
   const value = campaignValue(configuration, campaignRecipe);
   const candidate = typeof value === "string" ? { mode: value } : value;
   const parsed = CampaignPresenterSchema.safeParse(candidate);
-  if (!parsed.success) throw new CampaignEligibilityError();
+  if (!parsed.success) throw new CampaignEligibilityError(PRESENTER_CONFIGURATION_INVALID_MESSAGE);
   return parsed.data;
-}
-
-function campaignLanguage(configuration: JsonObject, campaignRecipe?: JsonObject): string {
-  const generation = record(configuration.generation);
-  const quoteContext = record(generation?.templateQuoteContext);
-  const creativeBrief = record(generation?.creativeBrief);
-  const value = quoteContext?.language ?? creativeBrief?.language ?? campaignRecipe?.language;
-  return typeof value === "string" ? value : "";
-}
-
-function validFootage(asset: OwnedPresenterFootageAsset | null | undefined): boolean {
-  return Boolean(
-    asset
-      && FOOTAGE_MIME_TYPES.has(asset.mimeType.toLowerCase())
-      && asset.sizeBytes > 0
-      && asset.durationMs !== null
-      && asset.durationMs > 0
-      && asset.durationMs <= 10 * 60 * 1_000
-      && asset.checksumSha256
-      && /^[a-f0-9]{64}$/u.test(asset.checksumSha256),
-  );
-}
-
-function templateAllows(template: PublishedTemplateVersion | null, mode: CampaignPresenter["mode"], language: string): boolean {
-  return Boolean(
-    template
-      && template.presenterModes.includes(mode)
-      && template.supportedLanguages.includes(language),
-  );
 }
 
 export type CampaignEligibilityService = {
@@ -84,10 +55,14 @@ export type CampaignEligibilityService = {
   presenterFromConfiguration(input: { configuration: JsonObject; campaignRecipe?: JsonObject }): CampaignPresenter;
 };
 
-export function createCampaignEligibilityService(dependencies: {
-  templates: Pick<GenerationRepository, "findPublishedTemplateVersion">;
-  capabilities: CapabilityRegistry;
-}): CampaignEligibilityService {
+/**
+ * The current Seedance adapters accept only prompt, image references and
+ * video settings. They have no contract for an AI cast or a footage-driven
+ * spokesperson, so non-none presenter modes must fail before a quote, claim
+ * or reservation can create a paid operation. Adding a public capability flag
+ * alone is deliberately insufficient to re-enable this pathway.
+ */
+export function createCampaignEligibilityService(): CampaignEligibilityService {
   async function assertPresenter(input: {
     configuration: JsonObject;
     campaignRecipe?: JsonObject;
@@ -96,20 +71,7 @@ export function createCampaignEligibilityService(dependencies: {
   }): Promise<void> {
     const selected = presenter(input.configuration, input.campaignRecipe);
     if (selected.mode === "none") return;
-    const language = campaignLanguage(input.configuration, input.campaignRecipe);
-    const template = input.templateVersionId
-      ? await dependencies.templates.findPublishedTemplateVersion(input.templateVersionId)
-      : null;
-    if (!templateAllows(template, selected.mode, language)) throw new CampaignEligibilityError();
-    if (selected.mode === "ai_ugc") {
-      try {
-        dependencies.capabilities.resolve("presenter.ai_ugc");
-      } catch {
-        throw new CampaignEligibilityError();
-      }
-      return;
-    }
-    if (!validFootage(input.footage)) throw new CampaignEligibilityError();
+    throw new CampaignEligibilityError(PRESENTER_RENDERING_UNAVAILABLE_MESSAGE);
   }
 
   return {
