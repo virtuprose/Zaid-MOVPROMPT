@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { TemplateRecommendations } from "./TemplateRecommendationCards";
+import { OutcomeStep } from "./OutcomeStep";
 import { CREATOR_TEMPLATES } from "./templates";
 
 const props = {
@@ -31,6 +32,17 @@ const props = {
 };
 
 describe("TemplateRecommendations", () => {
+  it("lets keyboard users change the selected outcome", () => {
+    const onChange = vi.fn();
+    render(<OutcomeStep value="launch" onChange={onChange} />);
+
+    const selected = screen.getByRole("radio", { name: /Launch something new/ });
+    fireEvent.keyDown(selected, { key: "ArrowRight" });
+
+    expect(onChange).toHaveBeenCalledWith("offer");
+    expect(screen.getByRole("radio", { name: /Launch something new/ })).toHaveAttribute("tabindex", "0");
+  });
+
   it("quoted recommendation tracer selects an exact ready template and quote", () => {
     const onSelect = vi.fn();
     expect(TemplateRecommendations).toBeTypeOf("function");
