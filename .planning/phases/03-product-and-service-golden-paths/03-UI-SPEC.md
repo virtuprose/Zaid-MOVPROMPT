@@ -108,10 +108,10 @@ New Phase 03 surfaces use exactly two weights: regular 400 and semibold 600. Exi
 
 | Role | Size | Weight | Line Height | Contract |
 |------|------|--------|-------------|----------|
-| Body | 15px | 400 | 1.5 | Field values, descriptions, helper copy, review facts. Use 14px only where the existing compact creator pattern requires it. |
+| Body | 16px | 400 | 1.5 | Field values, descriptions, helper copy, and review facts. |
 | Label | 12px | 600 | 1.2 | Uppercase English metadata with 0.08em tracking; Arabic labels are not uppercased and use normal tracking. |
 | Heading | 24px | 600 | 1.2 | Step titles, review group titles, recommendation title. |
-| Display | 40px mobile / 64px desktop | 600 | 1.0–1.2 | Page title only; one display title per creator screen. |
+| Display | 48px | 600 | 1.0–1.2 | Page title only; one display title per creator screen. |
 
 Long fact values and Arabic content wrap to two lines where practical. Product/service name cards use two-line clamp followed by accessible full text in a title/description or detail view; never clip a legal fact, CTA URL, phone number, price, or validation error.
 
@@ -204,8 +204,8 @@ Every state has one visible primary recovery action and a non-destructive second
 | Link scan partial | Show returned facts plus missing values as “Not added” and scanner warnings in plain language. | Confirm details | Edit facts |
 | Link scan error | Show exact recovery copy from Copywriting Contract. | Try another link | Upload photos or footage |
 | Upload in progress | File names, per-file status, cancel where supported; do not imply remote ownership before claim. | Continue when validation completes | Remove file |
-| Fact validation | Leave values in place; inline error follows the affected field; first invalid field receives focus on Continue. | Fix {field label} | Back |
-| Recommendations loading | Use 1–3 card skeletons that match final card geometry. | Wait | Change outcome |
+| Fact validation | Leave values in place; inline error follows the affected field; first invalid field receives focus on Continue. | Fix {field label} | Return to fact review |
+| Recommendations loading | Use 1–3 card skeletons that match final card geometry. | Checking recommendations | Change outcome |
 | Recommendations empty | Use documented empty copy; never choose an unsuitable template automatically. | Add missing input / Change outcome | Browse all templates |
 | Static direction | Show poster, expected result, and “View direction”; no playable-looking controls. | View direction | Choose template |
 | Quote loading | Final review remains available; price area uses a labelled skeleton. | Retry price on failure | Keep editing |
