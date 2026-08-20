@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 2
+open_count: 3
 waived_count: 0
 fixed_count: 3
-total_count: 5
-last_updated: 2026-08-19T20:58:50.652Z
+total_count: 6
+last_updated: 2026-08-20T14:01:54.255Z
 ---
 
 # Broken Windows Ledger
@@ -20,6 +20,7 @@ last_updated: 2026-08-19T20:58:50.652Z
 | 3 | 02 | unrun-verify | apps/api/src/creator-routes.postgres.test.ts |  | Source-change PostgreSQL replay/concurrency test skipped because MOVPROMPT_TEST_DATABASE_URL is not configured. | fixed |  | 2026-08-19T20:23:02.743Z | 2026-08-19T20:42:46.105Z |
 | 4 | 02 | deviation | apps/web/src/features/create/AuthGateDialog.test.tsx |  | Full web suite has a pre-existing order-dependent locale test failure; isolated test passes. | open |  | 2026-08-19T20:23:02.830Z |  |
 | 5 | 02 | unrun-verify | .planning/phases/02-guest-authentication-and-data-integrity/02-BROWSER-EVIDENCE.md |  | Live API, provider, private-claim, and two-account browser matrix was unavailable at the observed local web origin. | open |  | 2026-08-19T20:58:50.652Z |  |
+| 6 | 03 | stub | apps/web/src/features/create/creatorAssets.ts | 37 | MP4/MOV source media is preserved in the guest draft but authenticated asset claiming currently accepts only JPEG, PNG, and WebP. | open |  | 2026-08-20T14:01:54.255Z |  |
 
 ````json
 [
@@ -81,6 +82,18 @@ last_updated: 2026-08-19T20:58:50.652Z
     "status": "open",
     "reason": "",
     "recorded_at": "2026-08-19T20:58:50.652Z",
+    "resolved_at": null
+  },
+  {
+    "id": 6,
+    "kind": "stub",
+    "phase": "03",
+    "file": "apps/web/src/features/create/creatorAssets.ts",
+    "line": 37,
+    "description": "MP4/MOV source media is preserved in the guest draft but authenticated asset claiming currently accepts only JPEG, PNG, and WebP.",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-08-20T14:01:54.255Z",
     "resolved_at": null
   }
 ]

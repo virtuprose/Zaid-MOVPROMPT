@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 03
 current_phase_name: product-and-service-golden-paths
 status: executing
-stopped_at: Completed Phase 03 Plan 01 normalized campaign-source contracts
-last_updated: "2026-08-20T13:38:30.000Z"
+stopped_at: Completed Phase 03 Plan 02 product and service source journey
+last_updated: "2026-08-20T14:01:47.457Z"
 last_activity: 2026-08-20
-last_activity_desc: Phase 03 Plan 01 normalized source and provenance contracts complete
+last_activity_desc: Phase 03 Plan 02 completed the bilingual product and service source journey
 progress:
   total_phases: 3
   completed_phases: 2
   total_plans: 19
-  completed_plans: 12
+  completed_plans: 13
 ---
 
 # Project State
@@ -28,11 +28,11 @@ See: `.planning/PROJECT.md` (updated 2026-08-17)
 ## Current Position
 
 Phase: 03 (product-and-service-golden-paths) — EXECUTING
-Plan: 2 of 8
-Status: Executing Phase 03
-Last activity: 2026-08-20 — Phase 03 Plan 01 normalized source and provenance contracts complete
+Plan: 3 of 8
+Status: Ready to execute
+Last activity: 2026-08-20 — Phase 03 Plan 02 completed the bilingual product and service source journey
 
-Progress: [██████████] 100%
+Progress: [███████░░░] 68%
 
 ## Performance Metrics
 
@@ -62,6 +62,7 @@ Progress: [██████████] 100%
 | Phase 02 P07 | 17m | 3 tasks | 14 files |
 | Phase 02-guest-authentication-and-data-integrity P08 | 7m | 3 tasks | 15 files |
 | Phase 03 P01 | 11m | 3 tasks | 15 files |
+| Phase 03-product-and-service-golden-paths P02 | 26min | 3 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -96,6 +97,8 @@ Full decisions are recorded in `.planning/PROJECT.md`.
 - [Phase ?]: Rendered browser evidence records unavailable live-stack routes as open, never as passing.
 - [Phase 03]: CampaignSource plus its ConfirmedFact collection is the one normalized product/service anchor; legacy product fields derive a compatibility source only.
 - [Phase 03]: Campaign fact provenance transitions are explicit and immutable: imported values become confirmed only when selected, while edits remain manual.
+- [Phase 03]: Source choices now converge on one normalized CampaignSource with provenance-visible review.
+- [Phase 03]: Source retries retain the exact guest draft and never clear reviewed facts.
 
 ### Pending Todos
 
@@ -118,6 +121,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-08-20T09:33:10.756Z
-Stopped at: Completed Phase 03 Plan 01 normalized campaign-source contracts
-Resume file: .planning/phases/03-product-and-service-golden-paths/03-02-PLAN.md
+Last session: 2026-08-20T14:01:47.449Z
+Stopped at: Completed Phase 03 Plan 02 product and service source journey
+Resume file: .planning/phases/03-product-and-service-golden-paths/03-03-PLAN.md

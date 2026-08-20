@@ -32,9 +32,9 @@ Requirements for the first production release. A requirement is complete only af
 
 ### Business and Product Sources
 
-- [ ] **SOURCE-01**: User can begin with a product URL, business/service URL, product photos, real footage, or manual entry.
-- [ ] **SOURCE-02**: User can review and correct imported name, description, price, offer, location, booking link, WhatsApp number, logo, colors, images, and service facts.
-- [ ] **SOURCE-03**: Each business fact is marked as imported, user-confirmed, or manually entered.
+- [x] **SOURCE-01**: User can begin with a product URL, business/service URL, product photos, real footage, or manual entry.
+- [x] **SOURCE-02**: User can review and correct imported name, description, price, offer, location, booking link, WhatsApp number, logo, colors, images, and service facts.
+- [x] **SOURCE-03**: Each business fact is marked as imported, user-confirmed, or manually entered.
 - [x] **SOURCE-04**: Product/business scanning blocks private networks, unsafe redirects, oversized responses, invalid media, and abusive request rates.
 - [x] **SOURCE-05**: Authenticated remote images are mirrored into owner-scoped private storage with verified type, size, checksum, and project ownership.
 - [x] **SOURCE-06**: Failed import or media upload leaves the local draft unchanged and provides a clear Retry or Upload instead action.
@@ -42,7 +42,7 @@ Requirements for the first production release. A requirement is complete only af
 
 ### Template Mode and Campaign Setup
 
-- [ ] **CREATE-01**: Beginner can complete Template Mode without seeing model names, provider names, prompt engineering, codecs, or a timeline.
+- [x] **CREATE-01**: Beginner can complete Template Mode without seeing model names, provider names, prompt engineering, codecs, or a timeline.
 - [ ] **CREATE-02**: Product-first and template-first entry paths converge on the same campaign draft without losing information.
 - [ ] **CREATE-03**: User can choose an outcome: WhatsApp orders, bookings, offer, launch, demonstration, education, announcement, trust/testimonial, or brand story.
 - [ ] **CREATE-04**: User receives template recommendations based on vertical, outcome, available sources, presenter need, language, duration, and format.
@@ -51,7 +51,7 @@ Requirements for the first production release. A requirement is complete only af
 - [ ] **CREATE-07**: User can choose no presenter, approved AI UGC presenter, or uploaded real spokesperson; Digital Twins are not exposed in v1.
 - [ ] **CREATE-08**: User can select Kuwait, Arabic/English/bilingual campaign language, KWD price, offer, CTA destination, WhatsApp/booking details, tone, subtitles, audio, resolution, and output ratio.
 - [ ] **CREATE-09**: Review screen displays the actual selected template, outcome, source, language, CTA, price, offer, format, resolution, audio, subtitles, rights state, and authoritative price.
-- [ ] **CREATE-10**: Every Template Mode screen has one clear primary task, one clear next action, and complete loading, empty, validation, offline, error, and success states.
+- [x] **CREATE-10**: Every Template Mode screen has one clear primary task, one clear next action, and complete loading, empty, validation, offline, error, and success states.
 
 ### Pricing, Generation, and Quality
 
@@ -197,14 +197,14 @@ Deferred until the beginner Kuwait launch is stable and measured.
 | AUTH-08 | Phase 2 | Complete |
 | AUTH-09 | Phase 2 | Complete |
 | AUTH-10 | Phase 2 | Complete |
-| SOURCE-01 | Phase 3 | Pending |
-| SOURCE-02 | Phase 3 | Pending |
-| SOURCE-03 | Phase 3 | Pending |
+| SOURCE-01 | Phase 3 | Complete |
+| SOURCE-02 | Phase 3 | Complete |
+| SOURCE-03 | Phase 3 | Complete |
 | SOURCE-04 | Phase 2 | Complete |
 | SOURCE-05 | Phase 2 | Complete |
 | SOURCE-06 | Phase 2 | Complete |
 | SOURCE-07 | Phase 2 | Complete |
-| CREATE-01 | Phase 3 | Pending |
+| CREATE-01 | Phase 3 | Complete |
 | CREATE-02 | Phase 3 | Pending |
 | CREATE-03 | Phase 3 | Pending |
 | CREATE-04 | Phase 3 | Pending |
@@ -213,7 +213,7 @@ Deferred until the beginner Kuwait launch is stable and measured.
 | CREATE-07 | Phase 3 | Pending |
 | CREATE-08 | Phase 3 | Pending |
 | CREATE-09 | Phase 3 | Pending |
-| CREATE-10 | Phase 3 | Pending |
+| CREATE-10 | Phase 3 | Complete |
 | GEN-01 | Phase 1 | Complete |
 | GEN-02 | Phase 1 | Complete |
 | GEN-03 | Phase 1 | Complete |
