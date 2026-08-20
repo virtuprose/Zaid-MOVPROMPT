@@ -88,6 +88,7 @@ import {
   getCampaignGoalOption,
   normalizeCreatorResolution,
   type CreatorAspectRatio,
+  type CreatorAsset,
   type CreatorLanguage,
   type CreatorResolution,
   type CreatorProject,
@@ -198,11 +199,13 @@ function buildTemplatePrompt(project: CreatorProject) {
   ].join("\n");
 }
 
-function validateLocalImage(file: File) {
-  if (!["image/jpeg", "image/png", "image/webp"].includes(file.type.toLowerCase())) {
-    throw new Error(`${file.name} must be a JPEG, PNG or WebP image.`);
-  }
-  if (file.size > 12 * 1024 * 1024) throw new Error(`${file.name} is over 12 MB.`);
+function validateLocalMedia(file: File) {
+  const type = file.type.toLowerCase();
+  const isImage = ["image/jpeg", "image/png", "image/webp"].includes(type);
+  const isVideo = ["video/mp4", "video/quicktime"].includes(type);
+  if (!isImage && !isVideo) throw new Error(`${file.name} must be a JPEG, PNG, WebP, MP4 or MOV file.`);
+  const byteLimit = isVideo ? 75 * 1024 * 1024 : 12 * 1024 * 1024;
+  if (file.size > byteLimit) throw new Error(`${file.name} is over ${isVideo ? "75" : "12"} MB.`);
 }
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -289,6 +292,14 @@ function projectWithSource(project: CreatorProject, source: CampaignSource, chan
     brandColor: fact("brand_color") || project.brandColor,
     title: name ? `${name} — ${getCreatorTemplate(project.templateId).name}` : project.title,
   };
+}
+
+function SourceMediaPreview({ asset, alt, className }: { asset?: CreatorAsset; alt: string; className?: string }) {
+  if (!asset) return null;
+  if (asset.mimeType?.startsWith("video/")) {
+    return <video className={className} src={asset.url} aria-label={alt} controls muted playsInline preload="metadata" />;
+  }
+  return <img className={className} src={asset.url} alt={alt} />;
 }
 
 export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
@@ -809,31 +820,32 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
     setRecovery(null);
     try {
       const assets = await Promise.all(selected.map(async (file) => {
-        validateLocalImage(file);
+        validateLocalMedia(file);
         const assetKey = await putGuestAsset(project.id, file);
         return {
           id: crypto.randomUUID(),
           name: file.name,
           url: URL.createObjectURL(file),
-          mimeType: file.type.toLowerCase() as "image/jpeg" | "image/png" | "image/webp",
+          mimeType: file.type.toLowerCase(),
           assetKey,
           source: "upload" as const,
         };
       }));
       const images = [...retainedImages, ...assets].slice(0, 5);
       const uploadedName = selected[0].name.replace(/\.[^.]+$/, "");
+      const footage = selected.some((file) => file.type.toLowerCase().startsWith("video/"));
       const source = normalizeCampaignSource({
-        kind: "product_upload",
+        kind: footage ? "real_footage" : "product_upload",
         subject: sourceSubject,
         assetKeys: images.flatMap((image) => image.assetKey ? [image.assetKey] : []),
         facts: sourceSubject === "product"
           ? [
               { field: "name", value: project.product.name || uploadedName, provenance: "manual" },
-              { field: "media", value: `${images.length} photo${images.length === 1 ? "" : "s"} added`, provenance: "manual" },
+              { field: "media", value: `${images.length} ${footage ? "file" : "photo"}${images.length === 1 ? "" : "s"} added`, provenance: "manual" },
             ]
           : [
               { field: "service_name", value: project.product.name || uploadedName, provenance: "manual" },
-              { field: "media", value: `${images.length} photo${images.length === 1 ? "" : "s"} added`, provenance: "manual" },
+              { field: "media", value: `${images.length} ${footage ? "file" : "photo"}${images.length === 1 ? "" : "s"} added`, provenance: "manual" },
             ],
       });
       updateProjectSource(projectWithSource(project, source, {
@@ -1452,7 +1464,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
           <div className="creator-generation-inner">
             <div className="creator-generation-preview">
               {productPreviewImage
-                ? <img src={productPreviewImage} alt={tr(`${project.product.name || "Your product"} source image`, `صورة مصدر ${project.product.name || "المنتج"}`)} />
+                ? <SourceMediaPreview asset={project.product.images[0]} alt={tr(`${project.product.name || "Your product"} source media`, `وسائط مصدر ${project.product.name || "المنتج"}`)} />
                 : <div className="creator-media-empty"><FileImage aria-hidden="true" /><span>{tr("No product image added", "لم تتم إضافة صورة للمنتج")}</span></div>}
               <div className="creator-generation-scan" aria-hidden="true" />
             </div>
@@ -1514,7 +1526,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
                 {hasRenderedVideo && project.videoUrl
                   ? <video ref={videoRef} key={project.videoUrl} src={project.videoUrl} poster={productPreviewImage ?? undefined} aria-label={tr(`Generated video for ${project.product.name}`, `الفيديو المولّد لـ ${project.product.name}`)} playsInline autoPlay loop muted={previewMuted} />
                   : productPreviewImage
-                    ? <img src={productPreviewImage} alt={tr(`${project.product.name || "Product"} source preview`, `معاينة مصدر ${project.product.name || "المنتج"}`)} />
+                    ? <SourceMediaPreview asset={project.product.images[0]} alt={tr(`${project.product.name || "Product"} source preview`, `معاينة مصدر ${project.product.name || "المنتج"}`)} />
                     : <div className="creator-media-empty"><FileImage aria-hidden="true" /><span>{tr("Add a product image to preview this campaign", "أضف صورة منتج لمعاينة هذه الحملة")}</span></div>}
                 <div className="creator-video-overlay" data-rtl={isRtl}>
                   <small>{project.product.brand || template.eyebrow}</small>
@@ -1651,7 +1663,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
             </section>
 
             <aside className="creator-panel creator-product-card" aria-label={tr(`Selected ${project.promotionKind} preview`, "معاينة المصدر المحدد")}>
-              <div className="creator-product-image">{project.product.images[0] ? <img src={project.product.images[0].url} alt={project.product.name || tr(`Selected ${project.promotionKind}`, "المصدر المحدد")} /> : <div className="creator-empty" style={{ minHeight: "100%", border: 0, borderRadius: 0 }}><div><span className="creator-empty-icon"><FileImage aria-hidden="true" /></span><p>{sourceSubject === "service" ? tr("Your business or service media will appear here.", "وسائط نشاطك أو خدمتك راح تظهر هنا.") : tr("Your product media will appear here.", "وسائط منتجك راح تظهر هنا.")}</p></div></div>}</div>
+              <div className="creator-product-image">{project.product.images[0] ? <SourceMediaPreview asset={project.product.images[0]} alt={project.product.name || tr(`Selected ${project.promotionKind}`, "المصدر المحدد")} /> : <div className="creator-empty" style={{ minHeight: "100%", border: 0, borderRadius: 0 }}><div><span className="creator-empty-icon"><FileImage aria-hidden="true" /></span><p>{sourceSubject === "service" ? tr("Your business or service media will appear here.", "وسائط نشاطك أو خدمتك راح تظهر هنا.") : tr("Your product media will appear here.", "وسائط منتجك راح تظهر هنا.")}</p></div></div>}</div>
               <div className="creator-product-copy"><p className="creator-kicker">{sourceSubject === "service" ? tr("Business campaign", "حملة نشاط") : tr("Product campaign", "حملة منتج")}</p><h3>{project.product.name || (sourceSubject === "service" ? tr("Add your business details", "أضف تفاصيل نشاطك") : tr("Add your product details", "أضف تفاصيل منتجك"))}</h3><p>{tr("Only details you review are used in your campaign.", "نستخدم فقط التفاصيل التي تراجعها في حملتك.")}</p>{project.product.images.length > 0 && <div className="creator-image-strip">{project.product.images.map((image) => <span className="creator-image-thumb" key={image.id}><img src={image.url} alt="" /></span>)}</div>}</div>
             </aside>
           </div>
@@ -1671,7 +1683,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
               />
             </section>
             <aside className="creator-panel creator-product-card" aria-label={tr("Campaign source preview", "معاينة مصدر الحملة")}>
-              <div className="creator-product-image">{project.product.images[0] ? <img src={project.product.images[0].url} alt={project.product.name || tr("Campaign source", "مصدر الحملة")} /> : <div className="creator-empty" style={{ minHeight: "100%", border: 0, borderRadius: 0 }}><div><span className="creator-empty-icon"><FileImage aria-hidden="true" /></span><p>{tr("You can add photos or footage later. Your facts are already saved.", "تقدر تضيف صوراً أو فيديو لاحقاً. معلوماتك محفوظة بالفعل.")}</p></div></div>}</div>
+              <div className="creator-product-image">{project.product.images[0] ? <SourceMediaPreview asset={project.product.images[0]} alt={project.product.name || tr("Campaign source", "مصدر الحملة")} /> : <div className="creator-empty" style={{ minHeight: "100%", border: 0, borderRadius: 0 }}><div><span className="creator-empty-icon"><FileImage aria-hidden="true" /></span><p>{tr("You can add photos or footage later. Your facts are already saved.", "تقدر تضيف صوراً أو فيديو لاحقاً. معلوماتك محفوظة بالفعل.")}</p></div></div>}</div>
               <div className="creator-product-copy"><p className="creator-kicker">{tr("Your reviewed source", "المصدر الذي راجعته")}</p><h3>{project.product.name || tr("Details ready to add", "التفاصيل جاهزة للإضافة")}</h3><p>{tr("Each label tells you where a detail came from.", "كل تسمية توضح مصدر المعلومة.")}</p></div>
             </aside>
           </div>
@@ -1707,7 +1719,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
 
             <aside className="creator-panel creator-panel-pad creator-generation-summary" aria-label={tr("Generation summary", "ملخص التوليد")}>
               <p className="creator-kicker">{tr("Ready to create", "جاهز للإنشاء")}</p>
-              <div className="creator-product-image" style={{ borderRadius: 14, overflow: "hidden" }}><img src={project.product.images[0]?.url} alt={project.product.name} /></div>
+              <div className="creator-product-image" style={{ borderRadius: 14, overflow: "hidden" }}><SourceMediaPreview asset={project.product.images[0]} alt={project.product.name} /></div>
               <div className="creator-summary-list" style={{ marginTop: 16 }}><div className="creator-summary-row"><span>{tr("Template", "القالب")}</span><strong>{arabicUi ? template.nameAr : template.name}</strong></div><div className="creator-summary-row"><span>{tr("Campaign goal", "هدف الحملة")}</span><strong>{arabicUi ? ARABIC_GOAL_LABELS[project.goal] : getCampaignGoalOption(project.goal).label}</strong></div><div className="creator-summary-row"><span>{tr("Call to action", "الدعوة للإجراء")}</span><strong>{arabicUi ? ARABIC_CTA_LABELS[project.cta] ?? project.cta : project.cta}</strong></div>{project.product.price && <div className="creator-summary-row"><span>{tr("Price", "السعر")}</span><strong>{project.product.price} {MARKET_META[project.market].currency}</strong></div>}{project.offer && <div className="creator-summary-row"><span>{tr("Offer", "العرض")}</span><strong>{project.offer}</strong></div>}<div className="creator-summary-row"><span>{tr("Market", "السوق")}</span><strong>{MARKET_META[project.market].label}</strong></div><div className="creator-summary-row"><span>{tr("Campaign language", "لغة الحملة")}</span><strong>{project.language === "bilingual" ? tr("Kuwaiti Arabic + English", "عربي كويتي + إنجليزي") : project.language === "ar" ? tr("Kuwaiti Arabic", "عربي كويتي") : tr("English", "الإنجليزية")}</strong></div><div className="creator-summary-row"><span>{tr("Format", "المقاس")}</span><strong>{project.aspectRatio} · {project.resolution}</strong></div><div className="creator-summary-row"><span>{tr("Subtitles", "الترجمة المكتوبة")}</span><strong>{project.subtitles ? tr("Included", "مشمولة") : tr("Off", "متوقفة")}</strong></div><div className="creator-summary-row"><span>{tr("Audio", "الصوت")}</span><strong>{project.audio ? tr("Included", "مشمول") : tr("Off", "متوقف")}</strong></div></div>
               <div className="creator-cost-box" aria-live="polite">
                 {quote ? <>

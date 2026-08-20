@@ -187,9 +187,9 @@ export function SourceChoiceStep({
           <label htmlFor="campaign-source-files">
             <span className="creator-upload-icon"><FileUp aria-hidden="true" /></span>
             <strong>{text(arabic, "Choose photos or footage", "اختر صوراً أو فيديو")}</strong>
-            <span>{text(arabic, "JPG, PNG or WebP · up to 5 photos · 12 MB each", "JPG أو PNG أو WebP · حتى 5 صور · 12 MB لكل صورة")}</span>
+            <span>{text(arabic, "JPG, PNG, WebP, MP4 or MOV · up to 5 files", "JPG أو PNG أو WebP أو MP4 أو MOV · حتى 5 ملفات")}</span>
           </label>
-          <input id="campaign-source-files" type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={(event) => onFiles(event.target.files)} />
+          <input id="campaign-source-files" aria-label={text(arabic, "Choose photos or footage", "اختر صوراً أو فيديو")} type="file" accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime" multiple onChange={(event) => onFiles(event.target.files)} />
         </div>
       )}
 

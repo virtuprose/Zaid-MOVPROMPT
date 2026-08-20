@@ -21,7 +21,7 @@ export type CreatorAsset = {
   id: string;
   name: string;
   url: string;
-  mimeType?: "image/jpeg" | "image/png" | "image/webp";
+  mimeType?: string;
   assetKey?: string;
   checksum?: string;
   storagePath?: string;
