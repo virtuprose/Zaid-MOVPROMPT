@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { createDraftProject } from "./templates";
 import {
   buildPortableGenerationConfiguration,
+  imageReferencesForAdvancedHandoff,
   listLocalCreatorProjects,
   portableProductRecipe,
   saveLocalCreatorProject,
@@ -83,4 +84,31 @@ describe("creator project local cache", () => {
       mimeType: "image/webp",
     })]);
   });
+
+  it("does not pass MOV footage into Advanced image references", () => {
+    const project = createDraftProject();
+    project.product.images = [
+      {
+        id: "33333333-3333-4333-8333-333333333333",
+        name: "product.jpg",
+        url: "blob:product",
+        storagePath: "users/u/projects/p/assets/product/image/checksum",
+        mimeType: "image/jpeg",
+        source: "upload",
+      },
+      {
+        id: "44444444-4444-4444-8444-444444444444",
+        name: "spokesperson.mov",
+        url: "blob:footage",
+        storagePath: "users/u/projects/p/assets/footage/video/checksum",
+        mimeType: "video/quicktime",
+        source: "upload",
+      },
+    ];
+
+    expect(imageReferencesForAdvancedHandoff(project)).toEqual([
+      "users/u/projects/p/assets/product/image/checksum",
+    ]);
+  });
+
 });

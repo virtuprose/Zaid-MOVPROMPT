@@ -16,6 +16,18 @@ function presenterForProject(project: CreatorProject): CampaignPresenter {
   return project.presenterMode === "ai_ugc" ? { mode: "ai_ugc" } : { mode: "none" };
 }
 
+/**
+ * Advanced image references are a different contract from verified presenter
+ * footage. Keep video assets out until Advanced has a dedicated footage field.
+ */
+export function imageReferencesForAdvancedHandoff(project: CreatorProject): string[] {
+  return project.product.images.flatMap((image) => {
+    if (image.mimeType?.toLowerCase().startsWith("video/")) return [];
+    const reference = image.assetKey || image.storagePath || image.url;
+    return reference ? [reference] : [];
+  });
+}
+
 function storageKey(userId?: string | null) {
   return `${STORAGE_KEY}:${userId || "signed-out"}`;
 }

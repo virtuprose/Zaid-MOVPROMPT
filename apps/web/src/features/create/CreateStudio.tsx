@@ -59,6 +59,7 @@ import {
 import {
   buildPortableGenerationConfiguration,
   getLocalCreatorProject,
+  imageReferencesForAdvancedHandoff,
   loadCreatorProjects,
   portableCampaignRecipe,
   portableConfiguration,
@@ -1004,7 +1005,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
         advanced: {
           capability: "video.product_fidelity",
           prompt: project.product.images.length ? buildTemplatePrompt(project) : "",
-          references: project.product.images.map((image) => image.assetKey || image.storagePath || image.url),
+          references: imageReferencesForAdvancedHandoff(project),
           renderSettings: { duration: template.duration, ratio: project.aspectRatio },
         },
         returnPath: `/advanced?draft=${encodeURIComponent(project.id)}`,
