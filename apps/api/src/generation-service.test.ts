@@ -9,6 +9,7 @@ import {
   createGenerationApiService,
   GenerationApplicationError,
 } from "./generation-service.js";
+import { hashGenerationConfiguration } from "@movprompt/db";
 
 function ownedRun(overrides: Partial<OwnedRenderRun> = {}): OwnedRenderRun {
   const now = new Date("2026-08-14T12:00:00.000Z");
@@ -493,5 +494,148 @@ describe("template quote eligibility", () => {
     }, null)).rejects.toMatchObject({
       code: "template_configuration_ineligible",
     } satisfies Partial<GenerationApplicationError>);
+  });
+});
+
+describe("template quote rejection", () => {
+  const userId = "11111111-1111-4111-8111-111111111111";
+  const projectId = "22222222-2222-4222-8222-222222222222";
+  const versionId = "33333333-3333-4333-8333-333333333333";
+  const templateVersionId = "44444444-4444-4444-8444-444444444444";
+
+  const configuration = {
+    prompt: "Create an eligible Kuwait campaign.",
+    durationSeconds: 8,
+    aspectRatio: "9:16" as const,
+    resolution: "720p" as const,
+    audio: false,
+    references: [],
+    creativeBrief: {
+      market: "KW",
+      language: "en",
+      goal: "launch",
+      product: { name: "Confirmed product", callToAction: "Shop now" },
+    },
+  };
+
+  function publishedTemplate(overrides: Record<string, unknown> = {}) {
+    return {
+      id: templateVersionId,
+      durationSeconds: 8,
+      starterRenderEligible: false,
+      eligibility: {
+        goals: ["launch"],
+        supportedLanguages: ["en"],
+        supportedRatios: ["9:16"],
+        supportedMarkets: ["KW"],
+        requiredInputs: ["subject_name", "call_to_action"],
+        capabilityPolicy: ["video.cinematic"],
+        ...overrides,
+      },
+    };
+  }
+
+  function apiFor(template = publishedTemplate()) {
+    const repo = repository(ownedRun());
+    const createQuote = vi.fn(async () => ({
+      id: randomUUID(),
+      credits: 80,
+      entitlementEligible: false,
+      configurationHash: "a".repeat(64),
+      expiresAt: new Date("2026-08-20T15:00:00.000Z"),
+      breakdown: [{ label: "test", credits: 80 }],
+    } as never));
+    const startRender = vi.fn(async () => ownedRun({ projectId, projectVersionId: versionId }));
+    repo.findPublishedTemplateVersion = vi.fn(async () => template);
+    return {
+      repo,
+      createQuote,
+      startRender,
+      api: createGenerationApiService({
+        repository: repo,
+        generation: {
+          createQuote,
+          startRender,
+          releaseRenderReservation: vi.fn(async () => ({} as never)),
+        },
+        pricing: createGenerationPricingFromEnvironment({
+          GENERATION_PRICING_VERSION: "test-v1",
+          GENERATION_QUOTE_TTL_SECONDS: "900",
+          GENERATION_VIDEO_CINEMATIC_720P_CREDITS_PER_SECOND: "10",
+        }),
+        capabilities: new CapabilityRegistry({
+          "video.cinematic": {
+            enabled: true,
+            adapterId: "vercel-ai-gateway",
+            providerModelId: "bytedance/seedance-2.5",
+          },
+        }),
+      }),
+    };
+  }
+
+  const session = {
+    user: { id: userId, email: "owner@example.test", emailVerified: true, name: "Owner", role: "user" as const },
+    session: { id: "session" },
+  };
+
+  it("rejects a guest configuration that omits a catalog-required input without returning credits", async () => {
+    const { api, createQuote } = apiFor(publishedTemplate({ requiredInputs: ["primary_reference"] }));
+
+    await expect(api.createQuote({
+      capability: "video.cinematic",
+      templateVersionId,
+      configuration,
+    }, null)).rejects.toMatchObject({ code: "template_configuration_ineligible" });
+    expect(createQuote).not.toHaveBeenCalled();
+  });
+
+  it("rejects an owned project configuration that contradicts the published language policy", async () => {
+    const { api, createQuote, repo } = apiFor();
+    repo.findOwnedProjectVersion = vi.fn(async () => ({
+      id: versionId,
+      projectId,
+      templateVersionId,
+      configuration: { generation: { ...configuration, creativeBrief: { ...configuration.creativeBrief, language: "ar" } } },
+    }));
+
+    await expect(api.createQuote({ capability: "video.cinematic", projectVersionId: versionId }, session))
+      .rejects.toMatchObject({ code: "template_configuration_ineligible" });
+    expect(createQuote).not.toHaveBeenCalled();
+  });
+
+  it("revalidates published template eligibility at render submission before reserving work", async () => {
+    const template = publishedTemplate({ goals: ["bookings"] });
+    const { api, repo, startRender } = apiFor(template);
+    const boundConfiguration = {
+      capability: "video.cinematic",
+      pricingVersion: "test-v1",
+      templateVersionId,
+      generation: configuration,
+    };
+    repo.findOwnedProjectVersion = vi.fn(async () => ({
+      id: versionId,
+      projectId,
+      templateVersionId,
+      configuration: { generation: configuration },
+    }));
+    repo.findOwnedQuote = vi.fn(async () => ({
+      id: "55555555-5555-4555-8555-555555555555",
+      templateVersionId,
+      capabilityAlias: "video.cinematic",
+      credits: 80,
+      entitlementEligible: false,
+      configurationHash: hashGenerationConfiguration(boundConfiguration),
+      expiresAt: new Date("2026-08-20T15:00:00.000Z"),
+    }));
+
+    await expect(api.startRender({
+      userId,
+      projectId,
+      projectVersionId: versionId,
+      quoteId: "55555555-5555-4555-8555-555555555555",
+      idempotencyKey: "render-template-revalidate-1",
+    })).rejects.toMatchObject({ code: "template_configuration_ineligible" });
+    expect(startRender).not.toHaveBeenCalled();
   });
 });
