@@ -31,10 +31,10 @@ describe("CampaignSetupStep", () => {
     expect(screen.getByText("No presenter")).toBeVisible();
     expect(screen.getByLabelText("Market")).toHaveValue("KW");
     expect(screen.getByLabelText("Price")).toHaveValue("12.500");
-    expect(screen.getByLabelText("WhatsApp number")).toHaveValue("+96550000000");
+    expect(screen.getByText(/saved booking link and WhatsApp number/i)).toBeVisible();
 
     fireEvent.change(screen.getByLabelText("Call to action"), { target: { value: "Shop now" } });
-    expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ cta: "Shop now" }));
+    expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ cta: "Shop now" }), "cta");
     expect(screen.getByText("Confirming the current price…")).toBeVisible();
 
     fireEvent.click(screen.getByRole("button", { name: "Continue to review" }));
@@ -55,7 +55,7 @@ describe("CampaignSetupStep", () => {
 
     expect(screen.getByLabelText("لغة الحملة")).toHaveValue("bilingual");
     expect(screen.getByLabelText("رابط الحجز")).toHaveValue("https://noura.example/book");
-    expect(screen.getByLabelText("رقم واتساب")).toHaveValue("+96550000000");
+    expect(screen.queryByLabelText("رقم واتساب")).not.toBeInTheDocument();
     expect(screen.getByLabelText("السعر")).toHaveValue("9.000");
   });
 });

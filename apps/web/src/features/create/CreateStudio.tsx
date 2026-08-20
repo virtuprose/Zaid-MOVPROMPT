@@ -74,6 +74,8 @@ import { GuestClaimProgress } from "./GuestClaimProgress";
 import { CreatorProgress } from "./CreatorProgress";
 import { FactReviewStep } from "./FactReviewStep";
 import { SourceChoiceStep, type SourceChoice, type SourceSubject } from "./SourceChoiceStep";
+import { CampaignSetupStep } from "./CampaignSetupStep";
+import type { CampaignSetupField } from "./campaignSetupRules";
 import { buildGuestClaimSnapshot } from "./guestClaimSnapshot";
 import {
   hasUnclaimedCreatorAssets,
@@ -356,6 +358,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
   const [claimProgress, setClaimProgress] = useState<GuestClaimProgressState | null>(null);
   const [modeSwitching, setModeSwitching] = useState(false);
   const [rightsConfirmed, setRightsConfirmed] = useState(false);
+  const [campaignSetupReady, setCampaignSetupReady] = useState(false);
   const [authGateOpen, setAuthGateOpen] = useState(false);
   const [authGateCancellation, setAuthGateCancellation] = useState("");
   const [draftRestoring, setDraftRestoring] = useState(Boolean(requestedDraft));
@@ -612,6 +615,21 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
       ...invalidateCreatorProjectOutput({ ...current, ...changes }),
       updatedAt: new Date().toISOString(),
     }));
+  };
+
+  const updateCampaignSetup = (changes: Partial<CreatorProject>, field: CampaignSetupField) => {
+    setCampaignSetupReady(false);
+    setProject((current) => {
+      let source = campaignSourceForProject(current);
+      if (field === "price") source = editFact(source, "price", changes.product?.price ?? current.product.price);
+      if (field === "offer") source = editFact(source, "offer", changes.offer ?? current.offer);
+      if (field === "bookingUrl") source = editFact(source, "booking_url", changes.bookingUrl ?? current.bookingUrl);
+      if (field === "whatsapp") source = editFact(source, "whatsapp", changes.whatsapp ?? current.whatsapp);
+      return {
+        ...invalidateCreatorProjectOutput(projectWithSource(current, source, changes)),
+        updatedAt: new Date().toISOString(),
+      };
+    });
   };
 
   const commitProject = (updater: (current: CreatorProject) => CreatorProject) => {
@@ -1683,29 +1701,21 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
         {step === "details" && (
           <div className="creator-workspace">
             <section className="creator-panel creator-panel-pad" aria-labelledby="campaign-heading">
-              <div className="creator-panel-heading"><div><h2 id="campaign-heading">{tr("Campaign details", "تفاصيل الحملة")}</h2><p>{tr("Keep it simple. You can refine these details in the editor.", "خلّها بسيطة. تقدر تضبط التفاصيل أكثر في المحرر.")}</p></div></div>
-              <div className="creator-form-grid">
-                <div className="creator-field"><label htmlFor="product-name">{project.promotionKind === "business" ? tr("Business or service name", "اسم النشاط أو الخدمة") : tr("Product name", "اسم المنتج")}</label><input id="product-name" className="creator-input" value={project.product.name} onChange={(event) => updateProject({ product: { ...project.product, name: event.target.value }, title: `${event.target.value || tr("Untitled", "بدون عنوان")} — ${arabicUi ? template.nameAr : template.name}` })} /></div>
-                <div className="creator-field"><label htmlFor="brand-name">{project.promotionKind === "business" ? tr("Business name", "اسم النشاط") : tr("Brand", "العلامة التجارية")}</label><input id="brand-name" className="creator-input" value={project.product.brand} onChange={(event) => updateProject({ product: { ...project.product, brand: event.target.value } })} placeholder={tr("Optional", "اختياري")} /></div>
-                <div className="creator-field"><label htmlFor="market">{tr("Market", "السوق")}</label><select id="market" className="creator-select" value="KW" disabled><option value="KW">Kuwait · KWD</option></select><span className="creator-field-help">{tr("Kuwait is the supported launch market. More GCC markets are coming later.", "الكويت هي سوق الإطلاق المدعوم. باقي أسواق الخليج راح تتوفر لاحقاً.")}</span></div>
-                <div className="creator-field"><label htmlFor="language">{tr("Campaign language", "لغة الحملة")}</label><select id="language" className="creator-select" value={project.language} onChange={(event) => updateProject({ language: event.target.value as CreatorLanguage })}><option value="en">{tr("English", "الإنجليزية")}</option><option value="ar">{tr("Arabic · Kuwaiti dialect", "العربية · اللهجة الكويتية")}</option><option value="bilingual">{tr("Arabic + English · Kuwaiti dialect", "العربية + الإنجليزية · اللهجة الكويتية")}</option></select>{project.language !== "en" && <span className="creator-field-help">{tr("Natural Kuwait Arabic (ar-KW), not general Arabic.", "عربي كويتي طبيعي (ar-KW)، مو عربي عام.")}</span>}</div>
-                <div className="creator-field"><label htmlFor="price">{tr("Price", "السعر")}</label><input id="price" className="creator-input" value={project.product.price} onChange={(event) => updateProject({ product: { ...project.product, price: event.target.value } })} placeholder={`${tr("Optional", "اختياري")} · ${MARKET_META[project.market].currency}`} /></div>
-                <div className="creator-field"><label htmlFor="offer">{tr("Offer", "العرض")}</label><input id="offer" className="creator-input" value={project.offer} onChange={(event) => updateProject({ offer: event.target.value })} placeholder={tr("Optional · e.g. 20% off today", "اختياري · مثلاً خصم 20% اليوم")} /></div>
-                <div className="creator-field"><label htmlFor="campaign-goal">{tr("Campaign goal", "هدف الحملة")}</label><select id="campaign-goal" className="creator-select" value={project.goal} onChange={(event) => updateProject({ goal: event.target.value as CreatorProject["goal"] })}>{CAMPAIGN_GOAL_OPTIONS.map((option) => <option key={option.value} value={option.value}>{arabicUi ? ARABIC_GOAL_LABELS[option.value] : option.label}</option>)}</select></div>
-                <div className="creator-field"><label htmlFor="cta">{tr("Call to action", "الدعوة للإجراء")}</label><select id="cta" className="creator-select" value={project.cta} onChange={(event) => updateProject({ cta: event.target.value })}>{CTA_OPTIONS.map((option) => <option key={option} value={option}>{arabicUi ? ARABIC_CTA_LABELS[option] ?? option : option}</option>)}</select></div>
-                <div className="creator-field"><label htmlFor="brand-colour">{tr("Brand colour", "لون العلامة")}</label><input id="brand-colour" className="creator-input" type="color" value={project.brandColor} onChange={(event) => updateProject({ brandColor: event.target.value })} /></div>
-                {project.promotionKind === "business" && <div className="creator-field"><label htmlFor="location">{tr("Kuwait location", "الموقع في الكويت")}</label><input id="location" className="creator-input" value={project.location} onChange={(event) => updateProject({ location: event.target.value })} placeholder={tr("Area and branch, if relevant", "المنطقة والفرع، إذا ينطبق")} /></div>}
-                {project.promotionKind === "business" && <div className="creator-field"><label htmlFor="booking-url">{tr("Booking link", "رابط الحجز")}</label><input id="booking-url" className="creator-input" inputMode="url" value={project.bookingUrl} onChange={(event) => updateProject({ bookingUrl: event.target.value })} placeholder={`${tr("Optional", "اختياري")} · https://…`} /></div>}
-                <div className="creator-field"><label htmlFor="whatsapp">{tr("WhatsApp number", "رقم واتساب")}</label><input id="whatsapp" className="creator-input" inputMode="tel" value={project.whatsapp} onChange={(event) => updateProject({ whatsapp: event.target.value })} placeholder={`${tr("Optional", "اختياري")} · +965 0000 0000`} /></div>
-                <div className="creator-field"><label>{tr("Video format", "مقاس الفيديو")}</label><div className="creator-choice-grid">{(["9:16", "1:1", "4:5", "16:9"] as CreatorAspectRatio[]).map((ratio) => <button key={ratio} type="button" className={cn("creator-choice", project.aspectRatio === ratio && "is-selected")} aria-pressed={project.aspectRatio === ratio} onClick={() => updateProject({ aspectRatio: ratio })}>{ratio}</button>)}</div>{project.aspectRatio === "4:5" && <span className="creator-field-help">{tr("Uses a 3:4 generation canvas, then preserves the 4:5 portrait safe area in the deterministic export.", "يستخدم مساحة توليد 3:4، وبعدها يحافظ التصدير الثابت على منطقة 4:5 الآمنة.")}</span>}</div>
-                <div className="creator-field"><label htmlFor="quality">{tr("Quality", "الجودة")}</label><select id="quality" className="creator-select" value={project.resolution} onChange={(event) => updateProject({ resolution: event.target.value as CreatorResolution })}><option value="720p">720p · {tr("Recommended", "موصى به")}</option><option value="480p">480p · {tr("Faster preview", "معاينة أسرع")}</option></select></div>
-              </div>
-              <div className="creator-check-row"><input id="preflight-subtitles" type="checkbox" checked={project.subtitles} onChange={(event) => updateProject({ subtitles: event.target.checked })} /><label htmlFor="preflight-subtitles">{tr("Include subtitles when the video contains speech.", "أضف ترجمة مكتوبة إذا كان الفيديو يحتوي على كلام.")}</label></div>
-              <div className="creator-check-row"><input id="preflight-audio" type="checkbox" checked={project.audio} onChange={(event) => updateProject({ audio: event.target.checked })} /><label htmlFor="preflight-audio">{tr("Generate music and sound for this version.", "ولّد موسيقى وصوت لهذه النسخة.")}</label></div>
-              <div className="creator-check-row"><input id="rights" type="checkbox" checked={rightsConfirmed} onChange={(event) => setRightsConfirmed(event.target.checked)} /><label htmlFor="rights">{tr("Confirm that you have permission to use these images and that the campaign facts are accurate.", "أكّد أن لديك إذناً لاستخدام هذه الصور وأن معلومات الحملة دقيقة.")}</label></div>
-              {sourceError && <p className="creator-error" role="alert">{sourceError}</p>}
-              {recoveryActions}
-              <div className="creator-actions-row"><button className="creator-button creator-button-quiet" type="button" onClick={() => setStep(templateFirst.current ? "source" : "template")}><ArrowLeft aria-hidden="true" /> {tr("Back", "رجوع")}</button><button ref={generateButtonRef} className="creator-button creator-button-primary" type="button" onClick={() => void startGeneration()} disabled={!project.product.name.trim() || !rightsConfirmed || (!simulatedGeneration && (!quoteLoaded || !quote)) || sourceBusy}><Sparkles aria-hidden="true" /> {simulatedGeneration ? tr("Prepare product preview", "جهّز معاينة المنتج") : tr("Generate video", "ولّد الفيديو")}</button></div>
+              <CampaignSetupStep
+                project={project}
+                quoteState={templateQuote.status === "idle" ? "loading" : templateQuote.status}
+                onChange={updateCampaignSetup}
+                onContinue={() => setCampaignSetupReady(true)}
+                arabic={arabicUi}
+              />
+              {campaignSetupReady && <div className="creator-campaign-final-review" aria-labelledby="campaign-heading">
+                <h2 id="campaign-heading">{tr("Review before creating", "راجع قبل الإنشاء")}</h2>
+                <p>{tr("Your campaign settings are saved. Confirm your rights, then create this version.", "إعدادات حملتك محفوظة. أكّد الحقوق ثم أنشئ هذه النسخة.")}</p>
+                <div className="creator-check-row"><input id="rights" type="checkbox" checked={rightsConfirmed} onChange={(event) => setRightsConfirmed(event.target.checked)} /><label htmlFor="rights">{tr("Confirm that you have permission to use these images and that the campaign facts are accurate.", "أكّد أن لديك إذناً لاستخدام هذه الصور وأن معلومات الحملة دقيقة.")}</label></div>
+                {sourceError && <p className="creator-error" role="alert">{sourceError}</p>}
+                {recoveryActions}
+                <div className="creator-actions-row"><button className="creator-button creator-button-quiet" type="button" onClick={() => setStep(templateFirst.current ? "source" : "template")}><ArrowLeft aria-hidden="true" /> {tr("Back", "رجوع")}</button><button ref={generateButtonRef} className="creator-button creator-button-primary" type="button" onClick={() => void startGeneration()} disabled={!project.product.name.trim() || !rightsConfirmed || (!simulatedGeneration && (!quoteLoaded || !quote)) || sourceBusy}><Sparkles aria-hidden="true" /> {simulatedGeneration ? tr("Prepare product preview", "جهّز معاينة المنتج") : tr("Generate video", "ولّد الفيديو")}</button></div>
+              </div>}
             </section>
 
             <aside className="creator-panel creator-panel-pad creator-generation-summary" aria-label={tr("Generation summary", "ملخص التوليد")}>
