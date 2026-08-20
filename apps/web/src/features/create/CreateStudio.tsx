@@ -910,6 +910,19 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
     }
   };
 
+  const retrySourceRecovery = () => {
+    if (!recovery || recovery.state === "import_failed") {
+      void scanSource();
+      return;
+    }
+    if (recovery.state === "offline") {
+      setRecovery(null);
+      setSourceError("");
+      return;
+    }
+    retryRecovery();
+  };
+
   const replaceRecoverySource = () => {
     if (!recovery) return;
     if (recovery.state === "session_mismatch") {
@@ -1621,8 +1634,8 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
         <header className="creator-page-head">
           <div>
             <p className="creator-kicker">{tr("Create with a template", "أنشئ باستخدام قالب")}</p>
-            <h1 className="creator-title creator-title-sm">{step === "template" ? (project.product.images.length ? tr(`Choose the best format for this ${project.promotionKind === "business" ? "service" : "product"}.`, "اختر أفضل قالب لهذه الحملة.") : tr("Choose the result you want.", "اختر النتيجة التي تريدها.")) : step === "source" ? tr("What are you promoting?", "شنو تبي تروّج له؟") : tr("Review the campaign.", "راجع الحملة.")}</h1>
-            <p className="creator-subtitle">{step === "template" ? (project.product.images.length ? tr(`MovPrompt keeps your ${project.promotionKind === "business" ? "business" : "product"} facts while you compare proven campaign outcomes.`, "يحافظ MovPrompt على معلوماتك أثناء مقارنة نتائج الحملات المجربة.") : tr("Start from a proven campaign structure. You can still change the copy, branding and individual scenes later.", "ابدأ بهيكل حملة مجرب. تقدر تعدل النص والهوية والمشاهد لاحقاً.")) : step === "source" ? tr("Add a product page, business website or clear photos. You will confirm every imported fact before generation.", "أضف صفحة منتج أو موقع نشاط أو صور واضحة. راح تأكد كل معلومة قبل التوليد.") : tr("A few final details help MovPrompt create the right version for Kuwait.", "تفاصيل بسيطة تساعد MovPrompt يصنع النسخة المناسبة للكويت.")}</p>
+            <h1 className="creator-title creator-title-sm">{step === "template" ? (project.product.images.length ? tr(`Choose the best format for this ${project.promotionKind === "business" ? "service" : "product"}.`, "اختر أفضل قالب لهذه الحملة.") : tr("Choose the result you want.", "اختر النتيجة التي تريدها.")) : step === "source" ? tr("What are you promoting?", "شنو تبي تروّج له؟") : step === "facts" ? tr("Check the details we’ll use.", "تأكد من التفاصيل التي سنستخدمها.") : tr("Review the campaign.", "راجع الحملة.")}</h1>
+            <p className="creator-subtitle">{step === "template" ? (project.product.images.length ? tr(`MovPrompt keeps your ${project.promotionKind === "business" ? "business" : "product"} facts while you compare proven campaign outcomes.`, "يحافظ MovPrompt على معلوماتك أثناء مقارنة نتائج الحملات المجربة.") : tr("Start from a proven campaign structure. You can still change the copy, branding and individual scenes later.", "ابدأ بهيكل حملة مجرب. تقدر تعدل النص والهوية والمشاهد لاحقاً.")) : step === "source" ? tr("Add a product page, business website or clear photos. You will confirm every imported fact before generation.", "أضف صفحة منتج أو موقع نشاط أو صور واضحة. راح تأكد كل معلومة قبل التوليد.") : step === "facts" ? tr("Correct anything that is wrong. Every source label stays visible before you choose a template.", "صحح أي معلومة غير دقيقة. كل تسمية للمصدر تبقى واضحة قبل اختيار القالب.") : tr("A few final details help MovPrompt create the right version for Kuwait.", "تفاصيل بسيطة تساعد MovPrompt يصنع النسخة المناسبة للكويت.")}</p>
             <button className="creator-mode-switch" type="button" onClick={() => void switchToAdvanced()} disabled={modeSwitching}>
               <span className="creator-mode-switch-icon"><SlidersHorizontal aria-hidden="true" /></span>
               <span className="creator-mode-switch-copy">
@@ -1654,9 +1667,10 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
                 onCancel={cancelSourceScan}
                 onFiles={(files) => void uploadFiles(files)}
                 onManualStart={beginManualSource}
+                onRetry={retrySourceRecovery}
+                retryLabel={recoveryCopy?.primaryAction}
                 onBack={() => setStep(templateFirst.current ? "template" : "template")}
               />
-              {recoveryActions}
               {(sourceChoice === "product_link" || sourceChoice === "business_link") && project.product.images.length > 0 && (
                 <div className="creator-actions-row creator-source-continue"><button className="creator-button creator-button-secondary" type="button" onClick={continueFromSource}>{tr("Review saved details", "راجع التفاصيل المحفوظة")} <ArrowRight aria-hidden="true" /></button></div>
               )}

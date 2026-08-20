@@ -19,6 +19,8 @@ type SourceChoiceStepProps = {
   onCancel: () => void;
   onFiles: (files: FileList | null) => void;
   onManualStart: () => void;
+  onRetry?: () => void;
+  retryLabel?: string;
   onBack?: () => void;
 };
 
@@ -86,6 +88,8 @@ export function SourceChoiceStep({
   onCancel,
   onFiles,
   onManualStart,
+  onRetry,
+  retryLabel,
   onBack,
 }: SourceChoiceStepProps) {
   const isLink = value === "product_link" || value === "business_link";
@@ -208,7 +212,18 @@ export function SourceChoiceStep({
           {text(arabic, "Checking the link…", "جارٍ فحص الرابط…")}
         </p>
       )}
-      {error && <p id="source-choice-error" className="creator-error" role="alert">{error}</p>}
+      {error && (
+        <div className="creator-source-recovery" aria-labelledby="source-choice-error">
+          <p id="source-choice-error" className="creator-error" role="alert">{error}</p>
+          {onRetry && (
+            <button className="creator-button creator-button-secondary" type="button" onClick={onRetry}>
+              {retryLabel ?? (value === "upload"
+                ? text(arabic, "Choose another file", "اختر ملفاً آخر")
+                : text(arabic, "Try another link", "حاول رابطاً آخر"))}
+            </button>
+          )}
+        </div>
+      )}
       {onBack && <button className="creator-button creator-button-quiet" type="button" onClick={onBack}>{text(arabic, "Back", "رجوع")}</button>}
     </section>
   );
