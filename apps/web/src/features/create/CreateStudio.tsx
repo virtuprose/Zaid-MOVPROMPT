@@ -41,7 +41,7 @@ import { TemplateGrid } from "./TemplateGrid";
 import { OutcomeStep } from "./OutcomeStep";
 import { TemplateRecommendations } from "./TemplateRecommendationCards";
 import type { RecommendationSelection } from "./templateRecommendations";
-import { CREATOR_TEMPLATES, createDraftProject, getCreatorTemplate, hasCreatorImageReference, templateRequiresSourceMedia } from "./templates";
+import { CREATOR_TEMPLATES, createDraftProject, getCreatorTemplate, hasCreatorImageReference, isCreatorImageReference, templateRequiresSourceMedia } from "./templates";
 import {
   completeLocalProductPreview,
   hasRealCreatorVideo,
@@ -1361,7 +1361,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
     if (generationSubmission.current) return;
     generationSubmission.current = true;
     try {
-      const generation = await startCreatorGeneration({ projectId: renderProject.id, projectVersionId: renderProject.versionId!, quoteId: confirmedQuote.quoteId, idempotencyKey: renderProject.pendingGenerationId || crypto.randomUUID(), mode: "template", prompt: buildTemplatePrompt(renderProject), capability: confirmedQuote.capability as "video.cinematic" | "video.product_fidelity", options: { aspect_ratio: renderProject.aspectRatio === "4:5" ? "3:4" : renderProject.aspectRatio, duration: Math.min(15, template.duration), resolution: renderProject.resolution, audio: renderProject.audio }, referenceImages: renderProject.product.images.filter((image) => !image.mimeType || image.mimeType.startsWith("image/")).map((image) => image.url), rightsAttested: rightsConfirmed, metadata: { creator_project_id: renderProject.id, template_id: renderProject.templateId, language: renderProject.language, market: renderProject.market } });
+      const generation = await startCreatorGeneration({ projectId: renderProject.id, projectVersionId: renderProject.versionId!, quoteId: confirmedQuote.quoteId, idempotencyKey: renderProject.pendingGenerationId || crypto.randomUUID(), mode: "template", prompt: buildTemplatePrompt(renderProject), capability: confirmedQuote.capability as "video.cinematic" | "video.product_fidelity", options: { aspect_ratio: renderProject.aspectRatio === "4:5" ? "3:4" : renderProject.aspectRatio, duration: Math.min(15, template.duration), resolution: renderProject.resolution, audio: renderProject.audio }, referenceImages: renderProject.product.images.filter(isCreatorImageReference).map((image) => image.url), rightsAttested: rightsConfirmed, metadata: { creator_project_id: renderProject.id, template_id: renderProject.templateId, language: renderProject.language, market: renderProject.market } });
       setProject((current) => ({ ...current, jobId: generation.job.id, renderRunId: generation.runId, status: "generating" }));
       setGenerationStage("preparing");
       setGenerationMessage("Your campaign is queued securely");

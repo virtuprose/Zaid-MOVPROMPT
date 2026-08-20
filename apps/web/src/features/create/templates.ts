@@ -64,6 +64,17 @@ const REFERENCE_REQUIRED_INPUTS = new Set([
   "consented_person_reference",
 ]);
 
+const ALLOWED_CREATOR_IMAGE_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+export type CreatorImageAsset = CreatorAsset & { mimeType: "image/jpeg" | "image/png" | "image/webp" };
+
+/**
+ * Server-owned or uploaded media must declare an allowlisted still-image type.
+ * Legacy values without a MIME type are intentionally not guessed as images.
+ */
+export function isCreatorImageReference(asset: CreatorAsset): asset is CreatorImageAsset {
+  return ALLOWED_CREATOR_IMAGE_MIME_TYPES.has(asset.mimeType?.trim().toLowerCase() ?? "");
+}
+
 /** Keep the browser preflight aligned with the recipe rather than assuming every campaign needs a photo. */
 export function templateRequiresSourceMedia(templateId: string | null | undefined) {
   return getCreatorTemplate(templateId).requiredInputs.some((input) => REFERENCE_REQUIRED_INPUTS.has(input));
@@ -71,7 +82,7 @@ export function templateRequiresSourceMedia(templateId: string | null | undefine
 
 /** Footage has its own presenter pathway and must never satisfy an image-only template input. */
 export function hasCreatorImageReference(assets: CreatorAsset[]) {
-  return assets.some((asset) => !asset.mimeType || asset.mimeType.toLowerCase().startsWith("image/"));
+  return assets.some(isCreatorImageReference);
 }
 
 export const SAMPLE_PRODUCT = {
@@ -86,6 +97,7 @@ export const SAMPLE_PRODUCT = {
       id: "sample-product",
       name: "Kinza Cola",
       url: "/create/sample-kinza.jpg",
+      mimeType: "image/jpeg",
       source: "sample" as const,
     },
   ],

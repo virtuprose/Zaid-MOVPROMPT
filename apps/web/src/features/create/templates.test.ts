@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CREATOR_TEMPLATES, createDraftProject, getCreatorTemplate } from "./templates";
+import { CREATOR_TEMPLATES, createDraftProject, getCreatorTemplate, hasCreatorImageReference } from "./templates";
 import { getCampaignGoalOption, normalizeCreatorResolution } from "./types";
 
 describe("beginner creator templates", () => {
@@ -47,5 +47,15 @@ describe("beginner creator templates", () => {
     expect(normalizeCreatorResolution("1080p")).toBe("720p");
     expect(normalizeCreatorResolution("720p")).toBe("720p");
     expect(normalizeCreatorResolution("480p")).toBe("480p");
+  });
+
+  it("does not treat MIME-less uploaded or sample assets as image references", () => {
+    expect(hasCreatorImageReference([
+      { id: "legacy-upload", name: "unknown.mov", url: "blob:legacy", source: "upload" },
+      { id: "legacy-sample", name: "unknown", url: "/create/legacy", source: "sample" },
+    ])).toBe(false);
+    expect(hasCreatorImageReference([
+      { id: "known-image", name: "product.webp", url: "blob:image", source: "upload", mimeType: "image/webp" },
+    ])).toBe(true);
   });
 });

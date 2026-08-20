@@ -7,6 +7,7 @@ import { sanitizeCreatorProjectOutput } from "./creatorProjectOutput";
 import { hydrateCloudProject, stableProjectConfiguration } from "./portableProjectMapper";
 import { campaignFactValue, campaignSourceForProject } from "./sourceFacts";
 import { normalizeCreatorResolution, type CreatorProject } from "./types";
+import { isCreatorImageReference } from "./templates";
 
 const STORAGE_KEY = "movprompt.creator-projects.v2";
 const CHANGE_EVENT = "movprompt:creator-projects-changed";
@@ -22,7 +23,7 @@ function presenterForProject(project: CreatorProject): CampaignPresenter {
  */
 export function imageReferencesForAdvancedHandoff(project: CreatorProject): string[] {
   return project.product.images.flatMap((image) => {
-    if (image.mimeType?.toLowerCase().startsWith("video/")) return [];
+    if (!isCreatorImageReference(image)) return [];
     const reference = image.assetKey || image.storagePath || image.url;
     return reference ? [reference] : [];
   });
@@ -184,7 +185,7 @@ export function buildPortableGenerationConfiguration(project: CreatorProject) {
     // Footage is owner-verified for presenter eligibility. It is deliberately
     // not sent as an image reference to a capability that accepts images only.
     references: project.product.images.flatMap((image) =>
-      image.storagePath && image.mimeType && image.mimeType.startsWith("image/")
+      image.storagePath && isCreatorImageReference(image)
         ? [{ objectKey: image.storagePath, mimeType: image.mimeType }]
         : [],
     ),

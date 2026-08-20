@@ -111,4 +111,26 @@ describe("creator project local cache", () => {
     ]);
   });
 
+  it("fails closed for MIME-less legacy references in Advanced handoff and portable generation", () => {
+    const project = createDraftProject();
+    project.product.images = [
+      {
+        id: "33333333-3333-4333-8333-333333333333",
+        name: "legacy-upload.mov",
+        url: "blob:legacy-upload",
+        storagePath: "users/u/projects/p/assets/footage/legacy/checksum",
+        source: "upload",
+      },
+      {
+        id: "44444444-4444-4444-8444-444444444444",
+        name: "legacy-sample",
+        url: "/create/legacy-sample",
+        source: "sample",
+      },
+    ];
+
+    expect(imageReferencesForAdvancedHandoff(project)).toEqual([]);
+    expect(buildPortableGenerationConfiguration(project).references).toEqual([]);
+  });
+
 });
