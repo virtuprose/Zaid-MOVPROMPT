@@ -20,6 +20,12 @@ import {
 } from "@movprompt/providers";
 import { assertOwnedProjectKey } from "@movprompt/storage";
 
+import {
+  CampaignEligibilityError,
+  createCampaignEligibilityService,
+  type CampaignEligibilityService,
+} from "./campaign-eligibility.js";
+
 import type { AuthenticatedSession } from "./auth-gateway.js";
 import type {
   GenerationRepository,
@@ -56,7 +62,8 @@ export class GenerationApplicationError extends Error {
       | "invalid_generation_reference"
       | "project_version_not_found"
       | "template_version_not_found"
-      | "template_configuration_ineligible"
+  | "template_configuration_ineligible"
+      | "presenter_configuration_ineligible"
       | "quote_not_found"
       | "quote_expired"
       | "quote_configuration_mismatch"
@@ -104,6 +111,7 @@ type GenerationApiServiceOptions = {
   now?: () => Date;
   starterOnly?: boolean;
   starterEligibilityRequiresEmailVerification?: boolean;
+  campaignEligibility?: CampaignEligibilityService;
 };
 
 function generationConfiguration(configuration: JsonObject): GenerationConfiguration {
@@ -335,6 +343,10 @@ async function eligibleForStarter(input: {
 
 export function createGenerationApiService(options: GenerationApiServiceOptions): GenerationApiService {
   const now = options.now ?? (() => new Date());
+  const campaignEligibility = options.campaignEligibility ?? createCampaignEligibilityService({
+    templates: options.repository,
+    capabilities: options.capabilities,
+  });
 
   function assertCapability(capability: CapabilityAlias): void {
     try {
@@ -447,6 +459,35 @@ export function createGenerationApiService(options: GenerationApiServiceOptions)
     }
   }
 
+  async function assertOwnedPresenterEligibility(
+    userId: string,
+    version: OwnedProjectVersion,
+  ): Promise<void> {
+    try {
+      const selected = campaignEligibility.presenterFromConfiguration({
+        configuration: version.configuration,
+        ...(version.campaignRecipe ? { campaignRecipe: version.campaignRecipe } : {}),
+      });
+      const footage = selected.mode === "uploaded_spokesperson"
+        ? await options.repository.findOwnedPresenterFootageAsset(userId, version.projectId, selected.assetId)
+        : null;
+      await campaignEligibility.assertProjectPresenter({
+        configuration: version.configuration,
+        ...(version.campaignRecipe ? { campaignRecipe: version.campaignRecipe } : {}),
+        templateVersionId: version.templateVersionId,
+        footage,
+      });
+    } catch (error) {
+      if (error instanceof CampaignEligibilityError) {
+        throw new GenerationApplicationError(
+          "presenter_configuration_ineligible",
+          "The selected presenter cannot be used for this campaign.",
+        );
+      }
+      throw error;
+    }
+  }
+
   return {
     isAvailable() {
       return options.capabilities
@@ -464,6 +505,7 @@ export function createGenerationApiService(options: GenerationApiServiceOptions)
         if (!session) throw new GenerationApplicationError("authentication_required");
         const version = await loadOwnedVersion(session.user.id, request.projectVersionId);
         const configuration = generationConfiguration(version.configuration);
+        await assertOwnedPresenterEligibility(session.user.id, version);
         await assertOwnedGenerationReferences(session.user.id, version, request.capability, configuration);
         const template = await publishedTemplate(options.repository, version.templateVersionId);
         assertTemplateEligibility({
@@ -575,6 +617,7 @@ export function createGenerationApiService(options: GenerationApiServiceOptions)
       assertCapability(capability.data);
       const template = await publishedTemplate(options.repository, version.templateVersionId);
       const configuration = generationConfiguration(version.configuration);
+      await assertOwnedPresenterEligibility(input.userId, version);
       await assertOwnedGenerationReferences(input.userId, version, capability.data, configuration);
       assertTemplateEligibility({
         template,

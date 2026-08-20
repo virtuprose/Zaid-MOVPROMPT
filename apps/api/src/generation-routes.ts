@@ -120,6 +120,12 @@ function applicationError(error: unknown): never {
     case "invalid_generation_reference":
     case "template_configuration_ineligible":
       throw new ApiHttpError({ code: error.code, message: error.message, status: 400 });
+    case "presenter_configuration_ineligible":
+      throw new ApiHttpError({
+        code: error.code,
+        message: "The selected presenter cannot be used for this campaign.",
+        status: 400,
+      });
     case "project_version_not_found":
       throw new ApiHttpError({
         code: error.code,
