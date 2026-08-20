@@ -1,4 +1,4 @@
-import type { BusinessVertical, CampaignGoal, CampaignSource, PresenterMode } from "@movprompt/contracts";
+import type { BusinessVertical, CampaignGoal, CampaignPresenter, CampaignSource, PresenterMode } from "@movprompt/contracts";
 
 export type CreatorLanguage = "en" | "ar" | "bilingual";
 export type CreatorMarket = "KW" | "SA" | "AE" | "QA" | "BH" | "OM";
@@ -97,6 +97,8 @@ export type CreatorProject = {
   vertical: BusinessVertical;
   goal: CampaignGoal;
   presenterMode: PresenterMode;
+  /** Exact presenter/footage rights payload; omitted only for legacy draft compatibility. */
+  presenter?: CampaignPresenter;
   location: string;
   bookingUrl: string;
   whatsapp: string;

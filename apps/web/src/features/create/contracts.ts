@@ -6,7 +6,7 @@ import type {
   CreatorProject,
   CreatorResolution,
 } from "./types";
-import type { BusinessVertical, CampaignGoal, CampaignSource, PresenterMode } from "@movprompt/contracts";
+import type { BusinessVertical, CampaignGoal, CampaignPresenter, CampaignSource, PresenterMode } from "@movprompt/contracts";
 import { campaignSourceForProject } from "./sourceFacts";
 
 export type CreationMode = "template" | "advanced";
@@ -34,6 +34,7 @@ export type CampaignSettings = {
   vertical: BusinessVertical;
   goal: CampaignGoal;
   presenterMode: PresenterMode;
+  presenter?: CampaignPresenter;
   location: string;
   bookingUrl: string;
   whatsapp: string;
@@ -121,6 +122,7 @@ export function projectToCreationDraft(
       vertical: project.vertical,
       goal: project.goal,
       presenterMode: project.presenterMode,
+      presenter: project.presenter,
       location: project.location,
       bookingUrl: project.bookingUrl,
       whatsapp: project.whatsapp,

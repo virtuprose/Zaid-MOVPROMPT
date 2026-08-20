@@ -1,4 +1,4 @@
-import type { CreatorProjectRecord } from "@movprompt/contracts";
+import { CampaignPresenterSchema, type CreatorProjectRecord } from "@movprompt/contracts";
 
 import { portableCreatorApi } from "@/lib/api/portableApiClient";
 import { sanitizeCreatorProjectOutput } from "./creatorProjectOutput";
@@ -50,6 +50,9 @@ export function projectFromCloud(input: CreatorProjectRecord): CreatorProject | 
   const currentRenderRunId = input.latestRenderProjectVersionId === input.currentWorkingVersionId
     ? input.latestRenderRunId
     : null;
+  const presenter = CampaignPresenterSchema.safeParse(candidate.presenter).success
+    ? CampaignPresenterSchema.parse(candidate.presenter)
+    : candidate.presenterMode === "ai_ugc" ? { mode: "ai_ugc" as const } : { mode: "none" as const };
   return sanitizeCreatorProjectOutput(projectWithCampaignSource({
     ...candidate,
     id: input.id,
@@ -63,7 +66,8 @@ export function projectFromCloud(input: CreatorProjectRecord): CreatorProject | 
     promotionKind: candidate.promotionKind ?? "product",
     vertical: candidate.vertical ?? "ecommerce",
     goal: candidate.goal ?? "launch",
-    presenterMode: candidate.presenterMode ?? "none",
+    presenterMode: presenter.mode,
+    presenter,
     arabicDialect: "kuwaiti",
     dialectRegister: candidate.dialectRegister ?? "conversational",
     location: candidate.location ?? "",

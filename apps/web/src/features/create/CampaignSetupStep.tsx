@@ -1,6 +1,7 @@
 import { useId, useMemo, useState } from "react";
 
 import type { CreatorAspectRatio, CreatorLanguage, CreatorProject, CreatorResolution } from "./types";
+import { PresenterChoice, type PresenterCompatibility } from "./PresenterChoice";
 import {
   CTA_BY_GOAL,
   deliveryFieldsFor,
@@ -16,6 +17,7 @@ type CampaignSetupStepProps = {
   quoteState: QuoteState;
   onChange: (changes: Partial<CreatorProject>, field: CampaignSetupField) => void;
   onContinue: () => void;
+  presenterCompatibility?: PresenterCompatibility;
   arabic?: boolean;
 };
 
@@ -31,12 +33,14 @@ export function CampaignSetupStep({
   quoteState,
   onChange,
   onContinue,
+  presenterCompatibility = { aiUgc: false, uploadedSpokesperson: false },
   arabic = false,
 }: CampaignSetupStepProps) {
   const [localQuoteRefresh, setLocalQuoteRefresh] = useState(false);
   const [errors, setErrors] = useState<ReturnType<typeof validateCampaignSetup>>({});
   const errorSummaryId = useId();
   const delivery = deliveryFieldsFor(project.goal);
+  const presenter = project.presenter ?? (project.presenterMode === "ai_ugc" ? { mode: "ai_ugc" as const } : { mode: "none" as const });
   const effectiveQuoteState = localQuoteRefresh && quoteState === "ready" ? "loading" : quoteState;
   const activeErrors = useMemo(() => Object.values(errors).filter(Boolean), [errors]);
 
@@ -83,10 +87,15 @@ export function CampaignSetupStep({
           <span>01</span>
           <div><h3 id="campaign-presenter-heading">{copy(arabic, "Who appears?", "من يظهر في الفيديو؟")}</h3><p>{copy(arabic, "This version keeps the focus on your product or service.", "هذه النسخة تركز على منتجك أو خدمتك.")}</p></div>
         </div>
-        <div className="creator-presenter-baseline" aria-label={copy(arabic, "Presenter choice", "اختيار مقدّم الفيديو")}>
-          <span className="creator-presenter-choice-marker" aria-hidden="true">✓</span>
-          <div><strong>{copy(arabic, "No presenter", "بدون مقدّم")}</strong><span>{copy(arabic, "Your campaign uses the confirmed source media and protected business details.", "حملتك تستخدم وسائط المصدر المؤكدة وتفاصيل النشاط المحمية.")}</span></div>
-        </div>
+        <PresenterChoice
+          value={presenter}
+          compatibility={presenterCompatibility}
+          eligibleFootage={project.product.images}
+          onChange={(presenter) => {
+            apply("presenter", { presenter, presenterMode: presenter.mode });
+          }}
+          arabic={arabic}
+        />
       </section>
 
       <section className="creator-campaign-section" aria-labelledby="campaign-audience-heading">

@@ -76,6 +76,7 @@ import { FactReviewStep } from "./FactReviewStep";
 import { SourceChoiceStep, type SourceChoice, type SourceSubject } from "./SourceChoiceStep";
 import { CampaignSetupStep } from "./CampaignSetupStep";
 import type { CampaignSetupField } from "./campaignSetupRules";
+import type { PresenterCompatibility } from "./PresenterChoice";
 import { buildGuestClaimSnapshot } from "./guestClaimSnapshot";
 import {
   hasUnclaimedCreatorAssets,
@@ -359,6 +360,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
   const [modeSwitching, setModeSwitching] = useState(false);
   const [rightsConfirmed, setRightsConfirmed] = useState(false);
   const [campaignSetupReady, setCampaignSetupReady] = useState(false);
+  const [presenterCompatibility, setPresenterCompatibility] = useState<PresenterCompatibility>({ aiUgc: false, uploadedSpokesperson: false });
   const [authGateOpen, setAuthGateOpen] = useState(false);
   const [authGateCancellation, setAuthGateCancellation] = useState("");
   const [draftRestoring, setDraftRestoring] = useState(Boolean(requestedDraft));
@@ -525,6 +527,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
         vertical: draft.campaign.vertical ?? rebuilt.vertical,
         goal: draft.campaign.goal ?? rebuilt.goal,
         presenterMode: draft.campaign.presenterMode ?? "none",
+        presenter: draft.campaign.presenter,
         location: draft.campaign.location ?? "",
         bookingUrl: draft.campaign.bookingUrl ?? "",
         whatsapp: draft.campaign.whatsapp ?? "",
@@ -557,6 +560,30 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
       if (saveTimer.current) window.clearTimeout(saveTimer.current);
     };
   }, [persist, project]);
+
+  useEffect(() => {
+    if (!portablePlatform || step !== "details") {
+      setPresenterCompatibility({ aiUgc: false, uploadedSpokesperson: false });
+      return;
+    }
+    let active = true;
+    void Promise.all([portableCreatorApi.getTemplate(template.id), portableCreatorApi.featureFlags()])
+      .then(([publishedTemplate, flags]) => {
+        if (!active) return;
+        const aiUgcAvailable = flags.capabilities.some((capability) => capability.alias === "presenter.ai_ugc" && capability.available);
+        setPresenterCompatibility({
+          aiUgc: aiUgcAvailable
+            && publishedTemplate.capabilityPolicy.includes("presenter.ai_ugc")
+            && publishedTemplate.supportedLanguages.includes(project.language),
+          // Fail closed until the API projects a verified-footage policy.
+          uploadedSpokesperson: false,
+        });
+      })
+      .catch(() => {
+        if (active) setPresenterCompatibility({ aiUgc: false, uploadedSpokesperson: false });
+      });
+    return () => { active = false; };
+  }, [portablePlatform, project.language, step, template.id]);
 
   useEffect(() => {
     if ((!project.jobId && !project.renderRunId) || step !== "generating" || simulatedGeneration) return;
@@ -1706,6 +1733,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
                 quoteState={templateQuote.status === "idle" ? "loading" : templateQuote.status}
                 onChange={updateCampaignSetup}
                 onContinue={() => setCampaignSetupReady(true)}
+                presenterCompatibility={presenterCompatibility}
                 arabic={arabicUi}
               />
               {campaignSetupReady && <div className="creator-campaign-final-review" aria-labelledby="campaign-heading">

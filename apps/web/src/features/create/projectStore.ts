@@ -1,4 +1,4 @@
-import type { ClaimDraftRequest, CreatorProjectRecord } from "@movprompt/contracts";
+import type { CampaignPresenter, ClaimDraftRequest, CreatorProjectRecord } from "@movprompt/contracts";
 import { ENGINE_VERSION, getCreativeTemplate, type CreativeBrief } from "@movprompt/creative-engine";
 
 import { isFeatureEnabled } from "@/config/features";
@@ -10,6 +10,11 @@ import { normalizeCreatorResolution, type CreatorProject } from "./types";
 
 const STORAGE_KEY = "movprompt.creator-projects.v2";
 const CHANGE_EVENT = "movprompt:creator-projects-changed";
+
+function presenterForProject(project: CreatorProject): CampaignPresenter {
+  if (project.presenter) return project.presenter;
+  return project.presenterMode === "ai_ugc" ? { mode: "ai_ugc" } : { mode: "none" };
+}
 
 function storageKey(userId?: string | null) {
   return `${STORAGE_KEY}:${userId || "signed-out"}`;
@@ -159,6 +164,7 @@ export function buildPortableGenerationConfiguration(project: CreatorProject) {
       language: project.language,
       goal: project.goal,
       presenterMode: project.presenterMode,
+      presenter: presenterForProject(project),
       bookingUrl: project.bookingUrl,
       subtitles: project.subtitles,
     },
@@ -208,6 +214,7 @@ export function portableCampaignRecipe(project: CreatorProject): ClaimDraftReque
     vertical: project.vertical,
     goal: project.goal,
     presenterMode: project.presenterMode,
+    presenter: presenterForProject(project),
     market: project.market,
     language: project.language,
     arabicDialect: project.arabicDialect,

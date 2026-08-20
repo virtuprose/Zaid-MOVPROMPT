@@ -12,7 +12,8 @@ export type CampaignSetupField =
   | "aspectRatio"
   | "resolution"
   | "subtitles"
-  | "audio";
+  | "audio"
+  | "presenter";
 
 export type CampaignSetupErrors = Partial<Record<"price" | "bookingUrl" | "whatsapp", string>>;
 
