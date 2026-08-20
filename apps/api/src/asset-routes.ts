@@ -18,6 +18,12 @@ import type { AuthGateway } from "./auth-gateway.js";
 import type { AssetRepository, OwnedAssetRecord } from "./asset-repository.js";
 import type { AssetStorageGateway } from "./asset-storage.js";
 import { ApiHttpError } from "./errors.js";
+import {
+  createFootageVerifier,
+  FootageVerificationError,
+  MAX_FOOTAGE_BYTES,
+  type FootageVerifier,
+} from "./footage-verifier.js";
 import type { GuestClaimService } from "./guest-claim-service.js";
 import type { RemoteImageFetcher } from "./remote-image-fetcher.js";
 import type { RequestRateLimiter } from "./request-rate-limiter.js";
@@ -31,6 +37,7 @@ export type AssetRouteServices = {
   remoteImages?: RemoteImageFetcher;
   rateLimiter?: RequestRateLimiter;
   guestClaimService?: GuestClaimService;
+  footageVerifier?: FootageVerifier;
 };
 
 type RequiredAssetServices = {
@@ -65,6 +72,10 @@ function requireGuestClaimService(services: AssetRouteServices): GuestClaimServi
     });
   }
   return services.guestClaimService;
+}
+
+function footageVerifier(services: AssetRouteServices): FootageVerifier {
+  return services.footageVerifier ?? createFootageVerifier();
 }
 
 async function requireUserId(auth: AuthGateway, headers: Headers): Promise<string> {
@@ -227,12 +238,90 @@ function hasExpectedImageSignature(bytes: Uint8Array, mimeType: string): boolean
   return false;
 }
 
-function hasExpectedFootageSignature(bytes: Uint8Array, mimeType: string): boolean {
-  if (mimeType === "video/webm") {
-    return bytes.length >= 4 && bytes[0] === 0x1a && bytes[1] === 0x45 && bytes[2] === 0xdf && bytes[3] === 0xa3;
+function footageVerificationError(error: unknown): never {
+  if (error instanceof FootageVerificationError) {
+    throw new ApiHttpError({
+      code: error.code === "unavailable" ? "media_verifier_unavailable" : "invalid_asset_content",
+      message: error.message,
+      status: error.code === "unavailable" ? 503 : 422,
+      retryable: error.code === "unavailable",
+    });
   }
-  // ISO base media files (MP4 and QuickTime MOV) expose their ftyp box at byte 4.
-  return bytes.length >= 12 && String.fromCharCode(...bytes.subarray(4, 8)) === "ftyp";
+  throw new ApiHttpError({
+    code: "media_verifier_unavailable",
+    message: "Footage verification is temporarily unavailable.",
+    status: 503,
+    retryable: true,
+  });
+}
+
+async function verifyFootageBytes(
+  verifier: FootageVerifier,
+  asset: OwnedAssetRecord,
+  bytes: Uint8Array,
+): Promise<{ durationMs: number }> {
+  try {
+    return await verifier.verify({
+      bytes,
+      mimeType: asset.mimeType,
+      checksumSha256: asset.checksumSha256,
+    });
+  } catch (error) {
+    return footageVerificationError(error);
+  }
+}
+
+async function readStoredFootage(
+  storage: AssetStorageGateway,
+  asset: OwnedAssetRecord,
+): Promise<Uint8Array> {
+  try {
+    const stored = await storage.get({
+      bucket: asset.bucket,
+      key: asset.objectKey,
+      maxBytes: MAX_FOOTAGE_BYTES,
+    });
+    if (stored.contentType?.trim().toLowerCase() !== asset.mimeType.toLowerCase()) {
+      throw new FootageVerificationError("invalid", "The saved footage type does not match the selected file.");
+    }
+    if (stored.checksumSha256?.trim().toLowerCase() !== asset.checksumSha256) {
+      throw new FootageVerificationError("invalid", "The saved footage checksum does not match the selected file.");
+    }
+    return stored.body;
+  } catch (error) {
+    if (error instanceof FootageVerificationError) throw error;
+    throw new FootageVerificationError("unavailable", "Private storage could not read the saved footage for verification.");
+  }
+}
+
+async function persistVerifiedFootage(
+  repository: AssetRepository,
+  asset: OwnedAssetRecord,
+  durationMs: number,
+): Promise<OwnedAssetRecord> {
+  if (!repository.updateVerifiedFootage) {
+    throw new ApiHttpError({
+      code: "media_verifier_unavailable",
+      message: "Footage verification is temporarily unavailable.",
+      status: 503,
+      retryable: true,
+    });
+  }
+  const updated = await repository.updateVerifiedFootage({
+    userId: asset.userId,
+    projectId: asset.projectId,
+    assetId: asset.id,
+    durationMs,
+  });
+  if (!updated) {
+    throw new ApiHttpError({
+      code: "asset_not_found",
+      message: "The requested project asset was not found.",
+      status: 404,
+      retryable: false,
+    });
+  }
+  return updated;
 }
 
 async function readVerifiedAssetBody(request: Request, asset: OwnedAssetRecord): Promise<Uint8Array> {
@@ -309,12 +398,10 @@ async function readVerifiedAssetBody(request: Request, asset: OwnedAssetRecord):
     bytes.set(chunk, offset);
     offset += chunk.byteLength;
   }
-  if (footage ? !hasExpectedFootageSignature(bytes, contentType) : !hasExpectedImageSignature(bytes, contentType)) {
+  if (!footage && !hasExpectedImageSignature(bytes, contentType)) {
     throw new ApiHttpError({
       code: "invalid_asset_content",
-      message: footage
-        ? "The uploaded file is not a valid MP4, MOV or WebM video."
-        : "The uploaded file is not a valid JPG, PNG or WebP image.",
+      message: "The uploaded file is not a valid JPG, PNG or WebP image.",
       status: 422,
       retryable: false,
     });
@@ -441,6 +528,9 @@ export function registerAssetRoutes(
     });
     const asset = await findOwnedAsset(repository, userId, projectId, assetId!);
     const bytes = await readVerifiedAssetBody(context.req.raw, asset);
+    const verifiedFootage = asset.kind === "footage"
+      ? await verifyFootageBytes(footageVerifier(services), asset, bytes)
+      : null;
 
     try {
       await storage.put({
@@ -459,13 +549,16 @@ export function registerAssetRoutes(
       });
     }
     await verifyStoredObject(storage, asset);
+    const verifiedAsset = verifiedFootage
+      ? await persistVerifiedFootage(repository, asset, verifiedFootage.durationMs)
+      : asset;
 
     let signedDownload;
     try {
       signedDownload = await storage.signDownload({
         bucket: asset.bucket,
-        key: asset.objectKey,
-        ...(asset.originalFilename ? { downloadFilename: asset.originalFilename } : {}),
+        key: verifiedAsset.objectKey,
+        ...(verifiedAsset.originalFilename ? { downloadFilename: verifiedAsset.originalFilename } : {}),
       });
     } catch {
       throw new ApiHttpError({
@@ -477,7 +570,7 @@ export function registerAssetRoutes(
     }
 
     const response: SignedAssetDownloadResponse = {
-      asset: publicAsset(asset),
+      asset: publicAsset(verifiedAsset),
       download: {
         method: "GET",
         url: signedDownload.url,
@@ -637,16 +730,23 @@ export function registerAssetRoutes(
       });
     }
     await verifyStoredObject(storage, asset);
+    const verifiedFootage = asset.kind === "footage"
+      ? await verifyFootageBytes(footageVerifier(services), asset, await readStoredFootage(storage, asset))
+      : null;
+    const verifiedAsset = verifiedFootage
+      ? await persistVerifiedFootage(repository, asset, verifiedFootage.durationMs)
+      : asset;
     await guestClaimService.markAssetVerified({
       userId,
       pendingGenerationId: input.pendingGenerationId,
-      localAssetId: input.localAssetId,
-      bucket: asset.bucket,
-      objectKey: asset.objectKey,
+      localAssetId: verifiedAsset.id,
+      bucket: verifiedAsset.bucket,
+      objectKey: verifiedAsset.objectKey,
+      ...(verifiedFootage ? { durationMs: verifiedFootage.durationMs } : {}),
     });
 
     const response: AssetReadyResponse = {
-      asset: publicAsset(asset),
+      asset: publicAsset(verifiedAsset),
       status: "ready",
       requestId: context.get("requestId"),
     };

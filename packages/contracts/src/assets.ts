@@ -30,11 +30,11 @@ export const CreateAssetUploadRequestSchema = z
   .superRefine((request, context) => {
     if (request.kind !== "footage") return;
     const mimeType = request.metadata.mimeType.toLowerCase();
-    if (!new Set(["video/mp4", "video/quicktime", "video/webm"]).has(mimeType)) {
+    if (!new Set(["video/mp4", "video/quicktime"]).has(mimeType)) {
       context.addIssue({
         code: "custom",
         path: ["metadata", "mimeType"],
-        message: "Footage must be an MP4, MOV, or WebM video.",
+        message: "Footage must be an MP4 or MOV video.",
       });
     }
     if (!request.metadata.durationMs || request.metadata.durationMs > 10 * 60 * 1_000) {

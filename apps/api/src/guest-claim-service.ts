@@ -18,7 +18,7 @@ export interface GuestClaimService {
   claimGuestDraft(input: { userId: string; snapshot: GuestClaimSnapshot }): Promise<GuestClaimReceipt>;
   startClaim(input: { userId: string; snapshot: GuestClaimSnapshot }): Promise<GuestClaimOperation>;
   resumeClaim(input: { userId: string; pendingGenerationId: string }): Promise<GuestClaimOperation>;
-  markAssetVerified(input: { userId: string; pendingGenerationId: string; localAssetId: string; bucket: string; objectKey: string }): Promise<GuestClaimOperation>;
+  markAssetVerified(input: { userId: string; pendingGenerationId: string; localAssetId: string; bucket: string; objectKey: string; durationMs?: number }): Promise<GuestClaimOperation>;
   markAssetFailed(input: { userId: string; pendingGenerationId: string; localAssetId: string; code: string }): Promise<GuestClaimOperation>;
   finalizeClaim(input: { userId: string; pendingGenerationId: string }): Promise<GuestClaimReceipt>;
 }

@@ -8,7 +8,7 @@ import type { JsonObject } from "@movprompt/db";
 
 import type { GenerationRepository, OwnedPresenterFootageAsset, PublishedTemplateVersion } from "./generation-repository.js";
 
-const FOOTAGE_MIME_TYPES = new Set(["video/mp4", "video/quicktime", "video/webm"]);
+const FOOTAGE_MIME_TYPES = new Set(["video/mp4", "video/quicktime"]);
 
 export class CampaignEligibilityError extends Error {
   constructor() {

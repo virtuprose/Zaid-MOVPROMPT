@@ -326,7 +326,7 @@ export const creatorProjectAssets = pgTable(
     check(
       "creator_assets_footage_metadata",
       sql`${table.kind} <> 'footage' OR (
-        ${table.mimeType} IN ('video/mp4', 'video/quicktime', 'video/webm')
+        ${table.mimeType} IN ('video/mp4', 'video/quicktime')
         AND ${table.sizeBytes} > 0
         AND ${table.durationMs} > 0
         AND ${table.durationMs} <= 600000
@@ -426,7 +426,7 @@ export const guestClaimAssets = pgTable(
     check(
       "guest_claim_assets_footage_metadata",
       sql`${table.kind} <> 'footage' OR (
-        ${table.mimeType} IN ('video/mp4', 'video/quicktime', 'video/webm')
+        ${table.mimeType} IN ('video/mp4', 'video/quicktime')
         AND ${table.durationMs} > 0
         AND ${table.durationMs} <= 600000
       )`,

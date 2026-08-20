@@ -25,7 +25,7 @@ export const GuestClaimAssetManifestEntrySchema = z
   .strict()
   .superRefine((asset, context) => {
     if (asset.kind !== "footage") return;
-    if (!new Set(["video/mp4", "video/quicktime", "video/webm"]).has(asset.mimeType.toLowerCase())) {
+    if (!new Set(["video/mp4", "video/quicktime"]).has(asset.mimeType.toLowerCase())) {
       context.addIssue({ code: "custom", path: ["mimeType"], message: "Footage must be a supported video type." });
     }
     if (!asset.durationMs) {

@@ -4,6 +4,7 @@ import type { AuthGateway } from "./auth-gateway.js";
 import { createApi } from "./app.js";
 import type { AssetRepository, OwnedAssetRecord } from "./asset-repository.js";
 import type { AssetStorageGateway } from "./asset-storage.js";
+import { FootageVerificationError, type FootageVerifier } from "./footage-verifier.js";
 import { loadApiConfig } from "./config.js";
 import type { GuestClaimService } from "./guest-claim-service.js";
 import type { RemoteImageFetcher } from "./remote-image-fetcher.js";
@@ -65,6 +66,10 @@ function repository(options: {
     isProjectOwned: vi.fn(async () => options.projectOwned ?? true),
     createOrFind: vi.fn(async (record) => record),
     findOwned: vi.fn(async () => (options.asset === undefined ? ownedAsset() : options.asset)),
+    updateVerifiedFootage: vi.fn(async ({ durationMs }) => {
+      const asset = options.asset === undefined ? ownedAsset() : options.asset;
+      return asset ? { ...asset, durationMs } : null;
+    }),
   };
 }
 
@@ -93,6 +98,11 @@ function storage(): AssetStorageGateway {
       expiresInSeconds: 900,
     })),
     put: vi.fn(async (input) => ({ bucket: input.bucket, key: input.key })),
+    get: vi.fn(async () => ({
+      body: new Uint8Array([0xff, 0xd8, 0xff, 0xe0]),
+      contentType: "image/jpeg",
+      checksumSha256: CHECKSUM,
+    })),
     head: vi.fn(async () => ({
       contentLength: 1_024,
       contentType: "image/jpeg",
@@ -236,10 +246,11 @@ describe("private asset API", () => {
       contentType: "image/jpeg",
       checksumSha256,
     }));
+    const repo = repository({ asset });
     const app = createApi({
       config,
       authGateway: authGateway(),
-      assetRepository: repository({ asset }),
+      assetRepository: repo,
       assetStorage: objectStorage,
     });
 
@@ -264,7 +275,7 @@ describe("private asset API", () => {
     }));
   });
 
-  it("accepts owner-scoped MP4 footage only with verified duration, signature and checksum", async () => {
+  it("accepts owner-scoped MP4 footage only after the shared server verifier derives its duration", async () => {
     const bytes = new Uint8Array([0, 0, 0, 24, 0x66, 0x74, 0x79, 0x70, 0x69, 0x73, 0x6f, 0x6d, 0, 0, 0, 0]);
     const checksumSha256 = createHash("sha256").update(bytes).digest("hex");
     const asset: OwnedAssetRecord = {
@@ -282,11 +293,15 @@ describe("private asset API", () => {
       contentType: "video/mp4",
       checksumSha256,
     }));
+    const repo = repository({ asset });
     const app = createApi({
       config,
       authGateway: authGateway(),
-      assetRepository: repository({ asset }),
+      assetRepository: repo,
       assetStorage: objectStorage,
+      footageVerifier: {
+        verify: vi.fn(async () => ({ durationMs: 10_000 })),
+      },
     });
 
     const response = await app.request(
@@ -299,6 +314,7 @@ describe("private asset API", () => {
       asset: { id: ASSET_ID, kind: "footage", durationMs: 10_000, checksumSha256 },
     });
     expect(objectStorage.put).toHaveBeenCalledWith(expect.objectContaining({ contentType: "video/mp4" }));
+    expect(repo.updateVerifiedFootage).toHaveBeenCalledWith(expect.objectContaining({ durationMs: 10_000 }));
   });
 
   it("advances only the matching guest-claim checkpoint after private object verification", async () => {
@@ -346,6 +362,65 @@ describe("private asset API", () => {
       bucket: "creator-assets",
       objectKey: asset.objectKey,
     });
+  });
+
+  it("rejects direct-upload footage that only mimics an MP4 header before a guest claim can advance", async () => {
+    const bytes = new Uint8Array([0, 0, 0, 24, 0x66, 0x74, 0x79, 0x70, 0x69, 0x73, 0x6f, 0x6d, 0, 0, 0, 0]);
+    const checksumSha256 = createHash("sha256").update(bytes).digest("hex");
+    const asset: OwnedAssetRecord = {
+      ...ownedAsset(),
+      kind: "footage",
+      objectKey: `users/${USER_ID}/projects/${PROJECT_ID}/assets/footage/${ASSET_ID}/${checksumSha256}`,
+      mimeType: "video/mp4",
+      sizeBytes: bytes.byteLength,
+      checksumSha256,
+      durationMs: 1_000,
+    };
+    const repo = repository({ asset });
+    const claims = guestClaimService();
+    const objectStorage = storage();
+    objectStorage.head = vi.fn(async () => ({ contentLength: bytes.byteLength, contentType: "video/mp4", checksumSha256 }));
+    objectStorage.get = vi.fn(async () => ({ body: bytes, contentType: "video/mp4", checksumSha256 }));
+    const verifier: FootageVerifier = {
+      verify: vi.fn(async () => { throw new FootageVerificationError("invalid", "The uploaded file is not a decodable MP4 or MOV video."); }),
+    };
+    const app = createApi({ config, authGateway: authGateway(), assetRepository: repo, assetStorage: objectStorage, guestClaimService: claims, footageVerifier: verifier });
+
+    const response = await app.request(`/api/v1/projects/${PROJECT_ID}/assets/${ASSET_ID}/complete`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ pendingGenerationId: "66666666-6666-4666-8666-666666666666", localAssetId: ASSET_ID }),
+    });
+
+    expect(response.status).toBe(422);
+    await expect(response.json()).resolves.toMatchObject({ error: { code: "invalid_asset_content" } });
+    expect(claims.markAssetVerified).not.toHaveBeenCalled();
+  });
+
+  it("persists a verifier-derived duration instead of the caller declared duration before direct footage claim completion", async () => {
+    const bytes = new Uint8Array([0, 0, 0, 24, 0x66, 0x74, 0x79, 0x70, 0x69, 0x73, 0x6f, 0x6d, 0, 0, 0, 0]);
+    const checksumSha256 = createHash("sha256").update(bytes).digest("hex");
+    const asset: OwnedAssetRecord = {
+      ...ownedAsset(), kind: "footage", mimeType: "video/mp4", sizeBytes: bytes.byteLength, checksumSha256,
+      objectKey: `users/${USER_ID}/projects/${PROJECT_ID}/assets/footage/${ASSET_ID}/${checksumSha256}`,
+      durationMs: 1_000,
+    };
+    const repo = repository({ asset });
+    const claims = guestClaimService();
+    const objectStorage = storage();
+    objectStorage.head = vi.fn(async () => ({ contentLength: bytes.byteLength, contentType: "video/mp4", checksumSha256 }));
+    objectStorage.get = vi.fn(async () => ({ body: bytes, contentType: "video/mp4", checksumSha256 }));
+    const app = createApi({
+      config, authGateway: authGateway(), assetRepository: repo, assetStorage: objectStorage, guestClaimService: claims,
+      footageVerifier: { verify: vi.fn(async () => ({ durationMs: 12_345 })) },
+    });
+    const response = await app.request(`/api/v1/projects/${PROJECT_ID}/assets/${ASSET_ID}/complete`, {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ pendingGenerationId: "66666666-6666-4666-8666-666666666666", localAssetId: ASSET_ID }),
+    });
+    expect(response.status).toBe(200);
+    expect(repo.updateVerifiedFootage).toHaveBeenCalledWith(expect.objectContaining({ durationMs: 12_345 }));
+    expect(claims.markAssetVerified).toHaveBeenCalledWith(expect.objectContaining({ durationMs: 12_345 }));
   });
 
   it("rejects image bytes that do not match the declared checksum", async () => {

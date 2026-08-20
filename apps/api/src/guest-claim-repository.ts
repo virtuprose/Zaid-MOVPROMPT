@@ -47,7 +47,7 @@ export type GuestClaimOperation = {
 export interface GuestClaimRepository {
   start(input: { userId: string; snapshot: GuestClaimSnapshot }): Promise<GuestClaimOperation>;
   resume(input: { userId: string; pendingGenerationId: string }): Promise<GuestClaimOperation>;
-  markAssetVerified(input: { userId: string; pendingGenerationId: string; localAssetId: string; bucket: string; objectKey: string }): Promise<GuestClaimOperation>;
+  markAssetVerified(input: { userId: string; pendingGenerationId: string; localAssetId: string; bucket: string; objectKey: string; durationMs?: number }): Promise<GuestClaimOperation>;
   markAssetFailed(input: { userId: string; pendingGenerationId: string; localAssetId: string; code: string }): Promise<GuestClaimOperation>;
   finalize(input: { userId: string; pendingGenerationId: string }): Promise<{ operation: GuestClaimOperation; project: CreatorProjectRecord; assetManifest: GuestClaimAssetManifest }>;
 }
@@ -274,7 +274,7 @@ export function createGuestClaimRepository(dependencies: { db: Database }): Gues
       });
     },
 
-    async markAssetVerified({ userId, pendingGenerationId, localAssetId, bucket, objectKey }) {
+    async markAssetVerified({ userId, pendingGenerationId, localAssetId, bucket, objectKey, durationMs }) {
       return withUserTransaction(db, userId, async (tx) => {
         const operation = await claimByIntent(tx, userId, pendingGenerationId);
         if (!operation.projectId || operation.status === "ready") throw new GuestClaimRepositoryError("asset_invalid");
@@ -294,6 +294,9 @@ export function createGuestClaimRepository(dependencies: { db: Database }): Gues
         if (!["product", "logo", "audio", "reference", "footage"].includes(asset.kind)) {
           throw new GuestClaimRepositoryError("asset_invalid");
         }
+        if (asset.kind === "footage" && (!durationMs || durationMs > 10 * 60 * 1_000)) {
+          throw new GuestClaimRepositoryError("asset_invalid");
+        }
         const expectedKey = objectKeys.creatorAsset({
           userId,
           projectId: operation.projectId,
@@ -303,7 +306,9 @@ export function createGuestClaimRepository(dependencies: { db: Database }): Gues
         });
         if (objectKey !== expectedKey || !bucket.trim()) throw new GuestClaimRepositoryError("asset_invalid");
         await tx.update(schema.guestClaimAssets).set({
-          status: "verified", bucket, objectKey, verifiedAt: new Date(), errorCode: null, errorMetadata: {}, updatedAt: new Date(),
+          status: "verified", bucket, objectKey,
+          ...(asset.kind === "footage" ? { durationMs } : {}),
+          verifiedAt: new Date(), errorCode: null, errorMetadata: {}, updatedAt: new Date(),
         }).where(and(eq(schema.guestClaimAssets.id, asset.id), eq(schema.guestClaimAssets.userId, userId)));
         await tx.update(schema.guestClaimOperations).set({
           status: "securing", errorCode: null, errorMetadata: {}, updatedAt: new Date(),

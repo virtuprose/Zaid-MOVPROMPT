@@ -9,6 +9,7 @@ import { z } from "zod";
 import type { AssetRepository } from "./asset-repository.js";
 import { registerAssetRoutes } from "./asset-routes.js";
 import type { AssetStorageGateway } from "./asset-storage.js";
+import type { FootageVerifier } from "./footage-verifier.js";
 import type { AuthGateway } from "./auth-gateway.js";
 import type { ApiConfig } from "./config.js";
 import { loadApiConfig } from "./config.js";
@@ -38,6 +39,7 @@ export type CreateApiOptions = {
   authGateway?: AuthGateway;
   assetRepository?: AssetRepository;
   assetStorage?: AssetStorageGateway;
+  footageVerifier?: FootageVerifier;
   remoteImageFetcher?: RemoteImageFetcher;
   creatorRepository?: CreatorRepository;
   guestClaimService?: GuestClaimService;
@@ -177,6 +179,7 @@ export function createApi(options: CreateApiOptions = {}) {
     ...(options.authGateway ? { auth: options.authGateway } : {}),
     ...(options.assetRepository ? { repository: options.assetRepository } : {}),
     ...(options.assetStorage ? { storage: options.assetStorage } : {}),
+    ...(options.footageVerifier ? { footageVerifier: options.footageVerifier } : {}),
     ...(options.remoteImageFetcher ? { remoteImages: options.remoteImageFetcher } : {}),
     ...(options.requestRateLimiter ? { rateLimiter: options.requestRateLimiter } : {}),
     ...(options.guestClaimService ? { guestClaimService: options.guestClaimService } : {}),

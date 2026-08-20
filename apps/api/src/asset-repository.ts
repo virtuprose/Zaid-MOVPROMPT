@@ -19,6 +19,13 @@ export interface AssetRepository {
   isProjectOwned(userId: string, projectId: string): Promise<boolean>;
   createOrFind(record: CreateAssetRecord): Promise<OwnedAssetRecord>;
   findOwned(userId: string, projectId: string, assetId: string): Promise<OwnedAssetRecord | null>;
+  /** Optional during the migration so old test doubles fail closed at the route. */
+  updateVerifiedFootage?(input: {
+    userId: string;
+    projectId: string;
+    assetId: string;
+    durationMs: number;
+  }): Promise<OwnedAssetRecord | null>;
 }
 
 type SourceMetadata = { originalFilename?: string; sourceUrlHash?: string };
@@ -134,6 +141,21 @@ export function createDrizzleAssetRepository(db: Database): AssetRepository {
         ...(filename ? { originalFilename: filename } : {}),
         ...(remoteSourceUrlHash ? { sourceUrlHash: remoteSourceUrlHash } : {}),
       };
+    },
+
+    async updateVerifiedFootage({ userId, projectId, assetId, durationMs }) {
+      const [updated] = await withUserTransaction(db, userId, (tx) => tx
+        .update(schema.creatorProjectAssets)
+        .set({ durationMs })
+        .where(and(
+          eq(schema.creatorProjectAssets.id, assetId),
+          eq(schema.creatorProjectAssets.projectId, projectId),
+          eq(schema.creatorProjectAssets.userId, userId),
+          eq(schema.creatorProjectAssets.kind, "footage"),
+        ))
+        .returning({ id: schema.creatorProjectAssets.id }));
+      if (!updated) return null;
+      return this.findOwned(userId, projectId, assetId);
     },
   };
 }
