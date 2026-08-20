@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowUpRight, Check, Film, Grid2X2, Play, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -68,9 +68,11 @@ export function TemplateGrid({
   const visibleLimit = visibleCount + (selectedTemplate && !selectedTemplate.previewVideo ? 1 : 0);
   const visibleTemplates = orderedTemplates.slice(0, visibleLimit);
   const visibleGroups = groupVisibleTemplates(visibleTemplates, selectedId);
+  const selectionEnabled = catalogState !== "fallback" || !isFeatureEnabled("portableAuth");
 
-  useEffect(() => {
+  const loadPublishedCatalog = useCallback(() => {
     if (!isFeatureEnabled("portableAuth")) return;
+    setCatalogState("loading");
     let active = true;
     void portableCreatorApi.listTemplates().then((published) => {
       if (!active || !published.length) {
@@ -86,6 +88,8 @@ export function TemplateGrid({
     return () => { active = false; };
   }, []);
 
+  useEffect(() => loadPublishedCatalog(), [loadPublishedCatalog]);
+
   useEffect(() => {
     if (selectedId && !templates.some((template) => template.id === selectedId)) {
       void portableCreatorApi.getTemplate(selectedId).then((published) => {
@@ -98,7 +102,10 @@ export function TemplateGrid({
     <>
       {catalogState === "loading" && <p className="creator-catalog-status" role="status">{ar ? "جاري تحميل القوالب المنشورة…" : "Loading published templates…"}</p>}
       {catalogState === "fallback" && isFeatureEnabled("portableAuth") && (
-        <p className="creator-catalog-status" role="status">{ar ? "نعرض المعاينات المحلية مؤقتاً إلى أن يرجع الاتصال بالكتالوج." : "Showing local previews while the published catalog reconnects."}</p>
+        <div className="creator-catalog-status" role="status">
+          <span>{ar ? "معاينات القوالب المحلية متاحة للعرض فقط إلى أن يرجع كتالوج القوالب المنشورة." : "Local template previews are available to view only while the published catalog reconnects."}</span>
+          <button type="button" className="creator-review-edit" onClick={loadPublishedCatalog}>{ar ? "أعد المحاولة" : "Retry catalog"}</button>
+        </div>
       )}
       <div className="creator-template-discovery">
         <label className="creator-template-search">
@@ -148,6 +155,7 @@ export function TemplateGrid({
             onSelect={onSelect}
             onPreview={setPreviewTemplate}
             locale={locale}
+            selectionEnabled={selectionEnabled}
           />
         )}
         <TemplateGroup
@@ -160,6 +168,7 @@ export function TemplateGrid({
           onSelect={onSelect}
           onPreview={setPreviewTemplate}
           locale={locale}
+          selectionEnabled={selectionEnabled}
         />
         <TemplateGroup
           id="campaign-directions"
@@ -171,9 +180,10 @@ export function TemplateGrid({
           onSelect={onSelect}
           onPreview={setPreviewTemplate}
           locale={locale}
+          selectionEnabled={selectionEnabled}
         />
       </div>
-      {selectedId && filteredTemplates.some((template) => template.id === selectedId) && (
+      {selectionEnabled && selectedId && filteredTemplates.some((template) => template.id === selectedId) && (
         <div className="creator-template-continue">
           <button type="button" className="creator-button creator-button-primary" onClick={() => onSelect(selectedId)}>
             {ar ? "المتابعة بالقالب المحدد" : "Continue with selected template"}
@@ -212,6 +222,7 @@ function TemplateGroup({
   onSelect,
   onPreview,
   locale,
+  selectionEnabled,
 }: {
   id: string;
   title: string;
@@ -222,6 +233,7 @@ function TemplateGroup({
   onSelect: (templateId: string) => void;
   onPreview: (template: CreatorTemplate) => void;
   locale: "en" | "ar";
+  selectionEnabled: boolean;
 }) {
   if (!templates.length) return null;
   const headingId = `creator-template-group-${id}`;
@@ -248,6 +260,7 @@ function TemplateGroup({
             onSelect={onSelect}
             onPreview={onPreview}
             locale={locale}
+            selectionEnabled={selectionEnabled}
           />
         ))}
       </div>
@@ -255,7 +268,7 @@ function TemplateGroup({
   );
 }
 
-function TemplateCard({ template, selected, onSelect, onPreview, locale }: { template: CreatorTemplate; selected: boolean; onSelect: (templateId: string) => void; onPreview: (template: CreatorTemplate) => void; locale: "en" | "ar"; }) {
+function TemplateCard({ template, selected, onSelect, onPreview, locale, selectionEnabled }: { template: CreatorTemplate; selected: boolean; onSelect: (templateId: string) => void; onPreview: (template: CreatorTemplate) => void; locale: "en" | "ar"; selectionEnabled: boolean; }) {
   const ar = locale === "ar";
   const goal = template.goals[0] ?? "launch";
   return (
@@ -264,8 +277,9 @@ function TemplateCard({ template, selected, onSelect, onPreview, locale }: { tem
           type="button"
           className="creator-template-select"
           onClick={() => onSelect(template.id)}
+          disabled={!selectionEnabled}
           aria-pressed={selected}
-          aria-label={ar ? `اختر قالب ${template.nameAr}` : `Choose ${template.name} template`}
+          aria-label={selectionEnabled ? (ar ? `اختر قالب ${template.nameAr}` : `Choose ${template.name} template`) : (ar ? `معاينة قالب ${template.nameAr} فقط` : `${template.name} template preview only`)}
         >
           <div className="creator-template-media" data-media-tone={template.mediaTone}>
             <img src={template.poster} alt="" loading="lazy" style={{ objectPosition: template.posterPosition }} />

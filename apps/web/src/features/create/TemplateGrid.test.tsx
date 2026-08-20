@@ -1,21 +1,30 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter } from "react-router-dom";
 
 import { TemplateGrid } from "./TemplateGrid";
 import { CREATOR_TEMPLATES } from "./templates";
 
 const languageState = vi.hoisted(() => ({ locale: "en" as "en" | "ar" }));
+const featureState = vi.hoisted(() => ({ portableAuth: false }));
+const catalogApi = vi.hoisted(() => ({ listTemplates: vi.fn(), getTemplate: vi.fn() }));
 
 vi.mock("@/i18n/LanguageContext", () => ({
   useLanguage: () => ({ locale: languageState.locale }),
 }));
 
 vi.mock("@/config/features", () => ({
-  isFeatureEnabled: () => false,
+  isFeatureEnabled: (feature: string) => feature === "portableAuth" ? featureState.portableAuth : false,
 }));
 
+vi.mock("@/lib/api/portableApiClient", () => ({ portableCreatorApi: catalogApi }));
+
 describe("TemplateGrid", () => {
+  afterEach(() => {
+    featureState.portableAuth = false;
+    catalogApi.listTemplates.mockReset();
+    catalogApi.getTemplate.mockReset();
+  });
   it("offers an explicit way to continue with the already-selected template", () => {
     languageState.locale = "en";
     const onSelect = vi.fn();
@@ -116,6 +125,25 @@ describe("TemplateGrid", () => {
     expect(within(staticCard).getByRole("link", { name: `View ${staticTemplate.name} details` })).toBeVisible();
     expect(staticCard.querySelector(".creator-template-duration")).toBeNull();
     expect(staticCard.querySelector("video")).toBeNull();
+    view.unmount();
+  });
+
+  it("makes local fallback previews nonselectable until the published catalog is available", async () => {
+    languageState.locale = "en";
+    featureState.portableAuth = true;
+    catalogApi.listTemplates.mockRejectedValue(new Error("catalog offline"));
+    const onSelect = vi.fn();
+    const view = render(<MemoryRouter><TemplateGrid onSelect={onSelect} /></MemoryRouter>);
+
+    await screen.findByText("Local template previews are available to view only while the published catalog reconnects.");
+    const previewOnlyCard = screen.getByRole("button", { name: `${CREATOR_TEMPLATES[0]!.name} template preview only` });
+    expect(previewOnlyCard).toBeDisabled();
+    fireEvent.click(previewOnlyCard);
+    expect(onSelect).not.toHaveBeenCalled();
+
+    catalogApi.listTemplates.mockResolvedValue([]);
+    fireEvent.click(screen.getByRole("button", { name: "Retry catalog" }));
+    await waitFor(() => expect(screen.getByText("Local template previews are available to view only while the published catalog reconnects.")).toBeVisible());
     view.unmount();
   });
 });
