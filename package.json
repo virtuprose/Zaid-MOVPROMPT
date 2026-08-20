@@ -29,6 +29,7 @@
     "preview": "bun run --cwd apps/web preview",
     "test": "bun run --cwd apps/web test",
     "test:watch": "bun run --cwd apps/web test:watch",
+    "test:creator-smoke": "bun run --cwd apps/web test --run src/features/create/GoldenPathFlow.test.tsx src/features/create/GoldenPathStates.test.tsx src/features/create/__tests__/creatorContracts.test.ts",
     "test:workspaces": "bun run --filter '@movprompt/*' test",
     "test:all": "bun run test:workspaces",
     "typecheck:web": "bun run --cwd apps/web typecheck",

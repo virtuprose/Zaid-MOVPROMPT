@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { projectToCreationDraft } from "../contracts";
 import { createDraftProject, CREATOR_TEMPLATES } from "../templates";
+import { GOLDEN_PRODUCT_PATH, GOLDEN_SERVICE_PATH, createGoldenPathProject } from "../__fixtures__/goldenPathFixtures";
 
 describe("creator contracts", () => {
   it("keeps all fifty Kuwait category recipes available during development", () => {
@@ -77,5 +78,24 @@ describe("creator contracts", () => {
       audio: false,
       subtitles: true,
     });
+  });
+
+  it("serializes template-first and source-first golden paths into the same normalized submit intent", () => {
+    const sourceFirst = createGoldenPathProject(GOLDEN_PRODUCT_PATH);
+    const templateFirst = createGoldenPathProject({ ...GOLDEN_PRODUCT_PATH, entry: "template_first" });
+
+    expect(projectToCreationDraft(sourceFirst, true, "auth_required")).toMatchObject(
+      projectToCreationDraft(templateFirst, true, "auth_required"),
+    );
+  });
+
+  it("retains a stable service pending intent through auth cancellation and callback replay", () => {
+    const project = createGoldenPathProject(GOLDEN_SERVICE_PATH);
+    const first = projectToCreationDraft(project, true, "auth_required");
+    const replay = projectToCreationDraft({ ...project, pendingGenerationId: first.pendingGenerationId }, true, "auth_required");
+
+    expect(replay.pendingGenerationId).toBe(first.pendingGenerationId);
+    expect(replay.source).toEqual(first.source);
+    expect(replay.campaign).toEqual(first.campaign);
   });
 });
