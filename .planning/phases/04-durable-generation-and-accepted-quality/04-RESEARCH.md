@@ -362,22 +362,24 @@ await technicalAnalyzer.analyze(privateObject, immutableConfiguration);
 | A2 | [ASSUMED] Current official public docs do not expose a Gateway request-cancellation endpoint usable by this adapter. | Summary / Pitfall 5 | Gateway could add one; verify immediately before enabling post-acceptance cancellation. |
 | A3 | [ASSUMED] The observed exact Seedance output host remains valid for production activation. | Provider operation | Hosts can change; activation must record the actual approved canary host before enablement. |
 
-## Open Questions
+## Open Questions (RESOLVED BY GATES)
+
+These are deliberately unresolved live-contract questions, not implementation assumptions. Each answer is accepted only from the named plan gate; implementation must remain fail-closed and must not infer, guess, or pre-populate an answer before that gate passes.
 
 1. **What are the observed Seedance 2.5 start/status fields, output host, price, and latency for the currently authorized account?**
    - What we know: The code has an explicit opaque-operation parser and a reviewed host, while Vercel’s video APIs are documented as asynchronous/experimental. [VERIFIED: packages/providers/src/vercel-gateway-seedance.ts:38-67] [CITED: https://ai-sdk.dev/docs/ai-sdk-core/video-generation]
    - What is unclear: Current account/provider contract evidence has not been recorded in a paid canary during this research.
-   - Recommendation: Add an explicit human budget-authorization checkpoint before a real canary; record only the safe evidence required by D-25.
+   - Resolution gate: Plan 04-03 Task 04-03-03, the separately budget-authorized paid canary, records the current contract fields, hostname, micro-USD cost, and timing evidence from one persisted operation. Before that checkpoint passes, implementation must not assume the live field shape, hostname, cost, latency, or cancellation capability and must keep the capability fail-closed.
 
 2. **What exact quality thresholds pass representative Kuwait Arabic/English/bilingual fixtures?**
    - What we know: The current premium policy has an acceptance score and two internal retries. [VERIFIED: apps/worker/src/output-quality-reviewer.ts:30-47]
    - What is unclear: Golden fixtures and human review calibration are not proven in this research.
-   - Recommendation: Keep thresholds configurable/internal and gate production activation on golden-fixture plus canary evidence.
+   - Resolution gate: Plan 04-02 Task 04-02-01 builds the non-billable schema/metrics/import validator, and blocking Task 04-02-03 requires two independent qualified-human labels per candidate, adjudication, role attestations, candidate checksums, evaluator/rubric versions, an approval record, weighted kappa >= 0.70, every applicable per-dimension Spearman >= 0.70, and zero critical false accepts. The paid canary cannot replace this calibration. Before the human checkpoint passes, implementation must not invent labels or assume any threshold result; automatic acceptance remains unavailable.
 
 3. **Can the final private output be downloaded through an owner-authorized refresh route in the intended browser journey?**
    - What we know: The public service has recoverable output logic and storage is response-signed. [VERIFIED: apps/api/src/generation-service.ts:944-975]
    - What is unclear: A rendered-browser acceptance path for expired accepted-download URLs must be added/verified in this phase.
-   - Recommendation: Include a browser test/manual evidence task for an expired URL refresh; do not use a stored signed URL.
+   - Resolution gate: Plan 04-03 Task 04-03-02 supplies automated owner/cross-owner expiry-refresh coverage plus the rendered-browser matrix. Before those checks pass, implementation must not claim that the intended browser journey is proven and must never persist or reuse a signed URL.
 
 ## Environment Availability
 

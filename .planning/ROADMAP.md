@@ -168,9 +168,16 @@ Plans:
 **Plans:** 3 plans
 
 Plans:
+**Wave 1**
 
 - [ ] 04-01: Prove production provider submit/poll/reconcile/cancel and safe output acquisition contracts.
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 04-02: Complete media normalization, technical validation, visual/business quality gates, and bounded retries.
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 04-03: Prove exact settlement, previous-success preservation, output refresh, and failure/cancellation matrices.
 
 ### Phase 5: Projects and Immutable Version Recovery
