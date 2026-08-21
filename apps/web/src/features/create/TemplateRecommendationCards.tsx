@@ -3,6 +3,7 @@ import type { GenerationConfiguration } from "@movprompt/contracts";
 
 import { cn } from "@/lib/utils";
 import { useTemplateQuotes } from "./useTemplateQuotes";
+import type { PresenterCompatibility } from "./PresenterChoice";
 import {
   recommendTemplates,
   type RecommendationSelection,
@@ -17,6 +18,8 @@ type TemplateRecommendationsProps = TemplateRecommendationInput & {
   onSelect: (selection: RecommendationSelection) => void;
   /** Test seam only; production always consumes the server-backed quote hook. */
   quoteStateForTemplate?: (template: CreatorTemplate, configuration: GenerationConfiguration) => ReturnType<typeof useTemplateQuotes>;
+  /** Server-projected availability only. The default is deliberately fail-closed. */
+  presenterCompatibility?: PresenterCompatibility;
   arabic?: boolean;
 };
 
@@ -25,6 +28,7 @@ export function TemplateRecommendations({
   configurationForTemplate,
   onSelect,
   quoteStateForTemplate,
+  presenterCompatibility = { aiUgc: false, uploadedSpokesperson: false },
   arabic = false,
   ...input
 }: TemplateRecommendationsProps) {
@@ -57,6 +61,7 @@ export function TemplateRecommendations({
             configuration={configurationForTemplate(recommendation.template)}
             onSelect={onSelect}
             quoteStateForTemplate={quoteStateForTemplate}
+            presenterCompatibility={presenterCompatibility}
             arabic={arabic}
           />
         ))}
@@ -70,12 +75,14 @@ function RecommendationCard({
   configuration,
   onSelect,
   quoteStateForTemplate,
+  presenterCompatibility,
   arabic,
 }: {
   recommendation: TemplateRecommendation;
   configuration: GenerationConfiguration;
   onSelect: (selection: RecommendationSelection) => void;
   quoteStateForTemplate?: (template: CreatorTemplate, configuration: GenerationConfiguration) => ReturnType<typeof useTemplateQuotes>;
+  presenterCompatibility: PresenterCompatibility;
   arabic: boolean;
 }) {
   const { template, whyThisFits, requiredInputs } = recommendation;
@@ -95,6 +102,11 @@ function RecommendationCard({
   const recoveryLabel = quoteState.status === "changed"
     ? (arabic ? "راجع السعر الجديد" : "Review new price")
     : (arabic ? "أعد محاولة السعر" : "Retry price");
+  const presenterAvailability = presenterCompatibility.aiUgc
+    ? (arabic ? "مقدّم محتوى UGC متاح" : "AI UGC presenter available")
+    : presenterCompatibility.uploadedSpokesperson
+      ? (arabic ? "متحدث مرفوع متاح مع فيديو موثّق" : "Uploaded spokesperson available with verified footage")
+      : (arabic ? "لا يوجد مقدّم متاح لهذه الحملة" : "No presenter available for this campaign");
 
   return (
     <article className={cn("creator-recommendation-card", quoteReady && "is-ready")} aria-label={arabic ? `قالب ${template.nameAr}` : `${template.name} template`}>
@@ -110,7 +122,7 @@ function RecommendationCard({
           <div><dt>{arabic ? "لماذا يناسب" : "Why this fits"}</dt><dd>{whyThisFits}</dd></div>
           <div><dt>{arabic ? "المطلوب" : "Required"}</dt><dd>{requiredInputs.join(" · ")}</dd></div>
           <div><dt>{arabic ? "المدة والمقاسات" : "Duration and formats"}</dt><dd>{template.duration}s · {template.aspectRatios.join(" · ")}</dd></div>
-          <div><dt>{arabic ? "مقدّم الفيديو" : "Presenter"}</dt><dd>{arabic ? "بدون مقدّم أو حسب القالب" : "No presenter or template-supported"}</dd></div>
+          <div><dt>{arabic ? "مقدّم الفيديو" : "Presenter"}</dt><dd>{presenterAvailability}</dd></div>
         </dl>
       </div>
       <div className="creator-recommendation-quote" data-quote-state={quoteState.status}>

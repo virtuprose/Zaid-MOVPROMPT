@@ -57,6 +57,23 @@ describe("CampaignSetupStep", () => {
     expect(screen.getByLabelText("رابط الحجز")).toHaveValue("https://noura.example/book");
     expect(screen.queryByLabelText("رقم واتساب")).not.toBeInTheDocument();
     expect(screen.getByLabelText("السعر")).toHaveValue("9.000");
+    const cta = screen.getByLabelText("الدعوة للإجراء");
+    expect(cta).toHaveValue("Book now");
+    expect(screen.getByRole("option", { name: "احجز الآن · موصى به" })).toHaveValue("Book now");
+  });
+
+  it("localizes CTA labels without changing their persisted campaign values", () => {
+    const project = createDraftProject("luxury-product-reveal");
+    const onChange = vi.fn();
+
+    render(<CampaignSetupStep project={project} quoteState="ready" onChange={onChange} onContinue={vi.fn()} arabic />);
+
+    const cta = screen.getByLabelText("الدعوة للإجراء");
+    expect(cta).toHaveValue("Shop now");
+    expect(screen.getByRole("option", { name: "تسوّق الآن · موصى به" })).toHaveValue("Shop now");
+
+    fireEvent.change(cta, { target: { value: "Order on WhatsApp" } });
+    expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ cta: "Order on WhatsApp" }), "cta");
   });
 
   it("returns to a ready price after the quote hook resolves an edited campaign", () => {

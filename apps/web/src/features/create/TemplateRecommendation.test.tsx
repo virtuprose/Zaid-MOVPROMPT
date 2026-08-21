@@ -51,6 +51,7 @@ describe("TemplateRecommendations", () => {
     const card = screen.getAllByRole("article")[0]!;
     expect(card).toHaveTextContent("Why this fits");
     expect(card).toHaveTextContent("Confirmed price");
+    expect(card).toHaveTextContent("No presenter available for this campaign");
     fireEvent.click(screen.getAllByRole("button", { name: "Use this template" })[0]!);
 
     expect(onSelect).toHaveBeenCalledWith(expect.objectContaining({
@@ -105,5 +106,12 @@ describe("TemplateRecommendations", () => {
 
     expect(screen.getAllByText("Price updated").length).toBeGreaterThan(0);
     expect(screen.getAllByRole("button", { name: "Review new price" }).length).toBeGreaterThan(0);
+  });
+
+  it("localizes the fail-closed presenter state for Arabic without advertising unavailable people options", () => {
+    render(<TemplateRecommendations {...props} onSelect={vi.fn()} arabic />);
+
+    expect(screen.getAllByText("لا يوجد مقدّم متاح لهذه الحملة").length).toBeGreaterThan(0);
+    expect(screen.queryByText("مقدّم محتوى UGC متاح")).not.toBeInTheDocument();
   });
 });

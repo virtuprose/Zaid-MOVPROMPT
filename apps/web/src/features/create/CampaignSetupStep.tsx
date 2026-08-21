@@ -1,6 +1,6 @@
 import { useEffect, useId, useMemo, useState } from "react";
 
-import type { CreatorAspectRatio, CreatorLanguage, CreatorProject, CreatorResolution } from "./types";
+import { campaignCtaLabel, CTA_OPTIONS, type CreatorAspectRatio, type CreatorLanguage, type CreatorProject, type CreatorResolution } from "./types";
 import { PresenterChoice, type PresenterCompatibility } from "./PresenterChoice";
 import {
   CTA_BY_GOAL,
@@ -21,7 +21,6 @@ type CampaignSetupStepProps = {
   arabic?: boolean;
 };
 
-const CTA_OPTIONS = ["Shop now", "Order on WhatsApp", "Book now", "Learn more", "Visit store"];
 const RATIOS: CreatorAspectRatio[] = ["9:16", "1:1", "4:5", "16:9"];
 
 function copy(arabic: boolean, english: string, arabicText: string) {
@@ -120,7 +119,7 @@ export function CampaignSetupStep({
         <div className="creator-form-grid">
           <div className="creator-field"><label htmlFor="campaign-price">{copy(arabic, "Price", "السعر")}</label><div className="creator-money-input"><input id="campaign-price" className="creator-input" aria-invalid={Boolean(errors.price)} aria-describedby={errors.price ? "campaign-price-error" : undefined} inputMode="decimal" value={project.product.price} onBlur={(event) => { const value = normalizeKwdAmount(event.target.value); if (value !== event.target.value) apply("price", { product: { ...project.product, price: value } }); }} onChange={(event) => apply("price", { product: { ...project.product, price: event.target.value } })} placeholder={copy(arabic, "Optional", "اختياري")} /><span>KWD</span></div><span className="creator-field-help">{copy(arabic, "Use up to three decimal places.", "استخدم حتى ثلاث خانات عشرية.")}</span>{errors.price && <p id="campaign-price-error" className="creator-field-error">{errors.price}</p>}</div>
           <div className="creator-field"><label htmlFor="campaign-offer">{copy(arabic, "Offer", "العرض")}</label><input id="campaign-offer" className="creator-input" value={project.offer} onChange={(event) => apply("offer", { offer: event.target.value })} placeholder={copy(arabic, "Optional · e.g. gift with every order", "اختياري · مثلاً هدية مع كل طلب")} /></div>
-          <div className="creator-field"><label htmlFor="campaign-cta">{copy(arabic, "Call to action", "الدعوة للإجراء")}</label><select id="campaign-cta" className="creator-select" value={project.cta} onChange={(event) => apply("cta", { cta: event.target.value })}>{CTA_OPTIONS.map((cta) => <option key={cta} value={cta}>{cta === CTA_BY_GOAL[project.goal] ? `${cta} · ${copy(arabic, "recommended", "موصى به")}` : cta}</option>)}</select></div>
+          <div className="creator-field"><label htmlFor="campaign-cta">{copy(arabic, "Call to action", "الدعوة للإجراء")}</label><select id="campaign-cta" className="creator-select" value={project.cta} onChange={(event) => apply("cta", { cta: event.target.value })}>{CTA_OPTIONS.map((cta) => { const label = campaignCtaLabel(cta, arabic); return <option key={cta} value={cta}>{cta === CTA_BY_GOAL[project.goal] ? `${label} · ${copy(arabic, "recommended", "موصى به")}` : label}</option>; })}</select></div>
         </div>
       </section>
 

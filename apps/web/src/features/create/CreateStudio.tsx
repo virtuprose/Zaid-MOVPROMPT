@@ -92,6 +92,7 @@ import { useTemplateQuotes } from "./useTemplateQuotes";
 import { applyImportedFacts, campaignFactValue, campaignSourceForProject, confirmCampaignFacts, editFact, normalizeCampaignSource } from "./sourceFacts";
 import {
   CAMPAIGN_GOAL_OPTIONS,
+  campaignCtaLabel,
   CTA_OPTIONS,
   MARKET_META,
   getCampaignGoalOption,
@@ -134,14 +135,6 @@ const ARABIC_GOAL_LABELS: Record<CreatorProject["goal"], string> = {
   announcement: "إعلان",
   trust: "بناء الثقة",
   brand_story: "قصة العلامة التجارية",
-};
-
-const ARABIC_CTA_LABELS: Record<string, string> = {
-  "Shop now": "تسوق الآن",
-  "Order on WhatsApp": "اطلب عبر واتساب",
-  "Book now": "احجز الآن",
-  "Learn more": "اعرف أكثر",
-  "Visit store": "زر المتجر",
 };
 
 const GENERATION_STATES = [
@@ -461,7 +454,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
         "Preparing your preview": "جارٍ تجهيز المعاينة",
         "Your preview is ready": "المعاينة جاهزة",
         "Your product preview is ready": "معاينة المنتج جاهزة",
-        "Still working — reconnecting to your render": "ما زلنا نعمل — جارٍ إعادة الاتصال بالتوليد",
+        "Still working — reconnecting to your video": "ما زلنا نعمل — جارٍ إعادة الاتصال بالتوليد",
       } as Record<string, string>)[generationMessage] ?? generationMessage
     : generationMessage;
 
@@ -581,7 +574,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
       setStep(draft.product.images.length ? "details" : "source");
       setDraftRestoring(false);
       if (user && shouldResumeGeneration && draft.pendingGenerationId) {
-        toast.success("Campaign restored. Confirm the current price to start your render.");
+        toast.success("Campaign restored. Confirm the current price to create your video.");
       }
     })().catch(() => setDraftRestoring(false));
     return () => { active = false; };
@@ -625,7 +618,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
             setGenerationMessage("Your preview is ready");
             window.setTimeout(() => setStep("editor"), 450);
           } else {
-            const message = "The render completed without a valid generated video.";
+            const message = "The video was completed without a valid generated result.";
             setGenerationStage("failed");
             setProject((current) => ({ ...current, status: "failed", videoUrl: null, lastError: message, pendingGenerationId: null }));
             setSourceError(`${message} Your imported product images are unchanged.`);
@@ -635,14 +628,14 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
           const recoverableOutput = job.error?.includes("provider_output") || job.error === "fetch failed";
           const message = recoverableOutput
             ? "Your video was created, but MovPrompt could not finish saving it. Open Projects and retry saving it—this will not generate or charge again."
-            : job.error || "The render could not be completed.";
+            : job.error || "The video could not be completed.";
           setGenerationStage("failed");
           setProject((current) => ({ ...current, status: "failed", lastError: message, pendingGenerationId: null }));
           setSourceError(message);
           setStep("details");
         }
       } catch {
-        setGenerationMessage("Still working — reconnecting to your render");
+        setGenerationMessage("Still working — reconnecting to your video");
       }
     };
     void poll();
@@ -771,7 +764,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
     if (!/^https?:\/\/\S+$/i.test(trimmed)) {
       setSourceError(tr(
         `Enter a complete ${kind === "business" ? "business or service" : "product"} link beginning with http:// or https://.`,
-        "أدخل رابطاً كاملاً يبدأ بـ http:// أو https://.",
+        "أدخل رابطاً كاملاً للمنتج أو النشاط أو الخدمة.",
       ));
       return;
     }
@@ -1291,7 +1284,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
     let confirmedQuote = currentQuote;
     if (portablePlatform) {
       try {
-        if (!renderProject.versionId) throw new Error("The saved project version is not ready for generation.");
+        if (!renderProject.versionId) throw new Error("Your saved campaign is not ready to create a video yet.");
         const authoritativeQuoteResponse = await portableCreatorApi.generationQuote({
           projectVersionId: renderProject.versionId,
         });
@@ -1342,7 +1335,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
       setGenerationStage("preparing");
       setGenerationMessage("Your campaign is queued securely");
     } catch (error) {
-      const message = error instanceof Error ? error.message : "We couldn't start this render.";
+      const message = error instanceof Error ? error.message : "We couldn't start creating your video.";
       setProject((current) => ({ ...current, status: "failed", lastError: message, pendingGenerationId: null }));
       setSourceError(`${message} Your project is saved — you can try again.`);
       setStep("details");
@@ -1375,7 +1368,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
       } catch (error) {
         const message = error instanceof Error
           ? error.message
-          : "This render could not be cancelled because provider processing has already started.";
+          : "This video could not be cancelled because creation has already started.";
         setSourceError(message);
         toast.error(message);
         return;
@@ -1426,7 +1419,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
       return { ...current, scenes };
     });
     setChangeRequest("");
-    toast.success("Change added. Review it, then render the updated version.");
+    toast.success("Change added. Review it, then create the updated video.");
   };
 
   const undo = () => {
@@ -1518,7 +1511,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
             </div>
             <p className="creator-kicker">{arabicUi ? template.nameAr : template.name}</p>
             <h1>{tr("Building your campaign", "جارٍ بناء حملتك")}</h1>
-            <p>{simulatedGeneration ? tr("Preview workflow only — no AI video or credits. We will open an editable still preview using only your imported product image.", "مسار معاينة فقط — بدون فيديو ذكاء اصطناعي أو رصيد. سنفتح معاينة ثابتة قابلة للتعديل باستخدام صورة منتجك المستوردة فقط.") : tr("You can leave this screen safely. Your project is saved and the render will continue in the background.", "تقدر تترك هذه الصفحة بأمان. مشروعك محفوظ والتوليد راح يكمل بالخلفية.")}</p>
+            <p>{simulatedGeneration ? tr("Preview workflow only — no AI video or credits. We will open an editable still preview using only your imported product image.", "مسار معاينة فقط — بدون فيديو ذكاء اصطناعي أو رصيد. سنفتح معاينة ثابتة قابلة للتعديل باستخدام صورة منتجك المستوردة فقط.") : tr("You can leave this screen safely. Your project is saved and video creation will continue in the background.", "تقدر تترك هذه الصفحة بأمان. مشروعك محفوظ والتوليد راح يكمل بالخلفية.")}</p>
             <div
               className="creator-generation-progress"
               role="progressbar"
@@ -1551,8 +1544,8 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
             <div className="creator-editor-actions">
               <button className="creator-icon-button" type="button" onClick={undo} disabled={!undoStack.length} aria-label={tr("Undo", "تراجع")}><Undo2 aria-hidden="true" /></button>
               <button className="creator-icon-button" type="button" onClick={redo} disabled={!redoStack.length} aria-label={tr("Redo", "إعادة")}><Redo2 aria-hidden="true" /></button>
-              <button className="creator-button creator-button-secondary" type="button" onClick={() => void startGeneration() }>{hasRenderedVideo ? <RefreshCw aria-hidden="true" /> : <Sparkles aria-hidden="true" />} {hasRenderedVideo ? tr("Render updates", "توليد التعديلات") : tr("Generate video", "ولّد الفيديو")}</button>
-              <button className="creator-button creator-button-primary" type="button" onClick={() => { setSelectedExport(project.aspectRatio); setExportOpen(true); }} disabled={!hasRenderedVideo} title={!hasRenderedVideo ? tr("Export becomes available after a real video render completes.", "يتوفر التصدير بعد اكتمال توليد فيديو حقيقي.") : undefined}><Download aria-hidden="true" /> {tr("Export", "تصدير")}</button>
+              <button className="creator-button creator-button-secondary" type="button" onClick={() => void startGeneration() }>{hasRenderedVideo ? <RefreshCw aria-hidden="true" /> : <Sparkles aria-hidden="true" />} {hasRenderedVideo ? tr("Generate update", "توليد التعديلات") : tr("Generate video", "ولّد الفيديو")}</button>
+              <button className="creator-button creator-button-primary" type="button" onClick={() => { setSelectedExport(project.aspectRatio); setExportOpen(true); }} disabled={!hasRenderedVideo} title={!hasRenderedVideo ? tr("Export becomes available after your video is ready.", "يتوفر التصدير بعد اكتمال توليد فيديو حقيقي.") : undefined}><Download aria-hidden="true" /> {tr("Export", "تصدير")}</button>
             </div>
           </div>
 
@@ -1584,7 +1577,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
                 {!hasRenderedVideo && <div className="creator-preview-truth" role="note"><strong>{tr("Product image preview", "معاينة صورة المنتج")}</strong><span>{tr("No AI video has been rendered", "لم يتم توليد فيديو بالذكاء الاصطناعي")}</span></div>}
                 {hasRenderedVideo && <div className="creator-preview-controls"><button type="button" onClick={() => void togglePreviewPlayback()} aria-label={previewPlaying ? tr("Pause preview", "إيقاف المعاينة") : tr("Play preview", "تشغيل المعاينة")}>{previewPlaying ? <Pause aria-hidden="true" /> : <Play aria-hidden="true" />}</button><button type="button" onClick={() => setPreviewMuted((muted) => !muted)} aria-label={previewMuted ? tr("Turn preview sound on", "تشغيل صوت المعاينة") : tr("Mute preview", "كتم المعاينة")}>{previewMuted ? <VolumeX aria-hidden="true" /> : <Volume2 aria-hidden="true" />}</button></div>}
               </div>
-              <span className="creator-stage-note">{hasRenderedVideo ? tr("Preview overlays update instantly. Scene imagery updates after rendering.", "النصوص تتحدث فوراً. صور المشاهد تتحدث بعد التوليد.") : tr("Still preview only. Generate a real video before exporting.", "معاينة ثابتة فقط. ولّد فيديو حقيقياً قبل التصدير.")}</span>
+              <span className="creator-stage-note">{hasRenderedVideo ? tr("Preview overlays update instantly. Scene imagery updates after a new video is created.", "النصوص تتحدث فوراً. صور المشاهد تتحدث بعد التوليد.") : tr("Still preview only. Generate a real video before exporting.", "معاينة ثابتة فقط. ولّد فيديو حقيقياً قبل التصدير.")}</span>
             </section>
 
             <aside className="creator-panel creator-inspector" aria-label={tr("Editing controls", "أدوات التعديل")}>
@@ -1606,7 +1599,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
               {inspectorTab === "brand" && (
                 <>
                   <div className="creator-field"><label htmlFor="editor-language">{tr("Campaign language", "لغة الحملة")}</label><select id="editor-language" className="creator-select" value={project.language} onChange={(event) => updateProject({ language: event.target.value as CreatorLanguage })}><option value="en">{tr("English", "الإنجليزية")}</option><option value="ar">{tr("Arabic · Kuwaiti dialect", "العربية · اللهجة الكويتية")}</option><option value="bilingual">{tr("Arabic + English · Kuwaiti dialect", "العربية + الإنجليزية · اللهجة الكويتية")}</option></select>{project.language !== "en" && <span className="creator-field-help">{tr("Voice and campaign copy use natural Kuwait Arabic (ar-KW).", "الصوت ونص الحملة يستخدمون عربي كويتي طبيعي (ar-KW).")}</span>}</div>
-                  <div className="creator-field"><label htmlFor="editor-cta">{tr("Call to action", "الدعوة للإجراء")}</label><select id="editor-cta" className="creator-select" value={project.cta} onChange={(event) => updateProject({ cta: event.target.value })}>{CTA_OPTIONS.map((option) => <option key={option} value={option}>{arabicUi ? ARABIC_CTA_LABELS[option] ?? option : option}</option>)}</select></div>
+                  <div className="creator-field"><label htmlFor="editor-cta">{tr("Call to action", "الدعوة للإجراء")}</label><select id="editor-cta" className="creator-select" value={project.cta} onChange={(event) => updateProject({ cta: event.target.value })}>{CTA_OPTIONS.map((option) => <option key={option} value={option}>{campaignCtaLabel(option, arabicUi)}</option>)}</select></div>
                   <div className="creator-field"><label htmlFor="editor-offer">{tr("Offer", "العرض")}</label><input id="editor-offer" className="creator-input" value={project.offer} onChange={(event) => updateProject({ offer: event.target.value })} placeholder={tr("Optional — e.g. 20% off today", "اختياري — مثلاً خصم 20% اليوم")} /></div>
                   <div className="creator-field"><label htmlFor="editor-color">{tr("Brand colour", "لون العلامة")}</label><input id="editor-color" className="creator-input" type="color" value={project.brandColor} onChange={(event) => updateProject({ brandColor: event.target.value })} /></div>
                 </>
@@ -1637,7 +1630,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
               {EXPORT_PRESETS.map((preset) => (
                 <button key={preset.ratio} type="button" className={cn("creator-export-option", selectedExport === preset.ratio && "is-selected")} aria-pressed={selectedExport === preset.ratio} onClick={() => setSelectedExport(preset.ratio)}>
                   <span className="creator-ratio-icon">{preset.ratio}</span>
-                  <span><strong>{arabicUi ? preset.titleAr : preset.title}</strong><span>{preset.ratio === project.aspectRatio ? tr("Current rendered version · Download", "النسخة المولّدة الحالية · تنزيل") : tr("New generative version · Separate quote", "نسخة توليد جديدة · تسعير منفصل")}</span></span>
+                  <span><strong>{arabicUi ? preset.titleAr : preset.title}</strong><span>{preset.ratio === project.aspectRatio ? tr("Current video · Download", "النسخة المولّدة الحالية · تنزيل") : tr("New generated version · Separate quote", "نسخة توليد جديدة · تسعير منفصل")}</span></span>
                   {selectedExport === preset.ratio && <CheckCircle2 className="creator-export-check" aria-hidden="true" />}
                 </button>
               ))}
@@ -1650,7 +1643,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
               </div>
             )}
             {simulatedGeneration ? (
-              <div className="creator-import-note" role="note" style={{ marginTop: 24 }}><strong>{tr("Preview only", "معاينة فقط")}</strong><span>{tr("A downloadable MP4 becomes available after a real AI render completes.", "يتوفر ملف MP4 للتنزيل بعد اكتمال توليد حقيقي بالذكاء الاصطناعي.")}</span></div>
+              <div className="creator-import-note" role="note" style={{ marginTop: 24 }}><strong>{tr("Preview only", "معاينة فقط")}</strong><span>{tr("A downloadable MP4 becomes available after your AI video is ready.", "يتوفر ملف MP4 للتنزيل بعد اكتمال توليد حقيقي بالذكاء الاصطناعي.")}</span></div>
             ) : selectedExport === project.aspectRatio && hasRenderedVideo && project.videoUrl ? (
               <button className="creator-button creator-button-primary" type="button" onClick={downloadVideo} style={{ width: "100%", marginTop: 24 }}><Download aria-hidden="true" /> {tr("Download", "تنزيل")} {selectedExportMeta.ratio}</button>
             ) : (
@@ -1675,7 +1668,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
               <span className="creator-mode-switch-icon"><SlidersHorizontal aria-hidden="true" /></span>
               <span className="creator-mode-switch-copy">
                 <strong>{modeSwitching ? tr("Opening Advanced Mode…", "جارٍ فتح الوضع المتقدم…") : tr("Switch to Advanced", "الانتقال للوضع المتقدم")}</strong>
-                <small>{project.product.images.length ? tr("Your product and campaign settings come with you.", "منتجك وإعدادات الحملة تنتقل معك.") : tr("Use prompts, references and detailed render controls.", "استخدم التوجيهات والمراجع وتحكم أدق بالتوليد.")}</small>
+                <small>{project.product.images.length ? tr("Your product and campaign settings come with you.", "منتجك وإعدادات الحملة تنتقل معك.") : tr("Use references and detailed creative controls.", "استخدم المراجع وأدوات تحكم إبداعية مفصّلة.")}</small>
               </span>
               {modeSwitching ? <Loader2 className="animate-spin" aria-hidden="true" /> : <ArrowRight aria-hidden="true" />}
             </button>
@@ -1702,6 +1695,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
               hasSource={Boolean(project.product.name.trim() || project.product.images.length)}
               configurationForTemplate={recommendationConfigurationFor}
               onSelect={selectRecommendedTemplate}
+              presenterCompatibility={presenterCompatibility}
               arabic={arabicUi}
             />
             <div className="creator-browse-templates">
@@ -1801,11 +1795,11 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
             <aside className="creator-panel creator-panel-pad creator-generation-summary" aria-label={tr("Generation summary", "ملخص التوليد")}>
               <p className="creator-kicker">{tr("Ready to create", "جاهز للإنشاء")}</p>
               <div className="creator-product-image" style={{ borderRadius: 14, overflow: "hidden" }}><SourceMediaPreview asset={project.product.images[0]} alt={project.product.name} /></div>
-              <div className="creator-summary-list" style={{ marginTop: 16 }}><div className="creator-summary-row"><span>{tr("Template", "القالب")}</span><strong>{arabicUi ? template.nameAr : template.name}</strong></div><div className="creator-summary-row"><span>{tr("Campaign goal", "هدف الحملة")}</span><strong>{arabicUi ? ARABIC_GOAL_LABELS[project.goal] : getCampaignGoalOption(project.goal).label}</strong></div><div className="creator-summary-row"><span>{tr("Call to action", "الدعوة للإجراء")}</span><strong>{arabicUi ? ARABIC_CTA_LABELS[project.cta] ?? project.cta : project.cta}</strong></div>{project.product.price && <div className="creator-summary-row"><span>{tr("Price", "السعر")}</span><strong>{project.product.price} {MARKET_META[project.market].currency}</strong></div>}{project.offer && <div className="creator-summary-row"><span>{tr("Offer", "العرض")}</span><strong>{project.offer}</strong></div>}<div className="creator-summary-row"><span>{tr("Market", "السوق")}</span><strong>{MARKET_META[project.market].label}</strong></div><div className="creator-summary-row"><span>{tr("Campaign language", "لغة الحملة")}</span><strong>{project.language === "bilingual" ? tr("Kuwaiti Arabic + English", "عربي كويتي + إنجليزي") : project.language === "ar" ? tr("Kuwaiti Arabic", "عربي كويتي") : tr("English", "الإنجليزية")}</strong></div><div className="creator-summary-row"><span>{tr("Format", "المقاس")}</span><strong>{project.aspectRatio} · {project.resolution}</strong></div><div className="creator-summary-row"><span>{tr("Subtitles", "الترجمة المكتوبة")}</span><strong>{project.subtitles ? tr("Included", "مشمولة") : tr("Off", "متوقفة")}</strong></div><div className="creator-summary-row"><span>{tr("Audio", "الصوت")}</span><strong>{project.audio ? tr("Included", "مشمول") : tr("Off", "متوقف")}</strong></div></div>
+              <div className="creator-summary-list" style={{ marginTop: 16 }}><div className="creator-summary-row"><span>{tr("Template", "القالب")}</span><strong>{arabicUi ? template.nameAr : template.name}</strong></div><div className="creator-summary-row"><span>{tr("Campaign goal", "هدف الحملة")}</span><strong>{arabicUi ? ARABIC_GOAL_LABELS[project.goal] : getCampaignGoalOption(project.goal).label}</strong></div><div className="creator-summary-row"><span>{tr("Call to action", "الدعوة للإجراء")}</span><strong>{campaignCtaLabel(project.cta, arabicUi)}</strong></div>{project.product.price && <div className="creator-summary-row"><span>{tr("Price", "السعر")}</span><strong>{project.product.price} {MARKET_META[project.market].currency}</strong></div>}{project.offer && <div className="creator-summary-row"><span>{tr("Offer", "العرض")}</span><strong>{project.offer}</strong></div>}<div className="creator-summary-row"><span>{tr("Market", "السوق")}</span><strong>{MARKET_META[project.market].label}</strong></div><div className="creator-summary-row"><span>{tr("Campaign language", "لغة الحملة")}</span><strong>{project.language === "bilingual" ? tr("Kuwaiti Arabic + English", "عربي كويتي + إنجليزي") : project.language === "ar" ? tr("Kuwaiti Arabic", "عربي كويتي") : tr("English", "الإنجليزية")}</strong></div><div className="creator-summary-row"><span>{tr("Format", "المقاس")}</span><strong>{project.aspectRatio} · {project.resolution}</strong></div><div className="creator-summary-row"><span>{tr("Subtitles", "الترجمة المكتوبة")}</span><strong>{project.subtitles ? tr("Included", "مشمولة") : tr("Off", "متوقفة")}</strong></div><div className="creator-summary-row"><span>{tr("Audio", "الصوت")}</span><strong>{project.audio ? tr("Included", "مشمول") : tr("Off", "متوقف")}</strong></div></div>
               {!campaignSetupReady && <div className="creator-cost-box" aria-live="polite">
                 {quote ? <>
                   <small>{quote.entitlementEligible ? tr("Your first video", "فيديوك الأول") : tr("Confirmed generation price", "سعر التوليد المؤكد")}</small>
-                  <strong>{quote.entitlementEligible ? tr("Included · 0 credits for this render", "مشمول · 0 رصيد لهذا التوليد") : tr(`${quote.credits} credits`, `${quote.credits} رصيد`)}</strong>
+                  <strong>{quote.entitlementEligible ? tr("Included · 0 credits for this video", "مشمول · 0 رصيد لهذا التوليد") : tr(`${quote.credits} credits`, `${quote.credits} رصيد`)}</strong>
                   <span className="creator-cost-meta"><Clock3 aria-hidden="true" /> {tr(`Video length: ${projectDurationSeconds} seconds · estimated processing: 2–5 minutes`, `مدة الفيديو: ${projectDurationSeconds} ثانية · وقت المعالجة المتوقع: 2–5 دقائق`)}</span>
                 </> : simulatedGeneration ? <><small>{localDemoGeneration ? tr("Client preview", "معاينة للعميل") : tr("Development preview", "معاينة تطوير")}</small><strong>{tr("No AI credits charged · preview workflow only", "ما ينخصم رصيد ذكاء اصطناعي · مسار معاينة فقط")}</strong></> : <><small>{tr("Generation availability", "توفر التوليد")}</small><strong>{quoteLoaded ? quoteError || tr("Video generation is temporarily unavailable.", "توليد الفيديو غير متوفر مؤقتاً.") : tr("Confirming the current price…", "جارٍ تأكيد السعر الحالي…")}</strong>{quoteLoaded && quoteFailure?.retryable && <button className="creator-cost-retry" type="button" onClick={retryQuote}><RefreshCw aria-hidden="true" /> {tr("Retry price", "أعد محاولة السعر")}</button>}{quoteFailure?.requestId && <details className="creator-support-details"><summary>{tr("Support details", "تفاصيل الدعم")}</summary><code>{tr("Request ID", "رقم الطلب")}: {quoteFailure.requestId}</code></details>}</>}
               </div>}

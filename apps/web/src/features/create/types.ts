@@ -143,7 +143,26 @@ export const MARKET_META: Record<CreatorMarket, { label: string; currency: strin
   OM: { label: "Oman", currency: "OMR" },
 };
 
-export const CTA_OPTIONS = ["Shop now", "Order on WhatsApp", "Book now", "Learn more", "Visit store"];
+/**
+ * The value is what is persisted in a campaign recipe. Labels are deliberately
+ * separate so changing the interface language never changes a confirmed CTA.
+ */
+export const CTA_OPTIONS = ["Shop now", "Order on WhatsApp", "Book now", "Learn more", "Visit store"] as const;
+
+export type CampaignCta = (typeof CTA_OPTIONS)[number];
+
+export const CAMPAIGN_CTA_LABELS: Record<CampaignCta, { en: string; ar: string }> = {
+  "Shop now": { en: "Shop now", ar: "تسوّق الآن" },
+  "Order on WhatsApp": { en: "Order on WhatsApp", ar: "اطلب عبر واتساب" },
+  "Book now": { en: "Book now", ar: "احجز الآن" },
+  "Learn more": { en: "Learn more", ar: "اعرف المزيد" },
+  "Visit store": { en: "Visit store", ar: "زيارة المتجر" },
+};
+
+export function campaignCtaLabel(value: string, arabic = false): string {
+  const label = CAMPAIGN_CTA_LABELS[value as CampaignCta];
+  return label ? label[arabic ? "ar" : "en"] : value;
+}
 
 export const CAMPAIGN_GOAL_OPTIONS: Array<{
   value: CampaignGoal;

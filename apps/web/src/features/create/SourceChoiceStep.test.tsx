@@ -75,4 +75,26 @@ describe("SourceChoiceStep", () => {
     fireEvent.click(screen.getByRole("button", { name: "Enter details" }));
     expect(manual.onManualStart).toHaveBeenCalledTimes(1);
   });
+
+  it("associates a source-link recovery error with the actual invalid URL field", () => {
+    renderSourceChoice({ error: "We couldn’t read that link. Try another link." });
+
+    const url = screen.getByLabelText("Product link");
+    const error = screen.getByRole("alert");
+    const describedBy = url.getAttribute("aria-describedby") ?? "";
+
+    expect(url).toHaveAttribute("aria-invalid", "true");
+    expect(describedBy.split(" ")).toContain(error.id);
+    expect(document.getElementById(error.id)).toHaveTextContent("We couldn’t read that link. Try another link.");
+  });
+
+  it("keeps source error semantics and controls readable in Arabic RTL", () => {
+    renderSourceChoice({ arabic: true, error: "Enter a complete product link beginning with http:// or https://." });
+
+    const url = screen.getByLabelText("رابط المنتج");
+    expect(url).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByRole("alert")).toHaveTextContent("أدخل رابطاً كاملاً للمنتج.");
+    expect(screen.getByRole("radio", { name: /رابط منتج/ })).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByRole("region", { name: "شنو تبي تروّج له؟" })).toHaveAttribute("dir", "rtl");
+  });
 });

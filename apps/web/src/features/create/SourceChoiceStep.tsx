@@ -1,4 +1,4 @@
-import { useRef, type KeyboardEvent, type MutableRefObject } from "react";
+import { useId, useRef, type KeyboardEvent, type MutableRefObject } from "react";
 import { FileUp, Globe2, Link2, Loader2, PencilLine, X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -71,6 +71,22 @@ function text(arabic: boolean, english: string, arabicText: string) {
   return arabic ? arabicText : english;
 }
 
+function localizeSourceError(error: string | undefined, arabic: boolean): string | undefined {
+  if (!error) return error;
+  const knownMessages: Array<{ en: string; ar: string }> = [
+    {
+      en: "Enter a complete product link beginning with http:// or https://.",
+      ar: "أدخل رابطاً كاملاً للمنتج.",
+    },
+    {
+      en: "Enter a complete business or service link beginning with http:// or https://.",
+      ar: "أدخل رابطاً كاملاً للنشاط أو الخدمة.",
+    },
+  ];
+  const known = knownMessages.find((message) => error === message.en || error === message.ar);
+  return known ? known[arabic ? "ar" : "en"] : error;
+}
+
 function selectWithRadioKeys<T extends string>(
   event: KeyboardEvent<HTMLButtonElement>,
   values: readonly T[],
@@ -123,9 +139,12 @@ export function SourceChoiceStep({
     ? text(arabic, "We’ll bring back public business details for you to review. Add your booking details next.", "سنسترجع معلومات النشاط العامة لتراجعها. أضف تفاصيل الحجز بعدها.")
     : text(arabic, "We’ll bring back public product facts and photos for you to review.", "سنسترجع معلومات المنتج وصوره لتراجعها.");
   const statusId = "source-choice-status";
+  const linkHelpId = useId();
+  const linkErrorId = useId();
+  const errorText = localizeSourceError(error, arabic);
 
   return (
-    <section className="creator-source-choice" aria-labelledby="source-choice-heading">
+    <section className="creator-source-choice" aria-labelledby="source-choice-heading" dir={arabic ? "rtl" : undefined}>
       <div className="creator-source-choice-heading">
         <p className="creator-kicker">{text(arabic, "Campaign source", "مصدر الحملة")}</p>
         <h2 id="source-choice-heading">{text(arabic, "What are you promoting?", "شنو تبي تروّج له؟")}</h2>
@@ -188,7 +207,7 @@ export function SourceChoiceStep({
       )}
 
       {isLink && (
-        <div className="creator-source-entry" aria-describedby={error ? "source-choice-error" : "source-choice-help"}>
+        <div className="creator-source-entry">
           <label htmlFor="source-url">{linkLabel}</label>
           <div className="creator-input-row">
             <input
@@ -199,6 +218,8 @@ export function SourceChoiceStep({
               placeholder={value === "business_link" ? "https://yourbusiness.com" : "https://yourstore.com/product"}
               inputMode="url"
               disabled={busy}
+              aria-invalid={Boolean(errorText)}
+              aria-describedby={[linkHelpId, errorText ? linkErrorId : null].filter(Boolean).join(" ")}
             />
             {busy ? (
               <button className="creator-button creator-button-secondary" type="button" onClick={onCancel}>
@@ -211,7 +232,7 @@ export function SourceChoiceStep({
               </button>
             )}
           </div>
-          <p id="source-choice-help" className="creator-field-help">{linkHelp}</p>
+          <p id={linkHelpId} className="creator-field-help">{linkHelp}</p>
         </div>
       )}
 
@@ -241,9 +262,9 @@ export function SourceChoiceStep({
           {text(arabic, "Checking the link…", "جارٍ فحص الرابط…")}
         </p>
       )}
-      {error && (
-        <div className="creator-source-recovery" aria-labelledby="source-choice-error">
-          <p id="source-choice-error" className="creator-error" role="alert">{error}</p>
+      {errorText && (
+        <div className="creator-source-recovery" aria-labelledby={linkErrorId}>
+          <p id={linkErrorId} className="creator-error" role="alert">{errorText}</p>
           {onRetry && (
             <button className="creator-button creator-button-secondary" type="button" onClick={onRetry}>
               {retryLabel ?? (value === "upload"
