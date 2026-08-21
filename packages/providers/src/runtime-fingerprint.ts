@@ -37,6 +37,7 @@ export function generationRuntimeFingerprint(
     videoResolutionTier: environment.VERCEL_GATEWAY_SEEDANCE_RESOLUTION_TIER?.trim() || "",
     outputHosts: normalizedList(environment.PROVIDER_OUTPUT_ALLOWED_HOSTS),
     qualityModel: environment.MOVPROMPT_QUALITY_MODEL_ID?.trim() || "",
+    qualityRubricVersion: environment.MOVPROMPT_QUALITY_RUBRIC_VERSION?.trim() || "",
     pricing: {
       version: environment.GENERATION_PRICING_VERSION?.trim() || "",
       quoteTtlSeconds: environment.GENERATION_QUOTE_TTL_SECONDS?.trim() || "",

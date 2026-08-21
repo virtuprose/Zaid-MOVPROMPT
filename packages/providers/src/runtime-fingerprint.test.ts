@@ -34,6 +34,10 @@ describe("generationRuntimeFingerprint", () => {
       ...runtime,
       VERCEL_GATEWAY_SEEDANCE_RESOLUTION_TIER: "480p",
     })).not.toBe(expected);
+    expect(generationRuntimeFingerprint({
+      ...runtime,
+      MOVPROMPT_QUALITY_RUBRIC_VERSION: "kuwait-quality-rubric-v2",
+    })).not.toBe(expected);
   });
 
   it("does not include secret values, only their presence", () => {
