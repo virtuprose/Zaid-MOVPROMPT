@@ -4,6 +4,33 @@ MovPrompt stores the development Gateway key only in the ignored root
 `.env.local`. Never add it to a browser `VITE_*` variable, commit it, or place
 it in screenshots and logs.
 
+## Low-cost local project testing
+
+The tracked [local application profile](../../infra/environments/local.example)
+selects `bytedance/seedance-v1.0-pro-fast` for both server-only video
+capabilities only when `APP_ENV=local`. It keeps the first test at 480p, two
+seconds and provider-native audio off. Both 480p and 720p local quotes use the
+tracked 3-credit-per-second test rate; those values are not production pricing.
+
+Layer that tracked profile with your ignored `.env.local` (which contains the
+Gateway key) when starting the full local application. For Docker Compose:
+
+```bash
+docker compose --env-file infra/environments/local.example --env-file .env.local --profile application up
+```
+
+Do not set `MOVPROMPT_GATEWAY_CONFIRM_PAID_VIDEO=YES`: that switch is only for
+the separate guarded CLI smoke command, not normal project generation. A real
+**Generate** click in the application still creates a paid Gateway request and
+can also incur quality-review cost. The browser remains provider-agnostic and
+does not show model or provider names.
+
+There is no silent fallback. A missing, unknown or failed fast-model selection
+fails closed; it never retries through Seedance 2.5 or another family. Human
+calibration, private storage, technical validation, exact settlement and
+quality approval remain required before an accepted output completes. Staging
+and production stay hard-locked to `bytedance/seedance-2.5`.
+
 ## Commands
 
 Verify the key with a read-only credit-account request:

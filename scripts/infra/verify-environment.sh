@@ -221,6 +221,7 @@ if [[ "${FEATURE_GENERATION}" == "true" ]]; then
     MOVPROMPT_CAPABILITY_VIDEO_PRODUCT_FIDELITY
   )
   enabled_video_capability_count=0
+  selected_video_model=""
   for capability_prefix in "${video_capability_prefixes[@]}"; do
     enabled_variable="${capability_prefix}_ENABLED"
     adapter_variable="${capability_prefix}_ADAPTER_ID"
@@ -231,10 +232,21 @@ if [[ "${FEATURE_GENERATION}" == "true" ]]; then
         echo "${adapter_variable} must be vercel-ai-gateway for the installed production adapter." >&2
         exit 1
       fi
-      if [[ "${!model_variable:-}" != "bytedance/seedance-2.5" ]]; then
-        echo "${model_variable} must be exactly bytedance/seedance-2.5." >&2
+      capability_model="${!model_variable:-}"
+      if [[ "${APP_ENV}" == "local" ]]; then
+        if [[ "${capability_model}" != "bytedance/seedance-2.5" && "${capability_model}" != "bytedance/seedance-v1.0-pro-fast" ]]; then
+          echo "${model_variable} must be Seedance 2.5 or the explicit local Seedance Fast model." >&2
+          exit 1
+        fi
+      elif [[ "${capability_model}" != "bytedance/seedance-2.5" ]]; then
+        echo "${model_variable} must be exactly bytedance/seedance-2.5 outside local development." >&2
         exit 1
       fi
+      if [[ -n "${selected_video_model}" && "${selected_video_model}" != "${capability_model}" ]]; then
+        echo "Enabled video capabilities must select the same server-only model." >&2
+        exit 1
+      fi
+      selected_video_model="${capability_model}"
 
       pricing_prefix="GENERATION_VIDEO_${capability_prefix#MOVPROMPT_CAPABILITY_VIDEO_}"
       for resolution in 480P 720P; do
@@ -281,6 +293,22 @@ if [[ "${FEATURE_GENERATION}" == "true" ]]; then
       exit 1
     fi
   done
+
+  expected_output_host="ark-acg-ap-southeast-1.tos-ap-southeast-1.volces.com"
+  if [[ "${selected_video_model}" == "bytedance/seedance-v1.0-pro-fast" ]]; then
+    expected_output_host="ark-content-generation-ap-southeast-1.tos-ap-southeast-1.volces.com"
+  fi
+  expected_output_host_found=false
+  for provider_output_host in "${provider_output_hosts[@]}"; do
+    if [[ "${provider_output_host//[[:space:]]/}" == "${expected_output_host}" ]]; then
+      expected_output_host_found=true
+      break
+    fi
+  done
+  if [[ "${expected_output_host_found}" != "true" ]]; then
+    echo "PROVIDER_OUTPUT_ALLOWED_HOSTS must include the exact reviewed host for the selected video model." >&2
+    exit 1
+  fi
 
   if [[ "${VERCEL_GATEWAY_SEEDANCE_RESOLUTION_TIER:-}" != "480p" && "${VERCEL_GATEWAY_SEEDANCE_RESOLUTION_TIER:-}" != "720p" ]]; then
     echo "VERCEL_GATEWAY_SEEDANCE_RESOLUTION_TIER must be 480p or 720p." >&2
