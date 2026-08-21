@@ -47,3 +47,8 @@ updated: 2026-08-21
 - fix: Added `TemplateCampaignWriteSchema` with a required UUID template version, repository revalidation, a PostgreSQL check constraint, explicit `mode` projection, strict persisted/direct Template parsing, and no-fallback rejection before all generation economics or provider-facing work. Advanced Mode remains explicitly separate for supported legacy records.
 - verification: Adversarial API/PostgreSQL tests cover absent/null template IDs, guest-claim writes, repository bypasses, missing product recipes, malformed historic Template rows, direct Template estimates, and hidden fields. Focused generation/API tests, full workspace tests, full API/DB/worker tests on a disposable PostgreSQL 17 instance, build/typecheck, creator smoke, lint, and migration/RLS proof passed.
 - files_changed: packages/contracts/src/creator.ts, packages/db/src/schema.ts, packages/db/migrations/0020_template_mode_requires_version.sql, packages/db/migrations/meta/_journal.json, apps/api/src/creator-repository.ts, apps/api/src/generation-repository.ts, apps/api/src/generation-service.ts, apps/web/src/features/create/projectStore.ts, apps/web/src/features/create/CreateStudio.tsx, related API/PostgreSQL/web tests, and migration/RLS validation fixtures.
+
+## Prevention
+
+- Why not caught: the first remediation treated the template version as optional for legacy compatibility and did not make persisted-mode selection explicit before generation parsing.
+- Guard: Template Mode is now rejected without a UUID version at every new write, uses one complete payload for persisted and direct quote paths, and has API, repository, PostgreSQL, migration, and no-work-before-rejection coverage.
