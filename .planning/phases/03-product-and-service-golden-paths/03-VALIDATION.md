@@ -1,7 +1,7 @@
 ---
 phase: 03
 slug: product-and-service-golden-paths
-status: draft
+status: validated
 nyquist_compliant: false
 wave_0_complete: false
 created: 2026-08-20
@@ -42,7 +42,7 @@ created: 2026-08-20
 | 03-01-02 | 01 | 1 | SOURCE-01, SOURCE-02, SOURCE-03 | T-03-01, T-03-02 | Every source kind retains fact provenance and stable media identity. | unit/contracts | `bun run --cwd apps/web test -- src/features/create/campaignFacts.test.ts && bun run --cwd packages/contracts test -- creator` | ✅ | ✅ green |
 | 03-01-03 | 01 | 1 | CREATE-02, CREATE-03 | T-03-03 | Source-first/template-first serialize identical normalized intent. | unit/contracts | `bun run --cwd apps/web test -- src/features/create/campaignDraft.test.ts && bun run --cwd packages/creative-engine test -- types` | ✅ | ✅ green |
 | 03-02-01 | 02 | 2 | SOURCE-01, SOURCE-02, SOURCE-03, CREATE-01 | T-03-01, T-03-02 | Product link reaches provenance-aware review. | component | `bun run --cwd apps/web test -- src/features/create/GoldenPathFlow.test.tsx -t "product link to confirmed facts"` | ✅ | ✅ green |
-| 03-02-02 | 02 | 2 | SOURCE-01, SOURCE-02, SOURCE-03 | T-03-02 | Service/manual/upload/footage share exact fact review. | component | `bun run --cwd apps/web test -- src/features/create/FactReviewStep.test.tsx` | ✅ | ✅ green |
+| 03-02-02 | 02 | 2 | SOURCE-01, SOURCE-02, SOURCE-03 | T-03-02 | Every declared customer source start is reachable before exact fact review; service/manual/upload/footage share exact fact review. | component | `bun run --cwd apps/web test --run src/features/create/SourceChoiceStep.test.tsx src/features/create/FactReviewStep.test.tsx` | ✅ | ✅ green — 4 tests passed in this audit |
 | 03-02-03 | 02 | 2 | CREATE-10 | T-03-08 | Bilingual source errors preserve the draft. | component | `bun run --cwd apps/web test -- src/features/create/GoldenPathStates.test.tsx src/features/create/FactReviewStep.test.tsx` | ✅ | ✅ green |
 | 03-03-01 | 03 | 3 | CREATE-04, CREATE-05 | T-03-04, T-03-05 | Eligible catalog data receives an exact server quote; catalog never prices. | API/contracts | `bun run --cwd apps/api test -- generation-service.test.ts -t "template quote eligibility" && bun run --cwd packages/contracts test -- contracts` | ✅ | ✅ green |
 | 03-03-02 | 03 | 3 | CREATE-05, CREATE-10 | T-03-04, T-03-05 | Ineligible/stale/changed quotes fail before reservation. | API | `bun run --cwd apps/api test -- generation-service.test.ts -t "template quote rejection"` | ✅ | ✅ green |
@@ -89,6 +89,34 @@ created: 2026-08-20
 |----------|-------------|------------|-------------------|
 | Provisioned product/service UAT proves real email auth, configured social auth where available, private claim/checksum, callback replay, authoritative quote and one durable accepted run with provider queue paused. | SOURCE-01..03, CREATE-01..10 | Requires a healthy disposable PostgreSQL/private-storage/Mailpit/API/worker/web stack and browser session. | Run Task 03-08-02 exactly; verify one project/version/run, checksum equality, cross-user denial, replay idempotency, non-estimate quoteId, paused render queue and no provider marker/attempt/cost. Phase 03 remains incomplete if this row is not PASS. |
 | Responsive and accessible completion across the required matrix. | CREATE-01, CREATE-05..10 | Visual hierarchy, focus order, RTL, motion, and screen-reader announcements require rendered inspection. | Complete both paths at 375, 768, 1024, and 1440 pixels in English/Arabic and light/dark; verify keyboard-only flow, 44px targets, visible focus, no overflow, reduced motion, and polite status announcements. |
+
+## Validation Audit 2026-08-21
+
+| Metric | Count |
+|--------|-------|
+| Requirements mapped | 13/13 |
+| Automated behavioral checks mapped | 21/21 task rows |
+| New automated gap tests | 1 |
+| New test commands executed in this audit | 3 |
+| PostgreSQL-environment-gated checks | 3 |
+| Browser/manual-only checks | 1 matrix |
+| Provisioned UAT checks | 1 open |
+
+### Evidence Status
+
+- **Automated:** The source-picker tracer added by this audit passed after capacity was restored: `SourceChoiceStep.test.tsx` plus `FactReviewStep.test.tsx` ran 4/4 green. `bun run test:creator-smoke` ran 12/12 green, and `bun run test:all` ran 457 passing tests across workspaces (with 43 environment-guarded PostgreSQL/service skips). An initial `ENOSPC` attempt is retained in the audit trail as environment history, not product-test evidence.
+- **PostgreSQL-environment-gated:** Guest-claim ownership, claim lifecycle, and footage-migration proof require a disposable PostgreSQL 17 database with the application schema. The current local service is not provisioned for those tests.
+- **Browser/manual-only:** The responsive, RTL, keyboard, screen-reader, reduced-motion, and visual hierarchy matrix remains manual evidence. No browser observation is inferred from component tests.
+- **Provisioned UAT:** `03-UAT-EVIDENCE.md` remains authoritative: email/social auth, private claim/checksum, authoritative quote, and durable paused-queue submission are **NOT VERIFIED** until a healthy disposable stack is available. No provider or paid call was made during this audit.
+
+### Required Rerun
+
+```bash
+bun run --cwd apps/web test --run src/features/create/SourceChoiceStep.test.tsx src/features/create/FactReviewStep.test.tsx
+bun run test:creator-smoke
+bun scripts/infra/run-phase3-provisioned-uat.ts --verify-evidence
+node scripts/infra/check-phase3-evidence-redaction.mjs
+```
 
 ---
 
