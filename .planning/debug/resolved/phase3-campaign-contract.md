@@ -52,7 +52,7 @@ updated: 2026-08-21
 - root_cause: Refined twice: after strict Template writes and generation reads were added, direct internal guest-claim callers still trusted TypeScript types and could create a project and claim checkpoint before any strict Template snapshot parse.
 - fix: GuestClaimService now parses every snapshot before eligibility or repository work; GuestClaimRepository repeats the strict parse before transaction/persistence and when turning a saved operation into a version. Invalid campaign errors have a stable API response, while valid claim replay remains idempotent.
 - verification: Focused service, API and PG tests pass; adversarial PostgreSQL assertions prove malformed Template snapshots leave project/claim/quote/reservation/render counts unchanged. Full workspaces test/typecheck/build, creator smoke, lint (pre-existing warnings only), full database/API/worker PostgreSQL 17 suites, and Phase 2 disposable migration/RLS proof pass.
-- files_changed: fb42f6b and fa2c60f contain the first two remediations; final guest-claim remediation committed after this session is archived.
+- files_changed: fb42f6b and fa2c60f contain the first two remediations; 8c3e449 contains the final service/repository guest-claim enforcement and adversarial tests.
 
 ## Prevention
 
