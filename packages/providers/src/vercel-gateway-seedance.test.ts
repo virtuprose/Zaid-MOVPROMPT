@@ -125,6 +125,24 @@ describe("Vercel AI Gateway Seedance 2.5 adapter", () => {
     expect(fetcher.mock.calls.some(([url]) => String(url).includes("/cancel"))).toBe(false);
   });
 
+  it("keeps a completed operation without a downloadable result on the same durable reconciliation path", async () => {
+    const fetcher = vi.fn<typeof fetch>(async (url) => {
+      if (String(url).endsWith("/start")) {
+        return Response.json({ operation: { taskId: "task-without-output" } });
+      }
+      return Response.json({ status: "completed", videos: [] });
+    });
+    const provider = adapter(fetcher);
+    const { providerRequestId } = await provider.submit(generation());
+
+    await expect(provider.getStatus(providerRequestId)).resolves.toEqual({
+      providerRequestId,
+      status: "processing",
+    });
+    expect(fetcher.mock.calls.filter(([url]) => String(url).endsWith("/start"))).toHaveLength(1);
+    expect(fetcher.mock.calls.filter(([url]) => String(url).endsWith("/status"))).toHaveLength(1);
+  });
+
   it("inherits the prepared 3:4 canvas for a 4:5 delivery and keeps other references", async () => {
     const fetcher = vi.fn<typeof fetch>(async (_url, init) => {
       const body = JSON.parse(String(init?.body));
