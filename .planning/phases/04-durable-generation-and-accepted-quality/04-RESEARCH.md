@@ -358,9 +358,9 @@ await technicalAnalyzer.analyze(privateObject, immutableConfiguration);
 
 | # | Claim | Section | Risk if Wrong |
 |---|-------|---------|---------------|
-| A1 | A bounded exponential reconciliation cadence such as 15 seconds, 30 seconds, then capped 60–120 seconds will satisfy latency/cost needs. | Architecture Patterns | It may delay recovery or overload provider/status endpoints; set only with observed canary latency and queue evidence. |
-| A2 | Current official public docs do not expose a Gateway request-cancellation endpoint usable by this adapter. | Summary / Pitfall 5 | Gateway could add one; verify immediately before enabling post-acceptance cancellation. |
-| A3 | The observed exact Seedance output host remains valid for production activation. | Provider operation | Hosts can change; activation must record the actual approved canary host before enablement. |
+| A1 | [ASSUMED] A bounded exponential reconciliation cadence such as 15 seconds, 30 seconds, then capped 60–120 seconds will satisfy latency/cost needs. | Architecture Patterns | It may delay recovery or overload provider/status endpoints; set only with observed canary latency and queue evidence. |
+| A2 | [ASSUMED] Current official public docs do not expose a Gateway request-cancellation endpoint usable by this adapter. | Summary / Pitfall 5 | Gateway could add one; verify immediately before enabling post-acceptance cancellation. |
+| A3 | [ASSUMED] The observed exact Seedance output host remains valid for production activation. | Provider operation | Hosts can change; activation must record the actual approved canary host before enablement. |
 
 ## Open Questions
 
