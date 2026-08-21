@@ -1,10 +1,16 @@
 import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 
 import { PROVIDER_BENCHMARK_CORPUS } from "@movprompt/creative-engine";
 import { describe, expect, it, vi } from "vitest";
 
 import {
   benchmarkFactsChecksum,
+  calculateCalibrationMetrics,
+  calibrationApprovalRecordDigest,
+  calibrationCandidateManifestDigest,
+  calibrationEvidenceDigest,
   createCalibrationCandidateManifest,
   parseCalibrationCandidateManifest,
   validateCalibrationArtifact,
@@ -34,6 +40,78 @@ function manifestInput(): BenchmarkManifest {
       };
     }),
   };
+}
+
+function attestationDigest(role: string): string {
+  return checksum(`attestation:${role}`);
+}
+
+function approvedEvidence(candidates: ReturnType<typeof createCalibrationCandidateManifest>) {
+  const completedAt = "2026-08-21T12:00:00.000Z";
+  const reviewerRoleAttestations = [
+    "media_qa_reviewer",
+    "kuwaiti_arabic_reviewer",
+    "clinic_compliance_reviewer",
+  ].map((reviewerRole) => ({
+    reviewerRole: reviewerRole as "media_qa_reviewer" | "kuwaiti_arabic_reviewer" | "clinic_compliance_reviewer",
+    attestationDigest: attestationDigest(reviewerRole),
+    qualified: true as const,
+    independentlyCompleted: true as const,
+    completedAt,
+  }));
+  const adjudicatorRoleAttestations = [{
+    adjudicatorRole: "quality_adjudicator" as const,
+    attestationDigest: attestationDigest("quality_adjudicator"),
+    qualified: true as const,
+    completedAt,
+  }];
+  const labels = candidates.candidates.flatMap((candidate) => {
+    const reviewerRoles = candidate.vertical === "clinic"
+      ? ["media_qa_reviewer", "clinic_compliance_reviewer"] as const
+      : ["media_qa_reviewer", "kuwaiti_arabic_reviewer"] as const;
+    return reviewerRoles.map((reviewerRole) => ({
+      candidateId: candidate.id,
+      candidateChecksumSha256: candidate.candidateChecksumSha256,
+      reviewerRole,
+      roleAttestationDigest: attestationDigest(reviewerRole),
+      accepted: candidate.evaluator.decision === "accepted",
+      criticalDefect: candidate.evaluator.criticalDefect,
+      dimensions: candidate.evaluator.dimensions,
+      completedAt,
+      defectCategory: candidate.evaluator.criticalDefect ? "product_or_fact" as const : "none" as const,
+    }));
+  });
+  const adjudications = candidates.candidates.map((candidate) => ({
+    candidateId: candidate.id,
+    candidateChecksumSha256: candidate.candidateChecksumSha256,
+    adjudicatorRole: "quality_adjudicator" as const,
+    adjudicatorAttestationDigest: attestationDigest("quality_adjudicator"),
+    accepted: candidate.evaluator.decision === "accepted",
+    criticalDefect: candidate.evaluator.criticalDefect,
+    dimensions: candidate.evaluator.dimensions,
+    completedAt,
+    defectCategory: candidate.evaluator.criticalDefect ? "product_or_fact" as const : "none" as const,
+  }));
+  const metrics = calculateCalibrationMetrics(candidates, { labels, adjudications });
+  const unsignedEvidence = {
+    datasetVersion: candidates.version,
+    evaluatorVersion: candidates.candidates[0]!.evaluator.evaluatorVersion,
+    rubricVersion: candidates.candidates[0]!.evaluator.rubricVersion,
+    labels,
+    reviewerRoleAttestations,
+    adjudicatorRoleAttestations,
+    adjudications,
+    metrics,
+  };
+  const evidenceDigest = calibrationEvidenceDigest(calibrationCandidateManifestDigest(candidates), unsignedEvidence);
+  const approvalRecord = {
+    approverRole: "quality_calibration_approver" as const,
+    evidenceDigest,
+    approvedAt: completedAt,
+    approvalRecordDigest: "",
+  };
+  approvalRecord.approvalRecordDigest = calibrationApprovalRecordDigest(approvalRecord);
+  return { ...unsignedEvidence, approvalRecord };
 }
 
 describe("live benchmark manifest", () => {
@@ -82,6 +160,16 @@ describe("live benchmark manifest", () => {
 });
 
 describe("qualified-human calibration evidence", () => {
+  it("keeps the checked-in candidate fixture redacted and facts-locked", () => {
+    const fixture = JSON.parse(readFileSync(
+      fileURLToPath(new URL("./__fixtures__/kw-video-48-v1.json", import.meta.url)),
+      "utf8",
+    ));
+    const candidates = parseCalibrationCandidateManifest(fixture);
+    expect(candidates.candidates).toHaveLength(48);
+    expect(JSON.stringify(candidates)).not.toMatch(/objectKey|https?:\/\/|provider|approval|adjudication|reviewer/iu);
+  });
+
   it("builds a candidate-only corpus with immutable checksums and no human approval data", () => {
     const candidates = createCalibrationCandidateManifest(parseBenchmarkManifest(manifestInput()));
 
@@ -142,5 +230,27 @@ describe("qualified-human calibration evidence", () => {
 
     expect(() => validateCalibrationArtifact({ candidateManifest: candidates, evidence: unsafeEvidence }))
       .toThrow(/calibration_(forbidden_field|labels_incomplete)/u);
+  });
+
+  it("accepts only complete independently attested evidence whose metrics and approval digest recompute exactly", () => {
+    const candidates = createCalibrationCandidateManifest(parseBenchmarkManifest(manifestInput()));
+    const evidence = approvedEvidence(candidates);
+    expect(validateCalibrationArtifact({
+      candidateManifest: candidates,
+      evidence,
+      activeEvaluatorVersion: evidence.evaluatorVersion,
+      activeRubricVersion: evidence.rubricVersion,
+    })).toMatchObject({ passed: true, datasetVersion: "kw-video-48-v1" });
+
+    const altered = structuredClone(evidence);
+    altered.metrics.weightedCohenKappa = 0.7;
+    const { approvalRecord: _approvalRecord, ...unsignedAlteredEvidence } = altered;
+    altered.approvalRecord.evidenceDigest = calibrationEvidenceDigest(
+      calibrationCandidateManifestDigest(candidates),
+      unsignedAlteredEvidence,
+    );
+    altered.approvalRecord.approvalRecordDigest = calibrationApprovalRecordDigest(altered.approvalRecord);
+    expect(() => validateCalibrationArtifact({ candidateManifest: candidates, evidence: altered }))
+      .toThrow("calibration_metrics_mismatch");
   });
 });
