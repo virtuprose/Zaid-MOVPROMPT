@@ -69,6 +69,28 @@ describe("media quality analyzers", () => {
     expect(result[0]).toMatchObject({ dimension: "technical", score: 0, hardFailure: true });
   });
 
+  it("fails closed when the exact private delivery object cannot fully decode", async () => {
+    const analyzer = createFfprobeTechnicalAnalyzer({
+      storage,
+      probe: vi.fn(async () => ({
+        streams: [{ codec_type: "video", codec_name: "h264", width: 1080, height: 1920, avg_frame_rate: "24/1" }],
+        format: { duration: "8.0", format_name: "mov,mp4" },
+      })),
+      decode: vi.fn(async () => { throw new Error("truncated delivery object"); }),
+    });
+
+    await expect(analyzer.analyze({
+      candidate,
+      attemptNumber: 0,
+      configuration: { generation: { durationSeconds: 8, resolution: "720p", aspectRatio: "9:16", audio: false } },
+    })).resolves.toEqual([expect.objectContaining({
+      dimension: "technical",
+      score: 0,
+      hardFailure: true,
+      evidence: "truncated delivery object",
+    })]);
+  });
+
   const dimensions = [
     "product_identity", "prompt_adherence", "motion_realism", "visual_artifacts",
     "brand_safety", "dialect_fidelity", "speech_sync", "safe_zones", "compliance",

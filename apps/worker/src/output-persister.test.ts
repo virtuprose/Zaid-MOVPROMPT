@@ -179,14 +179,22 @@ describe("provider output persister", () => {
     })).rejects.toThrow("provider_output_url_invalid");
   });
 
-  it("supports explicit DNS-bound suffix rules and rejects private DNS answers before download", async () => {
+  it("requires exact reviewed output hosts and rejects private DNS answers before download", async () => {
     const fetcher = vi.fn(async () => new Response(mp4, {
       status: 200,
       headers: { "content-type": "video/mp4" },
     }));
-    const persister = createProviderOutputPersister({
+    expect(() => createProviderOutputPersister({
       storage: storage(),
       allowedHosts: [".volces.com"],
+      resolveHost: publicDns,
+      normalizer: async (bytes) => bytes,
+      fetcher,
+    })).toThrow("provider_output_host_rule_invalid");
+
+    const persister = createProviderOutputPersister({
+      storage: storage(),
+      allowedHosts: ["ark-content-generation-ap-southeast-1.tos-ap-southeast-1.volces.com"],
       resolveHost: async () => [{ address: "10.0.0.8", family: 4 }],
       normalizer: async (bytes) => bytes,
       fetcher,
@@ -207,7 +215,7 @@ describe("provider output persister", () => {
     }));
     const persister = createProviderOutputPersister({
       storage: storage(),
-      allowedHosts: [".volces.com", "media.provider.test"],
+      allowedHosts: ["ark-content-generation-ap-southeast-1.tos-ap-southeast-1.volces.com", "media.provider.test"],
       resolveHost: publicDns,
       normalizer: async (bytes) => bytes,
       fetcher,
