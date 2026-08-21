@@ -11,6 +11,7 @@ describe("template recommendations", () => {
       language: "en" as const,
       aspectRatio: "9:16" as const,
       hasSource: true,
+      subjectText: "Kinza Cola crisp Kuwait beverage",
     };
 
     const first = recommendTemplates(CREATOR_TEMPLATES, input);
@@ -19,6 +20,7 @@ describe("template recommendations", () => {
     expect(first[0]?.template.goals).toContain("launch");
     expect(first.map((item) => item.template.id)).toEqual(second.map((item) => item.template.id));
     expect(first).toHaveLength(3);
+    expect(first[0]?.template.id).toBe("food-beverage");
     expect(first[0]?.whyThisFits).toContain("launch");
   });
 

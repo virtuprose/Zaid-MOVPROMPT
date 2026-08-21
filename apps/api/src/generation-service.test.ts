@@ -740,6 +740,37 @@ describe("template quote eligibility", () => {
     }, null)).resolves.toMatchObject({ capability: "video.product_fidelity" });
   });
 
+  it("prices a guest upload from its declared local image before private claim", async () => {
+    const productTemplate = {
+      ...eligibleTemplate(),
+      eligibility: {
+        ...eligibleTemplate().eligibility!,
+        requiredInputs: ["product_image", "subject_name", "call_to_action"],
+        capabilityPolicy: ["video.cinematic", "video.product_fidelity"],
+      },
+    };
+    const { api } = quoteApi(productTemplate);
+
+    await expect(api.createQuote({
+      templateVersionId,
+      configuration: strictTemplateEstimate(templateVersionId, ({ configuration }) => {
+        const creatorProject = configuration.creatorProject as {
+          product: { images: Array<Record<string, unknown>> };
+        };
+        creatorProject.product.images = [{
+          id: randomUUID(),
+          name: "customer-product.jpg",
+          url: "",
+          mimeType: "image/jpeg",
+          source: "upload",
+        }];
+      }),
+    }, null)).resolves.toMatchObject({
+      capability: "video.product_fidelity",
+      estimateOnly: true,
+    });
+  });
+
   it("uses the stored template policy for authenticated project-version quotes", async () => {
     const projectId = randomUUID();
     const versionId = randomUUID();

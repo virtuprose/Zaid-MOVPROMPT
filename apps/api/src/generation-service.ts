@@ -276,12 +276,28 @@ function eligibilityContext(configuration: GenerationConfiguration, root: JsonOb
   const product = objectValue(creativeBrief?.product);
   const quoteContext = objectValue(configuration.templateQuoteContext);
   const creatorProject = objectValue(root.creatorProject);
+  const creatorProduct = objectValue(creatorProject?.product);
+  const declaredLocalImages = Array.isArray(creatorProduct?.images)
+    ? creatorProduct.images.filter((candidate) => {
+        const image = objectValue(candidate);
+        return Boolean(
+          image
+            && stringValue(image.id)
+            && ["image/jpeg", "image/png", "image/webp"].includes(stringValue(image.mimeType).toLowerCase()),
+        );
+      }).length
+    : 0;
   return {
     goal: stringValue(creativeBrief?.goal),
     language: stringValue(creativeBrief?.language),
     market: stringValue(creativeBrief?.market),
     ratio: configuration.aspectRatio ?? "",
-    references: configuration.references.length,
+    // A guest upload has a stable local asset identity before authentication,
+    // but it cannot have a private object key yet. It may satisfy an estimate's
+    // input disclosure only. Authenticated quote/start paths still call
+    // assertOwnedGenerationReferences first and require the verified private
+    // asset row, checksum, MIME, size and project namespace.
+    references: Math.max(configuration.references.length, declaredLocalImages),
     subjectName: stringValue(product?.name),
     brand: stringValue(product?.brand),
     callToAction: stringValue(product?.callToAction),

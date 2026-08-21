@@ -7,8 +7,8 @@ MovPrompt moves from a feature-rich prototype to a production Kuwait Campaign Au
 ## Phases
 
 - [x] **Phase 1: Production Truth Foundation** - Make availability, pricing, worker state, progress, and initial settlement authoritative. (completed 2026-08-19)
-- [ ] **Phase 2: Guest, Authentication, and Data Integrity** - Preserve exact guest campaigns through authentication and private cloud claiming.
-- [ ] **Phase 3: Product and Service Golden Paths** - Deliver one simple end-to-end campaign flow for products and service businesses.
+- [x] **Phase 2: Guest, Authentication, and Data Integrity** - Preserve exact guest campaigns through authentication and private cloud claiming. (completed 2026-08-20)
+- [x] **Phase 3: Product and Service Golden Paths** - Deliver one simple end-to-end campaign flow for products and service businesses. (completed 2026-08-21)
 - [ ] **Phase 4: Durable Generation and Accepted Quality** - Produce owned, validated, quality-approved output without browser dependence.
 - [ ] **Phase 5: Projects and Immutable Version Recovery** - Make every campaign, run, output, and accepted version durable and recoverable.
 - [ ] **Phase 6: Guided Editor and Social Campaign Pack** - Turn one accepted master into editable, matching, multi-format business deliverables.
@@ -100,7 +100,7 @@ Plans:
 
 **Wave 8** *(blocked on Wave 7 completion)*
 
-- [ ] 02-08: Complete and verify the guest/auth recovery UI across languages, themes, viewports, and accessibility states.
+- [x] 02-08: Complete and verify the guest/auth recovery UI across languages, themes, viewports, and accessibility states.
 
 ### Phase 3: Product and Service Golden Paths
 
@@ -116,7 +116,7 @@ Plans:
 4. Template-first and source-first entry converge on the same draft and every launch option truthfully states inputs, preview type, duration, format, and quote.
 5. Every screen has one clear task/action and usable loading, empty, validation, offline, error, and success states at mobile and desktop sizes.
 
-**Plans:** 7/8 plans executed
+**Plans:** 8/8 plans executed
 
 Plans:
 **Wave 1**
@@ -149,7 +149,7 @@ Plans:
 
 **Wave 8** *(blocked on Wave 7 completion)*
 
-- [ ] 03-08-PLAN.md — Automated smoke and rendered accessibility evidence pass; provisioned auth/private-claim/quote/worker UAT remains required.
+- [x] 03-08-PLAN.md — Automated smoke, rendered accessibility evidence, and provisioned auth/private-claim/quote/worker UAT pass.
 
 ### Phase 4: Durable Generation and Accepted Quality
 
@@ -309,8 +309,8 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Production Truth Foundation | 3/3 | Complete    | 2026-08-19 |
-| 2. Guest, Authentication, and Data Integrity | 8/8 | In Progress|  |
-| 3. Product and Service Golden Paths | 2/8 | In Progress|  |
+| 2. Guest, Authentication, and Data Integrity | 8/8 | Complete | 2026-08-20 |
+| 3. Product and Service Golden Paths | 8/8 | Complete | 2026-08-21 |
 | 4. Durable Generation and Accepted Quality | 0/3 | Not started | - |
 | 5. Projects and Immutable Version Recovery | 0/2 | Not started | - |
 | 6. Guided Editor and Social Campaign Pack | 0/3 | Not started | - |

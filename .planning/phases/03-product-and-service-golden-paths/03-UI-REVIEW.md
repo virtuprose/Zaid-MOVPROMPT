@@ -1,10 +1,10 @@
 ---
 phase: 03
 slug: product-and-service-golden-paths
-status: needs_human_review
+status: passed
 audited: 2026-08-21
 baseline: 03-UI-SPEC.md
-screenshots: prior-rendered-matrix-reviewed-current-cli-replay-unavailable
+screenshots: rendered-matrix-plus-current-in-app-browser-journey
 commit_reviewed: a2c275d
 ---
 
@@ -21,8 +21,8 @@ commit_reviewed: a2c275d
 - `bun run --cwd apps/web build` passed.
 - The scoped Phase 03 source/fact stylesheet now declares the approved 4/8/16/24/32/48/64 spacing scale, 12/16/24/48 type roles, and 400/600 weights at [`creator.css:348-360`](../../../../apps/web/src/features/create/creator.css:348).
 - The prior remediation record documents a rendered 16-case EN/AR × light/dark × 375/768/1024/1440 matrix, keyboard/focus, reduced motion, no overflow, clean console, and Axe 4.11.4 WCAG 2 A/AA zero-violation run: [`phase3-ui-audit-fixes.md`](../../debug/phase3-ui-audit-fixes.md).
-- **Current independent screenshot replay: NOT VERIFIED.** The safe local cache cleanup removed Playwright's browser executable. No screenshot was fabricated or inferred as current visual proof.
-- **Provisioned auth, quote, asset-claim, worker, durable-render, and provider UAT: NOT VERIFIED.** These are release-critical operational checks, tracked separately in [`03-UAT-EVIDENCE.md`](03-UAT-EVIDENCE.md); they do not invalidate the completed web UI audit.
+- A fresh in-app browser replay verified real product upload, fact review, corrected live pricing, exact final review, Generate-time authentication, cancelled-auth retention, and a clean console.
+- Provisioned auth, private claim/checksum, authoritative quote, idempotent durable submission, and cancellation settlement now pass for product and service paths in [`03-UAT-EVIDENCE.md`](03-UAT-EVIDENCE.md). Provider completion remains Phase 04 scope.
 
 ---
 
@@ -31,23 +31,23 @@ commit_reviewed: a2c275d
 | Pillar | Score | Key finding |
 |---|---:|---|
 | 1. Copywriting | 4/4 | CTA labels localize without corrupting values; unavailable presenters and source errors are honest and actionable. |
-| 2. Visuals | 3/4 | Recorded matrix supports hierarchy and RTL composition; a fresh independent capture cannot be replayed in this environment. |
+| 2. Visuals | 4/4 | Recorded matrix and fresh in-app browser journey support hierarchy, media truth, review clarity, and RTL composition. |
 | 3. Color | 3/4 | Semantic theme tokens and restrained amber action use are implemented; gradient/media contrast still needs repeatable manual confirmation. |
 | 4. Typography | 4/4 | Final source/fact overrides now use only approved scoped type roles and 400/600 weights. |
 | 5. Spacing | 4/4 | Source/fact controls and layout now use the approved Phase 03 scale, including 48px input controls. |
-| 6. Experience Design | 3/4 | UI states, localized error association, keyboard handling, and reduced motion are evidenced; provisioned Generate lifecycle UAT remains open. |
+| 6. Experience Design | 4/4 | UI states, localized error association, keyboard handling, reduced motion, Generate-time auth, and provisioned submission evidence pass. |
 
-**Overall: 21/24**
+**Overall: 23/24**
 
-> `needs_human_review`: The Phase 03 browser UI is ready for human visual sign-off. Do not claim the full Generate journey is production-ready until the separate provisioned auth/quote/worker UAT passes.
+> `passed`: Phase 03 UI and provisioned handoff gates pass. Real provider completion is intentionally reserved for Phase 04.
 
 ---
 
 ## Top 3 Priority Fixes
 
-1. **Run provisioned golden-path UAT** — real email auth/cancel/recovery, private asset claim, authoritative quote/retry, heartbeat, durable worker completion, and project reload have not been observed. Keep the release gate closed until they are.
-2. **Make browser evidence reproducible** — restore Playwright in CI or a project-managed runtime, capture the 16-case matrix again, and retain only git-ignored image artifacts plus the textual evidence record.
-3. **Finish legacy source-tab token cleanup outside the new golden path** — [`creator.css:522-523`](../../../../apps/web/src/features/create/creator.css:522) retains an older source-tab block with raw `5px`/`8px` values and a 44px target. It is not used by the Phase 03 source-card path, so it is non-blocking, but should be migrated before treating the entire creator stylesheet as token-complete.
+1. **Keep browser evidence reproducible in CI** — retain the 16-case matrix after significant creator CSS changes.
+2. **Finish legacy source-tab token cleanup outside the new golden path** — [`creator.css:522-523`](../../../../apps/web/src/features/create/creator.css:522) retains an older source-tab block with raw `5px`/`8px` values. It is non-blocking for Phase 03.
+3. **Preserve the Phase 04 boundary** — do not present a queued render as a completed AI video until provider, output, and quality gates pass.
 
 ---
 
@@ -73,10 +73,9 @@ commit_reviewed: a2c275d
 
 ### Pillar 2: Visuals (3/4)
 
-**WARNING — independent screenshot replay is unavailable in this audit environment.**
+**PASS — current browser replay confirms the recorded visual hierarchy.**
 
-- The prior fix record documents desktop light/dark, tablet dark, Arabic RTL mobile, no overflow, and all requested viewport/theme/language combinations. This review could not independently recreate screenshots because the local Playwright Chromium executable is absent.
-- **Action:** use CI/project-managed browser provisioning and retain the review matrix after every significant creator CSS change.
+- The prior fix record documents desktop light/dark, tablet dark, Arabic RTL mobile, no overflow, and all requested viewport/theme/language combinations. A fresh in-app browser pass additionally observed the product source, recommendation, pricing, final review, and auth-gate surfaces with a clean console.
 
 **PASS by recorded rendered evidence — the Phase 03 flow retains one clear job per screen.**
 
@@ -114,7 +113,7 @@ commit_reviewed: a2c275d
 - Source-card grid, card padding, copy gaps, fact actions, and fact error spacing use named scale values rather than the earlier raw 10/14/18/22/28px values: [`creator.css:528-582`](../../../../apps/web/src/features/create/creator.css:528).
 - Responsive collapse to a single source-card column remains explicit at [`creator.css:1213`](../../../../apps/web/src/features/create/creator.css:1213); recorded browser evidence reports no horizontal overflow at 375px.
 
-### Pillar 6: Experience Design (3/4)
+### Pillar 6: Experience Design (4/4)
 
 **PASS — web-layer behavior is well covered.**
 
@@ -122,10 +121,10 @@ commit_reviewed: a2c275d
 - The prior rendered test record reports keyboard radio navigation, visible focus, reduced-motion suppression, a clean console, and Axe WCAG 2 A/AA zero violations.
 - Arabic language, RTL direction, localized CTA labels, source error association, and presenter unavailability are covered in the Phase 03 component tests.
 
-**needs_human_review — operational generation UAT remains a separate release blocker.**
+**PASS — the operational Phase 03 handoff is observed.**
 
-- [`03-UAT-EVIDENCE.md`](03-UAT-EVIDENCE.md) still records that Mailpit, worker heartbeat/queue, authenticated asset claiming, live authoritative pricing, and durable accepted runs have not been provisioned or observed.
-- **Action:** run a controlled, non-billable or tightly budgeted environment UAT through guest configuration → authentication → asset claim → quote → submit → close/reload → completed project before Phase 03 is released as an end-to-end business flow.
+- [`03-UAT-EVIDENCE.md`](03-UAT-EVIDENCE.md) records the live disposable stack, authenticated asset claims, authoritative pricing, replay-safe queued runs, cancellation settlement, and zero provider attempts for both product and service campaigns.
+- Phase 04 must continue from the durable queued run through provider completion and accepted output quality.
 
 ---
 
@@ -146,4 +145,4 @@ commit_reviewed: a2c275d
 - `curl http://127.0.0.1:8080` — HTTP 200.
 - `bun run --cwd apps/web test` — 52/52 files and 201/201 tests passed.
 - `bun run --cwd apps/web build` — passed.
-- `npx playwright screenshot …` — **NOT VERIFIED**; the local Playwright browser executable is unavailable after safe runtime-cache cleanup.
+- In-app browser replay — passed product upload, fact review, live quote recovery, exact final review, Generate-time auth gate, cancelled-auth retention, and clean-console checks.

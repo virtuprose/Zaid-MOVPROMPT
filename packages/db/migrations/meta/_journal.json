@@ -148,6 +148,13 @@
       "when": 1787305500000,
       "tag": "0020_template_mode_requires_version",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1787306400000,
+      "tag": "0021_guest_claim_role_privileges",
+      "breakpoints": true
     }
   ]
 }

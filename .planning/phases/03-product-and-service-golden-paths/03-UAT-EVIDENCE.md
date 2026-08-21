@@ -4,42 +4,58 @@
 
 ## Status
 
-**NOT VERIFIED — Phase 03 remains formally incomplete.**
+**PASS — Phase 03 provisioned UAT completed on a disposable local stack.**
 
-The local provisioning precondition is only partially available: PostgreSQL 17, MinIO, the API health endpoint, and the web interface respond. The required Mailpit service is unavailable, no worker heartbeat/paused render-work queue was demonstrated, and the API advertises generation as disabled with both video capabilities unavailable. An authoritative quote and a durable accepted render run therefore cannot be exercised safely.
+PostgreSQL 17, private MinIO storage, Mailpit, the Hono API, Better Auth, and a restricted-role worker heartbeat were assembled together. Render dispatch stayed paused by a one-hour outbox poll interval, so the test could prove durable submission without contacting an AI provider.
 
 No provider submission, provider request, provider attempt, or paid cost was made.
 
-## Latest rerun
+## Observed product path
 
-On 2026-08-21, the final root verification reran `bun scripts/infra/run-phase3-provisioned-uat.ts`. The loopback API at `127.0.0.1:8787` was not running, so the harness failed before any mutation with a connection-refused readiness result. The same pass confirmed the web creator remained available at `127.0.0.1:8080` and the automated creator smoke, workspace typecheck, production build, bundle gate, and evidence-redaction check all passed.
+- A real local Kinza product image was uploaded through the private asset API.
+- The stored object matched the submitted SHA-256 checksum and byte size.
+- Guest claim start, asset checkpoint, finalization, and replay returned one project.
+- A stable private object key replaced the browser-local image before immutable version creation.
+- The authoritative quote was non-estimate, configuration-bound, and priced at 80 credits for an 8-second 720p product-fidelity campaign.
+- Replaying the same render idempotency key returned the same durable run.
+- The Projects response exposed the same latest run and `generating` project state.
+- Cancelling twice before provider acceptance returned the same cancelled run, restored the starter entitlement, left the credit ledger empty, and left provider-attempt count at zero.
 
-This newer observation tightens the blocker: the required services are not currently provisioned together. It does not invalidate the earlier partial observations below, and it does not authorize a simulated or paid generation attempt.
+## Observed service path
 
-## Read-only observations
+- A manually confirmed Kuwait booking-service campaign used a real service reference image.
+- Private upload, checksum verification, claim finalization, immutable version creation, version replay, quote, and render replay all passed.
+- The authoritative quote was non-estimate, configuration-bound, and priced at 120 credits for a 12-second 720p campaign.
+- Service facts, bilingual campaign language, CTA, KWD price, delivery settings, and rights remained in the strict persisted payload.
+- Cancellation before provider acceptance restored the same starter entitlement exactly once and produced no ledger entry or provider attempt.
 
-| Boundary | Observation | Status |
-|---|---|---|
-| PostgreSQL | Loopback PostgreSQL 17 accepts a read-only readiness check. | observed |
-| Private storage | MinIO liveness endpoint responds. | observed |
-| API | Health endpoint reports the API and PostgreSQL dependency healthy. | observed |
-| Email delivery | Mailpit UI is unavailable, so a real email/password delivery journey is not demonstrated. | NOT VERIFIED |
-| Social auth | The capability response advertises no configured Google or Apple provider. | not applicable for this observed runtime |
-| Asset claim and checksum | No authenticated browser/session and private upload claim were performed. | NOT VERIFIED |
-| Callback replay | No real callback/pending intent was submitted. | NOT VERIFIED |
-| Authoritative quote | Generation is disabled, so no non-estimate quote identifier was available. | NOT VERIFIED |
-| Durable accepted run | Render queue pause and worker heartbeat were not available; no submission was made. | NOT VERIFIED |
-| Provider isolation | No provider marker, request, attempt, or cost was created. | observed |
+## Browser evidence
 
-## Command record
+- A fresh guest uploaded the Kinza image in `/create`, reviewed its exact name, description, brand, and three-decimal KWD price, and reached outcome recommendations without prompts or model choices.
+- The browser initially exposed a real mismatch: local uploaded media was not counted for a guest price estimate. The server continued to fail closed.
+- The fix now lets declared guest JPEG/PNG/WebP media satisfy estimate-only input disclosure while authenticated quote/start still require the owned private object, checksum, MIME, size, and namespace.
+- Product-aware ranking now recommends category-matched templates before unrelated specialist templates, with broad product templates as the safe fallback.
+- The corrected live browser returned an 80-credit guest estimate, preserved the exact campaign on final review, opened authentication only after Generate, and retained the campaign after the auth dialog was closed.
+- The final browser console contained no errors or warnings.
 
-- `bun scripts/infra/run-phase3-provisioned-uat.ts` — intentionally exits non-zero after read-only readiness inspection when UAT prerequisites are missing; no mutation is attempted.
-- `bun scripts/infra/run-phase3-provisioned-uat.ts --verify-evidence` — confirms this artifact explicitly records the blocked result without a false pass.
+## Database and isolation evidence
 
-## Required follow-up
+- A fresh migration run uncovered missing restricted-role privileges on the two guest-claim tables.
+- Migration `0021_guest_claim_role_privileges.sql` grants only the API permissions needed for owner-scoped claim lifecycle and only the worker permissions needed for abandoned-claim reconciliation; PUBLIC remains revoked.
+- The guarded migration script created a fresh disposable PostgreSQL 17 database, applied all migrations twice, checked RLS and role privileges, and dropped the database successfully.
 
-1. Start a disposable local stack with PostgreSQL, private storage, Mailpit, API, and worker heartbeat; enable authoritative pricing and one approved capability without enabling provider dispatch.
-2. Pause the render-work queue and verify the pause while heartbeat remains fresh.
-3. Use disposable accounts to complete email authentication, configured social flows if advertised, private claim checksum equality, wrong-account denial, callback replay, authoritative quote, and exactly one durable accepted run.
-4. Release or cancel the untouched reservation before unpausing the queue; record only redacted counts and safe evidence.
-5. Replace this status only after the real evidence and browser matrix both pass.
+## Regression evidence
+
+- Full workspace tests: 463 passed, 43 environment-guarded skips.
+- Web: 52 files, 201 tests passed.
+- API: 19 files passed, 124 tests passed; focused generation service: 34 passed.
+- Worker: 15 files passed, 67 tests passed.
+- Contracts, database, storage, providers, creative engine, and auth suites passed.
+- All workspace typechecks and builds passed.
+- Creator smoke: 12/12 passed.
+- Initial bundle: 247,848 gzip bytes against a 307,200-byte limit.
+- Evidence redaction and `git diff --check` passed.
+
+## Scope boundary
+
+This evidence proves Phase 03 through a durable queued render with dispatch paused. It does not claim that a real AI video completed. Provider submission, output recovery, media normalization, quality acceptance, and settlement under provider failure belong to Phase 04.

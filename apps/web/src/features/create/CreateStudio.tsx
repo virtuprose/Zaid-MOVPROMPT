@@ -1693,6 +1693,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
               language={project.language}
               aspectRatio={project.aspectRatio}
               hasSource={Boolean(project.product.name.trim() || project.product.images.length)}
+              subjectText={`${project.product.name} ${project.product.description} ${project.product.brand}`}
               configurationForTemplate={recommendationConfigurationFor}
               onSelect={selectRecommendedTemplate}
               presenterCompatibility={presenterCompatibility}
