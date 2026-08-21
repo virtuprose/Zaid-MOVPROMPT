@@ -54,6 +54,31 @@ const GenerationConfigurationSchema = z
   })
   .passthrough();
 
+const MAX_INTERNAL_QUALITY_RETRIES = 2;
+const QUALITY_RETRY_DIRECTIVES: Record<QualityDecision["failedDimensions"][number], string> = {
+  technical: "Restore the requested delivery media quality without changing campaign facts.",
+  product_identity: "Match the confirmed product, packaging, label, logo and colour reference exactly.",
+  prompt_adherence: "Follow the approved story, subject, camera and action without adding unconfirmed details.",
+  motion_realism: "Use one physically plausible motion and remove unstable movement.",
+  visual_artifacts: "Remove flicker, warped geometry, broken hands and reflection artifacts.",
+  brand_safety: "Remove misleading or unsafe visual material while preserving confirmed facts.",
+  dialect_fidelity: "Use the approved Kuwait Arabic and preserve correct Arabic and bilingual text order.",
+  speech_sync: "Synchronize visible speech to the approved line or remove the speaking presenter.",
+  safe_zones: "Keep subjects clear of protected price, logo, subtitle and CTA safe zones.",
+  compliance: "Remove unconfirmed claims, transformations and consent-sensitive material.",
+};
+
+function deterministicQualityRetryDirective(failedDimensions: QualityDecision["failedDimensions"]): string {
+  const unique = [...new Set(failedDimensions)];
+  if (!unique.length || unique.some((dimension) => !(dimension in QUALITY_RETRY_DIRECTIVES))) {
+    throw new RenderLifecycleError("quality_retry_directive_invalid", false);
+  }
+  return unique
+    .sort((left, right) => left.localeCompare(right))
+    .map((dimension) => QUALITY_RETRY_DIRECTIVES[dimension])
+    .join(" ");
+}
+
 type RenderStatus =
   | "submitting"
   | "queued"
@@ -534,9 +559,11 @@ export function createDatabaseRenderLifecycleStore(db: Database): RenderLifecycl
     },
 
     async prepareQualityRetry(input) {
-      if (!Number.isSafeInteger(input.maxRetries) || input.maxRetries < 0 || input.maxRetries > 3) {
+      if (!Number.isSafeInteger(input.maxRetries) || input.maxRetries < 0 || input.maxRetries > MAX_INTERNAL_QUALITY_RETRIES) {
         throw new RenderLifecycleError("quality_retry_limit_invalid", false);
       }
+      if (input.decision.status !== "retry") throw new RenderLifecycleError("quality_retry_decision_invalid", false);
+      const retryDirective = deterministicQualityRetryDirective(input.decision.failedDimensions);
       await db.transaction(async (tx) => {
         await tx.execute(sql`select set_config('movprompt.user_id', ${input.userId}, true)`);
         const [run] = await tx
@@ -573,7 +600,7 @@ export function createDatabaseRenderLifecycleStore(db: Database): RenderLifecycl
           status: input.decision.status,
           score: input.decision.score,
           failedDimensions: input.decision.failedDimensions,
-          ...(input.decision.retryDirective ? { retryDirective: input.decision.retryDirective } : {}),
+          retryDirective,
         };
         const [attempt] = await tx
           .update(renderAttempts)
@@ -605,7 +632,7 @@ export function createDatabaseRenderLifecycleStore(db: Database): RenderLifecycl
             providerRequestId: null,
             qualityAttempt: nextAttempt,
             maxQualityRetries: input.maxRetries,
-            qualityRetryDirective: input.decision.retryDirective ?? "Improve every failed premium quality dimension.",
+            qualityRetryDirective: retryDirective,
             lastQualityReport: report,
             errorCode: null,
             errorMessage: null,
@@ -761,10 +788,18 @@ export function createGenerationLifecycleHandler(options: GenerationLifecycleHan
       configuration: snapshot.configuration,
     });
     if (quality.status === "retry") {
-      let maxRetries = snapshot.maxQualityRetries;
+      let maxRetries = Number.isSafeInteger(snapshot.maxQualityRetries)
+        ? Math.max(0, Math.min(snapshot.maxQualityRetries, MAX_INTERNAL_QUALITY_RETRIES))
+        : 0;
       const configuration = GenerationConfigurationSchema.parse(configurationInput(snapshot.configuration));
       if (configuration.creativeBrief !== undefined) {
-        maxRetries = CreativeBriefSchema.parse(configuration.creativeBrief).qualityPolicy.internalRetryLimit;
+        maxRetries = Math.max(
+          0,
+          Math.min(
+            CreativeBriefSchema.parse(configuration.creativeBrief).qualityPolicy.internalRetryLimit,
+            MAX_INTERNAL_QUALITY_RETRIES,
+          ),
+        );
       }
       await options.store.prepareQualityRetry({
         runId: snapshot.id,

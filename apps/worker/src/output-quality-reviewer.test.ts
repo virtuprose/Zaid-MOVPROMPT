@@ -56,13 +56,13 @@ describe("composed output quality reviewer", () => {
     await expect(reviewer.review(input)).resolves.toMatchObject({ status: "accepted", score: 96 });
   });
 
-  it("fails closed to a targeted retry when dialect evidence is missing", async () => {
+  it("fails closed to review when dialect evidence is missing", async () => {
     const reviewer = createComposedOutputQualityReviewer([
       analyzer("technical", ["technical"]),
       analyzer("visual", dimensions.filter((dimension) => dimension !== "technical" && dimension !== "dialect_fidelity")),
     ]);
     await expect(reviewer.review(input)).resolves.toMatchObject({
-      status: "retry",
+      status: "needs_review",
       failedDimensions: expect.arrayContaining(["dialect_fidelity"]),
     });
   });

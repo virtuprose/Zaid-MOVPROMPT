@@ -1,5 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { execFile } from "node:child_process";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { promisify } from "node:util";
 import {
   createDatabase,
@@ -23,6 +25,7 @@ import { jsonWorkerLogger } from "./logger.js";
 import { createFfprobeTechnicalAnalyzer, createGatewayVideoQualityAnalyzer } from "./media-quality-analyzers.js";
 import { createPostgresOutboxRepository, OutboxDispatcher } from "./outbox-dispatcher.js";
 import { createComposedOutputQualityReviewer } from "./output-quality-reviewer.js";
+import { validateCalibrationArtifact, type CalibrationEligibility } from "./benchmark-manifest.js";
 import { PgBossWorker } from "./pg-boss-worker.js";
 import {
   createDatabaseAssetReferenceVerifier,
@@ -83,6 +86,33 @@ const outputPersister = providerOutputHosts.length
   : undefined;
 const gatewayApiKey = process.env.AI_GATEWAY_API_KEY?.trim();
 const gatewayQualityModel = process.env.MOVPROMPT_QUALITY_MODEL_ID?.trim();
+const gatewayQualityRubricVersion = process.env.MOVPROMPT_QUALITY_RUBRIC_VERSION?.trim();
+
+/**
+ * Calibration evidence is intentionally opt-in through explicit server paths.
+ * A missing, malformed, stale, or non-approved artifact is a runtime quality
+ * outage, never permission to use the model's score as customer acceptance.
+ */
+function loadQualityCalibration(): CalibrationEligibility | undefined {
+  const candidatePath = process.env.MOVPROMPT_QUALITY_CANDIDATE_MANIFEST_PATH?.trim();
+  const calibrationPath = process.env.MOVPROMPT_QUALITY_CALIBRATION_PATH?.trim();
+  if (!candidatePath || !calibrationPath || !gatewayQualityModel || !gatewayQualityRubricVersion) return undefined;
+  try {
+    return validateCalibrationArtifact({
+      candidateManifest: JSON.parse(readFileSync(resolve(candidatePath), "utf8")),
+      evidence: JSON.parse(readFileSync(resolve(calibrationPath), "utf8")),
+      activeEvaluatorVersion: gatewayQualityModel,
+      activeRubricVersion: gatewayQualityRubricVersion,
+    });
+  } catch (error) {
+    jsonWorkerLogger.warn("quality_calibration_unavailable", {
+      code: error instanceof Error ? error.message.split(":", 1)[0] : "calibration_validation_failed",
+    });
+    return undefined;
+  }
+}
+
+const qualityCalibration = loadQualityCalibration();
 const gatewayReferenceVerifier = workerStorage
   ? createDatabaseAssetReferenceVerifier(database.db, workerStorage.assetsBucket)
   : undefined;
@@ -110,7 +140,7 @@ const outputQualityReviewer = workerStorage && gatewayApiKey && gatewayQualityMo
           ? { gatewayBaseUrl: process.env.VERCEL_AI_GATEWAY_BASE_URL.trim() }
           : {}),
       }),
-    ])
+    ], qualityCalibration)
   : undefined;
 
 function registerBytePlusCapability(
@@ -210,7 +240,7 @@ async function assertGenerationRuntimeReady(): Promise<boolean> {
     const capability = capabilityRegistry.resolve(alias);
     adapterRegistry.get(capability.adapterId, capability.alias);
   }
-  return true;
+  return Boolean(qualityCalibration);
 }
 
 let resolveWorker: (worker: PgBossWorker) => void = () => undefined;
