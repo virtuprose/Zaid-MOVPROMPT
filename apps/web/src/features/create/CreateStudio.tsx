@@ -89,6 +89,7 @@ import {
 } from "./creatorProjectAssets";
 import { SaveStatusIndicator, type SaveLifecycleState } from "./SaveStatusIndicator";
 import { useTemplateQuotes } from "./useTemplateQuotes";
+import type { TemplateQuote } from "./templateQuoteState";
 import { applyImportedFacts, campaignFactValue, campaignSourceForProject, confirmCampaignFacts, editFact, normalizeCampaignSource } from "./sourceFacts";
 import {
   CAMPAIGN_GOAL_OPTIONS,
@@ -124,6 +125,26 @@ const ARABIC_STEP_LABELS: Record<CreatorStep, string> = {
   generating: "الإنشاء",
   editor: "المراجعة",
 };
+
+// This quote is deliberately limited to the development-only local preview route.
+// It lets QA exercise the same state transitions without asking the pricing API or
+// claiming that a production price exists.
+const DEVELOPMENT_PREVIEW_QUOTE_ID = "00000000-0000-4000-8000-000000000001";
+const DEVELOPMENT_PREVIEW_CONFIGURATION_HASH = "0".repeat(64);
+
+function createDevelopmentPreviewQuote(): TemplateQuote {
+  return {
+    quoteId: DEVELOPMENT_PREVIEW_QUOTE_ID,
+    capability: "video.cinematic",
+    credits: 0,
+    entitlementEligible: true,
+    configurationHash: DEVELOPMENT_PREVIEW_CONFIGURATION_HASH,
+    pricingVersion: "development-preview",
+    expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+    breakdown: [{ label: "Development preview", credits: 0 }],
+    estimateOnly: true,
+  };
+}
 
 const ARABIC_GOAL_LABELS: Record<CreatorProject["goal"], string> = {
   whatsapp_orders: "طلبات واتساب",
@@ -420,6 +441,18 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
   // A quote can expire between the hook timer and a user click; never hand an
   // expired browser quote to auth recovery or the claim/submission path.
   const currentQuote = quote && new Date(quote.expiresAt).getTime() > Date.now() ? quote : null;
+  const developmentPreviewQuote = useMemo(
+    () => simulatedGeneration ? createDevelopmentPreviewQuote() : null,
+    [simulatedGeneration],
+  );
+  const activeQuote = currentQuote ?? developmentPreviewQuote;
+  const previewQuoteStateForTemplate = useCallback(() => ({
+    key: "development-preview",
+    status: "ready" as const,
+    quote: developmentPreviewQuote!,
+    retryable: false,
+    retry: () => undefined,
+  }), [developmentPreviewQuote]);
   const quoteLoaded = simulatedGeneration || !portablePlatform || !["idle", "loading"].includes(templateQuote.status);
   const quoteFailure = portablePlatform && !simulatedGeneration ? templateQuote.failure ?? null : null;
   const quoteError = templateQuote.status === "expired"
@@ -455,6 +488,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
         "Your preview is ready": "المعاينة جاهزة",
         "Your product preview is ready": "معاينة المنتج جاهزة",
         "Still working — reconnecting to your video": "ما زلنا نعمل — جارٍ إعادة الاتصال بالتوليد",
+        "Cancellation is pending — we'll keep checking your saved project": "طلب الإلغاء قيد المعالجة — سنواصل التحقق من مشروعك المحفوظ",
       } as Record<string, string>)[generationMessage] ?? generationMessage
     : generationMessage;
 
@@ -611,6 +645,20 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
         if (durableStage === "rendering") setGenerationMessage("Creating your video");
         if (durableStage === "securing_output") setGenerationMessage("Securing your completed video");
         if (durableStage === "quality_review") setGenerationMessage("Checking video quality");
+        if (durableStage === "cancelling") setGenerationMessage("Cancellation is pending — we'll keep checking your saved project");
+        if (durableStage === "cancelled") {
+          setGenerationStage("cancelled");
+          setProject((current) => ({
+            ...current,
+            status: "ready",
+            jobId: null,
+            renderRunId: null,
+            pendingGenerationId: null,
+          }));
+          setSourceError("");
+          setStep("details");
+          return;
+        }
         if (job.status === "completed") {
           if (job.video_url && !isBundledDemoVideoUrl(job.video_url)) {
             setProject((current) => ({ ...current, status: "review", videoUrl: job.video_url!, lastError: null, pendingGenerationId: null }));
@@ -1281,8 +1329,8 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
         return;
       }
     }
-    let confirmedQuote = currentQuote;
-    if (portablePlatform) {
+    let confirmedQuote = activeQuote;
+    if (portablePlatform && !simulatedGeneration) {
       try {
         if (!renderProject.versionId) throw new Error("Your saved campaign is not ready to create a video yet.");
         const authoritativeQuoteResponse = await portableCreatorApi.generationQuote({
@@ -1363,8 +1411,20 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
   const cancelGeneration = async () => {
     if ((project.jobId || project.renderRunId) && !simulatedGeneration) {
       try {
-        if (project.renderRunId) await cancelCreatorGeneration(project.renderRunId);
-        else await cancelVideoJob(project.jobId!);
+        const cancellation = project.renderRunId
+          ? await cancelCreatorGeneration(project.renderRunId)
+          : await cancelVideoJob(project.jobId!);
+        if (
+          cancellation
+          && typeof cancellation === "object"
+          && "status" in cancellation
+          && cancellation.status === "cancelling"
+        ) {
+          setGenerationStage("cancelling");
+          setGenerationMessage("Cancellation is pending — we'll keep checking your saved project");
+          setProject((current) => ({ ...current, status: "generating", lastError: null }));
+          return;
+        }
       } catch (error) {
         const message = error instanceof Error
           ? error.message
@@ -1512,19 +1572,11 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
             <p className="creator-kicker">{arabicUi ? template.nameAr : template.name}</p>
             <h1>{tr("Building your campaign", "جارٍ بناء حملتك")}</h1>
             <p>{simulatedGeneration ? tr("Preview workflow only — no AI video or credits. We will open an editable still preview using only your imported product image.", "مسار معاينة فقط — بدون فيديو ذكاء اصطناعي أو رصيد. سنفتح معاينة ثابتة قابلة للتعديل باستخدام صورة منتجك المستوردة فقط.") : tr("You can leave this screen safely. Your project is saved and video creation will continue in the background.", "تقدر تترك هذه الصفحة بأمان. مشروعك محفوظ والتوليد راح يكمل بالخلفية.")}</p>
-            <div
-              className="creator-generation-progress"
-              role="progressbar"
-              aria-label={tr("Campaign generation", "توليد الحملة")}
-              aria-valuemin={simulatedGeneration ? 0 : 1}
-              aria-valuemax={simulatedGeneration ? 100 : 5}
-              aria-valuenow={simulatedGeneration ? generationProgress : GENERATION_STAGE_POSITION[generationStage]}
-              aria-valuetext={simulatedGeneration ? `${localizedGenerationMessage} · ${generationProgress}%` : localizedGenerationMessage}
-            >
+            <div className="creator-generation-progress" aria-hidden="true">
               <span style={{ width: simulatedGeneration ? `${generationProgress}%` : `${GENERATION_STAGE_POSITION[generationStage] * 20}%` }} />
             </div>
             <div className="creator-generation-status" role="status">{localizedGenerationMessage}{simulatedGeneration ? ` · ${generationProgress}%` : ""}</div>
-            <button className="creator-button creator-button-quiet" type="button" onClick={cancelGeneration}>{tr("Cancel generation", "إلغاء التوليد")}</button>
+            <button className="creator-button creator-button-quiet" type="button" onClick={cancelGeneration} disabled={!simulatedGeneration && generationStage === "cancelling"}>{generationStage === "cancelling" ? tr("Cancellation pending", "الإلغاء قيد المعالجة") : tr("Cancel generation", "إلغاء التوليد")}</button>
           </div>
         </section>
       </CreatorShell>
@@ -1696,6 +1748,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
               subjectText={`${project.product.name} ${project.product.description} ${project.product.brand}`}
               configurationForTemplate={recommendationConfigurationFor}
               onSelect={selectRecommendedTemplate}
+              quoteStateForTemplate={simulatedGeneration && developmentPreviewQuote ? previewQuoteStateForTemplate : undefined}
               presenterCompatibility={presenterCompatibility}
               arabic={arabicUi}
             />
@@ -1766,7 +1819,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
             <section className="creator-panel creator-panel-pad" aria-labelledby="campaign-heading">
               <CampaignSetupStep
                 project={project}
-                quoteState={templateQuote.status === "idle" ? "loading" : templateQuote.status}
+                quoteState={simulatedGeneration ? "ready" : templateQuote.status === "idle" ? "loading" : templateQuote.status}
                 onChange={updateCampaignSetup}
                 onContinue={() => setCampaignSetupReady(true)}
                 presenterCompatibility={presenterCompatibility}
@@ -1776,7 +1829,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
                 <CampaignReviewStep
                   project={project}
                   rightsConfirmed={rightsConfirmed}
-                  quote={quote}
+                  quote={activeQuote}
                   quoteState={simulatedGeneration ? "ready" : templateQuote.status === "idle" ? "loading" : templateQuote.status}
                   sourceError={sourceError}
                   sourceBusy={sourceBusy}
@@ -1798,9 +1851,9 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
               <div className="creator-product-image" style={{ borderRadius: 14, overflow: "hidden" }}><SourceMediaPreview asset={project.product.images[0]} alt={project.product.name} /></div>
               <div className="creator-summary-list" style={{ marginTop: 16 }}><div className="creator-summary-row"><span>{tr("Template", "القالب")}</span><strong>{arabicUi ? template.nameAr : template.name}</strong></div><div className="creator-summary-row"><span>{tr("Campaign goal", "هدف الحملة")}</span><strong>{arabicUi ? ARABIC_GOAL_LABELS[project.goal] : getCampaignGoalOption(project.goal).label}</strong></div><div className="creator-summary-row"><span>{tr("Call to action", "الدعوة للإجراء")}</span><strong>{campaignCtaLabel(project.cta, arabicUi)}</strong></div>{project.product.price && <div className="creator-summary-row"><span>{tr("Price", "السعر")}</span><strong>{project.product.price} {MARKET_META[project.market].currency}</strong></div>}{project.offer && <div className="creator-summary-row"><span>{tr("Offer", "العرض")}</span><strong>{project.offer}</strong></div>}<div className="creator-summary-row"><span>{tr("Market", "السوق")}</span><strong>{MARKET_META[project.market].label}</strong></div><div className="creator-summary-row"><span>{tr("Campaign language", "لغة الحملة")}</span><strong>{project.language === "bilingual" ? tr("Kuwaiti Arabic + English", "عربي كويتي + إنجليزي") : project.language === "ar" ? tr("Kuwaiti Arabic", "عربي كويتي") : tr("English", "الإنجليزية")}</strong></div><div className="creator-summary-row"><span>{tr("Format", "المقاس")}</span><strong>{project.aspectRatio} · {project.resolution}</strong></div><div className="creator-summary-row"><span>{tr("Subtitles", "الترجمة المكتوبة")}</span><strong>{project.subtitles ? tr("Included", "مشمولة") : tr("Off", "متوقفة")}</strong></div><div className="creator-summary-row"><span>{tr("Audio", "الصوت")}</span><strong>{project.audio ? tr("Included", "مشمول") : tr("Off", "متوقف")}</strong></div></div>
               {!campaignSetupReady && <div className="creator-cost-box" aria-live="polite">
-                {quote ? <>
-                  <small>{quote.entitlementEligible ? tr("Your first video", "فيديوك الأول") : tr("Confirmed generation price", "سعر التوليد المؤكد")}</small>
-                  <strong>{quote.entitlementEligible ? tr("Included · 0 credits for this video", "مشمول · 0 رصيد لهذا التوليد") : tr(`${quote.credits} credits`, `${quote.credits} رصيد`)}</strong>
+                {activeQuote ? <>
+                  <small>{activeQuote.entitlementEligible ? tr("Your first video", "فيديوك الأول") : tr("Confirmed generation price", "سعر التوليد المؤكد")}</small>
+                  <strong>{activeQuote.entitlementEligible ? tr("Included · 0 credits for this video", "مشمول · 0 رصيد لهذا التوليد") : tr(`${activeQuote.credits} credits`, `${activeQuote.credits} رصيد`)}</strong>
                   <span className="creator-cost-meta"><Clock3 aria-hidden="true" /> {tr(`Video length: ${projectDurationSeconds} seconds · estimated processing: 2–5 minutes`, `مدة الفيديو: ${projectDurationSeconds} ثانية · وقت المعالجة المتوقع: 2–5 دقائق`)}</span>
                 </> : simulatedGeneration ? <><small>{localDemoGeneration ? tr("Client preview", "معاينة للعميل") : tr("Development preview", "معاينة تطوير")}</small><strong>{tr("No AI credits charged · preview workflow only", "ما ينخصم رصيد ذكاء اصطناعي · مسار معاينة فقط")}</strong></> : <><small>{tr("Generation availability", "توفر التوليد")}</small><strong>{quoteLoaded ? quoteError || tr("Video generation is temporarily unavailable.", "توليد الفيديو غير متوفر مؤقتاً.") : tr("Confirming the current price…", "جارٍ تأكيد السعر الحالي…")}</strong>{quoteLoaded && quoteFailure?.retryable && <button className="creator-cost-retry" type="button" onClick={retryQuote}><RefreshCw aria-hidden="true" /> {tr("Retry price", "أعد محاولة السعر")}</button>}{quoteFailure?.requestId && <details className="creator-support-details"><summary>{tr("Support details", "تفاصيل الدعم")}</summary><code>{tr("Request ID", "رقم الطلب")}: {quoteFailure.requestId}</code></details>}</>}
               </div>}

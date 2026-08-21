@@ -17,7 +17,6 @@ import {
 } from "@movprompt/db";
 import {
   CapabilityResolutionError,
-  VERCEL_GATEWAY_SEEDANCE_ADAPTER_ID,
   type CapabilityRegistry,
 } from "@movprompt/providers";
 import { assertOwnedProjectKey } from "@movprompt/storage";
@@ -454,6 +453,19 @@ function resolveTemplateCapability(input: {
   );
 }
 
+function publicErrorMessage(code: string): string {
+  if (code === "provider_output_host_not_allowed" || code === "provider_output_unavailable") {
+    return "We could not finish saving this video. Your project is safe; try again from Projects.";
+  }
+  if (code.startsWith("quality_gate_") || code === "output_quality_reviewer_unavailable") {
+    return "This video needs another review before it can be used. Your previous version is unchanged.";
+  }
+  if (code === "provider_cancelled") {
+    return "This video creation was cancelled. Your campaign details are still saved.";
+  }
+  return "Video creation needs attention. Your project is saved and you can try again.";
+}
+
 function publicRun(run: OwnedRenderRun): PublicRenderRun {
   const capability = CapabilityAliasSchema.safeParse(run.capabilityAlias);
   if (!capability.success) {
@@ -477,7 +489,10 @@ function publicRun(run: OwnedRenderRun): PublicRenderRun {
     error: run.errorCode
       ? {
           code: run.errorCode,
-          ...(run.errorMessage ? { message: run.errorMessage } : {}),
+          // Provider messages can contain operation identifiers, signed URLs,
+          // model details, or transient infrastructure text. Product clients
+          // receive only stable code-specific recovery guidance.
+          message: publicErrorMessage(run.errorCode),
         }
       : null,
     createdAt: run.createdAt.toISOString(),
@@ -979,15 +994,6 @@ export function createGenerationApiService(options: GenerationApiServiceOptions)
       if (run.status === "cancelled" || run.status === "cancelling") return publicRun(run);
       if (run.status === "completed" || run.status === "failed") {
         throw new GenerationApplicationError("render_not_cancellable");
-      }
-      if (
-        (run.status === "queued" || run.status === "processing") &&
-        run.provider === VERCEL_GATEWAY_SEEDANCE_ADAPTER_ID
-      ) {
-        throw new GenerationApplicationError(
-          "render_not_cancellable",
-          "AI Gateway does not currently expose a confirmed request-cancellation operation for this render.",
-        );
       }
       if (run.status === "submitting") {
         // The worker records the provider identity before issuing the billable
