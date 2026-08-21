@@ -40,6 +40,54 @@ function generation() {
 }
 
 describe("Vercel AI Gateway Seedance 2.5 adapter", () => {
+  it("permits the explicit local fast model only for the local environment", async () => {
+    const fetcher = vi.fn<typeof fetch>(async (_url, init) => {
+      expect(new Headers(init?.headers).get("ai-model-id")).toBe("bytedance/seedance-v1.0-pro-fast");
+      return Response.json({ operation: "local-fast-operation" });
+    });
+    const provider = createVercelGatewaySeedanceAdapter({
+      capability: "video.cinematic",
+      apiKey: "gateway-secret",
+      modelId: "bytedance/seedance-v1.0-pro-fast",
+      applicationEnvironment: "local",
+      fetcher,
+      resolveReferenceUrl: async (reference) => ({ url: `https://assets.example.test/${reference.objectKey}`, mediaType: reference.mimeType }),
+      resolveFirstFrame: async () => ({
+        type: "file",
+        data: Buffer.from([0xff, 0xd8, 0xff, 0xd9]).toString("base64"),
+        mediaType: "image/jpeg",
+      }),
+    });
+
+    await expect(provider.submit({ ...generation(), capability: "video.cinematic", durationSeconds: 2 })).resolves.toMatchObject({ status: "queued" });
+    expect(fetcher).toHaveBeenCalledOnce();
+    expect(() => createVercelGatewaySeedanceAdapter({
+      capability: "video.cinematic",
+      apiKey: "gateway-secret",
+      modelId: "bytedance/seedance-v1.0-pro-fast",
+      applicationEnvironment: "staging",
+      fetcher,
+      resolveReferenceUrl: async () => ({ url: "https://assets.example.test/ref.png", mediaType: "image/png" }),
+      resolveFirstFrame: async () => ({ type: "file", data: Buffer.from([0xff, 0xd8, 0xff, 0xd9]).toString("base64"), mediaType: "image/jpeg" }),
+    })).toThrow("vercel_gateway_seedance_fast_model_local_only");
+  });
+
+  it("enforces the fast model's two-to-twelve second contract before network submission", async () => {
+    const fetcher = vi.fn<typeof fetch>();
+    const provider = createVercelGatewaySeedanceAdapter({
+      capability: "video.product_fidelity",
+      apiKey: "gateway-secret",
+      modelId: "bytedance/seedance-v1.0-pro-fast",
+      applicationEnvironment: "local",
+      fetcher,
+      resolveReferenceUrl: async () => ({ url: "https://assets.example.test/ref.png", mediaType: "image/png" }),
+      resolveFirstFrame: async () => ({ type: "file", data: Buffer.from([0xff, 0xd8, 0xff, 0xd9]).toString("base64"), mediaType: "image/jpeg" }),
+    });
+    await expect(provider.submit({ ...generation(), durationSeconds: 1 })).rejects.toMatchObject({ code: "vercel_gateway_duration_unsupported" });
+    await expect(provider.submit({ ...generation(), durationSeconds: 13 })).rejects.toMatchObject({ code: "vercel_gateway_duration_unsupported" });
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+
   it("starts product fidelity from a private inline first frame with the exact approved model and idempotency key", async () => {
     const fetcher = vi.fn<typeof fetch>(async (url, init) => {
       expect(url).toBe("https://gateway.example.test/v4/ai/video-model/start");

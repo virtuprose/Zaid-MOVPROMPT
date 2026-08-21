@@ -4,7 +4,7 @@ import {
   type CapabilityKind,
   type PublicCapability,
 } from "@movprompt/contracts";
-import { VERCEL_GATEWAY_SEEDANCE_OUTPUT_HOSTS } from "./vercel-gateway-seedance.js";
+import { resolveVercelGatewaySeedanceModelPolicy } from "./vercel-gateway-seedance.js";
 
 type ServerCapabilitySpec = {
   alias: CapabilityAlias;
@@ -193,11 +193,19 @@ function adapterIsReady(
         .map((host) => host.trim().toLowerCase())
         .filter(Boolean),
     );
-    const verifiedOutputHostConfigured = VERCEL_GATEWAY_SEEDANCE_OUTPUT_HOSTS
+    let modelPolicy: ReturnType<typeof resolveVercelGatewaySeedanceModelPolicy>;
+    try {
+      modelPolicy = resolveVercelGatewaySeedanceModelPolicy(
+        providerModelId ?? "",
+        environment.APP_ENV,
+      );
+    } catch {
+      return false;
+    }
+    const verifiedOutputHostConfigured = modelPolicy.outputHosts
       .some((host) => configuredOutputHosts.has(host));
     return Boolean(
       isEnabled(environment.MOVPROMPT_PROVIDER_VERCEL_GATEWAY_READY) &&
-      providerModelId?.trim() === "bytedance/seedance-2.5" &&
       environment.VERCEL_AI_GATEWAY_BASE_URL?.trim() === "https://ai-gateway.vercel.sh/v4/ai" &&
       qualityModelId &&
       /^google\/gemini-[a-z0-9.-]+$/u.test(qualityModelId) &&

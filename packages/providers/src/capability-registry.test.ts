@@ -6,6 +6,32 @@ import {
 } from "./capability-registry.js";
 
 describe("CapabilityRegistry", () => {
+  it("only advertises the fast Vercel model for a complete local profile", () => {
+    const localFastProfile = {
+      APP_ENV: "local",
+      MOVPROMPT_CAPABILITY_VIDEO_CINEMATIC_ENABLED: "true",
+      MOVPROMPT_CAPABILITY_VIDEO_CINEMATIC_ADAPTER_ID: "vercel-ai-gateway",
+      MOVPROMPT_CAPABILITY_VIDEO_CINEMATIC_MODEL_ID: "bytedance/seedance-v1.0-pro-fast",
+      MOVPROMPT_PROVIDER_VERCEL_GATEWAY_READY: "true",
+      AI_GATEWAY_API_KEY: "secret",
+      VERCEL_AI_GATEWAY_BASE_URL: "https://ai-gateway.vercel.sh/v4/ai",
+      PROVIDER_OUTPUT_ALLOWED_HOSTS: "ark-content-generation-ap-southeast-1.tos-ap-southeast-1.volces.com",
+      S3_ENDPOINT: "https://storage.example.test",
+      S3_REGION: "auto",
+      S3_ACCESS_KEY_ID: "access",
+      S3_SECRET_ACCESS_KEY: "secret",
+      S3_ASSETS_BUCKET: "creator-assets",
+      S3_OUTPUTS_BUCKET: "creator-outputs",
+      FFMPEG_PATH: "ffmpeg",
+      FFPROBE_PATH: "ffprobe",
+      MOVPROMPT_QUALITY_MODEL_ID: "google/gemini-3.6-flash",
+    };
+    expect(createCapabilityRegistryFromEnvironment(localFastProfile).listPublic()
+      .find((item) => item.alias === "video.cinematic")?.available).toBe(true);
+    expect(createCapabilityRegistryFromEnvironment({ ...localFastProfile, APP_ENV: "staging" }).listPublic()
+      .find((item) => item.alias === "video.cinematic")?.available).toBe(false);
+  });
+
   it("resolves configured approved aliases", () => {
     const registry = new CapabilityRegistry({
       "video.cinematic": {

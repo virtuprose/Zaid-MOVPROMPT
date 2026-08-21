@@ -210,6 +210,7 @@ function registerVercelGatewayCapability(
     capability: alias,
     apiKey: gatewayApiKey,
     modelId: process.env[`${prefix}_MODEL_ID`]!,
+    applicationEnvironment: config.environment,
     resolutionTier: requestedResolution,
     generateAudio: process.env.VERCEL_GATEWAY_SEEDANCE_GENERATE_AUDIO?.trim().toLowerCase() === "true",
     ...(process.env.VERCEL_AI_GATEWAY_BASE_URL?.trim()

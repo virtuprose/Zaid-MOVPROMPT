@@ -10,10 +10,24 @@ import type {
 
 export const VERCEL_GATEWAY_SEEDANCE_ADAPTER_ID = "vercel-ai-gateway" as const;
 export const VERCEL_GATEWAY_SEEDANCE_MODEL_ID = "bytedance/seedance-2.5" as const;
+/** Development-only cheaper model. It is never selected as a fallback. */
+export const VERCEL_GATEWAY_SEEDANCE_FAST_MODEL_ID = "bytedance/seedance-v1.0-pro-fast" as const;
 /** Exact output origin observed and reviewed for the current Seedance 2.5 route. */
 export const VERCEL_GATEWAY_SEEDANCE_OUTPUT_HOSTS = [
   "ark-acg-ap-southeast-1.tos-ap-southeast-1.volces.com",
 ] as const;
+/** Exact output origin observed for the explicit local fast-model profile. */
+export const VERCEL_GATEWAY_SEEDANCE_FAST_OUTPUT_HOSTS = [
+  "ark-content-generation-ap-southeast-1.tos-ap-southeast-1.volces.com",
+] as const;
+
+export type VercelGatewayApplicationEnvironment = "local" | "staging" | "production";
+type VercelGatewaySeedanceModelPolicy = {
+  modelId: typeof VERCEL_GATEWAY_SEEDANCE_MODEL_ID | typeof VERCEL_GATEWAY_SEEDANCE_FAST_MODEL_ID;
+  outputHosts: readonly string[];
+  minimumDurationSeconds: number;
+  maximumDurationSeconds: number;
+};
 
 const GATEWAY_VIDEO_SPECIFICATION_VERSION = "4";
 const GATEWAY_PROTOCOL_VERSION = "0.0.1";
@@ -92,6 +106,8 @@ export type VercelGatewaySeedanceAdapterOptions = {
   capability: "video.cinematic" | "video.product_fidelity";
   apiKey: string;
   modelId: string;
+  /** Defaults to production-safe policy when omitted. */
+  applicationEnvironment?: string;
   resolveReferenceUrl: ReferenceUrlResolver;
   resolveFirstFrame: FirstFrameResolver;
   baseUrl?: string;
@@ -121,11 +137,36 @@ function cleanBaseUrl(value: string): string {
   return parsed.toString().replace(/\/$/u, "");
 }
 
-function assertModel(modelId: string): typeof VERCEL_GATEWAY_SEEDANCE_MODEL_ID {
-  if (modelId.trim() !== VERCEL_GATEWAY_SEEDANCE_MODEL_ID) {
-    throw new Error("vercel_gateway_seedance_25_model_required");
+function applicationEnvironment(value: string | undefined): VercelGatewayApplicationEnvironment {
+  return value?.trim() === "local" ? "local" : value?.trim() === "staging" ? "staging" : "production";
+}
+
+/** One server-only policy shared by the adapter and capability readiness. */
+export function resolveVercelGatewaySeedanceModelPolicy(
+  modelId: string,
+  environment?: string,
+): VercelGatewaySeedanceModelPolicy {
+  const selectedModelId = modelId.trim();
+  if (selectedModelId === VERCEL_GATEWAY_SEEDANCE_MODEL_ID) {
+    return {
+      modelId: VERCEL_GATEWAY_SEEDANCE_MODEL_ID,
+      outputHosts: VERCEL_GATEWAY_SEEDANCE_OUTPUT_HOSTS,
+      minimumDurationSeconds: 4,
+      maximumDurationSeconds: 30,
+    };
   }
-  return VERCEL_GATEWAY_SEEDANCE_MODEL_ID;
+  if (selectedModelId === VERCEL_GATEWAY_SEEDANCE_FAST_MODEL_ID) {
+    if (applicationEnvironment(environment) !== "local") {
+      throw new Error("vercel_gateway_seedance_fast_model_local_only");
+    }
+    return {
+      modelId: VERCEL_GATEWAY_SEEDANCE_FAST_MODEL_ID,
+      outputHosts: VERCEL_GATEWAY_SEEDANCE_FAST_OUTPUT_HOSTS,
+      minimumDurationSeconds: 2,
+      maximumDurationSeconds: 12,
+    };
+  }
+  throw new Error("vercel_gateway_seedance_25_model_required");
 }
 
 function retryableStatus(status: number): boolean {
@@ -319,13 +360,18 @@ function generationBody(
   defaultResolutionTier: "480p" | "720p",
   references: { image?: GatewayFile; inputReferences?: GatewayFile[] },
   defaultGenerateAudio: boolean,
+  modelPolicy: VercelGatewaySeedanceModelPolicy,
 ): Record<string, unknown> {
   const prompt = generation.prompt.trim();
   if (!prompt || prompt.length > 8_000) {
     throw new VercelGatewayProviderError("vercel_gateway_prompt_invalid", false);
   }
   const duration = generation.durationSeconds ?? 8;
-  if (!Number.isInteger(duration) || duration < 4 || duration > 30) {
+  if (
+    !Number.isInteger(duration) ||
+    duration < modelPolicy.minimumDurationSeconds ||
+    duration > modelPolicy.maximumDurationSeconds
+  ) {
     throw new VercelGatewayProviderError("vercel_gateway_duration_unsupported", false);
   }
   const requestedRatio = generation.aspectRatio ?? "9:16";
@@ -469,7 +515,7 @@ function providerTelemetry(payload: unknown): ProviderOperation["telemetry"] | u
 }
 
 /**
- * Durable Seedance 2.5 adapter for the AI Gateway v4 async video operation
+ * Durable Seedance adapter for the AI Gateway v4 async video operation.
  * contract. Provider/model identifiers stay entirely on the server.
  *
  * The current Gateway contract exposes start/status but no request-cancel
@@ -482,7 +528,11 @@ export function createVercelGatewaySeedanceAdapter(
 ): ProviderAdapter {
   const apiKey = options.apiKey.trim();
   if (!apiKey) throw new Error("vercel_gateway_api_key_required");
-  const modelId = assertModel(options.modelId);
+  const modelPolicy = resolveVercelGatewaySeedanceModelPolicy(
+    options.modelId,
+    options.applicationEnvironment,
+  );
+  const modelId = modelPolicy.modelId;
   const baseUrl = cleanBaseUrl(options.baseUrl ?? "https://ai-gateway.vercel.sh/v4/ai");
   const resolutionTier = options.resolutionTier ?? "720p";
   const defaultGenerateAudio = options.generateAudio ?? false;
@@ -566,7 +616,13 @@ export function createVercelGatewaySeedanceAdapter(
         true,
         generation,
       );
-      const body = generationBody(generation, resolutionTier, references, defaultGenerateAudio);
+      const body = generationBody(
+        generation,
+        resolutionTier,
+        references,
+        defaultGenerateAudio,
+        modelPolicy,
+      );
       const response = await request("/video-model/start", body, generation.idempotencyKey);
       let started: z.infer<typeof GatewayStartResponseSchema>;
       try {
