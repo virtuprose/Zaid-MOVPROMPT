@@ -389,6 +389,7 @@ const ProjectConfigurationInput = {
 function enforceTemplateCampaignPayload(
   input: {
     mode: CreationMode;
+    templateVersionId?: string | null | undefined;
     configuration: unknown;
     productRecipe: unknown;
     campaignRecipe: unknown;
@@ -868,14 +869,26 @@ export const TemplateCampaignPayloadSchema = z
   });
 export type TemplateCampaignPayload = z.infer<typeof TemplateCampaignPayloadSchema>;
 
+/**
+ * Template Mode must be attached to the exact immutable version that supplied
+ * its recipe. A mutable template slug or an absent version can never be used
+ * to make a Template Mode write, quote, or render eligible.
+ */
+export const TemplateCampaignWriteSchema = TemplateCampaignPayloadSchema.extend({
+  templateVersionId: z.uuid(),
+}).strict();
+export type TemplateCampaignWrite = z.infer<typeof TemplateCampaignWriteSchema>;
+
 export function validateTemplateCampaignPayload(input: {
   mode: CreationMode;
+  templateVersionId?: string | null | undefined;
   configuration: unknown;
   productRecipe: unknown;
   campaignRecipe: unknown;
-}): z.ZodSafeParseResult<TemplateCampaignPayload> | null {
+}): z.ZodSafeParseResult<TemplateCampaignWrite> | null {
   if (input.mode !== "template") return null;
-  return TemplateCampaignPayloadSchema.safeParse({
+  return TemplateCampaignWriteSchema.safeParse({
+    templateVersionId: input.templateVersionId,
     configuration: input.configuration,
     productRecipe: input.productRecipe,
     campaignRecipe: input.campaignRecipe,

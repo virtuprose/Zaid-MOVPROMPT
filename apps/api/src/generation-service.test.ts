@@ -10,6 +10,7 @@ import {
   GenerationApplicationError,
 } from "./generation-service.js";
 import { hashGenerationConfiguration } from "@movprompt/db";
+import type { GenerationConfiguration } from "@movprompt/contracts";
 
 import { validTemplateClaim } from "./campaign-contract.test-fixture.js";
 
@@ -53,6 +54,32 @@ function repository(run: OwnedRenderRun): GenerationRepository {
     requestOutputRecovery: vi.fn(async () => run),
     requestProviderCancellation: vi.fn(async () => null),
   };
+}
+
+function strictTemplateEstimate(
+  templateVersionId: string,
+  update?: (payload: {
+    configuration: { creatorProject: Record<string, unknown>; generation: Record<string, unknown> };
+    productRecipe: Record<string, unknown>;
+    campaignRecipe: Record<string, unknown>;
+  }) => void,
+): GenerationConfiguration {
+  const draft = validTemplateClaim({ templateVersionId });
+  const configuration = structuredClone(draft.configuration) as unknown as {
+    creatorProject: Record<string, unknown>;
+    generation: Record<string, unknown>;
+  };
+  const productRecipe = structuredClone(draft.productRecipe) as Record<string, unknown>;
+  const campaignRecipe = structuredClone(draft.campaignRecipe) as Record<string, unknown>;
+  update?.({ configuration, productRecipe, campaignRecipe });
+  return {
+    ...configuration.generation,
+    templateCampaign: {
+      configuration,
+      productRecipe,
+      campaignRecipe,
+    },
+  } as unknown as GenerationConfiguration;
 }
 
 function service(run: OwnedRenderRun) {
@@ -228,23 +255,7 @@ describe("starter-only private beta", () => {
 
     const quote = await api.createQuote({
       templateVersionId,
-      configuration: {
-        prompt: "Create a product-faithful private-beta campaign.",
-        durationSeconds: 8,
-        aspectRatio: "9:16",
-        resolution: "720p",
-        audio: false,
-        references: [],
-        creativeBrief: {
-          market: "KW",
-          language: "en",
-          goal: "launch",
-          product: {
-            name: "Confirmed product",
-            callToAction: "Shop now",
-          },
-        },
-      },
+      configuration: strictTemplateEstimate(templateVersionId),
     }, {
       user: {
         id: userId,
@@ -269,6 +280,7 @@ describe("starter-only private beta", () => {
     repo.findOwnedProjectVersion = vi.fn(async () => ({
       id: versionId,
       projectId,
+      mode: "advanced" as const,
       templateVersionId: null,
       configuration: {},
     }));
@@ -334,6 +346,7 @@ describe("generation reference ownership", () => {
       findOwnedProjectVersion: vi.fn(async () => ({
         id: versionId,
         projectId,
+        mode: "advanced" as const,
         templateVersionId: null,
         configuration: {
           generation: {
@@ -423,24 +436,15 @@ describe("template quote eligibility", () => {
   const templateVersionId = "11111111-1111-4111-8111-111111111111";
 
   function quoteConfiguration(goal = "launch") {
-    return {
-      prompt: "Create a faithful campaign for the confirmed product.",
-      durationSeconds: 8,
-      aspectRatio: "9:16" as const,
-      resolution: "720p" as const,
-      audio: true,
-      references: [],
-      creativeBrief: {
-        market: "KW",
-        language: "en",
-        goal,
-        product: {
-          name: "Confirmed product",
-          brand: "Confirmed brand",
-          callToAction: "Shop now",
-        },
-      },
-    };
+    return strictTemplateEstimate(templateVersionId, ({ configuration, campaignRecipe }) => {
+      configuration.creatorProject.goal = goal;
+      const generation = configuration.generation;
+      const quoteContext = generation.templateQuoteContext as Record<string, unknown>;
+      const creativeBrief = generation.creativeBrief as Record<string, unknown>;
+      quoteContext.goal = goal;
+      creativeBrief.goal = goal;
+      campaignRecipe.goal = goal;
+    });
   }
 
   function eligibleTemplate() {
@@ -507,6 +511,7 @@ describe("template quote eligibility", () => {
     repo.findOwnedProjectVersion = vi.fn(async () => ({
       id: versionId,
       projectId,
+      mode: "template" as const,
       templateVersionId: fixture.templateVersionId!,
       configuration: malformedConfiguration,
       productRecipe: fixture.productRecipe,
@@ -576,6 +581,119 @@ describe("template quote eligibility", () => {
     expect(startRender).not.toHaveBeenCalled();
   });
 
+  it("rejects historic Template Mode rows with no immutable template ID or product recipe before lookup, quote, or reservation", async () => {
+    const userId = randomUUID();
+    const projectId = randomUUID();
+    const fixture = validTemplateClaim();
+    const session = {
+      user: { id: userId, email: "owner@example.test", emailVerified: true, name: "Owner", role: "user" as const },
+      session: { id: "session" },
+    };
+
+    for (const malformed of [
+      {
+        label: "missing template ID",
+        version: {
+          mode: "template" as const,
+          templateVersionId: null,
+          configuration: fixture.configuration,
+          productRecipe: fixture.productRecipe,
+          campaignRecipe: fixture.campaignRecipe,
+        },
+      },
+      {
+        label: "missing product recipe",
+        version: {
+          mode: "template" as const,
+          templateVersionId: fixture.templateVersionId!,
+          configuration: fixture.configuration,
+          campaignRecipe: fixture.campaignRecipe,
+        },
+      },
+    ]) {
+      const versionId = randomUUID();
+      const repo = repository(ownedRun());
+      const createQuote = vi.fn(async () => ({} as never));
+      const startRender = vi.fn(async () => ({} as never));
+      repo.findOwnedProjectVersion = vi.fn(async () => ({
+        id: versionId,
+        projectId,
+        ...malformed.version,
+      }));
+      repo.findOwnedQuote = vi.fn(async () => ({
+        id: randomUUID(),
+        templateVersionId: fixture.templateVersionId!,
+        capabilityAlias: "video.cinematic",
+        credits: 60,
+        entitlementEligible: false,
+        configurationHash: "a".repeat(64),
+        expiresAt: new Date("2026-08-21T01:00:00.000Z"),
+      }));
+      const api = createGenerationApiService({
+        repository: repo,
+        generation: {
+          createQuote,
+          startRender,
+          releaseRenderReservation: vi.fn(async () => ({} as never)),
+        },
+        pricing: createGenerationPricingFromEnvironment({
+          GENERATION_PRICING_VERSION: "test-v1",
+          GENERATION_QUOTE_TTL_SECONDS: "900",
+          GENERATION_VIDEO_CINEMATIC_720P_CREDITS_PER_SECOND: "10",
+        }),
+        capabilities: new CapabilityRegistry({
+          "video.cinematic": {
+            enabled: true,
+            adapterId: "vercel-ai-gateway",
+            providerModelId: "bytedance/seedance-2.5",
+          },
+        }),
+      });
+
+      await expect(api.createQuote({ projectVersionId: versionId }, session), malformed.label)
+        .rejects.toMatchObject({ code: "invalid_campaign_configuration" });
+      expect(repo.findPublishedTemplateVersion, malformed.label).not.toHaveBeenCalled();
+      expect(repo.findOwnedReferenceAssets, malformed.label).not.toHaveBeenCalled();
+      expect(createQuote, malformed.label).not.toHaveBeenCalled();
+
+      await expect(api.startRender({
+        userId,
+        projectId,
+        projectVersionId: versionId,
+        quoteId: randomUUID(),
+        idempotencyKey: `historic-template-${randomUUID()}`,
+      }), malformed.label).rejects.toMatchObject({ code: "invalid_campaign_configuration" });
+      expect(repo.findOwnedQuote, malformed.label).not.toHaveBeenCalled();
+      expect(startRender, malformed.label).not.toHaveBeenCalled();
+    }
+  });
+
+  it("rejects direct template estimates without the strict campaign payload before catalog or pricing work", async () => {
+    const { api, repo } = quoteApi();
+    const malformed = {
+      prompt: "A product reveal",
+      durationSeconds: 6,
+      aspectRatio: "9:16",
+      resolution: "720p",
+      audio: true,
+      references: [],
+    } as GenerationConfiguration;
+
+    await expect(api.createQuote({ templateVersionId, configuration: malformed }, null)).rejects.toMatchObject({
+      code: "invalid_campaign_configuration",
+    });
+    expect(repo.findPublishedTemplateVersion).not.toHaveBeenCalled();
+
+    const hiddenOuterValue = {
+      ...strictTemplateEstimate(templateVersionId),
+      hiddenProviderModel: "unapproved-provider-model",
+    } as GenerationConfiguration;
+    await expect(api.createQuote({ templateVersionId, configuration: hiddenOuterValue }, null)).rejects.toMatchObject({
+      code: "invalid_campaign_configuration",
+    });
+    expect(repo.findPublishedTemplateVersion).not.toHaveBeenCalled();
+  });
+
   it("returns a configuration-bound estimate only for a matching published template", async () => {
     const { api } = quoteApi();
 
@@ -585,7 +703,7 @@ describe("template quote eligibility", () => {
       configuration: quoteConfiguration(),
     }, null)).resolves.toMatchObject({
       quoteId: null,
-      credits: 80,
+      credits: 60,
       estimateOnly: true,
     });
   });
@@ -616,10 +734,9 @@ describe("template quote eligibility", () => {
 
     await expect(api.createQuote({
       templateVersionId,
-      configuration: {
-        ...quoteConfiguration(),
-        references: [{ objectKey: "guest-reference", mimeType: "image/jpeg" }],
-      },
+      configuration: strictTemplateEstimate(templateVersionId, ({ configuration }) => {
+        configuration.generation.references = [{ objectKey: "guest-reference", mimeType: "image/jpeg" }];
+      }),
     }, null)).resolves.toMatchObject({ capability: "video.product_fidelity" });
   });
 
@@ -638,6 +755,7 @@ describe("template quote eligibility", () => {
     repo.findOwnedProjectVersion = vi.fn(async () => ({
       id: versionId,
       projectId,
+      mode: "advanced" as const,
       templateVersionId,
       configuration: { generation: quoteConfiguration() },
     }));
@@ -676,7 +794,7 @@ describe("template quote eligibility", () => {
     await expect(api.createQuote({
       capability: "video.product_fidelity",
       templateVersionId,
-      configuration: quoteConfiguration("bookings"),
+      configuration: quoteConfiguration("offer"),
     }, null)).rejects.toMatchObject({
       code: "template_configuration_ineligible",
     } satisfies Partial<GenerationApplicationError>);
@@ -689,20 +807,7 @@ describe("template quote rejection", () => {
   const versionId = "33333333-3333-4333-8333-333333333333";
   const templateVersionId = "44444444-4444-4444-8444-444444444444";
 
-  const configuration = {
-    prompt: "Create an eligible Kuwait campaign.",
-    durationSeconds: 8,
-    aspectRatio: "9:16" as const,
-    resolution: "720p" as const,
-    audio: false,
-    references: [],
-    creativeBrief: {
-      market: "KW",
-      language: "en",
-      goal: "launch",
-      product: { name: "Confirmed product", callToAction: "Shop now" },
-    },
-  };
+  const configuration = strictTemplateEstimate(templateVersionId);
 
   function publishedTemplate(overrides: Record<string, unknown> = {}) {
     return {
@@ -776,25 +881,17 @@ describe("template quote rejection", () => {
     expect(createQuote).not.toHaveBeenCalled();
   });
 
-  it("rejects WhatsApp-only booking templates for quote and submission", async () => {
+  it("rejects a template that requires a booking destination before quote and submission", async () => {
     const bookingTemplate = publishedTemplate({
       goals: ["launch"],
       requiredInputs: ["subject_name", "booking_destination"],
     });
-    const whatsappOnly = {
-      ...configuration,
-      templateQuoteContext: { bookingUrl: "", whatsapp: "+965 50000000" },
-      creativeBrief: {
-        ...configuration.creativeBrief,
-        product: { ...configuration.creativeBrief.product, whatsapp: "+965 50000000" },
-      },
-    };
     const { api, createQuote, repo, startRender } = apiFor(bookingTemplate);
 
     await expect(api.createQuote({
       capability: "video.cinematic",
       templateVersionId,
-      configuration: whatsappOnly,
+      configuration,
     }, null)).rejects.toMatchObject({ code: "template_configuration_ineligible" });
     expect(createQuote).not.toHaveBeenCalled();
 
@@ -802,13 +899,14 @@ describe("template quote rejection", () => {
       capability: "video.cinematic",
       pricingVersion: "test-v1",
       templateVersionId,
-      generation: whatsappOnly,
+      generation: configuration,
     };
     repo.findOwnedProjectVersion = vi.fn(async () => ({
       id: versionId,
       projectId,
+      mode: "advanced" as const,
       templateVersionId,
-      configuration: { generation: whatsappOnly },
+      configuration: { generation: configuration },
     }));
     repo.findOwnedQuote = vi.fn(async () => ({
       id: "55555555-5555-4555-8555-555555555555",
@@ -832,11 +930,20 @@ describe("template quote rejection", () => {
 
   it("rejects an owned project configuration that contradicts the published language policy", async () => {
     const { api, createQuote, repo } = apiFor();
+    const languageMismatch = strictTemplateEstimate(templateVersionId, ({ configuration, campaignRecipe }) => {
+      configuration.creatorProject.language = "ar";
+      const generation = configuration.generation;
+      (generation.templateQuoteContext as Record<string, unknown>).language = "ar";
+      (generation.creativeBrief as Record<string, unknown>).language = "ar";
+      (generation.creativeBrief as Record<string, unknown>).arabicDialect = "kuwaiti";
+      campaignRecipe.language = "ar";
+    });
     repo.findOwnedProjectVersion = vi.fn(async () => ({
       id: versionId,
       projectId,
+      mode: "advanced" as const,
       templateVersionId,
-      configuration: { generation: { ...configuration, creativeBrief: { ...configuration.creativeBrief, language: "ar" } } },
+      configuration: { generation: languageMismatch },
     }));
 
     await expect(api.createQuote({ capability: "video.cinematic", projectVersionId: versionId }, session))
@@ -856,6 +963,7 @@ describe("template quote rejection", () => {
     repo.findOwnedProjectVersion = vi.fn(async () => ({
       id: versionId,
       projectId,
+      mode: "advanced" as const,
       templateVersionId,
       configuration: { generation: configuration },
     }));
@@ -911,6 +1019,7 @@ describe("template quote rejection", () => {
       repo.findOwnedProjectVersion = vi.fn(async () => ({
         id: versionId,
         projectId,
+        mode: "advanced" as const,
         templateVersionId,
         configuration: { generation: configuration },
       }));
@@ -992,6 +1101,7 @@ describe("presenter eligibility", () => {
     repo.findOwnedProjectVersion = vi.fn(async () => ({
       id: versionId,
       projectId,
+      mode: "advanced" as const,
       templateVersionId,
       configuration: baseConfiguration,
       campaignRecipe: { language: "en", presenter: input.presenter },

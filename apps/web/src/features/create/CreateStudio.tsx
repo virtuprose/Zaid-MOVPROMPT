@@ -58,6 +58,7 @@ import {
 } from "./guestClaimRecovery";
 import {
   buildPortableGenerationConfiguration,
+  buildPortableTemplateEstimateConfiguration,
   getLocalCreatorProject,
   imageReferencesForAdvancedHandoff,
   loadCreatorProjects,
@@ -420,7 +421,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
   const templateQuote = useTemplateQuotes({
     enabled: portablePlatform && !simulatedGeneration && step === "details",
     templateId: template.id,
-    configuration: buildPortableGenerationConfiguration(project),
+    configuration: buildPortableTemplateEstimateConfiguration(project),
   });
   const quote = templateQuote.status === "ready" ? templateQuote.quote : null;
   // A quote can expire between the hook timer and a user click; never hand an
@@ -722,7 +723,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
   };
 
   const recommendationConfigurationFor = useCallback((candidateTemplate: CreatorTemplate) => {
-    return buildPortableGenerationConfiguration({
+    return buildPortableTemplateEstimateConfiguration({
       ...project,
       templateId: candidateTemplate.id,
       dialectRegister: candidateTemplate.dialectRegister,

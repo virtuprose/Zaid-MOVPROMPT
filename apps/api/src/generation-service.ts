@@ -2,6 +2,7 @@ import {
   CapabilityAliasSchema,
   GenerationConfigurationSchema,
   TemplateCampaignPayloadSchema,
+  TemplateGenerationConfigurationSchema,
   type CapabilityAlias,
   type CreateGenerationQuoteRequest,
   type GenerationConfiguration,
@@ -132,24 +133,85 @@ function generationConfiguration(configuration: JsonObject): GenerationConfigura
   return parsed.data as unknown as GenerationConfiguration;
 }
 
+const DIRECT_TEMPLATE_ESTIMATE_KEYS = new Set([
+  "prompt",
+  "durationSeconds",
+  "aspectRatio",
+  "resolution",
+  "audio",
+  "references",
+  "templateQuoteContext",
+  "creativeBrief",
+  "templateCampaign",
+]);
+
+function invalidCampaignConfiguration(): never {
+  throw new GenerationApplicationError(
+    "invalid_campaign_configuration",
+    "The saved template campaign settings are incomplete, invalid, or inconsistent.",
+  );
+}
+
+function sameJson(left: unknown, right: unknown): boolean {
+  return JSON.stringify(left) === JSON.stringify(right);
+}
+
+/**
+ * Template Mode persisted rows are never allowed to fall back to the broad
+ * Advanced configuration parser. Legacy Template Mode records stay readable,
+ * but cannot receive a quote or a charge until recreated from a valid draft.
+ */
 function persistedTemplateCampaign(input: OwnedProjectVersion): {
   configuration: GenerationConfiguration;
   root: JsonObject;
 } {
+  if (!input.templateVersionId || input.productRecipe === undefined || input.campaignRecipe === undefined) {
+    invalidCampaignConfiguration();
+  }
   const parsed = TemplateCampaignPayloadSchema.safeParse({
     configuration: input.configuration,
-    productRecipe: input.productRecipe ?? {},
-    campaignRecipe: input.campaignRecipe ?? {},
+    productRecipe: input.productRecipe,
+    campaignRecipe: input.campaignRecipe,
   });
-  if (!parsed.success) {
-    throw new GenerationApplicationError(
-      "invalid_campaign_configuration",
-      "The saved template campaign settings are incomplete, invalid, or inconsistent.",
-    );
-  }
+  if (!parsed.success) invalidCampaignConfiguration();
   return {
     configuration: parsed.data.configuration.generation as unknown as GenerationConfiguration,
     root: parsed.data.configuration as unknown as JsonObject,
+  };
+}
+
+/**
+ * A guest Template Mode estimate carries the exact same campaign payload as a
+ * persisted project. The generic configuration schema remains Advanced-only;
+ * the outer duplicate is checked to reject hidden or mismatched values rather
+ * than silently choosing one of two campaign descriptions.
+ */
+function directTemplateCampaign(input: GenerationConfiguration): {
+  configuration: GenerationConfiguration;
+  root: JsonObject;
+} {
+  const candidate = input as Record<string, unknown>;
+  if (Object.keys(candidate).some((key) => !DIRECT_TEMPLATE_ESTIMATE_KEYS.has(key))) {
+    invalidCampaignConfiguration();
+  }
+  const payload = TemplateCampaignPayloadSchema.safeParse(candidate.templateCampaign);
+  if (!payload.success) invalidCampaignConfiguration();
+  const outer = TemplateGenerationConfigurationSchema.safeParse({
+    prompt: candidate.prompt,
+    durationSeconds: candidate.durationSeconds,
+    aspectRatio: candidate.aspectRatio,
+    resolution: candidate.resolution,
+    audio: candidate.audio,
+    references: candidate.references,
+    templateQuoteContext: candidate.templateQuoteContext,
+    creativeBrief: candidate.creativeBrief,
+  });
+  if (!outer.success || !sameJson(outer.data, payload.data.configuration.generation)) {
+    invalidCampaignConfiguration();
+  }
+  return {
+    configuration: payload.data.configuration.generation as unknown as GenerationConfiguration,
+    root: payload.data.configuration as unknown as JsonObject,
   };
 }
 
@@ -469,6 +531,28 @@ async function publishedTemplate(
   return template;
 }
 
+async function persistedTemplateContext(
+  repository: GenerationRepository,
+  version: OwnedProjectVersion,
+): Promise<{
+  template: PublishedTemplateVersion;
+  configuration: GenerationConfiguration;
+  root: JsonObject;
+} | null> {
+  if (version.mode === "advanced") return null;
+  if (version.mode !== "template") {
+    throw new GenerationApplicationError(
+      "invalid_generation_configuration",
+      "The saved project version has an unsupported creation mode.",
+    );
+  }
+  // Parse before any catalog, quote, asset, reservation, or provider work.
+  const campaign = persistedTemplateCampaign(version);
+  const template = await publishedTemplate(repository, version.templateVersionId);
+  if (!template) invalidCampaignConfiguration();
+  return { template, ...campaign };
+}
+
 async function eligibleForStarter(input: {
   repository: GenerationRepository;
   session: AuthenticatedSession | null;
@@ -648,15 +732,12 @@ export function createGenerationApiService(options: GenerationApiServiceOptions)
       if (request.projectVersionId) {
         if (!session) throw new GenerationApplicationError("authentication_required");
         const version = await loadOwnedVersion(session.user.id, request.projectVersionId);
-        const template = await publishedTemplate(options.repository, version.templateVersionId);
-        // productRecipe is non-null in the PostgreSQL schema. The optional
-        // projection supports only explicitly legacy repository adapters that
-        // predate the Phase 3 columns; those rows cannot be created by the
-        // canonical write path. A selected DB row always re-validates here.
-        const validatedTemplate = template && version.productRecipe !== undefined
-          ? persistedTemplateCampaign(version)
-          : null;
-        const configuration = validatedTemplate?.configuration ?? generationConfiguration(version.configuration);
+        const persistedTemplate = await persistedTemplateContext(options.repository, version);
+        // Advanced has its own bounded configuration contract. Template Mode
+        // never reaches this fallback, including historical malformed rows.
+        const template = persistedTemplate?.template
+          ?? await publishedTemplate(options.repository, version.templateVersionId);
+        const configuration = persistedTemplate?.configuration ?? generationConfiguration(version.configuration);
         const capability = resolveTemplateCapability({
           template,
           ...(request.capability ? { requestedCapability: request.capability } : {}),
@@ -669,7 +750,7 @@ export function createGenerationApiService(options: GenerationApiServiceOptions)
           template,
           capability,
           configuration,
-          root: validatedTemplate?.root ?? version.configuration,
+          root: persistedTemplate?.root ?? version.configuration,
         });
         const price = options.pricing.price(
           capability,
@@ -716,8 +797,11 @@ export function createGenerationApiService(options: GenerationApiServiceOptions)
         }
       }
 
+      const directTemplate = request.templateVersionId
+        ? directTemplateCampaign(request.configuration!)
+        : null;
       const template = await publishedTemplate(options.repository, request.templateVersionId);
-      const configuration = request.configuration!;
+      const configuration = directTemplate?.configuration ?? request.configuration!;
       const capability = resolveTemplateCapability({
         template,
         ...(request.capability ? { requestedCapability: request.capability } : {}),
@@ -728,7 +812,7 @@ export function createGenerationApiService(options: GenerationApiServiceOptions)
         template,
         capability,
         configuration,
-        root: configuration as JsonObject,
+        root: directTemplate?.root ?? configuration as JsonObject,
       });
       const price = options.pricing.price(
         capability,
@@ -768,12 +852,9 @@ export function createGenerationApiService(options: GenerationApiServiceOptions)
       // Validate the immutable Template Mode payload before even reading a
       // quote. A poisoned historical row must not progress into quote,
       // reservation, or provider-related work.
-      const template = version.templateVersionId
-        ? await publishedTemplate(options.repository, version.templateVersionId)
-        : null;
-      const validatedTemplate = template && version.productRecipe !== undefined
-        ? persistedTemplateCampaign(version)
-        : null;
+      const persistedTemplate = await persistedTemplateContext(options.repository, version);
+      const template = persistedTemplate?.template
+        ?? await publishedTemplate(options.repository, version.templateVersionId);
       const quote = await options.repository.findOwnedQuote(input.userId, input.quoteId);
       if (!quote) throw new GenerationApplicationError("quote_not_found");
       if (options.starterOnly && !quote.entitlementEligible) {
@@ -787,14 +868,14 @@ export function createGenerationApiService(options: GenerationApiServiceOptions)
       const capability = CapabilityAliasSchema.safeParse(quote.capabilityAlias);
       if (!capability.success) throw new GenerationApplicationError("unapproved_capability");
       assertCapability(capability.data);
-      const configuration = validatedTemplate?.configuration ?? generationConfiguration(version.configuration);
+      const configuration = persistedTemplate?.configuration ?? generationConfiguration(version.configuration);
       await assertOwnedPresenterEligibility(input.userId, version);
       await assertOwnedGenerationReferences(input.userId, version, capability.data, configuration);
       assertTemplateEligibility({
         template,
         capability: capability.data,
         configuration,
-        root: validatedTemplate?.root ?? version.configuration,
+        root: persistedTemplate?.root ?? version.configuration,
       });
       const binding = boundConfiguration({
         capability: capability.data,

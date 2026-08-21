@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import {
   PresenterModeSchema,
+  type CreationMode,
   TemplateQuoteEligibilitySchema,
   type PresenterMode,
   type TemplateQuoteEligibility,
@@ -20,6 +21,7 @@ const STARTER_RECIPE_FLAG = "starterRenderEligible";
 export type OwnedProjectVersion = {
   id: string;
   projectId: string;
+  mode: CreationMode;
   templateVersionId: string | null;
   configuration: JsonObject;
   productRecipe?: JsonObject;
@@ -149,6 +151,7 @@ export function createDrizzleGenerationRepository(db: Database): GenerationRepos
         .select({
           id: schema.creatorProjectVersions.id,
           projectId: schema.creatorProjectVersions.projectId,
+          mode: schema.creatorProjectVersions.mode,
           templateVersionId: schema.creatorProjectVersions.templateVersionId,
           configuration: schema.creatorProjectVersions.configuration,
           productRecipe: schema.creatorProjectVersions.productRecipe,

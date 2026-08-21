@@ -293,6 +293,13 @@ export const creatorProjectVersions = pgTable(
       foreignColumns: [table.id, table.projectId, table.userId],
     }).onDelete("restrict"),
     check("creator_versions_positive_version", sql`${table.versionNumber} > 0`),
+    // PostgreSQL enforces the same immutable-template identity required by
+    // the public Template Mode contract. Historical rows remain readable via
+    // the matching NOT VALID migration, but new writes cannot omit it.
+    check(
+      "creator_versions_template_mode_version",
+      sql`${table.mode} <> 'template' OR ${table.templateVersionId} IS NOT NULL`,
+    ),
     index("creator_versions_project_created_idx").on(table.projectId, table.createdAt),
   ],
 );

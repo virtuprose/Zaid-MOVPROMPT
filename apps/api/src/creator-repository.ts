@@ -395,6 +395,7 @@ function databaseConstraint(error: unknown): string | null {
  */
 function assertPersistableCampaign(input: {
   mode: ClaimDraftRequest["mode"];
+  templateVersionId?: string | null | undefined;
   configuration: unknown;
   productRecipe: unknown;
   campaignRecipe: unknown;

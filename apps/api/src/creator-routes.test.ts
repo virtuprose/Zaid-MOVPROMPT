@@ -282,6 +282,53 @@ describe("portable creator API", () => {
     expect(projectRepository.replaceSource).not.toHaveBeenCalled();
   });
 
+  it("requires a published immutable template version before any Template Mode write", async () => {
+    const projectRepository = repository();
+    const app = createApi({ config, creatorRepository: projectRepository, authGateway: auth() });
+    const valid = validTemplateClaim({ draftId: DRAFT_ID, templateVersionId: TEMPLATE_VERSION_ID });
+    const { templateVersionId: _templateVersionId, ...missingTemplateVersion } = valid;
+
+    const claim = await app.request("/api/v1/projects/claim", {
+      method: "POST",
+      headers: { "content-type": "application/json", "idempotency-key": DRAFT_ID },
+      body: JSON.stringify(missingTemplateVersion),
+    });
+    expect(claim.status).toBe(400);
+    await expect(claim.json()).resolves.toMatchObject({ error: { code: "validation_failed" } });
+    expect(projectRepository.claimDraft).not.toHaveBeenCalled();
+
+    const versionWrite = await app.request(`/api/v1/projects/${PROJECT_ID}/versions`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "idempotency-key": "campaign-version-missing-template" },
+      body: JSON.stringify({
+        ...missingTemplateVersion,
+        parentVersionId: VERSION_ID,
+        changeReason: "Attempted template version bypass",
+      }),
+    });
+    expect(versionWrite.status).toBe(400);
+    expect(projectRepository.createVersion).not.toHaveBeenCalled();
+
+    const sourceWrite = await app.request(`/api/v1/projects/${PROJECT_ID}/source`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "idempotency-key": "campaign-source-missing-template" },
+      body: JSON.stringify({
+        ...missingTemplateVersion,
+        parentVersionId: VERSION_ID,
+        source: {
+          type: "upload",
+          name: "Northfield No. 07",
+          description: "A confirmed premium fragrance.",
+          price: "12.500",
+          brand: "Northfield",
+          assetIds: ["44444444-4444-4444-8444-444444444444"],
+        },
+      }),
+    });
+    expect(sourceWrite.status).toBe(400);
+    expect(projectRepository.replaceSource).not.toHaveBeenCalled();
+  });
+
   it("retries one transient source-scan failure through the complete scanner boundary", async () => {
     const scanner: SourceScanner = {
       scan: vi
@@ -417,6 +464,41 @@ describe("portable creator API", () => {
     });
     expect(response.status).toBe(201);
     expect(claims.claimGuestDraft).toHaveBeenCalledTimes(1);
+  });
+
+  it("rejects a Template Mode guest claim without an immutable template version before the claim service runs", async () => {
+    const claims = guestClaimService();
+    const valid = validTemplateClaim({ draftId: DRAFT_ID, templateVersionId: TEMPLATE_VERSION_ID });
+    const { templateVersionId: _templateVersionId, ...missingTemplateVersion } = valid;
+    const snapshot = {
+      ...missingTemplateVersion,
+      pendingGenerationId: PENDING_GENERATION_ID,
+      snapshotDigest: "a".repeat(64),
+      assetManifest: [],
+    };
+    const app = createApi({
+      config,
+      creatorRepository: repository(),
+      authGateway: auth(),
+      guestClaimService: claims,
+    });
+
+    const claimed = await app.request("/api/v1/drafts/claim", {
+      method: "POST",
+      headers: { "content-type": "application/json", "idempotency-key": PENDING_GENERATION_ID },
+      body: JSON.stringify(snapshot),
+    });
+    expect(claimed.status).toBe(400);
+    await expect(claimed.json()).resolves.toMatchObject({ error: { code: "validation_failed" } });
+    expect(claims.claimGuestDraft).not.toHaveBeenCalled();
+
+    const started = await app.request("/api/v1/drafts/claim/start", {
+      method: "POST",
+      headers: { "content-type": "application/json", "idempotency-key": PENDING_GENERATION_ID },
+      body: JSON.stringify(snapshot),
+    });
+    expect(started.status).toBe(400);
+    expect(claims.startClaim).not.toHaveBeenCalled();
   });
 
   it("rejects a mismatched claim key before writing", async () => {

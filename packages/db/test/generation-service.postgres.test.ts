@@ -44,7 +44,7 @@ describePostgres("generation service PostgreSQL transactions", () => {
       id: projectVersionId,
       projectId,
       userId,
-      mode: "template",
+      mode: "advanced",
       versionNumber: 1,
       configuration: { fixture: true },
     });
@@ -334,7 +334,7 @@ describePostgres("generation service PostgreSQL transactions", () => {
         id: projectVersionId,
         projectId,
         userId: firstProject.userId,
-        mode: "template",
+        mode: "advanced",
         versionNumber: 1,
         configuration: { fixture: true },
       });

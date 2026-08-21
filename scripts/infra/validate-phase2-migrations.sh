@@ -91,6 +91,7 @@ assert_query "claim tables never persist signed URLs" "SELECT (NOT EXISTS (SELEC
 assert_query "request rate limit table exists" "SELECT (to_regclass('public.request_rate_limits') IS NOT NULL)::int;"
 assert_query "request rate limit function exists" "SELECT EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'consume_request_rate_limit')::int;"
 assert_query "rate limit table only persists hashed subjects" "SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'request_rate_limits' AND column_name = 'subject_hash')::int;"
+assert_query "Template Mode versions require an immutable template version" "SELECT EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid = 'public.creator_project_versions'::regclass AND conname = 'creator_versions_template_mode_version' AND contype = 'c')::int;"
 
 DATABASE_URL_DIRECT="$database_url" bun run db:migrate >/dev/null
 "$psql_bin" "$database_url" -v ON_ERROR_STOP=1 -f "$rls_script" >/dev/null

@@ -33,7 +33,10 @@ function snapshot() {
     snapshotDigest: "a".repeat(64),
     assetManifest: [],
     title: "Exact Kuwait campaign",
-    mode: "template" as const,
+    // This callback fixture exercises identity/idempotency recovery, not the
+    // Template Mode contract. Keep it explicitly Advanced so it remains a
+    // legitimate legacy-style snapshot without an immutable template ID.
+    mode: "advanced" as const,
     configuration: { campaign: { market: "KW", language: "bilingual" } },
     productRecipe: { name: "Campaign product" },
     campaignRecipe: { market: "KW", language: "bilingual" },

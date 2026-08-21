@@ -7,7 +7,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { AuthGateway } from "./auth-gateway.js";
 import { createApi } from "./app.js";
 import { loadApiConfig } from "./config.js";
-import { createDrizzleCreatorRepository } from "./creator-repository.js";
+import { CreatorRepositoryError, createDrizzleCreatorRepository } from "./creator-repository.js";
 import { createGuestClaimRepository } from "./guest-claim-repository.js";
 import { createGuestClaimService } from "./guest-claim-service.js";
 import { validTemplateClaim } from "./campaign-contract.test-fixture.js";
@@ -101,6 +101,84 @@ describePostgres("portable creator HTTP ownership", () => {
       .from(schema.creatorProjects)
       .where(eq(schema.creatorProjects.userId, firstUserId));
     expect(after).toBe(before);
+  });
+
+  it("rejects a Template Mode claim without an immutable published template version before PostgreSQL persistence", async () => {
+    const creatorRepository = createDrizzleCreatorRepository(database.db);
+    const app = createApi({
+      config: loadApiConfig({ APP_ENV: "test", API_PORT: "3001", FEATURE_AUTHENTICATION: "true", FEATURE_TEMPLATE_MODE: "true" }),
+      authGateway: auth,
+      creatorRepository,
+    });
+    const localDraftId = randomUUID();
+    const valid = validTemplateClaim({ draftId: localDraftId });
+    const { templateVersionId: _templateVersionId, ...missingTemplateVersion } = valid;
+    const [{ before }] = await database.db
+      .select({ before: sql<number>`count(*)::integer` })
+      .from(schema.creatorProjects)
+      .where(eq(schema.creatorProjects.userId, firstUserId));
+
+    const response = await app.request("/api/v1/projects/claim", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "idempotency-key": localDraftId,
+        "x-test-user": firstUserId,
+      },
+      body: JSON.stringify(missingTemplateVersion),
+    });
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({ error: { code: "validation_failed" } });
+
+    const [{ after }] = await database.db
+      .select({ after: sql<number>`count(*)::integer` })
+      .from(schema.creatorProjects)
+      .where(eq(schema.creatorProjects.userId, firstUserId));
+    expect(after).toBe(before);
+  });
+
+  it("rejects a repository caller that bypasses HTTP parsing and omits the Template Mode version", async () => {
+    const creatorRepository = createDrizzleCreatorRepository(database.db);
+    const localDraftId = randomUUID();
+    const valid = validTemplateClaim({ draftId: localDraftId });
+    const { templateVersionId: _templateVersionId, ...missingTemplateVersion } = valid;
+    const [{ before }] = await database.db
+      .select({ before: sql<number>`count(*)::integer` })
+      .from(schema.creatorProjects)
+      .where(eq(schema.creatorProjects.userId, firstUserId));
+
+    await expect(creatorRepository.claimDraft(firstUserId, missingTemplateVersion as never)).rejects.toMatchObject({
+      code: "invalid_campaign_configuration",
+    } satisfies Partial<CreatorRepositoryError>);
+
+    const [{ after }] = await database.db
+      .select({ after: sql<number>`count(*)::integer` })
+      .from(schema.creatorProjects)
+      .where(eq(schema.creatorProjects.userId, firstUserId));
+    expect(after).toBe(before);
+  });
+
+  it("enforces Template Mode immutable-version identity in PostgreSQL as a final write boundary", async () => {
+    const projectId = randomUUID();
+    await database.db.insert(schema.creatorProjects).values({
+      id: projectId,
+      userId: firstUserId,
+      title: "Database template identity guard",
+      mode: "template",
+    });
+
+    await expect(database.db.insert(schema.creatorProjectVersions).values({
+      id: randomUUID(),
+      projectId,
+      userId: firstUserId,
+      mode: "template",
+      versionNumber: 1,
+      configuration: {},
+      productRecipe: {},
+      campaignRecipe: {},
+    })).rejects.toMatchObject({
+      cause: { constraint_name: "creator_versions_template_mode_version" },
+    });
   });
 
   it("claims once, hides the project from another account, and prevents a second claim", async () => {

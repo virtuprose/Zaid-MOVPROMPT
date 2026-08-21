@@ -3,6 +3,7 @@ import type {
   CampaignSettings,
   ClaimDraftRequest,
   CreatorProjectRecord,
+  GenerationConfiguration,
 } from "@movprompt/contracts";
 import { ENGINE_VERSION, getCreativeTemplate, type CreativeBrief } from "@movprompt/creative-engine";
 
@@ -221,6 +222,28 @@ export function portableConfiguration(project: CreatorProject): ClaimDraftReques
     creatorProject: stableProjectConfiguration(project),
     generation: buildPortableGenerationConfiguration(project),
   };
+}
+
+/**
+ * Guest Template Mode estimates use the same complete campaign payload that
+ * will be persisted after sign-in. This deliberately prevents a lower-trust
+ * price preview from carrying a different CTA, market, or hidden setting.
+ */
+export function buildPortableTemplateEstimateConfiguration(project: CreatorProject): GenerationConfiguration {
+  const generation = buildPortableGenerationConfiguration(project);
+  const configuration = {
+    creatorProject: stableProjectConfiguration(project),
+    generation,
+  };
+  const templateCampaign = {
+    configuration,
+    productRecipe: portableProductRecipe(project),
+    campaignRecipe: portableCampaignRecipe(project),
+  };
+  return {
+    ...generation,
+    templateCampaign,
+  } as unknown as GenerationConfiguration;
 }
 
 export function portableCampaignSettings(project: CreatorProject): CampaignSettings {

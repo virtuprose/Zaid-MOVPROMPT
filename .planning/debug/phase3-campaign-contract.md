@@ -20,7 +20,7 @@ updated: 2026-08-21
 - hypothesis: Campaign domain validation was implemented in web-only rules while portable public contracts retained generic JSON for migration compatibility.
 - test: Add adversarial contract/API tests for malformed and oversized campaign settings at claim/version write and generation read boundaries.
 - expecting: A shared bounded campaign schema rejects invalid settings consistently before persistence, quote, reservation, or provider work while preserving valid Kuwait Arabic/English/bilingual paths.
-- next_action: resolved — commit the validated campaign-contract fix and retain this evidence for Phase 03 closeout
+- next_action: resolved — retain the strict Template Mode identity and read-boundary checks in future migration and generation reviews
 - reasoning_checkpoint: Preserve the existing generic project envelope only where legacy compatibility demands it; security-critical campaign fields must be parsed and normalized server-side without silently dropping unknown values.
 - tdd_checkpoint: pending
 
@@ -32,12 +32,18 @@ updated: 2026-08-21
   observation: The shared strict `CampaignSettingsSchema` and persisted Template Mode payload contract reject unsupported markets, malformed KWD, invalid CTA/booking/WhatsApp/brand values, and hidden keys at claim, version, source replacement, guest claim, quote, and start boundaries.
 - timestamp: 2026-08-21T04:10:00+03:00
   observation: Focused contracts, API, generation, browser creator tests, full typechecks/builds, creator smoke tests, and a disposable PostgreSQL 17 migration/API proof passed with no provider calls.
+- timestamp: 2026-08-21T04:25:00+03:00
+  observation: Re-audit found the initial fix still allowed a narrow bypass: Template Mode writes could omit their immutable template version, and a persisted row or direct estimate could fall back to the generic generation configuration instead of requiring the complete Template Mode campaign payload.
+- timestamp: 2026-08-21T05:10:00+03:00
+  observation: The second remediation rejects Template Mode without a UUID template version at contract, repository, and PostgreSQL boundaries. Persisted Template Mode quote/start now parses the full payload before template, quote, reference, reservation, or provider work; direct Template estimates use the identical strict payload and reject hidden outer fields.
+- timestamp: 2026-08-21T05:15:00+03:00
+  observation: Focused and full tests, workspace typechecks/build, creator smoke, lint (warnings only), and disposable PostgreSQL 17 migration/API/worker proofs passed. No paid or provider calls were made.
 
 ## Eliminated
 
 ## Resolution
 
-- root_cause: Public draft and project envelopes accepted generic JSON for Template Mode, while generation trusted persisted configuration with a catchall schema. Browser-only bounds could therefore be bypassed before quote, reservation, or provider submission.
-- fix: Added one strict Kuwait Template Mode campaign contract and cross-field persisted payload validator. Claim, version, source replacement, guest-claim, quote, and start paths reject malformed, oversized, unsupported, or hidden values with stable errors before persistence or generation economics; a narrowly documented legacy read path exists only for adapters that have no persisted product recipe.
-- verification: Contract tests reject malformed KWD, non-KW markets, and unknown keys; API/PostgreSQL tests prove hostile payloads do not persist; generation tests prove hostile stored values cannot reach quote, reference lookup, reservation, or provider work. Full workspace typecheck, build, API/web tests, creator smoke, lint, diff check, and disposable PostgreSQL 17 proof passed.
-- files_changed: packages/contracts/src/creator.ts, packages/contracts/src/guest-claims.ts, apps/api/src/creator-repository.ts, apps/api/src/creator-routes.ts, apps/api/src/generation-repository.ts, apps/api/src/generation-service.ts, apps/api/src/generation-routes.ts, the associated contract/API/generation/PostgreSQL/browser tests, and the creator draft mapper/store.
+- root_cause: Refined: Template Mode identity was inferred from an optional template ID. This left direct estimates and malformed historical rows able to use the generic catchall generation configuration instead of the full immutable Template Mode payload.
+- fix: Added `TemplateCampaignWriteSchema` with a required UUID template version, repository revalidation, a PostgreSQL check constraint, explicit `mode` projection, strict persisted/direct Template parsing, and no-fallback rejection before all generation economics or provider-facing work. Advanced Mode remains explicitly separate for supported legacy records.
+- verification: Adversarial API/PostgreSQL tests cover absent/null template IDs, guest-claim writes, repository bypasses, missing product recipes, malformed historic Template rows, direct Template estimates, and hidden fields. Focused generation/API tests, full workspace tests, full API/DB/worker tests on a disposable PostgreSQL 17 instance, build/typecheck, creator smoke, lint, and migration/RLS proof passed.
+- files_changed: packages/contracts/src/creator.ts, packages/db/src/schema.ts, packages/db/migrations/0020_template_mode_requires_version.sql, packages/db/migrations/meta/_journal.json, apps/api/src/creator-repository.ts, apps/api/src/generation-repository.ts, apps/api/src/generation-service.ts, apps/web/src/features/create/projectStore.ts, apps/web/src/features/create/CreateStudio.tsx, related API/PostgreSQL/web tests, and migration/RLS validation fixtures.
