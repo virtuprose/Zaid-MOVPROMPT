@@ -7,7 +7,9 @@ import { SourceChoiceStep } from "./SourceChoiceStep";
 function renderSourceChoice(overrides: Partial<ComponentProps<typeof SourceChoiceStep>> = {}) {
   const onChoiceChange = vi.fn();
   const onSubjectChange = vi.fn();
-  render(
+  const onFiles = vi.fn();
+  const onManualStart = vi.fn();
+  const view = render(
     <SourceChoiceStep
       value="product_link"
       subject="product"
@@ -17,12 +19,12 @@ function renderSourceChoice(overrides: Partial<ComponentProps<typeof SourceChoic
       onUrlChange={vi.fn()}
       onImport={vi.fn()}
       onCancel={vi.fn()}
-      onFiles={vi.fn()}
-      onManualStart={vi.fn()}
+      onFiles={onFiles}
+      onManualStart={onManualStart}
       {...overrides}
     />,
   );
-  return { onChoiceChange, onSubjectChange };
+  return { onChoiceChange, onSubjectChange, onFiles, onManualStart, view };
 }
 
 describe("SourceChoiceStep", () => {
@@ -49,5 +51,28 @@ describe("SourceChoiceStep", () => {
     fireEvent.keyDown(product, { key: "End" });
     expect(onSubjectChange).toHaveBeenCalledWith("service");
     expect(service).toHaveFocus();
+  });
+
+  it("offers product and business links plus photos, real footage, and manual facts as distinct truthful starts", () => {
+    const upload = renderSourceChoice({ value: "upload", subject: "service" });
+
+    expect(screen.getByRole("radio", { name: /Product link/i })).toBeVisible();
+    expect(screen.getByRole("radio", { name: /Business or service link/i })).toBeVisible();
+    expect(screen.getByRole("radio", { name: /Upload photos or footage/i })).toBeVisible();
+    expect(screen.getByRole("radio", { name: /Enter details manually/i })).toBeVisible();
+
+    const input = screen.getByLabelText(/Choose photos or footage/i);
+    expect(input).toHaveAttribute("accept", "image/jpeg,image/png,image/webp,video/mp4,video/quicktime");
+    fireEvent.change(input, { target: { files: [new File(["footage"], "spokesperson.mov", { type: "video/quicktime" })] } });
+    expect(upload.onFiles).toHaveBeenCalledTimes(1);
+
+    upload.onChoiceChange.mockClear();
+    fireEvent.click(screen.getByRole("radio", { name: /Enter details manually/i }));
+    expect(upload.onChoiceChange).toHaveBeenCalledWith("manual");
+
+    upload.view.unmount();
+    const manual = renderSourceChoice({ value: "manual", subject: "service" });
+    fireEvent.click(screen.getByRole("button", { name: "Enter details" }));
+    expect(manual.onManualStart).toHaveBeenCalledTimes(1);
   });
 });
