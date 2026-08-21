@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 6
+open_count: 7
 waived_count: 0
 fixed_count: 3
-total_count: 9
-last_updated: 2026-08-20T21:11:47.437Z
+total_count: 10
+last_updated: 2026-08-21T16:58:50.558Z
 ---
 
 # Broken Windows Ledger
@@ -24,6 +24,7 @@ last_updated: 2026-08-20T21:11:47.437Z
 | 7 | 03 | unrun-verify | apps/web/src/features/create/CampaignSetupStep.tsx |  | Full-page campaign setup browser verification requires a live authoritative quote service; local QA correctly kept template selection disabled. | open |  | 2026-08-20T20:34:54.602Z |  |
 | 8 | 03 | unrun-verify | .planning/phases/03-product-and-service-golden-paths/03-UAT-EVIDENCE.md |  | Provisioned email/claim/checksum/replay/authoritative quote/durable-run UAT remains NOT VERIFIED because generation is disabled and Mailpit/worker queue evidence is unavailable. | open |  | 2026-08-20T21:11:47.357Z |  |
 | 9 | 03 | unrun-verify | .planning/phases/03-product-and-service-golden-paths/03-BROWSER-EVIDENCE.md |  | Rendered browser matrix remains NOT VERIFIED because browser automation and a reachable provisioned Generate path are unavailable. | open |  | 2026-08-20T21:11:47.437Z |  |
+| 10 | 04 | unrun-verify | apps/web/src/features/create/CreateStudio.tsx |  | Rendered browser verification of a real persisted cancelling run awaits a configured local API and worker fixture. | open |  | 2026-08-21T16:58:50.558Z |  |
 
 ````json
 [
@@ -133,6 +134,18 @@ last_updated: 2026-08-20T21:11:47.437Z
     "status": "open",
     "reason": "",
     "recorded_at": "2026-08-20T21:11:47.437Z",
+    "resolved_at": null
+  },
+  {
+    "id": 10,
+    "kind": "unrun-verify",
+    "phase": "04",
+    "file": "apps/web/src/features/create/CreateStudio.tsx",
+    "line": null,
+    "description": "Rendered browser verification of a real persisted cancelling run awaits a configured local API and worker fixture.",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-08-21T16:58:50.558Z",
     "resolved_at": null
   }
 ]
