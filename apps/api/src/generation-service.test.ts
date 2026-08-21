@@ -87,9 +87,10 @@ function service(run: OwnedRenderRun) {
     run.status = "cancelled";
     return {} as never;
   });
+  const generationRepository = repository(run);
   return {
     api: createGenerationApiService({
-      repository: repository(run),
+      repository: generationRepository,
       generation: {
         createQuote: vi.fn(async () => ({} as never)),
         startRender: vi.fn(async () => ({} as never)),
@@ -109,6 +110,7 @@ function service(run: OwnedRenderRun) {
       }),
     }),
     releaseRenderReservation,
+    repository: generationRepository,
   };
 }
 
@@ -135,7 +137,7 @@ describe("generation cancellation safety", () => {
     expect(releaseRenderReservation).toHaveBeenCalledOnce();
   });
 
-  it("does not claim a Gateway render was cancelled when the provider exposes no cancel operation", async () => {
+  it("keeps a Gateway render in honest pending cancellation while reconciliation continues", async () => {
     const userId = randomUUID();
     const run = ownedRun({
       status: "processing",
@@ -143,13 +145,36 @@ describe("generation cancellation safety", () => {
       providerRequestId: "vgw4.operation",
       chargedAt: new Date("2026-08-14T12:00:10.000Z"),
     });
-    const { api, releaseRenderReservation } = service(run);
+    const { api, releaseRenderReservation, repository: generationRepository } = service(run);
+    generationRepository.requestProviderCancellation = vi.fn(async () => ({
+      ...run,
+      status: "cancelling",
+      processingStage: "cancelling",
+    }));
 
-    await expect(api.cancelRender(userId, run.id, "cancel:run-3")).rejects.toMatchObject({
-      code: "render_not_cancellable",
-      message: expect.stringContaining("does not currently expose"),
-    } satisfies Partial<GenerationApplicationError>);
+    await expect(api.cancelRender(userId, run.id, "cancel:run-3")).resolves.toMatchObject({
+      status: "cancelling",
+      processingStage: "cancelling",
+    });
     expect(releaseRenderReservation).not.toHaveBeenCalled();
+  });
+
+  it("does not expose raw provider errors or capability-bearing URLs in public run state", async () => {
+    const userId = randomUUID();
+    const run = ownedRun({
+      status: "failed",
+      processingStage: "failed",
+      errorCode: "provider_output_host_not_allowed",
+      errorMessage: "https://secret-output.example.test/video.mp4?signature=private vgw4.operation",
+    });
+    const { api } = service(run);
+
+    await expect(api.getRender(userId, run.id)).resolves.toMatchObject({
+      error: {
+        code: "provider_output_host_not_allowed",
+        message: "We could not finish saving this video. Your project is safe; try again from Projects.",
+      },
+    });
   });
 });
 
