@@ -26,6 +26,7 @@ export interface QualityMediaStorage {
 
 type Fetcher = (input: string, init?: RequestInit) => Promise<Response>;
 type ProbeRunner = (url: string) => Promise<unknown>;
+type DecodeRunner = (url: string) => Promise<void>;
 
 const ProbeSchema = z.object({
   streams: z.array(z.object({
@@ -61,11 +62,25 @@ async function defaultProbeRunner(url: string): Promise<unknown> {
   return JSON.parse(stdout);
 }
 
+async function defaultDecodeRunner(url: string): Promise<void> {
+  await execFileAsync(
+    process.env.FFMPEG_PATH?.trim() || "ffmpeg",
+    ["-v", "error", "-i", url, "-f", "null", "-"],
+    { timeout: 10 * 60_000, maxBuffer: 2 * 1024 * 1024 },
+  );
+}
+
 export function createFfprobeTechnicalAnalyzer(options: {
   storage: QualityMediaStorage;
   probe?: ProbeRunner;
+  /**
+   * Full decode of the final private object. Tests using a synthetic probe can
+   * provide a deterministic substitute; production uses FFmpeg by default.
+   */
+  decode?: DecodeRunner;
 }): OutputQualityAnalyzer {
   const probe = options.probe ?? defaultProbeRunner;
+  const decode = options.decode ?? (options.probe ? async () => undefined : defaultDecodeRunner);
   return {
     id: "ffprobe-technical-v1",
     dimensions: ["technical"],
@@ -76,6 +91,9 @@ export function createFfprobeTechnicalAnalyzer(options: {
           key: input.candidate.objectKey,
           expiresInSeconds: 900,
         });
+        // A parseable header is not sufficient: fully decode the exact
+        // MovPrompt-owned object before it reaches visual review.
+        await decode(signed.url);
         const report = ProbeSchema.parse(await probe(signed.url));
         const video = report.streams.find((stream) => stream.codec_type === "video");
         const audio = report.streams.find((stream) => stream.codec_type === "audio");
@@ -101,7 +119,11 @@ export function createFfprobeTechnicalAnalyzer(options: {
           hardFailure = true;
           evidence.push("video_stream_missing");
         } else {
-          if (video.codec_name !== "h264") { score -= 30; evidence.push(`video_codec:${video.codec_name ?? "unknown"}`); }
+          if (video.codec_name !== "h264") {
+            score -= 30;
+            hardFailure = true;
+            evidence.push(`video_codec:${video.codec_name ?? "unknown"}`);
+          }
           const width = video.width ?? 0;
           const height = video.height ?? 0;
           const minimumShortSide = requestedResolution === "480p" ? 470 : 700;
@@ -125,7 +147,11 @@ export function createFfprobeTechnicalAnalyzer(options: {
           score -= 20;
           evidence.push(`duration_mismatch:${duration}/${expectedDuration}`);
         }
-        if (audio && audio.codec_name !== "aac") { score -= 8; evidence.push(`audio_codec:${audio.codec_name}`); }
+        if (audio && audio.codec_name !== "aac") {
+          score -= 8;
+          hardFailure = true;
+          evidence.push(`audio_codec:${audio.codec_name}`);
+        }
         if (audioExpected && !audio) {
           score -= 35;
           hardFailure = true;

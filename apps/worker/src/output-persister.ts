@@ -48,7 +48,7 @@ export type ProviderOutputPersisterOptions = {
 
 const DEFAULT_MAX_BYTES = 250 * 1024 * 1024;
 
-type HostRule = { kind: "exact" | "suffix"; value: string };
+type HostRule = { value: string };
 
 function validHostname(hostname: string): boolean {
   return hostname.length <= 253 && hostname.split(".").every((label) =>
@@ -62,20 +62,13 @@ function normalizedHosts(hosts: readonly string[]): readonly HostRule[] {
     if (rule.includes("://") || rule.includes("/") || rule.includes("*") || rule.includes(":")) {
       throw new Error("provider_output_host_rule_invalid");
     }
-    if (rule.startsWith(".")) {
-      const suffix = rule.slice(1);
-      if (!validHostname(suffix) || isIP(suffix)) throw new Error("provider_output_host_rule_invalid");
-      return { kind: "suffix", value: `.${suffix}` };
-    }
     if (!validHostname(rule) || isIP(rule)) throw new Error("provider_output_host_rule_invalid");
-    return { kind: "exact", value: rule };
+    return { value: rule };
   });
 }
 
 function hostMatches(hostname: string, rules: readonly HostRule[]): boolean {
-  return rules.some((rule) => rule.kind === "exact"
-    ? hostname === rule.value
-    : hostname.endsWith(rule.value) && hostname.length > rule.value.length);
+  return rules.some((rule) => hostname === rule.value);
 }
 
 function assertAllowedUrl(raw: string, hosts: readonly HostRule[]): URL {
