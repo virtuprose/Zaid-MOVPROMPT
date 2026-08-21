@@ -1,9 +1,10 @@
 # Continuity Validation — 260821-t0i
 
 Date: 2026-08-21
-Status: **PASS — PUBLICATION PENDING**
+Status: **PASS — PUBLISHED**
 Reviewed code baseline: `d2ce4116ad5d2ac2ae9fbac3deabf6018dbfee01`
 Resume source: `.planning/PROGRESS.md`
+Published continuity commit: `83970fb7b74210874c294a76651eb4c2f8504e96`
 
 ## Fresh-context scope
 
@@ -28,9 +29,16 @@ No mismatch or corrective rerun was required.
 
 - Continuity staged paths: PASS
 - Continuity prohibited-material review: PASS
+- Published continuity commit exact four-path proof: PASS
+- Published continuity upstream synchronization (`0` ahead, `0` behind): PASS
+- Readiness-marker staged paths: PASS
+- Readiness-marker prohibited-material review: PASS
 - GitHub Actions / CI/CD configuration or invocation: NOT PERMITTED
 - Workflow-file changes: NOT PERMITTED
-- Readiness marker: intentionally absent until the continuity commit is pushed and verified
+
+## READY FOR REDUNDANT MOVPROMPT SUB-AGENT HISTORY PRUNING
+
+The continuity commit is published and the fresh-context test passed. This marker permits only the separately audited closed, unlocked MovPrompt subagent rollout set under the constraints below.
 
 ## Cleanup authority
 
