@@ -1,6 +1,7 @@
 import type { QualityDimension } from "@movprompt/creative-engine";
 import { describe, expect, it, vi } from "vitest";
 
+import type { CalibrationEligibility } from "./benchmark-manifest.js";
 import { createComposedOutputQualityReviewer, type OutputQualityAnalyzer } from "./output-quality-reviewer.js";
 
 const dimensions: QualityDimension[] = [
@@ -35,13 +36,23 @@ const input = {
   configuration: { prompt: "Premium product campaign" },
 };
 
+const calibration: CalibrationEligibility = {
+  datasetVersion: "kw-video-48-v1",
+  evaluatorVersion: "quality-evaluator-v1",
+  rubricVersion: "kuwait-quality-rubric-v1",
+  candidateManifestDigest: "a".repeat(64),
+  evidenceDigest: "b".repeat(64),
+  approvalRecordDigest: "c".repeat(64),
+  passed: true,
+};
+
 describe("composed output quality reviewer", () => {
   it("accepts only when every premium quality dimension is supplied and passes", async () => {
     const reviewer = createComposedOutputQualityReviewer([
       analyzer("technical", ["technical"]),
       analyzer("visual", dimensions.slice(1, 9)),
       analyzer("compliance", ["compliance"]),
-    ]);
+    ], calibration);
     await expect(reviewer.review(input)).resolves.toMatchObject({ status: "accepted", score: 96 });
   });
 
@@ -52,6 +63,40 @@ describe("composed output quality reviewer", () => {
     ]);
     await expect(reviewer.review(input)).resolves.toMatchObject({
       status: "retry",
+      failedDimensions: expect.arrayContaining(["dialect_fidelity"]),
+    });
+  });
+
+  it("never automatically accepts when the exact qualified-human calibration is unavailable", async () => {
+    const reviewer = createComposedOutputQualityReviewer([
+      analyzer("technical", ["technical"]),
+      analyzer("visual", dimensions.slice(1, 9)),
+      analyzer("compliance", ["compliance"]),
+    ]);
+
+    await expect(reviewer.review(input)).resolves.toMatchObject({
+      status: "needs_review",
+      failedDimensions: dimensions,
+    });
+  });
+
+  it("rejects a critical product, Arabic, or compliance defect regardless of the aggregate score", async () => {
+    const reviewer = createComposedOutputQualityReviewer([
+      analyzer("technical", ["technical"]),
+      {
+        id: "visual",
+        dimensions: dimensions.slice(1, 9),
+        analyze: vi.fn(async () => dimensions.slice(1, 9).map((dimension) => ({
+          dimension,
+          score: 96,
+          ...(dimension === "dialect_fidelity" ? { hardFailure: true } : {}),
+        }))),
+      },
+      analyzer("compliance", ["compliance"]),
+    ], calibration);
+
+    await expect(reviewer.review(input)).resolves.toMatchObject({
+      status: "failed",
       failedDimensions: expect.arrayContaining(["dialect_fidelity"]),
     });
   });

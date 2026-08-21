@@ -625,4 +625,43 @@ describe("generation render lifecycle", () => {
       prompt: expect.stringContaining("Preserve the exact bottle label"),
     }));
   });
+
+  it("never permits a third internal quality retry even if an old run stored a larger budget", async () => {
+    const job = payload();
+    const current = snapshot(job, {
+      status: "processing",
+      provider: "test-provider",
+      providerRequestId: "provider-request-1",
+      chargedAt: new Date("2026-08-12T12:00:00.000Z"),
+      maxQualityRetries: 3,
+    });
+    const provider = adapter({
+      getStatus: vi.fn(async () => ({
+        providerRequestId: "provider-request-1",
+        status: "completed" as const,
+        outputUrl: "https://provider.example/output.mp4",
+      })),
+    });
+    const renderStore = store(current);
+    const handler = createGenerationLifecycleHandler({
+      store: renderStore,
+      billing: billing(),
+      ...registries(provider),
+      outputPersister: {
+        persist: vi.fn(async () => ({ bucket: "creator-outputs", objectKey: "candidate.mp4" })),
+      },
+      outputQualityReviewer: {
+        review: vi.fn(async () => ({
+          status: "retry",
+          score: 71,
+          failedDimensions: ["motion_realism"],
+          retryDirective: "Simplify the camera movement.",
+        })),
+      },
+      scheduleReconciliation: vi.fn(async () => undefined),
+    });
+
+    await handler.handle(job, context());
+    expect(renderStore.prepareQualityRetry).toHaveBeenCalledWith(expect.objectContaining({ maxRetries: 2 }));
+  });
 });
