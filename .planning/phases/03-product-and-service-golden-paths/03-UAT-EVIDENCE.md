@@ -10,6 +10,12 @@ The local provisioning precondition is only partially available: PostgreSQL 17, 
 
 No provider submission, provider request, provider attempt, or paid cost was made.
 
+## Latest rerun
+
+On 2026-08-21, the final root verification reran `bun scripts/infra/run-phase3-provisioned-uat.ts`. The loopback API at `127.0.0.1:8787` was not running, so the harness failed before any mutation with a connection-refused readiness result. The same pass confirmed the web creator remained available at `127.0.0.1:8080` and the automated creator smoke, workspace typecheck, production build, bundle gate, and evidence-redaction check all passed.
+
+This newer observation tightens the blocker: the required services are not currently provisioned together. It does not invalidate the earlier partial observations below, and it does not authorize a simulated or paid generation attempt.
+
 ## Read-only observations
 
 | Boundary | Observation | Status |
