@@ -5,6 +5,28 @@ import { FactReviewStep } from "./FactReviewStep";
 import { SourceChoiceStep } from "./SourceChoiceStep";
 
 describe("FactReviewStep", () => {
+  it("keeps the fact review in RTL while labels and values remain associated in Arabic", () => {
+    render(
+      <FactReviewStep
+        arabic
+        source={{
+          kind: "service_manual",
+          subject: "service",
+          assetKeys: [],
+          facts: [{ field: "service_name", value: "صالون نورة", provenance: "manual" }],
+        }}
+        goal="bookings"
+        onEdit={vi.fn()}
+        onConfirm={vi.fn()}
+        onContinue={vi.fn()}
+        onBack={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole("region", { name: "تأكد من التفاصيل التي سنستخدمها" })).toHaveAttribute("dir", "rtl");
+    expect(screen.getByLabelText("اسم النشاط أو الخدمة")).toHaveValue("صالون نورة");
+  });
+
   it("keeps service facts, optional states, footage selection, and presenter intent separate", () => {
     const onFiles = vi.fn();
     const view = render(

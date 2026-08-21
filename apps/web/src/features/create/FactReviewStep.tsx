@@ -70,7 +70,7 @@ export function FactReviewStep({ source, goal, arabic = false, onEdit, onConfirm
   };
 
   return (
-    <section className="creator-fact-review" aria-labelledby="fact-review-heading">
+    <section className="creator-fact-review" aria-labelledby="fact-review-heading" dir={arabic ? "rtl" : undefined}>
       <div className="creator-source-choice-heading">
         <p className="creator-kicker">{copy(arabic, "Review the facts", "راجع المعلومات")}</p>
         <h2 id="fact-review-heading">{copy(arabic, "Check the details we’ll use", "تأكد من التفاصيل التي سنستخدمها")}</h2>
