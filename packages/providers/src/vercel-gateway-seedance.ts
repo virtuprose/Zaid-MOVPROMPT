@@ -400,11 +400,13 @@ function statusOperation(
   }
   const video = payload.videos.find((candidate) => candidate.type === "url");
   if (!video) {
+    // Gateway completion without a usable output is ambiguous, not a customer
+    // failure. Keep polling the exact persisted operation: a later status can
+    // expose the output without another billable submission.
     return {
       providerRequestId,
-      status: "failed",
-      errorCode: "vercel_gateway_output_url_missing",
-      errorMessage: "AI Gateway completed the operation without a downloadable output URL.",
+      status: "processing",
+      ...(telemetry ? { telemetry } : {}),
     };
   }
   return { providerRequestId, status: "completed", outputUrl: video.url, ...(telemetry ? { telemetry } : {}) };
