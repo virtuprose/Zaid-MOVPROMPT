@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 4
 current_phase_name: Durable Generation and Accepted Quality
 status: executing
-stopped_at: Phase 4 context gathered
-last_updated: "2026-08-21T16:35:19.452Z"
+stopped_at: Blocking Task 04-02-03 — qualified-human Kuwait calibration
+last_updated: "2026-08-21T18:06:48Z"
 last_activity: 2026-08-21
-last_activity_desc: Phase 03 product and service golden paths passed provisioned UAT with zero provider calls
+last_activity_desc: Phase 04-01 complete; 04-02 automated tasks complete; qualified-human calibration pending
 progress:
   total_phases: 4
   completed_phases: 3
   total_plans: 22
-  completed_plans: 19
+  completed_plans: 20
 ---
 
 # Project State
@@ -28,17 +28,17 @@ See: `.planning/PROJECT.md` (updated 2026-08-17)
 ## Current Position
 
 Phase: 4 (Durable Generation and Accepted Quality) — EXECUTING
-Plan: 1 of 3
-Status: Executing Phase 4
-Last activity: 2026-08-21 — Phase 4 execution started
+Plan: 2 of 3
+Status: Blocking Task 04-02-03 requires genuine qualified-human calibration
+Last activity: 2026-08-21 — Phase 04-01 completed; Tasks 04-02-01 and 04-02-02 implemented and validated without a paid provider call
 
-Progress: [███░░░░░░░] 30%
+Progress: [██████░░░░] 56%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 19
+- Total plans completed: 20
 - Average duration: -
 - Total execution time: 0 hours
 
@@ -106,6 +106,8 @@ None yet.
 
 ### Blockers/Concerns
 
+- Phase 04 Task 04-02-03 is blocking: automation cannot create, duplicate, self-approve, or infer the two independent qualified-human label sets, adjudication, role attestations, and approval record.
+- The paid Seedance 2.5 canary remains a separate later gate under Task 04-03-03. It requires approved exact-version calibration first, followed by a new explicit current USD cap and one-operation authorization.
 - Phase 1: Live provider completion, private output recovery, worker reconciliation, and browser progress must agree before generation can be called reliable.
 - Phase 1: Production prices require accepted-output cost evidence by resolution; client fallback prices are prohibited.
 - Phase 8: Commercial clinic launch requires Kuwait legal review.
@@ -121,6 +123,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-08-21T13:40:38.029Z
-Stopped at: Phase 4 context gathered
-Resume file: .planning/phases/04-durable-generation-and-accepted-quality/04-CONTEXT.md
+Last session: 2026-08-21T18:06:48Z
+Stopped at: Blocking Task 04-02-03 — qualified-human Kuwait calibration
+Resume file: .planning/PROGRESS.md
