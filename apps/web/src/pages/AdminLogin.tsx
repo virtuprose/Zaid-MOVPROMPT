@@ -43,7 +43,7 @@ const AdminLogin = () => {
       setCheckingRole(false);
     };
     checkRole();
-  }, [user, authLoading, navigate, toast]);
+  }, [user, authLoading, navigate, toast, t]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();

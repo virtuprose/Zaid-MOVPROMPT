@@ -1,4 +1,4 @@
-import { useRef, useImperativeHandle, forwardRef, useEffect, useMemo } from "react";
+import { useRef, useImperativeHandle, forwardRef, useEffect, useMemo, useCallback } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { AtSign, Info, AlertTriangle } from "lucide-react";
 import { useLanguage } from "@/i18n/LanguageContext";
@@ -63,7 +63,7 @@ export const SceneMentionTextarea = forwardRef<SceneMentionTextareaHandle, Scene
       };
     };
 
-    const insertMention = (n: number) => {
+    const insertMention = useCallback((n: number) => {
       const el = ref.current;
       const token = `@${n} `;
       if (!el) {
@@ -91,9 +91,9 @@ export const SceneMentionTextarea = forwardRef<SceneMentionTextareaHandle, Scene
         el.focus();
         el.setSelectionRange(newCaret, newCaret);
       });
-    };
+    }, [onChange, value]);
 
-    useImperativeHandle(fwdRef, () => ({ insertMention }), [value, elements]);
+    useImperativeHandle(fwdRef, () => ({ insertMention }), [insertMention]);
 
     const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
       const next = e.target.value;

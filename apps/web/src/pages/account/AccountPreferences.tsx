@@ -1,75 +1,77 @@
-import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { ArrowLeft, Globe, Bell, Sun, Moon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { Seo } from "@/components/Seo";
-import { TopNav } from "@/components/TopNav";
+import { CreatorShell } from "@/features/create/CreatorShell";
 import { useTheme } from "@/components/ThemeProvider";
-
-
+import { useLanguage } from "@/i18n/LanguageContext";
 
 const AccountPreferences = () => {
-  const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
+  const { locale } = useLanguage();
+  const ar = locale === "ar";
+  const tr = (english: string, arabic: string) => ar ? arabic : english;
   return (
-    <div className="min-h-screen bg-background">
-      <Seo title="Preferences · MovPrompt" description="Language and notification preferences." />
-      <TopNav />
-      <div className="container max-w-3xl mx-auto px-4 py-6">
-        <Button variant="ghost" size="sm" onClick={() => navigate("/")} className="mb-4 gap-2">
-          <ArrowLeft className="w-4 h-4" /> Back
+    <CreatorShell>
+      <Seo title={`${tr("Preferences", "التفضيلات")} · MovPrompt`} description={tr("Language, theme, and notification preferences.", "تفضيلات اللغة والمظهر والإشعارات.")} noindex />
+      <div className="creator-page max-w-3xl">
+        <Button variant="ghost" size="sm" asChild className="mb-4 min-h-11 gap-2">
+          <Link to="/create"><ArrowLeft aria-hidden="true" className="w-4 h-4" /> {tr("Back to workspace", "العودة لمساحة العمل")}</Link>
         </Button>
-        <h1 className="text-2xl font-display font-bold mb-6">Preferences</h1>
+        <h1 className="text-2xl font-display font-bold mb-6">{tr("Preferences", "التفضيلات")}</h1>
         <div className="space-y-4">
-          <Card className="p-5 flex items-center justify-between">
+          <Card className="p-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3">
-              <Globe className="w-4 h-4 text-accent" />
+              <Globe aria-hidden="true" className="w-4 h-4 text-accent" />
               <div>
-                <p className="font-medium text-sm">Language</p>
-                <p className="text-xs text-muted-foreground">Choose your interface language</p>
+                <p className="font-medium text-sm">{tr("Language", "اللغة")}</p>
+                <p className="text-xs text-muted-foreground">{tr("Choose your interface language", "اختر لغة واجهة الاستخدام")}</p>
               </div>
             </div>
             <LanguageToggle />
           </Card>
-          <Card className="p-5 flex items-center justify-between">
+          <Card className="p-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3">
-              {theme === "dark" ? <Moon className="w-4 h-4 text-accent" /> : <Sun className="w-4 h-4 text-accent" />}
+              {theme === "dark" ? <Moon aria-hidden="true" className="w-4 h-4 text-accent" /> : <Sun aria-hidden="true" className="w-4 h-4 text-accent" />}
               <div>
-                <p className="font-medium text-sm">Appearance</p>
-                <p className="text-xs text-muted-foreground">Choose dark or light mode</p>
+                <p className="font-medium text-sm">{tr("Appearance", "المظهر")}</p>
+                <p className="text-xs text-muted-foreground">{tr("Choose dark or light mode", "اختر الوضع الداكن أو الفاتح")}</p>
               </div>
             </div>
-            <div className="inline-flex rounded-md border border-border p-0.5">
+            <div className="inline-flex self-start rounded-md border border-border p-0.5 sm:self-auto" role="group" aria-label={tr("Choose color theme", "اختر مظهر الألوان")}>
               <button
                 type="button"
                 onClick={() => setTheme("dark")}
-                className={`px-3 py-1.5 text-xs rounded-[4px] transition-colors ${theme === "dark" ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                aria-pressed={theme === "dark"}
+                className={`min-h-11 px-3 py-1.5 text-xs rounded-[4px] transition-colors ${theme === "dark" ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-foreground"}`}
               >
-                Dark
+                {tr("Dark", "داكن")}
               </button>
               <button
                 type="button"
                 onClick={() => setTheme("light")}
-                className={`px-3 py-1.5 text-xs rounded-[4px] transition-colors ${theme === "light" ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                aria-pressed={theme === "light"}
+                className={`min-h-11 px-3 py-1.5 text-xs rounded-[4px] transition-colors ${theme === "light" ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-foreground"}`}
               >
-                Light
+                {tr("Light", "فاتح")}
               </button>
             </div>
           </Card>
-          <Card className="p-5 flex items-center justify-between">
+          <Card className="p-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3">
-              <Bell className="w-4 h-4 text-accent" />
+              <Bell aria-hidden="true" className="w-4 h-4 text-accent" />
               <div>
-                <p className="font-medium text-sm">Notifications</p>
-                <p className="text-xs text-muted-foreground">Email and in-app alerts (coming soon)</p>
+                <p className="font-medium text-sm">{tr("Notifications", "الإشعارات")}</p>
+                <p className="text-xs text-muted-foreground">{tr("Review generation, export, and account alerts", "راجع إشعارات التوليد والتصدير والحساب")}</p>
               </div>
             </div>
-            <Button variant="outline" size="sm" disabled>Configure</Button>
+            <Button variant="outline" size="sm" className="min-h-11" asChild><Link to="/notifications">{tr("View notifications", "عرض الإشعارات")}</Link></Button>
           </Card>
         </div>
       </div>
-    </div>
+    </CreatorShell>
   );
 };
 

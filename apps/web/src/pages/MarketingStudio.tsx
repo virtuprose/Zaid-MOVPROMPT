@@ -322,6 +322,8 @@ export default function MarketingStudio() {
 
   // Auto-write the describe box from the current Format/Hook/Setting + brand/avatar/location.
   // Re-runs on every trio change. Aborts in-flight requests when picks change again.
+  const activeBrandKey = brandActiveIds.join(",");
+  const activeCharacterKey = characterActiveIds.join(",");
   useEffect(() => {
     if (!ready) return;
     // Scene-locked formats (e.g. Nokhadha) bake their own scene into the
@@ -404,8 +406,8 @@ export default function MarketingStudio() {
     customFormat,
     settingId,
     customSetting,
-    brandActiveIds.join(","),
-    characterActiveIds.join(","),
+    activeBrandKey,
+    activeCharacterKey,
     location.place,
     location.imagePath,
     subject,

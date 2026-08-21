@@ -7,19 +7,25 @@ import {
   Film,
   Grid2X2,
   Link2,
-  LockKeyhole,
   Moon,
   Play,
   Search,
+  Sparkles,
   Sun,
 } from "lucide-react";
 import { HeroTopNav } from "./HeroTopNav";
 import { Seo } from "@/components/Seo";
 import { useTheme } from "@/components/ThemeProvider";
+import { templateGoalLabel } from "@/features/create/templateMedia";
+import { CREATOR_TEMPLATES } from "@/features/create/templates";
+import type { CreatorTemplate } from "@/features/create/types";
+import { TemplatePreviewDialog } from "@/features/create/TemplatePreviewDialog";
+import { useLanguage } from "@/i18n/LanguageContext";
 import logoMark from "@/assets/logo-mark-white.svg";
 import "./cinematic-hero.css";
 
-type TemplateCategory = "All" | "Product" | "UGC" | "Fashion" | "Food" | "Apps";
+type TemplateCategory = "All" | "Shops" | "Ecommerce" | "Salons" | "Clinics";
+type TemplateSort = "recommended" | "duration";
 
 const heroReels = [
   { label: "Creator ad", image: "/homepage/hero-creator.png", className: "mp-reel-side" },
@@ -27,19 +33,10 @@ const heroReels = [
   { label: "Lifestyle cut", image: "/homepage/hero-lifestyle.png", className: "mp-reel-side" },
 ];
 
-const templates = [
-  { name: "The Product Reveal", category: "Product", duration: "08s", image: "/homepage/template-product-reveal.png" },
-  { name: "Creator Proof", category: "UGC", duration: "12s", image: "/homepage/template-creator-proof.png" },
-  { name: "Texture Study", category: "Product", duration: "06s", image: "/homepage/template-texture-study.png" },
-  { name: "In Motion", category: "Fashion", duration: "10s", image: "/homepage/template-in-motion.png" },
-  { name: "Clean Demo", category: "Apps", duration: "15s", image: "/homepage/template-clean-demo.png" },
-  { name: "Launch Story", category: "Food", duration: "12s", image: "/homepage/template-launch-story.png" },
-] as const;
-
 const campaignFrames = [
   { name: "Hero film", ratio: "16:9", duration: "10s", image: "/homepage/hero-product.png", className: "mp-campaign-hero" },
   { name: "Creator review", ratio: "9:16", duration: "15s", image: "/homepage/hero-creator.png", className: "mp-campaign-creator" },
-  { name: "Product detail", ratio: "1:1", duration: "06s", image: "/homepage/template-texture-study.png", className: "mp-campaign-detail" },
+  { name: "Product detail", ratio: "1:1", duration: "06s", image: "/homepage/template-clean-demo.png", className: "mp-campaign-detail" },
   { name: "Social cut", ratio: "4:5", duration: "08s", image: "/homepage/hero-lifestyle.png", className: "mp-campaign-social" },
   { name: "Launch teaser", ratio: "9:16", duration: "05s", image: "/homepage/hero-lifestyle.png", className: "mp-campaign-launch" },
 ] as const;
@@ -50,7 +47,19 @@ const footerFrames = [
   { label: "Lifestyle", image: "/homepage/hero-lifestyle.png" },
 ] as const;
 
-const categories: TemplateCategory[] = ["All", "Product", "UGC", "Fashion", "Food", "Apps"];
+const categories: TemplateCategory[] = ["All", "Shops", "Ecommerce", "Salons", "Clinics"];
+
+const categoryVertical: Record<Exclude<TemplateCategory, "All">, "retail" | "ecommerce" | "salon" | "clinic"> = {
+  Shops: "retail",
+  Ecommerce: "ecommerce",
+  Salons: "salon",
+  Clinics: "clinic",
+};
+
+const formatTemplateCategory = (value: string) => value
+  .split("-")
+  .map((word) => `${word.slice(0, 1).toUpperCase()}${word.slice(1)}`)
+  .join(" ");
 
 const normalizeProductUrl = (value: string) => {
   const candidate = /^https?:\/\//i.test(value.trim()) ? value.trim() : `https://${value.trim()}`;
@@ -59,53 +68,157 @@ const normalizeProductUrl = (value: string) => {
   return parsed.toString();
 };
 
+function HomepageTemplateGroup({
+  id,
+  title,
+  description,
+  templates,
+  selectedTemplate,
+  locale,
+  onSelect,
+  onUse,
+  onPreview,
+}: {
+  id: string;
+  title: string;
+  description: string;
+  templates: CreatorTemplate[];
+  selectedTemplate: string;
+  locale: "en" | "ar";
+  onSelect: (templateId: string) => void;
+  onUse: (templateId: string) => void;
+  onPreview: (template: CreatorTemplate) => void;
+}) {
+  if (!templates.length) return null;
+  const ar = locale === "ar";
+  const headingId = `mp-template-group-${id}`;
+  return (
+    <section className="mp-template-group" aria-labelledby={headingId}>
+      <div className="mp-template-group-heading">
+        <div>
+          <h3 id={headingId}>{title}</h3>
+          <p>{description}</p>
+        </div>
+        <span>{ar ? `${templates.length} قالب` : `${templates.length} ${templates.length === 1 ? "template" : "templates"}`}</span>
+      </div>
+      <div className="mp-template-grid">
+        {templates.map((template) => {
+          const selected = selectedTemplate === template.id;
+          return (
+            <article key={template.id} className="mp-template-card" data-selected={selected}>
+              <button
+                className="mp-template-choice"
+                type="button"
+                aria-pressed={selected}
+                aria-label={ar ? `اختر قالب ${template.nameAr}` : `Select ${template.name} template`}
+                onClick={() => onSelect(template.id)}
+              >
+                <span className="mp-template-card-media" data-media-tone={template.mediaTone}>
+                  <img src={template.poster} alt="" loading="lazy" style={{ objectPosition: template.posterPosition }} />
+                  <span className="mp-template-media-stamp" aria-hidden="true"><b>{template.mediaCode}</b><span>{templateGoalLabel(template.goals[0] ?? "launch", locale)}</span></span>
+                  <em aria-hidden="true">{ar ? "اتجاه القالب" : "Template direction"}</em>
+                </span>
+                <span className="mp-template-info">
+                  <strong>{ar ? template.nameAr : template.name}</strong>
+                  <i><span>{formatTemplateCategory(template.eyebrow)}</span><span aria-hidden="true">•</span><span>{template.duration}s</span></i>
+                  {!selected && <ArrowRight aria-hidden="true" />}
+                </span>
+              </button>
+              {template.previewVideo ? (
+                <button
+                  className="mp-template-preview-link"
+                  type="button"
+                  onClick={() => onPreview(template)}
+                  aria-label={ar ? `شغّل معاينة قالب ${template.nameAr}` : `Play ${template.name} preview`}
+                >
+                  <Play aria-hidden="true" />
+                  <span>{ar ? "شغّل المعاينة" : "Play preview"}</span>
+                </button>
+              ) : (
+                <Link
+                  className="mp-template-preview-link"
+                  to={`/templates/${encodeURIComponent(template.id)}`}
+                  aria-label={ar ? `شاهد اتجاه قالب ${template.nameAr}` : `View ${template.name} direction`}
+                >
+                  <ArrowUpRight aria-hidden="true" />
+                  <span>{ar ? "شاهد الاتجاه" : "View direction"}</span>
+                </Link>
+              )}
+              {selected && (
+                <button className="mp-use-template" type="button" onClick={() => onUse(template.id)}>
+                  {ar ? "استخدم القالب" : "Use template"}
+                </button>
+              )}
+            </article>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 export const CinematicHero = () => {
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
+  const { locale } = useLanguage();
   const productInputRef = useRef<HTMLInputElement>(null);
   const footerProductInputRef = useRef<HTMLInputElement>(null);
   const [productUrl, setProductUrl] = useState("");
   const [productError, setProductError] = useState("");
   const [footerProductUrl, setFooterProductUrl] = useState("");
+  const [previewTemplate, setPreviewTemplate] = useState<CreatorTemplate | null>(null);
   const [footerProductError, setFooterProductError] = useState("");
   const [category, setCategory] = useState<TemplateCategory>("All");
   const [query, setQuery] = useState("");
-  const [selectedTemplate, setSelectedTemplate] = useState("The Product Reveal");
+  const [visibleTemplateCount, setVisibleTemplateCount] = useState(12);
+  const [templateSort, setTemplateSort] = useState<TemplateSort>("recommended");
+  const [selectedTemplate, setSelectedTemplate] = useState(CREATOR_TEMPLATES[0]!.id);
   const [activeCampaignFrame, setActiveCampaignFrame] = useState("Hero film");
 
-  const visibleTemplates = useMemo(() => {
+  const matchingTemplates = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
-    return templates.filter((template) => {
-      const matchesCategory = category === "All" || template.category === category;
-      const matchesQuery = !normalizedQuery || `${template.name} ${template.category}`.toLowerCase().includes(normalizedQuery);
+    const matches = CREATOR_TEMPLATES.filter((template) => {
+      const matchesCategory = category === "All" || template.verticals.includes(categoryVertical[category]);
+      const haystack = [template.name, template.nameAr, template.eyebrow, template.description, template.descriptionAr, template.bestFor, ...template.tags]
+        .join(" ")
+        .toLocaleLowerCase();
+      const matchesQuery = !normalizedQuery || haystack.includes(normalizedQuery);
       return matchesCategory && matchesQuery;
     });
-  }, [category, query]);
+    return templateSort === "duration"
+      ? [...matches].sort((left, right) => left.duration - right.duration || left.name.localeCompare(right.name))
+      : matches;
+  }, [category, query, templateSort]);
+  const orderedMatchingTemplates = useMemo(() => {
+    const selected = matchingTemplates.find((template) => template.id === selectedTemplate) ?? null;
+    const remaining = selected
+      ? matchingTemplates.filter((template) => template.id !== selected.id)
+      : matchingTemplates;
+    const readyPreviews = remaining.filter((template) => template.previewVideo);
+    const campaignDirections = remaining.filter((template) => !template.previewVideo);
+    return selected
+      ? [selected, ...readyPreviews, ...campaignDirections]
+      : [...readyPreviews, ...campaignDirections];
+  }, [matchingTemplates, selectedTemplate]);
+  const selectedStaticTemplate = matchingTemplates.find((template) => template.id === selectedTemplate && !template.previewVideo) ?? null;
+  const visibleLimit = visibleTemplateCount + (selectedStaticTemplate ? 1 : 0);
+  const visibleTemplates = orderedMatchingTemplates.slice(0, visibleLimit);
+  const selectedDirection = visibleTemplates.find((template) => template.id === selectedTemplate && !template.previewVideo) ?? null;
+  const visibleReadyPreviews = visibleTemplates.filter((template) => template.previewVideo);
+  const visibleCampaignDirections = visibleTemplates.filter((template) => !template.previewVideo && template.id !== selectedDirection?.id);
 
-  const rememberCreation = (templateName?: string, url?: string) => {
+  const rememberCreation = (templateId?: string, url?: string) => {
     try {
-      if (templateName) {
-        const templateId: Record<string, string> = {
-          "Product Reveal": "luxury-product-reveal",
-          "The Product Reveal": "luxury-product-reveal",
-          "Creator Proof": "ugc-review",
-          "Lifestyle Cut": "fashion",
-          "Texture Study": "beauty-perfume",
-          "In Motion": "fashion",
-          "Clean Demo": "app-service",
-          "Launch Story": "food-beverage",
-        };
-        localStorage.setItem("movprompt.home.templateId", templateId[templateName] || "luxury-product-reveal");
-      }
+      if (templateId) localStorage.setItem("movprompt.home.templateId", templateId);
       if (url) localStorage.setItem("movprompt.home.productUrl", url);
     } catch {
       // Local storage is optional; navigation should still work.
     }
   };
 
-  const goToStudio = (templateName?: string) => {
-    rememberCreation(templateName);
-    navigate("/create");
+  const goToStudio = (templateId?: string) => {
+    rememberCreation(templateId);
+    navigate(templateId ? `/create?template=${encodeURIComponent(templateId)}` : "/create");
   };
 
   const handleProductSubmit = (event: FormEvent<HTMLFormElement>) => {
@@ -196,20 +309,24 @@ export const CinematicHero = () => {
               </div>
             </div>
 
-            <div className="mp-hero-visual" aria-label="Three campaign directions generated from one product">
+            <div
+              className="mp-hero-visual"
+              role="group"
+              tabIndex={0}
+              aria-label={locale === "ar" ? "ثلاثة أمثلة لاتجاهات حملة لمنتج واحد" : "Three example campaign directions for one product"}
+            >
               <div className="mp-reel-row">
                 {heroReels.map((reel) => (
                   <figure key={reel.label} className={`mp-reel ${reel.className}`}>
                     <img src={reel.image} alt={`${reel.label} preview featuring the same dark perfume bottle`} />
                     <figcaption>
-                      <Play aria-hidden="true" fill="currentColor" />
+                      <Film aria-hidden="true" />
                       <span>{reel.label}</span>
                     </figcaption>
-                    {reel.className === "mp-reel-main" && <span className="mp-reel-progress" aria-hidden="true" />}
                   </figure>
                 ))}
               </div>
-              <div className="mp-ready-chip"><span aria-hidden="true" />3 directions ready</div>
+              <div className="mp-ready-chip"><span aria-hidden="true" />3 example directions</div>
             </div>
           </div>
         </section>
@@ -222,66 +339,96 @@ export const CinematicHero = () => {
                 <h2 id="templates-title">Choose the result—not the model.</h2>
                 <p>Start with a format built for the way people watch, shop and share. MovPrompt handles the technical decisions.</p>
               </div>
-              <a href="#template-browser">View all templates <ArrowRight aria-hidden="true" /></a>
+              <Link to="/templates">View all {CREATOR_TEMPLATES.length} templates <ArrowRight aria-hidden="true" /></Link>
             </div>
 
             <div id="template-browser" className="mp-template-toolbar">
               <label className="mp-template-search">
                 <span>Search templates</span>
-                <div><Search aria-hidden="true" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search by product, style or goal" /></div>
+                <div><Search aria-hidden="true" /><input value={query} onChange={(event) => { setQuery(event.target.value); setVisibleTemplateCount(12); }} placeholder="Search by product, business or goal" /></div>
               </label>
               <div className="mp-category-tabs" role="group" aria-label="Filter templates by category">
                 {categories.map((item) => (
-                  <button key={item} type="button" aria-pressed={category === item} onClick={() => setCategory(item)}>{item}</button>
+                  <button key={item} type="button" aria-pressed={category === item} onClick={() => { setCategory(item); setVisibleTemplateCount(12); }}>{item}</button>
                 ))}
               </div>
               <label className="mp-sort-select">
                 <span className="sr-only">Sort templates</span>
-                <select defaultValue="recommended"><option value="recommended">Sort: Recommended</option><option value="duration">Sort: Duration</option></select>
+                <select
+                  value={templateSort}
+                  onChange={(event) => {
+                    setTemplateSort(event.target.value as TemplateSort);
+                    setVisibleTemplateCount(12);
+                  }}
+                >
+                  <option value="recommended">Sort: Recommended</option>
+                  <option value="duration">Sort: Duration</option>
+                </select>
                 <ChevronDown aria-hidden="true" />
               </label>
             </div>
 
+            <p className="mp-template-count" aria-live="polite">
+              Showing {visibleTemplates.length} of {matchingTemplates.length} matching templates · {CREATOR_TEMPLATES.length} total
+            </p>
+
             {visibleTemplates.length ? (
-              <div className="mp-template-grid" aria-live="polite">
-                {visibleTemplates.map((template) => {
-                  const selected = selectedTemplate === template.name;
-                  return (
-                    <article key={template.name} className="mp-template-card" data-selected={selected}>
-                      <button
-                        className="mp-template-choice"
-                        type="button"
-                        aria-pressed={selected}
-                        aria-label={`Select ${template.name} template`}
-                        onClick={() => setSelectedTemplate(template.name)}
-                      >
-                        <img src={template.image} alt={`${template.name} video preview`} loading="lazy" />
-                        <span className="mp-template-info">
-                          <strong>{template.name}</strong>
-                          <i><span>{template.category}</span><span aria-hidden="true">•</span><span>{template.duration}</span></i>
-                          {!selected && <ArrowRight aria-hidden="true" />}
-                        </span>
-                      </button>
-                      {selected && (
-                        <button className="mp-use-template" type="button" onClick={() => goToStudio(template.name)}>
-                          Use template
-                        </button>
-                      )}
-                    </article>
-                  );
-                })}
+              <div className="mp-template-groups" aria-live="polite">
+                {selectedDirection && (
+                  <HomepageTemplateGroup
+                    id="selected-direction"
+                    title={locale === "ar" ? "الاتجاه المحدد" : "Selected direction"}
+                    description={locale === "ar" ? "اختيارك الحالي محفوظ في الأعلى بينما تقارن المعاينات الجاهزة." : "Your current choice stays first while you compare ready previews."}
+                    templates={[selectedDirection]}
+                    selectedTemplate={selectedTemplate}
+                    locale={locale}
+                    onSelect={setSelectedTemplate}
+                    onUse={goToStudio}
+                    onPreview={setPreviewTemplate}
+                  />
+                )}
+                <HomepageTemplateGroup
+                  id="ready-previews"
+                  title={locale === "ar" ? "معاينات جاهزة" : "Ready previews"}
+                  description={locale === "ar" ? "معاينات حركة حقيقية تم التحقق منها ويمكن تشغيلها الآن." : "Verified motion previews you can play now."}
+                  templates={visibleReadyPreviews}
+                  selectedTemplate={selectedTemplate}
+                  locale={locale}
+                  onSelect={setSelectedTemplate}
+                  onUse={goToStudio}
+                  onPreview={setPreviewTemplate}
+                />
+                <HomepageTemplateGroup
+                  id="campaign-directions"
+                  title={locale === "ar" ? "اتجاهات حملات إضافية" : "More campaign directions"}
+                  description={locale === "ar" ? "أفكار بمعاينات ثابتة — وليست فيديوهات قابلة للتشغيل بعد." : "Concepts with static direction art—not playable videos yet."}
+                  templates={visibleCampaignDirections}
+                  selectedTemplate={selectedTemplate}
+                  locale={locale}
+                  onSelect={setSelectedTemplate}
+                  onUse={goToStudio}
+                  onPreview={setPreviewTemplate}
+                />
               </div>
             ) : (
               <div className="mp-template-empty" role="status">
                 <strong>No matching templates</strong>
                 <span>Try another search or choose a different category.</span>
-                <button type="button" onClick={() => { setQuery(""); setCategory("All"); }}>Show all templates</button>
+                <button type="button" onClick={() => { setQuery(""); setCategory("All"); setVisibleTemplateCount(12); }}>Show all templates</button>
+              </div>
+            )}
+
+            {visibleTemplates.length < matchingTemplates.length && (
+              <div className="mp-template-more">
+                <button type="button" onClick={() => setVisibleTemplateCount((count) => count + 12)}>
+                  Show more templates ({matchingTemplates.length - visibleTemplates.length})
+                </button>
               </div>
             )}
 
             <div className="mp-template-footer">
               <span>Templates include shot direction, pacing and format. Your product stays yours.</span>
-              <Link to="/docs">How templates work <ArrowRight aria-hidden="true" /></Link>
+              <Link to="/learn">How templates work <ArrowRight aria-hidden="true" /></Link>
             </div>
           </div>
         </section>
@@ -290,29 +437,33 @@ export const CinematicHero = () => {
           <div className="mp-container">
             <div className="mp-campaign-heading">
               <div>
-                <p className="mp-eyebrow">Campaign system</p>
-                <h2 id="campaign-title">One product. Every format.</h2>
+                <p className="mp-eyebrow">Campaign blueprint</p>
+                <h2 id="campaign-title">Plan once. Create each format with intent.</h2>
               </div>
-              <p>Generate a coordinated set of product, creator and social cuts while your brand stays consistent.</p>
-              <button type="button" onClick={focusProductInput}>Create variations <ArrowRight aria-hidden="true" /></button>
+              <p>See how one product can become a coordinated set of product, creator and social directions before you generate.</p>
+              <button type="button" onClick={focusProductInput}>Start with your product <ArrowRight aria-hidden="true" /></button>
             </div>
 
-            <div className="mp-campaign-grid" aria-label="Five coordinated video formats from one product">
+            <div
+              className="mp-campaign-grid"
+              role="group"
+              aria-label={locale === "ar" ? "خمسة أمثلة لتنسيقات حملة لمنتج واحد" : "Five example campaign formats for one product"}
+            >
               {campaignFrames.map((frame) => (
                 <figure
                   key={frame.name}
                   className={`mp-campaign-frame ${frame.className}`}
                   data-active={activeCampaignFrame === frame.name}
                 >
-                  <img src={frame.image} alt={`${frame.name} preview for the Northfield perfume campaign`} loading="lazy" />
+                  <img src={frame.image} alt={`${frame.name} example for a perfume campaign`} loading="lazy" />
                   <figcaption>
                     <button
                       type="button"
-                      aria-label={`Preview ${frame.name}`}
+                      aria-label={`Select ${frame.name} campaign frame`}
                       aria-pressed={activeCampaignFrame === frame.name}
                       onClick={() => setActiveCampaignFrame(frame.name)}
                     >
-                      <Play aria-hidden="true" fill="currentColor" />
+                      <Grid2X2 aria-hidden="true" />
                     </button>
                     <strong>{frame.name}</strong>
                     <span>{frame.ratio} · {frame.duration}</span>
@@ -334,15 +485,14 @@ export const CinematicHero = () => {
                     <img src={frame.image} alt="" loading="lazy" />
                   </button>
                 ))}
-                <span aria-hidden="true" />
               </div>
-              <div className="mp-campaign-facts" aria-label="Campaign details">
-                <span><Film aria-hidden="true" />5 videos</span>
-                <span><Grid2X2 aria-hidden="true" />3 ratios</span>
-                <span><LockKeyhole aria-hidden="true" />Brand locked</span>
+              <div className="mp-campaign-facts" role="group" aria-label="Campaign details">
+                <span><Film aria-hidden="true" />5 planned cuts</span>
+                <span><Grid2X2 aria-hidden="true" />3 shown ratios</span>
+                <span><Sparkles aria-hidden="true" />Example layout</span>
               </div>
               <button className="mp-button mp-button-primary" type="button" onClick={() => goToStudio()}>
-                Review campaign <ArrowUpRight aria-hidden="true" />
+                Start a campaign <ArrowUpRight aria-hidden="true" />
               </button>
             </div>
             <p className="sr-only" aria-live="polite">{activeCampaignFrame} selected for preview.</p>
@@ -386,7 +536,12 @@ export const CinematicHero = () => {
               <p className="mp-final-reassurance">No credit card required · Your product stays private</p>
             </div>
 
-            <div className="mp-final-media" aria-label="Product, creator and lifestyle campaign previews">
+            <div
+              className="mp-final-media"
+              role="group"
+              tabIndex={0}
+              aria-label={locale === "ar" ? "معاينات حملات المنتج وصانع المحتوى ونمط الحياة" : "Product, creator and lifestyle campaign previews"}
+            >
               {footerFrames.map((frame) => (
                 <figure key={frame.label}>
                   <span>{frame.label}</span>
@@ -421,7 +576,7 @@ export const CinematicHero = () => {
             <nav aria-label="Explore">
               <h2>Explore</h2>
               <a href="#campaign-system">Showcase</a>
-              <Link to="/auth?next=/account/billing">Pricing</Link>
+              <Link to="/pricing">Pricing</Link>
               <Link to="/learn">Learn</Link>
             </nav>
 
@@ -449,10 +604,11 @@ export const CinematicHero = () => {
 
           <div className="mp-footer-bottom">
             <span>© 2026 MovPrompt</span>
-            <div><span>English <ChevronDown aria-hidden="true" /></span><span>USD <ChevronDown aria-hidden="true" /></span></div>
+            <div><span>English</span><span>KWD</span></div>
           </div>
         </div>
       </footer>
+      <TemplatePreviewDialog template={previewTemplate} locale={locale} onOpenChange={(open) => { if (!open) setPreviewTemplate(null); }} />
     </div>
   );
 };

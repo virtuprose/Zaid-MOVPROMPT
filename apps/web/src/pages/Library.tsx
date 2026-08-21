@@ -546,7 +546,7 @@ function ExpandedPromptModal({
       if (!cancelled) setImageUrls(urls.filter((u): u is string => !!u));
     });
     return () => { cancelled = true; };
-  }, [entry?.id]);
+  }, [entry?.id, entry?.image_paths]);
 
   if (!entry) return null;
 

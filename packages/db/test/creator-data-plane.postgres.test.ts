@@ -25,7 +25,7 @@ describePostgres("creator data plane PostgreSQL boundaries", () => {
     await database.close();
   });
 
-  it("ships one development product recipe and one development service recipe", async () => {
+  it("ships fifty versioned Kuwait campaign recipes", async () => {
     const templates = await database.db
       .select({
         slug: schema.videoTemplates.slug,
@@ -34,12 +34,21 @@ describePostgres("creator data plane PostgreSQL boundaries", () => {
       })
       .from(schema.videoTemplates)
       .where(eq(schema.videoTemplates.publishingState, "published"));
+    expect(templates).toHaveLength(50);
     expect(templates).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ slug: "luxury-product-reveal", versionId: expect.any(String) }),
         expect.objectContaining({ slug: "salon-booking-offer", versionId: expect.any(String) }),
       ]),
     );
+    const recipes = await database.db
+      .select({ recipe: schema.videoTemplateVersions.recipe })
+      .from(schema.videoTemplateVersions)
+      .where(eq(schema.videoTemplateVersions.id, templates[0]!.versionId!));
+    expect(recipes[0]?.recipe).toMatchObject({
+      dialectPolicy: { arabicDialect: "kuwaiti", locale: "ar-KW", crossDialectFallback: false },
+      qualityPolicy: { tier: "premium", acceptanceScore: 85, internalRetryLimit: 2 },
+    });
   });
 
   it("sets the authenticated owner only for the lifetime of a transaction", async () => {

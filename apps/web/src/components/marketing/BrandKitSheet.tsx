@@ -525,7 +525,6 @@ export function BrandKitSheet({
               onRemove={removeReference}
               onDropAngles={async (files) => {
                 for (const f of files) {
-                  // eslint-disable-next-line no-await-in-loop
                   await handleAngleFile(f);
                 }
               }}

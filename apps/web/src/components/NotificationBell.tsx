@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/i18n/LanguageContext";
@@ -31,7 +31,7 @@ const NotificationBell = () => {
   const [readIds, setReadIds] = useState<Set<string>>(new Set());
   const [open, setOpen] = useState(false);
 
-  const fetchNotifications = async () => {
+  const fetchNotifications = useCallback(async () => {
     if (!user) return;
 
     const [{ data: notifs }, { data: reads }] = await Promise.all([
@@ -48,7 +48,7 @@ const NotificationBell = () => {
 
     setNotifications(notifs || []);
     setReadIds(new Set((reads || []).map((r) => r.notification_id)));
-  };
+  }, [user]);
 
   useEffect(() => {
     fetchNotifications();
@@ -67,7 +67,7 @@ const NotificationBell = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user]);
+  }, [fetchNotifications]);
 
   const markAsRead = async (notificationId: string) => {
     if (!user || readIds.has(notificationId)) return;
@@ -204,9 +204,9 @@ const NotificationBell = () => {
             <div className="h-9 w-9 rounded-full bg-muted/60 flex items-center justify-center">
               <BellOff className="h-4 w-4 text-muted-foreground" />
             </div>
-            <p className="text-sm font-medium text-foreground">No notifications yet</p>
+            <p className="text-sm font-medium text-foreground">{locale === "ar" ? "ما عندك إشعارات للحين" : "No notifications yet"}</p>
             <p className="text-xs text-muted-foreground leading-snug">
-              We'll let you know when your prompts get likes, comments, or when new models are added.
+              {locale === "ar" ? "راح نبلغك لما يكتمل التوليد أو التصدير أو يصير تحديث على حسابك." : "We’ll let you know when a generation or export completes, or when your account needs attention."}
             </p>
           </div>
         )}
@@ -215,7 +215,7 @@ const NotificationBell = () => {
           className="flex items-center justify-between px-3 py-2 border-t border-border"
         >
           <Link
-            to="/account/notifications"
+            to="/notifications"
             className="inline-flex items-center justify-center h-8 w-8 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
             aria-label="Notification settings"
             onClick={() => setOpen(false)}

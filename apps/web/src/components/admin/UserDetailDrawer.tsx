@@ -101,7 +101,7 @@ const UserDetailDrawer = ({ user, open, onOpenChange, onUserUpdated, onUserDelet
     setNotes(user.admin_notes || "");
     setNotesEditedAt(user.admin_notes_updated_at || null);
     fetchDrawerDetails(user);
-  }, [user?.id]);
+  }, [user]);
 
   const fetchDrawerDetails = async (u: DrawerUser) => {
     setLoadingDetails(true);

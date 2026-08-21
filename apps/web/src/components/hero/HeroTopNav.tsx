@@ -37,7 +37,7 @@ export const HeroTopNav = () => {
           <span>MovPrompt</span>
         </a>
 
-        <div className="mp-nav-links" aria-label="Homepage sections">
+        <div className="mp-nav-links" role="group" aria-label="Homepage sections">
           {navigation.map((item) => (
             <a key={item.label} href={item.href}>
               {item.label}
