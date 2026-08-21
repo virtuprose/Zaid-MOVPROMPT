@@ -8,7 +8,7 @@ status: executing
 stopped_at: Blocking Task 04-02-03 — qualified-human Kuwait calibration
 last_updated: "2026-08-21T18:06:48Z"
 last_activity: 2026-08-21
-last_activity_desc: Phase 04-01 complete; 04-02 automated tasks complete; qualified-human calibration pending
+last_activity_desc: Completed quick task 260821-tat local-only Seedance Fast generation profile; Phase 04 calibration remains pending
 progress:
   total_phases: 4
   completed_phases: 3
@@ -30,7 +30,7 @@ See: `.planning/PROJECT.md` (updated 2026-08-17)
 Phase: 4 (Durable Generation and Accepted Quality) — EXECUTING
 Plan: 2 of 3
 Status: Blocking Task 04-02-03 requires genuine qualified-human calibration
-Last activity: 2026-08-21 — Phase 04-01 completed; Tasks 04-02-01 and 04-02-02 implemented and validated without a paid provider call
+Last activity: 2026-08-21 — Completed quick task 260821-tat: local-only Seedance Fast generation profile
 
 Progress: [██████░░░░] 56%
 
@@ -111,6 +111,12 @@ None yet.
 - Phase 1: Live provider completion, private output recovery, worker reconciliation, and browser progress must agree before generation can be called reliable.
 - Phase 1: Production prices require accepted-output cost evidence by resolution; client fallback prices are prohibited.
 - Phase 8: Commercial clinic launch requires Kuwait legal review.
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260821-tat | Switch local development generation to Seedance v1.0 Pro Fast while keeping staging and production on Seedance 2.5 | 2026-08-21 | 8e52765 | [260821-tat-switch-local-development-video-generatio](./quick/260821-tat-switch-local-development-video-generatio/) |
 
 ## Deferred Items
 
