@@ -20,7 +20,7 @@ updated: 2026-08-21
 - hypothesis: Campaign domain validation was implemented in web-only rules while portable public contracts retained generic JSON for migration compatibility.
 - test: Add adversarial contract/API tests for malformed and oversized campaign settings at claim/version write and generation read boundaries.
 - expecting: A shared bounded campaign schema rejects invalid settings consistently before persistence, quote, reservation, or provider work while preserving valid Kuwait Arabic/English/bilingual paths.
-- next_action: resolved — retain the strict Template Mode identity and read-boundary checks in future migration and generation reviews
+- next_action: resolved — strict guest campaign parsing is enforced at route, service, repository, version, quote, and render boundaries
 - reasoning_checkpoint: Preserve the existing generic project envelope only where legacy compatibility demands it; security-critical campaign fields must be parsed and normalized server-side without silently dropping unknown values.
 - tdd_checkpoint: pending
 
@@ -38,17 +38,23 @@ updated: 2026-08-21
   observation: The second remediation rejects Template Mode without a UUID template version at contract, repository, and PostgreSQL boundaries. Persisted Template Mode quote/start now parses the full payload before template, quote, reference, reservation, or provider work; direct Template estimates use the identical strict payload and reject hidden outer fields.
 - timestamp: 2026-08-21T05:15:00+03:00
   observation: Focused and full tests, workspace typechecks/build, creator smoke, lint (warnings only), and disposable PostgreSQL 17 migration/API/worker proofs passed. No paid or provider calls were made.
+- timestamp: 2026-08-21T05:25:00+03:00
+  observation: Re-audit found the final direct/internal path: routes parsed guest snapshots, but `GuestClaimService.startClaim` and `GuestClaimRepository.start` trusted their typed inputs before persisting a project and claim operation.
+- timestamp: 2026-08-21T05:53:00+03:00
+  observation: `GuestClaimService` now safe-parses the complete strict snapshot before presenter eligibility or any repository call. `GuestClaimRepository` repeats the parse before its transaction and when finalizing a persisted operation, so direct callers and malformed historic Template snapshots fail before persistence or version creation.
+- timestamp: 2026-08-21T05:54:00+03:00
+  observation: Adversarial unit and disposable PostgreSQL 17 tests reject missing template identity, hidden campaign values, and oversized offer data through direct service and repository calls. Project, claim-operation, quote, reservation, and render counts remain unchanged. Full workspace tests, typechecks, builds, creator smoke, and PG17 migration/RLS validation passed; no provider calls occurred.
 
 ## Eliminated
 
 ## Resolution
 
-- root_cause: Refined: Template Mode identity was inferred from an optional template ID. This left direct estimates and malformed historical rows able to use the generic catchall generation configuration instead of the full immutable Template Mode payload.
-- fix: Added `TemplateCampaignWriteSchema` with a required UUID template version, repository revalidation, a PostgreSQL check constraint, explicit `mode` projection, strict persisted/direct Template parsing, and no-fallback rejection before all generation economics or provider-facing work. Advanced Mode remains explicitly separate for supported legacy records.
-- verification: Adversarial API/PostgreSQL tests cover absent/null template IDs, guest-claim writes, repository bypasses, missing product recipes, malformed historic Template rows, direct Template estimates, and hidden fields. Focused generation/API tests, full workspace tests, full API/DB/worker tests on a disposable PostgreSQL 17 instance, build/typecheck, creator smoke, lint, and migration/RLS proof passed.
-- files_changed: packages/contracts/src/creator.ts, packages/db/src/schema.ts, packages/db/migrations/0020_template_mode_requires_version.sql, packages/db/migrations/meta/_journal.json, apps/api/src/creator-repository.ts, apps/api/src/generation-repository.ts, apps/api/src/generation-service.ts, apps/web/src/features/create/projectStore.ts, apps/web/src/features/create/CreateStudio.tsx, related API/PostgreSQL/web tests, and migration/RLS validation fixtures.
+- root_cause: Refined twice: after strict Template writes and generation reads were added, direct internal guest-claim callers still trusted TypeScript types and could create a project and claim checkpoint before any strict Template snapshot parse.
+- fix: GuestClaimService now parses every snapshot before eligibility or repository work; GuestClaimRepository repeats the strict parse before transaction/persistence and when turning a saved operation into a version. Invalid campaign errors have a stable API response, while valid claim replay remains idempotent.
+- verification: Focused service, API and PG tests pass; adversarial PostgreSQL assertions prove malformed Template snapshots leave project/claim/quote/reservation/render counts unchanged. Full workspaces test/typecheck/build, creator smoke, lint (pre-existing warnings only), full database/API/worker PostgreSQL 17 suites, and Phase 2 disposable migration/RLS proof pass.
+- files_changed: fb42f6b and fa2c60f contain the first two remediations; final guest-claim remediation committed after this session is archived.
 
 ## Prevention
 
-- Why not caught: the first remediation treated the template version as optional for legacy compatibility and did not make persisted-mode selection explicit before generation parsing.
-- Guard: Template Mode is now rejected without a UUID version at every new write, uses one complete payload for persisted and direct quote paths, and has API, repository, PostgreSQL, migration, and no-work-before-rejection coverage.
+- Why not caught: HTTP route validation was incorrectly treated as the sole untrusted-input boundary, despite reusable service and repository entry points accepting structurally typed snapshots.
+- Guard: Full bounded `GuestClaimSnapshotSchema` parsing is now required by both service and repository write boundaries, with direct-call unit/PostgreSQL adversarial tests that assert no persistence or downstream generation work.

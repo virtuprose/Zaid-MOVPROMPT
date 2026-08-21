@@ -15,7 +15,15 @@ import { and, asc, eq, sql } from "drizzle-orm";
 export { createDatabaseAbandonedClaimCleanupRepository } from "@movprompt/db";
 
 export class GuestClaimRepositoryError extends Error {
-  constructor(readonly code: "conflict" | "not_found" | "assets_pending" | "asset_invalid" | "cleanup_leased") {
+  constructor(
+    readonly code:
+      | "conflict"
+      | "not_found"
+      | "assets_pending"
+      | "asset_invalid"
+      | "cleanup_leased"
+      | "invalid_campaign_configuration",
+  ) {
     super(code);
     this.name = "GuestClaimRepositoryError";
   }
@@ -172,6 +180,18 @@ function sameSnapshot(row: ClaimRow, snapshot: GuestClaimSnapshot): boolean {
     && canonical(row.assetManifest) === canonical(snapshot.assetManifest);
 }
 
+/**
+ * The service is the primary untrusted-input boundary, but repository callers
+ * include background and migration code. A malformed Template Mode snapshot
+ * must fail before it can create a project, a claim operation, or an asset
+ * checkpoint through a direct internal call.
+ */
+function parsePersistableSnapshot(snapshot: unknown): GuestClaimSnapshot {
+  const parsed = GuestClaimSnapshotSchema.safeParse(snapshot);
+  if (parsed.success) return parsed.data;
+  throw new GuestClaimRepositoryError("invalid_campaign_configuration");
+}
+
 function databaseConstraint(error: unknown): string | null {
   let current: unknown = error;
   for (let depth = 0; depth < 4; depth += 1) {
@@ -211,42 +231,43 @@ export function createGuestClaimRepository(dependencies: { db: Database }): Gues
   const { db } = dependencies;
   return {
     async start({ userId, snapshot }) {
+      const persistedSnapshot = parsePersistableSnapshot(snapshot);
       return withUserTransaction(db, userId, async (tx) => {
-        await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${`guest-claim:${snapshot.draftId}`}, 0))`);
+        await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${`guest-claim:${persistedSnapshot.draftId}`}, 0))`);
         const [byDraft] = await tx.select().from(schema.guestClaimOperations)
-          .where(eq(schema.guestClaimOperations.draftId, snapshot.draftId)).limit(1);
+          .where(eq(schema.guestClaimOperations.draftId, persistedSnapshot.draftId)).limit(1);
         if (byDraft) {
-          if (byDraft.userId !== userId || byDraft.pendingGenerationId !== snapshot.pendingGenerationId || !sameSnapshot(byDraft, snapshot)) {
+          if (byDraft.userId !== userId || byDraft.pendingGenerationId !== persistedSnapshot.pendingGenerationId || !sameSnapshot(byDraft, persistedSnapshot)) {
             throw new GuestClaimRepositoryError("conflict");
           }
           return operationPublic(byDraft, await assetsFor(tx, byDraft.id));
         }
         const [byIntent] = await tx.select().from(schema.guestClaimOperations).where(and(
           eq(schema.guestClaimOperations.userId, userId),
-          eq(schema.guestClaimOperations.pendingGenerationId, snapshot.pendingGenerationId),
+          eq(schema.guestClaimOperations.pendingGenerationId, persistedSnapshot.pendingGenerationId),
         )).limit(1);
         if (byIntent) {
-          if (!sameSnapshot(byIntent, snapshot)) throw new GuestClaimRepositoryError("conflict");
+          if (!sameSnapshot(byIntent, persistedSnapshot)) throw new GuestClaimRepositoryError("conflict");
           return operationPublic(byIntent, await assetsFor(tx, byIntent.id));
         }
-        await ensureTemplate(tx, snapshot.templateVersionId);
+        await ensureTemplate(tx, persistedSnapshot.templateVersionId);
         const [project] = await tx.insert(schema.creatorProjects).values({
-          userId, title: snapshot.title, mode: snapshot.mode, status: "draft", clientDraftId: snapshot.draftId,
+          userId, title: persistedSnapshot.title, mode: persistedSnapshot.mode, status: "draft", clientDraftId: persistedSnapshot.draftId,
         }).returning();
         if (!project) throw new Error("guest_claim_project_insert_failed");
         const [operation] = await tx.insert(schema.guestClaimOperations).values({
           userId,
-          draftId: snapshot.draftId,
-          pendingGenerationId: snapshot.pendingGenerationId,
-          snapshotDigest: snapshot.snapshotDigest,
-          snapshot: snapshot as unknown as JsonObject,
-          assetManifest: snapshot.assetManifest as unknown as JsonObject[],
+          draftId: persistedSnapshot.draftId,
+          pendingGenerationId: persistedSnapshot.pendingGenerationId,
+          snapshotDigest: persistedSnapshot.snapshotDigest,
+          snapshot: persistedSnapshot as unknown as JsonObject,
+          assetManifest: persistedSnapshot.assetManifest as unknown as JsonObject[],
           projectId: project.id,
-          status: snapshot.assetManifest.length === 0 ? "pending" : "securing",
+          status: persistedSnapshot.assetManifest.length === 0 ? "pending" : "securing",
         }).returning();
         if (!operation) throw new Error("guest_claim_operation_insert_failed");
-        const assets = snapshot.assetManifest.length === 0 ? [] : await tx.insert(schema.guestClaimAssets)
-          .values(snapshot.assetManifest.map((asset) => ({
+        const assets = persistedSnapshot.assetManifest.length === 0 ? [] : await tx.insert(schema.guestClaimAssets)
+          .values(persistedSnapshot.assetManifest.map((asset) => ({
             claimOperationId: operation.id,
             userId,
             localAssetId: asset.localAssetId,
@@ -350,7 +371,7 @@ export function createGuestClaimRepository(dependencies: { db: Database }): Gues
         }
         if (assets.some((asset) => asset.status !== "verified")) throw new GuestClaimRepositoryError("assets_pending");
         if (!operation.projectId) throw new Error("guest_claim_project_missing");
-        const snapshot = GuestClaimSnapshotSchema.parse(operation.snapshot);
+        const snapshot = parsePersistableSnapshot(operation.snapshot);
         await ensureTemplate(tx, snapshot.templateVersionId);
         const [version] = await tx.insert(schema.creatorProjectVersions).values({
           projectId: operation.projectId,

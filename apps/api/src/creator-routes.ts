@@ -140,6 +140,23 @@ function mapRepositoryError(error: unknown): never {
   });
 }
 
+function mapGuestClaimServiceError(error: GuestClaimServiceError): never {
+  if (error.code === "invalid_campaign_configuration") {
+    throw new ApiHttpError({
+      code: error.code,
+      message: "Campaign settings are incomplete, invalid, or no longer match the saved template.",
+      status: 400,
+      retryable: false,
+    });
+  }
+  throw new ApiHttpError({
+    code: error.code === "presenter_configuration_ineligible" ? error.code : "guest_claim_conflict",
+    message: error.code === "presenter_configuration_ineligible" ? error.message : "This campaign claim cannot be completed.",
+    status: 409,
+    retryable: error.retryable,
+  });
+}
+
 function noStore(context: { header(name: string, value: string): void }) {
   context.header("cache-control", "private, no-store");
 }
@@ -241,12 +258,7 @@ export function registerCreatorRoutes(
       return context.json(body, 201);
     } catch (error) {
       if (error instanceof GuestClaimServiceError) {
-        throw new ApiHttpError({
-          code: error.code === "presenter_configuration_ineligible" ? error.code : "guest_claim_conflict",
-          message: error.code === "presenter_configuration_ineligible" ? error.message : "This campaign claim cannot be completed.",
-          status: 409,
-          retryable: error.retryable,
-        });
+        mapGuestClaimServiceError(error);
       }
       mapRepositoryError(error);
     }
@@ -275,12 +287,7 @@ export function registerCreatorRoutes(
       return context.json(body, 201);
     } catch (error) {
       if (error instanceof GuestClaimServiceError) {
-        throw new ApiHttpError({
-          code: error.code === "presenter_configuration_ineligible" ? error.code : "guest_claim_conflict",
-          message: error.code === "presenter_configuration_ineligible" ? error.message : "This campaign claim cannot be completed.",
-          status: 409,
-          retryable: error.retryable,
-        });
+        mapGuestClaimServiceError(error);
       }
       mapRepositoryError(error);
     }
@@ -302,12 +309,7 @@ export function registerCreatorRoutes(
       return context.json(body);
     } catch (error) {
       if (error instanceof GuestClaimServiceError) {
-        throw new ApiHttpError({
-          code: "guest_claim_conflict",
-          message: "This campaign claim cannot be completed.",
-          status: 409,
-          retryable: error.retryable,
-        });
+        mapGuestClaimServiceError(error);
       }
       mapRepositoryError(error);
     }
@@ -336,12 +338,7 @@ export function registerCreatorRoutes(
       return context.json(body, 201);
     } catch (error) {
       if (error instanceof GuestClaimServiceError) {
-        throw new ApiHttpError({
-          code: "guest_claim_conflict",
-          message: "This campaign claim cannot be completed.",
-          status: 409,
-          retryable: error.retryable,
-        });
+        mapGuestClaimServiceError(error);
       }
       mapRepositoryError(error);
     }

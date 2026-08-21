@@ -12,6 +12,7 @@ import { createCampaignEligibilityService } from "./campaign-eligibility.js";
 import { createDrizzleGenerationRepository } from "./generation-repository.js";
 import { createGuestClaimRepository } from "./guest-claim-repository.js";
 import { createGuestClaimService } from "./guest-claim-service.js";
+import { validTemplateClaim } from "./campaign-contract.test-fixture.js";
 
 const integrationUrl = process.env.MOVPROMPT_TEST_DATABASE_URL;
 const describePostgres = integrationUrl ? describe.sequential : describe.skip;
@@ -87,6 +88,38 @@ describePostgres("guest claim service PostgreSQL boundary", () => {
     });
   }
 
+  async function persistedCounts() {
+    const [projects, operations, quotes, reservations, runs] = await Promise.all([
+      database.db.select({ id: schema.creatorProjects.id }).from(schema.creatorProjects)
+        .where(eq(schema.creatorProjects.userId, firstUserId)),
+      database.db.select({ id: schema.guestClaimOperations.id }).from(schema.guestClaimOperations)
+        .where(eq(schema.guestClaimOperations.userId, firstUserId)),
+      database.db.select({ id: schema.generationQuotes.id }).from(schema.generationQuotes)
+        .where(eq(schema.generationQuotes.userId, firstUserId)),
+      database.db.select({ id: schema.creditReservations.id }).from(schema.creditReservations)
+        .where(eq(schema.creditReservations.userId, firstUserId)),
+      database.db.select({ id: schema.renderRuns.id }).from(schema.renderRuns)
+        .where(eq(schema.renderRuns.userId, firstUserId)),
+    ]);
+    return {
+      projects: projects.length,
+      operations: operations.length,
+      quotes: quotes.length,
+      reservations: reservations.length,
+      runs: runs.length,
+    };
+  }
+
+  function strictTemplateSnapshot() {
+    const claim = validTemplateClaim({ draftId: randomUUID() });
+    return {
+      ...claim,
+      pendingGenerationId: randomUUID(),
+      snapshotDigest: "a".repeat(64),
+      assetManifest: [],
+    };
+  }
+
   const snapshot = {
     draftId,
     pendingGenerationId,
@@ -113,6 +146,43 @@ describePostgres("guest claim service PostgreSQL boundary", () => {
     productRecipe: { name: "Summer collection", source: "user_confirmed" },
     campaignRecipe: { language: "bilingual", market: "KW", cta: "WhatsApp order" },
   };
+
+  it("fails closed for direct service and repository Template snapshots before projects, claim operations, or generation work", async () => {
+    const malformedSnapshots = [
+      (() => {
+        const { templateVersionId: _templateVersionId, ...missingTemplateVersion } = strictTemplateSnapshot();
+        return missingTemplateVersion;
+      })(),
+      (() => {
+        const templateSnapshot = strictTemplateSnapshot();
+        return {
+          ...templateSnapshot,
+          campaignRecipe: { ...templateSnapshot.campaignRecipe, hiddenProviderModel: "unapproved-provider-model" },
+        };
+      })(),
+      (() => {
+        const templateSnapshot = strictTemplateSnapshot();
+        return {
+          ...templateSnapshot,
+          campaignRecipe: { ...templateSnapshot.campaignRecipe, offer: "x".repeat(401) },
+        };
+      })(),
+    ];
+
+    for (const malformed of malformedSnapshots) {
+      const before = await persistedCounts();
+      const repository = createGuestClaimRepository({ db: database.db });
+      const service = createGuestClaimService({ repository });
+
+      await expect(service.startClaim({ userId: firstUserId, snapshot: malformed as never })).rejects.toMatchObject({
+        code: "invalid_campaign_configuration",
+      });
+      await expect(repository.start({ userId: firstUserId, snapshot: malformed as never })).rejects.toMatchObject({
+        code: "invalid_campaign_configuration",
+      });
+      await expect(persistedCounts()).resolves.toEqual(before);
+    }
+  });
 
   it("creates one immutable receipt for an exact asset-free replay", async () => {
     const first = await app().request("/api/v1/drafts/claim", {

@@ -1,4 +1,9 @@
-import { GuestClaimReceiptSchema, type GuestClaimReceipt, type GuestClaimSnapshot } from "@movprompt/contracts";
+import {
+  GuestClaimReceiptSchema,
+  GuestClaimSnapshotSchema,
+  type GuestClaimReceipt,
+  type GuestClaimSnapshot,
+} from "@movprompt/contracts";
 
 import {
   GuestClaimRepositoryError,
@@ -9,7 +14,12 @@ import { CampaignEligibilityError, type CampaignEligibilityService } from "./cam
 
 export class GuestClaimServiceError extends Error {
   constructor(
-    readonly code: "conflict" | "assets_pending" | "not_found" | "presenter_configuration_ineligible",
+    readonly code:
+      | "conflict"
+      | "assets_pending"
+      | "not_found"
+      | "presenter_configuration_ineligible"
+      | "invalid_campaign_configuration",
     readonly retryable: boolean,
     message: string = code,
   ) {
@@ -29,6 +39,13 @@ export interface GuestClaimService {
 
 function mapError(error: unknown): never {
   if (error instanceof GuestClaimRepositoryError) {
+    if (error.code === "invalid_campaign_configuration") {
+      throw new GuestClaimServiceError(
+        "invalid_campaign_configuration",
+        false,
+        "The campaign settings are incomplete, invalid, or inconsistent.",
+      );
+    }
     if (error.code === "assets_pending") throw new GuestClaimServiceError("assets_pending", true);
     if (error.code === "cleanup_leased") throw new GuestClaimServiceError("assets_pending", true);
     if (error.code === "not_found") throw new GuestClaimServiceError("not_found", false);
@@ -38,6 +55,21 @@ function mapError(error: unknown): never {
     throw new GuestClaimServiceError("presenter_configuration_ineligible", false, error.message);
   }
   throw error;
+}
+
+/**
+ * Route parsing is not an authorization boundary: internal callers can invoke
+ * this service directly. Re-parse every guest snapshot before presenter
+ * eligibility, repository writes, or replay matching can observe it.
+ */
+function parseGuestClaimSnapshot(snapshot: unknown): GuestClaimSnapshot {
+  const parsed = GuestClaimSnapshotSchema.safeParse(snapshot);
+  if (parsed.success) return parsed.data;
+  throw new GuestClaimServiceError(
+    "invalid_campaign_configuration",
+    false,
+    "The campaign settings are incomplete, invalid, or inconsistent.",
+  );
 }
 
 export function createGuestClaimService(dependencies: {
@@ -51,8 +83,9 @@ export function createGuestClaimService(dependencies: {
   return {
     async startClaim(input) {
       try {
-        await assertEligibility(input.snapshot);
-        return await repository.start(input);
+        const snapshot = parseGuestClaimSnapshot(input.snapshot);
+        await assertEligibility(snapshot);
+        return await repository.start({ userId: input.userId, snapshot });
       } catch (error) {
         return mapError(error);
       }
@@ -103,9 +136,10 @@ export function createGuestClaimService(dependencies: {
 
     async claimGuestDraft({ userId, snapshot }) {
       try {
-        await assertEligibility(snapshot);
-        await repository.start({ userId, snapshot });
-        return await this.finalizeClaim({ userId, pendingGenerationId: snapshot.pendingGenerationId });
+        const parsedSnapshot = parseGuestClaimSnapshot(snapshot);
+        await assertEligibility(parsedSnapshot);
+        await repository.start({ userId, snapshot: parsedSnapshot });
+        return await this.finalizeClaim({ userId, pendingGenerationId: parsedSnapshot.pendingGenerationId });
       } catch (error) {
         return mapError(error);
       }
