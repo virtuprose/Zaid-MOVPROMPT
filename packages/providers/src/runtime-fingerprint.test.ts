@@ -38,6 +38,11 @@ describe("generationRuntimeFingerprint", () => {
       ...runtime,
       MOVPROMPT_QUALITY_RUBRIC_VERSION: "kuwait-quality-rubric-v2",
     })).not.toBe(expected);
+    expect(generationRuntimeFingerprint({ ...runtime, APP_ENV: "local" })).not.toBe(expected);
+    expect(generationRuntimeFingerprint({
+      ...runtime,
+      MOVPROMPT_CAPABILITY_VIDEO_CINEMATIC_MODEL_ID: "bytedance/seedance-v1.0-pro-fast",
+    })).not.toBe(expected);
   });
 
   it("does not include secret values, only their presence", () => {

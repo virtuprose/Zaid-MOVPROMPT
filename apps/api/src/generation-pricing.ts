@@ -1,4 +1,7 @@
 import type { CapabilityAlias } from "@movprompt/contracts";
+import {
+  VERCEL_GATEWAY_SEEDANCE_FAST_MODEL_ID,
+} from "@movprompt/providers";
 
 const RATE_ENVIRONMENT_KEYS: Readonly<Partial<Record<CapabilityAlias, string>>> = {
   "video.cinematic": "GENERATION_VIDEO_CINEMATIC_CREDITS_PER_SECOND",
@@ -72,15 +75,35 @@ function record(value: unknown): Record<string, unknown> | undefined {
   return value as Record<string, unknown>;
 }
 
-function durationSeconds(configuration: unknown, fallback?: number): number {
+function durationSeconds(
+  configuration: unknown,
+  fallback: number | undefined,
+  limits: { minimum: number; maximum: number },
+): number {
   const root = record(configuration);
   const nested = record(root?.generation);
   const candidate = nested?.durationSeconds ?? root?.durationSeconds ?? fallback;
   if (candidate === undefined) throw new InvalidGenerationConfigurationError("duration_required");
-  if (!Number.isSafeInteger(candidate) || Number(candidate) < 1 || Number(candidate) > 60) {
+  if (
+    !Number.isSafeInteger(candidate) ||
+    Number(candidate) < limits.minimum ||
+    Number(candidate) > limits.maximum
+  ) {
     throw new InvalidGenerationConfigurationError("duration_invalid");
   }
   return Number(candidate);
+}
+
+function videoDurationLimits(
+  environment: Readonly<Record<string, string | undefined>>,
+  capability: Extract<CapabilityAlias, "video.cinematic" | "video.product_fidelity">,
+): { minimum: number; maximum: number } {
+  const prefix = capability === "video.cinematic" ? "VIDEO_CINEMATIC" : "VIDEO_PRODUCT_FIDELITY";
+  const selectedModel = environment[`MOVPROMPT_CAPABILITY_${prefix}_MODEL_ID`]?.trim();
+  if (environment.APP_ENV?.trim() === "local" && selectedModel === VERCEL_GATEWAY_SEEDANCE_FAST_MODEL_ID) {
+    return { minimum: 2, maximum: 12 };
+  }
+  return { minimum: 4, maximum: 30 };
 }
 
 function videoResolution(configuration: unknown): VideoResolution {
@@ -179,7 +202,11 @@ export function createGenerationPricingFromEnvironment(
       if (effectiveRate === undefined) {
         throw new GenerationPricingUnavailableError(capability);
       }
-      const seconds = durationSeconds(configuration, templateDurationSeconds);
+      const seconds = durationSeconds(
+        configuration,
+        templateDurationSeconds,
+        videoDurationLimits(environment, capability as Extract<CapabilityAlias, "video.cinematic" | "video.product_fidelity">),
+      );
       const credits = checkedCredits(effectiveRate, seconds);
       return {
         credits,

@@ -1,4 +1,4 @@
-import { CapabilityRegistry, generationRuntimeFingerprint } from "@movprompt/providers";
+import { CapabilityRegistry, createCapabilityRegistryFromEnvironment, generationRuntimeFingerprint } from "@movprompt/providers";
 import { describe, expect, it, vi } from "vitest";
 
 import { createGenerationAvailabilityService } from "./generation-availability.js";
@@ -60,6 +60,36 @@ function service(environment: Record<string, string | undefined> = { ...baseEnvi
 }
 
 describe("generation availability", () => {
+  it("requires an identically fingerprinted worker for a complete local fast-model profile", async () => {
+    const environment = {
+      ...baseEnvironment,
+      APP_ENV: "local",
+      MOVPROMPT_CAPABILITY_VIDEO_CINEMATIC_MODEL_ID: "bytedance/seedance-v1.0-pro-fast",
+      MOVPROMPT_CAPABILITY_VIDEO_PRODUCT_FIDELITY_MODEL_ID: "bytedance/seedance-v1.0-pro-fast",
+      PROVIDER_OUTPUT_ALLOWED_HOSTS: "ark-content-generation-ap-southeast-1.tos-ap-southeast-1.volces.com",
+      GENERATION_PRICING_VERSION: "seedance-fast-local-2026-08-21",
+      GENERATION_VIDEO_CINEMATIC_480P_CREDITS_PER_SECOND: "3",
+      GENERATION_VIDEO_CINEMATIC_720P_CREDITS_PER_SECOND: "3",
+      GENERATION_VIDEO_PRODUCT_FIDELITY_480P_CREDITS_PER_SECOND: "3",
+      GENERATION_VIDEO_PRODUCT_FIDELITY_720P_CREDITS_PER_SECOND: "3",
+    };
+    const ready = createGenerationAvailabilityService({
+      enabled: true,
+      environment,
+      capabilities: createCapabilityRegistryFromEnvironment(environment),
+      pricing: createGenerationPricingFromEnvironment(environment),
+      storage: { checkBuckets: vi.fn(async () => undefined) },
+      heartbeats: { findFreshReady: vi.fn(async () => ({
+        instanceId: "local-fast-worker",
+        lastSeenAt: new Date(),
+        metadata: { generationReady: true, configurationFingerprint: generationRuntimeFingerprint(environment) },
+      })) },
+    });
+    await expect(ready.evaluate()).resolves.toMatchObject({ status: "ready" });
+    expect(createCapabilityRegistryFromEnvironment({ ...environment, APP_ENV: "production" }).listPublic()
+      .find((item) => item.alias === "video.cinematic")?.available).toBe(false);
+  });
+
   it("requires both pricing tiers and an identically configured fresh worker", async () => {
     await expect(service().evaluate()).resolves.toEqual({
       status: "ready",

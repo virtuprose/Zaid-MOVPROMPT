@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   createGenerationPricingFromEnvironment,
   GenerationPricingUnavailableError,
+  InvalidGenerationConfigurationError,
 } from "./generation-pricing.js";
 
 function tieredPricing() {
@@ -15,6 +16,23 @@ function tieredPricing() {
 }
 
 describe("authoritative resolution-bound generation pricing", () => {
+  it("binds local fast-model quotes to its two-to-twelve second contract", () => {
+    const pricing = createGenerationPricingFromEnvironment({
+      APP_ENV: "local",
+      GENERATION_PRICING_VERSION: "seedance-fast-local-2026-08-21",
+      GENERATION_QUOTE_TTL_SECONDS: "900",
+      MOVPROMPT_CAPABILITY_VIDEO_PRODUCT_FIDELITY_MODEL_ID: "bytedance/seedance-v1.0-pro-fast",
+      GENERATION_VIDEO_PRODUCT_FIDELITY_480P_CREDITS_PER_SECOND: "3",
+      GENERATION_VIDEO_PRODUCT_FIDELITY_720P_CREDITS_PER_SECOND: "3",
+    });
+    expect(pricing.price("video.product_fidelity", { durationSeconds: 2, resolution: "480p" }).credits).toBe(6);
+    expect(pricing.price("video.product_fidelity", { durationSeconds: 12, resolution: "720p" }).credits).toBe(36);
+    for (const durationSeconds of [1, 13]) {
+      expect(() => pricing.price("video.product_fidelity", { durationSeconds, resolution: "480p" }))
+        .toThrowError(InvalidGenerationConfigurationError);
+    }
+  });
+
   it("quotes 480p and 720p from distinct server rates", () => {
     const pricing = tieredPricing();
     expect(pricing.price("video.product_fidelity", {
