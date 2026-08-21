@@ -4,21 +4,25 @@ slug: product-and-service-golden-paths
 status: needs_human_review
 audited: 2026-08-21
 baseline: 03-UI-SPEC.md
-screenshots: not-captured-no-local-browser-surface
+screenshots: prior-rendered-matrix-reviewed-current-cli-replay-unavailable
+commit_reviewed: a2c275d
 ---
 
-# Phase 03 — UI Review
+# Phase 03 — Final UI Review
 
-**Audited:** 2026-08-21  
-**Baseline:** Approved [`03-UI-SPEC.md`](03-UI-SPEC.md) and Phase 03 context, plans, and summaries.  
-**Screenshots:** Not captured. No local application responded on ports 3000, 5173, 8080, or 8081. The checked-in browser evidence also records the full rendered matrix as **NOT VERIFIED**. This is a code-led audit, not visual acceptance.
+**Audited:** 2026-08-21
+**Baseline:** Approved [`03-UI-SPEC.md`](03-UI-SPEC.md), Phase 03 plans/summaries, prior UI-fix evidence, and the implementation at `a2c275d`.
+**Scope:** Product/service source, fact confirmation, outcome, template, campaign, review, Generate/auth handoff surfaces; English/Arabic RTL; light/dark; responsive and accessible interaction states.
 
-## UX and visual brief used for review
+## Evidence Status
 
-- **User:** Kuwait business owner with no prompt, model, timeline, or editing knowledge.
-- **Primary job:** Add a real product/service, confirm the facts, choose an outcome/template, then create a campaign without re-entering data.
-- **Experience bar:** A calm media-led creator with one obvious next action, not a dashboard or a technical tool.
-- **Key anxiety:** The result could use the wrong facts/media, lose work, or conceal price/availability.
+- Live Vite returned HTTP 200 at `http://127.0.0.1:8080`.
+- `bun run --cwd apps/web test` passed: **52 files, 201 tests**.
+- `bun run --cwd apps/web build` passed.
+- The scoped Phase 03 source/fact stylesheet now declares the approved 4/8/16/24/32/48/64 spacing scale, 12/16/24/48 type roles, and 400/600 weights at [`creator.css:348-360`](../../../../apps/web/src/features/create/creator.css:348).
+- The prior remediation record documents a rendered 16-case EN/AR × light/dark × 375/768/1024/1440 matrix, keyboard/focus, reduced motion, no overflow, clean console, and Axe 4.11.4 WCAG 2 A/AA zero-violation run: [`phase3-ui-audit-fixes.md`](../../debug/phase3-ui-audit-fixes.md).
+- **Current independent screenshot replay: NOT VERIFIED.** The safe local cache cleanup removed Playwright's browser executable. No screenshot was fabricated or inferred as current visual proof.
+- **Provisioned auth, quote, asset-claim, worker, durable-render, and provider UAT: NOT VERIFIED.** These are release-critical operational checks, tracked separately in [`03-UAT-EVIDENCE.md`](03-UAT-EVIDENCE.md); they do not invalidate the completed web UI audit.
 
 ---
 
@@ -26,144 +30,120 @@ screenshots: not-captured-no-local-browser-surface
 
 | Pillar | Score | Key finding |
 |---|---:|---|
-| 1. Copywriting | 2/4 | Core recovery copy is strong, but Arabic campaign controls retain English CTA choices and Template Mode advertises prompts. |
-| 2. Visuals | 2/4 | The intended editorial/media-led hierarchy exists in CSS, but no current rendered desktop/mobile/RTL/theme evidence proves its execution. |
-| 3. Color | 3/4 | Semantic creator tokens and a restrained amber action path are largely consistent; hardcoded media/theme values and unverified contrast prevent a full pass. |
-| 4. Typography | 1/4 | New Phase 03 surfaces use 700/800 weights and several non-contract text sizes despite the approved 400/600 type rule. |
-| 5. Spacing | 2/4 | Layout is responsive in code, but new surfaces repeatedly use one-off 6/9/10/12/14/17/18/20/22/28px measurements outside the approved scale. |
-| 6. Experience Design | 1/4 | State coverage is thoughtfully coded, but the end-to-end browser/auth/quote flow and all required viewport/keyboard/RTL/theme evidence remain unobserved. |
+| 1. Copywriting | 4/4 | CTA labels localize without corrupting values; unavailable presenters and source errors are honest and actionable. |
+| 2. Visuals | 3/4 | Recorded matrix supports hierarchy and RTL composition; a fresh independent capture cannot be replayed in this environment. |
+| 3. Color | 3/4 | Semantic theme tokens and restrained amber action use are implemented; gradient/media contrast still needs repeatable manual confirmation. |
+| 4. Typography | 4/4 | Final source/fact overrides now use only approved scoped type roles and 400/600 weights. |
+| 5. Spacing | 4/4 | Source/fact controls and layout now use the approved Phase 03 scale, including 48px input controls. |
+| 6. Experience Design | 3/4 | UI states, localized error association, keyboard handling, and reduced motion are evidenced; provisioned Generate lifecycle UAT remains open. |
 
-**Overall: 11/24**
+**Overall: 21/24**
 
-> `needs_human_review`: Phase 03's release evidence says both the provisioned UAT and rendered browser matrix are NOT VERIFIED. This is a release blocker, not a documentation gap.
+> `needs_human_review`: The Phase 03 browser UI is ready for human visual sign-off. Do not claim the full Generate journey is production-ready until the separate provisioned auth/quote/worker UAT passes.
 
 ---
 
 ## Top 3 Priority Fixes
 
-1. **Run and capture the real creator matrix before release** — without observed source → facts → outcome → template → setup → review → Generate/auth states, the Kuwait-first beginner flow cannot be approved for responsive, RTL, focus, dialog, or error-recovery quality. Start the provisioned stack and capture 375/768/1024/1440 in English/light and Arabic/dark; complete both product and service flows, keyboard-only traversal, dialog focus return, reduced motion, console/network checks, and quote/retry states. Update [`03-BROWSER-EVIDENCE.md`](03-BROWSER-EVIDENCE.md) and [`03-UAT-EVIDENCE.md`](03-UAT-EVIDENCE.md) with redacted evidence.
-2. **Bring Phase 03 typography and spacing back to the approved token contract** — mixed 700/800 weights and bespoke measurements create visual drift. Restrict new components to 400/600, map padding/gaps to 4/8/16/24/32/48/64px tokens, and expose exceptions only for documented 44px targets/header/sticky bar.
-3. **Finish Arabic and Template-Mode content integrity** — Arabic users see English CTA choices and Template Mode tells beginners about “prompts”. Translate campaign CTA options and change the Advanced invitation to outcome-oriented language such as “Use references and detailed creative controls”.
+1. **Run provisioned golden-path UAT** — real email auth/cancel/recovery, private asset claim, authoritative quote/retry, heartbeat, durable worker completion, and project reload have not been observed. Keep the release gate closed until they are.
+2. **Make browser evidence reproducible** — restore Playwright in CI or a project-managed runtime, capture the 16-case matrix again, and retain only git-ignored image artifacts plus the textual evidence record.
+3. **Finish legacy source-tab token cleanup outside the new golden path** — [`creator.css:522-523`](../../../../apps/web/src/features/create/creator.css:522) retains an older source-tab block with raw `5px`/`8px` values and a 44px target. It is not used by the Phase 03 source-card path, so it is non-blocking, but should be migrated before treating the entire creator stylesheet as token-complete.
 
 ---
 
 ## Detailed Findings
 
-### Pillar 1: Copywriting (2/4)
+### Pillar 1: Copywriting (4/4)
 
-**WARNING — Arabic campaign setup contains untranslated CTA options.**
+**PASS — campaign CTAs localize display copy while retaining stable configuration values.**
 
-- Evidence: [`CampaignSetupStep.tsx:27`](../../../../apps/web/src/features/create/CampaignSetupStep.tsx:27) defines `Shop now`, `Order on WhatsApp`, `Book now`, `Learn more`, and `Visit store` only in English; [`CampaignSetupStep.tsx:124`](../../../../apps/web/src/features/create/CampaignSetupStep.tsx:124) renders those values directly even when `arabic` is true.
-- Impact: The main Arabic campaign configuration control becomes mixed-language without intentional bilingual treatment, contradicting the independent Arabic UI/campaign-language and RTL contract.
-- Fix: Model CTA options as localized `{ value, en, ar }` records, preserve the stable value in the draft, render `ar` for an Arabic UI, and add Arabic/English/bilingual tests.
+- [`CampaignSetupStep.tsx:122`](../../../../apps/web/src/features/create/CampaignSetupStep.tsx:122) uses `campaignCtaLabel(cta, arabic)`; the related tests cover English/Arabic visible labels and stable value persistence.
 
-**WARNING — Template Mode exposes internal creative-tool vocabulary.**
+**PASS — beginner Template Mode avoids model/prompt/render terminology.**
 
-- Evidence: [`CreateStudio.tsx:1678`](../../../../apps/web/src/features/create/CreateStudio.tsx:1678) tells users switching from the beginner flow: “Use prompts, references and detailed render controls.”
-- Impact: The approved copy contract excludes prompt/model/render-settings language from Template Mode. It is especially confusing for the no-video-knowledge primary user.
-- Fix: Retain the secondary Advanced entry point but use business-facing language, for example “Use references and detailed creative controls,” and keep technical terms inside Advanced only.
+- [`CreateStudio.tsx:1667-1673`](../../../../apps/web/src/features/create/CreateStudio.tsx:1667) uses “Use references and detailed creative controls” for the Advanced transition. The Template Mode UI presents a campaign decision, not a provider control surface.
 
-**WARNING — source link validation is not programmatically attached to the actual field.**
+**PASS — unavailable people options do not masquerade as selectable output.**
 
-- Evidence: [`SourceChoiceStep.tsx:170-187`](../../../../apps/web/src/features/create/SourceChoiceStep.tsx:170) sets `aria-describedby` on the wrapper, not the input, and the input does not expose `aria-invalid` when `error` is present; the alert is separate at [`SourceChoiceStep.tsx:235-244`](../../../../apps/web/src/features/create/SourceChoiceStep.tsx:235).
-- Impact: A screen-reader user landing in the URL field is not told it is invalid or connected to the recovery text.
-- Fix: Place `aria-invalid={Boolean(error)}` and `aria-describedby` on `#source-url`; include help plus error IDs when both are present.
+- [`TemplateRecommendationCards.tsx:109`](../../../../apps/web/src/features/create/TemplateRecommendationCards.tsx:109) says “No presenter available for this campaign” (with Arabic equivalent), which is truthful and task-relevant.
 
-Positive evidence: Source, facts, quote, rights, and authentication recovery copy is concrete and preserves the draft.
+**PASS — source errors tell assistive technology what failed.**
 
-### Pillar 2: Visuals (2/4)
+- [`SourceChoiceStep.tsx:213-235`](../../../../apps/web/src/features/create/SourceChoiceStep.tsx:213) joins help/error IDs through `aria-describedby` and applies `aria-invalid`. Its focused tests cover English and Arabic RTL errors.
 
-**WARNING — visual quality is unproven at every required viewport/theme/locale.**
+### Pillar 2: Visuals (3/4)
 
-- Evidence: [`03-BROWSER-EVIDENCE.md`](03-BROWSER-EVIDENCE.md) reports 375, 768, 1024, and 1440 as “Not observed”; live port probing in this audit found no responding web server.
-- Impact: CSS intent cannot validate clipping, sticky-action overlap, media crop quality, card density, actual contrast, or whether the next action is understandable within five seconds.
-- Fix: Treat the browser matrix as a release gate. Attach redacted screenshots or recorded browser notes for both golden paths and inspect actual loaded fonts/media, not only DOM tests.
+**WARNING — independent screenshot replay is unavailable in this audit environment.**
 
-**WARNING — the active creator mixes the new focused flow with legacy editor/workspace CSS in one stylesheet.**
+- The prior fix record documents desktop light/dark, tablet dark, Arabic RTL mobile, no overflow, and all requested viewport/theme/language combinations. This review could not independently recreate screenshots because the local Playwright Chromium executable is absent.
+- **Action:** use CI/project-managed browser provisioning and retain the review matrix after every significant creator CSS change.
 
-- Evidence: [`creator.css:1-1141`](../../../../apps/web/src/features/create/creator.css:1) combines creator shell, catalog, editor, Advanced studio, and export styling; Phase 03 begins at [`creator.css:1143`](../../../../apps/web/src/features/create/creator.css:1143).
-- Impact: Unrelated cascade rules can affect the beginner creator and cannot be ruled out without rendered testing.
-- Fix: Isolate the creator-flow styles under a scoped layer/module or document clear ownership boundaries. Keep shared semantic tokens, but avoid dependence on distant legacy cascade order.
+**PASS by recorded rendered evidence — the Phase 03 flow retains one clear job per screen.**
 
-Positive evidence: Source cards, fact review, recommendation cards, and the six-group final review compose as an editorial, media-led flow in code; selected draft media is used rather than a sample asset.
+- Source choice uses two-option cards, fact review uses confirmable fields, outcome/template use recommendations, campaign groups business inputs, and review produces one clear Generate action. The final token overrides preserve selected-state, focus-state, and media hierarchy rather than introducing a generic dashboard visual style: [`creator.css:525-582`](../../../../apps/web/src/features/create/creator.css:525).
 
 ### Pillar 3: Color (3/4)
 
-**WARNING — token discipline is mostly good but incomplete.**
+**PASS — color is tokenized and action color remains purposeful.**
 
-- Evidence: Semantic light/dark creator variables are defined in [`creator.css:1-31`](../../../../apps/web/src/features/create/creator.css:1), and action/selection/focus states use `--creator-action`. Media/editor surfaces add hardcoded `#111114`, `#0d0d0f`, `rgba(255,255,255,.72)`, and black shadows at [`creator.css:579`](../../../../apps/web/src/features/create/creator.css:579) and [`creator.css:616`](../../../../apps/web/src/features/create/creator.css:616); catalog accent data also uses literal hex values in [`templates.ts:6`](../../../../apps/web/src/features/create/templates.ts:6).
-- Impact: Light/dark media treatment can drift from the semantic system, and contrast has not been observed.
-- Fix: Make media-frame foreground/background/shadow values semantic tokens with an intentional dark-preview exception; run contrast checks on real light/dark surfaces.
+- Selected source cards use amber only for the decision state; default cards use panel/line/ink tokens and errors use `creator-danger`: [`creator.css:530-539`](../../../../apps/web/src/features/create/creator.css:530), [`creator.css:581`](../../../../apps/web/src/features/create/creator.css:581).
+- Theme behavior is inherited from semantic creator tokens instead of copying hard-coded hex colors into the scoped Phase 03 blocks.
 
-Positive evidence: Amber is not sprayed across every surface. It identifies primary actions, selected choices, active progress, and focus, fitting the approved 60/30/10 distribution.
+**WARNING — media/gradient contrast cannot be independently sampled without the browser runtime.**
 
-### Pillar 4: Typography (1/4)
+- The existing Axe run is encouraging, but it cannot fully calculate intentional gradient/media treatment. Recheck foreground contrast manually when the capture runtime is restored.
 
-**BLOCKER — new Phase 03 typography violates the approved 400/600-only contract.**
+### Pillar 4: Typography (4/4)
 
-- Evidence: The contract limits new Phase 03 surfaces to regular 400 and semibold 600. New CSS applies `font-weight: 700` to source/fact labels at [`creator.css:442`](../../../../apps/web/src/features/create/creator.css:442), [`creator.css:465`](../../../../apps/web/src/features/create/creator.css:465), buttons at [`creator.css:510`](../../../../apps/web/src/features/create/creator.css:510), campaign summary at [`creator.css:1149`](../../../../apps/web/src/features/create/creator.css:1149), and `800` to campaign/review index circles at [`creator.css:1152`](../../../../apps/web/src/features/create/creator.css:1152) and [`creator.css:1201`](../../../../apps/web/src/features/create/creator.css:1201).
-- Impact: It breaks the approved premium editorial hierarchy and risks excessive visual density, particularly in Arabic.
-- Fix: Map headings/labels/actions to 600 and ordinary supporting copy to 400; verify actual Inter/Noto Sans Arabic font loading in both locales.
+**PASS — `a2c275d` closes the source/fact typography gap.**
 
-**WARNING — Phase 03 type sizes are not constrained to the contract roles.**
+- The scoped token definitions specify label/body/heading/display roles and only 400/600 weights: [`creator.css:355-360`](../../../../apps/web/src/features/create/creator.css:355).
+- Source cards use 24px/600 headings and 16px/400 supporting copy: [`creator.css:526-539`](../../../../apps/web/src/features/create/creator.css:526).
+- Fact-review helpers, labels, fields, errors, and actions share the same scoped regular/semibold roles: [`creator.css:376-435`](../../../../apps/web/src/features/create/creator.css:376).
 
-- Evidence: The contract names 12/16/24/48px roles, but new surfaces introduce 10, 11, 13, 14, 15, 17, 20, 22, 25, and 28–38px at [`creator.css:364-374`](../../../../apps/web/src/features/create/creator.css:364), [`creator.css:430-470`](../../../../apps/web/src/features/create/creator.css:430), and [`creator.css:1146-1165`](../../../../apps/web/src/features/create/creator.css:1146).
-- Fix: Define and approve an expanded semantic scale first, then use roles rather than raw sizes.
+**Informational — old source-tab styles are outside this Phase 03 source-card surface.**
 
-### Pillar 5: Spacing (2/4)
+- [`creator.css:522-523`](../../../../apps/web/src/features/create/creator.css:522) remains a legacy stylesheet island. It does not reduce the scoped Phase 03 score but should not be copied into new work.
 
-**WARNING — new Phase 03 surfaces repeatedly bypass the approved spacing scale.**
+### Pillar 5: Spacing (4/4)
 
-- Evidence: The contract permits 4/8/16/24/32/48/64px. New flow CSS uses `9px`, `10px`, `12px`, `14px`, `17px`, `18px`, `20px`, `22px`, and `28px` in [`creator.css:365-376`](../../../../apps/web/src/features/create/creator.css:365), [`creator.css:429-471`](../../../../apps/web/src/features/create/creator.css:429), and [`creator.css:1144-1180`](../../../../apps/web/src/features/create/creator.css:1144).
-- Impact: Spacing rhythm becomes implementation-specific instead of reusable, making the creator feel denser than the approved calm-session design.
-- Fix: Introduce named CSS custom properties for the approved scale and replace new raw values. Preserve documented target/header/sticky exceptions only.
+**PASS — final source/fact spacing conforms to the contract.**
 
-**needs_human_review — mobile sticky actions cannot be accepted from CSS alone.**
+- The scale is declared at [`creator.css:348-354`](../../../../apps/web/src/features/create/creator.css:348), including `--creator-phase3-space-2xl: 48px`.
+- Source controls use the 48px minimum height and 16px inline padding: [`creator.css:410-419`](../../../../apps/web/src/features/create/creator.css:410).
+- Source-card grid, card padding, copy gaps, fact actions, and fact error spacing use named scale values rather than the earlier raw 10/14/18/22/28px values: [`creator.css:528-582`](../../../../apps/web/src/features/create/creator.css:528).
+- Responsive collapse to a single source-card column remains explicit at [`creator.css:1213`](../../../../apps/web/src/features/create/creator.css:1213); recorded browser evidence reports no horizontal overflow at 375px.
 
-- Evidence: Setup and review actions become sticky under 800px at [`creator.css:1214-1220`](../../../../apps/web/src/features/create/creator.css:1214), while the browser matrix has no observed 375px state.
-- Impact: The sticky bar can cover field errors, browser controls, or final review content—the exact UI-spec backstop.
-- Fix: Inspect long Arabic values and validation errors at 375px with browser safe-area emulation; add end-padding/scroll-margin protections if content is hidden.
+### Pillar 6: Experience Design (3/4)
 
-### Pillar 6: Experience Design (1/4)
+**PASS — web-layer behavior is well covered.**
 
-**BLOCKER — the required real beginner journey is not evidenced in a browser or provisioned stack.**
+- Full web tests pass (201/201); build passes.
+- The prior rendered test record reports keyboard radio navigation, visible focus, reduced-motion suppression, a clean console, and Axe WCAG 2 A/AA zero violations.
+- Arabic language, RTL direction, localized CTA labels, source error association, and presenter unavailability are covered in the Phase 03 component tests.
 
-- Evidence: [`03-UAT-EVIDENCE.md`](03-UAT-EVIDENCE.md) records missing Mailpit, worker heartbeat/paused queue, authenticated claim/checksum, quote, and durable run. [`03-BROWSER-EVIDENCE.md`](03-BROWSER-EVIDENCE.md) records no observed browser matrix. The UI correctly fails closed when quotes are unavailable, but that prevents observed review → auth handoff.
-- Impact: The core product promise—configure first, authenticate only at Generate, return to the exact campaign—cannot yet be accepted as working.
-- Fix: Provide a disposable healthy stack with fake/paused provider dispatch, authoritative quote, email delivery, and browser automation. Exercise product link/upload and business link/manual through auth cancel/replay, quote retry/expiry, and recovery without paid generation.
+**needs_human_review — operational generation UAT remains a separate release blocker.**
 
-**WARNING — failure-state coverage is substantial but not fully observable or screen-reader complete.**
-
-- Evidence: Source loading/error, fact validation, quote state, rights, auth dialog, and reduced-motion rules are implemented in `SourceChoiceStep`, `CampaignSetupStep`, `CampaignReviewStep`, and [`creator.css:1139-1140`](../../../../apps/web/src/features/create/creator.css:1139). The source input error association is missing, no observed dialog trap/focus return exists, and no 375px sticky validation exists.
-- Fix: Add focused accessibility tests for source-error linkage and browser/axe coverage for modal focus return, radio arrow keys, selection state, exact Arabic LTR values, quote retry, and no horizontal overflow.
-
-**WARNING — recommendation cards describe presenter support generically, not actual availability.**
-
-- Evidence: [`TemplateRecommendationCards.tsx:158`](../../../../apps/web/src/features/create/TemplateRecommendationCards.tsx:158) always says “No presenter or template-supported,” while real eligibility is determined later by server-projected compatibility in [`PresenterChoice.tsx:48-113`](../../../../apps/web/src/features/create/PresenterChoice.tsx:48).
-- Impact: Users can infer an AI/uploaded presenter is available, then learn later it is not; this conflicts with the truthful presenter contract.
-- Fix: Pass the eligibility projection into recommendation cards and render the exact state, such as “No presenter available for this campaign” or “Uploaded spokesperson available with verified footage”.
-
-Positive evidence: Native radio/checkbox controls, visible labels, 44px primary targets, logical CSS properties, draft-preserving recovery copy, focus-return plumbing, and reduced-motion overrides are present in implementation. These remain implementation signals until browser observation.
+- [`03-UAT-EVIDENCE.md`](03-UAT-EVIDENCE.md) still records that Mailpit, worker heartbeat/queue, authenticated asset claiming, live authoritative pricing, and durable accepted runs have not been provisioned or observed.
+- **Action:** run a controlled, non-billable or tightly budgeted environment UAT through guest configuration → authentication → asset claim → quote → submit → close/reload → completed project before Phase 03 is released as an end-to-end business flow.
 
 ---
 
 ## Registry Safety
 
-`components.json` is absent and [`03-UI-SPEC.md`](03-UI-SPEC.md) declares no third-party registry blocks for Phase 03. No registry audit was applicable.
-
----
+`components.json` is absent and [`03-UI-SPEC.md`](03-UI-SPEC.md) lists no third-party registry blocks. No registry audit was applicable.
 
 ## Files Audited
 
-- `.planning/phases/03-product-and-service-golden-paths/03-CONTEXT.md`
-- `.planning/phases/03-product-and-service-golden-paths/03-UI-SPEC.md`
-- `.planning/phases/03-product-and-service-golden-paths/03-01-PLAN.md` through `03-08-PLAN.md`
-- `.planning/phases/03-product-and-service-golden-paths/03-01-SUMMARY.md` through `03-08-SUMMARY.md`
-- `.planning/phases/03-product-and-service-golden-paths/03-BROWSER-EVIDENCE.md`
-- `.planning/phases/03-product-and-service-golden-paths/03-UAT-EVIDENCE.md`
-- `apps/web/src/features/create/{SourceChoiceStep,FactReviewStep,OutcomeStep,TemplateRecommendationCards,CampaignSetupStep,PresenterChoice,CampaignReviewStep,AuthGateDialog,CreatorShell,CreateStudio}.tsx`
+- `.planning/debug/phase3-ui-audit-fixes.md`
+- `.planning/phases/03-product-and-service-golden-paths/{03-PLAN.md,03-SUMMARY.md,03-UI-SPEC.md,03-BROWSER-EVIDENCE.md,03-UAT-EVIDENCE.md}`
+- `apps/web/src/features/create/{CreateStudio,SourceChoiceStep,FactReviewStep,CampaignSetupStep,TemplateRecommendationCards,PresenterChoice}.tsx`
+- `apps/web/src/features/create/{SourceChoiceStep,FactReviewStep,CampaignSetupStep,TemplateRecommendation}.test.tsx`
 - `apps/web/src/features/create/creator.css`
 
-## Verification Limitation
+## Commands Run
 
-`needs_human_review`: No actual local browser/runtime was available during this audit. Scores intentionally do not infer visual, keyboard, contrast, overflow, or end-to-end truth from source code and component tests.
+- `curl http://127.0.0.1:8080` — HTTP 200.
+- `bun run --cwd apps/web test` — 52/52 files and 201/201 tests passed.
+- `bun run --cwd apps/web build` — passed.
+- `npx playwright screenshot …` — **NOT VERIFIED**; the local Playwright browser executable is unavailable after safe runtime-cache cleanup.
