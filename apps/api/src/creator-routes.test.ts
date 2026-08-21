@@ -10,6 +10,7 @@ import { createApi } from "./app.js";
 import type { CreatorRepository } from "./creator-repository.js";
 import { loadApiConfig } from "./config.js";
 import { ApiHttpError } from "./errors.js";
+import { validTemplateClaim } from "./campaign-contract.test-fixture.js";
 import type { GuestClaimService } from "./guest-claim-service.js";
 import type { SourceScanner } from "./source-scanner.js";
 import type { RequestRateLimiter } from "./request-rate-limiter.js";
@@ -131,6 +132,7 @@ function repository(): CreatorRepository {
     trashProject: vi.fn(async () => ({ ...project, status: "trashed", deletedAt: new Date().toISOString() })),
     restoreProject: vi.fn(async () => project),
     createVersion: vi.fn(async () => version),
+    replaceSource: vi.fn(async () => version),
     listVersions: vi.fn(async () => [version]),
     acceptVersion: vi.fn(async () => project),
     creditSummary: vi.fn(async () => ({
@@ -214,7 +216,7 @@ describe("portable creator API", () => {
       body: JSON.stringify({
         draftId: DRAFT_ID,
         title: project.title,
-        mode: "template",
+        mode: "advanced",
         templateVersionId: TEMPLATE_VERSION_ID,
         configuration: version.configuration,
         productRecipe: version.productRecipe,
@@ -225,6 +227,59 @@ describe("portable creator API", () => {
     expect(response.status).toBe(201);
     await expect(response.json()).resolves.toMatchObject({ project: { id: PROJECT_ID } });
     expect(projectRepository.claimDraft).toHaveBeenCalledWith(USER_ID, expect.objectContaining({ draftId: DRAFT_ID }));
+  });
+
+  it("rejects hidden template campaign values before a claim, version, or source write", async () => {
+    const projectRepository = repository();
+    const app = createApi({ config, creatorRepository: projectRepository, authGateway: auth() });
+    const valid = validTemplateClaim({ draftId: DRAFT_ID, templateVersionId: TEMPLATE_VERSION_ID });
+    const malformed = {
+      ...valid,
+      campaignRecipe: {
+        ...valid.campaignRecipe,
+        hiddenProviderModel: "unapproved-provider-model",
+      },
+    };
+
+    const claim = await app.request("/api/v1/projects/claim", {
+      method: "POST",
+      headers: { "content-type": "application/json", "idempotency-key": DRAFT_ID },
+      body: JSON.stringify(malformed),
+    });
+    expect(claim.status).toBe(400);
+    await expect(claim.json()).resolves.toMatchObject({ error: { code: "validation_failed" } });
+    expect(projectRepository.claimDraft).not.toHaveBeenCalled();
+
+    const versionWrite = await app.request(`/api/v1/projects/${PROJECT_ID}/versions`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "idempotency-key": "campaign-version-malformed" },
+      body: JSON.stringify({
+        ...malformed,
+        parentVersionId: VERSION_ID,
+        changeReason: "Attempted hidden campaign change",
+      }),
+    });
+    expect(versionWrite.status).toBe(400);
+    expect(projectRepository.createVersion).not.toHaveBeenCalled();
+
+    const sourceWrite = await app.request(`/api/v1/projects/${PROJECT_ID}/source`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "idempotency-key": "campaign-source-malformed" },
+      body: JSON.stringify({
+        ...malformed,
+        parentVersionId: VERSION_ID,
+        source: {
+          type: "upload",
+          name: "Northfield No. 07",
+          description: "A confirmed premium fragrance.",
+          price: "12.500",
+          brand: "Northfield",
+          assetIds: ["44444444-4444-4444-8444-444444444444"],
+        },
+      }),
+    });
+    expect(sourceWrite.status).toBe(400);
+    expect(projectRepository.replaceSource).not.toHaveBeenCalled();
   });
 
   it("retries one transient source-scan failure through the complete scanner boundary", async () => {
@@ -353,7 +408,7 @@ describe("portable creator API", () => {
         snapshotDigest: "a".repeat(64),
         assetManifest: [],
         title: "Northfield campaign",
-        mode: "template",
+        mode: "advanced",
         templateVersionId: TEMPLATE_VERSION_ID,
         configuration: { generation: { prompt: "Create the campaign", references: [] } },
         productRecipe: {},
@@ -382,7 +437,7 @@ describe("portable creator API", () => {
         snapshotDigest: "a".repeat(64),
         assetManifest: [],
         title: "Northfield campaign",
-        mode: "template",
+        mode: "advanced",
         configuration: {},
         productRecipe: {},
         campaignRecipe: {},
@@ -413,7 +468,7 @@ describe("portable creator API", () => {
         checksumSha256: "b".repeat(64),
       }],
       title: "Northfield campaign",
-      mode: "template",
+      mode: "advanced",
       configuration: {},
       productRecipe: {},
       campaignRecipe: {},

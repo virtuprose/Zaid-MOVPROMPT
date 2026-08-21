@@ -2,7 +2,7 @@ import { CampaignPresenterSchema, type CreatorProjectRecord } from "@movprompt/c
 
 import { portableCreatorApi } from "@/lib/api/portableApiClient";
 import { sanitizeCreatorProjectOutput } from "./creatorProjectOutput";
-import { campaignSourceForProject, projectWithCampaignSource } from "./sourceFacts";
+import { campaignFactValue, campaignSourceForProject, projectWithCampaignSource } from "./sourceFacts";
 import { normalizeCreatorResolution, type CreatorProject } from "./types";
 
 function isDurableCreatorObjectKey(value: string): boolean {
@@ -34,10 +34,30 @@ export function stableProjectConfiguration(project: CreatorProject): CreatorProj
     // Guest-local IndexedDB IDs are claim transport metadata, not durable facts.
     assetKeys: [...durableSourceAssetKeys],
   };
+  const sourceName = campaignFactValue(source, source.subject === "service" ? "service_name" : "name");
+  // Source facts are the canonical business truth once a project has a
+  // source. The legacy display fields are rewritten only in the persisted
+  // snapshot so a stale form field can never silently override it downstream.
+  const sourceFirstProject: CreatorProject = {
+    ...project,
+    location: campaignFactValue(source, "location"),
+    bookingUrl: campaignFactValue(source, "booking_url"),
+    whatsapp: campaignFactValue(source, "whatsapp"),
+    offer: campaignFactValue(source, "offer"),
+    product: {
+      ...project.product,
+      name: sourceName,
+      description: campaignFactValue(source, "description"),
+      price: campaignFactValue(source, "price"),
+      brand: campaignFactValue(source, "brand"),
+    },
+  };
+  const { versionId: _versionId, versionNumber: _versionNumber, ...stableProject } = projectWithCampaignSource({
+    ...sourceFirstProject,
+    source: persistedSource,
+  });
   return {
-    ...projectWithCampaignSource({ ...project, source: persistedSource }),
-    versionId: undefined,
-    versionNumber: undefined,
+    ...stableProject,
     status: "ready",
     logoUrl: "",
     product: {

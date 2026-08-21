@@ -117,6 +117,7 @@ function applicationError(error: unknown): never {
       throw new ApiHttpError({ code: error.code, message: error.message, status: 503, retryable: true });
     case "unapproved_capability":
     case "invalid_generation_configuration":
+    case "invalid_campaign_configuration":
     case "invalid_generation_reference":
     case "template_configuration_ineligible":
       throw new ApiHttpError({ code: error.code, message: error.message, status: 400 });

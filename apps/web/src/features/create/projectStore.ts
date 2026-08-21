@@ -1,4 +1,9 @@
-import type { CampaignPresenter, ClaimDraftRequest, CreatorProjectRecord } from "@movprompt/contracts";
+import type {
+  CampaignPresenter,
+  CampaignSettings,
+  ClaimDraftRequest,
+  CreatorProjectRecord,
+} from "@movprompt/contracts";
 import { ENGINE_VERSION, getCreativeTemplate, type CreativeBrief } from "@movprompt/creative-engine";
 
 import { isFeatureEnabled } from "@/config/features";
@@ -158,6 +163,7 @@ export function buildPortableGenerationConfiguration(project: CreatorProject) {
     scenes,
     qualityPolicy: template.qualityPolicy,
   };
+  const campaign = portableCampaignSettings(project);
   return {
     prompt: [
       `Create a ${project.aspectRatio} campaign for ${sourceName}.`,
@@ -172,15 +178,10 @@ export function buildPortableGenerationConfiguration(project: CreatorProject) {
     aspectRatio: project.aspectRatio,
     resolution: project.resolution,
     audio: project.audio,
-    templateQuoteContext: {
-      market: project.market,
-      language: project.language,
-      goal: project.goal,
-      presenterMode: project.presenterMode,
-      presenter: presenterForProject(project),
-      bookingUrl: project.bookingUrl,
-      subtitles: project.subtitles,
-    },
+    // This is the same complete, bounded contract persisted alongside the
+    // project. The API rejects a mismatch rather than letting a hidden value
+    // change quote, generation, or delivery behaviour.
+    templateQuoteContext: campaign,
     creativeBrief,
     // Footage is owner-verified for presenter eligibility. It is deliberately
     // not sent as an image reference to a capability that accepts images only.
@@ -222,7 +223,12 @@ export function portableConfiguration(project: CreatorProject): ClaimDraftReques
   };
 }
 
-export function portableCampaignRecipe(project: CreatorProject): ClaimDraftRequest["campaignRecipe"] {
+export function portableCampaignSettings(project: CreatorProject): CampaignSettings {
+  if (project.market !== "KW") {
+    // Kuwait is the only production campaign contract. Never relabel another
+    // market as Kuwait just to make a quote or render request succeed.
+    throw new Error("Campaign generation is currently available for Kuwait projects only.");
+  }
   const source = campaignSourceForProject(project);
   return {
     promotionKind: project.promotionKind,
@@ -237,11 +243,20 @@ export function portableCampaignRecipe(project: CreatorProject): ClaimDraftReque
     location: campaignFactValue(source, "location"),
     bookingUrl: campaignFactValue(source, "booking_url"),
     whatsapp: campaignFactValue(source, "whatsapp"),
+    price: campaignFactValue(source, "price"),
     offer: campaignFactValue(source, "offer"),
     cta: project.cta,
+    brand: campaignFactValue(source, "brand"),
+    brandColor: project.brandColor,
     aspectRatio: project.aspectRatio,
     resolution: project.resolution,
+    subtitles: project.subtitles,
+    audio: project.audio,
   };
+}
+
+export function portableCampaignRecipe(project: CreatorProject): ClaimDraftRequest["campaignRecipe"] {
+  return portableCampaignSettings(project);
 }
 
 export async function resolvePortableTemplateVersionId(templateId: string): Promise<string> {

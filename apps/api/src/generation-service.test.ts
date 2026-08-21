@@ -11,6 +11,8 @@ import {
 } from "./generation-service.js";
 import { hashGenerationConfiguration } from "@movprompt/db";
 
+import { validTemplateClaim } from "./campaign-contract.test-fixture.js";
+
 function ownedRun(overrides: Partial<OwnedRenderRun> = {}): OwnedRenderRun {
   const now = new Date("2026-08-14T12:00:00.000Z");
   return {
@@ -490,6 +492,89 @@ describe("template quote eligibility", () => {
       }),
     };
   }
+
+  it("rejects a malformed persisted template campaign before quote, reservation, or provider work", async () => {
+    const userId = randomUUID();
+    const projectId = randomUUID();
+    const versionId = randomUUID();
+    const fixture = validTemplateClaim();
+    const malformedConfiguration = structuredClone(fixture.configuration) as Record<string, unknown>;
+    const generation = malformedConfiguration.generation as Record<string, unknown>;
+    generation.hiddenProviderModel = "not-an-approved-capability";
+    const repo = repository(ownedRun());
+    const createQuote = vi.fn(async () => ({} as never));
+    const startRender = vi.fn(async () => ({} as never));
+    repo.findOwnedProjectVersion = vi.fn(async () => ({
+      id: versionId,
+      projectId,
+      templateVersionId: fixture.templateVersionId!,
+      configuration: malformedConfiguration,
+      productRecipe: fixture.productRecipe,
+      campaignRecipe: fixture.campaignRecipe,
+    }));
+    repo.findPublishedTemplateVersion = vi.fn(async () => ({
+      id: fixture.templateVersionId!,
+      durationSeconds: 6,
+      starterRenderEligible: false,
+      eligibility: {
+        goals: ["launch"],
+        supportedLanguages: ["en"],
+        supportedRatios: ["9:16"],
+        supportedMarkets: ["KW"],
+        requiredInputs: ["subject_name", "call_to_action"],
+        capabilityPolicy: ["video.cinematic"],
+      },
+    }));
+    repo.findOwnedQuote = vi.fn(async () => ({
+      id: randomUUID(),
+      templateVersionId: fixture.templateVersionId!,
+      capabilityAlias: "video.cinematic",
+      credits: 60,
+      entitlementEligible: false,
+      configurationHash: "a".repeat(64),
+      expiresAt: new Date("2026-08-21T01:00:00.000Z"),
+    }));
+    const api = createGenerationApiService({
+      repository: repo,
+      generation: {
+        createQuote,
+        startRender,
+        releaseRenderReservation: vi.fn(async () => ({} as never)),
+      },
+      pricing: createGenerationPricingFromEnvironment({
+        GENERATION_PRICING_VERSION: "test-v1",
+        GENERATION_QUOTE_TTL_SECONDS: "900",
+        GENERATION_VIDEO_CINEMATIC_720P_CREDITS_PER_SECOND: "10",
+      }),
+      capabilities: new CapabilityRegistry({
+        "video.cinematic": {
+          enabled: true,
+          adapterId: "vercel-ai-gateway",
+          providerModelId: "bytedance/seedance-2.5",
+        },
+      }),
+    });
+    const session = {
+      user: { id: userId, email: "owner@example.test", emailVerified: true, name: "Owner", role: "user" as const },
+      session: { id: "session" },
+    };
+
+    await expect(api.createQuote({ projectVersionId: versionId }, session)).rejects.toMatchObject({
+      code: "invalid_campaign_configuration",
+    });
+    expect(createQuote).not.toHaveBeenCalled();
+    expect(repo.findOwnedReferenceAssets).not.toHaveBeenCalled();
+
+    await expect(api.startRender({
+      userId,
+      projectId,
+      projectVersionId: versionId,
+      quoteId: randomUUID(),
+      idempotencyKey: "malformed-template-campaign",
+    })).rejects.toMatchObject({ code: "invalid_campaign_configuration" });
+    expect(repo.findOwnedQuote).not.toHaveBeenCalled();
+    expect(startRender).not.toHaveBeenCalled();
+  });
 
   it("returns a configuration-bound estimate only for a matching published template", async () => {
     const { api } = quoteApi();

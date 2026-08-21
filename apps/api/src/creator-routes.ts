@@ -111,6 +111,14 @@ async function parseJson(request: Request): Promise<unknown> {
 
 function mapRepositoryError(error: unknown): never {
   if (!(error instanceof CreatorRepositoryError)) throw error;
+  if (error.code === "invalid_campaign_configuration") {
+    throw new ApiHttpError({
+      code: error.code,
+      message: "Campaign settings are incomplete or no longer match the saved project.",
+      status: 400,
+      retryable: false,
+    });
+  }
   if (error.code === "idempotency_conflict") {
     throw new ApiHttpError({
       code: error.code,

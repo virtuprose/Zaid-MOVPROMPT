@@ -1,10 +1,15 @@
 import { describe, expect, it } from "vitest";
 
-import { CampaignGoalSchema } from "@movprompt/contracts";
+import { CampaignGoalSchema, TemplateCampaignPayloadSchema } from "@movprompt/contracts";
 import { CreativeBriefSchema } from "@movprompt/creative-engine";
 
 import { projectToCreationDraft } from "./contracts";
-import { buildPortableGenerationConfiguration, portableConfiguration } from "./projectStore";
+import {
+  buildPortableGenerationConfiguration,
+  portableCampaignRecipe,
+  portableConfiguration,
+  portableProductRecipe,
+} from "./projectStore";
 import { projectFromCloud } from "./portableProjectMapper";
 import { createDraftProject } from "./templates";
 import type { CreatorProject } from "./types";
@@ -129,6 +134,25 @@ describe("campaign draft convergence", () => {
       offer: "Free delivery",
       whatsapp: "+96550000000",
     });
+  });
+
+  it("emits one bounded Kuwait campaign payload for both product and service golden paths", () => {
+    for (const sourceProject of [productProject(), serviceProject()]) {
+      sourceProject.product.images = sourceProject.product.images.map((image, index) => ({
+        ...image,
+        id: index === 0 ? "11111111-1111-4111-8111-111111111111" : image.id,
+      }));
+      const payload = {
+        configuration: portableConfiguration(sourceProject),
+        productRecipe: portableProductRecipe(sourceProject),
+        campaignRecipe: portableCampaignRecipe(sourceProject),
+      };
+      expect(TemplateCampaignPayloadSchema.safeParse(payload).success).toBe(true);
+      expect(TemplateCampaignPayloadSchema.safeParse({
+        ...payload,
+        campaignRecipe: { ...payload.campaignRecipe, cta: "Tampered hidden CTA" },
+      }).success).toBe(false);
+    }
   });
 
   it("round-trips product and service sources from a saved project version without URL-bearing truth", () => {

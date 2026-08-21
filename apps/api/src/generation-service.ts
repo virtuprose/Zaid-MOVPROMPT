@@ -1,6 +1,7 @@
 import {
   CapabilityAliasSchema,
   GenerationConfigurationSchema,
+  TemplateCampaignPayloadSchema,
   type CapabilityAlias,
   type CreateGenerationQuoteRequest,
   type GenerationConfiguration,
@@ -59,6 +60,7 @@ export class GenerationApplicationError extends Error {
       | "capability_unavailable"
       | "unapproved_capability"
       | "invalid_generation_configuration"
+      | "invalid_campaign_configuration"
       | "invalid_generation_reference"
       | "project_version_not_found"
       | "template_version_not_found"
@@ -127,7 +129,28 @@ function generationConfiguration(configuration: JsonObject): GenerationConfigura
       "The saved project version does not contain a valid generation configuration.",
     );
   }
-  return parsed.data;
+  return parsed.data as unknown as GenerationConfiguration;
+}
+
+function persistedTemplateCampaign(input: OwnedProjectVersion): {
+  configuration: GenerationConfiguration;
+  root: JsonObject;
+} {
+  const parsed = TemplateCampaignPayloadSchema.safeParse({
+    configuration: input.configuration,
+    productRecipe: input.productRecipe ?? {},
+    campaignRecipe: input.campaignRecipe ?? {},
+  });
+  if (!parsed.success) {
+    throw new GenerationApplicationError(
+      "invalid_campaign_configuration",
+      "The saved template campaign settings are incomplete, invalid, or inconsistent.",
+    );
+  }
+  return {
+    configuration: parsed.data.configuration.generation as unknown as GenerationConfiguration,
+    root: parsed.data.configuration as unknown as JsonObject,
+  };
 }
 
 function boundConfiguration(input: {
@@ -625,8 +648,15 @@ export function createGenerationApiService(options: GenerationApiServiceOptions)
       if (request.projectVersionId) {
         if (!session) throw new GenerationApplicationError("authentication_required");
         const version = await loadOwnedVersion(session.user.id, request.projectVersionId);
-        const configuration = generationConfiguration(version.configuration);
         const template = await publishedTemplate(options.repository, version.templateVersionId);
+        // productRecipe is non-null in the PostgreSQL schema. The optional
+        // projection supports only explicitly legacy repository adapters that
+        // predate the Phase 3 columns; those rows cannot be created by the
+        // canonical write path. A selected DB row always re-validates here.
+        const validatedTemplate = template && version.productRecipe !== undefined
+          ? persistedTemplateCampaign(version)
+          : null;
+        const configuration = validatedTemplate?.configuration ?? generationConfiguration(version.configuration);
         const capability = resolveTemplateCapability({
           template,
           ...(request.capability ? { requestedCapability: request.capability } : {}),
@@ -639,7 +669,7 @@ export function createGenerationApiService(options: GenerationApiServiceOptions)
           template,
           capability,
           configuration,
-          root: version.configuration,
+          root: validatedTemplate?.root ?? version.configuration,
         });
         const price = options.pricing.price(
           capability,
@@ -686,8 +716,8 @@ export function createGenerationApiService(options: GenerationApiServiceOptions)
         }
       }
 
-      const configuration = request.configuration!;
       const template = await publishedTemplate(options.repository, request.templateVersionId);
+      const configuration = request.configuration!;
       const capability = resolveTemplateCapability({
         template,
         ...(request.capability ? { requestedCapability: request.capability } : {}),
@@ -735,6 +765,15 @@ export function createGenerationApiService(options: GenerationApiServiceOptions)
       if (version.projectId !== input.projectId) {
         throw new GenerationApplicationError("project_version_not_found");
       }
+      // Validate the immutable Template Mode payload before even reading a
+      // quote. A poisoned historical row must not progress into quote,
+      // reservation, or provider-related work.
+      const template = version.templateVersionId
+        ? await publishedTemplate(options.repository, version.templateVersionId)
+        : null;
+      const validatedTemplate = template && version.productRecipe !== undefined
+        ? persistedTemplateCampaign(version)
+        : null;
       const quote = await options.repository.findOwnedQuote(input.userId, input.quoteId);
       if (!quote) throw new GenerationApplicationError("quote_not_found");
       if (options.starterOnly && !quote.entitlementEligible) {
@@ -748,15 +787,14 @@ export function createGenerationApiService(options: GenerationApiServiceOptions)
       const capability = CapabilityAliasSchema.safeParse(quote.capabilityAlias);
       if (!capability.success) throw new GenerationApplicationError("unapproved_capability");
       assertCapability(capability.data);
-      const template = await publishedTemplate(options.repository, version.templateVersionId);
-      const configuration = generationConfiguration(version.configuration);
+      const configuration = validatedTemplate?.configuration ?? generationConfiguration(version.configuration);
       await assertOwnedPresenterEligibility(input.userId, version);
       await assertOwnedGenerationReferences(input.userId, version, capability.data, configuration);
       assertTemplateEligibility({
         template,
         capability: capability.data,
         configuration,
-        root: version.configuration,
+        root: validatedTemplate?.root ?? version.configuration,
       });
       const binding = boundConfiguration({
         capability: capability.data,

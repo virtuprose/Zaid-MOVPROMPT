@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 
-import { JsonObjectSchema } from "@movprompt/contracts";
+import { JsonObjectSchema, validateTemplateCampaignPayload } from "@movprompt/contracts";
 import type {
   BusinessVertical,
   CampaignLanguage,
@@ -52,7 +52,8 @@ export class CreatorRepositoryError extends Error {
       | "project_not_found"
       | "template_not_found"
       | "parent_version_not_found"
-      | "idempotency_conflict",
+      | "idempotency_conflict"
+      | "invalid_campaign_configuration",
   ) {
     super(code);
     this.name = "CreatorRepositoryError";
@@ -385,6 +386,24 @@ function databaseConstraint(error: unknown): string | null {
   return null;
 }
 
+/**
+ * API parsing is the first line of defence, but repository callers include
+ * migrations and internal services. Re-validate Template Mode here so no
+ * generic JSON path can persist fields that would later affect a quote or
+ * provider request. Existing rows remain readable; only new writes require
+ * the Phase 3 canonical form.
+ */
+function assertPersistableCampaign(input: {
+  mode: ClaimDraftRequest["mode"];
+  configuration: unknown;
+  productRecipe: unknown;
+  campaignRecipe: unknown;
+}): void {
+  const result = validateTemplateCampaignPayload(input);
+  if (!result || result.success) return;
+  throw new CreatorRepositoryError("invalid_campaign_configuration");
+}
+
 export function createDrizzleCreatorRepository(db: Database): CreatorRepository {
   async function ensurePublishedTemplateVersion(templateVersionId: string | null | undefined) {
     if (!templateVersionId) return;
@@ -455,6 +474,7 @@ export function createDrizzleCreatorRepository(db: Database): CreatorRepository 
     },
 
     async claimDraft(userId, input) {
+      assertPersistableCampaign(input);
       let result: string;
       try {
         result = await withUserTransaction(db, userId, async (tx) => {
@@ -636,6 +656,7 @@ export function createDrizzleCreatorRepository(db: Database): CreatorRepository 
     },
 
     async createVersion(userId, projectId, input, idempotencyKey) {
+      assertPersistableCampaign(input);
       await ensurePublishedTemplateVersion(input.templateVersionId);
       return withUserTransaction(db, userId, async (tx) => {
         await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${`${userId}:${projectId}:version`}, 0))`);
@@ -740,6 +761,7 @@ export function createDrizzleCreatorRepository(db: Database): CreatorRepository 
     },
 
     async replaceSource({ userId, projectId, parentVersionId, idempotencyKey, sourceFingerprint, sourceAssetIds, input }) {
+      assertPersistableCampaign(input);
       await ensurePublishedTemplateVersion(input.templateVersionId);
       return withUserTransaction(db, userId, async (tx) => {
         await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${`${userId}:${projectId}:version`}, 0))`);

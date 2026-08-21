@@ -7,6 +7,7 @@ import {
   CreatorProjectSchema,
   JsonObjectSchema,
   ProjectVersionSchema,
+  validateTemplateCampaignPayload,
 } from "./creator.js";
 
 const Sha256Schema = z.string().regex(/^[a-f0-9]{64}$/);
@@ -71,7 +72,18 @@ export const GuestClaimSnapshotSchema = z
     productRecipe: JsonObjectSchema.default({}),
     campaignRecipe: JsonObjectSchema.default({}),
   })
-  .strict();
+  .strict()
+  .superRefine((snapshot, context) => {
+    const result = validateTemplateCampaignPayload(snapshot);
+    if (!result || result.success) return;
+    for (const issue of result.error.issues) {
+      context.addIssue({
+        code: "custom",
+        path: issue.path,
+        message: issue.message,
+      });
+    }
+  });
 export type GuestClaimSnapshot = z.infer<typeof GuestClaimSnapshotSchema>;
 
 export const GuestClaimStatusSchema = z.enum(["pending", "securing", "ready", "failed"]);

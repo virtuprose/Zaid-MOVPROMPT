@@ -22,6 +22,7 @@ export type OwnedProjectVersion = {
   projectId: string;
   templateVersionId: string | null;
   configuration: JsonObject;
+  productRecipe?: JsonObject;
   campaignRecipe?: JsonObject;
 };
 
@@ -150,6 +151,7 @@ export function createDrizzleGenerationRepository(db: Database): GenerationRepos
           projectId: schema.creatorProjectVersions.projectId,
           templateVersionId: schema.creatorProjectVersions.templateVersionId,
           configuration: schema.creatorProjectVersions.configuration,
+          productRecipe: schema.creatorProjectVersions.productRecipe,
           campaignRecipe: schema.creatorProjectVersions.campaignRecipe,
         })
         .from(schema.creatorProjectVersions)

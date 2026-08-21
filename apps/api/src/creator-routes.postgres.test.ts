@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 import { createDatabase, schema } from "@movprompt/db";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import type { AuthGateway } from "./auth-gateway.js";
@@ -10,6 +10,7 @@ import { loadApiConfig } from "./config.js";
 import { createDrizzleCreatorRepository } from "./creator-repository.js";
 import { createGuestClaimRepository } from "./guest-claim-repository.js";
 import { createGuestClaimService } from "./guest-claim-service.js";
+import { validTemplateClaim } from "./campaign-contract.test-fixture.js";
 
 const integrationUrl = process.env.MOVPROMPT_TEST_DATABASE_URL;
 const describePostgres = integrationUrl ? describe.sequential : describe.skip;
@@ -65,6 +66,43 @@ describePostgres("portable creator HTTP ownership", () => {
     },
   };
 
+  it("rejects a malformed template payload before PostgreSQL can persist a project or version", async () => {
+    const creatorRepository = createDrizzleCreatorRepository(database.db);
+    const app = createApi({
+      config: loadApiConfig({ APP_ENV: "test", API_PORT: "3001", FEATURE_AUTHENTICATION: "true", FEATURE_TEMPLATE_MODE: "true" }),
+      authGateway: auth,
+      creatorRepository,
+    });
+    const draftId = randomUUID();
+    const valid = validTemplateClaim({ draftId });
+    const malformed = {
+      ...valid,
+      campaignRecipe: { ...valid.campaignRecipe, hiddenCapability: "provider/private-model" },
+    };
+    const [{ before }] = await database.db
+      .select({ before: sql<number>`count(*)::integer` })
+      .from(schema.creatorProjects)
+      .where(eq(schema.creatorProjects.userId, firstUserId));
+
+    const response = await app.request("/api/v1/projects/claim", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "idempotency-key": draftId,
+        "x-test-user": firstUserId,
+      },
+      body: JSON.stringify(malformed),
+    });
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({ error: { code: "validation_failed" } });
+
+    const [{ after }] = await database.db
+      .select({ after: sql<number>`count(*)::integer` })
+      .from(schema.creatorProjects)
+      .where(eq(schema.creatorProjects.userId, firstUserId));
+    expect(after).toBe(before);
+  });
+
   it("claims once, hides the project from another account, and prevents a second claim", async () => {
     const creatorRepository = createDrizzleCreatorRepository(database.db);
     const app = createApi({
@@ -86,7 +124,7 @@ describePostgres("portable creator HTTP ownership", () => {
       snapshotDigest: "a".repeat(64),
       assetManifest: [],
       title: "Private campaign",
-      mode: "template",
+      mode: "advanced",
       configuration: { generation: { prompt: "Create a Kuwait campaign", references: [] } },
       productRecipe: { name: "Private product" },
       campaignRecipe: { market: "KW", language: "bilingual" },
@@ -117,7 +155,7 @@ describePostgres("portable creator HTTP ownership", () => {
         "x-test-user": firstUserId,
       },
       body: JSON.stringify({
-        mode: "template",
+        mode: "advanced",
         configuration: { generation: { prompt: "Updated Kuwait campaign", references: [] } },
         productRecipe: { name: "Private product" },
         campaignRecipe: { market: "KW", language: "bilingual" },
@@ -183,7 +221,7 @@ describePostgres("portable creator HTTP ownership", () => {
         snapshotDigest: "d".repeat(64),
         assetManifest: [],
         title: "Coffee campaign",
-        mode: "template",
+        mode: "advanced",
         configuration: { creatorProject: { videoUrl: "https://old.example.test/output.mp4", renderRunId: "old-run", jobId: "old-job" } },
         productRecipe: { name: "Coffee" },
         campaignRecipe: { market: "KW", language: "en" },
@@ -208,7 +246,7 @@ describePostgres("portable creator HTTP ownership", () => {
 
     const body = JSON.stringify({
       parentVersionId,
-      mode: "template",
+      mode: "advanced",
       configuration: { creatorProject: { videoUrl: "https://old.example.test/output.mp4", renderRunId: "old-run", jobId: "old-job" } },
       productRecipe: { name: "Coffee", images: [{ assetId: sourceAssetId, checksum: "e".repeat(64) }] },
       campaignRecipe: { market: "KW", language: "en" },
