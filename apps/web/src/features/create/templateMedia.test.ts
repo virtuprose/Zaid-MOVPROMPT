@@ -26,12 +26,31 @@ describe("truthful template media catalog", () => {
 
   it("offers motion only for inspected, unique, template-specific clips", () => {
     const playable = CREATOR_TEMPLATES.filter((template) => template.previewVideo);
-    expect(playable).toHaveLength(11);
+    expect(playable).toHaveLength(12);
     expect(new Set(playable.map((template) => template.previewVideo)).size).toBe(playable.length);
     expect(Object.keys(VERIFIED_TEMPLATE_VIDEOS).sort()).toEqual(playable.map((template) => template.id).sort());
     for (const template of playable) {
-      expect(template.poster).toBe(`/template-previews/${template.id}.jpg`);
+      expect(template.poster).toMatch(/^\/template-previews\/(?:generated\/)?[^/]+\.jpg$/);
       expect(existsSync(resolve("public", template.previewVideo!.slice(1))), template.previewVideo!).toBe(true);
+    }
+  });
+
+  it("uses the three paid Seedance v1 template proofs and their matching poster frames", () => {
+    const selectedTemplateIds = [
+      "food-beverage",
+      "whatsapp-sales-ad",
+      "luxury-product-reveal",
+    ] as const;
+
+    for (const templateId of selectedTemplateIds) {
+      expect(VERIFIED_TEMPLATE_VIDEOS[templateId]).toBe(
+        `/template-previews/generated/${templateId}-seedance-v1.mp4`,
+      );
+      expect(TEMPLATE_POSTERS[templateId]).toBe(
+        `/template-previews/generated/${templateId}-seedance-v1.jpg`,
+      );
+      expect(existsSync(resolve("public", VERIFIED_TEMPLATE_VIDEOS[templateId]!.slice(1)))).toBe(true);
+      expect(existsSync(resolve("public", TEMPLATE_POSTERS[templateId]!.slice(1)))).toBe(true);
     }
   });
 

@@ -17,13 +17,13 @@ export type TemplateMediaSpec = {
  * repeated source photography never masquerades as a unique finished render.
  */
 export const TEMPLATE_POSTERS: Record<string, string> = {
-  "luxury-product-reveal": "/template-previews/luxury-product-reveal.jpg",
+  "luxury-product-reveal": "/template-previews/generated/luxury-product-reveal-seedance-v1.jpg",
   "hands-on-demo": "/homepage/hero-creator.png",
   "gcc-offer-launch": "/create/sample-kinza.jpg",
   "ugc-review": "/template-previews/ugc-review.jpg",
   unboxing: "/homepage/hero-product.png",
-  "whatsapp-sales-ad": "/homepage/template-clean-demo.png",
-  "food-beverage": "/template-previews/food-beverage.jpg",
+  "whatsapp-sales-ad": "/template-previews/generated/whatsapp-sales-ad-seedance-v1.jpg",
+  "food-beverage": "/template-previews/generated/food-beverage-seedance-v1.jpg",
   "beauty-perfume": "/homepage/hero-lifestyle.png",
   fashion: "/template-previews/fashion.jpg",
   electronics: "/template-previews/electronics.jpg",
@@ -74,9 +74,10 @@ export const TEMPLATE_POSTERS: Record<string, string> = {
  * playable. The remaining local preset MP4s stay out of the public catalog.
  */
 export const VERIFIED_TEMPLATE_VIDEOS: Partial<Record<string, string>> = {
-  "luxury-product-reveal": "/presets/realistic-3d.mp4",
+  "luxury-product-reveal": "/template-previews/generated/luxury-product-reveal-seedance-v1.mp4",
   "ugc-review": "/presets/ugc.mp4",
-  "food-beverage": "/presets/hero-shot.mp4",
+  "whatsapp-sales-ad": "/template-previews/generated/whatsapp-sales-ad-seedance-v1.mp4",
+  "food-beverage": "/template-previews/generated/food-beverage-seedance-v1.mp4",
   fashion: "/presets/cinematic-fashion.mp4",
   electronics: "/presets/before-after.mp4",
   "app-service": "/presets/lifestyle.mp4",

@@ -323,7 +323,15 @@
 .creator-template-group-heading p { margin-top: 3px; color: hsl(var(--creator-muted)); font-size: 11px; line-height: 1.45; }
 .creator-template-group-count { color: hsl(var(--creator-muted)); font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
 .creator-template-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
-.creator-catalog-status { margin: 0 0 14px; color: hsl(var(--creator-muted)); font-size: 13px; }
+.creator-catalog-status {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 14px;
+  color: hsl(var(--creator-muted));
+  font-size: 13px;
+}
 .creator-template-discovery { margin-bottom: 22px; display: grid; grid-template-columns: minmax(240px, 1fr) auto auto; gap: 12px; align-items: center; }
 .creator-template-search { min-height: 46px; display: flex; align-items: center; gap: 10px; padding: 0 14px; border: 1px solid hsl(var(--creator-line)); border-radius: 13px; background: hsl(var(--creator-panel)); color: hsl(var(--creator-muted)); }
 .creator-template-search:focus-within { border-color: hsl(var(--creator-action)); box-shadow: 0 0 0 3px hsl(var(--creator-action) / .12); }

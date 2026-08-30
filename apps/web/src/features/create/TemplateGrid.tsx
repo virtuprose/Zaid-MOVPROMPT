@@ -65,7 +65,13 @@ export function TemplateGrid({
   const orderedTemplates = selectedTemplate
     ? [selectedTemplate, ...readyPreviews, ...campaignDirections]
     : [...readyPreviews, ...campaignDirections];
-  const visibleLimit = visibleCount + (selectedTemplate && !selectedTemplate.previewVideo ? 1 : 0);
+  const minimumGroupedLimit = (selectedTemplate ? 1 : 0)
+    + readyPreviews.length
+    + (campaignDirections.length ? 1 : 0);
+  const visibleLimit = Math.max(
+    visibleCount + (selectedTemplate && !selectedTemplate.previewVideo ? 1 : 0),
+    minimumGroupedLimit,
+  );
   const visibleTemplates = orderedTemplates.slice(0, visibleLimit);
   const visibleGroups = groupVisibleTemplates(visibleTemplates, selectedId);
   const selectionEnabled = catalogState !== "fallback" || !isFeatureEnabled("portableAuth");

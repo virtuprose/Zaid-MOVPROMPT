@@ -52,8 +52,8 @@ describe("TemplateGrid", () => {
 
     expect(view.container.querySelectorAll("video")).toHaveLength(0);
     expect(screen.getAllByText("Template direction")).toHaveLength(1);
-    expect(screen.getAllByText("Motion preview")).toHaveLength(11);
-    expect(view.container.querySelectorAll(".creator-template-media[data-media-tone]")).toHaveLength(12);
+    expect(screen.getAllByText("Motion preview")).toHaveLength(12);
+    expect(view.container.querySelectorAll(".creator-template-media[data-media-tone]")).toHaveLength(13);
     expect(view.container.querySelectorAll<HTMLImageElement>(".creator-template-media img")[0]?.style.objectPosition).toBeTruthy();
     const previewButtons = screen.getAllByRole("button", { name: /Play .* preview/ });
     expect(previewButtons.length).toBeGreaterThan(0);
@@ -73,7 +73,7 @@ describe("TemplateGrid", () => {
 
     const ready = screen.getByRole("region", { name: "Ready previews" });
     const directions = screen.getByRole("region", { name: "More campaign directions" });
-    expect(within(ready).getAllByRole("button", { name: /Play .* preview/ })).toHaveLength(11);
+    expect(within(ready).getAllByRole("button", { name: /Play .* preview/ })).toHaveLength(12);
     expect(within(directions).getAllByRole("link", { name: /View .* details/ })).toHaveLength(1);
     expect(ready.compareDocumentPosition(directions) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     view.unmount();
