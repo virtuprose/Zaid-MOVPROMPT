@@ -47,3 +47,8 @@ tmp
 *.njsproj
 *.sln
 *.sw?
+
+# Local agent and workflow runtime state
+.claude/
+.codex/
+.gsd/
