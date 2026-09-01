@@ -6,9 +6,9 @@ current_phase: 4
 current_phase_name: Durable Generation and Accepted Quality
 status: executing
 stopped_at: Blocking Task 04-02-03 — qualified-human Kuwait calibration
-last_updated: "2026-08-21T18:06:48Z"
-last_activity: 2026-08-21
-last_activity_desc: Completed quick task 260821-tat local-only Seedance Fast generation profile; Phase 04 calibration remains pending
+last_updated: "2026-09-01T13:42:43Z"
+last_activity: 2026-09-01
+last_activity_desc: Published the complete canonical project to virtuprose/Zaid-MOVPROMPT with one main branch; Phase 04 calibration remains pending
 progress:
   total_phases: 4
   completed_phases: 3
@@ -117,6 +117,7 @@ None yet.
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 260821-tat | Switch local development generation to Seedance v1.0 Pro Fast while keeping staging and production on Seedance 2.5 | 2026-08-21 | 8e52765 | [260821-tat-switch-local-development-video-generatio](./quick/260821-tat-switch-local-development-video-generatio/) |
+| 260901-mpw | Publish the complete canonical MovPrompt project to the new single-main VirtuProse GitHub repository | 2026-09-01 | 911381e | [260901-mpw-publish-the-complete-current-movprompt-s](./quick/260901-mpw-publish-the-complete-current-movprompt-s/) |
 
 ## Deferred Items
 
@@ -129,6 +130,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-08-21T18:06:48Z
+Last session: 2026-09-01T13:42:43Z
 Stopped at: Blocking Task 04-02-03 — qualified-human Kuwait calibration
 Resume file: .planning/PROGRESS.md
