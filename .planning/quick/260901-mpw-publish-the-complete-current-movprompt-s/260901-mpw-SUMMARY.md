@@ -20,6 +20,7 @@ The complete canonical MovPrompt project was published to [virtuprose/Zaid-MOVPR
 - The former repository was used once as a temporary read-only source to complete the shallow history required for a valid GitHub pack, then removed from local remotes.
 - Two divergent former-repository branches were classified as superseded legacy lines and were not merged into the canonical React/Hono/PostgreSQL workspace or pushed to the new repository.
 - The previously completed durable-continuity verification artifact was preserved.
+- Scheduled Dependabot version-update configuration was removed after GitHub created 13 automated PR branches on initial import; those PRs were closed and their branches deleted so `main` remains the sole branch.
 
 ## Publication safety
 
