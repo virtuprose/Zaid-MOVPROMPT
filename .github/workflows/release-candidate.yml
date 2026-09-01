@@ -107,7 +107,7 @@ jobs:
           sha256sum release/movprompt-${RELEASE_SHA}.tar.gz > release/SHA256SUMS
 
       - name: Upload release candidate
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: movprompt-${{ inputs.environment }}-${{ github.sha }}
           path: |
