@@ -22,6 +22,20 @@ The complete canonical MovPrompt project was published to [virtuprose/Zaid-MOVPR
 - The previously completed durable-continuity verification artifact was preserved.
 - Scheduled Dependabot version-update configuration was removed after GitHub created 13 automated PR branches on initial import; those PRs were closed and their branches deleted so `main` remains the sole branch.
 
+### Pre-cleanup branch inventory
+
+Before deletion, `git merge-base --is-ancestor <ref> dec654eac82776751859beb3b5d4a588f99e25a9` passed for every then-configured active rebuild ref:
+
+| Ref | Tip before publication | Result |
+|---|---|---|
+| `codex/production-rebuild` | `dec654eac82776751859beb3b5d4a588f99e25a9` | Canonical latest snapshot |
+| `gsd-reviewfix/03-34398` | `cd479ed7a022ba8b35997ae0ff796ff356d7f678` | Contained |
+| `main` | `a2fe438009daaba82ef98bcfd89e4fa15974b9d9` | Contained |
+| former `origin/codex/production-rebuild` | `02f58a8c2636849d2a96d893e4eeb6d5a9770c90` | Contained |
+| former `origin/main` | `a2fe438009daaba82ef98bcfd89e4fa15974b9d9` | Contained |
+
+The publication-preparation commit then advanced the promoted snapshot to `911381e6ef6afa51059a24aa2ef9973ab7f97515` before the first push.
+
 ## Publication safety
 
 - Gitleaks scanned the complete published history: no leaks found.
