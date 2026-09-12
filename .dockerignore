@@ -19,6 +19,11 @@ artifacts
 backups
 release
 tmp
+graphify-out
+.local-setup
+.graphifyignore
+.planning
+design-concepts
 postgres-data
 minio-data
 mailpit-data

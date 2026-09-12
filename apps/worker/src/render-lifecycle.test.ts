@@ -367,7 +367,7 @@ describe("generation render lifecycle", () => {
     expect(renderBilling.finalizeProviderAccepted).toHaveBeenCalledTimes(2);
   });
 
-  it("leaves a transient pre-acceptance failure for pg-boss retry, then releases on final retry", async () => {
+  it("leaves a transient pre-acceptance failure for MongoDB worker retry, then releases on final retry", async () => {
     const job = payload();
     const failure = new Error("provider temporarily unavailable");
     const provider = adapter({ submit: vi.fn(async () => Promise.reject(failure)) });

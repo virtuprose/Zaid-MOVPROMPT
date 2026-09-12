@@ -8,32 +8,20 @@
     ".": {
       "types": "./src/index.ts",
       "import": "./dist/index.js"
-    },
-    "./schema": {
-      "types": "./src/schema.ts",
-      "import": "./dist/schema.js"
-    },
-    "./migrate": {
-      "types": "./src/migrate.ts",
-      "import": "./dist/migrate.js"
     }
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
-    "generate": "drizzle-kit generate",
-    "migrate": "tsx src/cli-migrate.ts",
-    "check": "drizzle-kit check",
-    "studio": "drizzle-kit studio"
+    "migrate": "tsx src/cli-mongo-init.ts",
+    "check": "tsx src/cli-mongo-init.ts"
   },
   "dependencies": {
-    "drizzle-orm": "^0.45.2",
-    "postgres": "^3.4.7"
+    "mongodb": "^6.20.0"
   },
   "devDependencies": {
     "@types/node": "^22.16.5",
-    "drizzle-kit": "^0.31.10",
     "tsx": "^4.20.0",
     "typescript": "^5.9.3",
     "vitest": "^4.1.10"

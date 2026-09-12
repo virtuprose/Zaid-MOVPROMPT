@@ -7,20 +7,16 @@ x-api-image: &api-image
     dockerfile: Dockerfile.api
 
 services:
-  postgres:
-    image: postgres:17-bookworm
+  mongodb:
+    image: mongo:8.0
     restart: unless-stopped
-    environment:
-      POSTGRES_DB: "${POSTGRES_DB:-movprompt}"
-      POSTGRES_USER: "${POSTGRES_USER:-movprompt}"
-      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-movprompt-local-only}"
+    command: ["mongod", "--replSet", "rs0", "--bind_ip_all"]
     ports:
-      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+      - "127.0.0.1:${MONGODB_PORT:-27017}:27017"
     volumes:
-      - postgres-data:/var/lib/postgresql/data
-      - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
+      - mongodb-data:/data/db
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand({ ping: 1 }).ok"]
       interval: 5s
       timeout: 5s
       retries: 12
@@ -99,19 +95,21 @@ services:
     networks:
       - backend
 
-  migrate:
-    <<: *api-image
+  mongodb-init:
+    image: mongo:8.0
     profiles: ["application"]
     restart: "no"
-    command: ["bun", "run", "--cwd", "packages/db", "migrate"]
-    environment:
-      APP_ENV: "${APP_ENV:-local}"
-      DATABASE_URL_DIRECT: "postgresql://${POSTGRES_USER:-movprompt}:${POSTGRES_PASSWORD:-movprompt-local-only}@postgres:5432/${POSTGRES_DB:-movprompt}"
-      DATABASE_SSL: "false"
-      DATABASE_POOL_MAX: "1"
-      DATABASE_APPLICATION_NAME: movprompt-local-migrate
+    entrypoint:
+      - /bin/bash
+      - -ec
+      - |
+        mongosh --host mongodb:27017 --quiet --eval '
+          try { rs.status() }
+          catch (error) { rs.initiate({_id:"rs0",members:[{_id:0,host:"mongodb:27017"}]}) }
+          while (!db.hello().isWritablePrimary) { sleep(500) }
+        '
     depends_on:
-      postgres:
+      mongodb:
         condition: service_healthy
     networks:
       - backend
@@ -154,9 +152,8 @@ services:
       GENERATION_IMAGE_PRODUCT_CREDITS_PER_IMAGE: "${GENERATION_IMAGE_PRODUCT_CREDITS_PER_IMAGE:-}"
       FEATURE_EXPORTS: "${FEATURE_EXPORTS:-false}"
       FEATURE_BILLING: "${FEATURE_BILLING:-false}"
-      DATABASE_URL_POOLED: "postgresql://movprompt_api:movprompt-api-local-only@postgres:5432/${POSTGRES_DB:-movprompt}"
-      DATABASE_URL_DIRECT: "postgresql://movprompt_api:movprompt-api-local-only@postgres:5432/${POSTGRES_DB:-movprompt}"
-      DATABASE_SSL: "false"
+      MONGODB_URI: "mongodb://mongodb:27017/${MONGODB_DATABASE:-movprompt}?replicaSet=rs0&directConnection=true"
+      MONGODB_DATABASE: "${MONGODB_DATABASE:-movprompt}"
       BETTER_AUTH_URL: "${BETTER_AUTH_URL:-http://localhost:8787}"
       BETTER_AUTH_SECRET: "${BETTER_AUTH_SECRET:-movprompt-local-only-better-auth-secret-change-me}"
       BETTER_AUTH_TRUSTED_ORIGINS: "${BETTER_AUTH_TRUSTED_ORIGINS:-http://localhost:8080,http://127.0.0.1:8080}"
@@ -204,7 +201,7 @@ services:
     ports:
       - "127.0.0.1:${API_PORT:-8787}:3000"
     depends_on:
-      migrate:
+      mongodb-init:
         condition: service_completed_successfully
       minio-init:
         condition: service_completed_successfully
@@ -250,7 +247,8 @@ services:
       GENERATION_VIDEO_CINEMATIC_720P_CREDITS_PER_SECOND: "${GENERATION_VIDEO_CINEMATIC_720P_CREDITS_PER_SECOND:-}"
       GENERATION_VIDEO_PRODUCT_FIDELITY_480P_CREDITS_PER_SECOND: "${GENERATION_VIDEO_PRODUCT_FIDELITY_480P_CREDITS_PER_SECOND:-}"
       GENERATION_VIDEO_PRODUCT_FIDELITY_720P_CREDITS_PER_SECOND: "${GENERATION_VIDEO_PRODUCT_FIDELITY_720P_CREDITS_PER_SECOND:-}"
-      DATABASE_URL_DIRECT: "postgresql://movprompt_worker:movprompt-worker-local-only@postgres:5432/${POSTGRES_DB:-movprompt}"
+      MONGODB_URI: "mongodb://mongodb:27017/${MONGODB_DATABASE:-movprompt}?replicaSet=rs0&directConnection=true"
+      MONGODB_DATABASE: "${MONGODB_DATABASE:-movprompt}"
       WORKER_ID: "${WORKER_ID:-movprompt-local-worker}"
       WORKER_SMOKE_TEST_ON_START: "${WORKER_SMOKE_TEST_ON_START:-true}"
       WORKER_OUTBOX_BATCH_SIZE: "${WORKER_OUTBOX_BATCH_SIZE:-20}"
@@ -297,14 +295,14 @@ services:
       MOVPROMPT_CAPABILITY_IMAGE_PRODUCT_ADAPTER_ID: "${MOVPROMPT_CAPABILITY_IMAGE_PRODUCT_ADAPTER_ID:-}"
       MOVPROMPT_CAPABILITY_IMAGE_PRODUCT_MODEL_ID: "${MOVPROMPT_CAPABILITY_IMAGE_PRODUCT_MODEL_ID:-}"
     depends_on:
-      migrate:
+      mongodb-init:
         condition: service_completed_successfully
     stop_grace_period: 40s
     networks:
       - backend
 
 volumes:
-  postgres-data:
+  mongodb-data:
   minio-data:
   mailpit-data:
 

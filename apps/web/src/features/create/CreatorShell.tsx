@@ -90,7 +90,7 @@ export function CreatorShell({ children, qaMode = false, studio }: { children: R
   };
 
   return (
-    <div className="creator-app min-h-screen bg-background text-foreground">
+    <div className="creator-app min-h-[100dvh] bg-background text-foreground">
       <a className="creator-skip-link" href="#creator-main">{ar ? "انتقل إلى مساحة العمل" : "Skip to workspace"}</a>
       <header className={cn("creator-header", studio && "creator-studio-header")}>
         <div className="creator-header-inner">

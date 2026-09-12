@@ -9,12 +9,12 @@ moveprompts/
 ├── apps/
 │   ├── web/              # Vite/React product and marketing UI
 │   ├── api/              # Hono portable HTTP API
-│   └── worker/           # pg-boss generation/export worker
+│   └── worker/           # MongoDB lease queue generation/export worker
 ├── packages/
 │   ├── auth/             # Better Auth configuration and provisioning
 │   ├── contracts/        # Shared Zod API/domain contracts
 │   ├── creative-engine/  # Kuwait templates, prompts, quality policy
-│   ├── db/               # Drizzle schema, migrations, repositories/services
+│   ├── db/               # MongoDB collections, indexes, repositories and services
 │   ├── providers/        # Capability registry and provider adapters
 │   └── storage/          # Private S3-compatible storage
 ├── supabase/             # Frozen legacy migrations and Edge Functions
@@ -40,7 +40,7 @@ moveprompts/
 
 **`apps/worker/`:**
 - Purpose: Durable background execution.
-- Contains: outbox dispatcher, pg-boss adapter, render lifecycle, reference preparation, output persistence, quality analysis, benchmark CLIs.
+- Contains: outbox dispatcher, MongoDB lease queue adapter, render lifecycle, reference preparation, output persistence, quality analysis, benchmark CLIs.
 - Key files: `apps/worker/src/main.ts`, `apps/worker/src/render-lifecycle.ts`, `apps/worker/src/output-persister.ts`.
 
 **`packages/`:**
@@ -77,7 +77,7 @@ moveprompts/
 
 **Testing:**
 - Co-located `*.test.ts` and `*.test.tsx` files across `apps/` and `packages/`.
-- PostgreSQL integration tests use `*.postgres.test.ts`.
+- Live MongoDB integration uses `.local-setup/verify-runtime.mjs`.
 - Browser test setup is `apps/web/src/test/setup.ts`.
 
 ## Naming Conventions
@@ -103,7 +103,7 @@ moveprompts/
 - Contract: `packages/contracts/src/`.
 - Route/repository: `apps/api/src/`.
 - Database schema/service: `packages/db/src/` plus an ordered migration.
-- Tests: API unit plus PostgreSQL integration test where ownership/state matters.
+- Tests: API unit tests plus the local MongoDB runtime verifier where ownership/state matters.
 
 **New worker capability:**
 - Provider contract/adapter: `packages/providers/src/`.

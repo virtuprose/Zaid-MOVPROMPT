@@ -27,16 +27,16 @@
 ## Data Storage
 
 **Databases:**
-- PostgreSQL 17 is the canonical authenticated source of truth.
+- MongoDB 17 is the canonical authenticated source of truth.
   - Connection: pooled and direct URLs are consumed by `packages/db/src/client.ts` and migration tooling.
-  - Client: Drizzle ORM plus the `postgres` driver.
+  - Client: the native MongoDB Node.js driver.
   - Core tables are declared in `packages/db/src/schema.ts`.
-- Supabase PostgreSQL remains a legacy migration source represented by `supabase/migrations/` and `scripts/migration/`.
+- Supabase remains a frozen legacy source. The active API and worker do not connect to it.
 
 **File Storage:**
 - Private S3-compatible storage through `packages/storage/src/service.ts`.
 - MinIO is the local implementation; Cloudflare R2/S3-compatible storage is supported by the same object-key contract.
-- Stable object keys are stored in PostgreSQL; short-lived signed URLs are generated only at access time.
+- Stable object keys are stored in MongoDB; short-lived signed URLs are generated only at access time.
 
 **Caching:**
 - No shared Redis/cache service is detected.
@@ -46,7 +46,7 @@
 ## Authentication & Identity
 
 **Auth Provider:**
-- Better Auth backed by PostgreSQL in `packages/auth/src/auth.ts`.
+- Better Auth backed by MongoDB in `packages/auth/src/auth.ts`.
   - Email/password is enabled.
   - Google and Apple providers are optional and appear only when configured.
   - Sessions use secure HTTP-only cookies.
@@ -76,7 +76,7 @@
 ## Environment Configuration
 
 **Required env groups:**
-- PostgreSQL pooled/direct connectivity.
+- MongoDB pooled/direct connectivity.
 - Better Auth URL, secret, trusted origins, and optional OAuth credentials.
 - S3 endpoint, region, credentials, and private bucket names.
 - SMTP delivery configuration.

@@ -1,5 +1,5 @@
 import { CapabilityAliasSchema, WORKER_JOB_NAMES, type GenerationJobPayload } from "@movprompt/contracts";
-import { sql, type Database } from "@movprompt/db";
+import { COLLECTIONS, type MongoDatabase } from "@movprompt/db";
 import { z } from "zod";
 
 import type { WorkerLogger } from "./logger.js";
@@ -64,108 +64,37 @@ function retryDelayMs(attempt: number): number {
   return Math.min(15 * 60_000, 5_000 * 2 ** Math.min(8, Math.max(0, attempt - 1)));
 }
 
-export type PostgresOutboxRepositoryOptions = {
-  idempotencyKeyPrefix?: string;
-};
-
-export function createPostgresOutboxRepository(
-  db: Database,
-  options: PostgresOutboxRepositoryOptions = {},
-): OutboxRepository {
-  const idempotencyFilter = options.idempotencyKeyPrefix
-    ? sql`AND idempotency_key LIKE ${`${options.idempotencyKeyPrefix}%`}`
-    : sql``;
-
+export function createMongoOutboxRepository(database: MongoDatabase): OutboxRepository {
+  const jobs = database.collection(COLLECTIONS.outboxJobs);
   return {
     async claimRenderStartJobs(input) {
       positiveInteger(input.batchSize, "outbox_batch_size");
       positiveInteger(input.leaseMs, "outbox_lease_ms");
-      const now = input.now.toISOString();
-      const leaseExpiredAt = new Date(input.now.getTime() - input.leaseMs).toISOString();
-
-      // Make abandoned, exhausted leases visible as dead instead of leaving
-      // them permanently stuck in processing after a worker crash.
-      await db.execute(sql`
-        UPDATE outbox_jobs
-        SET status = 'dead',
-            locked_at = NULL,
-            locked_by = NULL,
-            last_error = coalesce(last_error, 'outbox_lease_exhausted'),
-            updated_at = ${now}::timestamptz
-        WHERE topic = 'render.start'
-          ${idempotencyFilter}
-          AND status = 'processing'
-          AND locked_at < ${leaseExpiredAt}::timestamptz
-          AND attempts >= max_attempts
-      `);
-
-      const rows = await db.execute<ClaimedOutboxJob>(sql`
-        WITH claimable AS (
-          SELECT id
-          FROM outbox_jobs
-          WHERE topic = 'render.start'
-            ${idempotencyFilter}
-            AND attempts < max_attempts
-            AND (
-              (status IN ('pending', 'failed') AND available_at <= ${now}::timestamptz)
-              OR (status = 'processing' AND locked_at < ${leaseExpiredAt}::timestamptz)
-            )
-          ORDER BY available_at ASC, created_at ASC
-          FOR UPDATE SKIP LOCKED
-          LIMIT ${input.batchSize}
-        )
-        UPDATE outbox_jobs AS jobs
-        SET status = 'processing',
-            attempts = jobs.attempts + 1,
-            locked_at = ${now}::timestamptz,
-            locked_by = ${input.workerId},
-            last_error = NULL,
-            updated_at = ${now}::timestamptz
-        FROM claimable
-        WHERE jobs.id = claimable.id
-        RETURNING jobs.id,
-                  jobs.topic,
-                  jobs.payload,
-                  jobs.attempts,
-                  jobs.max_attempts AS "maxAttempts"
-      `);
-      return Array.from(rows);
+      const leaseCutoff = new Date(input.now.getTime() - input.leaseMs);
+      await jobs.updateMany(
+        { topic: "render.start", status: "processing", lockedAt: { $lt: leaseCutoff }, $expr: { $gte: ["$attempts", "$maxAttempts"] } },
+        { $set: { status: "dead", lockedAt: null, lockedBy: null, lastError: "outbox_lease_exhausted", updatedAt: input.now } },
+      );
+      const claimed: ClaimedOutboxJob[] = [];
+      for (let index = 0; index < input.batchSize; index += 1) {
+        const row = await jobs.findOneAndUpdate(
+          { topic: "render.start", $expr: { $lt: ["$attempts", { $ifNull: ["$maxAttempts", 10] }] }, $or: [{ status: { $in: ["pending", "failed"] }, availableAt: { $lte: input.now } }, { status: "processing", lockedAt: { $lt: leaseCutoff } }] },
+          { $set: { status: "processing", lockedAt: input.now, lockedBy: input.workerId, lastError: null, updatedAt: input.now }, $inc: { attempts: 1 } },
+          { sort: { availableAt: 1, createdAt: 1 }, returnDocument: "after" },
+        );
+        if (!row) break;
+        claimed.push({ id: String(row.id), topic: String(row.topic), payload: row.payload, attempts: Number(row.attempts), maxAttempts: Number(row.maxAttempts ?? 10) });
+      }
+      return claimed;
     },
-
     async complete(jobId, workerId, now) {
-      const completedAt = now.toISOString();
-      const rows = await db.execute<{ id: string }>(sql`
-        UPDATE outbox_jobs
-        SET status = 'completed',
-            locked_at = NULL,
-            locked_by = NULL,
-            updated_at = ${completedAt}::timestamptz
-        WHERE id = ${jobId}
-          AND status = 'processing'
-          AND locked_by = ${workerId}
-        RETURNING id
-      `);
-      return rows.length === 1;
+      const result = await jobs.updateOne({ id: jobId, status: "processing", lockedBy: workerId }, { $set: { status: "completed", lockedAt: null, lockedBy: null, updatedAt: now } });
+      return result.modifiedCount === 1;
     },
-
     async fail(input) {
       const dead = input.permanent || input.job.attempts >= input.job.maxAttempts;
-      const retryAt = input.retryAt.toISOString();
-      const failedAt = input.now.toISOString();
-      const rows = await db.execute<{ id: string }>(sql`
-        UPDATE outbox_jobs
-        SET status = ${dead ? "dead" : "failed"}::outbox_status,
-            available_at = ${retryAt}::timestamptz,
-            locked_at = NULL,
-            locked_by = NULL,
-            last_error = ${input.error},
-            updated_at = ${failedAt}::timestamptz
-        WHERE id = ${input.job.id}
-          AND status = 'processing'
-          AND locked_by = ${input.workerId}
-        RETURNING id
-      `);
-      return rows.length === 1;
+      const result = await jobs.updateOne({ id: input.job.id, status: "processing", lockedBy: input.workerId }, { $set: { status: dead ? "dead" : "failed", availableAt: input.retryAt, lockedAt: null, lockedBy: null, lastError: input.error, updatedAt: input.now } });
+      return result.modifiedCount === 1;
     },
   };
 }
@@ -274,7 +203,7 @@ export class OutboxDispatcher {
     };
 
     try {
-      // A null result means pg-boss already has this singleton. Delivery is
+      // A null result means the durable queue already has this singleton. Delivery is
       // therefore satisfied; the render handler is idempotent as a second floor.
       await this.#queue.enqueueGeneration(payload, {
         singletonKey: `submit:${parsed.data.runId}:${parsed.data.qualityAttempt ?? 0}`,

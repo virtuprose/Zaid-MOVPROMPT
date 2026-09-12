@@ -1,6 +1,6 @@
-import { schema, type Database } from "@movprompt/db";
+import { type MongoDatabase } from "@movprompt/db";
 import { betterAuth } from "better-auth";
-import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { mongodbAdapter } from "better-auth/adapters/mongodb";
 
 import type { AuthEnvironment } from "./config.js";
 import { createAuthProvisioningHooks, createAuthUserProvisioner } from "./provisioning.js";
@@ -15,7 +15,7 @@ export interface AuthEmail {
 export type AuthEmailSender = (email: AuthEmail) => Promise<void>;
 
 export interface CreateAuthInput {
-  db: Database;
+  db: MongoDatabase;
   environment: AuthEnvironment;
   sendEmail: AuthEmailSender;
 }
@@ -43,8 +43,8 @@ export async function dispatchAuthenticationEmail(sender: AuthEmailSender, email
 /**
  * Builds the Better Auth handler used by the API at `/api/auth/*`.
  *
- * All core IDs are PostgreSQL UUIDs. Supabase users are imported into `users`
- * with their existing UUID before cutover; new records use UUIDs too.
+ * All core IDs remain UUID strings. Supabase users can be imported into
+ * `users` with their existing UUID before cutover; new records use UUIDs too.
  */
 export function createMovPromptAuth(input: CreateAuthInput) {
   const { environment } = input;
@@ -63,17 +63,7 @@ export function createMovPromptAuth(input: CreateAuthInput) {
     baseURL: environment.baseUrl,
     secret: environment.secret,
     trustedOrigins: environment.trustedOrigins,
-    database: drizzleAdapter(input.db, {
-      provider: "pg",
-      schema: {
-        ...schema,
-        user: schema.users,
-        session: schema.sessions,
-        account: schema.accounts,
-        verification: schema.verifications,
-      },
-      transaction: true,
-    }),
+    database: mongodbAdapter(input.db.db, { client: input.db.client }),
     databaseHooks: provisioningHooks,
     user: {
       modelName: "users",
@@ -149,6 +139,7 @@ export function createMovPromptAuth(input: CreateAuthInput) {
     advanced: {
       database: {
         generateId: "uuid",
+        experimentalJoins: true,
       },
       defaultCookieAttributes: {
         httpOnly: true,

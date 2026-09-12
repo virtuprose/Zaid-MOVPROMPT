@@ -1,1 +1,0 @@
-ALTER TABLE public.character_kits ADD COLUMN IF NOT EXISTS shot_type text NOT NULL DEFAULT 'face';

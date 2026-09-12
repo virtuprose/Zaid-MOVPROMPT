@@ -28,7 +28,7 @@ bun run --cwd apps/worker test    # Worker tests
 
 **Naming:**
 - `*.test.ts` and `*.test.tsx` for unit/component tests.
-- `*.postgres.test.ts` for database-backed behavior.
+- `.local-setup/verify-runtime.mjs` for database-backed behavior.
 
 **Structure:**
 ```text
@@ -63,7 +63,7 @@ describe("generation service", () => {
 
 **Patterns:**
 ```typescript
-const enqueueGeneration = vi.fn(async () => "pg-boss-job-id");
+const enqueueGeneration = vi.fn(async () => "mongodb-job-id");
 const now = () => new Date("2026-08-16T00:00:00.000Z");
 ```
 
@@ -73,7 +73,7 @@ const now = () => new Date("2026-08-16T00:00:00.000Z");
 
 **What NOT to Mock:**
 - Configuration hashing, Zod contracts, credit/entitlement transitions, migration order, and RLS ownership rules.
-- Use a real temporary PostgreSQL database for those invariants.
+- Use a real temporary MongoDB database for those invariants.
 
 ## Fixtures and Factories
 
@@ -105,7 +105,7 @@ bun run test:all
 
 **Integration Tests:**
 - Hono route tests in `apps/api/src/*.test.ts`.
-- Real PostgreSQL generation, ownership, heartbeat, and worker lifecycle tests in `*.postgres.test.ts`.
+- Real MongoDB transaction, ownership, heartbeat, authentication and worker checks in `.local-setup/verify-runtime.mjs`.
 - S3 boundaries are tested through typed client fakes in `packages/storage/test/`.
 
 **E2E Tests:**
@@ -130,7 +130,7 @@ await expect(operation()).rejects.toMatchObject({
 ## Required Regression Strategy
 
 - Add a focused unit test for every bug before or with the fix.
-- Add PostgreSQL coverage for ownership, idempotency, credits, accepted-version pointers, or worker recovery changes.
+- Add MongoDB coverage for ownership, idempotency, credits, accepted-version pointers, or worker recovery changes.
 - Add component tests for every auth, draft recovery, pricing, CTA/language, template media, and mobile interaction change.
 - Keep live paid-provider tests explicitly guarded and excluded from default CI.
 

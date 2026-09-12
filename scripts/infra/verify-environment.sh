@@ -29,9 +29,8 @@ required_variables=(
   FEATURE_GENERATION
   FEATURE_EXPORTS
   FEATURE_BILLING
-  DATABASE_URL_POOLED
-  DATABASE_URL_DIRECT
-  DATABASE_SSL
+  MONGODB_URI
+  MONGODB_DATABASE
   S3_ENDPOINT
   S3_REGION
   S3_ACCESS_KEY_ID
@@ -111,16 +110,8 @@ for cors_origin in "${cors_origins[@]}"; do
   fi
 done
 
-for variable_name in DATABASE_URL_POOLED DATABASE_URL_DIRECT; do
-  variable_value="${!variable_name}"
-  if [[ ! "${variable_value}" =~ ^postgres(ql)?:// ]]; then
-    echo "${variable_name} must be a PostgreSQL connection string." >&2
-    exit 1
-  fi
-done
-
-if [[ "${DATABASE_SSL}" != "require" ]]; then
-  echo "DATABASE_SSL must be require outside local development." >&2
+if [[ ! "${MONGODB_URI}" =~ ^mongodb(+srv)?:// ]]; then
+  echo "MONGODB_URI must be a MongoDB connection string." >&2
   exit 1
 fi
 
@@ -353,7 +344,7 @@ for ttl_variable in S3_UPLOAD_URL_TTL_SECONDS S3_DOWNLOAD_URL_TTL_SECONDS; do
 done
 
 if [[ "${target_environment}" == "production" ]]; then
-  for variable_name in PUBLIC_APP_URL WEB_ORIGIN API_ORIGIN VITE_API_ORIGIN CORS_ALLOWED_ORIGINS DATABASE_URL_POOLED DATABASE_URL_DIRECT S3_ENDPOINT BETTER_AUTH_URL BETTER_AUTH_TRUSTED_ORIGINS; do
+  for variable_name in PUBLIC_APP_URL WEB_ORIGIN API_ORIGIN VITE_API_ORIGIN CORS_ALLOWED_ORIGINS MONGODB_URI S3_ENDPOINT BETTER_AUTH_URL BETTER_AUTH_TRUSTED_ORIGINS; do
     variable_value="${!variable_name}"
     if [[ "${variable_value}" == *localhost* || "${variable_value}" == *127.0.0.1* ]]; then
       echo "Production value cannot point to a local address: ${variable_name}" >&2

@@ -1,11 +1,7 @@
 import {
-  creditAccounts,
-  entitlements,
-  type Database,
-  users,
-  withUserTransaction,
+  COLLECTIONS,
+  type MongoDatabase,
 } from "@movprompt/db";
-import { eq } from "drizzle-orm";
 
 export const STARTER_TEMPLATE_RENDER_ENTITLEMENT = "starter_template_render";
 
@@ -31,26 +27,26 @@ export interface AuthBenefitPolicy {
  * render or replace an existing paid credit balance.
  */
 export function createAuthUserProvisioner(
-  db: Database,
+  db: MongoDatabase,
   policy: AuthBenefitPolicy = { requireEmailVerificationForStarter: true },
 ): AuthUserProvisioner {
   async function ensure(user: ProvisionableAuthUser): Promise<void> {
-    await withUserTransaction(db, user.id, async (transaction) => {
-      await transaction
-        .insert(creditAccounts)
-        .values({ userId: user.id })
-        .onConflictDoNothing({ target: creditAccounts.userId });
-
+    await db.transaction(async (session) => {
+      const now = new Date();
+      await db.collection(COLLECTIONS.creditAccounts).updateOne(
+        { userId: user.id },
+        { $setOnInsert: { userId: user.id, balance: 0, createdAt: now, updatedAt: now } },
+        { upsert: true, session },
+      );
       if (user.emailVerified || !policy.requireEmailVerificationForStarter) {
-        await transaction
-          .insert(entitlements)
-          .values({
-            userId: user.id,
-            type: STARTER_TEMPLATE_RENDER_ENTITLEMENT,
-          })
-          .onConflictDoNothing({
-            target: [entitlements.userId, entitlements.type],
-          });
+        await db.collection(COLLECTIONS.entitlements).updateOne(
+          { userId: user.id, type: STARTER_TEMPLATE_RENDER_ENTITLEMENT },
+          { $setOnInsert: {
+            id: crypto.randomUUID(), userId: user.id, type: STARTER_TEMPLATE_RENDER_ENTITLEMENT,
+            status: "available", createdAt: now, updatedAt: now,
+          } },
+          { upsert: true, session },
+        );
       }
     });
   }
@@ -58,11 +54,10 @@ export function createAuthUserProvisioner(
   return {
     ensure,
     async ensureById(userId) {
-      const [user] = await db
-        .select({ id: users.id, emailVerified: users.emailVerified })
-        .from(users)
-        .where(eq(users.id, userId))
-        .limit(1);
+      const user = await db.collection(COLLECTIONS.users).findOne(
+        { id: userId },
+        { projection: { id: 1, emailVerified: 1 } },
+      ) as ProvisionableAuthUser | null;
       if (user) await ensure(user);
     },
   };

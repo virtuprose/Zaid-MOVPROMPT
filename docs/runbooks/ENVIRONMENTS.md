@@ -6,7 +6,7 @@
 |---|---|---|---|
 | Purpose | Developer iteration | Production-shaped verification | Customer traffic |
 | Data | Synthetic only | Synthetic or approved sanitized fixtures | Real customer data |
-| Database | Local PostgreSQL volume | Dedicated instance/database | Dedicated HA instance/database |
+| Database | Local MongoDB replica-set volume | Dedicated replica set/database | Dedicated HA replica set/database |
 | Storage | Local MinIO | Dedicated private buckets | Dedicated private buckets |
 | Email | Mailpit only | Restricted test recipients/domain | Verified sender/domain |
 | OAuth | Local callback clients | Dedicated staging clients | Dedicated production clients |
@@ -35,9 +35,9 @@ The implemented API and worker currently require:
   `CORS_ALLOWED_ORIGINS`
 - `FEATURE_AUTHENTICATION` and `FEATURE_ASSETS`; assets cannot be enabled while
   authentication is disabled
-- `DATABASE_URL_POOLED` for API request traffic
-- `DATABASE_URL_DIRECT` for migrations and durable workers
-- `DATABASE_SSL=require` outside local development
+- `MONGODB_URI` for API and durable workers; it must target a replica set
+- `MONGODB_DATABASE` for the application database name
+- TLS must be enabled by the managed MongoDB connection string outside local development
 - `S3_ENDPOINT`, `S3_REGION`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`,
   `S3_FORCE_PATH_STYLE`, signed-URL TTLs and the exact private bucket names
   `creator-assets`, `creator-outputs`, `template-previews`
@@ -113,8 +113,8 @@ browser consuming each signed URL. Local Compose uses `minio.localhost` to meet
 that requirement without publishing a bucket. Production should use the
 private provider endpoint/custom domain approved for signed transfers.
 
-The worker uses `DATABASE_URL_DIRECT` because pg-boss, outbox leasing and
-reconciliation require durable direct PostgreSQL semantics. Do not route those
+The worker uses `MONGODB_URI` because queue leasing, outbox delivery and
+reconciliation require durable MongoDB transaction semantics. Do not route those
 operations through a transaction pooler. Lease duration must exceed ordinary
 enqueue latency, and shutdown grace must exceed the worker's graceful-stop
 window.

@@ -40,13 +40,10 @@ WORKER_HEARTBEAT_MAX_AGE_SECONDS=45
 FEATURE_EXPORTS=false
 FEATURE_BILLING=false
 
-POSTGRES_DB=movprompt
-POSTGRES_USER=movprompt
-POSTGRES_PASSWORD=movprompt-local-only
-POSTGRES_PORT=5432
-DATABASE_URL_POOLED=postgresql://movprompt:movprompt-local-only@localhost:5432/movprompt
-DATABASE_URL_DIRECT=postgresql://movprompt:movprompt-local-only@localhost:5432/movprompt
-DATABASE_SSL=false
+MONGODB_DATABASE=movprompt
+MONGODB_PORT=27017
+MONGODB_URI=mongodb://localhost:27017/movprompt?replicaSet=rs0&directConnection=true
+MONGODB_POOL_MAX=20
 
 MINIO_ROOT_USER=movprompt-local
 MINIO_ROOT_PASSWORD=movprompt-local-secret

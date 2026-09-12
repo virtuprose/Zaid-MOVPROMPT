@@ -5,7 +5,7 @@
 ## Tech Debt
 
 **Portable/legacy hybrid:**
-- Issue: Canonical-looking web routes still contain Supabase branches while Better Auth/PostgreSQL is the portable target.
+- Issue: Canonical-looking web routes still contain Supabase branches while Better Auth/MongoDB is the portable target.
 - Files: `apps/web/src/pages/AdvancedStudio.tsx`, `apps/web/src/lib/director/api.ts`, `apps/web/src/integrations/supabase/client.ts`, `supabase/functions/`.
 - Impact: A portable-auth session can reach code that expects Supabase authentication or legacy tables/functions.
 - Fix approach: Complete portable API parity per route, switch each canonical surface atomically, then redirect and retire the legacy path.
@@ -75,14 +75,14 @@
 **Render economics and lifecycle:**
 - Files: `packages/db/src/generation-service.ts`, `apps/worker/src/render-lifecycle.ts`.
 - Why fragile: Provider acceptance, entitlement reservation, charge, retries, cancellation, completion, and refund must be exactly once under concurrency.
-- Safe modification: Add domain tests and PostgreSQL concurrency tests before changing transitions.
+- Safe modification: Add domain tests and MongoDB concurrency tests before changing transitions.
 - Test coverage: Strong unit/integration coverage exists; live provider/output recovery remains externally dependent.
 
 **Working versus accepted versions:**
 - Files: `packages/db/migrations/0011_separate_working_and_accepted_versions.sql`, `apps/api/src/creator-repository.ts`, `apps/worker/src/render-lifecycle.ts`.
 - Why fragile: A failed new version must not replace the last usable output.
 - Safe modification: Maintain separate pointers and require a completed render before acceptance.
-- Test coverage: PostgreSQL regression tests exist in `apps/worker/src/render-worker.postgres.test.ts`.
+- Test coverage: worker lifecycle unit tests and the local MongoDB runtime verifier cover queue and heartbeat recovery.
 
 **Guest-to-auth draft claim:**
 - Files: `apps/web/src/features/create/guestDraftStore.ts`, `apps/web/src/features/create/creatorAssets.ts`, `apps/api/src/creator-routes.ts`.
@@ -92,8 +92,8 @@
 
 ## Scaling Limits
 
-**Single PostgreSQL queue:**
-- Current capacity: pg-boss and the application database share PostgreSQL.
+**Single MongoDB queue:**
+- Current capacity: MongoDB lease queue and the application database share MongoDB.
 - Limit: High render volume can contend with API/data traffic and outbox polling.
 - Scaling path: Tune pools and queue leases first; isolate worker database resources or move queue infrastructure only after measured pressure.
 

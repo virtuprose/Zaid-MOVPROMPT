@@ -26,11 +26,11 @@ deployment.
 2. Restore the latest approved production-shaped sanitized fixture.
 3. Run structural migration checks and verify Auth/assets feature dependencies.
 4. Execute migrations through a one-shot migration task using
-   `DATABASE_URL_DIRECT` with `ON_ERROR_STOP` behavior and retain
+   `MONGODB_URI`, run `bun run db:migrate` to create indexes, and retain
    complete logs.
 5. Deploy the API artifact by digest and verify Better Auth, SMTP and private
    object-storage configuration before starting the worker.
-6. Deploy one durable worker artifact by digest; verify pg-boss queues, outbox
+6. Deploy one durable worker artifact by digest; verify MongoDB worker jobs, outbox
    lease/retry behavior and reconciliation scheduling before scaling it.
 7. Deploy the web artifact and verify `/healthz`, `/api/v1/health`, server
    feature flags, safe generation availability and dependency connectivity.

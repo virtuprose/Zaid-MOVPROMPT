@@ -4,9 +4,11 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { promisify } from "node:util";
 import {
-  createDatabase,
-  createDatabaseAbandonedClaimCleanupRepository,
-  createServiceHeartbeatRepository,
+  createMongoDatabase,
+  createMongoAbandonedClaimCleanupRepository,
+  createMongoGenerationService,
+  createMongoServiceHeartbeatRepository,
+  ensureMongoIndexes,
   MOVPROMPT_WORKER_SERVICE_NAME,
 } from "@movprompt/db";
 import {
@@ -23,31 +25,32 @@ import { createHealthJobHandler } from "./handlers.js";
 import { AbandonedClaimCleanupService } from "./abandoned-claim-cleanup.js";
 import { jsonWorkerLogger } from "./logger.js";
 import { createFfprobeTechnicalAnalyzer, createGatewayVideoQualityAnalyzer } from "./media-quality-analyzers.js";
-import { createPostgresOutboxRepository, OutboxDispatcher } from "./outbox-dispatcher.js";
+import { createMongoOutboxRepository, OutboxDispatcher } from "./outbox-dispatcher.js";
 import { createComposedOutputQualityReviewer } from "./output-quality-reviewer.js";
 import { validateCalibrationArtifact, type CalibrationEligibility } from "./benchmark-manifest.js";
-import { PgBossWorker } from "./pg-boss-worker.js";
+import { MongoWorker } from "./mongo-worker.js";
 import {
-  createDatabaseAssetReferenceVerifier,
+  createMongoAssetReferenceVerifier,
   createGatewayFirstFramePreparer,
   createVerifiedReferenceUrlResolver,
 } from "./reference-frame-preparer.js";
 import { createProviderOutputPersister } from "./output-persister.js";
 import {
-  createDatabaseGenerationBilling,
-  createDatabaseRenderLifecycleStore,
   createGenerationLifecycleHandler,
 } from "./render-lifecycle.js";
+import { createMongoRenderLifecycleStore } from "./mongo-render-lifecycle-store.js";
 import { WorkerHeartbeat } from "./service-heartbeat.js";
 
 const execFileAsync = promisify(execFile);
 
 const config = loadWorkerConfig();
-const database = createDatabase({
-  url: config.databaseUrl,
-  applicationName: `${config.serviceName}-outbox`,
-  ssl: process.env.DATABASE_SSL === "require" ? "require" : false,
+const database = createMongoDatabase({
+  uri: config.databaseUrl,
+  databaseName: config.databaseName,
+  applicationName: `${config.serviceName}-worker`,
 });
+await database.connect();
+await ensureMongoIndexes(database);
 const capabilityRegistry = createCapabilityRegistryFromEnvironment(process.env);
 // Concrete provider packages register their adapters at this server-only
 // composition boundary. An empty registry deliberately fails closed.
@@ -114,7 +117,7 @@ function loadQualityCalibration(): CalibrationEligibility | undefined {
 
 const qualityCalibration = loadQualityCalibration();
 const gatewayReferenceVerifier = workerStorage
-  ? createDatabaseAssetReferenceVerifier(database.db, workerStorage.assetsBucket)
+  ? createMongoAssetReferenceVerifier(database, workerStorage.assetsBucket)
   : undefined;
 const verifiedReferenceUrlResolver = workerStorage && gatewayReferenceVerifier
   ? createVerifiedReferenceUrlResolver({
@@ -244,13 +247,13 @@ async function assertGenerationRuntimeReady(): Promise<boolean> {
   return Boolean(qualityCalibration);
 }
 
-let resolveWorker: (worker: PgBossWorker) => void = () => undefined;
-const workerReady = new Promise<PgBossWorker>((resolve) => {
+let resolveWorker: (worker: MongoWorker) => void = () => undefined;
+const workerReady = new Promise<MongoWorker>((resolve) => {
   resolveWorker = resolve;
 });
 const generationHandler = createGenerationLifecycleHandler({
-  store: createDatabaseRenderLifecycleStore(database.db),
-  billing: createDatabaseGenerationBilling(database.db),
+  store: createMongoRenderLifecycleStore(database),
+  billing: createMongoGenerationService(database),
   capabilityRegistry,
   adapterRegistry,
   ...(outputPersister ? { outputPersister } : {}),
@@ -266,7 +269,8 @@ const generationHandler = createGenerationLifecycleHandler({
   },
 });
 
-const worker = new PgBossWorker({
+const worker = new MongoWorker({
+  database,
   config,
   logger: jsonWorkerLogger,
   handlers: {
@@ -276,7 +280,7 @@ const worker = new PgBossWorker({
   ...(cleanupStorage
     ? {
         abandonedClaimCleanup: new AbandonedClaimCleanupService({
-          repository: createDatabaseAbandonedClaimCleanupRepository(database.db),
+          repository: createMongoAbandonedClaimCleanupRepository(database),
           storage: { remove: (bucket, objectKey) => cleanupStorage.delete(bucket, objectKey) },
         }),
       }
@@ -285,7 +289,7 @@ const worker = new PgBossWorker({
 resolveWorker(worker);
 
 const dispatcher = new OutboxDispatcher({
-  repository: createPostgresOutboxRepository(database.db),
+  repository: createMongoOutboxRepository(database),
   queue: worker,
   workerId: config.workerId,
   logger: jsonWorkerLogger,
@@ -296,7 +300,7 @@ const dispatcher = new OutboxDispatcher({
 
 const generationReady = await assertGenerationRuntimeReady();
 const heartbeat = new WorkerHeartbeat({
-  repository: createServiceHeartbeatRepository(database.db),
+  repository: createMongoServiceHeartbeatRepository(database),
   serviceName: MOVPROMPT_WORKER_SERVICE_NAME,
   instanceId: config.workerId,
   intervalSeconds: config.heartbeatIntervalSeconds,

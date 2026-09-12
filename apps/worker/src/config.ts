@@ -3,6 +3,7 @@ export type WorkerConfig = {
   version: string;
   environment: string;
   databaseUrl: string;
+  databaseName: string;
   workerId: string;
   smokeTestOnStart: boolean;
   outboxBatchSize: number;
@@ -26,10 +27,9 @@ function readPositiveInteger(value: string | undefined, fallback: number, label:
 export function loadWorkerConfig(
   environment: Readonly<Record<string, string | undefined>> = process.env,
 ): WorkerConfig {
-  const databaseUrl =
-    environment.DATABASE_URL_DIRECT?.trim() || environment.DATABASE_DIRECT_URL?.trim();
+  const databaseUrl = environment.MONGODB_URI?.trim();
   if (!databaseUrl) {
-    throw new Error("DATABASE_URL_DIRECT is required by the worker.");
+    throw new Error("MONGODB_URI is required by the worker.");
   }
 
   return {
@@ -37,6 +37,7 @@ export function loadWorkerConfig(
     version: environment.APP_VERSION?.trim() || "0.1.0-dev",
     environment: environment.APP_ENV?.trim() || "development",
     databaseUrl,
+    databaseName: environment.MONGODB_DATABASE?.trim() || "movprompt",
     workerId: environment.WORKER_ID?.trim() || crypto.randomUUID(),
     smokeTestOnStart: readBoolean(environment.WORKER_SMOKE_TEST_ON_START),
     outboxBatchSize: readPositiveInteger(environment.WORKER_OUTBOX_BATCH_SIZE, 20, "WORKER_OUTBOX_BATCH_SIZE"),

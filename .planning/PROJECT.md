@@ -23,9 +23,9 @@ A Kuwait business owner with no video skills can create a professional, accurate
 
 - ✓ The product has a public marketing site, Template Mode, Advanced Mode, template catalog, Projects, authentication, and account routes — existing code.
 - ✓ The web supports guest drafts, product/business link import, photo uploads, campaign settings, template selection, and Generate-time authentication — existing code.
-- ✓ PostgreSQL models users, immutable template/project versions, assets, quotes, render runs, credits, entitlements, exports, payments, notifications, outbox jobs, and worker heartbeats — existing code.
+- ✓ MongoDB models users, immutable template/project versions, assets, quotes, render runs, credits, entitlements, exports, payments, notifications, outbox jobs, and worker heartbeats — migrated for development on 2026-09-12.
 - ✓ The API exposes portable template, project, version, asset, quote, render, credit, and output endpoints with owner-scoped transactions — existing code.
-- ✓ The worker implements durable outbox/pg-boss generation, provider reconciliation, private output persistence, media validation, quality review, controlled retries, and exactly-once refund logic — existing code.
+- ✓ The worker implements a MongoDB-leased durable queue and outbox, provider reconciliation, private output persistence, media validation, quality review, controlled retries, and idempotent refund logic.
 - ✓ The creative engine contains 50 Kuwait-oriented template concepts with Arabic and English campaign copy — existing code.
 
 ### Active
@@ -58,7 +58,7 @@ A Kuwait business owner with no video skills can create a professional, accurate
 
 ## Context
 
-- The repository is a Bun/TypeScript monorepo with a React/Vite web app, Hono API, PostgreSQL/Drizzle data layer, Better Auth, pg-boss worker, private S3-compatible storage, and provider adapters.
+- The repository is a Bun/TypeScript monorepo with a React/Vite web app, Hono API, MongoDB data layer, Better Auth, MongoDB-leased worker, private S3-compatible storage, and provider adapters.
 - The codebase map is stored in `.planning/codebase/` and identifies a substantial portable foundation alongside legacy Supabase branches.
 - Current production risk is concentrated at integration boundaries: matching API/worker readiness, authoritative pricing, provider output recovery, private storage, quality review, and browser-visible run recovery.
 - The template catalog has more concepts than verified playable previews; marketing truth must distinguish finished examples from visual directions.
@@ -72,7 +72,7 @@ A Kuwait business owner with no video skills can create a professional, accurate
 - **Market**: Kuwait only for initial production; Arabic, English, and bilingual are first-class.
 - **Truth**: Imported or user-confirmed facts must never be invented or changed silently.
 - **Authentication**: Guests configure first; account creation appears only at Generate and must restore the exact draft.
-- **Architecture**: Continue the existing React/Hono/PostgreSQL/Better Auth/pg-boss/S3 system; do not redesign the platform again.
+- **Architecture**: Continue the React/Hono/MongoDB/Better Auth/S3 system; database and queue changes must preserve owner isolation, transactions, idempotency, and durable retries.
 - **Generation**: Provider/model IDs remain server-only; capabilities fail closed until pricing, worker, storage, output, and quality evidence agree.
 - **Economics**: A user pays for an accepted output, not failed provider attempts; charges/refunds and retries are idempotent.
 - **Editing**: Deterministic factual edits are free; visual changes are separately quoted immutable versions.
@@ -93,7 +93,7 @@ A Kuwait business owner with no video skills can create a professional, accurate
 | Account creation occurs only at Generate | Users experience value before authentication and retain the exact draft | ✓ Locked 2026-08-17 |
 | Accept product/business URLs, photos, footage, and manual entry | Supports both physical-product and service businesses | ✓ Locked 2026-08-17 |
 | Every generation produces a social-media pack | Customers need usable deliverables, not one isolated provider clip | ✓ Locked 2026-08-17 |
-| PostgreSQL is authenticated source of truth; IndexedDB is guest-only | Enables durable projects, ownership, recovery, and cross-device authenticated use | ✓ Locked 2026-08-17 |
+| MongoDB is authenticated source of truth; IndexedDB is guest-only | Enables durable projects, ownership, recovery, and cross-device authenticated use | ✓ Changed for development 2026-09-12 |
 | Retain the current portable architecture | The foundation is substantial; another rewrite would delay user value and increase risk | ✓ Locked 2026-08-17 |
 | Clinic content has stricter guardrails | Medical claims, patient privacy, consent, and before/after content create higher legal and trust risk | ✓ Locked 2026-08-17 |
 | Launch with 18 verified templates; keep unreviewed concepts hidden or labeled directions | A smaller trustworthy catalog is stronger than 50 repeated or unplayable demo cards | ✓ Locked 2026-08-17 |

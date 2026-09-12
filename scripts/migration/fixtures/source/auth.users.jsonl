@@ -1,2 +1,0 @@
-{"created_at":"2026-08-01T08:00:00.000Z","email":"Aisha@example.test","email_confirmed_at":"2026-08-01T08:05:00.000Z","id":"00000000-0000-4000-8000-000000000001","raw_user_meta_data":{"avatar_url":"https://example.test/aisha.png","full_name":"Aisha Al-Sabah","locale":"ar"},"updated_at":"2026-08-02T08:00:00.000Z"}
-{"created_at":"2026-08-01T09:00:00.000Z","email":"omar@example.test","email_confirmed_at":null,"id":"00000000-0000-4000-8000-000000000002","raw_user_meta_data":{"name":"Omar Al-Harbi","locale":"en"},"updated_at":"2026-08-01T09:00:00.000Z"}

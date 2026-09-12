@@ -16,7 +16,7 @@ Template Mode is the default experience. Advanced Mode remains a separate second
 - **Market**: Kuwait only for initial production; Arabic, English, and bilingual are first-class.
 - **Truth**: Imported or user-confirmed facts must never be invented or changed silently.
 - **Authentication**: Guests configure first; account creation appears only at Generate and must restore the exact draft.
-- **Architecture**: Continue the existing React/Hono/PostgreSQL/Better Auth/pg-boss/S3 system; do not redesign the platform again.
+- **Architecture**: Continue the existing React/Hono/MongoDB/Better Auth/S3 system; use the MongoDB transaction and lease-queue implementation.
 - **Generation**: Provider/model IDs remain server-only; capabilities fail closed until pricing, worker, storage, output, and quality evidence agree.
 - **Economics**: A user pays for an accepted output, not failed provider attempts; charges/refunds and retries are idempotent.
 - **Editing**: Deterministic factual edits are free; visual changes are separately quoted immutable versions.
@@ -33,7 +33,7 @@ Template Mode is the default experience. Advanced Mode remains a separate second
 ## Languages
 
 - TypeScript 5.9.3 - All active web, API, worker, shared-package, migration-tooling, and test code under `apps/`, `packages/`, and `scripts/`.
-- SQL (PostgreSQL 17 dialect) - Portable schema migrations and row-level security under `packages/db/migrations/` and `scripts/infra/check-rls-isolation.sql`.
+- MongoDB query documents and indexes - Portable persistence, transactions, TTL indexes, and owner-scoped repositories under `packages/db/src/mongo-*.ts`.
 - CSS/PostCSS/Tailwind CSS - Application and marketing styling in `apps/web/src/` and `apps/web/postcss.config.js`.
 - Bash - Infrastructure validation, backup, and parity scripts under `scripts/infra/`.
 - Deno TypeScript - Frozen legacy Supabase Edge Functions under `supabase/functions/`.
@@ -42,7 +42,7 @@ Template Mode is the default experience. Advanced Mode remains a separate second
 
 - Node.js 24.x - Required by the root `package.json` and server workspaces.
 - Browser - React single-page application built by Vite.
-- PostgreSQL 17 - Canonical portable database target in CI and `compose.yaml`.
+- MongoDB 8 replica set - Canonical portable database target in `compose.yaml`; replica-set mode supports transactions locally.
 - Bun 1.3.12 - Workspace install and script runner.
 - Lockfile: `bun.lock` is present and CI requires `bun install --frozen-lockfile`.
 
@@ -53,12 +53,12 @@ Template Mode is the default experience. Advanced Mode remains a separate second
 - Vite 8.2.1 with SWC - Web development and production builds in `apps/web/vite.config.ts`.
 - Hono 4.12.32 - Portable HTTP API in `apps/api/src/app.ts`.
 - Better Auth 1.4.18 - Portable email and optional Google/Apple authentication in `packages/auth/src/auth.ts`.
-- Drizzle ORM 0.45.2 plus `postgres` 3.4.7 - PostgreSQL data access and migrations in `packages/db/`.
-- pg-boss 12.26.3 - PostgreSQL-backed durable worker jobs in `apps/worker/src/pg-boss-worker.ts`.
+- MongoDB Node.js Driver 6 - Database access, sessions, transactions, indexes, and atomic lease operations in `packages/db/`, `apps/api/`, and `apps/worker/`.
+- MongoDB worker queue - Durable lease-based worker jobs in `apps/worker/src/mongo-worker.ts`.
 - Vitest 4.1.10 - Unit and integration tests across every active workspace.
 - Testing Library 16 and jsdom 30 - React component and interaction tests in `apps/web/src/**/*.test.tsx`.
 - TypeScript project builds - Workspace-specific `tsconfig.json` and `tsconfig.build.json` files.
-- Docker Compose - Local PostgreSQL, MinIO, Mailpit, API, and worker topology in `compose.yaml`.
+- Docker Compose - Local MongoDB replica set, MinIO, Mailpit, API, and worker topology in `compose.yaml`.
 - ESLint 9 with typescript-eslint and React Hooks rules - Repository-wide linting through `eslint.config.js`.
 
 ## Key Dependencies
@@ -87,10 +87,10 @@ Template Mode is the default experience. Advanced Mode remains a separate second
 
 ## Platform Requirements
 
-- Node 24, Bun 1.3.12, PostgreSQL 17, S3-compatible storage, and FFmpeg/FFprobe.
+- Node 24, Bun 1.3.12, MongoDB 8 replica set, S3-compatible storage, and FFmpeg/FFprobe.
 - Docker Compose is the documented full-stack path; web-only development can run from `bun run dev:web`.
 - Docker-compatible API and worker images are defined in `Dockerfile.api` and `Dockerfile.worker`.
-- PostgreSQL and private S3-compatible object storage are architectural requirements; no production deployment is proven by repository state alone.
+- MongoDB replica-set transactions and private S3-compatible object storage are architectural requirements; no production deployment is proven by repository state alone.
 
 <!-- GSD:stack-end -->
 
@@ -197,7 +197,7 @@ Template Mode is the default experience. Advanced Mode remains a separate second
 ## Pattern Overview
 
 - Public contracts are Zod schemas in `packages/contracts/src/`; server-only model IDs never belong in browser contracts.
-- Authenticated writes are owner-scoped explicitly and reinforced with transaction-local PostgreSQL RLS through `packages/db/src/user-transaction.ts`.
+- Authenticated reads and writes include explicit owner predicates in the MongoDB repositories and group related billing/outbox changes in transactions.
 - Project versions, quotes, ledger entries, and render attempts are immutable or append-oriented.
 - Generation is fail-closed until capability, pricing, storage, quality tooling, and worker heartbeat all agree.
 - Legacy Supabase paths coexist while portable route parity is completed.
@@ -213,7 +213,7 @@ Template Mode is the default experience. Advanced Mode remains a separate second
 - Purpose: Define schema, migrations, pricing-bound render invariants, credits, entitlements, and RLS.
 - Location: `packages/db/src/` and `packages/db/migrations/`.
 - Used by: API, auth, worker, migration tools.
-- Purpose: Drain transactional outbox, enqueue pg-boss work, submit/reconcile provider operations, persist/validate outputs, update final state.
+- Purpose: Drain the transactional outbox, enqueue MongoDB lease jobs, submit/reconcile provider operations, persist/validate outputs, and update final state.
 - Location: `apps/worker/src/`.
 - Depends on: DB, provider, storage, creative-engine, FFmpeg/FFprobe.
 
@@ -224,7 +224,7 @@ Template Mode is the default experience. Advanced Mode remains a separate second
 ### Source Import
 
 - Guest-only state: IndexedDB with seven-day TTL.
-- Authenticated source of truth: PostgreSQL.
+- Authenticated source of truth: MongoDB.
 - Cached UI state: React state, React Query, and transitional local project cache in `apps/web/src/features/create/projectStore.ts`.
 
 ## Key Abstractions
@@ -249,11 +249,11 @@ Template Mode is the default experience. Advanced Mode remains a separate second
 - Responsibilities: Load runtime services and serve the Hono app.
 - Location: `apps/worker/src/main.ts`.
 - Triggers: Node process/Docker container.
-- Responsibilities: Validate runtime, register adapters, heartbeat, outbox dispatch, and pg-boss handlers.
+- Responsibilities: Validate runtime, register adapters, heartbeat, outbox dispatch, and MongoDB lease-queue handlers.
 
 ## Architectural Constraints
 
-- **Concurrency:** Node event loops plus PostgreSQL advisory locks, row locks, leases, and pg-boss singleton keys.
+- **Concurrency:** Node event loops plus MongoDB transactions, conditional updates, leases, unique operation keys, and singleton queue keys.
 - **Global state:** API and worker compose singleton database/storage/provider services at process startup.
 - **Storage:** Database rows must contain stable bucket/object keys, never expiring signed URLs.
 - **Provider policy:** Browser inputs are semantic capabilities only; provider IDs and detailed errors remain server-side.

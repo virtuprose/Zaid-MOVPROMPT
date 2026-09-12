@@ -19,10 +19,10 @@
 │ Hono API `apps/api/src/`                                   │
 │ Auth, templates, projects, assets, quotes, render control   │
 └────────┬────────────────────────────────────────────────────┘
-         │ Drizzle transaction + outbox
+         │ MongoDB transaction + outbox
          ▼
 ┌──────────────────────────┬──────────────────────────────────┐
-│ PostgreSQL `packages/db` │ pg-boss worker `apps/worker`     │
+│ MongoDB `packages/db`    │ Mongo lease worker `apps/worker` │
 │ versions/ledger/RLS      │ provider/output/quality lifecycle│
 └──────────────┬───────────┴──────────────┬───────────────────┘
                ▼                          ▼
@@ -47,11 +47,11 @@
 
 ## Pattern Overview
 
-**Overall:** Modular monorepo with a React client, transaction-oriented Hono API, PostgreSQL outbox, and durable asynchronous worker.
+**Overall:** Modular monorepo with a React client, transaction-oriented Hono API, MongoDB outbox, and durable asynchronous worker.
 
 **Key Characteristics:**
 - Public contracts are Zod schemas in `packages/contracts/src/`; server-only model IDs never belong in browser contracts.
-- Authenticated writes are owner-scoped explicitly and reinforced with transaction-local PostgreSQL RLS through `packages/db/src/user-transaction.ts`.
+- Authenticated writes use explicit owner filters, MongoDB unique indexes, and replica-set transactions.
 - Project versions, quotes, ledger entries, and render attempts are immutable or append-oriented.
 - Generation is fail-closed until capability, pricing, storage, quality tooling, and worker heartbeat all agree.
 - Legacy Supabase paths coexist while portable route parity is completed.
@@ -74,7 +74,7 @@
 - Used by: API, auth, worker, migration tools.
 
 **Asynchronous execution:**
-- Purpose: Drain transactional outbox, enqueue pg-boss work, submit/reconcile provider operations, persist/validate outputs, update final state.
+- Purpose: Drain the transactional outbox, enqueue MongoDB-leased jobs, submit/reconcile provider operations, persist/validate outputs, update final state.
 - Location: `apps/worker/src/`.
 - Depends on: DB, provider, storage, creative-engine, FFmpeg/FFprobe.
 
@@ -84,11 +84,11 @@
 
 1. Guest configures a `CreationDraft` and blobs in `apps/web/src/features/create/guestDraftStore.ts`.
 2. Authentication is requested only at Generate through `apps/web/src/features/create/AuthGateDialog.tsx`.
-3. Draft claiming creates a PostgreSQL project/version through `/api/v1/drafts/claim` in `apps/api/src/creator-routes.ts`.
+3. Draft claiming creates a MongoDB project/version through `/api/v1/drafts/claim` in `apps/api/src/creator-routes.ts`.
 4. Assets are uploaded or securely mirrored through `apps/api/src/asset-routes.ts` and private `packages/storage/src/service.ts`.
 5. The API validates ownership/references and issues a configuration-bound quote in `apps/api/src/generation-service.ts`.
 6. `packages/db/src/generation-service.ts` atomically reserves entitlement/credits, creates the run, and inserts an outbox job.
-7. `apps/worker/src/outbox-dispatcher.ts` and `apps/worker/src/pg-boss-worker.ts` hand work to `apps/worker/src/render-lifecycle.ts`.
+7. `apps/worker/src/outbox-dispatcher.ts` and `apps/worker/src/mongo-worker.ts` hand work to `apps/worker/src/render-lifecycle.ts`.
 8. The provider adapter runs, output is copied and reviewed, and the accepted project version advances only on completion.
 9. Browser polling/subscription displays server state; it does not control completion.
 
@@ -101,7 +101,7 @@
 
 **State Management:**
 - Guest-only state: IndexedDB with seven-day TTL.
-- Authenticated source of truth: PostgreSQL.
+- Authenticated source of truth: MongoDB.
 - Cached UI state: React state, React Query, and transitional local project cache in `apps/web/src/features/create/projectStore.ts`.
 
 ## Key Abstractions
@@ -136,11 +136,11 @@
 **Worker:**
 - Location: `apps/worker/src/main.ts`.
 - Triggers: Node process/Docker container.
-- Responsibilities: Validate runtime, register adapters, heartbeat, outbox dispatch, and pg-boss handlers.
+- Responsibilities: Validate runtime, register adapters, heartbeat, outbox dispatch, and MongoDB lease-queue handlers.
 
 ## Architectural Constraints
 
-- **Concurrency:** Node event loops plus PostgreSQL advisory locks, row locks, leases, and pg-boss singleton keys.
+- **Concurrency:** Node event loops plus MongoDB transactions, conditional writes, leases, and unique singleton keys.
 - **Global state:** API and worker compose singleton database/storage/provider services at process startup.
 - **Storage:** Database rows must contain stable bucket/object keys, never expiring signed URLs.
 - **Provider policy:** Browser inputs are semantic capabilities only; provider IDs and detailed errors remain server-side.
@@ -174,7 +174,7 @@
 
 **Logging:** Structured API/worker events with request/job identifiers.
 **Validation:** Zod at public and provider boundaries; FFprobe/full media checks after generation.
-**Authentication:** Better Auth cookie sessions plus explicit owner predicates and PostgreSQL RLS.
+**Authentication:** Better Auth cookie sessions plus explicit owner predicates in every MongoDB repository operation.
 
 ---
 

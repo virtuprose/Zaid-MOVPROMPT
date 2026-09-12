@@ -114,16 +114,23 @@ export function TemplateGrid({
         </div>
       )}
       <div className="creator-template-discovery">
-        <label className="creator-template-search">
-          <span className="sr-only">{ar ? "ابحث في قوالب الفيديو" : "Search video templates"}</span>
-          <Search aria-hidden="true" />
-          <input
-            type="search"
-            value={query}
-            onChange={(event) => { setQuery(event.target.value); setVisibleCount(12); }}
-            placeholder={ar ? "ابحث عن هدف أو فئة أو نوع فيديو" : "Search an outcome, category or format"}
-          />
-        </label>
+        <div className="creator-template-discovery-main">
+          <label className="creator-template-search">
+            <span className="sr-only">{ar ? "ابحث في قوالب الفيديو" : "Search video templates"}</span>
+            <Search aria-hidden="true" />
+            <input
+              type="search"
+              value={query}
+              onChange={(event) => { setQuery(event.target.value); setVisibleCount(12); }}
+              placeholder={ar ? "ابحث عن هدف أو فئة أو نوع فيديو" : "Search an outcome, category or format"}
+            />
+          </label>
+          <p className="creator-template-count" aria-live="polite">
+            {ar
+              ? `نعرض ${visibleTemplates.length} من ${filteredTemplates.length} قالب`
+              : `Showing ${visibleTemplates.length} of ${filteredTemplates.length}`}
+          </p>
+        </div>
         <div className="creator-template-filters" role="group" aria-label={ar ? "تصفية القوالب حسب نوع النشاط" : "Filter templates by business type"}>
           {([
             ["all", ar ? "الكل" : "All"],
@@ -143,11 +150,6 @@ export function TemplateGrid({
             </button>
           ))}
         </div>
-        <p className="creator-template-count" aria-live="polite">
-          {ar
-            ? `نعرض ${visibleTemplates.length} من ${filteredTemplates.length} قالب`
-            : `Showing ${visibleTemplates.length} of ${filteredTemplates.length}`}
-        </p>
       </div>
       <div className="creator-template-groups" aria-busy={catalogState === "loading"} aria-live="polite">
         {visibleGroups.selectedDirection && (
@@ -179,7 +181,7 @@ export function TemplateGrid({
         <TemplateGroup
           id="campaign-directions"
           title={ar ? "اتجاهات حملات إضافية" : "More campaign directions"}
-          description={ar ? "أفكار إنتاج واضحة بمعاينات ثابتة — وليست فيديوهات قابلة للتشغيل بعد." : "Production-ready concepts with static direction art—not playable videos yet."}
+          description={ar ? "أفكار إنتاج واضحة بمعاينات ثابتة، وليست فيديوهات قابلة للتشغيل بعد." : "Production-ready concepts with static direction art. Playable videos are still being prepared."}
           icon="direction"
           templates={visibleGroups.campaignDirections}
           selectedId={selectedId}
@@ -299,7 +301,14 @@ function TemplateCard({ template, selected, onSelect, onPreview, locale, selecti
             <p>{locale === "ar" ? template.descriptionAr : template.description}</p>
             <div className="creator-template-meta">
               <span><strong>{ar ? `${template.scenes.length} مشاهد` : `${template.scenes.length} scenes`}</strong> · {ar ? "كويتي + إنجليزي" : "Kuwaiti Arabic + English"}</span>
-              {selected ? <Check aria-hidden="true" /> : <ArrowUpRight aria-hidden="true" />}
+              <span className="creator-template-state">
+                {selected
+                  ? (ar ? "محدد" : "Selected")
+                  : selectionEnabled
+                    ? (ar ? "اختر" : "Choose")
+                    : (ar ? "للمعاينة" : "Preview only")}
+                {selected ? <Check aria-hidden="true" /> : <ArrowUpRight aria-hidden="true" />}
+              </span>
             </div>
           </div>
         </button>

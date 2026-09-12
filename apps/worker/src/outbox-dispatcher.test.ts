@@ -32,7 +32,7 @@ function validPayload() {
   };
 }
 
-function setup(job: ReturnType<typeof claimed>, enqueue = vi.fn(async () => "pg-boss-job")) {
+function setup(job: ReturnType<typeof claimed>, enqueue = vi.fn(async () => "mongodb-job")) {
   const repository: OutboxRepository = {
     claimRenderStartJobs: vi.fn(async () => [job]),
     complete: vi.fn(async () => true),
@@ -50,7 +50,7 @@ function setup(job: ReturnType<typeof claimed>, enqueue = vi.fn(async () => "pg-
 }
 
 describe("render outbox dispatcher", () => {
-  it("bridges one claimed outbox row into the existing pg-boss generation queue", async () => {
+  it("bridges one claimed outbox row into the MongoDB generation queue", async () => {
     const job = claimed(validPayload());
     const { dispatcher, repository, enqueue } = setup(job);
 
@@ -71,7 +71,7 @@ describe("render outbox dispatcher", () => {
     expect(repository.fail).not.toHaveBeenCalled();
   });
 
-  it("dead-letters malformed payloads without putting them on pg-boss", async () => {
+  it("dead-letters malformed payloads without putting them on the MongoDB queue", async () => {
     const job = claimed({ runId: "not-a-uuid" });
     const { dispatcher, repository, enqueue } = setup(job);
 
@@ -85,7 +85,7 @@ describe("render outbox dispatcher", () => {
   it("returns queue failures to the durable outbox retry schedule", async () => {
     const job = claimed(validPayload(), 2);
     const enqueue = vi.fn(async () => {
-      throw new Error("pg-boss unavailable");
+      throw new Error("MongoDB queue unavailable");
     });
     const { dispatcher, repository } = setup(job, enqueue);
 
@@ -95,7 +95,7 @@ describe("render outbox dispatcher", () => {
       expect.objectContaining({
         job,
         permanent: false,
-        error: "pg-boss unavailable",
+        error: "MongoDB queue unavailable",
         retryAt: new Date("2026-08-12T12:00:10.000Z"),
       }),
     );

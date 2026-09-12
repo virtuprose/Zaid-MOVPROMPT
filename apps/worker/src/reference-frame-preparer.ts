@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
 
-import { and, eq, schema, sql, withUserTransaction, type Database } from "@movprompt/db";
+import { COLLECTIONS, type MongoDatabase } from "@movprompt/db";
 import type { ProviderGenerationRequest, ProviderReference } from "@movprompt/providers";
 import type { VercelGatewayInlineFirstFrame } from "@movprompt/providers";
 import { assertOwnedProjectKey } from "@movprompt/storage";
@@ -109,69 +109,20 @@ function parseCanonicalAssetKey(
  * owner-scoped asset row, canonical key, supported MIME and immutable digest
  * are all required before storage credentials are used.
  */
-export function createDatabaseAssetReferenceVerifier(
-  db: Database,
+export function createMongoAssetReferenceVerifier(
+  database: MongoDatabase,
   assetsBucket: string,
 ): ReferenceAssetVerifier {
   const canonicalBucket = assetsBucket.trim();
   if (!canonicalBucket) throw new Error("gateway_reference_assets_bucket_required");
-
   return async (reference, generation) => {
     const key = parseCanonicalAssetKey(reference.objectKey, generation.userId, generation.projectId);
-
-    const [asset] = await withUserTransaction(db, generation.userId, (transaction) => transaction
-      .select({
-        assetId: schema.creatorProjectAssets.id,
-        bucket: schema.creatorProjectAssets.bucket,
-        objectKey: schema.creatorProjectAssets.objectKey,
-        mimeType: schema.creatorProjectAssets.mimeType,
-        sizeBytes: schema.creatorProjectAssets.sizeBytes,
-        checksumSha256: schema.creatorProjectAssets.checksumSha256,
-      })
-      .from(schema.creatorProjectAssets)
-      .innerJoin(
-        schema.creatorProjects,
-        and(
-          eq(schema.creatorProjects.id, schema.creatorProjectAssets.projectId),
-          eq(schema.creatorProjects.userId, schema.creatorProjectAssets.userId),
-        ),
-      )
-      .where(and(
-        eq(schema.creatorProjectAssets.userId, generation.userId),
-        eq(schema.creatorProjectAssets.projectId, generation.projectId),
-        eq(schema.creatorProjectAssets.id, key.assetId),
-        eq(schema.creatorProjectAssets.objectKey, reference.objectKey),
-        eq(schema.creatorProjectAssets.bucket, canonicalBucket),
-        sql`${schema.creatorProjects.status} <> 'trashed'`,
-        sql`${schema.creatorProjects.deletedAt} IS NULL`,
-        sql`${schema.creatorProjectAssets.kind} IN ('product', 'reference')`,
-      ))
-      .limit(1));
-
-    const mimeType = asset ? normalizeImageMime(asset.mimeType) : undefined;
-    const checksumSha256 = asset?.checksumSha256?.trim().toLowerCase();
-    if (
-      !asset ||
-      asset.bucket !== canonicalBucket ||
-      asset.objectKey !== reference.objectKey ||
-      asset.assetId !== key.assetId ||
-      !mimeType ||
-      !Number.isSafeInteger(asset.sizeBytes) ||
-      asset.sizeBytes < 1 ||
-      !checksumSha256 ||
-      !SHA256_HEX.test(checksumSha256) ||
-      checksumSha256 !== key.checksumSha256
-    ) {
-      throw new Error("gateway_reference_not_available");
-    }
-    return {
-      assetId: asset.assetId,
-      bucket: asset.bucket,
-      objectKey: asset.objectKey,
-      mimeType,
-      sizeBytes: asset.sizeBytes,
-      checksumSha256,
-    };
+    const project = await database.collection(COLLECTIONS.creatorProjects).findOne({ id: generation.projectId, userId: generation.userId, status: { $ne: "trashed" }, deletedAt: null });
+    const asset = project ? await database.collection(COLLECTIONS.creatorProjectAssets).findOne({ id: key.assetId, userId: generation.userId, projectId: generation.projectId, objectKey: reference.objectKey, bucket: canonicalBucket, kind: { $in: ["product", "reference"] } }) : null;
+    const mimeType = asset ? normalizeImageMime(String(asset.mimeType)) : undefined;
+    const checksumSha256 = typeof asset?.checksumSha256 === "string" ? asset.checksumSha256.trim().toLowerCase() : undefined;
+    if (!asset || !mimeType || !Number.isSafeInteger(asset.sizeBytes) || Number(asset.sizeBytes) < 1 || !checksumSha256 || checksumSha256 !== key.checksumSha256) throw new Error("gateway_reference_not_available");
+    return { assetId: String(asset.id), bucket: String(asset.bucket), objectKey: String(asset.objectKey), mimeType, sizeBytes: Number(asset.sizeBytes), checksumSha256 };
   };
 }
 

@@ -309,7 +309,7 @@ async function generateSmokeVideo(): Promise<void> {
       outputUrl: url.toString(),
       outputHost: url.hostname.toLowerCase(),
       metadataPath,
-      note: "Ephemeral local recovery data. Never commit or copy this signed URL into PostgreSQL.",
+      note: "Ephemeral local recovery data. Never commit or copy this signed URL into MongoDB.",
     }, null, 2)}\n`, { encoding: "utf8", mode: 0o600 });
   };
 

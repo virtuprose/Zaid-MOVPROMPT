@@ -6,7 +6,7 @@
 
 **Primary:**
 - TypeScript 5.9.3 - All active web, API, worker, shared-package, migration-tooling, and test code under `apps/`, `packages/`, and `scripts/`.
-- SQL (PostgreSQL 17 dialect) - Portable schema migrations and row-level security under `packages/db/migrations/` and `scripts/infra/check-rls-isolation.sql`.
+- MongoDB documents and indexes - Active persistence under `packages/db/src/mongo-*.ts`; the former SQL migration files are retained only as migration history.
 
 **Secondary:**
 - CSS/PostCSS/Tailwind CSS - Application and marketing styling in `apps/web/src/` and `apps/web/postcss.config.js`.
@@ -18,7 +18,7 @@
 **Environment:**
 - Node.js 24.x - Required by the root `package.json` and server workspaces.
 - Browser - React single-page application built by Vite.
-- PostgreSQL 17 - Canonical portable database target in CI and `compose.yaml`.
+- MongoDB 8 replica set - Canonical database target in `compose.yaml`; replica-set mode enables multi-document transactions.
 
 **Package Manager:**
 - Bun 1.3.12 - Workspace install and script runner.
@@ -32,8 +32,7 @@
 - Vite 8.2.1 with SWC - Web development and production builds in `apps/web/vite.config.ts`.
 - Hono 4.12.32 - Portable HTTP API in `apps/api/src/app.ts`.
 - Better Auth 1.4.18 - Portable email and optional Google/Apple authentication in `packages/auth/src/auth.ts`.
-- Drizzle ORM 0.45.2 plus `postgres` 3.4.7 - PostgreSQL data access and migrations in `packages/db/`.
-- pg-boss 12.26.3 - PostgreSQL-backed durable worker jobs in `apps/worker/src/pg-boss-worker.ts`.
+- MongoDB Node.js Driver 6 - Database access, transactions, indexes, leases, and queue persistence in `packages/db/`, `apps/api/`, and `apps/worker/`.
 
 **Testing:**
 - Vitest 4.1.10 - Unit and integration tests across every active workspace.
@@ -41,7 +40,7 @@
 
 **Build/Dev:**
 - TypeScript project builds - Workspace-specific `tsconfig.json` and `tsconfig.build.json` files.
-- Docker Compose - Local PostgreSQL, MinIO, Mailpit, API, and worker topology in `compose.yaml`.
+- Docker Compose - Local MongoDB replica set, MinIO, Mailpit, API, and worker topology in `compose.yaml`.
 - ESLint 9 with typescript-eslint and React Hooks rules - Repository-wide linting through `eslint.config.js`.
 
 ## Key Dependencies
@@ -77,12 +76,12 @@
 ## Platform Requirements
 
 **Development:**
-- Node 24, Bun 1.3.12, PostgreSQL 17, S3-compatible storage, and FFmpeg/FFprobe.
+- Node 24, Bun 1.3.12, MongoDB 8 replica set, S3-compatible storage, and FFmpeg/FFprobe.
 - Docker Compose is the documented full-stack path; web-only development can run from `bun run dev:web`.
 
 **Production:**
 - Docker-compatible API and worker images are defined in `Dockerfile.api` and `Dockerfile.worker`.
-- PostgreSQL and private S3-compatible object storage are architectural requirements; no production deployment is proven by repository state alone.
+- MongoDB replica-set transactions and private S3-compatible object storage are architectural requirements; no production deployment is proven by repository state alone.
 
 ---
 

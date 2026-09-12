@@ -2,14 +2,15 @@ import { describe, expect, it } from "vitest";
 import { loadWorkerConfig } from "./config.js";
 
 describe("worker configuration", () => {
-  it("prefers the direct database URL used by infrastructure", () => {
+  it("loads the MongoDB replica-set connection used by infrastructure", () => {
     const config = loadWorkerConfig({
-      DATABASE_URL_DIRECT: "postgres://preferred",
-      DATABASE_DIRECT_URL: "postgres://legacy",
+      MONGODB_URI: "mongodb://localhost:27017/movprompt?replicaSet=rs0",
+      MONGODB_DATABASE: "movprompt_test",
       WORKER_ID: "worker-1",
     });
 
-    expect(config.databaseUrl).toBe("postgres://preferred");
+    expect(config.databaseUrl).toBe("mongodb://localhost:27017/movprompt?replicaSet=rs0");
+    expect(config.databaseName).toBe("movprompt_test");
     expect(config.outboxBatchSize).toBe(20);
     expect(config.outboxLeaseMs).toBe(60_000);
     expect(config.outboxPollIntervalMs).toBe(1_000);
@@ -17,23 +18,23 @@ describe("worker configuration", () => {
     expect(config.heartbeatIntervalSeconds).toBe(15);
   });
 
-  it("accepts the temporary legacy environment name", () => {
+  it("uses the default database name", () => {
     const config = loadWorkerConfig({
-      DATABASE_DIRECT_URL: "postgres://legacy",
+      MONGODB_URI: "mongodb://localhost:27017",
       WORKER_ID: "worker-1",
     });
 
-    expect(config.databaseUrl).toBe("postgres://legacy");
+    expect(config.databaseName).toBe("movprompt");
   });
 
   it("fails fast without a direct database connection", () => {
-    expect(() => loadWorkerConfig({})).toThrow("DATABASE_URL_DIRECT is required");
+    expect(() => loadWorkerConfig({})).toThrow("MONGODB_URI is required");
   });
 
   it("validates durable worker timing controls", () => {
     expect(() =>
       loadWorkerConfig({
-        DATABASE_URL_DIRECT: "postgres://database",
+        MONGODB_URI: "mongodb://database",
         WORKER_OUTBOX_LEASE_MS: "0",
       }),
     ).toThrow("WORKER_OUTBOX_LEASE_MS must be a positive integer");

@@ -1,7 +1,6 @@
 import { createHash } from "node:crypto";
+import { COLLECTIONS, type MongoDatabase } from "@movprompt/db";
 
-import type { Database } from "@movprompt/db";
-import { sql } from "drizzle-orm";
 
 export const DEFAULT_PUBLIC_SCAN_LIMIT = 20;
 export const DEFAULT_AUTHENTICATED_MIRROR_LIMIT = 50;
@@ -9,15 +8,6 @@ export const DEFAULT_RATE_LIMIT_WINDOW_SECONDS = 10 * 60;
 
 export type RequestRateAction = "public_source_scan" | "authenticated_remote_image_mirror";
 
-type RateLimitDatabase = Pick<Database, "execute">;
-
-export type RequestRateLimiterOptions = {
-  database: RateLimitDatabase;
-  publicScanLimit?: number;
-  authenticatedMirrorLimit?: number;
-  windowSeconds?: number;
-  trustedProxyHops?: number;
-};
 
 export type TrustedClientIpInput = {
   headers: Headers;
@@ -83,55 +73,47 @@ function hashSubject(subject: string): string {
   return createHash("sha256").update("movprompt-rate-limit-v1\0").update(subject).digest("hex");
 }
 
-export function createRequestRateLimiter(options: RequestRateLimiterOptions): RequestRateLimiter {
-  const publicScanLimit = positiveInteger(
-    options.publicScanLimit ?? DEFAULT_PUBLIC_SCAN_LIMIT,
-    "Public source scan limit",
-    100000,
-  );
-  const authenticatedMirrorLimit = positiveInteger(
-    options.authenticatedMirrorLimit ?? DEFAULT_AUTHENTICATED_MIRROR_LIMIT,
-    "Authenticated image mirror limit",
-    100000,
-  );
-  const windowSeconds = positiveInteger(
-    options.windowSeconds ?? DEFAULT_RATE_LIMIT_WINDOW_SECONDS,
-    "Rate-limit window",
-    86400,
-  );
+export function createMongoRequestRateLimiter(options: {
+  database: MongoDatabase;
+  publicScanLimit?: number;
+  authenticatedMirrorLimit?: number;
+  windowSeconds?: number;
+  trustedProxyHops?: number;
+}): RequestRateLimiter {
+  const publicScanLimit = positiveInteger(options.publicScanLimit ?? DEFAULT_PUBLIC_SCAN_LIMIT, "Public source scan limit", 100000);
+  const authenticatedMirrorLimit = positiveInteger(options.authenticatedMirrorLimit ?? DEFAULT_AUTHENTICATED_MIRROR_LIMIT, "Authenticated image mirror limit", 100000);
+  const windowSeconds = positiveInteger(options.windowSeconds ?? DEFAULT_RATE_LIMIT_WINDOW_SECONDS, "Rate-limit window", 86400);
   const trustedProxyHops = options.trustedProxyHops ?? 0;
   if (!Number.isSafeInteger(trustedProxyHops) || trustedProxyHops < 0 || trustedProxyHops > 32) {
     throw new Error("Trusted proxy hops must be an integer between 0 and 32.");
   }
 
   async function consume(input: { action: RequestRateAction; subject: string }) {
-    const maximum = input.action === "public_source_scan" ? publicScanLimit : authenticatedMirrorLimit;
-    const rows = await options.database.execute<{
-      allowed: boolean;
-      retry_after_seconds: number;
-    }>(sql`
-      SELECT "allowed", "retry_after_seconds"
-      FROM "consume_request_rate_limit"(
-        ${hashSubject(input.subject)},
-        ${input.action},
-        ${windowSeconds},
-        ${maximum}
-      )
-    `);
-    const decision = rows[0];
-    if (!decision || typeof decision.allowed !== "boolean" || !Number.isSafeInteger(decision.retry_after_seconds)) {
-      throw new Error("PostgreSQL rate-limit operation returned an invalid decision.");
-    }
-    return { allowed: decision.allowed, retryAfterSeconds: Math.max(1, decision.retry_after_seconds) };
+    const limit = input.action === "public_source_scan" ? publicScanLimit : authenticatedMirrorLimit;
+    const now = new Date();
+    const windowStart = new Date(Math.floor(now.getTime() / (windowSeconds * 1_000)) * windowSeconds * 1_000);
+    const expiresAt = new Date(windowStart.getTime() + windowSeconds * 1_000);
+    const key = `${input.action}:${hashSubject(input.subject)}:${windowStart.toISOString()}`;
+    const result = await options.database.collection(COLLECTIONS.requestRateLimits).findOneAndUpdate(
+      { key },
+      {
+        $inc: { count: 1 },
+        $setOnInsert: { action: input.action, subjectHash: hashSubject(input.subject), windowStart, expiresAt },
+        $set: { updatedAt: now },
+      },
+      { upsert: true, returnDocument: "after" },
+    );
+    const count = typeof result?.count === "number" ? result.count : limit + 1;
+    return {
+      allowed: count <= limit,
+      retryAfterSeconds: Math.max(1, Math.ceil((expiresAt.getTime() - now.getTime()) / 1_000)),
+    };
   }
 
   return {
     consume,
     consumePublicScan(input) {
-      return consume({
-        action: "public_source_scan",
-        subject: resolveTrustedClientIp({ ...input, trustedProxyHops }),
-      });
+      return consume({ action: "public_source_scan", subject: resolveTrustedClientIp({ ...input, trustedProxyHops }) });
     },
     consumeAuthenticatedMirror(userId) {
       return consume({ action: "authenticated_remote_image_mirror", subject: userId });
