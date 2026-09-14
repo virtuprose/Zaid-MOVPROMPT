@@ -1,5 +1,6 @@
 import {
   COLLECTIONS,
+  newMongoObjectId,
   type MongoDatabase,
 } from "@movprompt/db";
 
@@ -42,7 +43,7 @@ export function createAuthUserProvisioner(
         await db.collection(COLLECTIONS.entitlements).updateOne(
           { userId: user.id, type: STARTER_TEMPLATE_RENDER_ENTITLEMENT },
           { $setOnInsert: {
-            id: crypto.randomUUID(), userId: user.id, type: STARTER_TEMPLATE_RENDER_ENTITLEMENT,
+            id: newMongoObjectId(), userId: user.id, type: STARTER_TEMPLATE_RENDER_ENTITLEMENT,
             status: "available", createdAt: now, updatedAt: now,
           } },
           { upsert: true, session },

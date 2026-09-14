@@ -1,5 +1,4 @@
-import { randomUUID } from "node:crypto";
-import { COLLECTIONS, type MongoDatabase } from "./mongo-client.js";
+import { COLLECTIONS, newMongoObjectId, type MongoDatabase } from "./mongo-client.js";
 import {
   assertApprovedCapability,
   GenerationDomainError,
@@ -28,7 +27,7 @@ export function createMongoGenerationService(database: MongoDatabase): Generatio
       if (!Number.isSafeInteger(input.credits) || input.credits < 0) throw new Error("credits must be a non-negative integer");
       if (!(input.expiresAt instanceof Date) || input.expiresAt <= now) throw new GenerationDomainError("invalid_quote_expiry");
       if (input.breakdown.some((row) => !row.label.trim() || !Number.isSafeInteger(row.credits) || row.credits < 0) || input.breakdown.reduce((sum, row) => sum + row.credits, 0) !== input.credits) throw new GenerationDomainError("invalid_quote_breakdown");
-      const row = { id: randomUUID(), userId: input.userId ?? null, templateVersionId: input.templateVersionId ?? null, capabilityAlias: input.capabilityAlias, credits: input.credits, entitlementEligible: input.entitlementEligible, breakdown: input.breakdown, configurationHash: hashGenerationConfiguration(input.configuration), expiresAt: input.expiresAt, createdAt: now };
+      const row = { id: newMongoObjectId(), userId: input.userId ?? null, templateVersionId: input.templateVersionId ?? null, capabilityAlias: input.capabilityAlias, credits: input.credits, entitlementEligible: input.entitlementEligible, breakdown: input.breakdown, configurationHash: hashGenerationConfiguration(input.configuration), expiresAt: input.expiresAt, createdAt: now };
       await quotes.insertOne(row);
       return row as never;
     },
@@ -66,11 +65,11 @@ export function createMongoGenerationService(database: MongoDatabase): Generatio
           const holds = await reservations.find({ userId: input.userId, status: "reserved" }, { session }).toArray();
           if (!account || Number(account.balance ?? 0) - holds.reduce((sum, row) => sum + Number(row.amount ?? 0), 0) < Number(quote.credits)) throw new GenerationDomainError("insufficient_credits");
         }
-        const run = { id: randomUUID(), projectId: input.projectId, projectVersionId: input.projectVersionId, userId: input.userId, idempotencyKey: operationKey, capabilityAlias: input.capabilityAlias, quoteId: quote.id, quotedCredits: Number(quote.credits), chargedCredits: 0, starterEntitlementUsed, status: "submitting", processingStage: "preparing", refundStatus: "not_required", qualityAttempt: 0, provider: null, providerRequestId: null, outputBucket: null, outputObjectKey: null, errorCode: null, errorMessage: null, chargedAt: null, completedAt: null, createdAt: now, updatedAt: now };
+        const run = { id: newMongoObjectId(), projectId: input.projectId, projectVersionId: input.projectVersionId, userId: input.userId, idempotencyKey: operationKey, capabilityAlias: input.capabilityAlias, quoteId: quote.id, quotedCredits: Number(quote.credits), chargedCredits: 0, starterEntitlementUsed, status: "submitting", processingStage: "preparing", refundStatus: "not_required", qualityAttempt: 0, provider: null, providerRequestId: null, outputBucket: null, outputObjectKey: null, errorCode: null, errorMessage: null, chargedAt: null, completedAt: null, createdAt: now, updatedAt: now };
         await runs.insertOne(run, { session });
         if (starterEntitlementUsed) await entitlements.updateOne({ userId: input.userId, type: "starter_template_render", status: "reserved", reservedOperationKey: operationKey }, { $set: { reservedRunId: run.id, updatedAt: now } }, { session });
-        else if (Number(quote.credits) > 0) await reservations.insertOne({ id: randomUUID(), userId: input.userId, renderRunId: run.id, amount: Number(quote.credits), status: "reserved", idempotencyKey: `render.reserve:${run.id}`, createdAt: now, updatedAt: now }, { session });
-        await database.collection(COLLECTIONS.outboxJobs).updateOne({ topic: "render.start", operationKey: `render.start:${run.id}` }, { $setOnInsert: { id: randomUUID(), topic: "render.start", operationKey: `render.start:${run.id}`, payload: { runId: run.id, userId: input.userId, projectId: input.projectId, projectVersionId: input.projectVersionId, quoteId: quote.id, capabilityAlias: input.capabilityAlias, configurationHash }, status: "pending", attempts: 0, availableAt: now, createdAt: now, updatedAt: now } }, { upsert: true, session });
+        else if (Number(quote.credits) > 0) await reservations.insertOne({ id: newMongoObjectId(), userId: input.userId, renderRunId: run.id, amount: Number(quote.credits), status: "reserved", idempotencyKey: `render.reserve:${run.id}`, createdAt: now, updatedAt: now }, { session });
+        await database.collection(COLLECTIONS.outboxJobs).updateOne({ topic: "render.start", operationKey: `render.start:${run.id}` }, { $setOnInsert: { id: newMongoObjectId(), topic: "render.start", operationKey: `render.start:${run.id}`, payload: { runId: run.id, userId: input.userId, projectId: input.projectId, projectVersionId: input.projectVersionId, quoteId: quote.id, capabilityAlias: input.capabilityAlias, configurationHash }, status: "pending", attempts: 0, availableAt: now, createdAt: now, updatedAt: now } }, { upsert: true, session });
         await database.collection(COLLECTIONS.creatorProjects).updateOne({ id: input.projectId, userId: input.userId }, { $set: { status: "generating", currentWorkingVersionId: input.projectVersionId, updatedAt: now } }, { session });
         return run as never;
       });
@@ -82,7 +81,7 @@ export function createMongoGenerationService(database: MongoDatabase): Generatio
         const run = await runs.findOne({ id: input.runId, userId: input.userId }, { session }); if (!run) throw new GenerationDomainError("render_not_found");
         if (run.providerRequestId) { if (run.provider !== provider || run.providerRequestId !== providerRequestId) throw new GenerationDomainError("idempotency_conflict"); return run as never; }
         if (run.status !== "submitting") throw new GenerationDomainError("render_submission_not_recordable");
-        await database.collection(COLLECTIONS.renderAttempts).updateOne({ renderRunId: run.id, userId: run.userId, attemptNumber: run.qualityAttempt }, { $setOnInsert: { id: randomUUID(), renderRunId: run.id, projectId: run.projectId, projectVersionId: run.projectVersionId, userId: run.userId, attemptNumber: run.qualityAttempt, provider, providerRequestId, status: "submitted", createdAt: now, updatedAt: now } }, { upsert: true, session });
+        await database.collection(COLLECTIONS.renderAttempts).updateOne({ renderRunId: run.id, userId: run.userId, attemptNumber: run.qualityAttempt }, { $setOnInsert: { id: newMongoObjectId(), renderRunId: run.id, projectId: run.projectId, projectVersionId: run.projectVersionId, userId: run.userId, attemptNumber: run.qualityAttempt, provider, providerRequestId, status: "submitted", createdAt: now, updatedAt: now } }, { upsert: true, session });
         await runs.updateOne({ id: run.id, userId: input.userId }, { $set: { provider, providerRequestId, processingStage: "rendering", errorCode: null, errorMessage: null, updatedAt: now } }, { session });
         return (await runs.findOne({ id: run.id, userId: input.userId }, { session })) as never;
       });
@@ -100,7 +99,7 @@ export function createMongoGenerationService(database: MongoDatabase): Generatio
           const account = await accounts.findOne({ userId: input.userId }, { session }); if (!account || Number(account.balance) < Number(run.quotedCredits)) throw new GenerationDomainError("insufficient_credits");
           const balanceAfter = Number(account.balance) - Number(run.quotedCredits); chargedCredits = Number(run.quotedCredits);
           await accounts.updateOne({ userId: input.userId }, { $set: { balance: balanceAfter, updatedAt: now }, $inc: { lifetimeSpent: chargedCredits } }, { session });
-          await ledger.updateOne({ idempotencyKey: `render.charge:${run.id}` }, { $setOnInsert: { id: randomUUID(), userId: input.userId, kind: "charge", delta: -chargedCredits, balanceAfter, reason: "video_generation", referenceType: "render_run", referenceId: run.id, idempotencyKey: `render.charge:${run.id}`, metadata: { provider, providerRequestId }, createdAt: now } }, { upsert: true, session });
+          await ledger.updateOne({ idempotencyKey: `render.charge:${run.id}` }, { $setOnInsert: { id: newMongoObjectId(), userId: input.userId, kind: "charge", delta: -chargedCredits, balanceAfter, reason: "video_generation", referenceType: "render_run", referenceId: run.id, idempotencyKey: `render.charge:${run.id}`, metadata: { provider, providerRequestId }, createdAt: now } }, { upsert: true, session });
           await reservations.updateOne({ id: reservation.id }, { $set: { status: "charged", settlementReason: "provider_accepted", settledAt: now, updatedAt: now } }, { session });
         }
         await runs.updateOne({ id: run.id, userId: input.userId }, { $set: { provider, providerRequestId, chargedCredits, chargedAt: now, providerAcceptedAt: now, status: "queued", processingStage: "rendering", updatedAt: now } }, { session });
@@ -126,7 +125,7 @@ export function createMongoGenerationService(database: MongoDatabase): Generatio
         else if (Number(run.chargedCredits) > 0) {
           const account = await accounts.findOne({ userId: input.userId }, { session }); if (!account) throw new GenerationDomainError("render_not_refundable"); const balanceAfter = Number(account.balance) + Number(run.chargedCredits);
           await accounts.updateOne({ userId: input.userId }, { $set: { balance: balanceAfter, updatedAt: now }, $inc: { lifetimeSpent: -Number(run.chargedCredits) } }, { session });
-          await ledger.updateOne({ idempotencyKey: `render.refund:${run.id}` }, { $setOnInsert: { id: randomUUID(), userId: input.userId, kind: "refund", delta: Number(run.chargedCredits), balanceAfter, reason, referenceType: "render_run", referenceId: run.id, idempotencyKey: `render.refund:${run.id}`, createdAt: now } }, { upsert: true, session });
+          await ledger.updateOne({ idempotencyKey: `render.refund:${run.id}` }, { $setOnInsert: { id: newMongoObjectId(), userId: input.userId, kind: "refund", delta: Number(run.chargedCredits), balanceAfter, reason, referenceType: "render_run", referenceId: run.id, idempotencyKey: `render.refund:${run.id}`, createdAt: now } }, { upsert: true, session });
           await reservations.updateOne({ userId: input.userId, renderRunId: run.id }, { $set: { status: "refunded", settlementReason: reason, settledAt: now, updatedAt: now } }, { session });
         }
         await runs.updateOne({ id: run.id, userId: input.userId }, { $set: { refundStatus: "refunded", updatedAt: now } }, { session }); return (await runs.findOne({ id: run.id, userId: input.userId }, { session })) as never;

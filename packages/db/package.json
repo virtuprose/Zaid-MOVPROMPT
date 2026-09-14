@@ -18,6 +18,7 @@
     "check": "tsx src/cli-mongo-init.ts"
   },
   "dependencies": {
+    "@movprompt/creative-engine": "workspace:*",
     "mongodb": "^6.20.0"
   },
   "devDependencies": {

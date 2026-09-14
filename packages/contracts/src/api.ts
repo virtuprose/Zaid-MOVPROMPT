@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { PublicCapabilitySchema } from "./capabilities.js";
 
+export const MongoObjectIdSchema = z.string().regex(/^[0-9a-f]{24}$/i);
+
 export const RequestIdSchema = z
   .string()
   .min(8)

@@ -13,6 +13,7 @@ import {
   Sparkles,
   Sun,
 } from "lucide-react";
+import { motion, useReducedMotion } from "framer-motion";
 import { HeroTopNav } from "./HeroTopNav";
 import { Seo } from "@/components/Seo";
 import { useTheme } from "@/components/ThemeProvider";
@@ -21,6 +22,7 @@ import { CREATOR_TEMPLATES } from "@/features/create/templates";
 import type { CreatorTemplate } from "@/features/create/types";
 import { TemplatePreviewDialog } from "@/features/create/TemplatePreviewDialog";
 import { useLanguage } from "@/i18n/LanguageContext";
+import { isFeatureEnabled } from "@/config/features";
 import logoMark from "@/assets/logo-mark-white.svg";
 import "./cinematic-hero.css";
 
@@ -28,9 +30,9 @@ type TemplateCategory = "All" | "Shops" | "Ecommerce" | "Salons" | "Clinics";
 type TemplateSort = "recommended" | "duration";
 
 const heroReels = [
-  { label: "Creator ad", image: "/homepage/hero-creator.png", className: "mp-reel-side" },
-  { label: "Product film", image: "/homepage/hero-product.png", className: "mp-reel-main" },
-  { label: "Lifestyle cut", image: "/homepage/hero-lifestyle.png", className: "mp-reel-side" },
+  { label: "Creator story", format: "9:16", image: "/homepage/hero-creator.png", className: "mp-reel-creator" },
+  { label: "Product film", format: "16:9", image: "/homepage/hero-product.png", className: "mp-reel-main" },
+  { label: "Lifestyle cut", format: "4:5", image: "/homepage/hero-lifestyle.png", className: "mp-reel-lifestyle" },
 ];
 
 const campaignFrames = [
@@ -158,19 +160,18 @@ function HomepageTemplateGroup({
 }
 
 export const CinematicHero = () => {
+  const developmentFreeGeneration = import.meta.env.DEV && isFeatureEnabled("developmentFreeGeneration");
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
   const { locale } = useLanguage();
+  const reduceMotion = useReducedMotion();
   const productInputRef = useRef<HTMLInputElement>(null);
-  const footerProductInputRef = useRef<HTMLInputElement>(null);
   const [productUrl, setProductUrl] = useState("");
   const [productError, setProductError] = useState("");
-  const [footerProductUrl, setFooterProductUrl] = useState("");
   const [previewTemplate, setPreviewTemplate] = useState<CreatorTemplate | null>(null);
-  const [footerProductError, setFooterProductError] = useState("");
   const [category, setCategory] = useState<TemplateCategory>("All");
   const [query, setQuery] = useState("");
-  const [visibleTemplateCount, setVisibleTemplateCount] = useState(12);
+  const [visibleTemplateCount, setVisibleTemplateCount] = useState(13);
   const [templateSort, setTemplateSort] = useState<TemplateSort>("recommended");
   const [selectedTemplate, setSelectedTemplate] = useState(CREATOR_TEMPLATES[0]!.id);
   const [activeCampaignFrame, setActiveCampaignFrame] = useState("Hero film");
@@ -234,19 +235,6 @@ export const CinematicHero = () => {
     }
   };
 
-  const handleFooterProductSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    try {
-      const normalizedUrl = normalizeProductUrl(footerProductUrl);
-      setFooterProductError("");
-      rememberCreation(undefined, normalizedUrl);
-      navigate("/create");
-    } catch {
-      setFooterProductError("Enter a complete product URL, such as yourstore.com/product.");
-      footerProductInputRef.current?.focus();
-    }
-  };
-
   const focusProductInput = () => {
     document.getElementById("top")?.scrollIntoView({ behavior: "smooth", block: "start" });
     window.setTimeout(() => productInputRef.current?.focus(), 350);
@@ -255,7 +243,7 @@ export const CinematicHero = () => {
   return (
     <div id="top" className="mp-home">
       <Seo
-        title="MovPrompt — Create campaign-ready videos from templates"
+        title="MovPrompt - Create campaign-ready videos from templates"
         description="Add a product, choose a proven video format, and create polished product, creator, and social videos with MovPrompt."
         path="/"
       />
@@ -265,11 +253,16 @@ export const CinematicHero = () => {
       <main id="main-content">
         <section className="mp-hero" aria-labelledby="hero-title">
           <div className="mp-container mp-hero-grid">
-            <div className="mp-hero-copy">
-              <p className="mp-eyebrow"><span aria-hidden="true" />Template-first AI video</p>
-              <h1 id="hero-title">Create campaign-ready video from one product link.</h1>
+            <motion.div
+              className="mp-hero-copy"
+              initial={reduceMotion ? false : { opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: reduceMotion ? 0 : 0.58, ease: [0.16, 1, 0.3, 1] }}
+            >
+              <p className="mp-eyebrow">Template-first AI video</p>
+              <h1 id="hero-title">One product. A complete campaign.</h1>
               <p className="mp-hero-description">
-                Bring your product. Choose a proven format. Generate polished product, creator and social videos without a shoot or editing timeline.
+                Add a product link, choose a format, and create polished social video without shoots, prompts, or editing.
               </p>
 
               <form className="mp-product-form" onSubmit={handleProductSubmit} noValidate>
@@ -305,38 +298,60 @@ export const CinematicHero = () => {
 
               <div className="mp-hero-links">
                 <a href="#templates">Browse templates <ArrowRight aria-hidden="true" /></a>
-                <span>No prompt required · No credit card required</span>
+                <span>No prompt required. No credit card required.</span>
               </div>
-            </div>
+            </motion.div>
 
-            <div
+            <motion.div
               className="mp-hero-visual"
               role="group"
               tabIndex={0}
               aria-label={locale === "ar" ? "ثلاثة أمثلة لاتجاهات حملة لمنتج واحد" : "Three example campaign directions for one product"}
+              initial={reduceMotion ? false : { opacity: 0, x: 26, scale: 0.985 }}
+              animate={{ opacity: 1, x: 0, scale: 1 }}
+              transition={{ duration: reduceMotion ? 0 : 0.66, delay: reduceMotion ? 0 : 0.1, ease: [0.16, 1, 0.3, 1] }}
             >
+              <div className="mp-storyboard-head" aria-hidden="true">
+                <span>Campaign 01</span>
+                <strong>One product, three directions</strong>
+                <span>Ready to shape</span>
+              </div>
               <div className="mp-reel-row">
-                {heroReels.map((reel) => (
-                  <figure key={reel.label} className={`mp-reel ${reel.className}`}>
+                {heroReels.map((reel, index) => (
+                  <motion.figure
+                    key={reel.label}
+                    className={`mp-reel ${reel.className}`}
+                    initial={reduceMotion ? false : { opacity: 0, y: 18 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: reduceMotion ? 0 : 0.5, delay: reduceMotion ? 0 : 0.16 + index * 0.07, ease: [0.16, 1, 0.3, 1] }}
+                  >
                     <img src={reel.image} alt={`${reel.label} preview featuring the same dark perfume bottle`} />
                     <figcaption>
-                      <Film aria-hidden="true" />
-                      <span>{reel.label}</span>
+                      <span aria-hidden="true">0{index + 1}</span>
+                      <strong>{reel.label}</strong>
+                      <small>{reel.format}</small>
                     </figcaption>
-                  </figure>
+                  </motion.figure>
                 ))}
               </div>
-              <div className="mp-ready-chip"><span aria-hidden="true" />3 example directions</div>
-            </div>
+              <div className="mp-storyboard-foot" aria-hidden="true"><span>Product</span><span>Creator</span><span>Social</span></div>
+            </motion.div>
           </div>
         </section>
 
-        <section id="templates" className="mp-section mp-templates" aria-labelledby="templates-title">
+        <motion.section
+          id="templates"
+          className="mp-section mp-templates"
+          aria-labelledby="templates-title"
+          initial={reduceMotion ? false : { opacity: 0, y: 22 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.08 }}
+          transition={{ duration: reduceMotion ? 0 : 0.55, ease: [0.16, 1, 0.3, 1] }}
+        >
           <div className="mp-container">
             <div className="mp-section-heading mp-template-heading">
               <div>
-                <p className="mp-eyebrow">Proven video formats</p>
-                <h2 id="templates-title">Choose the result—not the model.</h2>
+                <h2 id="templates-title">Choose the result, then make it yours.</h2>
                 <p>Start with a format built for the way people watch, shop and share. MovPrompt handles the technical decisions.</p>
               </div>
               <Link to="/templates">View all {CREATOR_TEMPLATES.length} templates <ArrowRight aria-hidden="true" /></Link>
@@ -345,11 +360,11 @@ export const CinematicHero = () => {
             <div id="template-browser" className="mp-template-toolbar">
               <label className="mp-template-search">
                 <span>Search templates</span>
-                <div><Search aria-hidden="true" /><input value={query} onChange={(event) => { setQuery(event.target.value); setVisibleTemplateCount(12); }} placeholder="Search by product, business or goal" /></div>
+                <div><Search aria-hidden="true" /><input value={query} onChange={(event) => { setQuery(event.target.value); setVisibleTemplateCount(13); }} placeholder="Search by product, business or goal" /></div>
               </label>
               <div className="mp-category-tabs" role="group" aria-label="Filter templates by category">
                 {categories.map((item) => (
-                  <button key={item} type="button" aria-pressed={category === item} onClick={() => { setCategory(item); setVisibleTemplateCount(12); }}>{item}</button>
+                  <button key={item} type="button" aria-pressed={category === item} onClick={() => { setCategory(item); setVisibleTemplateCount(13); }}>{item}</button>
                 ))}
               </div>
               <label className="mp-sort-select">
@@ -358,7 +373,7 @@ export const CinematicHero = () => {
                   value={templateSort}
                   onChange={(event) => {
                     setTemplateSort(event.target.value as TemplateSort);
-                    setVisibleTemplateCount(12);
+                    setVisibleTemplateCount(13);
                   }}
                 >
                   <option value="recommended">Sort: Recommended</option>
@@ -369,7 +384,7 @@ export const CinematicHero = () => {
             </div>
 
             <p className="mp-template-count" aria-live="polite">
-              Showing {visibleTemplates.length} of {matchingTemplates.length} matching templates · {CREATOR_TEMPLATES.length} total
+              Showing {visibleTemplates.length} of {matchingTemplates.length} matching templates, {CREATOR_TEMPLATES.length} total
             </p>
 
             {visibleTemplates.length ? (
@@ -401,7 +416,7 @@ export const CinematicHero = () => {
                 <HomepageTemplateGroup
                   id="campaign-directions"
                   title={locale === "ar" ? "اتجاهات حملات إضافية" : "More campaign directions"}
-                  description={locale === "ar" ? "أفكار بمعاينات ثابتة — وليست فيديوهات قابلة للتشغيل بعد." : "Concepts with static direction art—not playable videos yet."}
+                  description={locale === "ar" ? "أفكار بمعاينات ثابتة، وليست فيديوهات قابلة للتشغيل بعد." : "Concepts with static direction art. Playable videos are still being prepared."}
                   templates={visibleCampaignDirections}
                   selectedTemplate={selectedTemplate}
                   locale={locale}
@@ -414,7 +429,7 @@ export const CinematicHero = () => {
               <div className="mp-template-empty" role="status">
                 <strong>No matching templates</strong>
                 <span>Try another search or choose a different category.</span>
-                <button type="button" onClick={() => { setQuery(""); setCategory("All"); setVisibleTemplateCount(12); }}>Show all templates</button>
+                <button type="button" onClick={() => { setQuery(""); setCategory("All"); setVisibleTemplateCount(13); }}>Show all templates</button>
               </div>
             )}
 
@@ -431,9 +446,17 @@ export const CinematicHero = () => {
               <Link to="/learn">How templates work <ArrowRight aria-hidden="true" /></Link>
             </div>
           </div>
-        </section>
+        </motion.section>
 
-        <section id="campaign-system" className="mp-section mp-campaign" aria-labelledby="campaign-title">
+        <motion.section
+          id="campaign-system"
+          className="mp-section mp-campaign"
+          aria-labelledby="campaign-title"
+          initial={reduceMotion ? false : { opacity: 0, y: 22 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.08 }}
+          transition={{ duration: reduceMotion ? 0 : 0.55, ease: [0.16, 1, 0.3, 1] }}
+        >
           <div className="mp-container">
             <div className="mp-campaign-heading">
               <div>
@@ -497,43 +520,24 @@ export const CinematicHero = () => {
             </div>
             <p className="sr-only" aria-live="polite">{activeCampaignFrame} selected for preview.</p>
           </div>
-        </section>
+        </motion.section>
 
-        <section id="start-creating" className="mp-final-cta" aria-labelledby="final-cta-title">
+        <motion.section
+          id="start-creating"
+          className="mp-final-cta"
+          aria-labelledby="final-cta-title"
+          initial={reduceMotion ? false : { opacity: 0, y: 22 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.12 }}
+          transition={{ duration: reduceMotion ? 0 : 0.55, ease: [0.16, 1, 0.3, 1] }}
+        >
           <div className="mp-container mp-final-cta-grid">
             <div className="mp-final-copy">
-              <p className="mp-eyebrow">Start creating</p>
               <h2 id="final-cta-title">Your next campaign starts with a link.</h2>
               <p>Bring the product. Choose the format. MovPrompt handles the production.</p>
-
-              <form className="mp-footer-product-form" onSubmit={handleFooterProductSubmit} noValidate>
-                <label htmlFor="footer-product-link">Product link</label>
-                <input
-                  ref={footerProductInputRef}
-                  id="footer-product-link"
-                  name="footerProductUrl"
-                  type="url"
-                  inputMode="url"
-                  autoComplete="url"
-                  placeholder="https://yourstore.com/product"
-                  value={footerProductUrl}
-                  aria-describedby={footerProductError ? "footer-product-error" : "footer-product-help"}
-                  aria-invalid={Boolean(footerProductError)}
-                  onChange={(event) => {
-                    setFooterProductUrl(event.target.value);
-                    if (footerProductError) setFooterProductError("");
-                  }}
-                />
-                {footerProductError ? (
-                  <p id="footer-product-error" className="mp-form-error" role="alert">{footerProductError}</p>
-                ) : (
-                  <span id="footer-product-help" className="sr-only">Paste the public URL of the product you want to promote.</span>
-                )}
-                <button className="mp-button mp-button-primary" type="submit">Start creating <ArrowUpRight aria-hidden="true" /></button>
-              </form>
-
+              <button className="mp-button mp-button-primary mp-final-primary" type="button" onClick={focusProductInput}>Add your product link <ArrowUpRight aria-hidden="true" /></button>
               <a className="mp-final-template-link" href="#templates">Browse templates first <ArrowRight aria-hidden="true" /></a>
-              <p className="mp-final-reassurance">No credit card required · Your product stays private</p>
+              <p className="mp-final-reassurance">No credit card required. Your product stays private.</p>
             </div>
 
             <div
@@ -551,7 +555,7 @@ export const CinematicHero = () => {
               <div className="mp-final-progress" aria-hidden="true"><span /></div>
             </div>
           </div>
-        </section>
+        </motion.section>
       </main>
 
       <footer className="mp-site-footer">
@@ -576,7 +580,7 @@ export const CinematicHero = () => {
             <nav aria-label="Explore">
               <h2>Explore</h2>
               <a href="#campaign-system">Showcase</a>
-              <Link to="/pricing">Pricing</Link>
+              {!developmentFreeGeneration && <Link to="/pricing">Pricing</Link>}
               <Link to="/learn">Learn</Link>
             </nav>
 

@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { CreationDraft } from "./contracts";
 import {
@@ -9,6 +9,7 @@ import {
   getGuestAsset,
   putGuestAsset,
   saveGuestDraft,
+  setGuestDraftClockForTests,
   setGuestDraftStorageForTests,
 } from "./guestDraftStore";
 import {
@@ -59,7 +60,12 @@ function receipt(overrides: Partial<CanonicalClaimReceipt> = {}): CanonicalClaim
 }
 
 describe("guest claim recovery", () => {
-  afterEach(() => setGuestDraftStorageForTests());
+  beforeEach(() => setGuestDraftClockForTests(() => new Date("2026-08-20T08:00:00.000Z")));
+
+  afterEach(() => {
+    setGuestDraftStorageForTests();
+    setGuestDraftClockForTests();
+  });
 
   it("retains the exact local draft when the canonical receipt has a missing configuration field or checksum mismatch", async () => {
     setGuestDraftStorageForTests(createMemoryGuestDraftStorage());
@@ -231,16 +237,21 @@ describe("guest claim recovery", () => {
     const failedAsset = selectGuestClaimRecovery(original, "asset_claim_failed", { localAssetId: ASSET_ID });
 
     expect(offline).toEqual({ state: "offline", action: "retry", draft: original });
-    expect(failedAsset).toEqual({ state: "claim_failed", action: "retry_asset", localAssetId: ASSET_ID, draft: original });
+    expect(failedAsset).toEqual({ state: "asset_failed", action: "retry_asset", localAssetId: ASSET_ID, draft: original });
     expect(offline.draft).toBe(original);
     expect(failedAsset.draft).toBe(original);
   });
 
   it("uses the exact bilingual recovery copy without exposing storage details", () => {
-    expect(getGuestClaimRecoveryCopy("en", "claim_failed")).toEqual({
+    expect(getGuestClaimRecoveryCopy("en", "asset_failed")).toEqual({
       message: "We couldn’t secure this image. Your campaign is still saved here.",
       primaryAction: "Retry securing image",
       secondaryAction: "Replace image",
+    });
+    expect(getGuestClaimRecoveryCopy("en", "claim_failed")).toEqual({
+      message: "We couldn’t save this campaign to your account. It is still saved in this browser. Try again.",
+      primaryAction: "Try again",
+      secondaryAction: "Continue editing",
     });
     expect(getGuestClaimRecoveryCopy("ar", "import_failed")).toEqual({
       message: "لم نتمكن من استيراد هذا المصدر. حملتك لم تتغيّر. حاول مرة أخرى أو ارفع صوراً بدلاً من ذلك.",

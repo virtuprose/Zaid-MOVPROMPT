@@ -43,6 +43,7 @@ import NotificationBell from "@/components/NotificationBell";
 import { CreditBadge } from "@/components/credits/CreditBadge";
 import logoMark from "@/assets/logo-mark.svg";
 import { cn } from "@/lib/utils";
+import { isFeatureEnabled } from "@/config/features";
 
 type NavItem = { to: string; label: string; badge?: string; icon: typeof Sparkles };
 
@@ -55,6 +56,7 @@ const NAV_ITEMS: NavItem[] = [
 
 
 export function TopNav() {
+  const developmentFreeGeneration = import.meta.env.DEV && isFeatureEnabled("developmentFreeGeneration");
   const { user, loading, signOut } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
@@ -182,9 +184,9 @@ export function TopNav() {
                 Library
               </Button>
 
-              <div className="hidden sm:block">
+              {!developmentFreeGeneration && <div className="hidden sm:block">
                 <CreditBadge />
-              </div>
+              </div>}
               <div className="hidden sm:block">
                 <NotificationBell />
               </div>
@@ -240,13 +242,13 @@ export function TopNav() {
                         <Settings className="w-4 h-4 text-muted-foreground group-hover:text-accent group-focus:text-accent transition-colors" />
                         <span className="text-sm">Account settings</span>
                       </DropdownMenuItem>
-                      <DropdownMenuItem
+                      {!developmentFreeGeneration && <DropdownMenuItem
                         onClick={() => navigate("/account/billing")}
                         className="gap-3 px-4 py-3 rounded-lg cursor-pointer focus:bg-muted focus:text-foreground group"
                       >
                         <CreditCard className="w-4 h-4 text-muted-foreground group-hover:text-accent group-focus:text-accent transition-colors" />
                         <span className="text-sm">Billing & subscription</span>
-                      </DropdownMenuItem>
+                      </DropdownMenuItem>}
                       <DropdownMenuItem
                         onClick={() => navigate("/account/preferences")}
                         className="gap-3 px-4 py-3 rounded-lg cursor-pointer focus:bg-muted focus:text-foreground group"
@@ -377,13 +379,13 @@ export function TopNav() {
                       <p className="px-3 pb-1.5 text-[10px] font-display font-bold uppercase tracking-[0.16em] text-muted-foreground/70">
                         Account
                       </p>
-                      <Button
+                      {!developmentFreeGeneration && <Button
                         variant="ghost"
                         className="justify-start h-11 rounded-lg gap-3 px-3 text-[14px]"
                         onClick={() => { setMobileOpen(false); navigate("/account/billing"); }}
                       >
                         <Coins className="w-4 h-4 text-accent" /> Buy Credits
-                      </Button>
+                      </Button>}
                       <Button
                         variant="ghost"
                         className="justify-start h-11 rounded-lg gap-3 px-3 text-[14px]"

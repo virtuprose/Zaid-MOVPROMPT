@@ -10,6 +10,7 @@ type FactReviewStepProps = {
   source: CampaignSource;
   goal: CampaignGoal;
   arabic?: boolean;
+  hidePricing?: boolean;
   onEdit: (field: CampaignFactField, value: string) => void;
   onConfirm: (fields: CampaignFactField[]) => void;
   onContinue: () => void;
@@ -43,11 +44,16 @@ function provenanceCopy(arabic: boolean, provenance: CampaignSource["facts"][num
 }
 
 /** A controlled fact editor; the parent applies exact source and legacy-project transitions. */
-export function FactReviewStep({ source, goal, arabic = false, onEdit, onConfirm, onContinue, onBack }: FactReviewStepProps) {
+export function FactReviewStep({ source, goal, arabic = false, hidePricing = false, onEdit, onConfirm, onContinue, onBack }: FactReviewStepProps) {
   const [validation, setValidation] = useState<CampaignFactField[]>([]);
   const fieldRefs = useRef(new Map<CampaignFactField, HTMLInputElement>());
-  const rows = useMemo(() => factsForReview(source, goal), [goal, source]);
-  const importedFields = source.facts.filter((fact) => fact.provenance === "imported").map((fact) => fact.field);
+  const rows = useMemo(
+    () => factsForReview(source, goal).filter((row) => !hidePricing || row.field !== "price"),
+    [goal, hidePricing, source],
+  );
+  const importedFields = source.facts
+    .filter((fact) => fact.provenance === "imported" && (!hidePricing || fact.field !== "price"))
+    .map((fact) => fact.field);
   const required = new Set(requiredFactsForOutcome(goal, source.subject));
   const summary = source.kind === "product_url"
     ? copy(arabic, "Product link", "رابط المنتج")

@@ -488,7 +488,7 @@ describe("template quote eligibility", () => {
     };
   }
 
-  function quoteApi(template = eligibleTemplate()) {
+  function quoteApi(template = eligibleTemplate(), developmentFree = false) {
     const repo = repository(ownedRun());
     repo.findPublishedTemplateVersion = vi.fn(async () => template);
     return {
@@ -501,6 +501,7 @@ describe("template quote eligibility", () => {
           releaseRenderReservation: vi.fn(async () => ({} as never)),
         },
         pricing: createGenerationPricingFromEnvironment({
+          ...(developmentFree ? { APP_ENV: "local", DEVELOPMENT_FREE_GENERATION: "true" } : {}),
           GENERATION_PRICING_VERSION: "test-v1",
           GENERATION_QUOTE_TTL_SECONDS: "900",
           GENERATION_VIDEO_PRODUCT_FIDELITY_720P_CREDITS_PER_SECOND: "10",
@@ -763,6 +764,27 @@ describe("template quote eligibility", () => {
         configuration.generation.references = [{ objectKey: "guest-reference", mimeType: "image/jpeg" }];
       }),
     }, null)).resolves.toMatchObject({ capability: "video.product_fidelity" });
+  });
+
+  it("opens a local development estimate before the browser image is privately claimed", async () => {
+    const productTemplate = {
+      ...eligibleTemplate(),
+      eligibility: {
+        ...eligibleTemplate().eligibility!,
+        requiredInputs: ["product_image", "subject_name", "call_to_action"],
+        capabilityPolicy: ["video.cinematic", "video.product_fidelity"],
+      },
+    };
+    const { api } = quoteApi(productTemplate, true);
+
+    await expect(api.createQuote({
+      templateVersionId,
+      configuration: strictTemplateEstimate(templateVersionId),
+    }, null)).resolves.toMatchObject({
+      capability: "video.product_fidelity",
+      credits: 0,
+      estimateOnly: true,
+    });
   });
 
   it("prices a guest upload from its declared local image before private claim", async () => {

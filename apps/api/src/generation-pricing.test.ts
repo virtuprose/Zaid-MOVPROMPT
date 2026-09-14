@@ -16,6 +16,31 @@ function tieredPricing() {
 }
 
 describe("authoritative resolution-bound generation pricing", () => {
+  it("creates zero-credit internal quotes only for explicit local development", () => {
+    const pricing = createGenerationPricingFromEnvironment({
+      APP_ENV: "local",
+      DEVELOPMENT_FREE_GENERATION: "true",
+      MOVPROMPT_CAPABILITY_VIDEO_PRODUCT_FIDELITY_MODEL_ID: "bytedance/seedance-v1.0-pro-fast",
+    });
+
+    expect(pricing.mode).toBe("development-free");
+    expect(pricing.isAvailable("video.product_fidelity")).toBe(true);
+    expect(pricing.price("video.product_fidelity", { durationSeconds: 8, resolution: "720p" })).toEqual({
+      credits: 0,
+      breakdown: [{ label: "Local development 8s 720p video", credits: 0 }],
+    });
+  });
+
+  it("does not enable free generation outside the local environment", () => {
+    const pricing = createGenerationPricingFromEnvironment({
+      APP_ENV: "production",
+      DEVELOPMENT_FREE_GENERATION: "true",
+    });
+
+    expect(pricing.mode).toBe("paid");
+    expect(pricing.isAvailable("video.product_fidelity")).toBe(false);
+  });
+
   it("binds local fast-model quotes to its two-to-twelve second contract", () => {
     const pricing = createGenerationPricingFromEnvironment({
       APP_ENV: "local",

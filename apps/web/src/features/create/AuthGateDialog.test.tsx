@@ -53,8 +53,8 @@ describe("AuthGateDialog provider truth", () => {
 
     expect(screen.getByRole("heading", { name: "حملتك جاهزة للإنشاء" })).toBeVisible();
     expect(screen.getByRole("button", { name: "المتابعة بالبريد الإلكتروني" })).toBeVisible();
-    expect(screen.getByText(/لن يتم الخصم قبل تأكيد السعر النهائي/)).toBeVisible();
-    expect(screen.queryByText(/Your campaign|Continue with email|No charge/)).not.toBeInTheDocument();
+    expect(screen.getByText(/تبقى حملتك محفوظة أثناء تسجيل الدخول/)).toBeVisible();
+    expect(screen.queryByText(/Your campaign|Continue with email|No charge|السعر|الخصم/)).not.toBeInTheDocument();
   });
 
   it("renders exactly the configured server social methods and focuses the first enabled method", async () => {

@@ -43,8 +43,8 @@ export async function dispatchAuthenticationEmail(sender: AuthEmailSender, email
 /**
  * Builds the Better Auth handler used by the API at `/api/auth/*`.
  *
- * All core IDs remain UUID strings. Supabase users can be imported into
- * `users` with their existing UUID before cutover; new records use UUIDs too.
+ * Better Auth maps its logical `id` field to MongoDB's native ObjectId `_id`.
+ * API consumers receive the standard 24-character hexadecimal representation.
  */
 export function createMovPromptAuth(input: CreateAuthInput) {
   const { environment } = input;
@@ -122,7 +122,7 @@ export function createMovPromptAuth(input: CreateAuthInput) {
       },
     },
     emailVerification: {
-      sendOnSignUp: isFirstCampaignVerificationDeferred,
+      sendOnSignUp: false,
       sendOnSignIn: !isFirstCampaignVerificationDeferred,
       autoSignInAfterVerification: true,
       expiresIn: 60 * 60,
@@ -137,10 +137,6 @@ export function createMovPromptAuth(input: CreateAuthInput) {
     },
     socialProviders,
     advanced: {
-      database: {
-        generateId: "uuid",
-        experimentalJoins: true,
-      },
       defaultCookieAttributes: {
         httpOnly: true,
         sameSite: "lax",

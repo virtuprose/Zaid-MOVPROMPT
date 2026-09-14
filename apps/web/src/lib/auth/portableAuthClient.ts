@@ -1,4 +1,5 @@
 import { createAuthClient } from "better-auth/react";
+import { AUTH_REQUEST_TIMEOUT_MS } from "./requestTimeout";
 
 function apiOrigin(): string {
   const configured = import.meta.env.VITE_API_ORIGIN?.trim();
@@ -15,6 +16,7 @@ export const portableAuthClient = createAuthClient({
   baseURL: `${apiOrigin()}/api/auth`,
   fetchOptions: {
     credentials: "include",
+    timeout: AUTH_REQUEST_TIMEOUT_MS,
   },
 });
 

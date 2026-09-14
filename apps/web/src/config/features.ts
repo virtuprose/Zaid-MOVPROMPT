@@ -5,7 +5,8 @@ export type ProductFeature =
   | "advancedMode"
   | "exportPipeline"
   | "portableAuth"
-  | "localDemoGeneration";
+  | "localDemoGeneration"
+  | "developmentFreeGeneration";
 
 const enabledByDefault: Record<ProductFeature, boolean> = {
   guestCreator: true,
@@ -15,6 +16,7 @@ const enabledByDefault: Record<ProductFeature, boolean> = {
   exportPipeline: false,
   portableAuth: false,
   localDemoGeneration: false,
+  developmentFreeGeneration: false,
 };
 
 const envNames: Record<ProductFeature, string> = {
@@ -25,6 +27,7 @@ const envNames: Record<ProductFeature, string> = {
   exportPipeline: "VITE_FEATURE_EXPORT_PIPELINE",
   portableAuth: "VITE_FEATURE_PORTABLE_AUTH",
   localDemoGeneration: "VITE_FEATURE_LOCAL_DEMO_GENERATION",
+  developmentFreeGeneration: "VITE_FEATURE_DEVELOPMENT_FREE_GENERATION",
 };
 
 export function isFeatureEnabled(feature: ProductFeature) {

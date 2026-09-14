@@ -1,8 +1,10 @@
 import { z } from "zod";
 
-import { IdempotencyKeySchema, RequestIdSchema } from "./api.js";
+import { IdempotencyKeySchema, MongoObjectIdSchema, RequestIdSchema } from "./api.js";
 import { CapabilityAliasSchema } from "./capabilities.js";
 import { JsonValueSchema, RenderRunStatusSchema } from "./generation.js";
+
+const EntityIdSchema = MongoObjectIdSchema.or(z.uuid());
 
 export const CreationModeSchema = z.enum(["template", "advanced"]);
 export type CreationMode = z.infer<typeof CreationModeSchema>;
@@ -35,7 +37,7 @@ export type CampaignGoal = z.infer<typeof CampaignGoalSchema>;
 const PersonMediaRightsSchema = z
   .object({
     version: z.literal("person-media-rights-v1"),
-    assetId: z.uuid(),
+    assetId: EntityIdSchema,
     personMediaRightsAttested: z.literal(true),
   })
   .strict();
@@ -50,7 +52,7 @@ export const CampaignPresenterSchema = z.discriminatedUnion("mode", [
   z.object({ mode: z.literal("ai_ugc") }).strict(),
   z.object({
     mode: z.literal("uploaded_spokesperson"),
-    assetId: z.uuid(),
+    assetId: EntityIdSchema,
     rights: PersonMediaRightsSchema,
   })
     .strict()
@@ -180,7 +182,7 @@ export const PublicTemplateSchema = z
     id: z.string().trim().min(1).max(120),
     slug: z.string().trim().min(1).max(120),
     category: z.string().trim().min(1).max(80),
-    versionId: z.uuid(),
+    versionId: EntityIdSchema,
     versionNumber: z.number().int().positive(),
     name: LocalizedTextSchema,
     description: LocalizedTextSchema,
@@ -313,10 +315,10 @@ export type TemplateResponse = z.infer<typeof TemplateResponseSchema>;
 
 export const ProjectVersionSchema = z
   .object({
-    id: z.uuid(),
-    projectId: z.uuid(),
-    parentVersionId: z.uuid().nullable(),
-    templateVersionId: z.uuid().nullable(),
+    id: EntityIdSchema,
+    projectId: EntityIdSchema,
+    parentVersionId: EntityIdSchema.nullable(),
+    templateVersionId: EntityIdSchema.nullable(),
     mode: CreationModeSchema,
     versionNumber: z.number().int().positive(),
     configuration: JsonObjectSchema,
@@ -330,14 +332,14 @@ export type ProjectVersion = z.infer<typeof ProjectVersionSchema>;
 
 export const CreatorProjectSchema = z
   .object({
-    id: z.uuid(),
+    id: EntityIdSchema,
     title: z.string().trim().min(1).max(160),
     mode: CreationModeSchema,
     status: ProjectStatusSchema,
-    currentWorkingVersionId: z.uuid().nullable(),
-    currentAcceptedVersionId: z.uuid().nullable(),
-    latestRenderRunId: z.uuid().nullable(),
-    latestRenderProjectVersionId: z.uuid().nullable(),
+    currentWorkingVersionId: EntityIdSchema.nullable(),
+    currentAcceptedVersionId: EntityIdSchema.nullable(),
+    latestRenderRunId: EntityIdSchema.nullable(),
+    latestRenderProjectVersionId: EntityIdSchema.nullable(),
     latestRenderRunStatus: RenderRunStatusSchema.nullable(),
     deletedAt: z.iso.datetime().nullable(),
     createdAt: z.iso.datetime(),
@@ -380,7 +382,7 @@ export type ProjectVersionResponse = z.infer<typeof ProjectVersionResponseSchema
 const ProjectConfigurationInput = {
   title: z.string().trim().min(1).max(160),
   mode: CreationModeSchema,
-  templateVersionId: z.uuid().optional(),
+  templateVersionId: EntityIdSchema.optional(),
   configuration: JsonObjectSchema,
   productRecipe: JsonObjectSchema.default({}),
   campaignRecipe: JsonObjectSchema.default({}),
@@ -409,7 +411,7 @@ function enforceTemplateCampaignPayload(
 
 export const ClaimDraftRequestSchema = z
   .object({
-    draftId: z.uuid(),
+    draftId: EntityIdSchema,
     ...ProjectConfigurationInput,
   })
   .strict()
@@ -418,8 +420,8 @@ export type ClaimDraftRequest = z.infer<typeof ClaimDraftRequestSchema>;
 
 export const CreateProjectVersionRequestSchema = z
   .object({
-    parentVersionId: z.uuid().nullable().optional(),
-    templateVersionId: z.uuid().optional(),
+    parentVersionId: EntityIdSchema.nullable().optional(),
+    templateVersionId: EntityIdSchema.optional(),
     mode: CreationModeSchema,
     configuration: JsonObjectSchema,
     productRecipe: JsonObjectSchema.default({}),
@@ -437,15 +439,15 @@ const SourceReplacementFactsSchema = z
     description: z.string().trim().max(4_000),
     price: z.string().trim().max(120),
     brand: z.string().trim().max(240),
-    assetIds: z.array(z.uuid()).min(1).max(5),
+    assetIds: z.array(EntityIdSchema).min(1).max(5),
   })
   .strict();
 
 /** A source replacement is distinct from an ordinary campaign edit: it invalidates current output. */
 export const ReplaceProjectSourceRequestSchema = z
   .object({
-    parentVersionId: z.uuid(),
-    templateVersionId: z.uuid().optional(),
+    parentVersionId: EntityIdSchema,
+    templateVersionId: EntityIdSchema.optional(),
     mode: CreationModeSchema,
     configuration: JsonObjectSchema,
     productRecipe: JsonObjectSchema.default({}),
@@ -462,18 +464,18 @@ export const ReplaceProjectSourceResponseSchema = z
 export type ReplaceProjectSourceResponse = z.infer<typeof ReplaceProjectSourceResponseSchema>;
 
 export const AcceptProjectVersionRequestSchema = z
-  .object({ versionId: z.uuid() })
+  .object({ versionId: EntityIdSchema })
   .strict();
 
 export const ProjectRouteParametersSchema = z
-  .object({ projectId: z.uuid(), versionId: z.uuid().optional(), runId: z.uuid().optional() })
+  .object({ projectId: EntityIdSchema, versionId: EntityIdSchema.optional(), runId: EntityIdSchema.optional() })
   .strict();
 
 export const EmptyMutationRequestSchema = z.object({}).strict();
 
 export const CreditLedgerEntrySchema = z
   .object({
-    id: z.uuid(),
+    id: EntityIdSchema,
     kind: z.enum(["purchase", "grant", "charge", "refund", "adjustment"]),
     delta: z.number().int(),
     balanceAfter: z.number().int().nonnegative(),
@@ -559,7 +561,7 @@ export type CampaignSource = z.infer<typeof CampaignSourceSchema>;
 
 const PersistedCreatorAssetSchema = z
   .object({
-    id: z.uuid(),
+    id: EntityIdSchema,
     name: z.string().trim().min(1).max(240),
     url: z.literal(""),
     mimeType: z.string().trim().min(1).max(255).optional(),
@@ -606,7 +608,7 @@ const PersistedCreatorSceneSchema = z
 
 const PersistedTemplateCreatorProjectSchema = z
   .object({
-    id: z.uuid(),
+    id: EntityIdSchema,
     title: z.string().trim().min(1).max(160),
     templateId: z.string().trim().min(1).max(120),
     status: z.literal("ready"),
@@ -747,7 +749,7 @@ const TemplateProductRecipeSchema = z
       .array(
         z
           .object({
-            assetId: z.uuid(),
+            assetId: EntityIdSchema,
             name: z.string().trim().min(1).max(240),
             objectKey: StableAssetKeySchema,
             mimeType: z.string().trim().min(1).max(255).optional(),
@@ -764,7 +766,7 @@ const TemplateProjectConfigurationSchema = z
     creatorProject: PersistedTemplateCreatorProjectSchema,
     generation: TemplateGenerationConfigurationSchema,
     sourceFingerprint: Sha256Schema.optional(),
-    duplicateOfProjectId: z.uuid().optional(),
+    duplicateOfProjectId: EntityIdSchema.optional(),
     duplicateOperationKey: z.string().trim().min(1).max(256).optional(),
   })
   .strict();
@@ -875,7 +877,7 @@ export type TemplateCampaignPayload = z.infer<typeof TemplateCampaignPayloadSche
  * to make a Template Mode write, quote, or render eligible.
  */
 export const TemplateCampaignWriteSchema = TemplateCampaignPayloadSchema.extend({
-  templateVersionId: z.uuid(),
+  templateVersionId: EntityIdSchema,
 }).strict();
 export type TemplateCampaignWrite = z.infer<typeof TemplateCampaignWriteSchema>;
 
@@ -910,8 +912,8 @@ export type SourceScanResponse = z.infer<typeof SourceScanResponseSchema>;
 
 export const OutputDownloadResponseSchema = z
   .object({
-    runId: z.uuid(),
-    projectId: z.uuid(),
+    runId: EntityIdSchema,
+    projectId: EntityIdSchema,
     download: z
       .object({ method: z.literal("GET"), url: z.url(), expiresInSeconds: z.number().int().positive() })
       .strict(),

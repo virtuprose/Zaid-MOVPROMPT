@@ -4,24 +4,26 @@ import { createDraftProject, CREATOR_TEMPLATES } from "../templates";
 import { GOLDEN_PRODUCT_PATH, GOLDEN_SERVICE_PATH, canonicalGoldenPathIntent, createGoldenPathProject } from "../__fixtures__/goldenPathFixtures";
 
 describe("creator contracts", () => {
-  it("keeps all fifty Kuwait category recipes available during development", () => {
-    expect(CREATOR_TEMPLATES).toHaveLength(50);
-    expect(new Set(CREATOR_TEMPLATES.map((template) => template.id)).size).toBe(50);
+  it("keeps only the five distinct launch categories available", () => {
+    expect(CREATOR_TEMPLATES).toHaveLength(5);
+    expect(new Set(CREATOR_TEMPLATES.map((template) => template.id)).size).toBe(5);
+    expect(new Set(CREATOR_TEMPLATES.map((template) => template.eyebrow)).size).toBe(5);
     expect(CREATOR_TEMPLATES.some((template) => template.id === "salon-booking-offer")).toBe(true);
     for (const template of CREATOR_TEMPLATES) {
       expect(template.languages).toEqual(expect.arrayContaining(["en", "ar", "bilingual"]));
       expect(template.aspectRatios).toEqual(expect.arrayContaining(["9:16", "1:1", "4:5", "16:9"]));
+      expect(template.requiredInputs).toContain("primary_reference");
     }
   });
 
   it("preserves the pending generation intent in a seven-day guest draft", () => {
-    const project = createDraftProject("gcc-offer-launch");
+    const project = createDraftProject("whatsapp-sales-ad");
     project.pendingGenerationId = "stable-generation-intent";
     project.pendingQuoteCredits = 180;
     const draft = projectToCreationDraft(project, true, "auth_required");
     expect(draft.pendingGenerationId).toBe("stable-generation-intent");
     expect(draft.acceptedQuote).toBeUndefined();
-    expect(draft.campaign).toMatchObject({ vertical: "retail", goal: "offer", presenterMode: "none" });
+    expect(draft.campaign).toMatchObject({ vertical: "retail", goal: "whatsapp_orders", presenterMode: "none" });
     expect(draft.campaign).toMatchObject({ arabicDialect: "kuwaiti", dialectRegister: "conversational" });
     expect(new Date(draft.expiresAt).getTime() - new Date(draft.updatedAt).getTime()).toBe(7 * 24 * 60 * 60 * 1000);
   });

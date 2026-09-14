@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { Camera, History, Layers, Loader2, Mail } from "lucide-react";
-import { motion } from "framer-motion";
+import { ArrowLeft, Camera, CheckCircle2, Eye, EyeOff, History, Layers, Loader2, Mail, ShieldCheck } from "lucide-react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -21,9 +21,11 @@ import { lovable } from "@/integrations/lovable";
 import { supabase } from "@/integrations/supabase/client";
 import { authErrorMessage } from "@/lib/auth/portableAuthClient";
 import { portableAuthActions } from "@/lib/auth/portableAuthActions";
+import { isAuthRequestTimeout, withAuthRequestTimeout } from "@/lib/auth/requestTimeout";
 import { authCallbackUrl, rememberAuthReturnIntent, safeAuthReturnPath } from "@/lib/auth/returnPath";
 import { portableCreatorApi } from "@/lib/api/portableApiClient";
 import type { AuthCapability } from "@movprompt/contracts";
+import "./auth.css";
 
 const portableAuth = isFeatureEnabled("portableAuth");
 const requireEmailVerification = isEmailVerificationRequired();
@@ -38,7 +40,8 @@ export default function Auth() {
   );
   const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
-  const { t } = useLanguage();
+  const { t, locale } = useLanguage();
+  const reduceMotion = useReducedMotion();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
@@ -47,6 +50,9 @@ export default function Auth() {
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [serverCapability, setServerCapability] = useState<AuthCapability | null>(null);
   const [formError, setFormError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [signUpStatus, setSignUpStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [signUpSecondsRemaining, setSignUpSecondsRemaining] = useState(30);
   const headingRef = useRef<HTMLHeadingElement | null>(null);
   const errorRef = useRef<HTMLParagraphElement | null>(null);
   const socialProviders = enabledSocialAuthProviders(serverCapability);
@@ -66,6 +72,14 @@ export default function Auth() {
     if (formError) errorRef.current?.focus();
   }, [formError]);
 
+  useEffect(() => {
+    if (signUpStatus !== "loading") return;
+    const countdown = window.setInterval(() => {
+      setSignUpSecondsRemaining((seconds) => Math.max(0, seconds - 1));
+    }, 1_000);
+    return () => window.clearInterval(countdown);
+  }, [signUpStatus]);
+
   const features = [
     { icon: Camera, title: t("auth.feat.dop.title"), description: t("auth.feat.dop.desc") },
     { icon: Layers, title: t("auth.feat.workflows.title"), description: t("auth.feat.workflows.desc") },
@@ -80,58 +94,80 @@ export default function Auth() {
     event.preventDefault();
     setFormError("");
     setBusy("email");
-    if (portableAuth) {
-      const result = await portableAuthActions.signInEmail({ email, password, callbackURL });
-      setBusy(null);
-      if ((result as { error?: unknown }).error) {
-        const message = `${authErrorMessage((result as { error?: unknown }).error)} ${t("auth.draftStillSaved")}`;
-        setFormError(message);
-        toast({ title: t("toast.signInFailed"), description: message, variant: "destructive" });
-      } else {
+    try {
+      if (portableAuth) {
+        const result = await withAuthRequestTimeout(
+          portableAuthActions.signInEmail({ email, password, callbackURL }),
+        );
+        if ((result as { error?: unknown }).error) {
+          throw new Error(authErrorMessage((result as { error?: unknown }).error));
+        }
         navigate(nextPath, { replace: true });
+        return;
       }
-      return;
-    }
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    setBusy(null);
-    if (error) {
-      const message = `${error.message} ${t("auth.draftStillSaved")}`;
+      const { error } = await withAuthRequestTimeout(
+        supabase.auth.signInWithPassword({ email, password }),
+      );
+      if (error) throw error;
+    } catch (error) {
+      const message = isAuthRequestTimeout(error)
+        ? `${t("auth.signInTimeout")} ${t("auth.draftStillSaved")}`
+        : `${authErrorMessage(error)} ${t("auth.draftStillSaved")}`;
       setFormError(message);
       toast({ title: t("toast.signInFailed"), description: message, variant: "destructive" });
+    } finally {
+      setBusy(null);
     }
   }
 
   async function emailSignUp(event: React.FormEvent) {
     event.preventDefault();
     setFormError("");
+    setSignUpStatus("idle");
     if (!agreedToTerms) {
       setFormError(t("auth.mustAgreeTerms"));
+      setSignUpStatus("error");
       toast({ title: t("auth.mustAgreeTerms"), variant: "destructive" });
       return;
     }
+    setSignUpSecondsRemaining(30);
+    setSignUpStatus("loading");
     setBusy("email");
-    if (portableAuth) {
-      const displayName = name.trim() || email.split("@")[0] || "Creator";
-      const result = await portableAuthActions.signUpEmail({ email, password, name: displayName, callbackURL });
-      setBusy(null);
-      if ((result as { error?: unknown }).error) {
-        const message = `${authErrorMessage((result as { error?: unknown }).error)} ${t("auth.draftStillSaved")}`;
-        setFormError(message);
-        toast({ title: t("toast.signUpFailed"), description: message, variant: "destructive" });
-      } else {
+    try {
+      if (portableAuth) {
+        const displayName = name.trim() || email.split("@")[0] || "Creator";
+        const result = await withAuthRequestTimeout(
+          portableAuthActions.signUpEmail({ email, password, name: displayName, callbackURL }),
+        );
+        if ((result as { error?: unknown }).error) {
+          throw new Error(authErrorMessage((result as { error?: unknown }).error));
+        }
         try { localStorage.setItem("first_signup_pending", "1"); } catch { /* optional welcome state */ }
+        setSignUpStatus("success");
         if (requireEmailVerification) {
           toast({ title: t("auth.checkEmailTitle"), description: t("auth.checkEmailDesc") });
         } else {
           toast({ title: t("auth.accountReadyTitle"), description: t("auth.accountReadyDesc") });
           navigate(nextPath, { replace: true });
         }
+        return;
       }
-      return;
+      const { error } = await withAuthRequestTimeout(
+        supabase.auth.signUp({ email, password, options: { emailRedirectTo: callbackURL } }),
+      );
+      if (error) throw error;
+      setSignUpStatus("success");
+      toast({ title: t("auth.accountReadyTitle"), description: t("auth.accountReadyDesc") });
+    } catch (error) {
+      const message = isAuthRequestTimeout(error)
+        ? `${t("auth.signUpTimeout")} ${t("auth.draftStillSaved")}`
+        : `${authErrorMessage(error)} ${t("auth.draftStillSaved")}`;
+      setSignUpStatus("error");
+      setFormError(message);
+      toast({ title: t("toast.signUpFailed"), description: message, variant: "destructive" });
+    } finally {
+      setBusy(null);
     }
-    const { error } = await supabase.auth.signUp({ email, password, options: { emailRedirectTo: callbackURL } });
-    setBusy(null);
-    if (error) toast({ title: t("toast.signUpFailed"), description: error.message, variant: "destructive" });
   }
 
   async function forgotPassword(event: React.FormEvent) {
@@ -139,17 +175,21 @@ export default function Auth() {
     setFormError("");
     setBusy("email");
     const redirectTo = `${window.location.origin}/reset-password`;
-    const result = portableAuth
-      ? await portableAuthActions.requestPasswordReset({ email, redirectTo }) as { error?: unknown }
-      : await supabase.auth.resetPasswordForEmail(email, { redirectTo });
-    setBusy(null);
-    if (result.error) {
-      const message = `${authErrorMessage(result.error)} ${t("auth.draftStillSaved")}`;
-      setFormError(message);
-      toast({ title: t("toast.resetFailed"), description: message, variant: "destructive" });
-    } else {
+    try {
+      const result = await withAuthRequestTimeout(portableAuth
+        ? portableAuthActions.requestPasswordReset({ email, redirectTo }) as Promise<{ error?: unknown }>
+        : supabase.auth.resetPasswordForEmail(email, { redirectTo }));
+      if (result.error) throw new Error(authErrorMessage(result.error));
       toast({ title: t("toast.checkEmail"), description: t("auth.resetEmailDesc") });
       setForgotMode(false);
+    } catch (error) {
+      const message = isAuthRequestTimeout(error)
+        ? `${t("auth.signInTimeout")} ${t("auth.draftStillSaved")}`
+        : `${authErrorMessage(error)} ${t("auth.draftStillSaved")}`;
+      setFormError(message);
+      toast({ title: t("toast.resetFailed"), description: message, variant: "destructive" });
+    } finally {
+      setBusy(null);
     }
   }
 
@@ -175,42 +215,146 @@ export default function Auth() {
     return <div className="min-h-screen bg-background flex items-center justify-center" role="status" aria-live="polite"><Loader2 aria-hidden className="w-6 h-6 animate-spin text-primary" /><span className="sr-only">Checking your session</span></div>;
   }
 
-  const fieldClass = "bg-background/65 border-border text-foreground placeholder:text-muted-foreground rounded-lg px-4 py-[14px] h-auto focus-visible:border-primary/60";
+  const fieldClass = "auth-field h-12 rounded-xl border-border bg-background px-4 text-foreground placeholder:text-muted-foreground focus-visible:border-primary/70";
+  const enterTransition = reduceMotion ? { duration: 0 } : { duration: 0.55, ease: [0.16, 1, 0.3, 1] as const };
   return (
-    <main className="min-h-screen bg-background relative overflow-x-hidden">
-      <Seo title="Sign in or create an account — MovPrompt" description="Save your campaign and start creating with MovPrompt." path="/auth" />
-      <div className="fixed inset-0 pointer-events-none" aria-hidden><div className="absolute top-0 left-1/4 w-[600px] h-[400px] bg-primary/8 rounded-full blur-[140px]" /><div className="absolute bottom-0 right-1/4 w-[500px] h-[300px] bg-accent/6 rounded-full blur-[120px]" /></div>
-      <Link to="/" className="absolute top-1.5 start-4 z-20 inline-flex min-h-11 items-center font-display font-bold text-sm tracking-tight rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><span className="text-primary">Mov</span><span className="text-foreground">Prompt</span></Link>
-      <div className="absolute top-1.5 end-3 z-20 [&_button]:min-h-11"><LanguageToggle /></div>
+    <main className="auth-page min-h-[100dvh] bg-background text-foreground">
+      <Seo title="Sign in or create an account - MovPrompt" description="Save your campaign and start creating with MovPrompt." path="/auth" />
 
-      <div className="relative z-10 grid md:grid-cols-2 min-h-screen">
-        <motion.section initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="hidden md:flex flex-col justify-center px-8 lg:px-16" aria-labelledby="auth-benefits-title">
-          <h2 id="auth-benefits-title" className="text-3xl lg:text-5xl font-display font-bold leading-tight mb-3">{t("auth.heroTitle")} <span className="text-primary">{t("auth.heroCinema")}</span></h2>
-          <p className="text-muted-foreground text-base lg:text-lg mb-8 max-w-md">{t("auth.heroDesc")}</p>
-          <div className="space-y-3 max-w-lg">{features.map((feature) => <Card key={feature.title} className="bg-card/60 border-border/60"><CardContent className="flex items-start gap-3 p-4"><feature.icon aria-hidden className="w-5 h-5 mt-0.5 text-primary" /><div><p className="font-medium text-sm">{feature.title}</p><p className="text-xs text-muted-foreground mt-0.5">{feature.description}</p></div></CardContent></Card>)}</div>
-        </motion.section>
+      <header className="auth-topbar">
+        <Link to="/" className="auth-brand rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+          <span className="auth-brand-mark" aria-hidden="true" />
+          <span><b>Mov</b>Prompt</span>
+        </Link>
+        <div className="[&_button]:min-h-11"><LanguageToggle /></div>
+      </header>
 
-        <motion.section initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-center px-4 py-20 md:py-8" aria-labelledby="auth-title">
-          <div className="w-full max-w-sm">
-            <div className="mb-5"><h1 ref={headingRef} id="auth-title" tabIndex={-1} className="text-2xl font-display font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">{t("auth.continueTitle")}</h1><p className="mt-1 text-sm text-muted-foreground">{t("auth.continueDesc")}</p></div>
-            <Card className="bg-card border-border shadow-[inset_0_0_40px_0_hsl(var(--primary)/0.07)]"><CardContent className="p-5 sm:p-6 space-y-5">
-              {formError && <p ref={errorRef} role="alert" tabIndex={-1} className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">{formError}</p>}
-              {socialProviders.map((provider) => (
-                <Button key={provider} variant="outline" className="w-full h-11" onClick={() => void socialSignIn(provider)} disabled={busy !== null}>
-                  {busy === provider && <Loader2 aria-hidden className="w-4 h-4 animate-spin me-2" />}
-                  {t(provider === "google" ? "auth.continueGoogle" : "auth.continueApple")}
-                </Button>
+      <div className="auth-layout">
+        <motion.aside
+          initial={reduceMotion ? false : { opacity: 0, x: -24 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={enterTransition}
+          className="auth-story"
+          aria-labelledby="auth-benefits-title"
+        >
+          <img className="auth-story-image" src="/homepage/hero-creator.png" alt="" />
+          <div className="auth-story-shade" aria-hidden="true" />
+          <div className="auth-story-copy">
+            <p className="auth-context"><ShieldCheck aria-hidden="true" /> {locale === "ar" ? "مسودتك محمية" : "Your draft is protected"}</p>
+            <h2 id="auth-benefits-title">{t("auth.heroTitle")} <span>{t("auth.heroCinema")}</span></h2>
+            <p className="auth-story-description">{t("auth.heroDesc")}</p>
+            <div className="auth-benefits">
+              {features.map((feature, index) => (
+                <motion.div
+                  key={feature.title}
+                  initial={reduceMotion ? false : { opacity: 0, y: 14 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ ...enterTransition, delay: reduceMotion ? 0 : 0.12 + index * 0.07 }}
+                  className="auth-benefit"
+                >
+                  <span><feature.icon aria-hidden="true" /></span>
+                  <div><strong>{feature.title}</strong><p>{feature.description}</p></div>
+                </motion.div>
               ))}
-              {socialProviders.length > 0 && <div className="relative" aria-hidden><div className="absolute inset-0 flex items-center"><span className="w-full border-t border-border" /></div><div className="relative flex justify-center text-xs"><span className="bg-card px-2 text-muted-foreground">{t("auth.or")}</span></div></div>}
-              <Tabs defaultValue="signin">
-                <TabsList className="grid h-12 grid-cols-2 w-full p-0.5"><TabsTrigger className="h-11" value="signin">{t("auth.signIn")}</TabsTrigger><TabsTrigger className="h-11" value="signup">{t("auth.signUp")}</TabsTrigger></TabsList>
-                <TabsContent value="signin">
-                  {forgotMode ? <form onSubmit={forgotPassword} className="space-y-3 mt-4"><p className="text-sm text-muted-foreground">{t("auth.resetDesc")}</p><div className="space-y-1.5"><Label htmlFor="forgot-email">{t("auth.email")}</Label><Input className={fieldClass} id="forgot-email" type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} required /></div><Button className="w-full h-11" disabled={busy !== null}>{busy === "email" && <Loader2 aria-hidden className="w-4 h-4 animate-spin me-2" />}{t("auth.sendResetLink")}</Button><button type="button" onClick={() => setForgotMode(false)} className="min-h-11 text-xs text-primary hover:underline w-full">{t("auth.backToSignIn")}</button></form> : <form onSubmit={emailSignIn} className="space-y-3 mt-4"><div className="space-y-1.5"><Label htmlFor="signin-email">{t("auth.email")}</Label><Input className={fieldClass} id="signin-email" type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} required /></div><div className="space-y-1.5"><Label htmlFor="signin-password">{t("auth.password")}</Label><Input className={fieldClass} id="signin-password" type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} required minLength={10} /></div><Button className="w-full h-11" disabled={busy !== null}>{busy === "email" ? <Loader2 aria-hidden className="w-4 h-4 animate-spin me-2" /> : <Mail aria-hidden className="w-4 h-4 me-2" />}{t("auth.signIn")}</Button><button type="button" onClick={() => setForgotMode(true)} className="min-h-11 text-xs text-muted-foreground hover:text-primary w-full">{t("auth.forgotPassword")}</button></form>}
-                </TabsContent>
-                <TabsContent value="signup"><form onSubmit={emailSignUp} className="space-y-3 mt-4"><div className="space-y-1.5"><Label htmlFor="signup-name">{t("auth.name")}</Label><Input className={fieldClass} id="signup-name" autoComplete="name" value={name} onChange={(event) => setName(event.target.value)} placeholder={t("auth.namePlaceholder")} /></div><div className="space-y-1.5"><Label htmlFor="signup-email">{t("auth.email")}</Label><Input className={fieldClass} id="signup-email" type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} required /></div><div className="space-y-1.5"><Label htmlFor="signup-password">{t("auth.password")}</Label><Input className={fieldClass} id="signup-password" type="password" autoComplete="new-password" value={password} onChange={(event) => setPassword(event.target.value)} required minLength={10} aria-describedby="password-help" /><p id="password-help" className="text-xs text-muted-foreground">{t("auth.passwordHelp")}</p></div>{!requireEmailVerification && <p className="rounded-lg border border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground" role="note">{t("auth.verificationLaterNotice")}</p>}<div className="flex items-start gap-2"><Checkbox id="agree-terms" checked={agreedToTerms} onCheckedChange={(checked) => setAgreedToTerms(checked === true)} className="mt-0.5" /><label htmlFor="agree-terms" className="text-xs text-muted-foreground leading-relaxed">{t("auth.agreeTerms")} <Link to="/terms" className="text-primary underline-offset-4 hover:underline" target="_blank">{t("auth.termsLink")}</Link> &amp; <Link to="/privacy" className="text-primary underline-offset-4 hover:underline" target="_blank">{t("auth.privacyLink")}</Link></label></div><Button className="w-full h-11" disabled={busy !== null || !agreedToTerms}>{busy === "email" ? <Loader2 aria-hidden className="w-4 h-4 animate-spin me-2" /> : <Mail aria-hidden className="w-4 h-4 me-2" />}{t("auth.createAccount")}</Button></form></TabsContent>
-              </Tabs>
-            </CardContent></Card>
-            <p className="mt-4 text-center text-xs text-muted-foreground" aria-live="polite">{t("auth.finalPriceNotice")}</p>
+            </div>
+          </div>
+          <p className="auth-story-caption"><Camera aria-hidden="true" /> {locale === "ar" ? "حملة صانع محتوى، جاهزة من نفس المسودة" : "A creator campaign, built from the same saved draft"}</p>
+        </motion.aside>
+
+        <motion.section
+          initial={reduceMotion ? false : { opacity: 0, y: 18 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ ...enterTransition, delay: reduceMotion ? 0 : 0.08 }}
+          className="auth-form-section"
+          aria-labelledby="auth-title"
+        >
+          <div className="auth-form-shell">
+            <Link to="/create" className="auth-back-link"><ArrowLeft aria-hidden="true" /> {locale === "ar" ? "العودة إلى حملتك" : "Back to your campaign"}</Link>
+            <div className="auth-mobile-promise"><ShieldCheck aria-hidden="true" /><span>{t("auth.draftStillSaved")}</span></div>
+            <div className="auth-form-heading">
+              <h1 ref={headingRef} id="auth-title" tabIndex={-1}>{t("auth.continueTitle")}</h1>
+              <p>{t("auth.continueDesc")}</p>
+            </div>
+
+            <Card className="auth-card border-border bg-card">
+              <CardContent className="space-y-5 p-5 sm:p-7">
+                <AnimatePresence initial={false}>
+                  {formError && (
+                    <motion.p
+                      ref={errorRef}
+                      role="alert"
+                      tabIndex={-1}
+                      initial={reduceMotion ? false : { opacity: 0, y: -8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0 }}
+                      className="rounded-xl border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+                    >
+                      {formError}
+                    </motion.p>
+                  )}
+                </AnimatePresence>
+
+                {socialProviders.map((provider) => (
+                  <Button key={provider} variant="outline" className="h-12 w-full rounded-xl" onClick={() => void socialSignIn(provider)} disabled={busy !== null}>
+                    {busy === provider && <Loader2 aria-hidden="true" className="me-2 h-4 w-4 animate-spin" />}
+                    {t(provider === "google" ? "auth.continueGoogle" : "auth.continueApple")}
+                  </Button>
+                ))}
+                {socialProviders.length > 0 && <div className="relative" aria-hidden><div className="absolute inset-0 flex items-center"><span className="w-full border-t border-border" /></div><div className="relative flex justify-center text-xs"><span className="bg-card px-3 text-muted-foreground">{t("auth.or")}</span></div></div>}
+
+                <Tabs defaultValue="signin" onValueChange={() => { setFormError(""); if (signUpStatus !== "loading") setSignUpStatus("idle"); }}>
+                  <TabsList className="auth-tabs grid h-12 w-full grid-cols-2 rounded-xl p-1">
+                    <TabsTrigger className="h-10 rounded-lg" value="signin">{t("auth.signIn")}</TabsTrigger>
+                    <TabsTrigger className="h-10 rounded-lg" value="signup">{t("auth.signUp")}</TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="signin">
+                    <AnimatePresence mode="wait" initial={false}>
+                      {forgotMode ? (
+                        <motion.form key="forgot" initial={reduceMotion ? false : { opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -8 }} onSubmit={forgotPassword} className="mt-5 space-y-4">
+                          <p className="text-sm leading-relaxed text-muted-foreground">{t("auth.resetDesc")}</p>
+                          <div className="space-y-2"><Label htmlFor="forgot-email">{t("auth.email")}</Label><Input className={fieldClass} id="forgot-email" type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} required /></div>
+                          <Button className="h-12 w-full rounded-xl" disabled={busy !== null}>{busy === "email" && <Loader2 aria-hidden="true" className="me-2 h-4 w-4 animate-spin" />}{t("auth.sendResetLink")}</Button>
+                          <button type="button" onClick={() => setForgotMode(false)} className="min-h-11 w-full text-sm text-primary hover:underline">{t("auth.backToSignIn")}</button>
+                        </motion.form>
+                      ) : (
+                        <motion.form key="signin" initial={reduceMotion ? false : { opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 8 }} onSubmit={emailSignIn} className="mt-5 space-y-4">
+                          <div className="space-y-2"><Label htmlFor="signin-email">{t("auth.email")}</Label><Input className={fieldClass} id="signin-email" type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} required /></div>
+                          <div className="space-y-2"><Label htmlFor="signin-password">{t("auth.password")}</Label><div className="auth-password-field"><Input className={fieldClass} id="signin-password" type={showPassword ? "text" : "password"} autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} required minLength={10} /><button type="button" onClick={() => setShowPassword((visible) => !visible)} aria-label={showPassword ? t("auth.hidePassword") : t("auth.showPassword")}>{showPassword ? <EyeOff aria-hidden="true" /> : <Eye aria-hidden="true" />}</button></div></div>
+                          <Button className="auth-submit h-12 w-full rounded-xl" disabled={busy !== null}>{busy === "email" ? <Loader2 aria-hidden="true" className="me-2 h-4 w-4 animate-spin" /> : <Mail aria-hidden="true" className="me-2 h-4 w-4" />}{t("auth.signIn")}</Button>
+                          <button type="button" onClick={() => setForgotMode(true)} className="min-h-11 w-full text-sm text-muted-foreground hover:text-primary">{t("auth.forgotPassword")}</button>
+                        </motion.form>
+                      )}
+                    </AnimatePresence>
+                  </TabsContent>
+                  <TabsContent value="signup">
+                    <form onSubmit={emailSignUp} className="mt-5 space-y-4" aria-busy={signUpStatus === "loading"}>
+                      <div className="space-y-2"><Label htmlFor="signup-name">{t("auth.name")}</Label><Input className={fieldClass} id="signup-name" autoComplete="name" value={name} onChange={(event) => setName(event.target.value)} placeholder={t("auth.namePlaceholder")} /></div>
+                      <div className="space-y-2"><Label htmlFor="signup-email">{t("auth.email")}</Label><Input className={fieldClass} id="signup-email" type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} required /></div>
+                      <div className="space-y-2"><Label htmlFor="signup-password">{t("auth.password")}</Label><div className="auth-password-field"><Input className={fieldClass} id="signup-password" type={showPassword ? "text" : "password"} autoComplete="new-password" value={password} onChange={(event) => setPassword(event.target.value)} required minLength={10} aria-describedby="password-help" /><button type="button" onClick={() => setShowPassword((visible) => !visible)} aria-label={showPassword ? t("auth.hidePassword") : t("auth.showPassword")}>{showPassword ? <EyeOff aria-hidden="true" /> : <Eye aria-hidden="true" />}</button></div><p id="password-help" className="text-xs leading-relaxed text-muted-foreground">{t("auth.passwordHelp")}</p></div>
+                      {!requireEmailVerification && <p className="rounded-xl border border-border bg-muted/40 px-4 py-3 text-xs leading-relaxed text-muted-foreground" role="note">{t("auth.verificationLaterNotice")}</p>}
+                      <div className="flex items-start gap-3"><Checkbox id="agree-terms" checked={agreedToTerms} onCheckedChange={(checked) => setAgreedToTerms(checked === true)} className="mt-0.5" /><label htmlFor="agree-terms" className="text-xs leading-relaxed text-muted-foreground">{t("auth.agreeTerms")} <Link to="/terms" className="text-primary underline-offset-4 hover:underline" target="_blank">{t("auth.termsLink")}</Link> &amp; <Link to="/privacy" className="text-primary underline-offset-4 hover:underline" target="_blank">{t("auth.privacyLink")}</Link></label></div>
+                      <AnimatePresence mode="wait" initial={false}>
+                        {signUpStatus === "loading" && (
+                          <motion.div key="signup-loading" className="auth-request-status" role="status" aria-live="polite" initial={reduceMotion ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                            <Loader2 aria-hidden="true" className="auth-status-spinner" />
+                            <div><strong>{t("auth.creatingAccount")}</strong><p>{t("auth.signUpCountdown").replace("{seconds}", String(signUpSecondsRemaining))}</p></div>
+                            <span aria-hidden="true">{signUpSecondsRemaining}</span>
+                          </motion.div>
+                        )}
+                        {signUpStatus === "success" && (
+                          <motion.div key="signup-success" className="auth-request-status is-success" role="status" aria-live="polite" initial={reduceMotion ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
+                            <CheckCircle2 aria-hidden="true" />
+                            <div><strong>{requireEmailVerification ? t("auth.checkEmailTitle") : t("auth.accountReadyTitle")}</strong><p>{requireEmailVerification ? t("auth.checkEmailDesc") : t("auth.accountReadyDesc")}</p></div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                      <Button className="auth-submit h-12 w-full rounded-xl" disabled={busy !== null || !agreedToTerms || signUpStatus === "success"}>{busy === "email" ? <Loader2 aria-hidden="true" className="me-2 h-4 w-4 animate-spin" /> : <Mail aria-hidden="true" className="me-2 h-4 w-4" />}{busy === "email" ? `${t("auth.creatingAccount")} (${signUpSecondsRemaining}s)` : t("auth.createAccount")}</Button>
+                    </form>
+                  </TabsContent>
+                </Tabs>
+              </CardContent>
+            </Card>
+            <p className="auth-price-note" aria-live="polite">{t("auth.finalPriceNotice")}</p>
           </div>
         </motion.section>
       </div>

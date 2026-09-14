@@ -32,7 +32,7 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/compone
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { isFeatureEnabled } from "@/config/features";
-import { portableCreatorApi } from "@/lib/api/portableApiClient";
+import { PortableApiError, portableCreatorApi } from "@/lib/api/portableApiClient";
 import { cancelCreatorGeneration, cancelVideoJob, pollCreatorGeneration, pollVideoJob, startCreatorGeneration } from "@/lib/director/api";
 import { cn } from "@/lib/utils";
 import { CreatorShell } from "./CreatorShell";
@@ -89,6 +89,9 @@ import {
 } from "./creatorProjectAssets";
 import { SaveStatusIndicator, type SaveLifecycleState } from "./SaveStatusIndicator";
 import { useTemplateQuotes } from "./useTemplateQuotes";
+import { stepForLoadedProject } from "./creatorResumeStep";
+import { buildTemplatePrompt } from "./templateGenerationPrompt";
+import { prepareAuthenticatedAssetClaim } from "./authenticatedAssetClaim";
 import type { TemplateQuote } from "./templateQuoteState";
 import { applyImportedFacts, campaignFactValue, campaignSourceForProject, confirmCampaignFacts, editFact, normalizeCampaignSource } from "./sourceFacts";
 import {
@@ -205,24 +208,6 @@ function readHomepageHandoff() {
   }
 }
 
-function buildTemplatePrompt(project: CreatorProject) {
-  const template = getCreatorTemplate(project.templateId);
-  const refs = project.product.images.map((_, index) => `@Image${index + 1}`).join(", ");
-  const language = project.language === "ar" ? "native Kuwaiti Arabic (ar-KW)" : project.language === "bilingual" ? "native Kuwaiti Arabic (ar-KW) and English" : "English";
-  return [
-    `Create a ${template.duration}-second ${project.aspectRatio} ${project.promotionKind === "business" ? "service" : "product"} campaign using ${template.name}.`,
-    `The supplied references are ${refs}. ${project.promotionKind === "business" ? "Keep the business environment, people and branding faithful to the references. Do not invent service results, qualifications or claims." : "Preserve the exact product shape, package, label, colours and logo across every shot."}`,
-    `${project.promotionKind === "business" ? "Business or service" : "Product"} facts: ${project.product.name}. ${project.product.description}. Brand: ${project.product.brand || "not supplied"}. Price: ${project.product.price || "not supplied"} ${MARKET_META[project.market].currency}.`,
-    ...(project.promotionKind === "business" ? [`Location: ${project.location || "not supplied"}. Booking destination: ${project.bookingUrl || "not supplied"}. WhatsApp: ${project.whatsapp || "not supplied"}.`] : []),
-    `Market: ${MARKET_META[project.market].label}. Spoken and campaign language: ${language}. ${project.language !== "en" ? "Use natural Kuwait dialect—not Egyptian, Levantine, Emirati, Saudi, or generic Modern Standard Arabic—and compose deterministic RTL overlays with correct punctuation." : ""}`,
-    project.offer ? `Offer: ${project.offer}.` : "Do not invent an offer or discount.",
-    `CTA: ${project.cta}. Brand colour: ${project.brandColor}.`,
-    "Scene recipe:",
-    ...project.scenes.map((scene, index) => `${index + 1}. ${scene.duration}s — ${scene.title}. ${scene.direction} On-screen text: “${scene.headline}”.`),
-    "Keep important text inside social safe zones. Premium, photoreal product advertising. No altered spelling, extra products, invented claims, watermarks or unreadable typography.",
-  ].join("\n");
-}
-
 function validateLocalMedia(file: File) {
   const type = file.type.toLowerCase();
   const isImage = ["image/jpeg", "image/png", "image/webp"].includes(type);
@@ -287,14 +272,6 @@ function normalizeLoadedProject(project: CreatorProject): CreatorProject {
     market: "KW",
     resolution: normalizeCreatorResolution((project as CreatorProject & { resolution?: unknown }).resolution),
   });
-}
-
-function stepForLoadedProject(project: CreatorProject): CreatorStep {
-  if (hasRealCreatorVideo(project)) return "editor";
-  if (project.renderRunId && ["generating", "review", "completed"].includes(project.status)) {
-    return "generating";
-  }
-  return project.product.images.length ? "details" : "source";
 }
 
 function sourceChoiceForProject(project: CreatorProject): SourceChoice {
@@ -367,6 +344,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
   const userId = user?.id;
   const portablePlatform = isFeatureEnabled("portableAuth");
   const localDemoGeneration = isFeatureEnabled("localDemoGeneration");
+  const developmentFreeGeneration = import.meta.env.DEV && isFeatureEnabled("developmentFreeGeneration");
   const simulatedGeneration = import.meta.env.DEV && (qaMode || localDemoGeneration);
   const requestedProject = searchParams.get("project") || routeProjectId || null;
   const requestedTemplate = searchParams.get("template");
@@ -456,13 +434,19 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
   const quoteLoaded = simulatedGeneration || !portablePlatform || !["idle", "loading"].includes(templateQuote.status);
   const quoteFailure = portablePlatform && !simulatedGeneration ? templateQuote.failure ?? null : null;
   const quoteError = templateQuote.status === "expired"
-      ? tr("The confirmed price expired. Refresh it before generating.", "انتهت صلاحية السعر المؤكد. حدّثه قبل التوليد.")
+      ? developmentFreeGeneration
+        ? tr("The local generation session expired. Refresh it before generating.", "انتهت جلسة التوليد المحلية. حدّثها قبل التوليد.")
+        : tr("The confirmed price expired. Refresh it before generating.", "انتهت صلاحية السعر المؤكد. حدّثه قبل التوليد.")
       : templateQuote.status === "changed"
-        ? tr("Your campaign changed. Confirm the current price again.", "تغيّرت حملتك. أكد السعر الحالي مرة ثانية.")
+        ? developmentFreeGeneration
+          ? tr("Your campaign changed. Preparing the updated generation session.", "تغيّرت حملتك. جارٍ تجهيز جلسة التوليد المحدثة.")
+          : tr("Your campaign changed. Confirm the current price again.", "تغيّرت حملتك. أكد السعر الحالي مرة ثانية.")
         : quoteFailure?.code === "worker_unavailable"
           ? tr("Generation is temporarily paused. Your project is saved.", "التوليد متوقف مؤقتاً. مشروعك محفوظ.")
           : quoteFailure?.code === "pricing_unavailable"
-            ? tr("We couldn’t confirm the current price. Try again.", "ما قدرنا نؤكد السعر الحالي. حاول مرة ثانية.")
+            ? developmentFreeGeneration
+              ? tr("The local generation service is not ready. Try again.", "خدمة التوليد المحلية غير جاهزة. حاول مرة ثانية.")
+              : tr("We couldn’t confirm the current price. Try again.", "ما قدرنا نؤكد السعر الحالي. حاول مرة ثانية.")
             : quoteFailure
               ? tr("Video generation is temporarily unavailable.", "توليد الفيديو غير متوفر مؤقتاً.")
               : !portablePlatform && !simulatedGeneration
@@ -534,19 +518,26 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
     saveTimer.current = window.setTimeout(() => {
       void (async () => {
         try {
-          if (!qaMode && (!user || hasUnclaimedCreatorAssets(next))) {
+          if (!qaMode && (!userId || hasUnclaimedCreatorAssets(next))) {
             await saveGuestDraft(projectToCreationDraft(next, rightsConfirmed));
             if (!requestedDraft) navigate(`/create?draft=${encodeURIComponent(next.id)}`, { replace: true });
           } else {
-            await syncCreatorProject(next, qaMode ? null : user?.id);
+            await syncCreatorProject(next, qaMode ? null : userId);
           }
           if (saveRevision.current === revision) setSaveState("saved");
-        } catch {
+        } catch (error) {
+          const apiError = error instanceof PortableApiError ? error : null;
+          console.warn("creator_project_save_failed", JSON.stringify({
+            code: apiError?.code ?? "unexpected_error",
+            status: apiError?.status ?? null,
+            retryable: apiError?.retryable ?? false,
+            requestId: apiError?.requestId ?? null,
+          }));
           if (saveRevision.current === revision) setSaveState("error");
         }
       })();
     }, 350);
-  }, [navigate, qaMode, requestedDraft, rightsConfirmed, user]);
+  }, [navigate, qaMode, requestedDraft, rightsConfirmed, userId]);
 
   useEffect(() => {
     if (!requestedDraft || qaMode) {
@@ -608,11 +599,11 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
       setStep(draft.product.images.length ? "details" : "source");
       setDraftRestoring(false);
       if (user && shouldResumeGeneration && draft.pendingGenerationId) {
-        toast.success("Campaign restored. Confirm the current price to create your video.");
+        toast.success(developmentFreeGeneration ? "Campaign restored. You can create your video now." : "Campaign restored. Confirm the current price to create your video.");
       }
     })().catch(() => setDraftRestoring(false));
     return () => { active = false; };
-  }, [project.product.images.length, qaMode, requestedDraft, shouldResumeGeneration, user]);
+  }, [developmentFreeGeneration, project.product.images.length, qaMode, requestedDraft, shouldResumeGeneration, user]);
 
   useEffect(() => {
     persist(project);
@@ -756,11 +747,13 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
 
   const selectRecommendedTemplate = (selection: RecommendationSelection) => {
     selectTemplate(selection.template.id);
-    setProject((current) => ({
-      ...current,
-      pendingQuoteCredits: selection.quote.credits,
-      updatedAt: new Date().toISOString(),
-    }));
+    if (selection.quote) {
+      setProject((current) => ({
+        ...current,
+        pendingQuoteCredits: selection.quote!.credits,
+        updatedAt: new Date().toISOString(),
+      }));
+    }
   };
 
   const recommendationConfigurationFor = useCallback((candidateTemplate: CreatorTemplate) => {
@@ -963,7 +956,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
     if (!recovery) return;
     setRecovery(null);
     setSourceError("");
-    if (recovery.state === "claim_failed") {
+    if (recovery.state === "claim_failed" || recovery.state === "asset_failed") {
       void startGenerationRef.current();
       return;
     }
@@ -993,7 +986,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
     }
     setRecovery(null);
     setSourceError("");
-    if (recovery.state === "claim_failed" || recovery.state === "import_failed") {
+    if (recovery.state === "claim_failed" || recovery.state === "asset_failed" || recovery.state === "import_failed") {
       setSourceChoice("upload");
       setStep("source");
       window.requestAnimationFrame(() => document.getElementById("campaign-source-files")?.focus());
@@ -1268,7 +1261,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
       return;
     }
     if (!simulatedGeneration && (!quoteLoaded || !currentQuote)) {
-      setSourceError(quoteError || "Live pricing is still loading. Try again in a moment.");
+      setSourceError(quoteError || (developmentFreeGeneration ? "The local generation service is still loading. Try again in a moment." : "Live pricing is still loading. Try again in a moment."));
       return;
     }
     if (!simulatedGeneration && !user) {
@@ -1290,7 +1283,12 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
     }
     let claimedProject: CreatorProject;
     try {
-      claimedProject = await claimGuestProject(project, {
+      const claimCandidate = user ? prepareAuthenticatedAssetClaim(project) : project;
+      if (claimCandidate !== project) {
+        setProject(claimCandidate);
+        await saveGuestDraft(projectToCreationDraft(claimCandidate, rightsConfirmed, "claiming"));
+      }
+      claimedProject = await claimGuestProject(claimCandidate, {
         signal: controller.signal,
         onProgress: (progress) => {
           if (activeClaimController.current === controller) setClaimProgress(progress);
@@ -1301,7 +1299,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
       if (isAbortError(error)) return;
       const next = selectGuestClaimRecovery(
         projectToCreationDraft(project, rightsConfirmed),
-        "asset_claim_failed",
+        error instanceof GuestClaimAssetFailure ? "asset_claim_failed" : "claim_failed",
         error instanceof GuestClaimAssetFailure ? { localAssetId: error.localAssetId } : {},
       );
       setRecovery(next);
@@ -1338,26 +1336,28 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
         });
         const authoritativeQuote = authoritativeQuoteResponse;
         if (!authoritativeQuote.quoteId) {
-          throw new Error("The confirmed generation price could not be saved.");
+          throw new Error(developmentFreeGeneration ? "The local generation session could not be saved." : "The confirmed generation price could not be saved.");
         }
         if (authoritativeQuote.credits !== currentQuote!.credits) {
           setProject({ ...renderProject, pendingQuoteCredits: authoritativeQuote.credits });
-          setSourceError(tr(
-            `The generation price changed from ${currentQuote!.credits} to ${authoritativeQuote.credits} credits. Review the confirmed price, then select Generate video again.`,
-            `تغيّر سعر التوليد من ${currentQuote!.credits} إلى ${authoritativeQuote.credits} رصيد. راجع السعر المؤكد، ثم اختر توليد الفيديو مرة ثانية.`,
-          ));
+          setSourceError(developmentFreeGeneration
+            ? tr("The generation settings changed. Select Generate video again.", "تغيّرت إعدادات التوليد. اختر توليد الفيديو مرة ثانية.")
+            : tr(
+              `The generation price changed from ${currentQuote!.credits} to ${authoritativeQuote.credits} credits. Review the confirmed price, then select Generate video again.`,
+              `تغيّر سعر التوليد من ${currentQuote!.credits} إلى ${authoritativeQuote.credits} رصيد. راجع السعر المؤكد، ثم اختر توليد الفيديو مرة ثانية.`,
+            ));
           setSourceBusy(false);
           return;
         }
         confirmedQuote = authoritativeQuote;
       } catch (error) {
-        setSourceError(error instanceof Error ? error.message : "The confirmed generation price is unavailable. Your project remains saved.");
+        setSourceError(error instanceof Error ? error.message : developmentFreeGeneration ? "The local generation service is unavailable. Your project remains saved." : "The confirmed generation price is unavailable. Your project remains saved.");
         setSourceBusy(false);
         return;
       }
     }
     if (!confirmedQuote?.quoteId) {
-      setSourceError("The confirmed generation price is unavailable. Your project remains saved.");
+      setSourceError(developmentFreeGeneration ? "The local generation service is unavailable. Your project remains saved." : "The confirmed generation price is unavailable. Your project remains saved.");
       setSourceBusy(false);
       return;
     }
@@ -1398,15 +1398,17 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
     if (!project.pendingGenerationId || !rightsConfirmed || (templateRequiresSourceMedia(project.templateId) && !hasCreatorImageReference(project.product.images)) || step !== "details") return;
     if (project.pendingQuoteCredits != null && project.pendingQuoteCredits !== currentQuote.credits) {
       resumedGeneration.current = true;
-      setSourceError(tr(
-        `The generation price changed from ${project.pendingQuoteCredits} to ${currentQuote.credits} credits. Review the new price, then select Generate video again.`,
-        `تغيّر سعر التوليد من ${project.pendingQuoteCredits} إلى ${currentQuote.credits} رصيد. راجع السعر الجديد، ثم اختر توليد الفيديو مرة ثانية.`,
-      ));
+      setSourceError(developmentFreeGeneration
+        ? tr("The generation settings changed. Select Generate video again.", "تغيّرت إعدادات التوليد. اختر توليد الفيديو مرة ثانية.")
+        : tr(
+          `The generation price changed from ${project.pendingQuoteCredits} to ${currentQuote.credits} credits. Review the new price, then select Generate video again.`,
+          `تغيّر سعر التوليد من ${project.pendingQuoteCredits} إلى ${currentQuote.credits} رصيد. راجع السعر الجديد، ثم اختر توليد الفيديو مرة ثانية.`,
+        ));
       return;
     }
     resumedGeneration.current = true;
     void startGenerationRef.current();
-  }, [currentQuote, draftRestoring, project.pendingGenerationId, project.pendingQuoteCredits, project.product.images, project.templateId, quoteLoaded, rightsConfirmed, shouldResumeGeneration, simulatedGeneration, step, tr, user]);
+  }, [currentQuote, developmentFreeGeneration, draftRestoring, project.pendingGenerationId, project.pendingQuoteCredits, project.product.images, project.templateId, quoteLoaded, rightsConfirmed, shouldResumeGeneration, simulatedGeneration, step, tr, user]);
 
   const cancelGeneration = async () => {
     if ((project.jobId || project.renderRunId) && !simulatedGeneration) {
@@ -1749,6 +1751,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
               configurationForTemplate={recommendationConfigurationFor}
               onSelect={selectRecommendedTemplate}
               quoteStateForTemplate={simulatedGeneration && developmentPreviewQuote ? previewQuoteStateForTemplate : undefined}
+              hidePricing={developmentFreeGeneration}
               presenterCompatibility={presenterCompatibility}
               arabic={arabicUi}
             />
@@ -1801,6 +1804,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
                 source={campaignSourceForProject(project)}
                 goal={project.goal}
                 arabic={arabicUi}
+                hidePricing={developmentFreeGeneration}
                 onEdit={updateCampaignFact}
                 onConfirm={confirmSourceFacts}
                 onContinue={continueFromFactReview}
@@ -1819,7 +1823,6 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
             <section className="creator-panel creator-panel-pad" aria-labelledby="campaign-heading">
               <CampaignSetupStep
                 project={project}
-                quoteState={simulatedGeneration ? "ready" : templateQuote.status === "idle" ? "loading" : templateQuote.status}
                 onChange={updateCampaignSetup}
                 onContinue={() => setCampaignSetupReady(true)}
                 presenterCompatibility={presenterCompatibility}
@@ -1836,6 +1839,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
                   requestId={quoteFailure?.requestId}
                   generateButtonRef={generateButtonRef}
                   arabic={arabicUi}
+                  hidePricing={developmentFreeGeneration}
                   onEdit={editCampaignReview}
                   onRightsChange={setRightsConfirmed}
                   onRetryQuote={retryQuote}
@@ -1849,9 +1853,9 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
             <aside className="creator-panel creator-panel-pad creator-generation-summary" aria-label={tr("Generation summary", "ملخص التوليد")}>
               <p className="creator-kicker">{tr("Ready to create", "جاهز للإنشاء")}</p>
               <div className="creator-product-image" style={{ borderRadius: 14, overflow: "hidden" }}><SourceMediaPreview asset={project.product.images[0]} alt={project.product.name} /></div>
-              <div className="creator-summary-list" style={{ marginTop: 16 }}><div className="creator-summary-row"><span>{tr("Template", "القالب")}</span><strong>{arabicUi ? template.nameAr : template.name}</strong></div><div className="creator-summary-row"><span>{tr("Campaign goal", "هدف الحملة")}</span><strong>{arabicUi ? ARABIC_GOAL_LABELS[project.goal] : getCampaignGoalOption(project.goal).label}</strong></div><div className="creator-summary-row"><span>{tr("Call to action", "الدعوة للإجراء")}</span><strong>{campaignCtaLabel(project.cta, arabicUi)}</strong></div>{project.product.price && <div className="creator-summary-row"><span>{tr("Price", "السعر")}</span><strong>{project.product.price} {MARKET_META[project.market].currency}</strong></div>}{project.offer && <div className="creator-summary-row"><span>{tr("Offer", "العرض")}</span><strong>{project.offer}</strong></div>}<div className="creator-summary-row"><span>{tr("Market", "السوق")}</span><strong>{MARKET_META[project.market].label}</strong></div><div className="creator-summary-row"><span>{tr("Campaign language", "لغة الحملة")}</span><strong>{project.language === "bilingual" ? tr("Kuwaiti Arabic + English", "عربي كويتي + إنجليزي") : project.language === "ar" ? tr("Kuwaiti Arabic", "عربي كويتي") : tr("English", "الإنجليزية")}</strong></div><div className="creator-summary-row"><span>{tr("Format", "المقاس")}</span><strong>{project.aspectRatio} · {project.resolution}</strong></div><div className="creator-summary-row"><span>{tr("Subtitles", "الترجمة المكتوبة")}</span><strong>{project.subtitles ? tr("Included", "مشمولة") : tr("Off", "متوقفة")}</strong></div><div className="creator-summary-row"><span>{tr("Audio", "الصوت")}</span><strong>{project.audio ? tr("Included", "مشمول") : tr("Off", "متوقف")}</strong></div></div>
+              <div className="creator-summary-list" style={{ marginTop: 16 }}><div className="creator-summary-row"><span>{tr("Template", "القالب")}</span><strong>{arabicUi ? template.nameAr : template.name}</strong></div><div className="creator-summary-row"><span>{tr("Campaign goal", "هدف الحملة")}</span><strong>{arabicUi ? ARABIC_GOAL_LABELS[project.goal] : getCampaignGoalOption(project.goal).label}</strong></div><div className="creator-summary-row"><span>{tr("Call to action", "الدعوة للإجراء")}</span><strong>{campaignCtaLabel(project.cta, arabicUi)}</strong></div>{!developmentFreeGeneration && project.product.price && <div className="creator-summary-row"><span>{tr("Price", "السعر")}</span><strong>{project.product.price} {MARKET_META[project.market].currency}</strong></div>}{project.offer && <div className="creator-summary-row"><span>{tr("Offer", "العرض")}</span><strong>{project.offer}</strong></div>}<div className="creator-summary-row"><span>{tr("Market", "السوق")}</span><strong>{MARKET_META[project.market].label}</strong></div><div className="creator-summary-row"><span>{tr("Campaign language", "لغة الحملة")}</span><strong>{project.language === "bilingual" ? tr("Kuwaiti Arabic + English", "عربي كويتي + إنجليزي") : project.language === "ar" ? tr("Kuwaiti Arabic", "عربي كويتي") : tr("English", "الإنجليزية")}</strong></div><div className="creator-summary-row"><span>{tr("Format", "المقاس")}</span><strong>{project.aspectRatio} · {project.resolution}</strong></div><div className="creator-summary-row"><span>{tr("Subtitles", "الترجمة المكتوبة")}</span><strong>{project.subtitles ? tr("Included", "مشمولة") : tr("Off", "متوقفة")}</strong></div><div className="creator-summary-row"><span>{tr("Audio", "الصوت")}</span><strong>{project.audio ? tr("Included", "مشمول") : tr("Off", "متوقف")}</strong></div></div>
               {!campaignSetupReady && <div className="creator-cost-box" aria-live="polite">
-                {activeQuote ? <>
+                {developmentFreeGeneration ? <><small>{tr("Local development", "التطوير المحلي")}</small><strong>{tr("Vercel video generation is enabled", "توليد الفيديو عبر Vercel مفعّل")}</strong><span className="creator-cost-meta"><Clock3 aria-hidden="true" /> {tr(`Video length: ${projectDurationSeconds} seconds · estimated processing: 2–5 minutes`, `مدة الفيديو: ${projectDurationSeconds} ثانية · وقت المعالجة المتوقع: 2–5 دقائق`)}</span></> : activeQuote ? <>
                   <small>{activeQuote.entitlementEligible ? tr("Your first video", "فيديوك الأول") : tr("Confirmed generation price", "سعر التوليد المؤكد")}</small>
                   <strong>{activeQuote.entitlementEligible ? tr("Included · 0 credits for this video", "مشمول · 0 رصيد لهذا التوليد") : tr(`${activeQuote.credits} credits`, `${activeQuote.credits} رصيد`)}</strong>
                   <span className="creator-cost-meta"><Clock3 aria-hidden="true" /> {tr(`Video length: ${projectDurationSeconds} seconds · estimated processing: 2–5 minutes`, `مدة الفيديو: ${projectDurationSeconds} ثانية · وقت المعالجة المتوقع: 2–5 دقائق`)}</span>

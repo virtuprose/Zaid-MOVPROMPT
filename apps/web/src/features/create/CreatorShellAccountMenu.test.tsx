@@ -28,7 +28,7 @@ vi.mock("@/components/credits/CreditBadge", () => ({
 import { CreatorShell } from "./CreatorShell";
 
 describe("CreatorShell account menu", () => {
-  it("exposes canonical account destinations and a working sign-out action", async () => {
+  it("keeps development account navigation payment free and supports sign-out", async () => {
     render(
       <MemoryRouter initialEntries={["/create"]}>
         <CreatorShell><div>Workspace</div></CreatorShell>
@@ -41,7 +41,7 @@ describe("CreatorShell account menu", () => {
     });
 
     expect(await screen.findByRole("menuitem", { name: /account settings/i })).toBeInTheDocument();
-    expect(screen.getByRole("menuitem", { name: /credits & pricing/i })).toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: /credits & pricing/i })).not.toBeInTheDocument();
     expect(screen.getByRole("menuitem", { name: /preferences/i })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("menuitem", { name: /sign out/i }));

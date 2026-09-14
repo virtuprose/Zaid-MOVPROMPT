@@ -1,4 +1,4 @@
-import { CapabilityAliasSchema, WORKER_JOB_NAMES, type GenerationJobPayload } from "@movprompt/contracts";
+import { CapabilityAliasSchema, MongoObjectIdSchema, WORKER_JOB_NAMES, type GenerationJobPayload } from "@movprompt/contracts";
 import { COLLECTIONS, type MongoDatabase } from "@movprompt/db";
 import { z } from "zod";
 
@@ -6,11 +6,11 @@ import type { WorkerLogger } from "./logger.js";
 
 const RenderStartOutboxPayloadSchema = z
   .object({
-    runId: z.uuid(),
-    userId: z.uuid(),
-    projectId: z.uuid(),
-    projectVersionId: z.uuid(),
-    quoteId: z.uuid(),
+    runId: MongoObjectIdSchema.or(z.uuid()),
+    userId: MongoObjectIdSchema.or(z.uuid()),
+    projectId: MongoObjectIdSchema.or(z.uuid()),
+    projectVersionId: MongoObjectIdSchema.or(z.uuid()),
+    quoteId: MongoObjectIdSchema.or(z.uuid()),
     capabilityAlias: CapabilityAliasSchema,
     configurationHash: z.string().regex(/^[a-f0-9]{64}$/),
     qualityAttempt: z.number().int().min(0).max(3).optional(),

@@ -21,6 +21,7 @@ type TemplateRecommendationsProps = TemplateRecommendationInput & {
   /** Server-projected availability only. The default is deliberately fail-closed. */
   presenterCompatibility?: PresenterCompatibility;
   arabic?: boolean;
+  hidePricing?: boolean;
 };
 
 export function TemplateRecommendations({
@@ -30,6 +31,7 @@ export function TemplateRecommendations({
   quoteStateForTemplate,
   presenterCompatibility = { aiUgc: false, uploadedSpokesperson: false },
   arabic = false,
+  hidePricing = false,
   ...input
 }: TemplateRecommendationsProps) {
   const recommendations = recommendTemplates(templates, input);
@@ -63,6 +65,7 @@ export function TemplateRecommendations({
             quoteStateForTemplate={quoteStateForTemplate}
             presenterCompatibility={presenterCompatibility}
             arabic={arabic}
+            hidePricing={hidePricing}
           />
         ))}
       </div>
@@ -77,6 +80,7 @@ function RecommendationCard({
   quoteStateForTemplate,
   presenterCompatibility,
   arabic,
+  hidePricing,
 }: {
   recommendation: TemplateRecommendation;
   configuration: GenerationConfiguration;
@@ -84,6 +88,7 @@ function RecommendationCard({
   quoteStateForTemplate?: (template: CreatorTemplate, configuration: GenerationConfiguration) => ReturnType<typeof useTemplateQuotes>;
   presenterCompatibility: PresenterCompatibility;
   arabic: boolean;
+  hidePricing: boolean;
 }) {
   const { template, whyThisFits, requiredInputs } = recommendation;
   const liveQuoteState = useTemplateQuotes({ enabled: true, templateId: template.id, configuration });
@@ -125,7 +130,7 @@ function RecommendationCard({
           <div><dt>{arabic ? "مقدّم الفيديو" : "Presenter"}</dt><dd>{presenterAvailability}</dd></div>
         </dl>
       </div>
-      <div className="creator-recommendation-quote" data-quote-state={quoteState.status}>
+      {!hidePricing && <div className="creator-recommendation-quote" data-quote-state={quoteState.status}>
         <span>{quoteLabel}</span>
         {quoteReady && quoteState.quote ? <strong>{quoteState.quote.entitlementEligible ? (arabic ? "0 رصيد" : "0 credits") : (arabic ? `${quoteState.quote.credits} رصيد` : `${quoteState.quote.credits} credits`)}</strong> : null}
         {!quoteReady && quoteState.status !== "loading" && quoteState.status !== "idle" ? (
@@ -134,14 +139,12 @@ function RecommendationCard({
           </button>
         ) : null}
         {quoteState.requestId ? <details className="creator-support-details"><summary>{arabic ? "تفاصيل الدعم" : "Support details"}</summary><code>{quoteState.requestId}</code></details> : null}
-      </div>
+      </div>}
       <button
         className="creator-button creator-button-primary creator-recommendation-select"
         type="button"
-        disabled={!quoteReady}
         aria-describedby={!quoteReady ? `quote-${template.id}` : undefined}
         onClick={() => {
-          if (!quoteState.quote) return;
           onSelect({ template, quote: quoteState.quote, configuration });
         }}
       >

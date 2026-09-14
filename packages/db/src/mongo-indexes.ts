@@ -3,14 +3,36 @@ import { COLLECTIONS } from "./mongo-client.js";
 
 export async function ensureMongoIndexes(database: MongoDatabase): Promise<void> {
   const workerJobs = database.collection(COLLECTIONS.workerJobs);
+  const creatorProjectVersions = database.collection(COLLECTIONS.creatorProjectVersions);
   const singletonIndexName = "name_1_singletonKey_1";
-  const singletonIndex = (await workerJobs.indexes()).find((index) => index.name === singletonIndexName);
+  const operationKeyIndexName = "userId_1_operationKey_1";
+  let singletonIndex;
+  let operationKeyIndex;
+  try {
+    singletonIndex = (await workerJobs.indexes()).find((index) => index.name === singletonIndexName);
+  } catch (error) {
+    const code = error && typeof error === "object" && "code" in error ? error.code : undefined;
+    if (code !== 26) throw error;
+  }
+  try {
+    operationKeyIndex = (await creatorProjectVersions.indexes()).find((index) => index.name === operationKeyIndexName);
+  } catch (error) {
+    const code = error && typeof error === "object" && "code" in error ? error.code : undefined;
+    if (code !== 26) throw error;
+  }
 
   // A sparse compound index still indexes jobs because `name` is always present,
   // treating a missing singleton key as null. Replace that form so ordinary jobs
   // can coexist while named singleton jobs remain unique.
   if (singletonIndex && !singletonIndex.partialFilterExpression) {
     await workerJobs.dropIndex(singletonIndexName);
+  }
+
+  // Initial claimed versions have no idempotency operation. A sparse index
+  // still indexes an explicit null, so the second campaign for a user would
+  // collide. Only actual operation keys participate in uniqueness.
+  if (operationKeyIndex && !operationKeyIndex.partialFilterExpression) {
+    await creatorProjectVersions.dropIndex(operationKeyIndexName);
   }
 
   await Promise.all([
@@ -24,7 +46,13 @@ export async function ensureMongoIndexes(database: MongoDatabase): Promise<void>
     database.collection(COLLECTIONS.creatorProjects).createIndex({ clientDraftId: 1 }, { unique: true, sparse: true }),
     database.collection(COLLECTIONS.creatorProjects).createIndex({ userId: 1, updatedAt: -1 }),
     database.collection(COLLECTIONS.creatorProjectVersions).createIndex({ projectId: 1, versionNumber: 1 }, { unique: true }),
-    database.collection(COLLECTIONS.creatorProjectVersions).createIndex({ userId: 1, operationKey: 1 }, { unique: true, sparse: true }),
+    creatorProjectVersions.createIndex(
+      { userId: 1, operationKey: 1 },
+      {
+        unique: true,
+        partialFilterExpression: { operationKey: { $type: "string" } },
+      },
+    ),
     database.collection(COLLECTIONS.creatorProjectAssets).createIndex({ userId: 1, projectId: 1, objectKey: 1 }, { unique: true }),
     database.collection(COLLECTIONS.guestClaimOperations).createIndex({ draftId: 1 }, { unique: true }),
     database.collection(COLLECTIONS.guestClaimOperations).createIndex({ userId: 1, pendingGenerationId: 1 }, { unique: true }),

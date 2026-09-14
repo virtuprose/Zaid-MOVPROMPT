@@ -1,6 +1,5 @@
-import { randomUUID } from "node:crypto";
 import { ExportJobPayloadSchema, GenerationJobPayloadSchema, HealthJobPayloadSchema, WORKER_JOB_NAMES, type WorkerJobName } from "@movprompt/contracts";
-import { COLLECTIONS, type MongoDatabase } from "@movprompt/db";
+import { COLLECTIONS, newMongoObjectId, type MongoDatabase } from "@movprompt/db";
 import type { Document } from "mongodb";
 import type { WorkerConfig } from "./config.js";
 import type { WorkerHandlers, WorkerJobContext } from "./handlers.js";
@@ -42,7 +41,7 @@ export class MongoWorker {
   }
 
   async #enqueue(name: string, data: object, options: { singletonKey?: string; delaySeconds?: number }): Promise<string> {
-    const id = randomUUID(); const now = new Date();
+    const id = newMongoObjectId(); const now = new Date();
     await this.#database.collection(COLLECTIONS.workerJobs).insertOne({ id, name, data, status: "queued", retryCount: 0, retryLimit: name === WORKER_JOB_NAMES.generation ? 5 : 0, startAfter: new Date(now.getTime() + (options.delaySeconds ?? 0) * 1_000), ...(options.singletonKey ? { singletonKey: options.singletonKey } : {}), leaseOwner: null, leaseExpiresAt: null, createdAt: now, updatedAt: now }); return id;
   }
 

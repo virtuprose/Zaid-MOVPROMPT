@@ -90,6 +90,17 @@ describe("portable project mapping", () => {
     expect(stable.source?.assetKeys).not.toContain("guest-draft/local-image");
   });
 
+  it("keeps a legacy manual product source aligned with its normalized campaign source", () => {
+    const stable = stableProjectConfiguration({
+      ...project,
+      product: { ...project.product, sourceType: null, images: [] },
+      source: undefined,
+    });
+
+    expect(stable.source?.kind).toBe("product_upload");
+    expect(stable.product.sourceType).toBe("upload");
+  });
+
   it("uses the server project and version IDs as canonical cloud identity", () => {
     const cloud = projectFromCloud({
       id: "44444444-4444-4444-8444-444444444444",

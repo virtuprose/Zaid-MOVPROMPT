@@ -67,7 +67,8 @@ describe("TemplateRecommendations", () => {
     expect(screen.queryByRole("button", { name: "Use this template" })).not.toBeInTheDocument();
   });
 
-  it("offers a quote retry without showing a fallback credit price", () => {
+  it("allows template selection while pricing remains unavailable", () => {
+    const onSelect = vi.fn();
     render(
       <TemplateRecommendations
         {...props}
@@ -79,14 +80,20 @@ describe("TemplateRecommendations", () => {
           failure: { code: "pricing_unavailable", retryable: true },
           retry: vi.fn(),
         } as never)}
-        onSelect={vi.fn()}
+        onSelect={onSelect}
       />,
     );
 
     expect(screen.getAllByText("Price unavailable").length).toBeGreaterThan(0);
     expect(screen.getAllByRole("button", { name: "Retry price" }).length).toBeGreaterThan(0);
     expect(screen.queryByText("42 credits")).not.toBeInTheDocument();
-    expect(screen.getAllByRole("button", { name: "Use this template" })[0]).toBeDisabled();
+    const selectButton = screen.getAllByRole("button", { name: "Use this template" })[0]!;
+    expect(selectButton).toBeEnabled();
+    fireEvent.click(selectButton);
+    expect(onSelect).toHaveBeenCalledWith(expect.objectContaining({
+      template: expect.objectContaining({ goals: expect.arrayContaining(["launch"]) }),
+      quote: null,
+    }));
   });
 
   it("asks the customer to review a changed quote instead of substituting a price", () => {

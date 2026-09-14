@@ -1,6 +1,6 @@
-import { createHash, randomUUID } from "node:crypto";
+import { createHash } from "node:crypto";
 import { PresenterModeSchema, TemplateQuoteEligibilitySchema, type PresenterMode } from "@movprompt/contracts";
-import { COLLECTIONS, hashGenerationConfiguration, type JsonObject, type MongoDatabase } from "@movprompt/db";
+import { COLLECTIONS, hashGenerationConfiguration, newMongoObjectId, type JsonObject, type MongoDatabase } from "@movprompt/db";
 import type { Document } from "mongodb";
 import type {
   GenerationRepository,
@@ -89,7 +89,7 @@ export function createMongoGenerationRepository(database: MongoDatabase): Genera
         await database.collection(COLLECTIONS.renderAttempts).updateOne({ renderRunId: runId, userId, attemptNumber: run.qualityAttempt }, { $set: { status: "processing", updatedAt: now } }, { session });
         await projects.updateOne({ id: run.projectId, userId, currentWorkingVersionId: run.projectVersionId }, { $set: { status: "generating", updatedAt: now } }, { session });
         const operationKey = `render.output_recovery:${runId}:${createHash("sha256").update(idempotencyKey).digest("hex").slice(0, 16)}`;
-        await database.collection(COLLECTIONS.outboxJobs).updateOne({ topic: "render.start", operationKey }, { $setOnInsert: { id: randomUUID(), topic: "render.start", operationKey, payload: { runId: run.id, userId: run.userId, projectId: run.projectId, projectVersionId: run.projectVersionId, quoteId: run.quoteId, capabilityAlias: run.capabilityAlias, configurationHash: hashGenerationConfiguration(version.configuration), qualityAttempt: run.qualityAttempt }, status: "pending", attempts: 0, availableAt: now, createdAt: now, updatedAt: now } }, { upsert: true, session });
+        await database.collection(COLLECTIONS.outboxJobs).updateOne({ topic: "render.start", operationKey }, { $setOnInsert: { id: newMongoObjectId(), topic: "render.start", operationKey, payload: { runId: run.id, userId: run.userId, projectId: run.projectId, projectVersionId: run.projectVersionId, quoteId: run.quoteId, capabilityAlias: run.capabilityAlias, configurationHash: hashGenerationConfiguration(version.configuration), qualityAttempt: run.qualityAttempt }, status: "pending", attempts: 0, availableAt: now, createdAt: now, updatedAt: now } }, { upsert: true, session });
         return String(run.id);
       });
       return found ? renderRun(await runs.findOne({ id: found, userId })) : null;

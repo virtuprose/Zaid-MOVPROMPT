@@ -138,7 +138,7 @@ export function TemplateGrid({
             ["ecommerce", ar ? "المتاجر الإلكترونية" : "Ecommerce"],
             ["salon", ar ? "الصالونات" : "Salons"],
             ["clinic", ar ? "العيادات" : "Clinics"],
-          ] as const).map(([value, label]) => (
+          ] as const).filter(([value]) => value === "all" || templates.some((template) => template.verticals.includes(value))).map(([value, label]) => (
             <button
               key={value}
               type="button"

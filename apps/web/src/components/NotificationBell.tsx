@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
+import { isFeatureEnabled } from "@/config/features";
 
 interface Notification {
   id: string;
@@ -25,6 +26,7 @@ interface Notification {
 }
 
 const NotificationBell = () => {
+  const portableMode = isFeatureEnabled("portableAuth");
   const { user } = useAuth();
   const { locale, t } = useLanguage();
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -32,7 +34,7 @@ const NotificationBell = () => {
   const [open, setOpen] = useState(false);
 
   const fetchNotifications = useCallback(async () => {
-    if (!user) return;
+    if (!user || portableMode) return;
 
     const [{ data: notifs }, { data: reads }] = await Promise.all([
       supabase
@@ -48,9 +50,10 @@ const NotificationBell = () => {
 
     setNotifications(notifs || []);
     setReadIds(new Set((reads || []).map((r) => r.notification_id)));
-  }, [user]);
+  }, [portableMode, user]);
 
   useEffect(() => {
+    if (portableMode) return;
     fetchNotifications();
 
     const channel = supabase
@@ -67,7 +70,7 @@ const NotificationBell = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [fetchNotifications]);
+  }, [fetchNotifications, portableMode]);
 
   const markAsRead = async (notificationId: string) => {
     if (!user || readIds.has(notificationId)) return;
@@ -110,6 +113,15 @@ const NotificationBell = () => {
   };
 
   if (!user) return null;
+  if (portableMode) {
+    return (
+      <Button variant="ghost" size="icon" asChild>
+        <Link to="/notifications" aria-label="Notifications" className="text-muted-foreground hover:text-foreground">
+          <Bell className="h-5 w-5" />
+        </Link>
+      </Button>
+    );
+  }
 
   const hasNotifications = notifications.length > 0;
   const hasUnread = unreadCount > 0;

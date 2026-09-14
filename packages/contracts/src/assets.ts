@@ -1,5 +1,7 @@
 import { z } from "zod";
-import { RequestIdSchema } from "./api.js";
+import { MongoObjectIdSchema, RequestIdSchema } from "./api.js";
+
+const EntityIdSchema = MongoObjectIdSchema.or(z.uuid());
 
 export const CreatorAssetKindSchema = z.enum(["product", "logo", "audio", "reference", "footage"]);
 
@@ -22,7 +24,7 @@ export type AssetUploadMetadata = z.infer<typeof AssetUploadMetadataSchema>;
 export const CreateAssetUploadRequestSchema = z
   .object({
     /** A browser-local opaque UUID may be retained as the canonical asset identity during guest claim. */
-    assetId: z.uuid().optional(),
+    assetId: EntityIdSchema.optional(),
     kind: CreatorAssetKindSchema,
     metadata: AssetUploadMetadataSchema,
   })
@@ -51,8 +53,8 @@ export type CreateAssetUploadRequest = z.infer<typeof CreateAssetUploadRequestSc
 /** The browser identifies a guest-claim checkpoint without ever sending storage coordinates. */
 export const CompleteClaimAssetRequestSchema = z
   .object({
-    pendingGenerationId: z.uuid(),
-    localAssetId: z.uuid(),
+    pendingGenerationId: EntityIdSchema,
+    localAssetId: EntityIdSchema,
   })
   .strict();
 
@@ -70,8 +72,8 @@ export type MirrorRemoteImageRequest = z.infer<typeof MirrorRemoteImageRequestSc
 
 export const AssetRouteParametersSchema = z
   .object({
-    projectId: z.uuid(),
-    assetId: z.uuid().optional(),
+    projectId: EntityIdSchema,
+    assetId: EntityIdSchema.optional(),
   })
   .strict();
 
@@ -83,8 +85,8 @@ export const AssetDownloadQuerySchema = z
 
 export const CreatorAssetSchema = z
   .object({
-    id: z.uuid(),
-    projectId: z.uuid(),
+    id: EntityIdSchema,
+    projectId: EntityIdSchema,
     kind: CreatorAssetKindSchema,
     objectKey: z.string().min(1).max(1024),
     mimeType: z.string().min(1),

@@ -1,11 +1,11 @@
-import { CREATIVE_TEMPLATE_CATALOG } from "@movprompt/creative-engine";
+import { LAUNCH_CREATIVE_TEMPLATE_CATALOG } from "@movprompt/creative-engine";
 
 import { templateMediaFor } from "./templateMedia";
 import { getCampaignGoalOption, type CreatorAsset, type CreatorProject, type CreatorTemplate } from "./types";
 
 const ACCENTS = ["#c99946", "#77a989", "#d49737", "#b78452", "#a68b69", "#d1763d", "#c08a86", "#8d796a", "#6f8fa8", "#7a88b5"] as const;
 
-export const CREATOR_TEMPLATES: CreatorTemplate[] = CREATIVE_TEMPLATE_CATALOG.map((template, index) => {
+export const CREATOR_TEMPLATES: CreatorTemplate[] = LAUNCH_CREATIVE_TEMPLATE_CATALOG.map((template, index) => {
   const primaryGoal = template.goals[0] ?? "launch";
   return {
     id: template.id,

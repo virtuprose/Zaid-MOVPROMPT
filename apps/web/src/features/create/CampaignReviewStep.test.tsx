@@ -58,6 +58,44 @@ describe("CampaignReviewStep", () => {
     expect(onGenerate).toHaveBeenCalledOnce();
   });
 
+  it("keeps development generation open without showing prices or credits", () => {
+    const project = createDraftProject("luxury-product-reveal");
+    project.product = {
+      ...project.product,
+      name: "Amber No. 7",
+      price: "12.500",
+      images: [{ id: "amber", name: "amber.jpg", url: "https://example.test/amber.jpg", mimeType: "image/jpeg", source: "url" }],
+    };
+    project.source = {
+      kind: "product_upload",
+      subject: "product",
+      assetKeys: [],
+      facts: [
+        { field: "name", value: "Amber No. 7", provenance: "manual" },
+        { field: "price", value: "12.500", provenance: "manual" },
+      ],
+    };
+    const onGenerate = vi.fn();
+
+    render(
+      <CampaignReviewStep
+        project={project}
+        rightsConfirmed
+        hidePricing
+        quote={{ quoteId: "local-session", capability: "video.product_fidelity", credits: 0, entitlementEligible: false, expiresAt: new Date(Date.now() + 60_000).toISOString(), breakdown: [], configurationHash: "local", pricingVersion: "development-free-v1", estimateOnly: false }}
+        quoteState="ready"
+        onEdit={vi.fn()}
+        onGenerate={onGenerate}
+      />,
+    );
+
+    expect(screen.queryByRole("heading", { name: "Price" })).not.toBeInTheDocument();
+    expect(screen.queryByText(/credits/i)).not.toBeInTheDocument();
+    expect(screen.queryByText("12.500 KWD")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Generate campaign" }));
+    expect(onGenerate).toHaveBeenCalledOnce();
+  });
+
   it("keeps an Arabic service review direction-safe and blocks generation for an expired quote", () => {
     const project = createDraftProject("gcc-offer-launch");
     project.promotionKind = "business";
@@ -104,8 +142,8 @@ describe("CampaignReviewStep", () => {
     expect(screen.getByRole("button", { name: "أنشئ الحملة" })).toBeDisabled();
   });
 
-  it("does not require media for a manual service template whose recipe only needs confirmed facts", () => {
-    const project = createDraftProject("clinic-service-explainer");
+  it("requires the client image for a manual service launch template", () => {
+    const project = createDraftProject("app-service");
     project.promotionKind = "business";
     project.product = { ...project.product, name: "Skin consultation" };
     project.source = {
@@ -127,8 +165,8 @@ describe("CampaignReviewStep", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Generate campaign" }));
-    expect(onGenerate).toHaveBeenCalledOnce();
+    expect(screen.getByRole("button", { name: "Generate campaign" })).toBeDisabled();
+    expect(onGenerate).not.toHaveBeenCalled();
   });
 
   it("still blocks a manual product campaign when its selected template requires a visual reference", () => {
@@ -158,6 +196,6 @@ describe("CampaignReviewStep", () => {
 
   it("derives the media requirement from the immutable template recipe", () => {
     expect(templateRequiresSourceMedia("luxury-product-reveal")).toBe(true);
-    expect(templateRequiresSourceMedia("clinic-service-explainer")).toBe(false);
+    expect(templateRequiresSourceMedia("app-service")).toBe(true);
   });
 });

@@ -203,7 +203,15 @@ function recipe(spec: TemplateSpec): CreativeTemplateRecipe {
       ? ["video.product_fidelity", "presenter.ai_ugc", "speech.generate", "speech.lip_sync"]
       : ["video.product_fidelity", "video.cinematic", "speech.generate"],
     protectedLayers: ["subject_identity", "logo", "price", "offer", "cta", "arabic_copy", "subtitles"],
-    complianceRules: ["Never invent business facts", "Render price, offer, logo, CTA and subtitles as deterministic layers", ...clinicRules, ...transformationRules, ...(spec.compliance ?? [])],
+    complianceRules: [
+      "Never invent business facts",
+      "Treat the client-uploaded primary reference as the authoritative subject identity in every scene",
+      "Preserve the reference subject's shape, proportions, colours, labels, logos and identifying details; apply the template only to composition, setting, camera, lighting and motion",
+      "Render price, offer, logo, CTA and subtitles as deterministic layers",
+      ...clinicRules,
+      ...transformationRules,
+      ...(spec.compliance ?? []),
+    ],
     qualityPolicy: PREMIUM_QUALITY,
     tags: spec.tags,
     scenes: buildScenes(spec),
@@ -270,6 +278,26 @@ if (CREATIVE_TEMPLATE_CATALOG.length !== 50) {
 }
 if (new Set(CREATIVE_TEMPLATE_CATALOG.map((template) => template.id)).size !== 50) {
   throw new Error("creative_template_catalog_ids_must_be_unique");
+}
+
+export const LAUNCH_TEMPLATE_IDS = [
+  "luxury-product-reveal",
+  "whatsapp-sales-ad",
+  "food-beverage",
+  "salon-booking-offer",
+  "app-service",
+] as const;
+
+export const LAUNCH_CREATIVE_TEMPLATE_CATALOG: readonly CreativeTemplateRecipe[] = Object.freeze(
+  LAUNCH_TEMPLATE_IDS.map((templateId) => {
+    const template = CREATIVE_TEMPLATE_CATALOG.find((candidate) => candidate.id === templateId);
+    if (!template) throw new Error(`launch_template_missing:${templateId}`);
+    return template;
+  }),
+);
+
+if (new Set(LAUNCH_CREATIVE_TEMPLATE_CATALOG.map((template) => template.category)).size !== LAUNCH_TEMPLATE_IDS.length) {
+  throw new Error("launch_template_categories_must_be_unique");
 }
 
 export function getCreativeTemplate(templateId: string): CreativeTemplateRecipe {

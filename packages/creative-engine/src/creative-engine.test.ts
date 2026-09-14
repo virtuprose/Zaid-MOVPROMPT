@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { CREATIVE_TEMPLATE_CATALOG, CREATIVE_TEMPLATE_CATEGORIES } from "./catalog.js";
+import {
+  CREATIVE_TEMPLATE_CATALOG,
+  CREATIVE_TEMPLATE_CATEGORIES,
+  LAUNCH_CREATIVE_TEMPLATE_CATALOG,
+  LAUNCH_TEMPLATE_IDS,
+} from "./catalog.js";
 import {
   PROVIDER_BENCHMARK_CORPUS,
   buildBenchmarkCreativeBrief,
@@ -41,6 +46,18 @@ function brief(): CreativeBrief {
 }
 
 describe("creative template catalog", () => {
+  it("publishes five launch templates with distinct categories and authoritative client references", () => {
+    expect(LAUNCH_CREATIVE_TEMPLATE_CATALOG.map((template) => template.id)).toEqual(LAUNCH_TEMPLATE_IDS);
+    expect(new Set(LAUNCH_CREATIVE_TEMPLATE_CATALOG.map((template) => template.category))).toHaveLength(5);
+    for (const template of LAUNCH_CREATIVE_TEMPLATE_CATALOG) {
+      expect(template.requiredInputs).toContain("primary_reference");
+      expect(template.complianceRules).toEqual(expect.arrayContaining([
+        expect.stringContaining("client-uploaded primary reference"),
+        expect.stringContaining("Preserve the reference subject's shape"),
+      ]));
+    }
+  });
+
   it("contains fifty distinct, fully structured Kuwait recipes", () => {
     expect(CREATIVE_TEMPLATE_CATALOG).toHaveLength(50);
     expect(new Set(CREATIVE_TEMPLATE_CATALOG.map((template) => template.id))).toHaveLength(50);

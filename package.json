@@ -14,8 +14,8 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "bun run --cwd apps/web dev",
-    "dev:web": "bun run --cwd apps/web dev",
+    "dev": "bun --env-file=.env scripts/dev.ts",
+    "dev:web": "bun --env-file=../../.env run --cwd apps/web dev",
     "dev:api": "bun --env-file=../../.env run --cwd apps/api dev",
     "dev:worker": "bun --env-file=../../.env run --cwd apps/worker dev",
     "dev:services": "docker compose up -d mongodb mongodb-init minio minio-init mailpit",

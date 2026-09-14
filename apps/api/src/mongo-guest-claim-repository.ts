@@ -1,6 +1,5 @@
-import { randomUUID } from "node:crypto";
 import { CreatorProjectSchema, GuestClaimAssetManifestSchema, GuestClaimSnapshotSchema, ProjectVersionSchema, type GuestClaimSnapshot } from "@movprompt/contracts";
-import { COLLECTIONS, type JsonObject, type MongoDatabase } from "@movprompt/db";
+import { COLLECTIONS, newMongoObjectId, type JsonObject, type MongoDatabase } from "@movprompt/db";
 import { objectKeys } from "@movprompt/storage";
 import type { ClientSession, Document } from "mongodb";
 import { GuestClaimRepositoryError, type GuestClaimOperation, type GuestClaimRepository } from "./guest-claim-repository.js";
@@ -16,13 +15,20 @@ function publicOperation(row: Document, assets: Document[]): GuestClaimOperation
   return { id: String(row.id), projectId: String(row.projectId), draftId: String(row.draftId), pendingGenerationId: String(row.pendingGenerationId), snapshotDigest: String(row.snapshotDigest), status: row.status, nextAsset: next ? { id: String(next.id), localAssetId: String(next.localAssetId), ordinal: Number(next.ordinal), status: next.status } : null };
 }
 
-function claimedConfiguration(configuration: JsonObject, assets: Document[]): JsonObject {
-  const next = structuredClone(configuration); const creatorProject = next.creatorProject;
-  if (creatorProject && typeof creatorProject === "object" && !Array.isArray(creatorProject)) {
-    const source = (creatorProject as JsonObject).source;
-    if (source && typeof source === "object" && !Array.isArray(source)) (source as JsonObject).assetKeys = assets.filter((asset) => ["product", "reference", "footage"].includes(String(asset.kind)) && asset.objectKey).map((asset) => String(asset.objectKey));
-  }
-  return next;
+function publicVersion(row: Document) {
+  return ProjectVersionSchema.parse({
+    id: String(row.id),
+    projectId: String(row.projectId),
+    parentVersionId: typeof row.parentVersionId === "string" ? row.parentVersionId : null,
+    templateVersionId: typeof row.templateVersionId === "string" ? row.templateVersionId : null,
+    mode: row.mode,
+    versionNumber: Number(row.versionNumber),
+    configuration: row.configuration,
+    productRecipe: row.productRecipe,
+    campaignRecipe: row.campaignRecipe,
+    changeReason: typeof row.changeReason === "string" ? row.changeReason : null,
+    createdAt: (row.createdAt as Date).toISOString(),
+  });
 }
 
 export function createMongoGuestClaimRepository(database: MongoDatabase): GuestClaimRepository {
@@ -42,11 +48,13 @@ export function createMongoGuestClaimRepository(database: MongoDatabase): GuestC
         if (byDraft) { if (byDraft.userId !== userId || byDraft.pendingGenerationId !== parsed.data.pendingGenerationId || canonical(byDraft.snapshot) !== canonical(parsed.data)) throw new GuestClaimRepositoryError("conflict"); return publicOperation(byDraft, await assetsFor(String(byDraft.id), session)); }
         const existing = await operations.findOne({ userId, pendingGenerationId: parsed.data.pendingGenerationId }, { session });
         if (existing) { if (canonical(existing.snapshot) !== canonical(parsed.data)) throw new GuestClaimRepositoryError("conflict"); return publicOperation(existing, await assetsFor(String(existing.id), session)); }
-        await ensureTemplate(parsed.data.templateVersionId, session); const now = new Date(); const projectId = randomUUID(); const operationId = randomUUID();
-        await projects.insertOne({ id: projectId, userId, title: parsed.data.title, mode: parsed.data.mode, status: "draft", clientDraftId: parsed.data.draftId, currentWorkingVersionId: null, currentAcceptedVersionId: null, deletedAt: null, createdAt: now, updatedAt: now }, { session });
+        await ensureTemplate(parsed.data.templateVersionId, session); const now = new Date(); const existingProject = await projects.findOne({ clientDraftId: parsed.data.draftId }, { session });
+        if (existingProject && existingProject.userId !== userId) throw new GuestClaimRepositoryError("conflict");
+        const projectId = existingProject ? String(existingProject.id) : newMongoObjectId(); const operationId = newMongoObjectId();
+        if (!existingProject) await projects.insertOne({ id: projectId, userId, title: parsed.data.title, mode: parsed.data.mode, status: "draft", clientDraftId: parsed.data.draftId, currentWorkingVersionId: null, currentAcceptedVersionId: null, deletedAt: null, createdAt: now, updatedAt: now }, { session });
         const operation = { id: operationId, userId, draftId: parsed.data.draftId, pendingGenerationId: parsed.data.pendingGenerationId, snapshotDigest: parsed.data.snapshotDigest, snapshot: parsed.data, assetManifest: parsed.data.assetManifest, projectId, projectVersionId: null, status: parsed.data.assetManifest.length ? "securing" : "pending", errorCode: null, errorMetadata: {}, finalizedAt: null, createdAt: now, updatedAt: now };
         await operations.insertOne(operation, { session });
-        const assets = parsed.data.assetManifest.map((asset) => ({ id: randomUUID(), claimOperationId: operationId, userId, localAssetId: asset.localAssetId, ordinal: asset.ordinal, kind: asset.kind, mimeType: asset.mimeType, sizeBytes: asset.sizeBytes, checksumSha256: asset.checksumSha256, durationMs: asset.durationMs ?? null, status: "pending", bucket: null, objectKey: null, errorCode: null, errorMetadata: {}, createdAt: now, updatedAt: now }));
+        const assets = parsed.data.assetManifest.map((asset) => ({ id: newMongoObjectId(), claimOperationId: operationId, userId, localAssetId: asset.localAssetId, ordinal: asset.ordinal, kind: asset.kind, mimeType: asset.mimeType, sizeBytes: asset.sizeBytes, checksumSha256: asset.checksumSha256, durationMs: asset.durationMs ?? null, status: "pending", bucket: null, objectKey: null, errorCode: null, errorMetadata: {}, createdAt: now, updatedAt: now }));
         if (assets.length) await claimAssets.insertMany(assets, { session }); return publicOperation(operation, assets);
       });
     },
@@ -71,13 +79,15 @@ export function createMongoGuestClaimRepository(database: MongoDatabase): GuestC
         const operation = await byIntent(userId, pendingGenerationId, session); const assets = await assetsFor(String(operation.id), session);
         if (assets.some((asset) => asset.status !== "verified")) throw new GuestClaimRepositoryError("assets_pending");
         if (operation.status !== "ready") {
-          const snapshot = GuestClaimSnapshotSchema.parse(operation.snapshot) as GuestClaimSnapshot; await ensureTemplate(snapshot.templateVersionId, session); const now = new Date(); const versionId = randomUUID();
-          await versions.insertOne({ id: versionId, projectId: operation.projectId, userId, mode: snapshot.mode, versionNumber: 1, parentVersionId: null, templateVersionId: snapshot.templateVersionId ?? null, configuration: claimedConfiguration(snapshot.configuration, assets), productRecipe: snapshot.productRecipe, campaignRecipe: snapshot.campaignRecipe, changeReason: "Guest draft claimed after authentication", operationKey: snapshot.pendingGenerationId, createdAt: now }, { session });
+          const snapshot = GuestClaimSnapshotSchema.parse(operation.snapshot) as GuestClaimSnapshot; await ensureTemplate(snapshot.templateVersionId, session); const now = new Date(); const versionId = newMongoObjectId();
+          const previousVersion = await versions.findOne({ projectId: operation.projectId, userId }, { session, sort: { versionNumber: -1 } });
+          await versions.insertOne({ id: versionId, projectId: operation.projectId, userId, mode: snapshot.mode, versionNumber: Number(previousVersion?.versionNumber ?? 0) + 1, parentVersionId: previousVersion ? String(previousVersion.id) : null, templateVersionId: snapshot.templateVersionId ?? null, configuration: structuredClone(snapshot.configuration), productRecipe: snapshot.productRecipe, campaignRecipe: snapshot.campaignRecipe, changeReason: "Guest draft claimed after authentication", operationKey: snapshot.pendingGenerationId, createdAt: now }, { session });
           if (assets.length) for (const asset of assets) await database.collection(COLLECTIONS.creatorProjectAssets).updateOne({ id: asset.localAssetId, projectId: operation.projectId, userId }, { $setOnInsert: { id: asset.localAssetId, projectId: operation.projectId, userId, kind: asset.kind, bucket: asset.bucket, objectKey: asset.objectKey, mimeType: asset.mimeType, sizeBytes: asset.sizeBytes, checksumSha256: asset.checksumSha256, durationMs: asset.durationMs ?? null, createdAt: now, updatedAt: now } }, { upsert: true, session });
-          await projects.updateOne({ id: operation.projectId, userId }, { $set: { status: "ready", currentWorkingVersionId: versionId, updatedAt: now } }, { session }); await operations.updateOne({ id: operation.id, userId }, { $set: { status: "ready", projectVersionId: versionId, errorCode: null, errorMetadata: {}, finalizedAt: now, updatedAt: now } }, { session }); operation.status = "ready"; operation.projectVersionId = versionId;
+          await projects.updateOne({ id: operation.projectId, userId }, { $set: { title: snapshot.title, mode: snapshot.mode, status: "ready", currentWorkingVersionId: versionId, updatedAt: now } }, { session }); await operations.updateOne({ id: operation.id, userId }, { $set: { status: "ready", projectVersionId: versionId, errorCode: null, errorMetadata: {}, finalizedAt: now, updatedAt: now } }, { session }); operation.status = "ready"; operation.projectVersionId = versionId;
         }
         const project = await projects.findOne({ id: operation.projectId, userId }, { session }); const version = await versions.findOne({ id: operation.projectVersionId, userId }, { session }); if (!project || !version) throw new Error("guest_claim_receipt_missing");
-        return { operation: publicOperation(operation, assets), project: CreatorProjectSchema.parse({ id: project.id, title: project.title, mode: project.mode, status: project.status, currentWorkingVersionId: project.currentWorkingVersionId, currentAcceptedVersionId: project.currentAcceptedVersionId ?? null, latestRenderRunId: null, latestRenderProjectVersionId: null, latestRenderRunStatus: null, deletedAt: null, createdAt: (project.createdAt as Date).toISOString(), updatedAt: (project.updatedAt as Date).toISOString(), currentVersion: ProjectVersionSchema.parse({ ...version, createdAt: (version.createdAt as Date).toISOString() }), versionCount: 1, outputCount: 0 }), assetManifest: GuestClaimAssetManifestSchema.parse(assets.map((asset) => ({ localAssetId: asset.localAssetId, ordinal: asset.ordinal, kind: asset.kind, mimeType: asset.mimeType, sizeBytes: asset.sizeBytes, checksumSha256: asset.checksumSha256, ...(typeof asset.durationMs === "number" ? { durationMs: asset.durationMs } : {}) }))) };
+        const versionCount = await versions.countDocuments({ projectId: operation.projectId, userId }, { session });
+        return { operation: publicOperation(operation, assets), project: CreatorProjectSchema.parse({ id: project.id, title: project.title, mode: project.mode, status: project.status, currentWorkingVersionId: project.currentWorkingVersionId, currentAcceptedVersionId: project.currentAcceptedVersionId ?? null, latestRenderRunId: null, latestRenderProjectVersionId: null, latestRenderRunStatus: null, deletedAt: null, createdAt: (project.createdAt as Date).toISOString(), updatedAt: (project.updatedAt as Date).toISOString(), currentVersion: publicVersion(version), versionCount, outputCount: 0 }), assetManifest: GuestClaimAssetManifestSchema.parse(assets.map((asset) => ({ localAssetId: asset.localAssetId, ordinal: asset.ordinal, kind: asset.kind, mimeType: asset.mimeType, sizeBytes: asset.sizeBytes, checksumSha256: asset.checksumSha256, ...(typeof asset.durationMs === "number" ? { durationMs: asset.durationMs } : {}) }))) };
       });
     },
   };

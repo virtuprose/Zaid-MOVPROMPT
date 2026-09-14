@@ -101,6 +101,6 @@ export function recommendTemplates(
 
 export type RecommendationSelection = {
   template: CreatorTemplate;
-  quote: NonNullable<import("./templateQuoteState").TemplateQuoteState["quote"]>;
+  quote: import("./templateQuoteState").TemplateQuoteState["quote"];
   configuration: GenerationConfiguration;
 };

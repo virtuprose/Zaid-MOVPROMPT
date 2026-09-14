@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { isFeatureEnabled } from "@/config/features";
 
 export const getSessionId = (): string => {
   let id = localStorage.getItem("movprompt_session_id");
@@ -10,6 +11,7 @@ export const getSessionId = (): string => {
 };
 
 export const trackPageVisit = async (pagePath: string = "/") => {
+  if (isFeatureEnabled("portableAuth")) return;
   try {
     await supabase.from("page_visits").insert({
       page_path: pagePath,
@@ -22,6 +24,7 @@ export const trackPageVisit = async (pagePath: string = "/") => {
 };
 
 export const trackGeneration = async (workflowType: string, targetModel: string) => {
+  if (isFeatureEnabled("portableAuth")) return;
   try {
     const { data: { user } } = await supabase.auth.getUser();
     await supabase.from("generation_events").insert({

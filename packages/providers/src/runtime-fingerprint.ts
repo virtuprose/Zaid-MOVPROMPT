@@ -22,6 +22,7 @@ export function generationRuntimeFingerprint(
 ): string {
   const configuration = {
     applicationEnvironment: environment.APP_ENV?.trim() || "",
+    developmentFreeGeneration: normalizedBoolean(environment.DEVELOPMENT_FREE_GENERATION),
     gatewayBaseUrl: environment.VERCEL_AI_GATEWAY_BASE_URL?.trim() || "",
     providerReady: normalizedBoolean(environment.MOVPROMPT_PROVIDER_VERCEL_GATEWAY_READY),
     gatewayKeyPresent: Boolean(environment.AI_GATEWAY_API_KEY?.trim()),

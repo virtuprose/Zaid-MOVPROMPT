@@ -66,6 +66,7 @@ const AppRoutes = () => {
   const guestCreator = isFeatureEnabled("guestCreator");
   const projects = isFeatureEnabled("projects");
   const advancedMode = isFeatureEnabled("advancedMode");
+  const developmentFreeGeneration = import.meta.env.DEV && isFeatureEnabled("developmentFreeGeneration");
 
   if (!isOnline) return <OfflineFallback />;
 
@@ -103,10 +104,10 @@ const AppRoutes = () => {
           <Route path="/advanced/templates" element={<AuthGuard><TemplateWorkshop /></AuthGuard>} />
           <Route path="/advanced/history" element={projects ? <AuthGuard><CreatorProjects /></AuthGuard> : <Navigate to="/create" replace />} />
           <Route path="/ads" element={advancedMode ? <LegacyRouteRedirect kind="advanced" /> : <AuthGuard><MarketingStudio /></AuthGuard>} />
-          <Route path="/pricing" element={<Pricing />} />
+          <Route path="/pricing" element={developmentFreeGeneration ? <Navigate to="/create" replace /> : <Pricing />} />
           <Route path="/notifications" element={<AuthGuard><Notifications /></AuthGuard>} />
           <Route path="/account/settings" element={<AuthGuard><AccountSettings /></AuthGuard>} />
-          <Route path="/account/billing" element={<AuthGuard><AccountBilling /></AuthGuard>} />
+          <Route path="/account/billing" element={developmentFreeGeneration ? <Navigate to="/create" replace /> : <AuthGuard><AccountBilling /></AuthGuard>} />
           <Route path="/account/preferences" element={<AuthGuard><AccountPreferences /></AuthGuard>} />
           <Route path="/account/notifications" element={<Navigate to="/notifications" replace />} />
           {import.meta.env.DEV && <Route path="/qa/create" element={<CreatorQa />} />}

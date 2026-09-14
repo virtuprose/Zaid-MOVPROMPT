@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { CreatorAssetKindSchema } from "./assets.js";
-import { IdempotencyKeySchema, RequestIdSchema } from "./api.js";
+import { IdempotencyKeySchema, MongoObjectIdSchema, RequestIdSchema } from "./api.js";
 import {
   CreationModeSchema,
   CreatorProjectSchema,
@@ -10,12 +10,14 @@ import {
   validateTemplateCampaignPayload,
 } from "./creator.js";
 
+const EntityIdSchema = MongoObjectIdSchema.or(z.uuid());
+
 const Sha256Schema = z.string().regex(/^[a-f0-9]{64}$/);
 
 /** Browser-local metadata that identifies an asset before it is copied to private storage. */
 export const GuestClaimAssetManifestEntrySchema = z
   .object({
-    localAssetId: z.uuid(),
+    localAssetId: EntityIdSchema,
     ordinal: z.number().int().nonnegative().max(99),
     kind: CreatorAssetKindSchema,
     mimeType: z.string().trim().min(1).max(255),
@@ -61,13 +63,13 @@ export type GuestClaimAssetManifest = z.infer<typeof GuestClaimAssetManifestSche
  */
 export const GuestClaimSnapshotSchema = z
   .object({
-    draftId: z.uuid(),
+    draftId: EntityIdSchema,
     pendingGenerationId: IdempotencyKeySchema,
     snapshotDigest: Sha256Schema,
     assetManifest: GuestClaimAssetManifestSchema,
     title: z.string().trim().min(1).max(160),
     mode: CreationModeSchema,
-    templateVersionId: z.uuid().optional(),
+    templateVersionId: EntityIdSchema.optional(),
     configuration: JsonObjectSchema,
     productRecipe: JsonObjectSchema.default({}),
     campaignRecipe: JsonObjectSchema.default({}),
@@ -91,8 +93,8 @@ export type GuestClaimStatus = z.infer<typeof GuestClaimStatusSchema>;
 
 export const GuestClaimAssetCheckpointSchema = z
   .object({
-    id: z.string().uuid(),
-    localAssetId: z.uuid(),
+    id: EntityIdSchema,
+    localAssetId: EntityIdSchema,
     ordinal: z.number().int().nonnegative().max(99),
     status: z.enum(["pending", "securing", "verified", "failed"]),
   })
@@ -102,9 +104,9 @@ export type GuestClaimAssetCheckpoint = z.infer<typeof GuestClaimAssetCheckpoint
 /** Server-owned claim state lets the browser resume one failed local asset without guessing progress. */
 export const GuestClaimOperationSchema = z
   .object({
-    id: z.uuid(),
-    projectId: z.uuid(),
-    draftId: z.uuid(),
+    id: EntityIdSchema,
+    projectId: EntityIdSchema,
+    draftId: EntityIdSchema,
     pendingGenerationId: IdempotencyKeySchema,
     snapshotDigest: Sha256Schema,
     status: GuestClaimStatusSchema,
@@ -122,13 +124,13 @@ export const GuestClaimOperationResponseSchema = z
 export type GuestClaimOperationResponse = z.infer<typeof GuestClaimOperationResponseSchema>;
 
 export const GuestClaimRouteParametersSchema = z
-  .object({ pendingGenerationId: z.uuid() })
+  .object({ pendingGenerationId: EntityIdSchema })
   .strict();
 
 export const GuestClaimReceiptSchema = z
   .object({
     status: GuestClaimStatusSchema,
-    draftId: z.uuid(),
+    draftId: EntityIdSchema,
     pendingGenerationId: IdempotencyKeySchema,
     snapshotDigest: Sha256Schema,
     /** Ordered verified manifest is required before browser-local blobs may be cleaned up. */

@@ -42,6 +42,8 @@ import { createMongoRenderLifecycleStore } from "./mongo-render-lifecycle-store.
 import { WorkerHeartbeat } from "./service-heartbeat.js";
 
 const execFileAsync = promisify(execFile);
+const developmentFreeGeneration = process.env.APP_ENV?.trim() === "local"
+  && process.env.DEVELOPMENT_FREE_GENERATION?.trim().toLowerCase() === "true";
 
 const config = loadWorkerConfig();
 const database = createMongoDatabase({
@@ -145,6 +147,11 @@ const outputQualityReviewer = workerStorage && gatewayApiKey && gatewayQualityMo
       }),
     ], qualityCalibration)
   : undefined;
+const runtimeOutputQualityReviewer = developmentFreeGeneration
+  ? {
+      review: async () => ({ status: "accepted" as const, score: 100, failedDimensions: [] }),
+    }
+  : outputQualityReviewer;
 
 function registerBytePlusCapability(
   alias: "video.cinematic" | "video.product_fidelity",
@@ -160,7 +167,7 @@ function registerBytePlusCapability(
     !workerStorage ||
     !verifiedReferenceUrlResolver ||
     !providerOutputHosts.length ||
-    !outputQualityReviewer ||
+    !runtimeOutputQualityReviewer ||
     !campaignVoiceRenderer
   ) {
     return;
@@ -201,7 +208,7 @@ function registerVercelGatewayCapability(
     !providerOutputHosts.length ||
     !gatewayFirstFramePreparer ||
     !verifiedReferenceUrlResolver ||
-    !outputQualityReviewer
+    !runtimeOutputQualityReviewer
   ) {
     return;
   }
@@ -229,7 +236,7 @@ registerVercelGatewayCapability("video.product_fidelity", "VIDEO_PRODUCT_FIDELIT
 
 async function assertGenerationRuntimeReady(): Promise<boolean> {
   if (process.env.FEATURE_GENERATION?.trim().toLowerCase() !== "true") return false;
-  if (!workerStorage || !outputPersister || !outputQualityReviewer || !providerOutputHosts.length) {
+  if (!workerStorage || !outputPersister || !runtimeOutputQualityReviewer || !providerOutputHosts.length) {
     throw new Error("generation_worker_dependencies_unavailable");
   }
   await Promise.all([
@@ -244,7 +251,7 @@ async function assertGenerationRuntimeReady(): Promise<boolean> {
     const capability = capabilityRegistry.resolve(alias);
     adapterRegistry.get(capability.adapterId, capability.alias);
   }
-  return Boolean(qualityCalibration);
+  return developmentFreeGeneration || Boolean(qualityCalibration);
 }
 
 let resolveWorker: (worker: MongoWorker) => void = () => undefined;
@@ -257,7 +264,7 @@ const generationHandler = createGenerationLifecycleHandler({
   capabilityRegistry,
   adapterRegistry,
   ...(outputPersister ? { outputPersister } : {}),
-  ...(outputQualityReviewer ? { outputQualityReviewer } : {}),
+  ...(runtimeOutputQualityReviewer ? { outputQualityReviewer: runtimeOutputQualityReviewer } : {}),
   reconciliationDelaySeconds: config.renderReconciliationDelaySeconds,
   scheduleReconciliation: async (payload, delaySeconds) => {
     const worker = await workerReady;

@@ -756,6 +756,7 @@ export function createGenerationApiService(options: GenerationApiServiceOptions)
     },
 
     async createQuote(request, session) {
+      const developmentFree = options.pricing.mode === "development-free";
       const pricingVersion = options.pricing.version;
       const quotedAt = now();
       const expiresAt = new Date(quotedAt.getTime() + options.pricing.quoteTtlSeconds * 1_000);
@@ -788,7 +789,7 @@ export function createGenerationApiService(options: GenerationApiServiceOptions)
           configuration,
           template?.durationSeconds,
         );
-        const entitlementEligible = await eligibleForStarter({
+        const entitlementEligible = developmentFree ? false : await eligibleForStarter({
           repository: options.repository,
           session,
           template,
@@ -839,18 +840,23 @@ export function createGenerationApiService(options: GenerationApiServiceOptions)
         configuration,
       });
       assertCapability(capability);
-      assertTemplateEligibility({
-        template,
-        capability,
-        configuration,
-        root: directTemplate?.root ?? configuration as JsonObject,
-      });
+      // Local development may create an estimate before a browser-only image
+      // has been claimed into private storage. The authenticated submission
+      // path below still requires an owned, checksum-verified reference.
+      if (!developmentFree) {
+        assertTemplateEligibility({
+          template,
+          capability,
+          configuration,
+          root: directTemplate?.root ?? configuration as JsonObject,
+        });
+      }
       const price = options.pricing.price(
         capability,
         configuration,
         template?.durationSeconds,
       );
-      const entitlementEligible = await eligibleForStarter({
+      const entitlementEligible = developmentFree ? false : await eligibleForStarter({
         repository: options.repository,
         session,
         template,
@@ -876,6 +882,7 @@ export function createGenerationApiService(options: GenerationApiServiceOptions)
     },
 
     async startRender(input) {
+      const developmentFree = options.pricing.mode === "development-free";
       const version = await loadOwnedVersion(input.userId, input.projectVersionId);
       if (version.projectId !== input.projectId) {
         throw new GenerationApplicationError("project_version_not_found");
@@ -888,7 +895,7 @@ export function createGenerationApiService(options: GenerationApiServiceOptions)
         ?? await publishedTemplate(options.repository, version.templateVersionId);
       const quote = await options.repository.findOwnedQuote(input.userId, input.quoteId);
       if (!quote) throw new GenerationApplicationError("quote_not_found");
-      if (options.starterOnly && !quote.entitlementEligible) {
+      if (options.starterOnly && !developmentFree && !quote.entitlementEligible) {
         throw new GenerationApplicationError(
           "starter_entitlement_unavailable",
           options.starterEligibilityRequiresEmailVerification === false

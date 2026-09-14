@@ -7,8 +7,8 @@ import { TEMPLATE_POSTERS, VERIFIED_TEMPLATE_VIDEOS } from "./templateMedia";
 
 describe("truthful template media catalog", () => {
   it("covers every template with an explicit local poster mapping", () => {
-    expect(Object.keys(TEMPLATE_POSTERS).sort()).toEqual(CREATOR_TEMPLATES.map((template) => template.id).sort());
     for (const template of CREATOR_TEMPLATES) {
+      expect(TEMPLATE_POSTERS).toHaveProperty(template.id);
       expect(existsSync(resolve("public", template.poster.slice(1))), template.poster).toBe(true);
     }
   });
@@ -26,9 +26,14 @@ describe("truthful template media catalog", () => {
 
   it("offers motion only for inspected, unique, template-specific clips", () => {
     const playable = CREATOR_TEMPLATES.filter((template) => template.previewVideo);
-    expect(playable).toHaveLength(12);
+    expect(playable).toHaveLength(4);
     expect(new Set(playable.map((template) => template.previewVideo)).size).toBe(playable.length);
-    expect(Object.keys(VERIFIED_TEMPLATE_VIDEOS).sort()).toEqual(playable.map((template) => template.id).sort());
+    expect(playable.map((template) => template.id).sort()).toEqual([
+      "app-service",
+      "food-beverage",
+      "luxury-product-reveal",
+      "whatsapp-sales-ad",
+    ]);
     for (const template of playable) {
       expect(template.poster).toMatch(/^\/template-previews\/(?:generated\/)?[^/]+\.jpg$/);
       expect(existsSync(resolve("public", template.previewVideo!.slice(1))), template.previewVideo!).toBe(true);
@@ -54,9 +59,9 @@ describe("truthful template media catalog", () => {
     }
   });
 
-  it("gives all fifty cards a unique factual code and crop treatment", () => {
-    expect(new Set(CREATOR_TEMPLATES.map((template) => template.mediaCode)).size).toBe(50);
-    expect(new Set(CREATOR_TEMPLATES.map((template) => template.posterPosition)).size).toBe(50);
+  it("gives all five launch cards a unique factual code and crop treatment", () => {
+    expect(new Set(CREATOR_TEMPLATES.map((template) => template.mediaCode)).size).toBe(5);
+    expect(new Set(CREATOR_TEMPLATES.map((template) => template.posterPosition)).size).toBe(5);
     for (const [index, template] of CREATOR_TEMPLATES.entries()) {
       expect(template.mediaCode).toBe(`T${String(index + 1).padStart(2, "0")}`);
       expect(template.poster).toMatch(/^\/(?:create|homepage|presets|template-previews)\//);

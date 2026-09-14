@@ -18,6 +18,7 @@ type CampaignReviewStepProps = {
   quote: TemplateQuote | null;
   quoteState: CampaignReviewQuoteState;
   arabic?: boolean;
+  hidePricing?: boolean;
   sourceError?: string;
   sourceBusy?: boolean;
   requestId?: string;
@@ -88,6 +89,7 @@ export function CampaignReviewStep({
   quote,
   quoteState,
   arabic = false,
+  hidePricing = false,
   sourceError,
   sourceBusy = false,
   requestId,
@@ -98,7 +100,7 @@ export function CampaignReviewStep({
   onGenerate,
 }: CampaignReviewStepProps) {
   const source = campaignSourceForProject(project);
-  const sourceFacts = factsForReview(source, project.goal).filter((row) => row.fact);
+  const sourceFacts = factsForReview(source, project.goal).filter((row) => row.fact && (!hidePricing || row.field !== "price"));
   const templateName = project.templateId.replace(/-/g, " ");
   const presenter = project.presenterMode === "ai_ugc"
     ? copy(arabic, "AI UGC presenter", "مقدّم UGC")
@@ -162,15 +164,15 @@ export function CampaignReviewStep({
           <label className="creator-review-rights"><input type="checkbox" checked={rightsConfirmed} onChange={(event) => onRightsChange?.(event.target.checked)} /><span><strong>{rightsConfirmed ? <><CheckCircle2 aria-hidden="true" /> {copy(arabic, "Confirmed", "تم التأكيد")}</> : <><CircleAlert aria-hidden="true" /> {copy(arabic, "Confirmation needed", "التأكيد مطلوب")}</>}</strong><span>{copy(arabic, "I have permission to use the media and the campaign facts are accurate.", "لدي إذن لاستخدام الوسائط ومعلومات الحملة دقيقة.")}</span></span></label>
         </section>
 
-        <section className="creator-review-group creator-review-price" aria-labelledby="review-price-heading">
+        {!hidePricing && <section className="creator-review-group creator-review-price" aria-labelledby="review-price-heading">
           <div className="creator-review-group-head"><div><span className="creator-review-index">06</span><h3 id="review-price-heading">{copy(arabic, "Price", "السعر")}</h3></div>{quoteState !== "ready" && onRetryQuote ? <button type="button" className="creator-review-edit" onClick={onRetryQuote}><RefreshCw aria-hidden="true" /> {copy(arabic, "Refresh price", "حدّث السعر")}</button> : editButton("details", copy(arabic, "Edit campaign", "تعديل الحملة"))}</div>
           {quoteFresh ? <div className="creator-review-price-ready"><span>{quote.entitlementEligible ? copy(arabic, "Your first campaign", "حملتك الأولى") : copy(arabic, "Confirmed generation price", "سعر الإنشاء المؤكد")}</span><strong>{quote.entitlementEligible ? copy(arabic, "Included · 0 credits", "مشمول · 0 رصيد") : copy(arabic, `${quote.credits} credits`, `${quote.credits} رصيد`)}</strong><small><Clock3 aria-hidden="true" /> {copy(arabic, "Valid for this exact campaign", "صالح لهذه الحملة بالضبط")}</small></div> : <div className="creator-review-price-state" role="status" aria-live="polite"><CircleAlert aria-hidden="true" /><span>{quoteStateMessage(arabic, quoteState)}</span>{requestId && <details><summary>{copy(arabic, "Support details", "تفاصيل الدعم")}</summary><code>{copy(arabic, "Request ID", "رقم الطلب")}: {requestId}</code></details>}</div>}
-        </section>
+        </section>}
       </div>
 
       {sourceError && <p className="creator-error" role="alert">{sourceError}</p>}
       <div className="creator-review-actions">
-        <p>{canGenerate ? copy(arabic, "Everything is ready. Create your account only when you generate.", "كل شيء جاهز. أنشئ حسابك فقط عند الإنشاء.") : !hasRequiredSource ? requiresSourceMedia ? copy(arabic, "Add the required source details and media before generating. Your campaign is saved.", "أضف تفاصيل المصدر والوسائط المطلوبة قبل الإنشاء. حملتك محفوظة.") : copy(arabic, "Add the required source details before generating. Your campaign is saved.", "أضف تفاصيل المصدر المطلوبة قبل الإنشاء. حملتك محفوظة.") : missingRights ? copy(arabic, "Confirm your rights to generate this campaign.", "أكد حقوقك لإنشاء هذه الحملة.") : quoteState === "ready" ? copy(arabic, "Your campaign is being prepared. Keep this page open.", "جارٍ تجهيز حملتك. أبق هذه الصفحة مفتوحة.") : quoteStateMessage(arabic, quoteState)}</p>
+        <p>{canGenerate ? copy(arabic, "Everything is ready. Create your account only when you generate.", "كل شيء جاهز. أنشئ حسابك فقط عند الإنشاء.") : !hasRequiredSource ? requiresSourceMedia ? copy(arabic, "Add the required source details and media before generating. Your campaign is saved.", "أضف تفاصيل المصدر والوسائط المطلوبة قبل الإنشاء. حملتك محفوظة.") : copy(arabic, "Add the required source details before generating. Your campaign is saved.", "أضف تفاصيل المصدر المطلوبة قبل الإنشاء. حملتك محفوظة.") : missingRights ? copy(arabic, "Confirm your rights to generate this campaign.", "أكد حقوقك لإنشاء هذه الحملة.") : hidePricing ? copy(arabic, "The local generation service is getting ready. Keep this page open.", "جارٍ تجهيز خدمة التوليد المحلية. أبق هذه الصفحة مفتوحة.") : quoteState === "ready" ? copy(arabic, "Your campaign is being prepared. Keep this page open.", "جارٍ تجهيز حملتك. أبق هذه الصفحة مفتوحة.") : quoteStateMessage(arabic, quoteState)}</p>
         <button ref={generateButtonRef} type="button" className="creator-button creator-button-primary" onClick={onGenerate} disabled={!canGenerate}>
           {sourceBusy ? <RefreshCw className="animate-spin" aria-hidden="true" /> : <Sparkles aria-hidden="true" />}
           {copy(arabic, "Generate campaign", "أنشئ الحملة")}

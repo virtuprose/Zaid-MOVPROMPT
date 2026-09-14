@@ -138,7 +138,7 @@ export function createOpenApiDocument(version: string) {
               name: "projectId",
               in: "path",
               required: true,
-              schema: { type: "string", format: "uuid" },
+              schema: { type: "string", pattern: "^[0-9a-fA-F]{24}$" },
             },
           ],
           responses: {
@@ -213,7 +213,7 @@ export function createOpenApiDocument(version: string) {
               name: "projectId",
               in: "path",
               required: true,
-              schema: { type: "string", format: "uuid" },
+              schema: { type: "string", pattern: "^[0-9a-fA-F]{24}$" },
             },
             {
               name: "Idempotency-Key",
@@ -254,7 +254,7 @@ export function createOpenApiDocument(version: string) {
               name: "projectId",
               in: "path",
               required: true,
-              schema: { type: "string", format: "uuid" },
+              schema: { type: "string", pattern: "^[0-9a-fA-F]{24}$" },
             },
             {
               name: "Idempotency-Key",
@@ -282,13 +282,13 @@ export function createOpenApiDocument(version: string) {
               name: "projectId",
               in: "path",
               required: true,
-              schema: { type: "string", format: "uuid" },
+              schema: { type: "string", pattern: "^[0-9a-fA-F]{24}$" },
             },
             {
               name: "assetId",
               in: "path",
               required: true,
-              schema: { type: "string", format: "uuid" },
+              schema: { type: "string", pattern: "^[0-9a-fA-F]{24}$" },
             },
           ],
           responses: {
@@ -306,13 +306,13 @@ export function createOpenApiDocument(version: string) {
               name: "projectId",
               in: "path",
               required: true,
-              schema: { type: "string", format: "uuid" },
+              schema: { type: "string", pattern: "^[0-9a-fA-F]{24}$" },
             },
             {
               name: "assetId",
               in: "path",
               required: true,
-              schema: { type: "string", format: "uuid" },
+              schema: { type: "string", pattern: "^[0-9a-fA-F]{24}$" },
             },
           ],
           responses: {
@@ -340,7 +340,7 @@ export function createOpenApiDocument(version: string) {
           operationId: "listRenderRuns",
           security: [{ cookieAuth: [] }],
           parameters: [
-            { name: "projectId", in: "query", required: false, schema: { type: "string", format: "uuid" } },
+            { name: "projectId", in: "query", required: false, schema: { type: "string", pattern: "^[0-9a-fA-F]{24}$" } },
             { name: "limit", in: "query", required: false, schema: { type: "integer", minimum: 1, maximum: 100, default: 50 } },
           ],
           responses: {
@@ -373,7 +373,7 @@ export function createOpenApiDocument(version: string) {
           operationId: "getRenderRun",
           security: [{ cookieAuth: [] }],
           parameters: [
-            { name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+            { name: "id", in: "path", required: true, schema: { type: "string", pattern: "^[0-9a-fA-F]{24}$" } },
           ],
           responses: {
             "200": { description: "Owner-scoped durable render status." },
@@ -387,7 +387,7 @@ export function createOpenApiDocument(version: string) {
           operationId: "cancelRenderRun",
           security: [{ cookieAuth: [] }],
           parameters: [
-            { name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+            { name: "id", in: "path", required: true, schema: { type: "string", pattern: "^[0-9a-fA-F]{24}$" } },
             {
               name: "Idempotency-Key",
               in: "header",
@@ -409,7 +409,7 @@ export function createOpenApiDocument(version: string) {
           description: "Reconciles an existing accepted provider operation without submitting or charging for a new generation.",
           security: [{ cookieAuth: [] }],
           parameters: [
-            { name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+            { name: "id", in: "path", required: true, schema: { type: "string", pattern: "^[0-9a-fA-F]{24}$" } },
             {
               name: "Idempotency-Key",
               in: "header",

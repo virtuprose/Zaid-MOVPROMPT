@@ -13,6 +13,8 @@ Docker Compose runs MongoDB 8 as a single-node `rs0` replica set. The former Pos
 - `.env.infrastructure` contains local MongoDB, MinIO, Mailpit, auth, and feature defaults.
 - `bun run db:migrate` and `bun run db:check` now connect to MongoDB and create/check indexes.
 - Root API, worker, and database scripts explicitly load the ignored root `.env`, so local commands use the device MongoDB URL even after changing into their workspace directories.
+- The native Homebrew MongoDB service now runs at `mongodb://localhost:27017` as the `rs0` replica-set primary, matching MongoDB Compass while retaining transaction support.
+- Clean-database initialization now tolerates a missing `worker_jobs` namespace before creating its indexes.
 - `node .local-setup/run.mjs up` initializes the replica set before starting API and worker containers.
 
 ## Verification
@@ -24,4 +26,5 @@ Docker Compose runs MongoDB 8 as a single-node `rs0` replica set. The former Pos
 - Database, auth, API, worker, contracts, storage, providers, and creative-engine tests passed.
 - The repository-wide test command still reports seven failures in two unchanged web UI suites: five IndexedDB guest-recovery tests and two homepage gallery expectations. These are outside the database runtime path; the web production build and typecheck pass.
 - No provider generation or paid request was made.
+- The local Vercel AI Gateway key passed the read-only credit and model-readiness checks; the account currently has no available Gateway credit, so generation remains fail-closed.
 - Nothing was committed or pushed.

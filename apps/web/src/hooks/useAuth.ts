@@ -1,5 +1,5 @@
 import type { Session, User } from "@supabase/supabase-js";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { isFeatureEnabled } from "@/config/features";
 import { supabase } from "@/integrations/supabase/client";
 import { attributeStoredRefIfAny } from "@/lib/referrals";
@@ -32,12 +32,20 @@ export function projectPortableUser(input: NonNullable<ReturnType<typeof portabl
 
 function usePortableAuth() {
   const sessionState = portableAuthClient.useSession();
-  const user = sessionState.data?.user ? projectPortableUser(sessionState.data.user) : null;
-  return {
-    user,
-    session: sessionState.data && user
+  const sessionUser = sessionState.data?.user;
+  const user = useMemo(
+    () => sessionUser ? projectPortableUser(sessionUser) : null,
+    [sessionUser],
+  );
+  const session = useMemo(
+    () => sessionState.data && user
       ? ({ ...sessionState.data, user } as unknown as AuthSession)
       : null,
+    [sessionState.data, user],
+  );
+  return {
+    user,
+    session,
     loading: sessionState.isPending,
     error: sessionState.error,
     refresh: sessionState.refetch,

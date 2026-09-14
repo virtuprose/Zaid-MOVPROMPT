@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { HelmetProvider } from "react-helmet-async";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it } from "vitest";
@@ -53,7 +53,7 @@ describe("CinematicHero scrollable campaign galleries", () => {
     const directions = screen.getByRole("region", { name: "More campaign directions" });
 
     const previewButtons = within(ready).getAllByRole("button", { name: /Play .* preview/ });
-    expect(previewButtons).toHaveLength(11);
+    expect(previewButtons).toHaveLength(4);
     expect(within(directions).getAllByRole("link", { name: /View .* direction/ })).toHaveLength(1);
     expect(ready.compareDocumentPosition(directions) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     fireEvent.click(previewButtons[0]!);
@@ -61,11 +61,13 @@ describe("CinematicHero scrollable campaign galleries", () => {
     view.unmount();
   });
 
-  it("localizes homepage catalog proof groups for Arabic", () => {
+  it("localizes homepage catalog proof groups for Arabic", async () => {
     const view = renderHero("ar");
 
-    expect(screen.getByRole("region", { name: "معاينات جاهزة" })).toBeVisible();
-    expect(screen.getByRole("region", { name: "اتجاهات حملات إضافية" })).toBeVisible();
+    await waitFor(() => {
+      expect(screen.getByRole("region", { name: "معاينات جاهزة" })).toBeVisible();
+      expect(screen.getByRole("region", { name: "اتجاهات حملات إضافية" })).toBeVisible();
+    });
     view.unmount();
   });
 });

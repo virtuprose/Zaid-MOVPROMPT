@@ -1,7 +1,9 @@
 import { z } from "zod";
 
 import { CapabilityAliasSchema } from "./capabilities.js";
-import { RequestIdSchema } from "./api.js";
+import { MongoObjectIdSchema, RequestIdSchema } from "./api.js";
+
+const EntityIdSchema = MongoObjectIdSchema.or(z.uuid());
 
 const JsonPrimitiveSchema = z.union([z.string(), z.number().finite(), z.boolean(), z.null()]);
 
@@ -45,8 +47,8 @@ export const CreateGenerationQuoteRequestSchema = z
      * do not use a template, where the server validates it separately.
      */
     capability: CapabilityAliasSchema.optional(),
-    templateVersionId: z.uuid().optional(),
-    projectVersionId: z.uuid().optional(),
+    templateVersionId: EntityIdSchema.optional(),
+    projectVersionId: EntityIdSchema.optional(),
     configuration: GenerationConfigurationSchema.optional(),
   })
   .strict()
@@ -80,7 +82,7 @@ export const GenerationQuoteBreakdownItemSchema = z
 
 export const GenerationQuoteSchema = z
   .object({
-    quoteId: z.uuid().nullable(),
+    quoteId: EntityIdSchema.nullable(),
     capability: CapabilityAliasSchema,
     credits: z.number().int().nonnegative(),
     entitlementEligible: z.boolean(),
@@ -103,16 +105,16 @@ export type GenerationQuoteResponse = z.infer<typeof GenerationQuoteResponseSche
 
 export const StartRenderRunRequestSchema = z
   .object({
-    projectId: z.uuid(),
-    projectVersionId: z.uuid(),
-    quoteId: z.uuid(),
+    projectId: EntityIdSchema,
+    projectVersionId: EntityIdSchema,
+    quoteId: EntityIdSchema,
     rightsAttested: z.literal(true),
   })
   .strict();
 
 export type StartRenderRunRequest = z.infer<typeof StartRenderRunRequestSchema>;
 
-export const RenderRunParametersSchema = z.object({ id: z.uuid() }).strict();
+export const RenderRunParametersSchema = z.object({ id: EntityIdSchema }).strict();
 
 export const CancelRenderRunRequestSchema = z.object({}).strict();
 
@@ -143,11 +145,11 @@ export type RenderProcessingStage = z.infer<typeof RenderProcessingStageSchema>;
 
 export const PublicRenderRunSchema = z
   .object({
-    id: z.uuid(),
-    projectId: z.uuid(),
-    projectVersionId: z.uuid(),
+    id: EntityIdSchema,
+    projectId: EntityIdSchema,
+    projectVersionId: EntityIdSchema,
     capability: CapabilityAliasSchema,
-    quoteId: z.uuid(),
+    quoteId: EntityIdSchema,
     quotedCredits: z.number().int().nonnegative(),
     chargedCredits: z.number().int().nonnegative(),
     starterEntitlementUsed: z.boolean(),
@@ -180,7 +182,7 @@ export type RenderRunResponse = z.infer<typeof RenderRunResponseSchema>;
 
 export const RenderRunListQuerySchema = z
   .object({
-    projectId: z.uuid().optional(),
+    projectId: EntityIdSchema.optional(),
     limit: z.coerce.number().int().min(1).max(100).default(50),
   })
   .strict();

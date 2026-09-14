@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { Menu, Moon, Sun, X } from "lucide-react";
 import logoMark from "@/assets/logo-mark-white.svg";
 import { useTheme } from "@/components/ThemeProvider";
+import { isFeatureEnabled } from "@/config/features";
 
 const navigation = [
   { label: "Templates", href: "#templates" },
@@ -13,6 +14,7 @@ export const HeroTopNav = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const { theme, toggleTheme } = useTheme();
   const nextTheme = theme === "light" ? "dark" : "light";
+  const developmentFreeGeneration = import.meta.env.DEV && isFeatureEnabled("developmentFreeGeneration");
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -44,7 +46,7 @@ export const HeroTopNav = () => {
             </a>
           ))}
           <Link to="/advanced">Advanced</Link>
-          <Link to="/pricing">Pricing</Link>
+          {!developmentFreeGeneration && <Link to="/pricing">Pricing</Link>}
         </div>
 
         <div className="mp-nav-actions">
@@ -98,9 +100,9 @@ export const HeroTopNav = () => {
           <Link to="/advanced" onClick={() => setMenuOpen(false)}>
             Advanced
           </Link>
-          <Link to="/pricing" onClick={() => setMenuOpen(false)}>
+          {!developmentFreeGeneration && <Link to="/pricing" onClick={() => setMenuOpen(false)}>
             Pricing
-          </Link>
+          </Link>}
           <button className="mp-mobile-theme-row" type="button" onClick={toggleTheme}>
             {theme === "light" ? <Moon aria-hidden="true" /> : <Sun aria-hidden="true" />}
             Use {nextTheme} mode

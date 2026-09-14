@@ -13,8 +13,8 @@ const requiredCopy = {
     ar: "أنشئ حساباً لبدء التوليد. سيعود منتجك والقالب وإعدادات حملتك كما تركتها تماماً في هذا المتصفح.",
   },
   "auth.gatePriceNote": {
-    en: "No charge is made until the final price is confirmed. Cancel to keep editing.",
-    ar: "لن يتم الخصم قبل تأكيد السعر النهائي. أغلق النافذة لمتابعة التعديل.",
+    en: "Your campaign stays saved while you sign in. Cancel to keep editing.",
+    ar: "تبقى حملتك محفوظة أثناء تسجيل الدخول. أغلق النافذة لمتابعة التعديل.",
   },
   "auth.continueEmail": { en: "Continue with email", ar: "المتابعة بالبريد الإلكتروني" },
   "auth.signIn": { en: "Sign in", ar: "تسجيل الدخول" },
@@ -45,6 +45,10 @@ const requiredCopy = {
   "creator.recovery.claimFailed": {
     en: "We couldn’t secure this image. Your campaign is still saved here.",
     ar: "لم نتمكن من تأمين هذه الصورة. حملتك ما زالت محفوظة هنا.",
+  },
+  "creator.recovery.projectClaimFailed": {
+    en: "We couldn’t save this campaign to your account. It is still saved in this browser. Try again.",
+    ar: "لم نتمكن من حفظ هذه الحملة في حسابك. ما زالت محفوظة في هذا المتصفح. حاول مرة أخرى.",
   },
   "creator.recovery.retryAsset": { en: "Retry securing image", ar: "أعد تأمين الصورة" },
   "creator.recovery.replaceImage": { en: "Replace image", ar: "استبدل الصورة" },
@@ -104,10 +108,10 @@ describe("authentication handoff copy", () => {
     expect(ar["auth.continueEmail"]).toMatch(/[\u0600-\u06ff]/u);
   });
 
-  it("keeps the guest gate truthful about draft recovery and pricing", () => {
+  it("keeps the guest gate truthful about draft recovery", () => {
     expect(en["auth.gateDescription"]).toContain("this browser");
-    expect(en["auth.gatePriceNote"]).toContain("No charge");
-    expect(en["auth.gatePriceNote"]).toContain("final price");
+    expect(en["auth.gatePriceNote"]).toContain("stays saved");
+    expect(en["auth.gatePriceNote"]).not.toMatch(/charge|price/i);
   });
 
   it("explains that private-beta verification can be completed later", () => {

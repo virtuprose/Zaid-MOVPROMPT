@@ -107,6 +107,7 @@ export default function AdvancedStudio() {
     [arabicUi],
   );
   const portablePlatform = isFeatureEnabled("portableAuth");
+  const developmentFreeGeneration = import.meta.env.DEV && isFeatureEnabled("developmentFreeGeneration");
   const cameraLabel = (id: (typeof CAMERA_OPTIONS)[number]["id"], fallback: string) => arabicUi
     ? ({ "push-in": "اقتراب", orbit: "دوران", handheld: "يدوي", static: "ثابت" } as const)[id]
     : fallback;
@@ -263,7 +264,9 @@ export default function AdvancedStudio() {
         const message = portableError?.code === "worker_unavailable"
           ? tr("Generation is temporarily paused. Your direction is saved.", "التوليد متوقف مؤقتاً. اتجاهك محفوظ.")
           : portableError?.code === "pricing_unavailable"
-            ? tr("We couldn’t confirm the current price. Try again.", "ما قدرنا نؤكد السعر الحالي. حاول مرة ثانية.")
+            ? developmentFreeGeneration
+              ? tr("The local generation service is not ready. Try again.", "خدمة التوليد المحلية غير جاهزة. حاول مرة ثانية.")
+              : tr("We couldn’t confirm the current price. Try again.", "ما قدرنا نؤكد السعر الحالي. حاول مرة ثانية.")
             : tr("Video generation is temporarily unavailable.", "توليد الفيديو غير متوفر مؤقتاً.");
         setQuoteError(shouldRetryAutomatically
           ? `${message} ${tr("Retrying automatically…", "جارٍ إعادة المحاولة تلقائياً…")}`
@@ -287,7 +290,7 @@ export default function AdvancedStudio() {
       window.clearTimeout(timer);
       if (automaticRetryTimer !== null) window.clearTimeout(automaticRetryTimer);
     };
-  }, [capability, duration, portablePlatform, quoteRetry, studioConfigurationInput, tr, user?.id]);
+  }, [capability, developmentFreeGeneration, duration, portablePlatform, quoteRetry, studioConfigurationInput, tr, user?.id]);
 
   const retryQuote = useCallback(() => {
     quoteAutoRetryCount.current = 0;
@@ -518,7 +521,9 @@ export default function AdvancedStudio() {
       return;
     }
     if (!quoteLoaded || !quote) {
-      toast.error(quoteError || tr("Live pricing is still loading. Try again in a moment.", "جارٍ تحميل السعر المباشر. حاول بعد لحظات."));
+      toast.error(quoteError || (developmentFreeGeneration
+        ? tr("The local generation service is still loading. Try again in a moment.", "جارٍ تحميل خدمة التوليد المحلية. حاول بعد لحظات.")
+        : tr("Live pricing is still loading. Try again in a moment.", "جارٍ تحميل السعر المباشر. حاول بعد لحظات.")));
       return;
     }
     const operationId = pendingId || crypto.randomUUID();
@@ -578,7 +583,9 @@ export default function AdvancedStudio() {
           projectVersionId: saved.version.id,
         });
         if (!authoritativeQuote.quoteId) {
-          throw new Error(tr("The confirmed generation price could not be saved.", "تعذر حفظ سعر التوليد المؤكد."));
+          throw new Error(developmentFreeGeneration
+            ? tr("The local generation session could not be saved.", "تعذر حفظ جلسة التوليد المحلية.")
+            : tr("The confirmed generation price could not be saved.", "تعذر حفظ سعر التوليد المؤكد."));
         }
         if (authoritativeQuote.credits !== quote.credits) {
           setQuote({
@@ -590,10 +597,12 @@ export default function AdvancedStudio() {
             breakdown: authoritativeQuote.breakdown,
             estimateOnly: authoritativeQuote.estimateOnly,
           });
-          setPriceNotice(tr(
-            `The price changed from ${quote.credits} to ${authoritativeQuote.credits} credits. Review it, then select Generate direction again.`,
-            `تغيّر السعر من ${quote.credits} إلى ${authoritativeQuote.credits} رصيد. راجعه، ثم اختر توليد الاتجاه مرة ثانية.`,
-          ));
+          setPriceNotice(developmentFreeGeneration
+            ? tr("The generation settings changed. Select Generate direction again.", "تغيّرت إعدادات التوليد. اختر توليد الاتجاه مرة ثانية.")
+            : tr(
+              `The price changed from ${quote.credits} to ${authoritativeQuote.credits} credits. Review it, then select Generate direction again.`,
+              `تغيّر السعر من ${quote.credits} إلى ${authoritativeQuote.credits} رصيد. راجعه، ثم اختر توليد الاتجاه مرة ثانية.`,
+            ));
           setSubmitting(false);
           return;
         }
@@ -624,7 +633,7 @@ export default function AdvancedStudio() {
       if (versionError) throw versionError;
       await supabase.from("creator_projects").update({ current_accepted_version_id: versionId }).eq("id", draftId).eq("user_id", user.id);
       const referenceImages = [...(sourceDraft?.product.images.map((image) => image.url) ?? []), ...references.map((reference) => reference.url)];
-      if (!quote.quoteId) throw new Error("The confirmed generation price is unavailable.");
+      if (!quote.quoteId) throw new Error(developmentFreeGeneration ? "The local generation service is unavailable." : "The confirmed generation price is unavailable.");
       const generation = await startCreatorGeneration({ projectId: draftId, projectVersionId: versionId, quoteId: quote.quoteId, idempotencyKey: operationId, mode: "advanced", prompt: directorPrompt(), capability: capability as "video.cinematic" | "video.product_fidelity", options: { duration, aspect_ratio: providerCanvasRatio(ratio), resolution, audio }, referenceImages, rightsAttested: true, metadata: { advanced_flow: true, requested_aspect_ratio: ratio, provider_aspect_ratio: providerCanvasRatio(ratio), resolution, camera_move: cameraMove, shot_type: shotType, motion, lighting, product_fidelity: fidelity, visual_direction: selectedDirectionSpec.label, source_template_version_id: sourceDraft?.templateVersionId } });
       toast.success(tr("Direction queued. You can follow it in Projects.", "تم وضع الاتجاه في قائمة التوليد. تقدر تتابعه في المشاريع."));
       window.location.assign(`/projects?run=${encodeURIComponent(generation.runId)}`);
@@ -740,7 +749,7 @@ export default function AdvancedStudio() {
             </div>
             <div className="advanced-composer-meta">
               <label><input type="checkbox" checked={rights} onChange={(event) => setRights(event.target.checked)} /><span>{tr("I have permission to use these assets", "عندي صلاحية استخدام هذه المواد")}</span></label>
-              <span id="advanced-prompt-help" className="advanced-price-status" role="status" aria-live="polite">{priceNotice || (quote ? (arabicUi ? `${quote.credits} رصيد · عادةً من دقيقتين إلى 5 دقائق` : `${quote.credits} credits · usually 2–5 minutes`) : quoteLoaded ? quoteError || tr("Video generation is temporarily unavailable.", "توليد الفيديو غير متوفر مؤقتاً.") : tr("Checking live price…", "جارٍ التحقق من السعر…"))}{quoteLoaded && !quote && quoteFailure?.retryable && <button type="button" onClick={retryQuote}>{tr("Retry price", "أعد محاولة السعر")}</button>}{quoteFailure?.requestId && <details><summary>{tr("Support details", "تفاصيل الدعم")}</summary><code>{quoteFailure.requestId}</code></details>}</span>
+              <span id="advanced-prompt-help" className="advanced-price-status" role="status" aria-live="polite">{priceNotice || (quote ? developmentFreeGeneration ? tr("Ready for local generation · usually 2–5 minutes", "جاهز للتوليد المحلي · عادةً من دقيقتين إلى 5 دقائق") : (arabicUi ? `${quote.credits} رصيد · عادةً من دقيقتين إلى 5 دقائق` : `${quote.credits} credits · usually 2–5 minutes`) : quoteLoaded ? quoteError || tr("Video generation is temporarily unavailable.", "توليد الفيديو غير متوفر مؤقتاً.") : developmentFreeGeneration ? tr("Checking generation service…", "جارٍ التحقق من خدمة التوليد…") : tr("Checking live price…", "جارٍ التحقق من السعر…"))}{quoteLoaded && !quote && quoteFailure?.retryable && <button type="button" onClick={retryQuote}>{developmentFreeGeneration ? tr("Retry", "أعد المحاولة") : tr("Retry price", "أعد محاولة السعر")}</button>}{quoteFailure?.requestId && <details><summary>{tr("Support details", "تفاصيل الدعم")}</summary><code>{quoteFailure.requestId}</code></details>}</span>
             </div>
             {settingsOpen && (
               <div id="advanced-quick-settings" className="advanced-quick-settings">

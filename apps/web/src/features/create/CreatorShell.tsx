@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils";
 import logoMark from "@/assets/logo-mark.svg";
 import "./creator.css";
 import { useLanguage } from "@/i18n/LanguageContext";
+import { isFeatureEnabled } from "@/config/features";
 import { DRAFT_SAVE_EVENT, type DraftSaveEventDetail } from "./guestDraftStore";
 import { SaveStatusIndicator, type SaveLifecycleState } from "./SaveStatusIndicator";
 
@@ -46,6 +47,7 @@ export function CreatorShell({ children, qaMode = false, studio }: { children: R
   const [signingOut, setSigningOut] = useState(false);
   const studioActive = Boolean(studio);
   const qaPrefix = qaMode ? "/qa/create" : "";
+  const developmentFreeGeneration = import.meta.env.DEV && isFeatureEnabled("developmentFreeGeneration");
 
   useEffect(() => {
     if (!studioActive) return;
@@ -130,7 +132,7 @@ export function CreatorShell({ children, qaMode = false, studio }: { children: R
 
           <div className="creator-header-actions">
             {qaMode && <span className="creator-demo-badge">Local preview</span>}
-            {!qaMode && user && <CreditBadge className="creator-credit-pill" />}
+            {!qaMode && !developmentFreeGeneration && user && <CreditBadge className="creator-credit-pill" />}
             {studio?.onExport && <button className="creator-studio-export" type="button" onClick={studio.onExport}><Download aria-hidden="true" /> {ar ? "تصدير" : "Export"}</button>}
             {user && <Link className="creator-icon-button" to="/notifications" aria-label={ar ? "الإشعارات" : "Notifications"}><Bell aria-hidden="true" /></Link>}
             <button className="creator-language-button" type="button" onClick={() => setLocale(locale === "en" ? "ar" : "en")} aria-label={locale === "en" ? "Use Arabic interface" : "Use English interface"}><Globe2 aria-hidden="true" /><span>{locale === "en" ? "العربية" : "English"}</span></button>
@@ -156,9 +158,9 @@ export function CreatorShell({ children, qaMode = false, studio }: { children: R
                   <DropdownMenuItem asChild className="min-h-11 gap-3">
                     <Link to="/account/settings"><Settings aria-hidden="true" className="h-4 w-4" />{ar ? "إعدادات الحساب" : "Account settings"}</Link>
                   </DropdownMenuItem>
-                  <DropdownMenuItem asChild className="min-h-11 gap-3">
+                  {!developmentFreeGeneration && <DropdownMenuItem asChild className="min-h-11 gap-3">
                     <Link to="/account/billing"><CreditCard aria-hidden="true" className="h-4 w-4" />{ar ? "الرصيد والتسعير" : "Credits & pricing"}</Link>
-                  </DropdownMenuItem>
+                  </DropdownMenuItem>}
                   <DropdownMenuItem asChild className="min-h-11 gap-3">
                     <Link to="/account/preferences"><UserRoundCog aria-hidden="true" className="h-4 w-4" />{ar ? "التفضيلات" : "Preferences"}</Link>
                   </DropdownMenuItem>

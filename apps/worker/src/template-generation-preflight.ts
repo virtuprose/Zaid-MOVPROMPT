@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 
 import {
-  CREATIVE_TEMPLATE_CATALOG,
+  LAUNCH_CREATIVE_TEMPLATE_CATALOG,
   CreativeBriefSchema,
   CreativeTemplateRecipeSchema,
   ENGINE_VERSION,
@@ -28,7 +28,7 @@ const CTA = {
   bilingual: "Order Kinza on WhatsApp · اطلب كينزا على واتساب",
 } as const;
 
-function demoBrief(template: (typeof CREATIVE_TEMPLATE_CATALOG)[number], language: typeof LANGUAGES[number]): CreativeBrief {
+function demoBrief(template: (typeof LAUNCH_CREATIVE_TEMPLATE_CATALOG)[number], language: typeof LANGUAGES[number]): CreativeBrief {
   return CreativeBriefSchema.parse({
     engineVersion: ENGINE_VERSION,
     templateId: template.id,
@@ -69,7 +69,7 @@ export function buildTemplatePreflightManifest(reference: {
   height: number;
   checksumSha256: string;
 }) {
-  const templates = CREATIVE_TEMPLATE_CATALOG.map((templateInput) => {
+  const templates = LAUNCH_CREATIVE_TEMPLATE_CATALOG.map((templateInput) => {
     const template = CreativeTemplateRecipeSchema.parse(templateInput);
     if (template.supportedMarkets.join(",") !== "KW") throw new Error(`template_market_invalid:${template.id}`);
     if (template.durationSeconds < 4 || template.durationSeconds > 30) {

@@ -11,6 +11,13 @@ function isDurableCreatorObjectKey(value: string): boolean {
   return value.startsWith("creator-assets/") || value.startsWith("users/");
 }
 
+function persistedProductSourceType(source: ReturnType<typeof campaignSourceForProject>): CreatorProject["product"]["sourceType"] {
+  if (source.kind === "product_url") return "product_link";
+  if (source.kind === "business_url") return "business_link";
+  if (source.kind === "product_upload" || source.kind === "real_footage") return "upload";
+  return "sample";
+}
+
 function recoveredProjectStatus(input: CreatorProjectRecord): CreatorProject["status"] {
   if (input.status === "trashed") return "draft";
   if (input.latestRenderProjectVersionId !== input.currentWorkingVersionId) return input.status;
@@ -61,7 +68,8 @@ export function stableProjectConfiguration(project: CreatorProject): CreatorProj
     status: "ready",
     logoUrl: "",
     product: {
-      ...project.product,
+      ...sourceFirstProject.product,
+      sourceType: persistedProductSourceType(source),
       sourceUrl: "",
       images: project.product.images.map((image) => ({
         ...image,

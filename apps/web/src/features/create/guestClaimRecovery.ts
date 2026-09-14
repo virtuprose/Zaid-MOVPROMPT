@@ -31,7 +31,7 @@ export type GuestClaimRecoveryCode = "asset_claim_failed" | "import_failed" | "n
 export type GuestClaimRecoveryAction = "retry" | "retry_asset" | "replace_source" | "continue_editing" | "sign_out";
 
 export type TypedGuestClaimRecovery = {
-  state: "claim_failed" | "import_failed" | "offline" | "session_mismatch";
+  state: "claim_failed" | "asset_failed" | "import_failed" | "offline" | "session_mismatch";
   action: GuestClaimRecoveryAction;
   draft: CreationDraft;
   localAssetId?: string;
@@ -42,11 +42,18 @@ export function getGuestClaimRecoveryCopy(
   state: TypedGuestClaimRecovery["state"],
 ): { message: string; primaryAction: string; secondaryAction: string } {
   const translation = locale === "ar" ? ar : en;
-  if (state === "claim_failed") {
+  if (state === "asset_failed") {
     return {
       message: translation["creator.recovery.claimFailed"],
       primaryAction: translation["creator.recovery.retryAsset"],
       secondaryAction: translation["creator.recovery.replaceImage"],
+    };
+  }
+  if (state === "claim_failed") {
+    return {
+      message: translation["creator.recovery.projectClaimFailed"],
+      primaryAction: translation["creator.recovery.retry"],
+      secondaryAction: translation["creator.recovery.continueEditing"],
     };
   }
   if (state === "import_failed") {
@@ -80,7 +87,7 @@ export function selectGuestClaimRecovery(
   if (code === "session_mismatch") return { state: "session_mismatch", action: "continue_editing", draft };
   if (code === "import_failed") return { state: "import_failed", action: "replace_source", draft };
   if (code === "asset_claim_failed" && details.localAssetId) {
-    return { state: "claim_failed", action: "retry_asset", localAssetId: details.localAssetId, draft };
+    return { state: "asset_failed", action: "retry_asset", localAssetId: details.localAssetId, draft };
   }
   return { state: "claim_failed", action: "retry", draft };
 }

@@ -1,4 +1,4 @@
-import { createHash, randomUUID } from "node:crypto";
+import { createHash } from "node:crypto";
 import {
   JsonObjectSchema,
   validateTemplateCampaignPayload,
@@ -13,6 +13,7 @@ import {
 import {
   COLLECTIONS,
   canonicalizeGenerationConfiguration,
+  newMongoObjectId,
   type JsonObject,
   type MongoDatabase,
 } from "@movprompt/db";
@@ -161,9 +162,9 @@ export function createMongoCreatorRepository(database: MongoDatabase): CreatorRe
           return String(existing.id);
         }
         await ensureTemplate(input.templateVersionId, session);
-        const now = new Date(); const id = randomUUID(); const versionId = randomUUID();
+        const now = new Date(); const id = newMongoObjectId(); const versionId = newMongoObjectId();
         await projects.insertOne({ id, userId, title: input.title, mode: input.mode, status: "ready", clientDraftId: input.draftId, currentWorkingVersionId: versionId, currentAcceptedVersionId: null, deletedAt: null, createdAt: now, updatedAt: now }, { session });
-        await versions.insertOne({ id: versionId, projectId: id, userId, mode: input.mode, versionNumber: 1, parentVersionId: null, templateVersionId: input.templateVersionId ?? null, configuration: input.configuration, productRecipe: input.productRecipe, campaignRecipe: input.campaignRecipe, changeReason: "Guest draft claimed after authentication", operationKey: null, createdAt: now }, { session });
+        await versions.insertOne({ id: versionId, projectId: id, userId, mode: input.mode, versionNumber: 1, parentVersionId: null, templateVersionId: input.templateVersionId ?? null, configuration: input.configuration, productRecipe: input.productRecipe, campaignRecipe: input.campaignRecipe, changeReason: "Guest draft claimed after authentication", createdAt: now }, { session });
         return id;
       });
       const project = await loadProject(userId, projectId); if (!project) throw new Error("claimed_project_not_found"); return project;
@@ -201,7 +202,7 @@ export function createMongoCreatorRepository(database: MongoDatabase): CreatorRe
           if (requested !== persisted) throw new CreatorRepositoryError("idempotency_conflict"); return String(existing.id);
         }
         if (input.parentVersionId && !(await versions.findOne({ id: input.parentVersionId, projectId, userId }, { session }))) throw new CreatorRepositoryError("parent_version_not_found");
-        const last = await versions.findOne({ projectId, userId }, { session, sort: { versionNumber: -1 } }); const now = new Date(); const versionId = randomUUID();
+        const last = await versions.findOne({ projectId, userId }, { session, sort: { versionNumber: -1 } }); const now = new Date(); const versionId = newMongoObjectId();
         await versions.insertOne({ id: versionId, projectId, userId, mode: input.mode, versionNumber: Number(last?.versionNumber ?? 0) + 1, parentVersionId: input.parentVersionId ?? null, templateVersionId: input.templateVersionId ?? null, configuration: input.configuration, productRecipe: input.productRecipe, campaignRecipe: input.campaignRecipe, changeReason: input.changeReason ?? null, operationKey: idempotencyKey, createdAt: now }, { session });
         await projects.updateOne({ id: projectId, userId }, { $set: { mode: input.mode, status: "ready", currentWorkingVersionId: versionId, updatedAt: now } }, { session }); return versionId;
       });

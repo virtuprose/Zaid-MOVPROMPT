@@ -46,6 +46,7 @@ export class InvalidGenerationConfigurationError extends Error {
 export interface GenerationPricing {
   readonly version: string;
   readonly quoteTtlSeconds: number;
+  readonly mode?: "paid" | "development-free";
   isAvailable(capability: CapabilityAlias): boolean;
   price(
     capability: CapabilityAlias,
@@ -127,6 +128,8 @@ function checkedCredits(rate: number, quantity: number): number {
 export function createGenerationPricingFromEnvironment(
   environment: Readonly<Record<string, string | undefined>>,
 ): GenerationPricing {
+  const developmentFree = environment.APP_ENV?.trim() === "local"
+    && environment.DEVELOPMENT_FREE_GENERATION?.trim().toLowerCase() === "true";
   const version = environment.GENERATION_PRICING_VERSION?.trim() || undefined;
   const quoteTtlSeconds = positiveInteger(environment.GENERATION_QUOTE_TTL_SECONDS);
   const state: PricingState = {
@@ -162,15 +165,19 @@ export function createGenerationPricingFromEnvironment(
   const globallyAvailable = Boolean(state.version && state.quoteTtlSeconds);
 
   return {
+    mode: developmentFree ? "development-free" : "paid",
     get version() {
+      if (developmentFree) return "development-free-v1";
       if (!state.version) throw new GenerationPricingUnavailableError();
       return state.version;
     },
     get quoteTtlSeconds() {
+      if (developmentFree) return 86_400;
       if (!state.quoteTtlSeconds) throw new GenerationPricingUnavailableError();
       return state.quoteTtlSeconds;
     },
     isAvailable(capability) {
+      if (developmentFree) return capability !== "image.product";
       if (!globallyAvailable) return false;
       if (capability === "video.cinematic" || capability === "video.product_fidelity") {
         return Boolean(
@@ -182,6 +189,21 @@ export function createGenerationPricingFromEnvironment(
       return state.rates[capability] !== undefined;
     },
     price(capability, configuration, templateDurationSeconds) {
+      if (developmentFree) {
+        if (capability === "image.product") {
+          return { credits: 0, breakdown: [{ label: "Local development image generation", credits: 0 }] };
+        }
+        const resolution = videoResolution(configuration);
+        const seconds = durationSeconds(
+          configuration,
+          templateDurationSeconds,
+          videoDurationLimits(environment, capability as Extract<CapabilityAlias, "video.cinematic" | "video.product_fidelity">),
+        );
+        return {
+          credits: 0,
+          breakdown: [{ label: `Local development ${seconds}s ${resolution} video`, credits: 0 }],
+        };
+      }
       const rate = state.rates[capability];
       if (!globallyAvailable) {
         throw new GenerationPricingUnavailableError(capability);

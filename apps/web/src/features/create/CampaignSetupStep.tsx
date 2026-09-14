@@ -1,20 +1,16 @@
-import { useEffect, useId, useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 
 import { campaignCtaLabel, CTA_OPTIONS, type CreatorAspectRatio, type CreatorLanguage, type CreatorProject, type CreatorResolution } from "./types";
 import { PresenterChoice, type PresenterCompatibility } from "./PresenterChoice";
 import {
   CTA_BY_GOAL,
   deliveryFieldsFor,
-  normalizeKwdAmount,
   validateCampaignSetup,
   type CampaignSetupField,
 } from "./campaignSetupRules";
 
-type QuoteState = "ready" | "loading" | "unavailable" | "expired" | "changed";
-
 type CampaignSetupStepProps = {
   project: CreatorProject;
-  quoteState: QuoteState;
   onChange: (changes: Partial<CreatorProject>, field: CampaignSetupField) => void;
   onContinue: () => void;
   presenterCompatibility?: PresenterCompatibility;
@@ -29,28 +25,18 @@ function copy(arabic: boolean, english: string, arabicText: string) {
 
 export function CampaignSetupStep({
   project,
-  quoteState,
   onChange,
   onContinue,
   presenterCompatibility = { aiUgc: false, uploadedSpokesperson: false },
   arabic = false,
 }: CampaignSetupStepProps) {
-  const [localQuoteRefresh, setLocalQuoteRefresh] = useState(false);
   const [errors, setErrors] = useState<ReturnType<typeof validateCampaignSetup>>({});
   const errorSummaryId = useId();
   const delivery = deliveryFieldsFor(project.goal);
   const presenter = project.presenter ?? (project.presenterMode === "ai_ugc" ? { mode: "ai_ugc" as const } : { mode: "none" as const });
-  const effectiveQuoteState = localQuoteRefresh && quoteState === "ready" ? "loading" : quoteState;
   const activeErrors = useMemo(() => Object.values(errors).filter(Boolean), [errors]);
 
-  // A configuration edit is pending only until the quote hook reports its next state.
-  // Without this reset, a previous ready quote leaves the UI in a permanent loading state.
-  useEffect(() => {
-    setLocalQuoteRefresh(false);
-  }, [quoteState]);
-
   const apply = (field: CampaignSetupField, changes: Partial<CreatorProject>) => {
-    setLocalQuoteRefresh(true);
     onChange(changes, field);
   };
 
@@ -117,7 +103,6 @@ export function CampaignSetupStep({
       <section className="creator-campaign-section" aria-labelledby="campaign-offer-heading">
         <div className="creator-campaign-section-head"><span>03</span><div><h3 id="campaign-offer-heading">{copy(arabic, "Offer and action", "العرض والإجراء")}</h3><p>{copy(arabic, "Optional values remain saved if you change the campaign result later.", "القيم الاختيارية تظل محفوظة إذا غيّرت نتيجة الحملة لاحقاً.")}</p></div></div>
         <div className="creator-form-grid">
-          <div className="creator-field"><label htmlFor="campaign-price">{copy(arabic, "Price", "السعر")}</label><div className="creator-money-input"><input id="campaign-price" className="creator-input" aria-invalid={Boolean(errors.price)} aria-describedby={errors.price ? "campaign-price-error" : undefined} inputMode="decimal" value={project.product.price} onBlur={(event) => { const value = normalizeKwdAmount(event.target.value); if (value !== event.target.value) apply("price", { product: { ...project.product, price: value } }); }} onChange={(event) => apply("price", { product: { ...project.product, price: event.target.value } })} placeholder={copy(arabic, "Optional", "اختياري")} /><span>KWD</span></div><span className="creator-field-help">{copy(arabic, "Use up to three decimal places.", "استخدم حتى ثلاث خانات عشرية.")}</span>{errors.price && <p id="campaign-price-error" className="creator-field-error">{errors.price}</p>}</div>
           <div className="creator-field"><label htmlFor="campaign-offer">{copy(arabic, "Offer", "العرض")}</label><input id="campaign-offer" className="creator-input" value={project.offer} onChange={(event) => apply("offer", { offer: event.target.value })} placeholder={copy(arabic, "Optional · e.g. gift with every order", "اختياري · مثلاً هدية مع كل طلب")} /></div>
           <div className="creator-field"><label htmlFor="campaign-cta">{copy(arabic, "Call to action", "الدعوة للإجراء")}</label><select id="campaign-cta" className="creator-select" value={project.cta} onChange={(event) => apply("cta", { cta: event.target.value })}>{CTA_OPTIONS.map((cta) => { const label = campaignCtaLabel(cta, arabic); return <option key={cta} value={cta}>{cta === CTA_BY_GOAL[project.goal] ? `${label} · ${copy(arabic, "recommended", "موصى به")}` : label}</option>; })}</select></div>
         </div>
@@ -141,9 +126,6 @@ export function CampaignSetupStep({
         <div className="creator-campaign-toggles"><label className="creator-check-row"><input type="checkbox" checked={project.subtitles} onChange={(event) => apply("subtitles", { subtitles: event.target.checked })} /><span>{copy(arabic, "Include subtitles when the video contains speech.", "أضف ترجمة مكتوبة إذا كان الفيديو يحتوي على كلام.")}</span></label><label className="creator-check-row"><input type="checkbox" checked={project.audio} onChange={(event) => apply("audio", { audio: event.target.checked })} /><span>{copy(arabic, "Include music and sound for this version.", "أضف موسيقى وصوت لهذه النسخة.")}</span></label></div>
       </section>
 
-      <div className="creator-campaign-pricing" role="status" aria-live="polite">
-        {effectiveQuoteState === "loading" ? copy(arabic, "Confirming the current price…", "جارٍ تأكيد السعر الحالي…") : effectiveQuoteState === "ready" ? copy(arabic, "The current price is ready to review.", "السعر الحالي جاهز للمراجعة.") : effectiveQuoteState === "expired" ? copy(arabic, "The price expired. Confirm it again before generating.", "انتهت صلاحية السعر. أعد تأكيده قبل التوليد.") : copy(arabic, "We couldn’t confirm the current price. Your edits are saved; try again.", "تعذر تأكيد السعر الحالي. تقدر تحفظ تعديلاتك وتعيد المحاولة.")}
-      </div>
       <div className="creator-campaign-actions">
         <button className="creator-button creator-button-primary" type="button" onClick={continueToReview}>{copy(arabic, "Continue to review", "المتابعة للمراجعة")}</button>
       </div>

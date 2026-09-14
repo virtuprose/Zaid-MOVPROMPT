@@ -15,7 +15,7 @@ export type CampaignSetupField =
   | "audio"
   | "presenter";
 
-export type CampaignSetupErrors = Partial<Record<"price" | "bookingUrl" | "whatsapp", string>>;
+export type CampaignSetupErrors = Partial<Record<"bookingUrl" | "whatsapp", string>>;
 
 export const CTA_BY_GOAL: Record<CampaignGoal, string> = {
   whatsapp_orders: "Order on WhatsApp",
@@ -66,9 +66,6 @@ export function isValidDestination(value: string): boolean {
 /** Browser checks improve recovery; the server is still authoritative on claim and render. */
 export function validateCampaignSetup(project: CreatorProject): CampaignSetupErrors {
   const errors: CampaignSetupErrors = {};
-  if (!isValidKwdAmount(project.product.price)) {
-    errors.price = "Enter a KWD amount with up to three decimal places.";
-  }
   if (isBookingOutcome(project.goal) && !isValidDestination(project.bookingUrl)) {
     errors.bookingUrl = "Add a valid booking link to continue.";
   }
