@@ -71,6 +71,7 @@ export function useTemplateQuotes(input: UseTemplateQuotesInput) {
         const portableError = error instanceof PortableApiError ? error : null;
         setState((current) => unavailableTemplateQuote(current, {
           code: portableError?.code ?? "pricing_unavailable",
+          message: portableError?.message ?? "Could not connect to the generation service. Please retry.",
           retryable: portableError?.retryable ?? true,
           ...(portableError?.requestId ? { requestId: portableError.requestId } : {}),
         }));

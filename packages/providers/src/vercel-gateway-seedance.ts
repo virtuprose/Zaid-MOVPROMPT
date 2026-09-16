@@ -608,7 +608,7 @@ export function createVercelGatewaySeedanceAdapter(
       // private product image, contain+pads it to the exact quote-bound canvas
       // and supplies it as an inline first-frame file. The request omits the
       // separate ratio field so Seedance inherits that prepared canvas without
-      // exposing local MinIO to the provider.
+      // exposing local storage to the provider.
       const references = await referenceFiles(
         generation.references,
         options.resolveReferenceUrl,

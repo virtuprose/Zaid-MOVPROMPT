@@ -25,6 +25,8 @@ type ProjectFilters = {
 export class CreatorRepositoryError extends Error {
   constructor(
     readonly code:
+      | "project_has_generated_video"
+      | "project_generation_in_progress"
       | "project_not_found"
       | "template_not_found"
       | "parent_version_not_found"

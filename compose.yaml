@@ -24,57 +24,6 @@ services:
     networks:
       - backend
 
-  minio:
-    image: quay.io/minio/minio:RELEASE.2025-04-22T22-12-26Z
-    restart: unless-stopped
-    command: server /data --console-address ":9001"
-    environment:
-      MINIO_ROOT_USER: "${MINIO_ROOT_USER:-movprompt-local}"
-      MINIO_ROOT_PASSWORD: "${MINIO_ROOT_PASSWORD:-movprompt-local-secret}"
-      MINIO_API_CORS_ALLOW_ORIGIN: "${MINIO_API_CORS_ALLOW_ORIGIN:-http://localhost:8080,http://127.0.0.1:8080}"
-      # The health probe uses this named mc host before minio-init runs.
-      MC_HOST_local: "http://${MINIO_ROOT_USER:-movprompt-local}:${MINIO_ROOT_PASSWORD:-movprompt-local-secret}@127.0.0.1:9000"
-    ports:
-      - "127.0.0.1:${MINIO_API_PORT:-9000}:9000"
-      - "127.0.0.1:${MINIO_CONSOLE_PORT:-9001}:9001"
-    volumes:
-      - minio-data:/data
-    healthcheck:
-      test: ["CMD", "mc", "ready", "local"]
-      interval: 5s
-      timeout: 5s
-      retries: 12
-      start_period: 10s
-    networks:
-      backend:
-        aliases:
-          # Browsers resolve *.localhost to loopback while Docker DNS resolves
-          # this alias to MinIO, so generated signed URLs work on both sides.
-          - minio.localhost
-
-  minio-init:
-    image: quay.io/minio/mc:RELEASE.2025-04-16T18-13-26Z
-    restart: "no"
-    depends_on:
-      minio:
-        condition: service_healthy
-    environment:
-      MINIO_ROOT_USER: "${MINIO_ROOT_USER:-movprompt-local}"
-      MINIO_ROOT_PASSWORD: "${MINIO_ROOT_PASSWORD:-movprompt-local-secret}"
-    entrypoint:
-      - /bin/sh
-      - -ec
-      - |
-        mc alias set local http://minio:9000 "$$MINIO_ROOT_USER" "$$MINIO_ROOT_PASSWORD"
-        mc mb --ignore-existing local/creator-assets
-        mc mb --ignore-existing local/creator-outputs
-        mc mb --ignore-existing local/template-previews
-        mc anonymous set none local/creator-assets
-        mc anonymous set none local/creator-outputs
-        mc anonymous set none local/template-previews
-    networks:
-      - backend
-
   mailpit:
     image: axllent/mailpit:v1.30.5
     restart: unless-stopped
@@ -157,6 +106,9 @@ services:
       MONGODB_DATABASE: "${MONGODB_DATABASE:-movprompt}"
       BETTER_AUTH_URL: "${BETTER_AUTH_URL:-http://localhost:8787}"
       BETTER_AUTH_SECRET: "${BETTER_AUTH_SECRET:-movprompt-local-only-better-auth-secret-change-me}"
+      GUEST_TRUST_PROXY: "${GUEST_TRUST_PROXY:-false}"
+      GUEST_DAILY_BUDGET_USD: "${GUEST_DAILY_BUDGET_USD:-}"
+      GUEST_MAX_RENDER_COST_USD: "${GUEST_MAX_RENDER_COST_USD:-}"
       BETTER_AUTH_TRUSTED_ORIGINS: "${BETTER_AUTH_TRUSTED_ORIGINS:-http://localhost:8080,http://127.0.0.1:8080}"
       GOOGLE_CLIENT_ID: "${GOOGLE_CLIENT_ID:-}"
       GOOGLE_CLIENT_SECRET: "${GOOGLE_CLIENT_SECRET:-}"
@@ -169,16 +121,13 @@ services:
       SMTP_SECURE: "false"
       SMTP_USER: ""
       SMTP_PASSWORD: ""
-      S3_ENDPOINT: "${S3_DOCKER_ENDPOINT:-http://minio.localhost:9000}"
-      S3_REGION: "${S3_REGION:-us-east-1}"
-      S3_ACCESS_KEY_ID: "${MINIO_ROOT_USER:-movprompt-local}"
-      S3_SECRET_ACCESS_KEY: "${MINIO_ROOT_PASSWORD:-movprompt-local-secret}"
-      S3_FORCE_PATH_STYLE: "true"
-      S3_ASSETS_BUCKET: creator-assets
-      S3_OUTPUTS_BUCKET: creator-outputs
-      S3_PREVIEWS_BUCKET: template-previews
-      S3_UPLOAD_URL_TTL_SECONDS: "${S3_UPLOAD_URL_TTL_SECONDS:-900}"
-      S3_DOWNLOAD_URL_TTL_SECONDS: "${S3_DOWNLOAD_URL_TTL_SECONDS:-900}"
+      R2_ACCOUNT_ID: "${R2_ACCOUNT_ID:-}"
+      R2_ACCESS_KEY_ID: "${R2_ACCESS_KEY_ID:-}"
+      R2_SECRET_ACCESS_KEY: "${R2_SECRET_ACCESS_KEY:-}"
+      R2_ASSETS_BUCKET: "${R2_ASSETS_BUCKET:-}"
+      R2_OUTPUTS_BUCKET: "${R2_OUTPUTS_BUCKET:-}"
+      R2_TEMPLATE_PREVIEWS_BUCKET: "${R2_TEMPLATE_PREVIEWS_BUCKET:-}"
+      R2_TEMPLATE_PREVIEWS_BASE_URL: "${R2_TEMPLATE_PREVIEWS_BASE_URL:-}"
       PROVIDER_OUTPUT_ALLOWED_HOSTS: "${PROVIDER_OUTPUT_ALLOWED_HOSTS:-}"
       AI_GATEWAY_API_KEY: "${AI_GATEWAY_API_KEY:-}"
       VERCEL_AI_GATEWAY_BASE_URL: "${VERCEL_AI_GATEWAY_BASE_URL:-https://ai-gateway.vercel.sh/v4/ai}"
@@ -198,13 +147,10 @@ services:
       MOVPROMPT_CAPABILITY_IMAGE_PRODUCT_ADAPTER_ID: "${MOVPROMPT_CAPABILITY_IMAGE_PRODUCT_ADAPTER_ID:-}"
       MOVPROMPT_CAPABILITY_IMAGE_PRODUCT_MODEL_ID: "${MOVPROMPT_CAPABILITY_IMAGE_PRODUCT_MODEL_ID:-}"
       MOVPROMPT_PROVIDER_VERCEL_GATEWAY_READY: "${MOVPROMPT_PROVIDER_VERCEL_GATEWAY_READY:-false}"
-      MOVPROMPT_PROVIDER_BYTEPLUS_READY: "${MOVPROMPT_PROVIDER_BYTEPLUS_READY:-false}"
     ports:
       - "127.0.0.1:${API_PORT:-8787}:3000"
     depends_on:
       mongodb-init:
-        condition: service_completed_successfully
-      minio-init:
         condition: service_completed_successfully
       mailpit:
         condition: service_healthy
@@ -258,35 +204,22 @@ services:
       WORKER_OUTBOX_POLL_INTERVAL_MS: "${WORKER_OUTBOX_POLL_INTERVAL_MS:-1000}"
       WORKER_RENDER_RECONCILIATION_DELAY_SECONDS: "${WORKER_RENDER_RECONCILIATION_DELAY_SECONDS:-15}"
       WORKER_HEARTBEAT_INTERVAL_SECONDS: "${WORKER_HEARTBEAT_INTERVAL_SECONDS:-15}"
-      S3_ENDPOINT: "${S3_DOCKER_ENDPOINT:-http://minio.localhost:9000}"
-      S3_REGION: "${S3_REGION:-us-east-1}"
-      S3_ACCESS_KEY_ID: "${MINIO_ROOT_USER:-movprompt-local}"
-      S3_SECRET_ACCESS_KEY: "${MINIO_ROOT_PASSWORD:-movprompt-local-secret}"
-      S3_FORCE_PATH_STYLE: "true"
-      S3_ASSETS_BUCKET: creator-assets
-      S3_OUTPUTS_BUCKET: creator-outputs
-      S3_PREVIEWS_BUCKET: template-previews
-      S3_UPLOAD_URL_TTL_SECONDS: "${S3_UPLOAD_URL_TTL_SECONDS:-900}"
-      S3_DOWNLOAD_URL_TTL_SECONDS: "${S3_DOWNLOAD_URL_TTL_SECONDS:-900}"
+      R2_ACCOUNT_ID: "${R2_ACCOUNT_ID:-}"
+      R2_ACCESS_KEY_ID: "${R2_ACCESS_KEY_ID:-}"
+      R2_SECRET_ACCESS_KEY: "${R2_SECRET_ACCESS_KEY:-}"
+      R2_ASSETS_BUCKET: "${R2_ASSETS_BUCKET:-}"
+      R2_OUTPUTS_BUCKET: "${R2_OUTPUTS_BUCKET:-}"
+      R2_TEMPLATE_PREVIEWS_BUCKET: "${R2_TEMPLATE_PREVIEWS_BUCKET:-}"
+      R2_TEMPLATE_PREVIEWS_BASE_URL: "${R2_TEMPLATE_PREVIEWS_BASE_URL:-}"
       PROVIDER_OUTPUT_ALLOWED_HOSTS: "${PROVIDER_OUTPUT_ALLOWED_HOSTS:-}"
       AI_GATEWAY_API_KEY: "${AI_GATEWAY_API_KEY:-}"
       VERCEL_AI_GATEWAY_BASE_URL: "${VERCEL_AI_GATEWAY_BASE_URL:-https://ai-gateway.vercel.sh/v4/ai}"
       VERCEL_GATEWAY_SEEDANCE_RESOLUTION_TIER: "${VERCEL_GATEWAY_SEEDANCE_RESOLUTION_TIER:-720p}"
       VERCEL_GATEWAY_SEEDANCE_GENERATE_AUDIO: "${VERCEL_GATEWAY_SEEDANCE_GENERATE_AUDIO:-false}"
-      BYTEPLUS_ARK_API_KEY: "${BYTEPLUS_ARK_API_KEY:-}"
-      BYTEPLUS_ARK_BASE_URL: "${BYTEPLUS_ARK_BASE_URL:-https://ark.ap-southeast.bytepluses.com/api/v3}"
-      BYTEPLUS_CALLBACK_URL: "${BYTEPLUS_CALLBACK_URL:-}"
-      BYTEPLUS_SEEDANCE_RESOLUTION: "${BYTEPLUS_SEEDANCE_RESOLUTION:-1080p}"
-      BYTEPLUS_SEEDANCE_GENERATE_AUDIO: "${BYTEPLUS_SEEDANCE_GENERATE_AUDIO:-false}"
-      AZURE_SPEECH_KEY: "${AZURE_SPEECH_KEY:-}"
-      AZURE_SPEECH_REGION: "${AZURE_SPEECH_REGION:-}"
-      AZURE_SPEECH_KUWAITI_VOICE: "${AZURE_SPEECH_KUWAITI_VOICE:-ar-KW-NouraNeural}"
-      AZURE_SPEECH_ENGLISH_VOICE: "${AZURE_SPEECH_ENGLISH_VOICE:-en-US-AvaMultilingualNeural}"
       FFPROBE_PATH: "${FFPROBE_PATH:-ffprobe}"
       FFMPEG_PATH: "${FFMPEG_PATH:-ffmpeg}"
       MOVPROMPT_QUALITY_MODEL_ID: "${MOVPROMPT_QUALITY_MODEL_ID:-google/gemini-3.6-flash}"
       MOVPROMPT_PROVIDER_VERCEL_GATEWAY_READY: "${MOVPROMPT_PROVIDER_VERCEL_GATEWAY_READY:-false}"
-      MOVPROMPT_PROVIDER_BYTEPLUS_READY: "${MOVPROMPT_PROVIDER_BYTEPLUS_READY:-false}"
       MOVPROMPT_CAPABILITY_VIDEO_CINEMATIC_ENABLED: "${MOVPROMPT_CAPABILITY_VIDEO_CINEMATIC_ENABLED:-false}"
       MOVPROMPT_CAPABILITY_VIDEO_CINEMATIC_ADAPTER_ID: "${MOVPROMPT_CAPABILITY_VIDEO_CINEMATIC_ADAPTER_ID:-}"
       MOVPROMPT_CAPABILITY_VIDEO_CINEMATIC_MODEL_ID: "${MOVPROMPT_CAPABILITY_VIDEO_CINEMATIC_MODEL_ID:-}"
@@ -305,7 +238,6 @@ services:
 
 volumes:
   mongodb-data:
-  minio-data:
   mailpit-data:
 
 networks:

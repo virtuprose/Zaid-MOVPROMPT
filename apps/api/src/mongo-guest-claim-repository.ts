@@ -35,7 +35,7 @@ export function createMongoGuestClaimRepository(database: MongoDatabase): GuestC
   const operations = database.collection(COLLECTIONS.guestClaimOperations); const claimAssets = database.collection(COLLECTIONS.guestClaimAssets);
   const projects = database.collection(COLLECTIONS.creatorProjects); const versions = database.collection(COLLECTIONS.creatorProjectVersions);
   async function assetsFor(id: string, session?: ClientSession) { return claimAssets.find({ claimOperationId: id }, session ? { session } : {}).sort({ ordinal: 1 }).toArray(); }
-  async function byIntent(userId: string, pendingGenerationId: string, session?: ClientSession) { const row = await operations.findOne({ userId, pendingGenerationId }, session ? { session } : {}); if (!row) throw new GuestClaimRepositoryError("not_found"); return row; }
+  async function byIntent(userId: string, pendingGenerationId: string, session?: ClientSession) { const row = await operations.findOne({ userId, pendingGenerationId, supersededAt: { $exists: false } }, session ? { session } : {}); if (!row) throw new GuestClaimRepositoryError("not_found"); return row; }
   async function ensureTemplate(id: string | undefined, session: ClientSession) {
     if (!id) return; const version = await database.collection(COLLECTIONS.videoTemplateVersions).findOne({ id, publishedAt: { $ne: null } }, { session });
     if (!version || !(await database.collection(COLLECTIONS.videoTemplates).findOne({ id: version.templateId, publishingState: "published" }, { session }))) throw new GuestClaimRepositoryError("conflict");
@@ -45,9 +45,26 @@ export function createMongoGuestClaimRepository(database: MongoDatabase): GuestC
       const parsed = GuestClaimSnapshotSchema.safeParse(snapshot); if (!parsed.success) throw new GuestClaimRepositoryError("invalid_campaign_configuration");
       return database.transaction(async (session) => {
         const byDraft = await operations.findOne({ draftId: parsed.data.draftId }, { session });
-        if (byDraft) { if (byDraft.userId !== userId || byDraft.pendingGenerationId !== parsed.data.pendingGenerationId || canonical(byDraft.snapshot) !== canonical(parsed.data)) throw new GuestClaimRepositoryError("conflict"); return publicOperation(byDraft, await assetsFor(String(byDraft.id), session)); }
+        if (byDraft) {
+          if (byDraft.userId !== userId) throw new GuestClaimRepositoryError("conflict");
+          if (byDraft.pendingGenerationId === parsed.data.pendingGenerationId) {
+            if (canonical(byDraft.snapshot) !== canonical(parsed.data)) throw new GuestClaimRepositoryError("conflict");
+            return publicOperation(byDraft, await assetsFor(String(byDraft.id), session));
+          }
+          // A changed draft is a new intent. Preserve the unfinished operation and its
+          // media history while releasing the unique draft slot for the same project.
+          // The operation write also serializes replacement against finalization.
+          if (byDraft.status === "ready" || byDraft.projectVersionId) throw new GuestClaimRepositoryError("conflict");
+          if ((await assetsFor(String(byDraft.id), session)).some((asset) =>
+            (asset.errorMetadata as JsonObject | undefined)?.cleanup &&
+            ((asset.errorMetadata as JsonObject).cleanup as JsonObject).state === "leased")) throw new GuestClaimRepositoryError("cleanup_leased");
+          await operations.updateOne({ id: byDraft.id, userId }, { $set: {
+            originalDraftId: byDraft.draftId, draftId: String(byDraft.id),
+            supersededAt: new Date(), updatedAt: new Date(), status: "failed", errorCode: "claim_superseded",
+          } }, { session });
+        }
         const existing = await operations.findOne({ userId, pendingGenerationId: parsed.data.pendingGenerationId }, { session });
-        if (existing) { if (canonical(existing.snapshot) !== canonical(parsed.data)) throw new GuestClaimRepositoryError("conflict"); return publicOperation(existing, await assetsFor(String(existing.id), session)); }
+        if (existing) { if (existing.supersededAt || canonical(existing.snapshot) !== canonical(parsed.data)) throw new GuestClaimRepositoryError("conflict"); return publicOperation(existing, await assetsFor(String(existing.id), session)); }
         await ensureTemplate(parsed.data.templateVersionId, session); const now = new Date(); const existingProject = await projects.findOne({ clientDraftId: parsed.data.draftId }, { session });
         if (existingProject && existingProject.userId !== userId) throw new GuestClaimRepositoryError("conflict");
         const projectId = existingProject ? String(existingProject.id) : newMongoObjectId(); const operationId = newMongoObjectId();
@@ -71,8 +88,12 @@ export function createMongoGuestClaimRepository(database: MongoDatabase): GuestC
       });
     },
     async markAssetFailed({ userId, pendingGenerationId, localAssetId, code }) {
-      const operation = await byIntent(userId, pendingGenerationId); const asset = await claimAssets.findOne({ claimOperationId: operation.id, localAssetId, userId }); if (!asset) throw new GuestClaimRepositoryError("not_found"); const now = new Date();
-      await claimAssets.updateOne({ id: asset.id }, { $set: { status: "failed", errorCode: code, errorMetadata: {}, updatedAt: now } }); await operations.updateOne({ id: operation.id, userId }, { $set: { status: "failed", errorCode: code, errorMetadata: {}, updatedAt: now } }); const updated = await byIntent(userId, pendingGenerationId); return publicOperation(updated, await assetsFor(String(updated.id)));
+      return database.transaction(async (session) => {
+        const operation = await byIntent(userId, pendingGenerationId, session); const asset = await claimAssets.findOne({ claimOperationId: operation.id, localAssetId, userId }, { session }); if (!asset) throw new GuestClaimRepositoryError("not_found");
+        if (operation.status === "ready") throw new GuestClaimRepositoryError("asset_invalid");
+        const now = new Date();
+        await claimAssets.updateOne({ id: asset.id, userId }, { $set: { status: "failed", errorCode: code, errorMetadata: {}, updatedAt: now } }, { session }); await operations.updateOne({ id: operation.id, userId }, { $set: { status: "failed", errorCode: code, errorMetadata: {}, updatedAt: now } }, { session }); const updated = await byIntent(userId, pendingGenerationId, session); return publicOperation(updated, await assetsFor(String(updated.id), session));
+      });
     },
     async finalize({ userId, pendingGenerationId }) {
       return database.transaction(async (session) => {

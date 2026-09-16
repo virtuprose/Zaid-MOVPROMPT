@@ -1,4 +1,4 @@
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter } from "react-router-dom";
 
@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   listRenders: vi.fn(),
   outputDownload: vi.fn(),
   loadCreatorProjects: vi.fn(),
+  trashCreatorProject: vi.fn(),
 }));
 
 vi.mock("@/components/Seo", () => ({ Seo: () => null }));
@@ -29,11 +30,12 @@ vi.mock("@/features/create/projectStore", () => ({
   listLocalCreatorProjects: () => [],
   loadCreatorProjects: mocks.loadCreatorProjects,
   subscribeToCreatorProjects: () => () => undefined,
-  trashCreatorProject: vi.fn(),
+  trashCreatorProject: mocks.trashCreatorProject,
 }));
 vi.mock("@/lib/api/portableApiClient", () => ({
   PortableApiError: class PortableApiError extends Error {},
   portableCreatorApi: {
+    claimGuestResults: vi.fn().mockResolvedValue({ claimed: true, projectIds: [] }),
     listRenders: mocks.listRenders,
     outputDownload: mocks.outputDownload,
     retryRenderOutput: vi.fn(),
@@ -47,6 +49,7 @@ const project = {
   userId: "11111111-1111-4111-8111-111111111111",
   title: "AirPods Max — Electronics feature demo",
   status: "completed",
+  hasGeneratedVideo: false,
   templateId: "electronics-feature-demo",
   aspectRatio: "9:16",
   updatedAt: "2026-08-15T14:00:00.000Z",
@@ -91,5 +94,68 @@ describe("CreatorProjects generation history", () => {
     expect(screen.getAllByRole("button", { name: "Download" })).toHaveLength(3);
     expect(mocks.outputDownload).toHaveBeenCalledTimes(3);
     expect(new Set(Array.from(container.querySelectorAll("video")).map((video) => video.getAttribute("src"))).size).toBe(3);
+  });
+});
+
+const draft = { ...project, id: "44444444-4444-4444-8444-444444444444", title: "Unfinished test campaign", status: "ready", videoUrl: null, renderRunId: null, jobId: null };
+
+describe("Delete unfinished projects", () => {
+  afterEach(() => { cleanup(); vi.clearAllMocks(); });
+  async function show(items = [draft, project], history: typeof runs = []) {
+    mocks.loadCreatorProjects.mockResolvedValue(items);
+    mocks.listRenders.mockResolvedValue(history);
+    render(<MemoryRouter><CreatorProjects /></MemoryRouter>);
+    await screen.findByRole("heading", { name: draft.title, level: 2 });
+  }
+  it("offers a named delete button only on unfinished projects", async () => {
+    await show();
+    expect(screen.getAllByRole("button", { name: /Delete project/ })).toHaveLength(1);
+    expect(screen.getByRole("button", { name: `Delete project ${draft.title}` })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /Move .* to trash/ })).toBeNull();
+  });
+  it.each(["draft", "review", "generating", "failed", "exporting"])("offers Delete project for non-generated %s work", async status => {
+    await show([{ ...draft, status }]);
+    fireEvent.click(screen.getByRole("button", { name: `Delete project ${draft.title}` }));
+    expect(await screen.findByRole("alertdialog", { name: "Are you sure you want to delete this project?" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Cancel" })).toBeTruthy();
+  });
+  it("protects historical videos even when the working version is a draft", async () => {
+    await show([draft, { ...draft, id: project.id, title: project.title, hasGeneratedVideo: true }]);
+    expect(screen.getAllByRole("button", { name: /Delete project/ })).toHaveLength(1);
+  });
+  it("offers deletion for active renders and explains cancellation", async () => {
+    await show([draft], [{ ...runs[0], projectId: draft.id, status: "processing", outputAvailable: false } as typeof runs[number]]);
+    await waitFor(() => expect(screen.getByRole("button", { name: /Delete project/ })).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: /Delete project/ }));
+    expect(await screen.findByRole("alertdialog")).toHaveTextContent("cancelled before deletion");
+  });
+  it("does not delete when confirmation is cancelled", async () => {
+    await show();
+    fireEvent.click(screen.getByRole("button", { name: `Delete project ${draft.title}` }));
+    expect(await screen.findByRole("alertdialog")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(mocks.trashCreatorProject).not.toHaveBeenCalled();
+  });
+  it("waits for deletion and prevents duplicate clicks", async () => {
+    let finish!: () => void;
+    mocks.trashCreatorProject.mockImplementation(() => new Promise<void>(resolve => { finish = resolve; }));
+    await show();
+    fireEvent.click(screen.getByRole("button", { name: `Delete project ${draft.title}` }));
+    const confirm = await screen.findByRole("button", { name: "Delete project" });
+    fireEvent.click(confirm); fireEvent.click(confirm);
+    expect(mocks.trashCreatorProject).toHaveBeenCalledExactlyOnceWith(draft.id, project.userId);
+    expect(screen.getByRole("button", { name: "Deleting…" })).toBeDisabled();
+    mocks.loadCreatorProjects.mockResolvedValue([project]); finish();
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+    expect(screen.queryByRole("heading", { name: draft.title })).toBeNull();
+  });
+  it("preserves the draft and shows a retryable error when deletion fails", async () => {
+    mocks.trashCreatorProject.mockRejectedValue(new Error("offline"));
+    await show();
+    fireEvent.click(screen.getByRole("button", { name: `Delete project ${draft.title}` }));
+    fireEvent.click(await screen.findByRole("button", { name: "Delete project" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("couldn’t delete");
+    expect(screen.getByRole("alertdialog")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: draft.title, hidden: true, level: 2 })).toBeTruthy();
   });
 });

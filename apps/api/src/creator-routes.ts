@@ -25,7 +25,7 @@ import {
   type TemplateListResponse,
   type TemplateResponse,
 } from "@movprompt/contracts";
-import type { Hono } from "hono";
+import type { Handler, Hono } from "hono";
 
 import type { AssetStorageGateway } from "./asset-storage.js";
 import type { AuthGateway } from "./auth-gateway.js";
@@ -111,6 +111,16 @@ async function parseJson(request: Request): Promise<unknown> {
 
 function mapRepositoryError(error: unknown): never {
   if (!(error instanceof CreatorRepositoryError)) throw error;
+  if (error.code === "project_has_generated_video" || error.code === "project_generation_in_progress") {
+    throw new ApiHttpError({
+      code: error.code,
+      message: error.code === "project_has_generated_video"
+        ? "Projects with generated videos cannot be deleted. Only unfinished drafts can be deleted."
+        : "This campaign is still generating. Wait until generation finishes before deleting a draft.",
+      status: 409,
+      retryable: false,
+    });
+  }
   if (error.code === "invalid_campaign_configuration") {
     throw new ApiHttpError({
       code: error.code,
@@ -554,7 +564,9 @@ export function registerCreatorRoutes(
     });
   }
 
-  app.get("/api/v1/projects/:projectId/render-runs/:runId/output", async (context) => {
+  const serveOutput: Handler<ApiEnvironment> = async (context) => {
+    const session = await requireAuth(services).getSession(context.req.raw.headers);
+    if (session?.session.guest) throw new ApiHttpError({ code: "authentication_required", message: "Sign in to download the clean video.", status: 401, retryable: false });
     const repository = requireRepository(services);
     const userId = await requireUserId(services, context.req.raw.headers);
     const { projectId, runId } = ProjectRouteParametersSchema.parse({
@@ -591,6 +603,30 @@ export function registerCreatorRoutes(
       key: output.objectKey,
       downloadFilename: `${projectId}.mp4`,
     });
+    if (context.req.path.endsWith("/output/file")) {
+      // Account ownership is checked above. R2 is read server-side so bucket
+      // CORS and browser blocking of third-party storage cannot break exports.
+      let upstream: Response;
+      try {
+        upstream = await fetch(download.url, {
+          signal: AbortSignal.any([context.req.raw.signal, AbortSignal.timeout(30_000)]),
+          redirect: "error",
+        });
+      } catch {
+        throw new ApiHttpError({ code: "output_download_failed", message: "Could not retrieve your saved video. Please try again.", status: 502, retryable: true });
+      }
+      if (!upstream.ok || !upstream.body) {
+        await upstream.body?.cancel();
+        throw new ApiHttpError({ code: "output_download_failed", message: "Could not retrieve your saved video. Please try again.", status: 502, retryable: true });
+      }
+      return context.newResponse(upstream.body, 200, {
+        "Content-Type": "video/mp4",
+        "Content-Disposition": `attachment; filename="${projectId}.mp4"`,
+        "Cache-Control": "private, no-store",
+        "X-Content-Type-Options": "nosniff",
+        ...(upstream.headers.get("content-length") ? { "Content-Length": upstream.headers.get("content-length")! } : {}),
+      });
+    }
     const body: OutputDownloadResponse = {
       runId: runId!,
       projectId,
@@ -603,5 +639,7 @@ export function registerCreatorRoutes(
     };
     noStore(context);
     return context.json(body);
-  });
+  };
+  app.get("/api/v1/projects/:projectId/render-runs/:runId/output", serveOutput);
+  app.get("/api/v1/projects/:projectId/render-runs/:runId/output/file", serveOutput);
 }

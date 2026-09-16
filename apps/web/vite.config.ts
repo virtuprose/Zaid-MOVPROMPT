@@ -16,6 +16,11 @@ export default defineConfig(() => ({
   // The legacy Supabase MCP bundle remains frozen under /supabase while the
   // portable API replaces it. Do not regenerate a new function inside apps/web.
   plugins: [react()],
+  // Local recipe/contract builds must reach the creator immediately rather
+  // than remaining in Vite's pre-bundled workspace dependency cache.
+  optimizeDeps: {
+    exclude: ["@movprompt/creative-engine", "@movprompt/contracts"],
+  },
   resolve: {
     alias: {
       "@": path.resolve(import.meta.dirname, "./src"),

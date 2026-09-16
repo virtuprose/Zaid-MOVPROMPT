@@ -596,6 +596,9 @@ export type VideoJob = {
   prompt: string;
   video_url?: string | null;
   error?: string | null;
+  created_at?: string;
+  updated_at?: string;
+  completed_at?: string | null;
   processing_stage?: "preparing" | "rendering" | "securing_output" | "quality_review" | "ready" | "cancelling" | "failed" | "cancelled";
   fal_request_id?: string | null;
   fal_status_url?: string | null;
@@ -725,6 +728,9 @@ export async function startCreatorGeneration(input: { projectId: string; project
       runId: run.id,
       job: {
         id: run.id,
+        created_at: run.createdAt,
+        updated_at: run.updatedAt,
+        completed_at: run.completedAt,
         status: run.status === "processing" ? "processing" : "queued",
         provider: run.capability,
         prompt: input.prompt,
@@ -739,7 +745,7 @@ export async function startCreatorGeneration(input: { projectId: string; project
   return { runId: data.run.id, job: data.job as VideoJob };
 }
 
-export async function pollCreatorGeneration(runId: string): Promise<VideoJob> {
+export async function pollCreatorGeneration(runId: string, guest = false): Promise<VideoJob> {
   if (isFeatureEnabled("portableAuth")) {
     const run = await portableCreatorApi.renderStatus(runId);
     const status: VideoJob["status"] = run.status === "completed"
@@ -750,7 +756,7 @@ export async function pollCreatorGeneration(runId: string): Promise<VideoJob> {
           ? "processing"
           : "queued";
     const videoUrl = status === "completed" && run.outputAvailable
-      ? await portableCreatorApi.outputDownload(run.projectId, run.id)
+      ? await (guest ? portableCreatorApi.guestPreview(run.projectId, run.id) : portableCreatorApi.outputDownload(run.projectId, run.id))
       : null;
     return {
       id: run.id,
@@ -760,6 +766,9 @@ export async function pollCreatorGeneration(runId: string): Promise<VideoJob> {
       video_url: videoUrl,
       error: run.error?.message ?? run.error?.code ?? (run.status === "cancelled" ? "Generation was cancelled." : null),
       processing_stage: run.processingStage,
+      created_at: run.createdAt,
+      updated_at: run.updatedAt,
+      completed_at: run.completedAt,
     };
   }
   const { data, error } = await supabase.functions.invoke("generation-status", { body: { run_id: runId } });

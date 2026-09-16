@@ -40,9 +40,19 @@ export class MongoWorker {
     catch (error) { if ((error as { code?: number }).code === 11000) return null; throw error; }
   }
 
-  async #enqueue(name: string, data: object, options: { singletonKey?: string; delaySeconds?: number }): Promise<string> {
+  async #enqueue(name: string, data: object, options: { singletonKey?: string; delaySeconds?: number; singletonNextSlot?: boolean }): Promise<string> {
     const id = newMongoObjectId(); const now = new Date();
-    await this.#database.collection(COLLECTIONS.workerJobs).insertOne({ id, name, data, status: "queued", retryCount: 0, retryLimit: name === WORKER_JOB_NAMES.generation ? 5 : 0, startAfter: new Date(now.getTime() + (options.delaySeconds ?? 0) * 1_000), ...(options.singletonKey ? { singletonKey: options.singletonKey } : {}), leaseOwner: null, leaseExpiresAt: null, createdAt: now, updatedAt: now }); return id;
+    const jobs = this.#database.collection(COLLECTIONS.workerJobs);
+    const document = { id, name, data, status: "queued", retryCount: 0, retryLimit: name === WORKER_JOB_NAMES.generation ? 5 : 0, startAfter: new Date(now.getTime() + (options.delaySeconds ?? 0) * 1_000), ...(options.singletonKey ? { singletonKey: options.singletonKey } : {}), leaseOwner: null, leaseExpiresAt: null, createdAt: now, updatedAt: now };
+    if (options.singletonNextSlot && options.singletonKey) {
+      // An active poll may schedule its successor. Transfer the unique key
+      // atomically; duplicate callers still cannot create two queued polls.
+      await this.#database.transaction(async session => {
+        await jobs.updateOne({ name, singletonKey: options.singletonKey, status: "active", leaseOwner: this.#config.workerId }, { $unset: { singletonKey: "" } }, { session });
+        await jobs.insertOne(document, { session });
+      });
+    } else await jobs.insertOne(document);
+    return id;
   }
 
   async #enqueueCleanup() { if (!this.#cleanup) return; await this.#enqueue(ABANDONED_CLAIM_CLEANUP_JOB, { requestId: "scheduled" }, {}).catch(() => undefined); }
@@ -51,11 +61,12 @@ export class MongoWorker {
     if (!this.#running) return; const now = new Date(); const jobs = this.#database.collection(COLLECTIONS.workerJobs);
     const job = await jobs.findOneAndUpdate({ status: "queued", startAfter: { $lte: now }, $or: [{ leaseExpiresAt: null }, { leaseExpiresAt: { $lte: now } }] }, { $set: { status: "active", leaseOwner: this.#config.workerId, leaseExpiresAt: new Date(now.getTime() + 120_000), updatedAt: now } }, { sort: { startAfter: 1, createdAt: 1 }, returnDocument: "after" });
     if (!job) return;
+    this.#logger.info("worker_job_picked", { jobId: String(job.id), jobName: String(job.name), workerId: this.#config.workerId, renderRunId: job.data?.renderRunId, requestId: job.data?.requestId, retryCount: job.retryCount });
     try { await this.#handle(job); await jobs.updateOne({ id: job.id, leaseOwner: this.#config.workerId }, { $set: { status: "completed", completedAt: new Date(), leaseOwner: null, leaseExpiresAt: null, updatedAt: new Date() }, $unset: { singletonKey: "" } }); }
     catch (error) {
       const retryCount = Number(job.retryCount ?? 0) + 1; const retryLimit = Number(job.retryLimit ?? 0); const retry = retryCount <= retryLimit;
       await jobs.updateOne({ id: job.id, leaseOwner: this.#config.workerId }, { $set: { status: retry ? "queued" : "failed", retryCount, startAfter: new Date(Date.now() + Math.min(15 * 60_000, 30_000 * 2 ** Math.max(0, retryCount - 1))), leaseOwner: null, leaseExpiresAt: null, ...(retry ? {} : { failedAt: new Date() }), error: error instanceof Error ? error.message : String(error), updatedAt: new Date() }, ...(retry ? {} : { $unset: { singletonKey: "" } }) });
-      this.#logger.error("worker_job_failed", { jobId: String(job.id), jobName: String(job.name), workerId: this.#config.workerId, retryCount, retry });
+      this.#logger.error("worker_job_failed", { jobId: String(job.id), jobName: String(job.name), workerId: this.#config.workerId, renderRunId: job.data?.renderRunId, requestId: job.data?.requestId, errorCode: typeof (error as { code?: unknown }).code === "string" ? (error as { code: string }).code : "worker_handler_failed", retryCount, retry, nextRetryAt: retry ? new Date(Date.now() + Math.min(15 * 60_000, 30_000 * 2 ** Math.max(0, retryCount - 1))).toISOString() : null });
     }
   }
 

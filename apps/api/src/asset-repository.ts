@@ -2,6 +2,7 @@ import type { CreatorAsset } from "@movprompt/contracts";
 
 export type OwnedAssetRecord = CreatorAsset & {
   userId: string;
+  storageOwnerId?: string;
   bucket: string;
   originalFilename?: string;
   sourceUrlHash?: string;

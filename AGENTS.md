@@ -15,8 +15,8 @@ Template Mode is the default experience. Advanced Mode remains a separate second
 - **Primary user**: Must require no knowledge of prompts, models, timelines, codecs, or video editing.
 - **Market**: Kuwait only for initial production; Arabic, English, and bilingual are first-class.
 - **Truth**: Imported or user-confirmed facts must never be invented or changed silently.
-- **Authentication**: Guests configure first; account creation appears only at Generate and must restore the exact draft.
-- **Architecture**: Continue the existing React/Hono/MongoDB/Better Auth/S3 system; use the MongoDB transaction and lease-queue implementation.
+- **Authentication**: Guests configure and generate first; sign-in appears at clean download and idempotently claims their saved projects.
+- **Architecture**: Continue the existing React/Hono/MongoDB/Better Auth/R2 system; use the MongoDB transaction and lease-queue implementation.
 - **Generation**: Provider/model IDs remain server-only; capabilities fail closed until pricing, worker, storage, output, and quality evidence agree.
 - **Economics**: A user pays for an accepted output, not failed provider attempts; charges/refunds and retries are idempotent.
 - **Editing**: Deterministic factual edits are free; visual changes are separately quoted immutable versions.
@@ -58,7 +58,7 @@ Template Mode is the default experience. Advanced Mode remains a separate second
 - Vitest 4.1.10 - Unit and integration tests across every active workspace.
 - Testing Library 16 and jsdom 30 - React component and interaction tests in `apps/web/src/**/*.test.tsx`.
 - TypeScript project builds - Workspace-specific `tsconfig.json` and `tsconfig.build.json` files.
-- Docker Compose - Local MongoDB replica set, MinIO, Mailpit, API, and worker topology in `compose.yaml`.
+- Docker Compose - Local MongoDB replica set, Mailpit, API, and worker topology in `compose.yaml`.
 - ESLint 9 with typescript-eslint and React Hooks rules - Repository-wide linting through `eslint.config.js`.
 
 ## Key Dependencies
@@ -67,10 +67,10 @@ Template Mode is the default experience. Advanced Mode remains a separate second
 - `@movprompt/creative-engine` - Kuwait campaign templates, prompt compilation, preflight, and quality policy.
 - `@movprompt/db` - Canonical schema, owner-scoped transactions, generation economics, and migrations.
 - `@movprompt/providers` - Semantic capability registry and Seedance provider adapters.
-- `@movprompt/storage` - Private S3-compatible object keys, signing, validation, and reads.
+- `@movprompt/storage` - Private R2 object keys, signing, validation, and reads.
 - `@tanstack/react-query` - Browser query lifecycle configured at `apps/web/src/App.tsx`.
 - `zod` 4.4.3 - Boundary validation throughout contracts, API, providers, and worker.
-- AWS SDK S3 client/presigner - MinIO locally and S3-compatible production storage.
+- AWS SDK S3 client/presigner - R2 protocol communication only; no alternate storage provider.
 - AI SDK 7 - Vercel AI Gateway quality analysis and video smoke tooling in `apps/worker/`.
 - Nodemailer 9 - SMTP boundary for Better Auth emails in `apps/api/src/email.ts`.
 - FFmpeg and FFprobe executables - Reference-frame preparation, output validation, and normalization in `apps/worker/`.
@@ -87,10 +87,10 @@ Template Mode is the default experience. Advanced Mode remains a separate second
 
 ## Platform Requirements
 
-- Node 24, Bun 1.3.12, MongoDB 8 replica set, S3-compatible storage, and FFmpeg/FFprobe.
+- Node 24, Bun 1.3.12, MongoDB 8 replica set, Cloudflare R2 storage, and FFmpeg/FFprobe.
 - Docker Compose is the documented full-stack path; web-only development can run from `bun run dev:web`.
 - Docker-compatible API and worker images are defined in `Dockerfile.api` and `Dockerfile.worker`.
-- MongoDB replica-set transactions and private S3-compatible object storage are architectural requirements; no production deployment is proven by repository state alone.
+- MongoDB replica-set transactions and private Cloudflare R2 object storage are architectural requirements; no production deployment is proven by repository state alone.
 
 <!-- GSD:stack-end -->
 

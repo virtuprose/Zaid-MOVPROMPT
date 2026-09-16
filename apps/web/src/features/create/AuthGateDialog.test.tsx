@@ -51,9 +51,9 @@ describe("AuthGateDialog provider truth", () => {
     localStorage.setItem("movprompt-lang", "en");
     renderGate("ar");
 
-    expect(screen.getByRole("heading", { name: "حملتك جاهزة للإنشاء" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "سجّل الدخول لتنزيل الفيديو" })).toBeVisible();
     expect(screen.getByRole("button", { name: "المتابعة بالبريد الإلكتروني" })).toBeVisible();
-    expect(screen.getByText(/تبقى حملتك محفوظة أثناء تسجيل الدخول/)).toBeVisible();
+    expect(screen.getByText(/الفيديو جاهز/)).toBeVisible();
     expect(screen.queryByText(/Your campaign|Continue with email|No charge|السعر|الخصم/)).not.toBeInTheDocument();
   });
 

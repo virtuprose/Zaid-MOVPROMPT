@@ -19,6 +19,36 @@ function storage() {
 }
 
 describe("provider output persister", () => {
+  it("finishes the saved campaign facts before persisting the clean master and preview", async () => {
+    const target = storage();
+    const finished = new Uint8Array([...mp4, 1]); const preview = new Uint8Array([...mp4, 2]);
+    const normalizer = vi.fn(async () => finished);
+    const createPreview = vi.fn(async () => preview);
+    const facts = { callToAction: "Book now", offer: "20% off", bookingUrl: "https://example.com/book", whatsapp: "+96550000000" };
+    const persister = createProviderOutputPersister({ storage: target, allowedHosts: ["media.provider.test"], resolveHost: publicDns, normalizer, createPreview, fetcher: async () => new Response(mp4, { headers: { "content-type": "video/mp4" } }) });
+    await persister.persist({ runId: "run-1", userId: "user-1", projectId: "project-1", projectVersionId: "version-1", attemptNumber: 0, sourceUrl: "https://media.provider.test/result.mp4", configuration: { generation: { aspectRatio: "9:16", creativeBrief: { product: facts } } } });
+    expect(normalizer).toHaveBeenCalledWith(mp4, undefined, { aspectRatio: "9:16", campaignText: facts });
+    expect(createPreview).toHaveBeenCalledWith(finished);
+    expect(target.put).toHaveBeenNthCalledWith(1, expect.objectContaining({ body: finished, key: expect.stringMatching(/outputs\/render-.*\.mp4$/) }));
+    expect(target.put).toHaveBeenNthCalledWith(2, expect.objectContaining({ body: preview, key: expect.stringMatching(/\.preview\.mp4$/) }));
+  });
+  it.runIf(process.env.MOVPROMPT_TEST_FFMPEG === "true")("adds exact optional campaign facts only to the closing video frames", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "movprompt-campaign-layer-test-"));
+    const source = join(directory, "source.mp4"); const output = join(directory, "output.mp4");
+    try {
+      await execFileAsync(process.env.FFMPEG_PATH || "ffmpeg", ["-v", "error", "-y", "-f", "lavfi", "-i", "color=c=blue:s=480x854:d=8:r=12", "-f", "lavfi", "-i", "sine=frequency=440:duration=8", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-c:a", "aac", "-shortest", source]);
+      await writeFile(output, await normalizeDeliveryMp4(new Uint8Array(await readFile(source)), undefined, { aspectRatio: "9:16", campaignText: { callToAction: "احجز الآن", offer: "خصم 20%", whatsapp: "+96550000000", bookingUrl: "https://example.com/book" } }));
+      const frame = async (time: string) => {
+        const path = join(directory, `${time}.png`);
+        await execFileAsync(process.env.FFMPEG_PATH || "ffmpeg", ["-v", "error", "-y", "-ss", time, "-i", output, "-frames:v", "1", path]);
+        return readFile(path);
+      };
+      expect(createHash("sha256").update(await frame("1")).digest("hex")).not.toBe(createHash("sha256").update(await frame("6")).digest("hex"));
+      const { stdout } = await execFileAsync(process.env.FFPROBE_PATH || "ffprobe", ["-v", "error", "-show_entries", "stream=codec_type:format=duration", "-of", "json", output]);
+      expect(Number(JSON.parse(stdout).format.duration)).toBeCloseTo(8, 1);
+      expect(JSON.parse(stdout).streams.some((stream: { codec_type: string }) => stream.codec_type === "audio")).toBe(true);
+    } finally { await rm(directory, { recursive: true, force: true }); }
+  }, 30_000);
   it.runIf(process.env.MOVPROMPT_TEST_FFMPEG === "true")(
     "normalizes provider media to MP4 H264/AAC delivery",
     async () => {

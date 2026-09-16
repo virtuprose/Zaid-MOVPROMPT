@@ -110,6 +110,22 @@ export function createMongoCreatorRepository(database: MongoDatabase): CreatorRe
     if (!template) throw new CreatorRepositoryError("template_not_found");
   }
 
+  async function deletionProtection(project: Document, session?: ClientSession) {
+    const options = session ? { session } : {};
+    const owner = { projectId: project.id, userId: project.userId };
+    const savedRun = await database.collection(COLLECTIONS.renderRuns).findOne({
+      ...owner, $or: [{ status: "completed" }, { outputObjectKey: { $exists: true, $nin: [null, ""] } }],
+    }, options);
+    const savedExport = await database.collection(COLLECTIONS.exports).findOne(owner, options);
+    const activeRun = await database.collection(COLLECTIONS.renderRuns).findOne({
+      ...owner, status: { $in: ["submitting", "queued", "processing", "cancelling"] },
+    }, options);
+    return {
+      hasGeneratedVideo: Boolean(project.currentAcceptedVersionId || savedRun || savedExport || project.status === "completed"),
+      hasActiveGeneration: Boolean(activeRun),
+    };
+  }
+
   async function loadProject(userId: string, projectId: string, session?: ClientSession): Promise<CreatorProjectRecord | null> {
     const options = session ? { session } : {};
     const project = await projects.findOne({ id: projectId, userId }, options);
@@ -133,6 +149,7 @@ export function createMongoCreatorRepository(database: MongoDatabase): CreatorRe
       deletedAt: project.deletedAt instanceof Date ? project.deletedAt.toISOString() : null,
       createdAt: (project.createdAt as Date).toISOString(), updatedAt: (project.updatedAt as Date).toISOString(),
       currentVersion: current ? versionPublic(current) : null, versionCount, outputCount,
+      ...await deletionProtection(project, session),
     };
   }
 
@@ -184,12 +201,23 @@ export function createMongoCreatorRepository(database: MongoDatabase): CreatorRe
       return repository.claimDraft(userId, { draftId: deterministicUuid("movprompt-project-duplicate-v1", userId, projectId, idempotencyKey), title: `${original.title} copy`, mode: original.mode, ...(original.currentVersion.templateVersionId ? { templateVersionId: original.currentVersion.templateVersionId } : {}), configuration: { ...original.currentVersion.configuration, duplicateOfProjectId: projectId, duplicateOperationKey: idempotencyKey }, productRecipe: original.currentVersion.productRecipe, campaignRecipe: original.currentVersion.campaignRecipe });
     },
     async trashProject(userId, projectId) {
-      const now = new Date(); const result = await projects.updateOne({ id: projectId, userId, deletedAt: null }, { $set: { status: "trashed", deletedAt: now, updatedAt: now } });
-      const project = await loadProject(userId, projectId); if (!result.matchedCount && !project?.deletedAt) throw new CreatorRepositoryError("project_not_found"); return project!;
+      return database.transaction(async (session) => {
+        const project = await projects.findOne({ id: projectId, userId }, { session });
+        if (!project) throw new CreatorRepositoryError("project_not_found");
+        const protection = await deletionProtection(project, session);
+        if (protection.hasGeneratedVideo) throw new CreatorRepositoryError("project_has_generated_video");
+        if (protection.hasActiveGeneration) throw new CreatorRepositoryError("project_generation_in_progress");
+        if (!project.deletedAt) {
+          // Generation also writes this document in a transaction, serializing delete/submit races.
+          const now = new Date();
+          await projects.updateOne({ id: projectId, userId, deletedAt: null }, { $set: { status: "trashed", deletedAt: now, updatedAt: now } }, { session });
+        }
+        return (await loadProject(userId, projectId, session))!;
+      });
     },
     async restoreProject(userId, projectId) {
-      const result = await projects.updateOne({ id: projectId, userId, deletedAt: { $ne: null } }, { $set: { status: "draft", deletedAt: null, updatedAt: new Date() } });
-      const project = await loadProject(userId, projectId); if (!result.matchedCount && !project) throw new CreatorRepositoryError("project_not_found"); return project!;
+      const result = await projects.updateOne({ id: projectId, userId, deletedAt: { $ne: null }, mediaCleanupState: { $nin: ["deleting", "deleted"] } }, { $set: { status: "draft", deletedAt: null, updatedAt: new Date() } });
+      const project = await loadProject(userId, projectId); if (!result.matchedCount) throw new CreatorRepositoryError("project_not_found"); return project!;
     },
     async createVersion(userId, projectId, input, idempotencyKey) {
       assertPersistable(input); await ensureTemplate(input.templateVersionId);

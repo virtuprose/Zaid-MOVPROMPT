@@ -4,10 +4,12 @@ import { CREATOR_TEMPLATES } from "./templates";
 import type { CreatorTemplate } from "./types";
 
 export function creatorTemplateFromCatalog(template: PublicTemplate): CreatorTemplate {
-  const local = CREATOR_TEMPLATES.find((item) => item.id === template.id) ?? CREATOR_TEMPLATES[0]!;
+  const local = CREATOR_TEMPLATES.find((item) => item.id === template.slug || item.id === template.id) ?? CREATOR_TEMPLATES[0]!;
   return {
     ...local,
-    id: template.id,
+    // Browser recipes and create URLs use slugs. MongoDB IDs are resolved
+    // separately when obtaining the immutable version for save/quote/start.
+    id: template.slug,
     name: template.name.en,
     nameAr: template.name.ar,
     eyebrow: template.category,

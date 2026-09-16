@@ -18,7 +18,7 @@
     "dev:web": "bun --env-file=../../.env run --cwd apps/web dev",
     "dev:api": "bun --env-file=../../.env run --cwd apps/api dev",
     "dev:worker": "bun --env-file=../../.env run --cwd apps/worker dev",
-    "dev:services": "docker compose up -d mongodb mongodb-init minio minio-init mailpit",
+    "dev:services": "docker compose up -d mongodb mongodb-init mailpit",
     "dev:stack": "docker compose up --build",
     "build": "bun run --cwd apps/web build",
     "build:web": "bun run --cwd apps/web build",
@@ -37,7 +37,9 @@
     "typecheck:workspaces": "bun run --filter '@movprompt/*' typecheck",
     "typecheck": "bun run typecheck:workspaces",
     "db:migrate": "bun --env-file=../../.env run --cwd packages/db migrate",
-    "db:check": "bun --env-file=../../.env run --cwd packages/db check"
+    "db:check": "bun --env-file=../../.env run --cwd packages/db check",
+    "storage:check": "bun --env-file=.env scripts/infra/check-object-storage.ts",
+    "storage:publish-templates": "bun --env-file=.env scripts/infra/publish-r2-templates.ts"
   },
   "devDependencies": {
     "@aws-sdk/client-s3": "^3.1108.0",

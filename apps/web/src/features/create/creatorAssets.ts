@@ -11,6 +11,7 @@ import {
 } from "@movprompt/contracts";
 
 import type { CreatorAsset } from "./types";
+import { canonicalCreatorAssetId } from "./creatorAssetIdentity";
 
 type CreatorSourceMimeType = NonNullable<CreatorAsset["mimeType"]>;
 
@@ -102,6 +103,7 @@ export class GuestClaimAssetFailure extends Error {
 
 export type ClaimedGuestAsset = {
   localAssetId: string;
+  assetId: string;
   storagePath: string;
   kind: CreatorAssetKind;
   mimeType: CreatorSourceMimeType;
@@ -110,7 +112,7 @@ export type ClaimedGuestAsset = {
   url: string;
 };
 
-async function requestClaimOperation(
+export async function requestClaimOperation(
   pendingGenerationId: string,
   signal?: AbortSignal,
 ): Promise<ReturnType<typeof GuestClaimOperationResponseSchema.parse>["operation"]> {
@@ -119,7 +121,15 @@ async function requestClaimOperation(
     credentials: "include",
     signal,
   });
+  if (response.status === 404) throw new GuestClaimOperationMissingError();
   return GuestClaimOperationResponseSchema.parse(await jsonResponse(response)).operation;
+}
+
+export class GuestClaimOperationMissingError extends Error {
+  constructor() {
+    super("The campaign save has not started yet.");
+    this.name = "GuestClaimOperationMissingError";
+  }
 }
 
 async function secureClaimAsset(input: {
@@ -154,8 +164,9 @@ async function secureClaimAsset(input: {
     input.signal,
   );
   const upload = SignedAssetUploadResponseSchema.parse(await jsonResponse(uploadResponse));
+  const canonicalAssetId = await canonicalCreatorAssetId(input.localAssetId);
   if (
-    upload.asset.id !== input.localAssetId ||
+    (upload.asset.id !== input.localAssetId && upload.asset.id !== canonicalAssetId) ||
     upload.asset.projectId !== input.projectId ||
     upload.asset.mimeType !== input.mimeType ||
     upload.asset.sizeBytes !== input.sizeBytes ||
@@ -175,6 +186,9 @@ async function secureClaimAsset(input: {
   );
   // A signed preview may exist only in this response. Claim recovery stores neither it nor the object key.
   const download = SignedAssetDownloadResponseSchema.parse(await jsonResponse(stored));
+  if (download.asset.id !== upload.asset.id || download.asset.projectId !== input.projectId || download.asset.checksumSha256 !== input.checksumSha256) {
+    throw new Error("claim_asset_upload_mismatch");
+  }
   const completed = await fetch(
     `${apiOrigin()}/api/v1/projects/${input.projectId}/assets/${upload.asset.id}/complete`,
     {
@@ -186,11 +200,12 @@ async function secureClaimAsset(input: {
     },
   );
   const ready = AssetReadyResponseSchema.parse(await jsonResponse(completed));
-  if (ready.asset.id !== input.localAssetId || ready.asset.checksumSha256 !== input.checksumSha256) {
+  if (ready.asset.id !== upload.asset.id || ready.asset.projectId !== input.projectId || ready.asset.checksumSha256 !== input.checksumSha256) {
     throw new Error("claim_asset_completion_mismatch");
   }
   return {
-    localAssetId: ready.asset.id,
+    localAssetId: input.localAssetId,
+    assetId: ready.asset.id,
     storagePath: ready.asset.objectKey,
     kind: ready.asset.kind,
     mimeType: parseCreatorSourceMimeType(ready.asset.mimeType),
@@ -210,11 +225,12 @@ export async function claimGuestAssets(input: {
   snapshot: GuestClaimSnapshot;
   blobs: ReadonlyMap<string, Blob>;
   signal?: AbortSignal;
+  resumeReady?: boolean;
   onProgress?: (progress: GuestClaimProgress) => void;
 }): Promise<{ receipt: GuestClaimReceipt; assets: ClaimedGuestAsset[] }> {
   assertNotAborted(input.signal);
   input.onProgress?.({ stage: "creating" });
-  const started = await fetch(`${apiOrigin()}/api/v1/drafts/claim/start`, {
+  const started = input.resumeReady ? null : await fetch(`${apiOrigin()}/api/v1/drafts/claim/start`, {
     method: "POST",
     credentials: "include",
     headers: {
@@ -224,7 +240,10 @@ export async function claimGuestAssets(input: {
     body: JSON.stringify(input.snapshot),
     signal: input.signal,
   });
-  let operation = GuestClaimOperationResponseSchema.parse(await jsonResponse(started)).operation;
+  let operation = started
+    ? GuestClaimOperationResponseSchema.parse(await jsonResponse(started)).operation
+    : await requestClaimOperation(input.snapshot.pendingGenerationId, input.signal);
+  if (input.resumeReady && operation.status !== "ready") throw new Error("The saved campaign is not ready for recovery.");
   const manifest = new Map(input.snapshot.assetManifest.map((asset) => [asset.localAssetId, asset]));
   const securedAssets = new Map<string, ClaimedGuestAsset>();
 
@@ -288,8 +307,13 @@ export async function claimGuestAssets(input: {
       { credentials: "include", signal: input.signal },
     );
     const download = SignedAssetDownloadResponseSchema.parse(await jsonResponse(response));
+    const canonicalAssetId = await canonicalCreatorAssetId(asset.localAssetId);
+    if ((download.asset.id !== asset.localAssetId && download.asset.id !== canonicalAssetId) || download.asset.projectId !== receipt.project.id || download.asset.checksumSha256 !== asset.checksumSha256) {
+      throw new GuestClaimAssetFailure(asset.localAssetId, new Error("claim_asset_resume_mismatch"));
+    }
     securedAssets.set(asset.localAssetId, {
-      localAssetId: download.asset.id,
+      localAssetId: asset.localAssetId,
+      assetId: download.asset.id,
       storagePath: download.asset.objectKey,
       kind: download.asset.kind,
       mimeType: parseCreatorSourceMimeType(download.asset.mimeType),

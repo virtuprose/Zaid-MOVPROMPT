@@ -1,3 +1,4 @@
+import { createGuestAccess } from "./guest-access.js";
 import { authEnvironmentFromEnv, createMovPromptAuth } from "@movprompt/auth";
 import {
   createMongoDatabase,
@@ -7,7 +8,7 @@ import {
   mongoConfigFromEnv,
 } from "@movprompt/db";
 import { createCapabilityRegistryFromEnvironment } from "@movprompt/providers";
-import { objectStorageConfigFromEnv, PrivateObjectStorage } from "@movprompt/storage";
+import { r2StorageConfigFromEnv, R2Storage } from "@movprompt/storage";
 import type { CreateApiOptions, ReadinessDependency } from "./app.js";
 import { createMongoAssetRepository } from "./mongo-asset-repository.js";
 import { createAssetStorageGateway } from "./asset-storage.js";
@@ -28,6 +29,8 @@ import { createSourceScanner } from "./source-scanner.js";
 
 export type RuntimeServices = Pick<
   CreateApiOptions,
+  | "guestAccess"
+  | "templatePreviewStorage"
   | "authGateway"
   | "assetRepository"
   | "assetStorage"
@@ -83,6 +86,8 @@ export function createRuntimeServices(
     sendEmail: createSmtpAuthEmailSender(smtpEmailConfigFromEnv(environment)),
   });
 
+  const authGateway = createBetterAuthGateway(auth, authEnvironment.publicCapability);
+  const guestAccess = createGuestAccess(database, authGateway, environment);
   const capabilities = createCapabilityRegistryFromEnvironment(environment);
   const pricing = createGenerationPricingFromEnvironment(environment);
   const generationRepository = createMongoGenerationRepository(database);
@@ -90,7 +95,8 @@ export function createRuntimeServices(
   const generationService = assetsEnabled
     ? createGenerationApiService({
         repository: generationRepository,
-        generation: createMongoGenerationService(database),
+        isGuestOwner: guestAccess.isGuest,
+        generation: createMongoGenerationService(database, environment),
         pricing,
         capabilities,
         starterOnly: environment.GENERATION_STARTER_ONLY?.trim().toLowerCase() !== "false",
@@ -117,8 +123,20 @@ export function createRuntimeServices(
     };
   }
 
-  const storage = new PrivateObjectStorage(objectStorageConfigFromEnv(environment));
+  let storage: R2Storage;
+  try {
+    storage = new R2Storage(r2StorageConfigFromEnv(environment));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "R2 configuration is incomplete";
+    console.warn(`[MovPrompt] Storage unavailable: ${message}. Fill the R2 settings and restart.`);
+    readinessDependencies.push({ name: "r2-storage", check: async () => { throw new Error(message); } });
+    return { authGateway, guestAccess, creatorRepository, guestClaimService, sourceScanner, requestRateLimiter, capabilityRegistry: capabilities, readinessDependencies, close: () => database.close() };
+  }
+  readinessDependencies.push({ name: "r2-storage", check: async () => {
+    await Promise.all([...new Set([storage.assetsBucket, storage.outputsBucket, storage.previewsBucket!])].map(bucket => storage.checkBucket(bucket)));
+  } });
   const assetStorage = createAssetStorageGateway(storage);
+  const storageGuestAccess = createGuestAccess(database, authGateway, environment, assetStorage);
   const generationAvailability = createGenerationAvailabilityService({
     enabled: generationEnabled,
     environment,
@@ -137,7 +155,9 @@ export function createRuntimeServices(
     });
   }
   return {
-    authGateway: createBetterAuthGateway(auth, authEnvironment.publicCapability),
+    guestAccess: storageGuestAccess,
+    templatePreviewStorage: storage,
+    authGateway,
     creatorRepository,
     guestClaimService,
     sourceScanner,

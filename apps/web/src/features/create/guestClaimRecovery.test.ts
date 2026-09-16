@@ -62,6 +62,15 @@ function receipt(overrides: Partial<CanonicalClaimReceipt> = {}): CanonicalClaim
 describe("guest claim recovery", () => {
   beforeEach(() => setGuestDraftClockForTests(() => new Date("2026-08-20T08:00:00.000Z")));
 
+  it("verifies the saved JSON receipt when optional browser fields are undefined", async () => {
+    setGuestDraftStorageForTests(createMemoryGuestDraftStorage());
+    await saveGuestDraft(draft());
+    const browserConfiguration = { ...configuration, optional: undefined, images: [{ id: ASSET_ID, assetKey: undefined }] };
+    const checkpoint = await markClaimCheckpoint(DRAFT_ID, { pendingGenerationId: INTENT_ID, snapshotDigest: "b".repeat(64), configuration: browserConfiguration, assetManifest: manifest });
+    const transferredConfiguration = JSON.parse(JSON.stringify(browserConfiguration));
+    expect(verifyCanonicalReceipt(checkpoint!, receipt({ version: { configuration: transferredConfiguration } as CanonicalClaimReceipt["version"] }))).toMatchObject({ state: "verified" });
+  });
+
   afterEach(() => {
     setGuestDraftStorageForTests();
     setGuestDraftClockForTests();

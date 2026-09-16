@@ -7,7 +7,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { AuthGateway } from "./auth-gateway.js";
 import { createApi } from "./app.js";
-import type { CreatorRepository } from "./creator-repository.js";
+import { CreatorRepositoryError, type CreatorRepository } from "./creator-repository.js";
 import { loadApiConfig } from "./config.js";
 import { ApiHttpError } from "./errors.js";
 import { validTemplateClaim } from "./campaign-contract.test-fixture.js";
@@ -191,6 +191,17 @@ describe("portable creator API", () => {
     consume: vi.fn(),
     consumePublicScan: vi.fn(async () => ({ allowed, retryAfterSeconds: 120 })),
     consumeAuthenticatedMirror: vi.fn(),
+  });
+  it.each(["project_has_generated_video", "project_generation_in_progress"] as const)("rejects protected project deletion with %s", async code => {
+    const repo = repository();
+    vi.mocked(repo.trashProject).mockRejectedValue(new CreatorRepositoryError(code));
+    const app = createApi({ config, creatorRepository: repo, authGateway: auth() });
+    const response = await app.request(`/api/v1/projects/${PROJECT_ID}/trash`, {
+      method: "POST", headers: { "content-type": "application/json", "idempotency-key": "delete-draft-test" }, body: "{}",
+    });
+    expect(response.status).toBe(409);
+    expect(await response.json()).toMatchObject({ error: { code, retryable: false } });
+    expect(repo.trashProject).toHaveBeenCalledWith(USER_ID, PROJECT_ID);
   });
   it("serves the public published template catalog without authentication", async () => {
     const app = createApi({ config, creatorRepository: repository(), authGateway: auth(null) });

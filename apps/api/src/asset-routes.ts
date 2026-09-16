@@ -13,6 +13,7 @@ import {
   type SignedAssetUploadResponse,
 } from "@movprompt/contracts";
 import { assertOwnedProjectKey, objectKeys } from "@movprompt/storage";
+import { toMongoObjectId } from "@movprompt/db";
 import type { Hono } from "hono";
 import type { AuthGateway } from "./auth-gateway.js";
 import type { AssetRepository, OwnedAssetRecord } from "./asset-repository.js";
@@ -168,7 +169,7 @@ async function verifyStoredObject(
   storage: AssetStorageGateway,
   asset: OwnedAssetRecord,
 ): Promise<void> {
-  assertOwnedProjectKey(asset.objectKey, asset.userId, asset.projectId);
+  assertOwnedProjectKey(asset.objectKey, asset.storageOwnerId ?? asset.userId, asset.projectId);
 
   let head;
   try {
@@ -723,7 +724,7 @@ export function registerAssetRoutes(
     });
     const asset = await findOwnedAsset(repository, userId, projectId, assetId!);
     const input = CompleteClaimAssetRequestSchema.parse(await parseJson(context.req.raw));
-    if (input.localAssetId !== asset.id) {
+    if (input.localAssetId !== asset.id && toMongoObjectId(input.localAssetId).toHexString() !== asset.id) {
       throw new ApiHttpError({
         code: "asset_not_found",
         message: "The requested project asset was not found.",
@@ -743,7 +744,7 @@ export function registerAssetRoutes(
     await guestClaimService.markAssetVerified({
       userId,
       pendingGenerationId: input.pendingGenerationId,
-      localAssetId: verifiedAsset.id,
+      localAssetId: input.localAssetId,
       bucket: verifiedAsset.bucket,
       objectKey: verifiedAsset.objectKey,
       ...(verifiedContent.durationMs ? { durationMs: verifiedContent.durationMs } : {}),

@@ -1,6 +1,6 @@
 import { compileKuwaitiCampaignCopy, voiceDirection } from "./kuwaiti-arabic.js";
 import { templateRequiresSynchronizedSpeech } from "./catalog.js";
-import { CreativeBriefSchema, type CompiledCreativeDirection } from "./types.js";
+import { ENGINE_VERSION, CreativeBriefSchema, type CompiledCreativeDirection } from "./types.js";
 
 const NEGATIVE_PROMPT = [
   "changed product shape, label, logo, packaging, colour or proportions",
@@ -24,6 +24,9 @@ export function compileCreativeDirection(input: {
   const brief = CreativeBriefSchema.parse(input.creativeBrief);
   const audioEnabled = input.audioEnabled ?? true;
   const requiresSynchronizedSpeech = templateRequiresSynchronizedSpeech(brief.templateId);
+  const negativePrompt = brief.templateId === "app-service"
+    ? NEGATIVE_PROMPT.replace("watermark or user interface", "watermark or invented user interface")
+    : NEGATIVE_PROMPT;
   const kuwaiti = brief.language === "en" ? null : compileKuwaitiCampaignCopy(brief);
   let cursor = 0;
   const shots = brief.scenes.map((scene, index) => {
@@ -52,6 +55,7 @@ export function compileCreativeDirection(input: {
     brief.product.offer ? `Confirmed offer: ${brief.product.offer}` : "Offer: not supplied; never invent an offer",
     `Confirmed call to action: ${brief.product.callToAction}`,
     brief.product.whatsapp ? `Confirmed WhatsApp destination: ${brief.product.whatsapp}` : "WhatsApp destination: not supplied",
+    brief.product.bookingUrl ? `Confirmed booking link: ${brief.product.bookingUrl}` : "Booking link: not supplied; never invent a destination",
     brief.product.location ? `Confirmed location: ${brief.product.location}` : "Location: not supplied",
   ].join("\n");
 
@@ -60,13 +64,16 @@ export function compileCreativeDirection(input: {
     : "FIRST QUALITY PASS: prioritise product identity, physical realism and shot-to-shot continuity over decorative complexity.";
 
   const prompt = [
-    `MOVPROMPT PREMIUM CAMPAIGN ENGINE · ${brief.engineVersion}`,
+    `MOVPROMPT PREMIUM CAMPAIGN ENGINE · ${ENGINE_VERSION}`,
     retry,
     "NON-NEGOTIABLE PRODUCT AND BUSINESS TRUTH",
     factualLock,
+    "OFFER AND CONTACT FINISHING: preserve the confirmed offer, booking link and WhatsApp number exactly. Leave a clear lower end-card area for the finishing service to display supplied facts and the confirmed call to action. Never display an empty optional field, placeholder or invented destination. Do not bake these texts into AI footage; the finishing service adds accurate text afterwards.",
     "REFERENCE POLICY",
     "Treat supplied product references as an exact digital identity lock. Preserve silhouette, packaging geometry, label placement, logo, colour and material. Treat people and locations as continuity references only when explicitly supplied.",
     "CAMPAIGN DIRECTION",
+    brief.templatePromptVersion ? `Pinned template prompt: ${brief.templatePromptVersion}; recipe ${brief.templateRecipeVersion}` : "",
+    brief.templateVisualSystem ?? "",
     input.rawPrompt.trim(),
     `Tone: ${brief.tone}. Market: Kuwait. Format: conversion-ready social campaign.`,
     "SHOT PLAN",
@@ -80,16 +87,16 @@ export function compileCreativeDirection(input: {
       ? "MUTED OUTPUT: generate no speech, dialogue, music or sound effects. Do not show a person visibly speaking or moving their mouth as if speaking."
       : requiresSynchronizedSpeech
         ? "SYNCHRONIZED PRESENTER SPEECH: any visible speaking person must deliver the exact approved line with natural phoneme-to-mouth timing and provider-native synchronized audio. Never create silent talking, detached dubbing or a different script."
-        : "VOICEOVER SEPARATION: do not show a person visibly speaking; preserve clean visuals for the deterministic campaign voice track added after generation.",
+        : "PROVIDER-NATIVE AUDIO: use only the approved spoken lines as off-screen narration when audio is enabled. Do not show a person visibly speaking. No separate narration service or post-generation voice track is available.",
     "FINISHING STANDARD",
     "Photoreal commercial finish, physically plausible motion, coherent geography, motivated key/fill/rim lighting, stable exposure and colour, clean edit points, premium sound perspective and intentional pacing.",
-    `NEGATIVE CONSTRAINTS: ${NEGATIVE_PROMPT}.`,
+    `NEGATIVE CONSTRAINTS: ${negativePrompt}.`,
   ].filter(Boolean).join("\n\n");
 
   if (prompt.length > 8_000) throw new Error("compiled_prompt_exceeds_provider_contract");
   return {
     prompt,
-    negativePrompt: NEGATIVE_PROMPT,
+    negativePrompt,
     spokenLocale: brief.language === "en" ? "en-US" : brief.language === "ar" ? "ar-KW" : "mixed",
     dialectScore: kuwaiti?.score ?? 100,
     dialectWarnings: kuwaiti?.warnings ?? [],

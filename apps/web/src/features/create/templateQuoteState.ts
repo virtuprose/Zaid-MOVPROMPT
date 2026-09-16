@@ -4,6 +4,7 @@ export type TemplateQuote = GenerationQuoteResponse["quote"] & { requestId?: str
 
 export type TemplateQuoteFailure = {
   code: string;
+  message?: string;
   retryable: boolean;
   requestId?: string;
 };

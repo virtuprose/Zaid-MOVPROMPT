@@ -9,7 +9,7 @@ import {
   type ProviderBenchmarkObservation,
 } from "@movprompt/creative-engine";
 import { createBytePlusSeedanceAdapter } from "@movprompt/providers";
-import { objectStorageConfigFromEnv, PrivateObjectStorage } from "@movprompt/storage";
+import { r2StorageConfigFromEnv, R2Storage } from "@movprompt/storage";
 import { z } from "zod";
 
 import {
@@ -17,7 +17,6 @@ import {
   parseBenchmarkManifest,
   verifyBenchmarkManifestAssets,
 } from "./benchmark-manifest.js";
-import { createAzureCampaignVoiceRenderer } from "./campaign-voice.js";
 import { createLiveBenchmarkExecutor, type LiveBenchmarkTaskCheckpoint } from "./live-benchmark.js";
 import { createFfprobeTechnicalAnalyzer, createGatewayVideoQualityAnalyzer } from "./media-quality-analyzers.js";
 import { createProviderOutputPersister } from "./output-persister.js";
@@ -125,20 +124,13 @@ if (adapterId !== "byteplus-modelark") throw new Error("benchmark_adapter_must_b
 const modelId = required(`${capabilityPrefix}_MODEL_ID`);
 const bytePlusApiKey = required("BYTEPLUS_ARK_API_KEY");
 const outputHosts = required("PROVIDER_OUTPUT_ALLOWED_HOSTS").split(",").map((host) => host.trim()).filter(Boolean);
-const storage = new PrivateObjectStorage(objectStorageConfigFromEnv(process.env));
+const storage = new R2Storage(r2StorageConfigFromEnv(process.env));
 const manifest = parseBenchmarkManifest(JSON.parse(await readFile(manifestPath, "utf8")));
 await verifyBenchmarkManifestAssets(manifest, storage);
 
-const voiceRenderer = createAzureCampaignVoiceRenderer({
-  apiKey: required("AZURE_SPEECH_KEY"),
-  region: required("AZURE_SPEECH_REGION"),
-  kuwaitiVoice: required("AZURE_SPEECH_KUWAITI_VOICE") as "ar-KW-NouraNeural" | "ar-KW-FahedNeural",
-  englishVoice: required("AZURE_SPEECH_ENGLISH_VOICE"),
-});
 const outputPersister = createProviderOutputPersister({
   storage,
   allowedHosts: outputHosts,
-  voiceRenderer,
 });
 const analyzers = [
   createFfprobeTechnicalAnalyzer({ storage }),

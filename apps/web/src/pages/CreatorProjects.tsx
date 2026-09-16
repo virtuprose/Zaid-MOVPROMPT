@@ -8,8 +8,10 @@ import { useAuth } from "@/hooks/useAuth";
 import { CreatorShell } from "@/features/create/CreatorShell";
 import { getCreatorTemplate } from "@/features/create/templates";
 import { duplicateCreatorProject, listLocalCreatorProjects, loadCreatorProjects, subscribeToCreatorProjects, trashCreatorProject } from "@/features/create/projectStore";
+import { ProjectDeletionPendingError } from "@/features/create/trashUnfinishedProject";
+import { canDeleteCreatorDraft } from "@/features/create/creatorProjectDeletion";
 import type { CreatorProject } from "@/features/create/types";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { isFeatureEnabled } from "@/config/features";
 import { PortableApiError, portableCreatorApi } from "@/lib/api/portableApiClient";
@@ -58,6 +60,9 @@ export default function CreatorProjects({ qaMode = false }: { qaMode?: boolean }
   const [runsError, setRunsError] = useState("");
   const [retryingRunId, setRetryingRunId] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<CreatorProject | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const deletingRef = useRef(false);
+  const [deleteError, setDeleteError] = useState("");
   const portablePlatform = isFeatureEnabled("portableAuth") && !qaMode;
 
   const loadRuns = useCallback(async () => {
@@ -70,6 +75,8 @@ export default function CreatorProjects({ qaMode = false }: { qaMode?: boolean }
     setRunsLoading(true);
     setRunsError("");
     try {
+      await portableCreatorApi.claimGuestResults();
+      setProjects(await loadCreatorProjects(user.id));
       const nextRuns = await portableCreatorApi.listRenders({ limit: 50 });
       setRuns(nextRuns);
       const completed = nextRuns.filter((run) => run.status === "completed" && run.outputAvailable && !runMediaRef.current[run.id]);
@@ -103,6 +110,14 @@ export default function CreatorProjects({ qaMode = false }: { qaMode?: boolean }
 
   useEffect(() => {
     void loadRuns();
+  }, [loadRuns]);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      runMediaRef.current = {};
+      void loadRuns();
+    }, 10 * 60_000);
+    return () => window.clearInterval(timer);
   }, [loadRuns]);
 
   useEffect(() => {
@@ -160,14 +175,33 @@ export default function CreatorProjects({ qaMode = false }: { qaMode?: boolean }
   };
 
   const remove = async () => {
-    if (!pendingDelete) return;
+    if (!pendingDelete || deletingRef.current) return;
+    if (!canDeleteCreatorDraft(pendingDelete, runs)) {
+      setDeleteError(tr("This project has a generated video and cannot be deleted.", "هذا المشروع فيه فيديو مُنشأ ولا يمكن حذفه."));
+      return;
+    }
+    deletingRef.current = true;
+    setDeleting(true);
+    setDeleteError("");
     try {
       await trashCreatorProject(pendingDelete.id, qaMode ? null : user?.id);
-      setProjects(await loadCreatorProjects(qaMode ? null : user?.id));
+      // Preserve hydrated thumbnails; the local cache intentionally strips temporary media URLs.
+      setProjects(projects.filter(project => project.id !== pendingDelete.id));
+      setRuns(current => current.filter(run => run.projectId !== pendingDelete.id));
       setPendingDelete(null);
       toast.success(tr("Project moved to trash.", "تم نقل المشروع إلى سلة المحذوفات."));
-    } catch {
-      toast.error(tr("We couldn’t move this project to trash. Try again.", "ما قدرنا ننقل المشروع إلى سلة المحذوفات. حاول مرة ثانية."));
+    } catch (error) {
+      const message = error instanceof ProjectDeletionPendingError
+        ? tr("Generation is still stopping. Your project is preserved. Try Delete again once it stops.", "التوليد لا يزال يتوقف. مشروعك محفوظ. حاول الحذف مرة أخرى بعد توقفه.")
+        : error instanceof PortableApiError && ["project_generation_in_progress", "provider_acceptance_in_progress"].includes(error.code)
+          ? tr("Generation could not stop yet. Your project is preserved. Try Delete again shortly.", "لم يتوقف التوليد بعد. مشروعك محفوظ. حاول الحذف مرة أخرى بعد قليل.")
+          : error instanceof PortableApiError && error.code === "project_has_generated_video"
+            ? tr("This project has a generated video and cannot be deleted.", "هذا المشروع فيه فيديو مُنشأ ولا يمكن حذفه.")
+            : tr("We couldn’t delete this project. Try again.", "ما قدرنا نحذف المشروع. حاول مرة ثانية.");
+      setDeleteError(message);
+    } finally {
+      deletingRef.current = false;
+      setDeleting(false);
     }
   };
 
@@ -259,7 +293,7 @@ export default function CreatorProjects({ qaMode = false }: { qaMode?: boolean }
                     <div className="creator-project-actions">
                       <Link className="creator-button creator-button-secondary" to={qaMode ? `/qa/create?project=${project.id}` : `/projects/${project.id}`}>{tr("Open", "فتح")}</Link>
                       <button className="creator-icon-button" type="button" onClick={() => void duplicate(project)} aria-label={tr(`Duplicate ${project.title}`, `انسخ ${project.title}`)}><Copy aria-hidden="true" /></button>
-                      <button className="creator-icon-button" type="button" onClick={() => setPendingDelete(project)} aria-label={tr(`Move ${project.title} to trash`, `انقل ${project.title} إلى سلة المحذوفات`)}><Trash2 aria-hidden="true" /></button>
+                      {canDeleteCreatorDraft(project, runs) ? <button className="creator-button creator-button-secondary creator-delete-draft" type="button" onClick={() => { setDeleteError(""); setPendingDelete(project); }} aria-label={tr(`Delete project ${project.title}`, `حذف مشروع ${project.title}`)}><Trash2 aria-hidden="true" />{tr("Delete project", "حذف المشروع")}</button> : null}
                     </div>
                   </div>
                 </article>
@@ -272,8 +306,18 @@ export default function CreatorProjects({ qaMode = false }: { qaMode?: boolean }
           </div>
         )}
       </div>
-      <AlertDialog open={Boolean(pendingDelete)} onOpenChange={(open) => !open && setPendingDelete(null)}>
-        <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>{tr("Move this project to trash?", "نقل هذا المشروع إلى سلة المحذوفات؟")}</AlertDialogTitle><AlertDialogDescription>{tr(`“${pendingDelete?.title ?? ""}” will leave your project list but remains recoverable during the trash retention period.`, `سيختفي «${pendingDelete?.title ?? ""}» من قائمة المشاريع، ويمكن استعادته خلال مدة الاحتفاظ.`)}</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>{tr("Keep project", "احتفظ بالمشروع")}</AlertDialogCancel><AlertDialogAction onClick={() => void remove()}>{tr("Move to trash", "نقل إلى السلة")}</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
+      <AlertDialog open={Boolean(pendingDelete)} onOpenChange={(open) => { if (!open && !deletingRef.current) setPendingDelete(null); }}>
+        <AlertDialogContent className="creator-app" dir={ar ? "rtl" : "ltr"}>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{tr("Are you sure you want to delete this project?", "هل أنت متأكد أنك تريد حذف هذا المشروع؟")}</AlertDialogTitle>
+            <AlertDialogDescription>{tr(`“${pendingDelete?.title ?? ""}” will be moved to trash and removed from My Projects. Any running generation will be cancelled before deletion. Generated videos are protected.`, `سيتم نقل «${pendingDelete?.title ?? ""}» إلى سلة المحذوفات وإزالته من مشاريعي. سيتم إلغاء أي توليد جارٍ قبل الحذف. الفيديوهات المُنشأة محمية.`)}</AlertDialogDescription>
+          </AlertDialogHeader>
+          {deleteError ? <p className="creator-export-error" role="alert">{deleteError}</p> : null}
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>{tr("Cancel", "إلغاء")}</AlertDialogCancel>
+            <button className="creator-button creator-button-secondary creator-delete-draft" type="button" disabled={deleting} onClick={() => void remove()}>{deleting ? tr("Deleting…", "جارٍ الحذف…") : tr("Delete project", "حذف المشروع")}</button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
       </AlertDialog>
     </CreatorShell>
   );

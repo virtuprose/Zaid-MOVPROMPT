@@ -13,6 +13,7 @@ import { hashGenerationConfiguration } from "@movprompt/db";
 import type { GenerationConfiguration } from "@movprompt/contracts";
 
 import { validTemplateClaim } from "./campaign-contract.test-fixture.js";
+import { LAUNCH_CREATIVE_TEMPLATE_CATALOG } from "@movprompt/creative-engine";
 
 function ownedRun(overrides: Partial<OwnedRenderRun> = {}): OwnedRenderRun {
   const now = new Date("2026-08-14T12:00:00.000Z");
@@ -766,6 +767,44 @@ describe("template quote eligibility", () => {
     }, null)).resolves.toMatchObject({ capability: "video.product_fidelity" });
   });
 
+  it.each(LAUNCH_CREATIVE_TEMPLATE_CATALOG)("estimates $id without an optional brand", async template => {
+    const published = {
+      ...eligibleTemplate(),
+      eligibility: {
+        ...eligibleTemplate().eligibility!,
+        goals: template.goals,
+        requiredInputs: template.requiredInputs,
+        capabilityPolicy: ["video.cinematic"],
+      },
+    };
+    const { api } = quoteApi(published);
+    const config = strictTemplateEstimate(templateVersionId, payload => {
+      const update = (value: unknown): void => {
+        if (Array.isArray(value)) {
+          for (let index = value.length - 1; index >= 0; index--) {
+            if (value[index]?.field === "brand") value.splice(index, 1);
+            else update(value[index]);
+          }
+          return;
+        }
+        if (!value || typeof value !== "object") return;
+        const record = value as Record<string, unknown>;
+        for (const key of Object.keys(record)) {
+          if (key === "brand") record[key] = "";
+          else if (key === "goal") record[key] = template.goals[0];
+          else if (key === "whatsapp") record[key] = "+96550000000";
+          else if (key === "bookingUrl") record[key] = "https://booking.example.test/appointments";
+          else update(record[key]);
+        }
+      };
+      update(payload);
+      const creator = payload.configuration.creatorProject as { source: { facts: unknown[] } };
+      creator.source.facts.push({ field: "whatsapp", value: "+96550000000", provenance: "user_confirmed" }, { field: "booking_url", value: "https://booking.example.test/appointments", provenance: "user_confirmed" });
+      payload.configuration.generation.references = [{ objectKey: "guest-reference", mimeType: "image/jpeg" }];
+    });
+    await expect(api.createQuote({ templateVersionId, configuration: config }, null)).resolves.toMatchObject({ estimateOnly: true, capability: "video.cinematic" });
+  });
+
   it("opens a local development estimate before the browser image is privately claimed", async () => {
     const productTemplate = {
       ...eligibleTemplate(),
@@ -957,6 +996,19 @@ describe("template quote rejection", () => {
       configuration,
     }, null)).rejects.toMatchObject({ code: "template_configuration_ineligible" });
     expect(createQuote).not.toHaveBeenCalled();
+  });
+
+  it("pins the published visual recipe while allowing confirmed copy changes", async () => {
+    const config = strictTemplateEstimate(templateVersionId);
+    const brief = config.creativeBrief as Record<string, unknown>;
+    const visualRecipe = { versionNumber: 3, promptVersion: "test-v3", visualSystem: "Warm studio", scenes: structuredClone(brief.scenes) as Array<Record<string, unknown>> };
+    Object.assign(brief, { templateRecipeVersion: 3, templatePromptVersion: "test-v3", templateVisualSystem: "Warm studio" });
+    const campaign = config.templateCampaign as { configuration: { generation: Record<string, unknown> } };
+    campaign.configuration.generation.creativeBrief = brief;
+    const { api } = apiFor({ ...publishedTemplate(), durationSeconds: config.durationSeconds, visualRecipe });
+    await expect(api.createQuote({ templateVersionId, configuration: config }, null)).resolves.toMatchObject({ estimateOnly: true });
+    (brief.scenes as Array<Record<string, unknown>>)[0]!.direction = "An unrelated visual style";
+    await expect(api.createQuote({ templateVersionId, configuration: config }, null)).rejects.toMatchObject({ code: "template_configuration_ineligible", message: expect.stringContaining("older template recipe") });
   });
 
   it("rejects a template that requires a booking destination before quote and submission", async () => {

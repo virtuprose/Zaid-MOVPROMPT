@@ -19,11 +19,15 @@ export function OutcomeStep({
   value,
   onChange,
   arabic = false,
+  goals,
 }: {
   value: CampaignGoal;
   onChange: (goal: CampaignGoal) => void;
   arabic?: boolean;
+  goals?: readonly CampaignGoal[];
 }) {
+  const options = CAMPAIGN_GOAL_OPTIONS.filter(option => !goals || goals.includes(option.value));
+  const hasSelection = options.some(option => option.value === value);
   const heading = arabic ? "ماذا تريد أن تحقق هذه الحملة؟" : "What do you want this campaign to do?";
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>, index: number) => {
@@ -31,8 +35,8 @@ export function OutcomeStep({
     const isNext = event.key === "ArrowRight" || event.key === "ArrowDown";
     if (isPrevious || isNext) {
       event.preventDefault();
-      const nextIndex = (index + (isNext ? 1 : -1) + CAMPAIGN_GOAL_OPTIONS.length) % CAMPAIGN_GOAL_OPTIONS.length;
-      const next = CAMPAIGN_GOAL_OPTIONS[nextIndex]!;
+      const nextIndex = (index + (isNext ? 1 : -1) + options.length) % options.length;
+      const next = options[nextIndex]!;
       onChange(next.value);
       document.getElementById(`campaign-outcome-${next.value}`)?.focus();
       return;
@@ -40,7 +44,7 @@ export function OutcomeStep({
 
     if (event.key === " " || event.key === "Enter") {
       event.preventDefault();
-      onChange(CAMPAIGN_GOAL_OPTIONS[index]!.value);
+      onChange(options[index]!.value);
     }
   };
 
@@ -49,7 +53,7 @@ export function OutcomeStep({
       <legend>{heading}</legend>
       <p>{arabic ? "اختر نتيجة واحدة. سنعرض قوالب مناسبة بناءً على التفاصيل التي أكّدتها." : "Choose one result. We’ll show templates that match the details you confirmed."}</p>
       <div className="creator-outcome-grid" role="radiogroup" aria-label={heading}>
-        {CAMPAIGN_GOAL_OPTIONS.map((option, index) => {
+        {options.map((option, index) => {
           const selected = option.value === value;
           return (
             <button
@@ -59,7 +63,7 @@ export function OutcomeStep({
               type="button"
               role="radio"
               aria-checked={selected}
-              tabIndex={selected ? 0 : -1}
+              tabIndex={selected || (!hasSelection && index === 0) ? 0 : -1}
               onClick={() => onChange(option.value)}
               onKeyDown={(event) => handleKeyDown(event, index)}
             >

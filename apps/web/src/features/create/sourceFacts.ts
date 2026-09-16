@@ -111,7 +111,9 @@ export function factsForReview(source: CampaignSource, goal: CampaignGoal): Camp
   const present = new Map(source.facts.map((fact) => [fact.field, fact]));
   const required = new Set(requiredFactsForOutcome(goal, source.subject));
   const expected = source.subject === "product" ? PRODUCT_FACT_FIELDS : SERVICE_FACT_FIELDS;
-  return expected.map((field) => {
+  // Outcome requirements and supplied facts must remain visible even when a
+  // product image is used with a service/booking template.
+  return [...new Set([...expected, ...required, ...present.keys()])].map((field) => {
     const fact = present.get(field);
     if (fact) return { field, state: "present", fact };
     return { field, state: required.has(field) ? "required_missing" : "not_added" };

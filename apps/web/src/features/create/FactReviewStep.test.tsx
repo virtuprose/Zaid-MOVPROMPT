@@ -5,6 +5,10 @@ import { FactReviewStep } from "./FactReviewStep";
 import { SourceChoiceStep } from "./SourceChoiceStep";
 
 describe("FactReviewStep", () => {
+  it("shows a required booking link for a product used in a booking campaign", () => {
+    render(<FactReviewStep source={{ kind: "product_upload", subject: "product", assetKeys: [], facts: [{ field: "name", value: "Client product", provenance: "manual" }] }} goal="bookings" onEdit={vi.fn()} onConfirm={vi.fn()} onContinue={vi.fn()} onBack={vi.fn()} />);
+    expect(screen.getByLabelText("Booking link")).toHaveAttribute("aria-required", "true");
+  });
   it("keeps the fact review in RTL while labels and values remain associated in Arabic", () => {
     render(
       <FactReviewStep
@@ -24,7 +28,7 @@ describe("FactReviewStep", () => {
     );
 
     expect(screen.getByRole("region", { name: "تأكد من التفاصيل التي سنستخدمها" })).toHaveAttribute("dir", "rtl");
-    expect(screen.getByLabelText("اسم النشاط أو الخدمة")).toHaveValue("صالون نورة");
+    expect(screen.getByLabelText(/اسم النشاط أو الخدمة/)).toHaveValue("صالون نورة");
   });
 
   it("keeps service facts, optional states, footage selection, and presenter intent separate", () => {
@@ -70,9 +74,12 @@ describe("FactReviewStep", () => {
       />,
     );
 
-    expect(screen.getByLabelText("Business or service name")).toHaveValue("Noura Salon");
-    expect(screen.getByLabelText("Booking link")).toHaveValue("");
-    expect(screen.getAllByText("Not added").length).toBeGreaterThan(0);
+    expect(screen.getByLabelText(/Business or service name/)).toHaveValue("Noura Salon");
+    expect(screen.getByLabelText(/Booking link/)).toHaveValue("");
+    expect(screen.getByLabelText(/Booking link/)).toHaveAttribute("aria-required", "true");
+    expect(screen.getByLabelText("Description")).not.toHaveAttribute("aria-required", "true");
+    expect(screen.queryByText("Not added")).toBeNull();
+    expect(screen.queryByText(/not added to this campaign/)).toBeNull();
     expect(screen.getByText("Real footage")).toBeVisible();
     expect(screen.queryByText(/presenter/i)).not.toBeInTheDocument();
   });

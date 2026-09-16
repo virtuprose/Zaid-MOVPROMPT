@@ -3,6 +3,7 @@ import {
   GetObjectCommand,
   HeadBucketCommand,
   HeadObjectCommand,
+  ListObjectsV2Command,
   PutObjectCommand,
   S3Client,
   type HeadObjectCommandOutput,
@@ -17,15 +18,14 @@ import {
   type ValidatedUploadMetadata,
 } from "./validation.js";
 
-export interface ObjectStorageConfig {
-  endpoint?: string;
-  region: string;
+export interface R2StorageConfig {
+  accountId: string;
+  previewsBaseUrl?: string;
   accessKeyId: string;
   secretAccessKey: string;
   assetsBucket: string;
   outputsBucket: string;
   previewsBucket?: string;
-  forcePathStyle?: boolean;
   uploadUrlTtlSeconds?: number;
   downloadUrlTtlSeconds?: number;
 }
@@ -127,28 +127,37 @@ function positiveInteger(value: string | undefined, fallback: number, label: str
   return parsed;
 }
 
-export function objectStorageConfigFromEnv(env: NodeJS.ProcessEnv = process.env): ObjectStorageConfig {
-  const endpoint = env.S3_ENDPOINT?.trim();
-  const previewsBucket = env.S3_PREVIEWS_BUCKET?.trim();
+export function r2StorageConfigFromEnv(env: NodeJS.ProcessEnv = process.env): R2StorageConfig {
+  const accountId = requireEnv(env, "R2_ACCOUNT_ID");
+  if (!/^[a-f0-9]{32}$/i.test(accountId)) throw new Error("R2_ACCOUNT_ID must be a 32-character Cloudflare account ID");
+  const previewsBaseUrl = env.R2_TEMPLATE_PREVIEWS_BASE_URL?.trim();
+  if (previewsBaseUrl) {
+    let previewUrl: URL;
+    try { previewUrl = new URL(previewsBaseUrl); } catch { throw new Error("R2_TEMPLATE_PREVIEWS_BASE_URL must be an HTTPS URL"); }
+    if (previewUrl.protocol !== "https:" || previewUrl.username || previewUrl.password || previewUrl.search || previewUrl.hash) {
+      throw new Error("R2_TEMPLATE_PREVIEWS_BASE_URL must be an HTTPS URL without credentials, query or fragment");
+    }
+  }
+  const buckets = ["R2_ASSETS_BUCKET", "R2_OUTPUTS_BUCKET", "R2_TEMPLATE_PREVIEWS_BUCKET"].map((key) => {
+    const bucket = requireEnv(env, key);
+    if (!/^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$/.test(bucket)) throw new Error(`${key} must be a valid R2 bucket name`);
+    return bucket;
+  });
+  if (previewsBaseUrl && (buckets[2] === buckets[0] || buckets[2] === buckets[1])) {
+    throw new Error("Shared R2 customer media bucket must remain private; leave R2_TEMPLATE_PREVIEWS_BASE_URL empty");
+  }
   return {
-    ...(endpoint ? { endpoint } : {}),
-    region: env.S3_REGION?.trim() || "auto",
-    accessKeyId: requireEnv(env, "S3_ACCESS_KEY_ID"),
-    secretAccessKey: requireEnv(env, "S3_SECRET_ACCESS_KEY"),
-    assetsBucket: requireEnv(env, "S3_ASSETS_BUCKET"),
-    outputsBucket: requireEnv(env, "S3_OUTPUTS_BUCKET"),
-    ...(previewsBucket ? { previewsBucket } : {}),
-    forcePathStyle: env.S3_FORCE_PATH_STYLE === "true",
-    uploadUrlTtlSeconds: positiveInteger(env.S3_UPLOAD_URL_TTL_SECONDS, 900, "S3_UPLOAD_URL_TTL_SECONDS"),
-    downloadUrlTtlSeconds: positiveInteger(
-      env.S3_DOWNLOAD_URL_TTL_SECONDS,
-      900,
-      "S3_DOWNLOAD_URL_TTL_SECONDS",
-    ),
+    accountId,
+    ...(previewsBaseUrl ? { previewsBaseUrl: previewsBaseUrl.replace(/\/$/, "") } : {}),
+    accessKeyId: requireEnv(env, "R2_ACCESS_KEY_ID"),
+    secretAccessKey: requireEnv(env, "R2_SECRET_ACCESS_KEY"),
+    assetsBucket: buckets[0]!, outputsBucket: buckets[1]!, previewsBucket: buckets[2]!,
+    uploadUrlTtlSeconds: positiveInteger(env.R2_UPLOAD_URL_TTL_SECONDS, 900, "R2_UPLOAD_URL_TTL_SECONDS"),
+    downloadUrlTtlSeconds: positiveInteger(env.R2_DOWNLOAD_URL_TTL_SECONDS, 900, "R2_DOWNLOAD_URL_TTL_SECONDS"),
   };
 }
 
-export class PrivateObjectStorage {
+export class R2Storage {
   readonly assetsBucket: string;
   readonly outputsBucket: string;
   readonly previewsBucket: string | undefined;
@@ -158,7 +167,7 @@ export class PrivateObjectStorage {
   private readonly downloadUrlTtlSeconds: number;
   private readonly allowedBuckets: ReadonlySet<string>;
 
-  constructor(private readonly config: ObjectStorageConfig, client?: S3Client) {
+  constructor(private readonly config: R2StorageConfig, client?: S3Client) {
     this.assetsBucket = config.assetsBucket;
     this.outputsBucket = config.outputsBucket;
     this.previewsBucket = config.previewsBucket;
@@ -170,13 +179,13 @@ export class PrivateObjectStorage {
     this.client =
       client ??
       new S3Client({
-        ...(config.endpoint ? { endpoint: config.endpoint } : {}),
-        region: config.region,
+        endpoint: `https://${config.accountId}.r2.cloudflarestorage.com`,
+        region: "auto",
         credentials: {
           accessKeyId: config.accessKeyId,
           secretAccessKey: config.secretAccessKey,
         },
-        forcePathStyle: config.forcePathStyle ?? false,
+        forcePathStyle: false,
         requestChecksumCalculation: "WHEN_REQUIRED",
         responseChecksumValidation: "WHEN_REQUIRED",
       });
@@ -297,6 +306,24 @@ export class PrivateObjectStorage {
   async head(bucket: string, key: string): Promise<HeadObjectCommandOutput> {
     this.assertBucket(bucket);
     return this.client.send(new HeadObjectCommand({ Bucket: bucket, Key: assertStorageKey(key) }));
+  }
+
+  /** Worker-only cleanup of a database-authorized project, including abandoned attempts. */
+  async deleteProjectMedia(userId: string, projectId: string): Promise<void> {
+    if (!/^[a-f0-9]{24}$/.test(userId) || !/^[a-f0-9]{24}$/.test(projectId)) throw new Error("Invalid project cleanup identifiers");
+    const prefix = `users/${userId}/projects/${projectId}/`;
+    for (const bucket of new Set([this.assetsBucket, this.outputsBucket])) {
+      // Delete each first page, then enumerate again. No continuation token can skip deleted entries.
+      for (;;) {
+        const page = await this.client.send(new ListObjectsV2Command({ Bucket: bucket, Prefix: prefix, MaxKeys: 500 }));
+        const keys = (page.Contents ?? []).flatMap(row => row.Key ? [row.Key] : []);
+        if (!keys.length) break;
+        for (const key of keys) {
+          if (!key.startsWith(prefix)) throw new Error("R2 cleanup namespace mismatch");
+          await this.delete(bucket, key);
+        }
+      }
+    }
   }
 
   async delete(bucket: string, key: string): Promise<void> {

@@ -1,11 +1,11 @@
 import type { S3Client } from "@aws-sdk/client-s3";
 import { describe, expect, it, vi } from "vitest";
 
-import { PrivateObjectStorage } from "../src/service.js";
+import { R2Storage } from "../src/service.js";
 
-function storageWith(send: S3Client["send"]): PrivateObjectStorage {
-  return new PrivateObjectStorage({
-    region: "us-east-1",
+function storageWith(send: S3Client["send"]): R2Storage {
+  return new R2Storage({
+    accountId: "a".repeat(32),
     accessKeyId: "test-access-key",
     secretAccessKey: "test-secret-key",
     assetsBucket: "creator-assets",
@@ -15,7 +15,7 @@ function storageWith(send: S3Client["send"]): PrivateObjectStorage {
 
 const objectKey = `users/user-1/projects/project-1/assets/product/asset-1/${"b".repeat(64)}`;
 
-describe("PrivateObjectStorage bounded server reads", () => {
+describe("R2Storage bounded server reads", () => {
   it("reads private bytes with normalized MIME metadata and a streaming cap", async () => {
     async function* body() {
       yield Uint8Array.from([1, 2]);
@@ -53,5 +53,29 @@ describe("PrivateObjectStorage bounded server reads", () => {
 
     await expect(storage.get(request)).rejects.toThrow("exceeds the configured read limit");
     await expect(storage.get(request)).rejects.toThrow("exceeds the configured read limit");
+  });
+});
+
+
+describe("R2 project cleanup", () => {
+  it("deletes only the exact project prefix in the two private buckets", async () => {
+    const owner = "a".repeat(24), project = "b".repeat(24);
+    const prefix = `users/${owner}/projects/${project}/`;
+    const send = vi.fn().mockResolvedValueOnce({ Contents: [{ Key: `${prefix}video.mp4` }] }).mockResolvedValueOnce({}).mockResolvedValueOnce({ Contents: [] }).mockResolvedValueOnce({ Contents: [] });
+    await storageWith(send as unknown as S3Client["send"]).deleteProjectMedia(owner, project);
+    expect(send.mock.calls.map(([command]) => command.input)).toEqual([
+      { Bucket: "creator-assets", Prefix: prefix, MaxKeys: 500 },
+      { Bucket: "creator-assets", Key: `${prefix}video.mp4` },
+      { Bucket: "creator-assets", Prefix: prefix, MaxKeys: 500 },
+      { Bucket: "creator-outputs", Prefix: prefix, MaxKeys: 500 },
+    ]);
+  });
+  it("rejects invalid identifiers and out-of-scope object results before deleting", async () => {
+    const send = vi.fn().mockResolvedValue({ Contents: [{ Key: "users/someone-else/private.mp4" }] });
+    const storage = storageWith(send as unknown as S3Client["send"]);
+    await expect(storage.deleteProjectMedia("../", "b".repeat(24))).rejects.toThrow("Invalid");
+    expect(send).not.toHaveBeenCalled();
+    await expect(storage.deleteProjectMedia("a".repeat(24), "b".repeat(24))).rejects.toThrow("namespace");
+    expect(send).toHaveBeenCalledOnce();
   });
 });

@@ -116,8 +116,9 @@ export function createMongoAssetReferenceVerifier(
   const canonicalBucket = assetsBucket.trim();
   if (!canonicalBucket) throw new Error("gateway_reference_assets_bucket_required");
   return async (reference, generation) => {
-    const key = parseCanonicalAssetKey(reference.objectKey, generation.userId, generation.projectId);
     const project = await database.collection(COLLECTIONS.creatorProjects).findOne({ id: generation.projectId, userId: generation.userId, status: { $ne: "trashed" }, deletedAt: null });
+    const storageOwner = reference.objectKey.split("/")[1] === generation.userId ? generation.userId : typeof project?.storageOwnerId === "string" ? project.storageOwnerId : generation.userId;
+    const key = parseCanonicalAssetKey(reference.objectKey, storageOwner, generation.projectId);
     const asset = project ? await database.collection(COLLECTIONS.creatorProjectAssets).findOne({ id: key.assetId, userId: generation.userId, projectId: generation.projectId, objectKey: reference.objectKey, bucket: canonicalBucket, kind: { $in: ["product", "reference"] } }) : null;
     const mimeType = asset ? normalizeImageMime(String(asset.mimeType)) : undefined;
     const checksumSha256 = typeof asset?.checksumSha256 === "string" ? asset.checksumSha256.trim().toLowerCase() : undefined;
@@ -260,7 +261,7 @@ export function createVerifiedReferenceUrlResolver(options: {
 /**
  * Reads a private product image through S3 credentials, verifies storage MIME
  * against magic bytes, then contain+pads (never crops) it to the exact quoted
- * Seedance canvas. The normalized JPEG is sent inline, so no localhost/MinIO
+ * Seedance canvas. The normalized JPEG is sent inline, so no local storage
  * URL ever crosses the provider boundary.
  */
 export function createGatewayFirstFramePreparer(options: GatewayFirstFramePreparerOptions) {

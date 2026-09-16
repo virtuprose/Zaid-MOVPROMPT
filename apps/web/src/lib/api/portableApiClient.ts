@@ -70,7 +70,7 @@ async function request<T>(path: string, schema: z.ZodType<T>, options: RequestOp
     headers,
     credentials: "include",
     ...(options.body === undefined ? {} : { body: JSON.stringify(options.body) }),
-    ...(options.signal ? { signal: options.signal } : {}),
+    signal: options.signal ? AbortSignal.any([options.signal, AbortSignal.timeout(30_000)]) : AbortSignal.timeout(30_000),
   });
   const raw: unknown = await response.json().catch(() => null);
   if (!response.ok) {
@@ -90,7 +90,21 @@ async function request<T>(path: string, schema: z.ZodType<T>, options: RequestOp
   return schema.parse(raw);
 }
 
+const GuestSessionResponseSchema = z.object({ user: z.object({ id: z.string(), name: z.string(), email: z.string() }), guest: z.boolean(), expiresAt: z.string().optional() });
+let pendingGuestSession: Promise<z.infer<typeof GuestSessionResponseSchema>> | undefined;
+
 export const portableCreatorApi = {
+  async guestSession() {
+    pendingGuestSession ??= request("/api/v1/guest/session", GuestSessionResponseSchema, { method: "POST", body: {}, signal: AbortSignal.timeout(30_000) }).finally(() => { pendingGuestSession = undefined; });
+    return pendingGuestSession;
+  },
+  async claimGuestResults() {
+    return request("/api/v1/guest/claim", z.object({ claimed: z.boolean(), projectIds: z.array(z.string()) }), { method: "POST", body: {}, signal: AbortSignal.timeout(30_000) });
+  },
+  async guestPreview(projectId: string, runId: string) {
+    const result = await request(`/api/v1/guest/projects/${encodeURIComponent(projectId)}/render-runs/${encodeURIComponent(runId)}/preview`, z.object({ url: z.string().url() }));
+    return result.url;
+  },
   async featureFlags(): Promise<FeatureFlagsResponse> {
     return request("/api/v1/feature-flags", FeatureFlagsResponseSchema);
   },
@@ -242,6 +256,13 @@ export const portableCreatorApi = {
       OutputDownloadResponseSchema,
     );
     return result.download.url;
+  },
+
+  async outputFileDownload(projectId: string, runId: string): Promise<string> {
+    // Validate account ownership/readiness before starting browser navigation.
+    // The attachment endpoint rechecks ownership and streams R2 privately.
+    await this.outputDownload(projectId, runId);
+    return `${apiOrigin()}/api/v1/projects/${encodeURIComponent(projectId)}/render-runs/${encodeURIComponent(runId)}/output/file`;
   },
 
   async assetDownload(projectId: string, assetId: string): Promise<string> {

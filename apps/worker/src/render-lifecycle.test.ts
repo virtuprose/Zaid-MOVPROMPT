@@ -122,6 +122,26 @@ function adapter(overrides: Partial<ProviderAdapter> = {}): ProviderAdapter {
 }
 
 describe("generation render lifecycle", () => {
+  it("persists unexpected database retry errors and logs their stage without raw messages", async () => {
+    const job = payload(), current = snapshot(job), lifecycleStore = store(current), provider = adapter();
+    vi.mocked(lifecycleStore.beginProviderSubmission).mockRejectedValue(Object.assign(new Error("E11000 sensitive internal details"), { code: 11000 }));
+    const ctx = context();
+    const handler = createGenerationLifecycleHandler({ store: lifecycleStore, billing: billing(), ...registries(provider), scheduleReconciliation: vi.fn() });
+    await expect(handler.handle(job, ctx)).rejects.toThrow();
+    expect(provider.submit).not.toHaveBeenCalled();
+    expect(lifecycleStore.recordRetryableFailure).toHaveBeenCalledWith(expect.objectContaining({ errorCode: "generation_database_error" }));
+    expect(ctx.logger.error).toHaveBeenCalledWith("render_stage_failed", expect.objectContaining({ renderRunId: job.renderRunId, requestId: job.requestId, errorCode: "generation_database_error", retrying: true }));
+    expect(JSON.stringify(vi.mocked(ctx.logger.error).mock.calls)).not.toContain("sensitive internal details");
+  });
+
+  it("ends an unexpected database failure after the bounded retries rather than leaving the run loading", async () => {
+    const job = payload(), current = snapshot(job), lifecycleStore = store(current), provider = adapter();
+    vi.mocked(lifecycleStore.beginProviderSubmission).mockRejectedValue(Object.assign(new Error("E11000"), { code: 11000 }));
+    const handler = createGenerationLifecycleHandler({ store: lifecycleStore, billing: billing(), ...registries(provider), scheduleReconciliation: vi.fn() });
+    await handler.handle(job, context(5, 5));
+    expect(provider.submit).not.toHaveBeenCalled();
+    expect(lifecycleStore.markTerminal).toHaveBeenCalledWith(expect.objectContaining({ status: "failed", errorCode: "generation_database_error" }));
+  });
   it("fails closed and releases the hold when no approved adapter is configured", async () => {
     const job = payload();
     const current = snapshot(job);

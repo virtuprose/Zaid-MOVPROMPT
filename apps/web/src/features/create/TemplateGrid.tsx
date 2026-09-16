@@ -181,7 +181,7 @@ export function TemplateGrid({
         <TemplateGroup
           id="campaign-directions"
           title={ar ? "اتجاهات حملات إضافية" : "More campaign directions"}
-          description={ar ? "أفكار إنتاج واضحة بمعاينات ثابتة، وليست فيديوهات قابلة للتشغيل بعد." : "Production-ready concepts with static direction art. Playable videos are still being prepared."}
+          description={ar ? "فيديوهات المعاينة غير متوفرة بعد. تقدر تختار قالب وتجهز حملتك." : "Preview videos are not available yet. You can still choose a template and prepare your campaign."}
           icon="direction"
           templates={visibleGroups.campaignDirections}
           selectedId={selectedId}
@@ -290,7 +290,7 @@ function TemplateCard({ template, selected, onSelect, onPreview, locale, selecti
           aria-label={selectionEnabled ? (ar ? `اختر قالب ${template.nameAr}` : `Choose ${template.name} template`) : (ar ? `معاينة قالب ${template.nameAr} فقط` : `${template.name} template preview only`)}
         >
           <div className="creator-template-media" data-media-tone={template.mediaTone}>
-            <img src={template.poster} alt="" loading="lazy" style={{ objectPosition: template.posterPosition }} />
+            {template.poster ? <img src={template.poster} alt="" loading="lazy" style={{ objectPosition: template.posterPosition }} /> : <span className="creator-template-placeholder" aria-hidden="true" />}
             <span className="creator-template-direction" aria-hidden="true"><b>{template.mediaCode}</b><span>{templateGoalLabel(goal, locale)}</span></span>
             <span className="creator-template-media-kind" aria-hidden="true">{template.previewVideo ? (ar ? "معاينة حركة" : "Motion preview") : (ar ? "اتجاه القالب" : "Template direction")}</span>
             {template.previewVideo ? <span className="creator-template-duration">{template.duration}s</span> : null}

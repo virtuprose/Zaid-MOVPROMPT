@@ -336,12 +336,12 @@ describe("private asset API", () => {
     expect(repo.updateVerifiedFootage).toHaveBeenCalledWith(expect.objectContaining({ durationMs: 10_000 }));
   });
 
-  it("advances only the matching guest-claim checkpoint after private object verification", async () => {
+  it("maps the browser UUID to a native MongoDB asset ID before advancing the matching checkpoint", async () => {
     const bytes = VALID_PNG;
     const checksumSha256 = createHash("sha256").update(bytes).digest("hex");
     const asset = {
       ...ownedAsset(),
-      id: ASSET_ID,
+      id: createHash("sha256").update(ASSET_ID).digest("hex").slice(0, 24),
       mimeType: "image/png",
       sizeBytes: bytes.byteLength,
       checksumSha256,
@@ -364,7 +364,7 @@ describe("private asset API", () => {
     });
 
     const response = await app.request(
-      `/api/v1/projects/${PROJECT_ID}/assets/${ASSET_ID}/complete`,
+      `/api/v1/projects/${PROJECT_ID}/assets/${asset.id}/complete`,
       {
         method: "POST",
         headers: { "content-type": "application/json" },

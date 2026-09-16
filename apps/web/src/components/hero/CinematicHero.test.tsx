@@ -50,12 +50,10 @@ describe("CinematicHero scrollable campaign galleries", () => {
   it("leads the homepage catalog with all verified playable previews", () => {
     const view = renderHero("en");
     const ready = screen.getByRole("region", { name: "Ready previews" });
-    const directions = screen.getByRole("region", { name: "More campaign directions" });
+    expect(screen.queryByRole("region", { name: "More campaign directions" })).not.toBeInTheDocument();
 
     const previewButtons = within(ready).getAllByRole("button", { name: /Play .* preview/ });
-    expect(previewButtons).toHaveLength(4);
-    expect(within(directions).getAllByRole("link", { name: /View .* direction/ })).toHaveLength(1);
-    expect(ready.compareDocumentPosition(directions) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(previewButtons).toHaveLength(5);
     fireEvent.click(previewButtons[0]!);
     expect(screen.getByRole("dialog").querySelector("video")).toHaveAttribute("controls");
     view.unmount();
@@ -66,7 +64,7 @@ describe("CinematicHero scrollable campaign galleries", () => {
 
     await waitFor(() => {
       expect(screen.getByRole("region", { name: "معاينات جاهزة" })).toBeVisible();
-      expect(screen.getByRole("region", { name: "اتجاهات حملات إضافية" })).toBeVisible();
+      expect(screen.queryByRole("region", { name: "اتجاهات حملات إضافية" })).not.toBeInTheDocument();
     });
     view.unmount();
   });

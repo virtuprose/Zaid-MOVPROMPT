@@ -64,6 +64,7 @@ describe("template quote state", () => {
     const key = createTemplateQuoteKey(templateVersionId, configuration);
     const unavailable = unavailableTemplateQuote(beginTemplateQuote(key), {
       code: "pricing_unavailable",
+      message: "Add a working booking link to continue.",
       retryable: true,
       requestId: "request-failure-1",
     });
@@ -72,6 +73,7 @@ describe("template quote state", () => {
     const changed = beginTemplateQuote(changedKey, key);
 
     expect(unavailable).toMatchObject({ status: "unavailable", retryable: true, requestId: "request-failure-1" });
+    expect(unavailable.failure?.message).toBe("Add a working booking link to continue.");
     expect(expired.status).toBe("expired");
     expect(changed.status).toBe("changed");
     expect(quoteForGeneration(unavailable, new Date())).toBeNull();

@@ -20,6 +20,7 @@ export function mongoTemplateCatalogDocuments(catalog: readonly CreativeTemplate
       localizedName: template.localizedName,
       localizedDescription: template.localizedDescription,
       recipe: {
+        templatePromptVersion: `${template.id}-v${template.versionNumber}`,
         outcome: template.outcome,
         verticals: template.verticals,
         goals: template.goals,

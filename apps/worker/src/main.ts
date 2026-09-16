@@ -1,3 +1,6 @@
+import { cleanExpiredGuestMedia, cleanTrashedProjectMedia } from "./guest-media-cleanup.js";
+import { createWatermarkedPreview } from "./preview-watermark.js";
+import { assertCampaignTextFont } from "./campaign-output-text.js";
 import { randomUUID } from "node:crypto";
 import { execFile } from "node:child_process";
 import { readFileSync } from "node:fs";
@@ -12,15 +15,13 @@ import {
   MOVPROMPT_WORKER_SERVICE_NAME,
 } from "@movprompt/db";
 import {
-  createBytePlusSeedanceAdapter,
   createCapabilityRegistryFromEnvironment,
   createVercelGatewaySeedanceAdapter,
   ProviderAdapterRegistry,
   generationRuntimeFingerprint,
 } from "@movprompt/providers";
-import { objectStorageConfigFromEnv, PrivateObjectStorage } from "@movprompt/storage";
+import { r2StorageConfigFromEnv, R2Storage } from "@movprompt/storage";
 import { loadWorkerConfig } from "./config.js";
-import { createAzureCampaignVoiceRenderer } from "./campaign-voice.js";
 import { createHealthJobHandler } from "./handlers.js";
 import { AbandonedClaimCleanupService } from "./abandoned-claim-cleanup.js";
 import { jsonWorkerLogger } from "./logger.js";
@@ -61,32 +62,16 @@ const providerOutputHosts = (process.env.PROVIDER_OUTPUT_ALLOWED_HOSTS ?? "")
   .split(",")
   .map((host) => host.trim())
   .filter(Boolean);
-const bytePlusApiKey = process.env.BYTEPLUS_ARK_API_KEY?.trim();
-const workerStorage = providerOutputHosts.length || bytePlusApiKey
-  ? new PrivateObjectStorage(objectStorageConfigFromEnv(process.env))
-  : undefined;
-// Cleanup is independently useful before any paid-generation provider is enabled.
-// When explicitly enabled, storage configuration remains fail-closed at startup.
-const cleanupStorage = workerStorage ?? (process.env.MOVPROMPT_ABANDONED_CLAIM_CLEANUP_ENABLED?.trim().toLowerCase() === "true"
-  ? new PrivateObjectStorage(objectStorageConfigFromEnv(process.env))
-  : undefined);
-const azureSpeechKey = process.env.AZURE_SPEECH_KEY?.trim();
-const azureSpeechRegion = process.env.AZURE_SPEECH_REGION?.trim();
-const campaignVoiceRenderer = azureSpeechKey && azureSpeechRegion
-  ? createAzureCampaignVoiceRenderer({
-      apiKey: azureSpeechKey,
-      region: azureSpeechRegion,
-      kuwaitiVoice: (process.env.AZURE_SPEECH_KUWAITI_VOICE?.trim() || "ar-KW-NouraNeural") as "ar-KW-NouraNeural" | "ar-KW-FahedNeural",
-      ...(process.env.AZURE_SPEECH_ENGLISH_VOICE?.trim()
-        ? { englishVoice: process.env.AZURE_SPEECH_ENGLISH_VOICE.trim() }
-        : {}),
-    })
-  : undefined;
-const outputPersister = providerOutputHosts.length
+let workerStorage: R2Storage | undefined;
+try { workerStorage = new R2Storage(r2StorageConfigFromEnv(process.env)); }
+catch (error) { jsonWorkerLogger.warn("r2_setup_required", { message: error instanceof Error ? error.message : "R2 configuration missing" }); }
+const cleanupStorage = workerStorage;
+const outputPersister = workerStorage && providerOutputHosts.length
   ? createProviderOutputPersister({
+      logger: jsonWorkerLogger,
       storage: workerStorage!,
+      createPreview: createWatermarkedPreview,
       allowedHosts: providerOutputHosts,
-      ...(campaignVoiceRenderer ? { voiceRenderer: campaignVoiceRenderer } : {}),
     })
   : undefined;
 const gatewayApiKey = process.env.AI_GATEWAY_API_KEY?.trim();
@@ -153,46 +138,6 @@ const runtimeOutputQualityReviewer = developmentFreeGeneration
     }
   : outputQualityReviewer;
 
-function registerBytePlusCapability(
-  alias: "video.cinematic" | "video.product_fidelity",
-  environmentPrefix: "VIDEO_CINEMATIC" | "VIDEO_PRODUCT_FIDELITY",
-): void {
-  const prefix = `MOVPROMPT_CAPABILITY_${environmentPrefix}`;
-  if (
-    process.env[`${prefix}_ENABLED`]?.trim().toLowerCase() !== "true" ||
-    process.env.MOVPROMPT_PROVIDER_BYTEPLUS_READY?.trim().toLowerCase() !== "true" ||
-    process.env[`${prefix}_ADAPTER_ID`]?.trim() !== "byteplus-modelark" ||
-    !process.env[`${prefix}_MODEL_ID`]?.trim() ||
-    !bytePlusApiKey ||
-    !workerStorage ||
-    !verifiedReferenceUrlResolver ||
-    !providerOutputHosts.length ||
-    !runtimeOutputQualityReviewer ||
-    !campaignVoiceRenderer
-  ) {
-    return;
-  }
-  const requestedResolution = process.env.BYTEPLUS_SEEDANCE_RESOLUTION?.trim();
-  const resolution = requestedResolution === "720p" ? "720p" : "1080p";
-  adapterRegistry.register(createBytePlusSeedanceAdapter({
-    capability: alias,
-    apiKey: bytePlusApiKey,
-    modelId: process.env[`${prefix}_MODEL_ID`]!,
-    resolution,
-    generateAudio: process.env.BYTEPLUS_SEEDANCE_GENERATE_AUDIO?.trim().toLowerCase() === "true",
-    ...(process.env.BYTEPLUS_ARK_BASE_URL?.trim()
-      ? { baseUrl: process.env.BYTEPLUS_ARK_BASE_URL.trim() }
-      : {}),
-    ...(process.env.BYTEPLUS_CALLBACK_URL?.trim()
-      ? { callbackUrl: process.env.BYTEPLUS_CALLBACK_URL.trim() }
-      : {}),
-    resolveReferenceUrl: verifiedReferenceUrlResolver,
-  }));
-}
-
-registerBytePlusCapability("video.cinematic", "VIDEO_CINEMATIC");
-registerBytePlusCapability("video.product_fidelity", "VIDEO_PRODUCT_FIDELITY");
-
 function registerVercelGatewayCapability(
   alias: "video.cinematic" | "video.product_fidelity",
   environmentPrefix: "VIDEO_CINEMATIC" | "VIDEO_PRODUCT_FIDELITY",
@@ -236,6 +181,7 @@ registerVercelGatewayCapability("video.product_fidelity", "VIDEO_PRODUCT_FIDELIT
 
 async function assertGenerationRuntimeReady(): Promise<boolean> {
   if (process.env.FEATURE_GENERATION?.trim().toLowerCase() !== "true") return false;
+  assertCampaignTextFont();
   if (!workerStorage || !outputPersister || !runtimeOutputQualityReviewer || !providerOutputHosts.length) {
     throw new Error("generation_worker_dependencies_unavailable");
   }
@@ -305,7 +251,7 @@ const dispatcher = new OutboxDispatcher({
   pollIntervalMs: config.outboxPollIntervalMs,
 });
 
-const generationReady = await assertGenerationRuntimeReady();
+const generationReady = workerStorage ? await assertGenerationRuntimeReady() : false;
 const heartbeat = new WorkerHeartbeat({
   repository: createMongoServiceHeartbeatRepository(database),
   serviceName: MOVPROMPT_WORKER_SERVICE_NAME,
@@ -320,8 +266,7 @@ const heartbeat = new WorkerHeartbeat({
   logger: jsonWorkerLogger,
 });
 try {
-  await worker.start();
-  dispatcher.start();
+  if (generationReady) { await worker.start(); dispatcher.start(); }
   await heartbeat.start();
 
   if (config.smokeTestOnStart) {
@@ -361,3 +306,17 @@ async function shutdown(signal: string) {
 
 process.once("SIGINT", () => void shutdown("SIGINT"));
 process.once("SIGTERM", () => void shutdown("SIGTERM"));
+
+// Serialized periodic cleanup; errors leave the tombstone for a safe retry.
+let guestCleanupRunning = false;
+if (workerStorage) {
+  const storage = workerStorage;
+  setInterval(() => {
+    if (guestCleanupRunning) return;
+    guestCleanupRunning = true;
+    void cleanExpiredGuestMedia(database, storage)
+      .then(() => cleanTrashedProjectMedia(database, storage))
+      .catch(() => jsonWorkerLogger.warn("guest_cleanup_retry", { code: "r2_or_database_unavailable" }))
+      .finally(() => { guestCleanupRunning = false; });
+  }, 60_000).unref();
+}

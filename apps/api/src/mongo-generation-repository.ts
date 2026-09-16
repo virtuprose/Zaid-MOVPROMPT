@@ -46,8 +46,10 @@ export function createMongoGenerationRepository(database: MongoDatabase): Genera
   return {
     async findOwnedProjectVersion(userId, projectVersionId) {
       const version = await versions.findOne({ id: projectVersionId, userId });
-      if (!version || !(await projects.findOne({ id: version.projectId, userId, status: { $ne: "trashed" } }))) return null;
-      return { id: String(version.id), projectId: String(version.projectId), mode: version.mode, templateVersionId: typeof version.templateVersionId === "string" ? version.templateVersionId : null, configuration: (version.configuration ?? {}) as JsonObject, productRecipe: (version.productRecipe ?? {}) as JsonObject, campaignRecipe: (version.campaignRecipe ?? {}) as JsonObject } as OwnedProjectVersion;
+      if (!version) return null;
+      const project = await projects.findOne({ id: version.projectId, userId, status: { $ne: "trashed" } });
+      if (!project) return null;
+      return { ...(typeof project.storageOwnerId === "string" ? { storageOwnerId: project.storageOwnerId } : {}), id: String(version.id), projectId: String(version.projectId), mode: version.mode, templateVersionId: typeof version.templateVersionId === "string" ? version.templateVersionId : null, configuration: (version.configuration ?? {}) as JsonObject, productRecipe: (version.productRecipe ?? {}) as JsonObject, campaignRecipe: (version.campaignRecipe ?? {}) as JsonObject } as OwnedProjectVersion;
     },
     async findOwnedReferenceAssets(userId, projectId, objectKeys) {
       if (!objectKeys.length || !(await projects.findOne({ id: projectId, userId, status: { $ne: "trashed" } }))) return [];
@@ -65,7 +67,11 @@ export function createMongoGenerationRepository(database: MongoDatabase): Genera
       const recipe = (version.recipe ?? {}) as JsonObject; const inputSchema = (version.inputSchema ?? {}) as JsonObject;
       const parsed = TemplateQuoteEligibilitySchema.safeParse({ goals: strings(recipe.goals), supportedLanguages: strings(version.supportedLanguages), supportedRatios: strings(version.supportedRatios), supportedMarkets: strings(version.supportedMarkets), requiredInputs: strings(recipe.requiredInputs), capabilityPolicy: strings(recipe.capabilityPolicy) });
       const modes = [...new Set([...strings(recipe.presenterModes), ...strings(inputSchema.presenterModes)])].map((value) => PresenterModeSchema.safeParse(value)).flatMap((value) => value.success ? [value.data] : []);
-      return { id: String(version.id), durationSeconds: Number(version.durationSeconds), starterRenderEligible: recipe.starterRenderEligible === true, eligibility: parsed.success ? parsed.data : null, supportedLanguages: strings(version.supportedLanguages), presenterModes: modes as PresenterMode[] } as PublishedTemplateVersion;
+      return { id: String(version.id), durationSeconds: Number(version.durationSeconds), starterRenderEligible: recipe.starterRenderEligible === true, eligibility: parsed.success ? parsed.data : null, supportedLanguages: strings(version.supportedLanguages), presenterModes: modes as PresenterMode[],
+        ...(Number(version.versionNumber) >= 3 && typeof recipe.templatePromptVersion === "string" && Array.isArray(recipe.sceneRecipe) ? {
+          visualRecipe: { versionNumber: Number(version.versionNumber), promptVersion: recipe.templatePromptVersion, visualSystem: String(recipe.visualSystem), scenes: recipe.sceneRecipe },
+        } : {}),
+      } as PublishedTemplateVersion;
     },
     async hasAvailableStarterEntitlement(userId) {
       return Boolean(await database.collection(COLLECTIONS.entitlements).findOne({ userId, type: "starter_template_render", status: "available" }));

@@ -215,7 +215,7 @@ describe("creator remote product image mirroring", () => {
       new Uint8Array(await crypto.subtle.digest("SHA-256", await blob.arrayBuffer())),
     ).map((value) => value.toString(16).padStart(2, "0")).join("")));
     const asset = (id: string, checksum: string) => ({
-      id,
+      id: id === firstAssetId ? "f1d11edf5c5cbe84bc60d6c5" : id,
       projectId,
       kind: "product",
       objectKey: `users/u/projects/${projectId}/assets/product/${id}/${checksum}`,
@@ -338,6 +338,40 @@ describe("creator remote product image mirroring", () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(String(fetchMock.mock.calls.at(-1)?.[0])).not.toContain("/finalize");
     expect(blobs.get(assetId)).toBe(blob);
+  });
+
+  it("retains local blob identity while returning the canonical MongoDB ID on a successful claim and resume", async () => {
+    const localAssetId = "44444444-4444-4444-8444-444444444444";
+    const assetId = "f1d11edf5c5cbe84bc60d6c5";
+    const projectId = "66e6d8e7c51fa82b8e426931";
+    const blob = new Blob([new Uint8Array([0xff, 0xd8, 0xff, 0xe0])], { type: "image/jpeg" });
+    const checksumSha256 = Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", await blob.arrayBuffer())), value => value.toString(16).padStart(2, "0")).join("");
+    const snapshot = { draftId: "77777777-7777-4777-8777-777777777777", pendingGenerationId: "33333333-3333-4333-8333-333333333333", snapshotDigest: "a".repeat(64), title: "Image claim", mode: "advanced" as const, configuration: {}, productRecipe: {}, campaignRecipe: {}, assetManifest: [{ localAssetId, ordinal: 0, kind: "product" as const, mimeType: "image/jpeg", sizeBytes: 4, checksumSha256 }] };
+    const asset = { id: assetId, projectId, kind: "product", objectKey: `users/u/projects/${projectId}/assets/product/${localAssetId}/${checksumSha256}`, mimeType: "image/jpeg", sizeBytes: 4, checksumSha256 };
+    const download = { asset, download: { method: "GET", url: "https://storage.example.test/image", expiresInSeconds: 900 }, requestId: "download" };
+    const operation = { id: "66e6d8e7c51fa82b8e426932", projectId, draftId: snapshot.draftId, pendingGenerationId: snapshot.pendingGenerationId, snapshotDigest: snapshot.snapshotDigest, status: "securing", nextAsset: null };
+    const version = { id: "66e6d8e7c51fa82b8e426933", projectId, parentVersionId: null, templateVersionId: null, mode: "advanced", versionNumber: 1, configuration: {}, productRecipe: {}, campaignRecipe: {}, changeReason: null, createdAt: "2026-09-15T00:00:00.000Z" };
+    const project = { id: projectId, title: snapshot.title, mode: "advanced", status: "ready", currentWorkingVersionId: version.id, currentAcceptedVersionId: null, latestRenderRunId: null, latestRenderProjectVersionId: null, latestRenderRunStatus: null, deletedAt: null, createdAt: version.createdAt, updatedAt: version.createdAt, currentVersion: version, versionCount: 1, outputCount: 0 };
+    const claim = { status: "ready", draftId: snapshot.draftId, pendingGenerationId: snapshot.pendingGenerationId, snapshotDigest: snapshot.snapshotDigest, assetManifest: snapshot.assetManifest, project, version };
+    const json = (body: object) => new Response(JSON.stringify({ ...body, requestId: "request-test-claim" }), { status: 200, headers: { "content-type": "application/json" } });
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(json({ operation: { ...operation, nextAsset: { id: operation.id, localAssetId, ordinal: 0, status: "pending" } }, requestId: "start" }))
+      .mockResolvedValueOnce(json({ asset, upload: { method: "PUT", url: "https://storage.example.test/upload", headers: {}, expiresInSeconds: 900 }, requestId: "reserve" }))
+      .mockResolvedValueOnce(json(download))
+      .mockResolvedValueOnce(json({ asset, status: "ready", requestId: "complete" }))
+      .mockResolvedValueOnce(json({ operation, requestId: "resume" }))
+      .mockResolvedValueOnce(json({ claim, requestId: "finalize" }));
+    vi.stubGlobal("fetch", fetchMock);
+    const result = await claimGuestAssets({ snapshot, blobs: new Map([[localAssetId, blob]]) });
+    expect(result.assets[0]).toMatchObject({ localAssetId, assetId, storagePath: asset.objectKey });
+    expect(String(fetchMock.mock.calls[3]![0])).toContain(`/assets/${assetId}/complete`);
+    expect(JSON.parse(fetchMock.mock.calls[3]![1]!.body as string).localAssetId).toBe(localAssetId);
+    fetchMock.mockReset().mockResolvedValueOnce(json({ operation, requestId: "start" })).mockResolvedValueOnce(json({ claim, requestId: "finalize" })).mockResolvedValueOnce(json(download));
+    expect((await claimGuestAssets({ snapshot, blobs: new Map() })).assets[0]).toMatchObject({ localAssetId, assetId });
+    fetchMock.mockReset().mockResolvedValueOnce(json({ operation: { ...operation, status: "ready" }, requestId: "resume" })).mockResolvedValueOnce(json({ claim, requestId: "finalize" })).mockResolvedValueOnce(json(download));
+    expect((await claimGuestAssets({ snapshot, blobs: new Map(), resumeReady: true })).assets[0]).toMatchObject({ localAssetId, assetId });
+    expect(fetchMock.mock.calls[0]![1]).toMatchObject({ credentials: "include" });
+    expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith("/claim/start"))).toBe(false);
   });
 
   it("calls the authenticated mirror endpoint and returns only the private stored asset", async () => {

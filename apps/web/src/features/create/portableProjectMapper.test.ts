@@ -63,6 +63,15 @@ const project: CreatorProject = {
 };
 
 describe("portable project mapping", () => {
+  it("excludes server-derived generation flags from the strict saved configuration", () => {
+    const stable = stableProjectConfiguration({ ...project, hasGeneratedVideo: true, hasActiveGeneration: true });
+    expect(stable).not.toHaveProperty("hasGeneratedVideo");
+    expect(stable).not.toHaveProperty("hasActiveGeneration");
+  });
+  it("does not create a recipe change when hydration supplies the default no-presenter value", () => {
+    expect(stableProjectConfiguration({ ...project, presenter: { mode: "none" } }))
+      .toEqual(stableProjectConfiguration(project));
+  });
   it("never persists a short-lived asset or output URL", () => {
     const stable = stableProjectConfiguration(project);
     expect(stable.product.images[0].storagePath).toBe(project.product.images[0].storagePath);

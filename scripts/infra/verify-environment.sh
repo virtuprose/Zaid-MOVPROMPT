@@ -31,16 +31,18 @@ required_variables=(
   FEATURE_BILLING
   MONGODB_URI
   MONGODB_DATABASE
-  S3_ENDPOINT
-  S3_REGION
-  S3_ACCESS_KEY_ID
-  S3_SECRET_ACCESS_KEY
-  S3_FORCE_PATH_STYLE
-  S3_ASSETS_BUCKET
-  S3_OUTPUTS_BUCKET
-  S3_PREVIEWS_BUCKET
-  S3_UPLOAD_URL_TTL_SECONDS
-  S3_DOWNLOAD_URL_TTL_SECONDS
+  GUEST_TRUST_PROXY
+  GUEST_DAILY_BUDGET_USD
+  GUEST_MAX_RENDER_COST_USD
+  R2_ACCOUNT_ID
+  R2_TEMPLATE_PREVIEWS_BASE_URL
+  R2_ACCESS_KEY_ID
+  R2_SECRET_ACCESS_KEY
+  R2_ASSETS_BUCKET
+  R2_OUTPUTS_BUCKET
+  R2_TEMPLATE_PREVIEWS_BUCKET
+  R2_UPLOAD_URL_TTL_SECONDS
+  R2_DOWNLOAD_URL_TTL_SECONDS
   SMTP_HOST
   SMTP_PORT
   SMTP_SECURE
@@ -82,7 +84,7 @@ if [[ "${APP_ENV}" != "${target_environment}" ]]; then
   exit 1
 fi
 
-if [[ ! "${PUBLIC_APP_URL}" =~ ^https:// || ! "${WEB_ORIGIN}" =~ ^https:// || ! "${API_ORIGIN}" =~ ^https:// || ! "${VITE_API_ORIGIN}" =~ ^https:// || ! "${BETTER_AUTH_URL}" =~ ^https:// || ! "${S3_ENDPOINT}" =~ ^https:// ]]; then
+if [[ ! "${PUBLIC_APP_URL}" =~ ^https:// || ! "${WEB_ORIGIN}" =~ ^https:// || ! "${API_ORIGIN}" =~ ^https:// || ! "${VITE_API_ORIGIN}" =~ ^https:// || ! "${BETTER_AUTH_URL}" =~ ^https:// || ! "${R2_TEMPLATE_PREVIEWS_BASE_URL}" =~ ^https:// ]]; then
   echo "Public, API, Vite API, Better Auth and object-storage URLs must use HTTPS outside local development." >&2
   exit 1
 fi
@@ -115,7 +117,7 @@ if [[ ! "${MONGODB_URI}" =~ ^mongodb(+srv)?:// ]]; then
   exit 1
 fi
 
-for boolean_variable in VITE_FEATURE_PORTABLE_AUTH VITE_AUTH_REQUIRE_EMAIL_VERIFICATION VITE_FEATURE_GUEST_CREATOR VITE_FEATURE_WORKSPACE_SHELL VITE_FEATURE_PROJECTS VITE_FEATURE_ADVANCED_MODE VITE_FEATURE_EXPORT_PIPELINE VITE_FEATURE_LOCAL_DEMO_GENERATION FEATURE_AUTHENTICATION FEATURE_ASSETS FEATURE_TEMPLATE_MODE FEATURE_ADVANCED_MODE FEATURE_GENERATION FEATURE_EXPORTS FEATURE_BILLING AUTH_REQUIRE_EMAIL_VERIFICATION S3_FORCE_PATH_STYLE SMTP_SECURE WORKER_SMOKE_TEST_ON_START; do
+for boolean_variable in VITE_FEATURE_PORTABLE_AUTH VITE_AUTH_REQUIRE_EMAIL_VERIFICATION VITE_FEATURE_GUEST_CREATOR VITE_FEATURE_WORKSPACE_SHELL VITE_FEATURE_PROJECTS VITE_FEATURE_ADVANCED_MODE VITE_FEATURE_EXPORT_PIPELINE VITE_FEATURE_LOCAL_DEMO_GENERATION FEATURE_AUTHENTICATION FEATURE_ASSETS FEATURE_TEMPLATE_MODE FEATURE_ADVANCED_MODE FEATURE_GENERATION FEATURE_EXPORTS FEATURE_BILLING AUTH_REQUIRE_EMAIL_VERIFICATION SMTP_SECURE WORKER_SMOKE_TEST_ON_START; do
   boolean_value="${!boolean_variable}"
   if [[ "${boolean_value}" != "true" && "${boolean_value}" != "false" ]]; then
     echo "${boolean_variable} must be true or false." >&2
@@ -322,12 +324,12 @@ if (( ${#BETTER_AUTH_SECRET} < 32 )); then
   exit 1
 fi
 
-if [[ "${S3_ASSETS_BUCKET}" != "creator-assets" || "${S3_OUTPUTS_BUCKET}" != "creator-outputs" || "${S3_PREVIEWS_BUCKET}" != "template-previews" ]]; then
+if [[ "${R2_ASSETS_BUCKET}" != "creator-assets" || "${R2_OUTPUTS_BUCKET}" != "creator-outputs" || "${R2_TEMPLATE_PREVIEWS_BUCKET}" != "template-previews" ]]; then
   echo "S3 bucket names must be creator-assets, creator-outputs and template-previews." >&2
   exit 1
 fi
 
-for integer_variable in SMTP_PORT S3_UPLOAD_URL_TTL_SECONDS S3_DOWNLOAD_URL_TTL_SECONDS WORKER_OUTBOX_BATCH_SIZE WORKER_OUTBOX_LEASE_MS WORKER_OUTBOX_POLL_INTERVAL_MS WORKER_RENDER_RECONCILIATION_DELAY_SECONDS; do
+for integer_variable in SMTP_PORT R2_UPLOAD_URL_TTL_SECONDS R2_DOWNLOAD_URL_TTL_SECONDS WORKER_OUTBOX_BATCH_SIZE WORKER_OUTBOX_LEASE_MS WORKER_OUTBOX_POLL_INTERVAL_MS WORKER_RENDER_RECONCILIATION_DELAY_SECONDS; do
   integer_value="${!integer_variable}"
   if [[ ! "${integer_value}" =~ ^[0-9]+$ || "${integer_value}" -lt 1 ]]; then
     echo "${integer_variable} must be a positive integer." >&2
@@ -335,7 +337,7 @@ for integer_variable in SMTP_PORT S3_UPLOAD_URL_TTL_SECONDS S3_DOWNLOAD_URL_TTL_
   fi
 done
 
-for ttl_variable in S3_UPLOAD_URL_TTL_SECONDS S3_DOWNLOAD_URL_TTL_SECONDS; do
+for ttl_variable in R2_UPLOAD_URL_TTL_SECONDS R2_DOWNLOAD_URL_TTL_SECONDS; do
   ttl_value="${!ttl_variable}"
   if [[ "${ttl_value}" -gt 3600 ]]; then
     echo "${ttl_variable} cannot exceed 3600 seconds." >&2
@@ -344,7 +346,7 @@ for ttl_variable in S3_UPLOAD_URL_TTL_SECONDS S3_DOWNLOAD_URL_TTL_SECONDS; do
 done
 
 if [[ "${target_environment}" == "production" ]]; then
-  for variable_name in PUBLIC_APP_URL WEB_ORIGIN API_ORIGIN VITE_API_ORIGIN CORS_ALLOWED_ORIGINS MONGODB_URI S3_ENDPOINT BETTER_AUTH_URL BETTER_AUTH_TRUSTED_ORIGINS; do
+  for variable_name in PUBLIC_APP_URL WEB_ORIGIN API_ORIGIN VITE_API_ORIGIN CORS_ALLOWED_ORIGINS MONGODB_URI R2_ACCOUNT_ID BETTER_AUTH_URL BETTER_AUTH_TRUSTED_ORIGINS; do
     variable_value="${!variable_name}"
     if [[ "${variable_value}" == *localhost* || "${variable_value}" == *127.0.0.1* ]]; then
       echo "Production value cannot point to a local address: ${variable_name}" >&2

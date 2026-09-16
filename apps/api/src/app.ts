@@ -1,3 +1,5 @@
+import type { GuestAccess } from "./guest-access.js";
+import { registerTemplatePreviewRoutes, type TemplatePreviewStorage } from "./template-preview-routes.js";
 import type { ApiErrorEnvelope, ServiceHealth } from "@movprompt/contracts";
 import {
   createCapabilityRegistryFromEnvironment,
@@ -38,6 +40,8 @@ export type CreateApiOptions = {
   readinessDependencies?: ReadinessDependency[];
   environment?: Readonly<Record<string, string | undefined>>;
   authGateway?: AuthGateway;
+  guestAccess?: GuestAccess;
+  templatePreviewStorage?: TemplatePreviewStorage;
   assetRepository?: AssetRepository;
   assetStorage?: AssetStorageGateway;
   assetContentVerifier?: AssetContentVerifier;
@@ -118,6 +122,8 @@ export function createApi(options: CreateApiOptions = {}) {
     );
   }
 
+  registerTemplatePreviewRoutes(app, options.templatePreviewStorage);
+
   app.get("/healthz", (context) =>
     context.json({
       service: config.serviceName,
@@ -176,9 +182,12 @@ export function createApi(options: CreateApiOptions = {}) {
     });
   });
 
+  options.guestAccess?.register(app);
+  const creatorAuth = options.guestAccess?.scopedAuth ?? options.authGateway;
+
   registerAssetRoutes(app, {
     enabled: effectiveFeatures.assets,
-    ...(options.authGateway ? { auth: options.authGateway } : {}),
+    ...(creatorAuth ? { auth: creatorAuth } : {}),
     ...(options.assetRepository ? { repository: options.assetRepository } : {}),
     ...(options.assetStorage ? { storage: options.assetStorage } : {}),
     ...(options.assetContentVerifier ? { assetContentVerifier: options.assetContentVerifier } : {}),
@@ -190,7 +199,7 @@ export function createApi(options: CreateApiOptions = {}) {
 
   registerCreatorRoutes(app, {
     enabled: config.featureFlags.templateMode && Boolean(options.creatorRepository),
-    ...(options.authGateway ? { auth: options.authGateway } : {}),
+    ...(creatorAuth ? { auth: creatorAuth } : {}),
     ...(options.creatorRepository ? { repository: options.creatorRepository } : {}),
     ...(options.guestClaimService ? { guestClaimService: options.guestClaimService } : {}),
     ...(options.assetStorage ? { storage: options.assetStorage } : {}),
@@ -201,7 +210,7 @@ export function createApi(options: CreateApiOptions = {}) {
   registerGenerationRoutes(app, {
     enabled: Boolean(options.authGateway && options.generationService),
     ...(options.generationAvailability ? { availability: options.generationAvailability } : {}),
-    ...(options.authGateway ? { auth: options.authGateway } : {}),
+    ...(creatorAuth ? { auth: creatorAuth } : {}),
     ...(options.generationService ? { generation: options.generationService } : {}),
   });
 

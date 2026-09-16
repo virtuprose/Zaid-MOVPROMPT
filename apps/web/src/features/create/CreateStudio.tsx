@@ -3,7 +3,6 @@ import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   ArrowLeft,
   ArrowRight,
-  CheckCircle2,
   ChevronDown,
   ChevronUp,
   Clock3,
@@ -28,7 +27,9 @@ import {
 import { toast } from "sonner";
 import type { CampaignFactField, CampaignSource, GuestClaimAssetManifest, RenderProcessingStage } from "@movprompt/contracts";
 import { Seo } from "@/components/Seo";
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import { GenerationProgress } from "./GenerationProgress";
+import { CampaignExportDialog } from "./CampaignExportDialog";
+import { downloadStoredVideo } from "./downloadStoredVideo";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { isFeatureEnabled } from "@/config/features";
@@ -71,13 +72,13 @@ import {
 import { hydrateCloudProject } from "./portableProjectMapper";
 import { projectToCreationDraft, type CreationDraft } from "./contracts";
 import { cleanupExpiredGuestDrafts, getGuestAsset, getGuestDraft, loadGuestDraft, markClaimCheckpoint, putGuestAsset, saveGuestDraft } from "./guestDraftStore";
-import { claimGuestAssets, GuestClaimAssetFailure, type GuestClaimProgress as GuestClaimProgressState } from "./creatorAssets";
+import { claimGuestAssets, requestClaimOperation, GuestClaimOperationMissingError, GuestClaimAssetFailure, type GuestClaimProgress as GuestClaimProgressState } from "./creatorAssets";
 import { GuestClaimProgress } from "./GuestClaimProgress";
 import { CreatorProgress } from "./CreatorProgress";
 import { FactReviewStep } from "./FactReviewStep";
 import { SourceChoiceStep, type SourceChoice, type SourceSubject } from "./SourceChoiceStep";
 import { CampaignSetupStep } from "./CampaignSetupStep";
-import type { CampaignSetupField } from "./campaignSetupRules";
+import { validateCampaignSetup, type CampaignSetupField } from "./campaignSetupRules";
 import type { PresenterCompatibility } from "./PresenterChoice";
 import { CampaignReviewStep, type CampaignReviewEditTarget } from "./CampaignReviewStep";
 import { buildGuestClaimSnapshot } from "./guestClaimSnapshot";
@@ -88,6 +89,8 @@ import {
   syncCreatorProjectWithOwnedRemoteImages,
 } from "./creatorProjectAssets";
 import { SaveStatusIndicator, type SaveLifecycleState } from "./SaveStatusIndicator";
+import { useTemplateCampaignOptions } from "./useTemplateCampaignOptions";
+import { templateCampaignIssue } from "./templateCampaignOptions";
 import { useTemplateQuotes } from "./useTemplateQuotes";
 import { stepForLoadedProject } from "./creatorResumeStep";
 import { buildTemplatePrompt } from "./templateGenerationPrompt";
@@ -95,7 +98,6 @@ import { prepareAuthenticatedAssetClaim } from "./authenticatedAssetClaim";
 import type { TemplateQuote } from "./templateQuoteState";
 import { applyImportedFacts, campaignFactValue, campaignSourceForProject, confirmCampaignFacts, editFact, normalizeCampaignSource } from "./sourceFacts";
 import {
-  CAMPAIGN_GOAL_OPTIONS,
   campaignCtaLabel,
   CTA_OPTIONS,
   MARKET_META,
@@ -160,32 +162,6 @@ const ARABIC_GOAL_LABELS: Record<CreatorProject["goal"], string> = {
   trust: "بناء الثقة",
   brand_story: "قصة العلامة التجارية",
 };
-
-const GENERATION_STATES = [
-  "Preparing your product",
-  "Building your campaign",
-  "Creating the scenes",
-  "Adding your brand and copy",
-  "Preparing your preview",
-];
-
-const GENERATION_STAGE_POSITION: Record<RenderProcessingStage, number> = {
-  preparing: 1,
-  rendering: 2,
-  securing_output: 3,
-  quality_review: 4,
-  ready: 5,
-  cancelling: 4,
-  failed: 4,
-  cancelled: 4,
-};
-
-const EXPORT_PRESETS: Array<{ ratio: CreatorAspectRatio; title: string; titleAr: string; detail: string; detailAr: string }> = [
-  { ratio: "9:16", title: "TikTok, Reels & Snapchat", titleAr: "تيك توك وريلز وسناب شات", detail: "Vertical · Social safe zones", detailAr: "عمودي · مساحات اجتماعية آمنة" },
-  { ratio: "1:1", title: "Instagram feed", titleAr: "منشور إنستغرام", detail: "Square · Feed safe zones", detailAr: "مربع · مساحات منشور آمنة" },
-  { ratio: "4:5", title: "Instagram portrait", titleAr: "إنستغرام عمودي", detail: "Portrait · Platform safe zones", detailAr: "عمودي · مساحات آمنة للمنصة" },
-  { ratio: "16:9", title: "YouTube & website", titleAr: "يوتيوب والموقع", detail: "Landscape · Website safe zones", detailAr: "أفقي · مساحات موقع آمنة" },
-];
 
 function readHomepageHandoff() {
   try {
@@ -275,6 +251,7 @@ function normalizeLoadedProject(project: CreatorProject): CreatorProject {
 }
 
 function sourceChoiceForProject(project: CreatorProject): SourceChoice {
+  if (!project.product.name.trim() && !project.product.images.length && templateRequiresSourceMedia(project.templateId)) return "upload";
   const source = campaignSourceForProject(project);
   if (source.kind === "product_url") return "product_link";
   if (source.kind === "business_url") return "business_link";
@@ -340,11 +317,18 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
   );
   const [searchParams] = useSearchParams();
   const { projectId: routeProjectId, draftId: routeDraftId } = useParams();
-  const { user, signOut } = useAuth();
+  const { user: accountUser, signOut, loading: authLoading } = useAuth();
+  const [guestUser, setGuestUser] = useState<{ id: string; name: string; email: string } | null>(null);
+  const [guestRetry, setGuestRetry] = useState(0);
+  const [guestError, setGuestError] = useState("");
+  const [guestExpiresAt, setGuestExpiresAt] = useState<string | null>(null);
+  const [accountClaimReady, setAccountClaimReady] = useState(false);
+  const user = accountUser ?? guestUser;
+  const isGuest = !accountUser;
   const userId = user?.id;
   const portablePlatform = isFeatureEnabled("portableAuth");
   const localDemoGeneration = isFeatureEnabled("localDemoGeneration");
-  const developmentFreeGeneration = import.meta.env.DEV && isFeatureEnabled("developmentFreeGeneration");
+  const developmentFreeGeneration = isGuest || (import.meta.env.DEV && isFeatureEnabled("developmentFreeGeneration"));
   const simulatedGeneration = import.meta.env.DEV && (qaMode || localDemoGeneration);
   const requestedProject = searchParams.get("project") || routeProjectId || null;
   const requestedTemplate = searchParams.get("template");
@@ -375,6 +359,20 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
   const [sourceSubject, setSourceSubject] = useState<SourceSubject>(() => sourceSubjectForProject(project));
   const [productUrl, setProductUrl] = useState(initialProject?.product.sourceUrl ?? homepageHandoff.sourceUrl);
   const [sourceError, setSourceError] = useState("");
+  useEffect(() => {
+    if (qaMode || authLoading) return;
+    let active = true;
+    if (accountUser) {
+      void portableCreatorApi.claimGuestResults().then(() => { if (active) { setGuestError(""); setAccountClaimReady(true); } })
+        .catch(error => { if (active) { setGuestError(error instanceof Error ? error.message : "Your project could not be saved to your account."); } });
+    } else {
+      void portableCreatorApi.guestSession().then(result => {
+        if (active) { setGuestError(""); setGuestUser(result.user); setGuestExpiresAt(result.expiresAt ?? null); }
+      }).catch(error => { if (active) setGuestError(error instanceof Error ? error.message : "Guest setup failed. Please retry."); });
+    }
+    return () => { active = false; };
+  }, [accountUser, authLoading, qaMode, guestRetry]);
+
   const [recovery, setRecovery] = useState<TypedGuestClaimRecovery | null>(null);
   const [sourceBusy, setSourceBusy] = useState(false);
   const [showAllTemplates, setShowAllTemplates] = useState(false);
@@ -387,8 +385,12 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
   const [authGateCancellation, setAuthGateCancellation] = useState("");
   const [draftRestoring, setDraftRestoring] = useState(Boolean(requestedDraft));
   const [generationProgress, setGenerationProgress] = useState(0);
+  const [generationStartedAt, setGenerationStartedAt] = useState<number | null>(null);
+  const [generationCompletedAt, setGenerationCompletedAt] = useState<number | null>(null);
+  const [generationLastCheckedAt, setGenerationLastCheckedAt] = useState<number | null>(null);
+  const [generationStatusError, setGenerationStatusError] = useState("");
+  const generationStatusPoll = useRef<() => Promise<void>>(async () => undefined);
   const [generationStage, setGenerationStage] = useState<RenderProcessingStage>("preparing");
-  const [generationMessage, setGenerationMessage] = useState(GENERATION_STATES[0]);
   const [activeSceneId, setActiveSceneId] = useState(project.scenes[0]?.id ?? "");
   const [inspectorTab, setInspectorTab] = useState<"scene" | "brand" | "format">("scene");
   const [changeRequest, setChangeRequest] = useState("");
@@ -410,8 +412,15 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const template = getCreatorTemplate(project.templateId);
   const projectDurationSeconds = project.scenes.reduce((sum, scene) => sum + scene.duration, 0);
+  const templateSettings = useTemplateCampaignOptions(template, portablePlatform && !simulatedGeneration);
+  const supportedOptions = templateSettings.options;
+  const compatibilityIssue = templateCampaignIssue(project, supportedOptions, arabicUi);
+  const templateSettingsIssue = templateSettings.error
+    ? tr("Could not load this template’s supported settings. Retry the template check.", "تعذر تحميل إعدادات القالب. أعد التحقق من القالب.")
+    : !templateSettings.ready ? tr("Checking this template’s supported settings…", "جارٍ التحقق من إعدادات القالب…") : "";
+  const campaignSetupIssue = compatibilityIssue || templateSettingsIssue || Object.values(validateCampaignSetup(project))[0];
   const templateQuote = useTemplateQuotes({
-    enabled: portablePlatform && !simulatedGeneration && step === "details",
+    enabled: portablePlatform && !simulatedGeneration && step === "details" && !campaignSetupIssue,
     templateId: template.id,
     configuration: buildPortableTemplateEstimateConfiguration(project),
   });
@@ -448,46 +457,54 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
               ? tr("The local generation service is not ready. Try again.", "خدمة التوليد المحلية غير جاهزة. حاول مرة ثانية.")
               : tr("We couldn’t confirm the current price. Try again.", "ما قدرنا نؤكد السعر الحالي. حاول مرة ثانية.")
             : quoteFailure
-              ? tr("Video generation is temporarily unavailable.", "توليد الفيديو غير متوفر مؤقتاً.")
+              ? quoteFailure.message || tr("Video generation is temporarily unavailable. Retry the service check.", "توليد الفيديو غير متوفر مؤقتاً. أعد التحقق من الخدمة.")
               : !portablePlatform && !simulatedGeneration
                 ? tr("Video generation is temporarily unavailable.", "توليد الفيديو غير متوفر مؤقتاً.")
                 : "";
   const activeScene = project.scenes.find((scene) => scene.id === activeSceneId) ?? project.scenes[0];
   const recoveryCopy = recovery ? getGuestClaimRecoveryCopy(arabicUi ? "ar" : "en", recovery.state) : null;
   const hasRenderedVideo = hasRealCreatorVideo(project);
+  const lastMediaRenewal = useRef(0);
+  const renewPreview = useCallback(async () => {
+    if (!project.renderRunId || simulatedGeneration || Date.now() - lastMediaRenewal.current < 60_000) return;
+    lastMediaRenewal.current = Date.now();
+    try {
+      const url = isGuest
+        ? await portableCreatorApi.guestPreview(project.id, project.renderRunId)
+        : await portableCreatorApi.outputDownload(project.id, project.renderRunId);
+      setProject(current => ({ ...current, videoUrl: url }));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not refresh video access. Your project remains saved.");
+    }
+  }, [project.id, project.renderRunId, simulatedGeneration, isGuest]);
+  useEffect(() => {
+    if (!hasRenderedVideo) return;
+    const timer = window.setInterval(() => void renewPreview(), 10 * 60_000);
+    return () => window.clearInterval(timer);
+  }, [hasRenderedVideo, renewPreview]);
   const productPreviewImage = project.product.images[0]?.url || null;
   const isRtl = project.language === "ar" || project.language === "bilingual";
   const activeSceneHeadline = arabicUi && activeScene?.headlineAr ? activeScene.headlineAr : activeScene?.headline;
   const activeScenePurpose = arabicUi && activeScene?.purposeAr ? activeScene.purposeAr : activeScene?.purpose;
-  const localizedGenerationMessage = arabicUi
-    ? ({
-        "Preparing your product": "جارٍ تجهيز المنتج",
-        "Building your campaign": "جارٍ بناء الحملة",
-        "Creating your video": "جارٍ إنشاء الفيديو",
-        "Securing your completed video": "جارٍ حفظ الفيديو المكتمل بأمان",
-        "Checking video quality": "جارٍ فحص جودة الفيديو",
-        "Creating the scenes": "جارٍ إنشاء المشاهد",
-        "Adding your brand and copy": "جارٍ إضافة الهوية والنص",
-        "Preparing your preview": "جارٍ تجهيز المعاينة",
-        "Your preview is ready": "المعاينة جاهزة",
-        "Your product preview is ready": "معاينة المنتج جاهزة",
-        "Still working — reconnecting to your video": "ما زلنا نعمل — جارٍ إعادة الاتصال بالتوليد",
-        "Cancellation is pending — we'll keep checking your saved project": "طلب الإلغاء قيد المعالجة — سنواصل التحقق من مشروعك المحفوظ",
-      } as Record<string, string>)[generationMessage] ?? generationMessage
-    : generationMessage;
-
   useEffect(() => {
-    if (!requestedProject || !userId) return;
+    if (!requestedProject || !userId || (accountUser && !accountClaimReady)) return;
     let active = true;
-    void loadCreatorProjects(userId).then((projects) => {
+    void loadCreatorProjects(userId).then(async (projects) => {
       const saved = projects.find((item) => item.id === requestedProject);
       if (!active || !saved) return;
-      const normalized = normalizeLoadedProject(saved);
+      let normalized = normalizeLoadedProject(saved);
+      if (normalized.renderRunId && normalized.status !== "generating") {
+        const run = await pollCreatorGeneration(normalized.renderRunId, !accountUser);
+        if (!active) return;
+        if (run.created_at && Number.isFinite(Date.parse(run.created_at))) setGenerationStartedAt(Date.parse(run.created_at));
+        if (run.status === "completed" && run.video_url) normalized = { ...normalized, status: "review", videoUrl: run.video_url };
+        else if (run.status !== "failed") normalized = { ...normalized, status: "generating" };
+      }
       setProject(normalized);
       setStep(stepForLoadedProject(normalized));
-    });
+    }).catch(error => { if (active) setSourceError(error instanceof Error ? error.message : "Could not restore your project."); });
     return () => { active = false; };
-  }, [requestedProject, userId]);
+  }, [requestedProject, userId, accountUser, accountClaimReady]);
 
   useEffect(() => {
     const onOffline = () => {
@@ -505,10 +522,14 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
     return () => window.cancelAnimationFrame(frame);
   }, [recovery]);
 
-  const retryQuote = templateQuote.retry;
+  const retryQuote = () => {
+    if (!templateSettings.ready) templateSettings.retry();
+    templateQuote.retry();
+  };
 
   const persist = useCallback((next: CreatorProject) => {
     if (saveTimer.current) window.clearTimeout(saveTimer.current);
+    if (activeClaimController.current) return;
     const revision = ++saveRevision.current;
     if (!next.product.images.length && !next.product.sourceUrl && !next.product.name) {
       setSaveState("idle");
@@ -516,6 +537,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
     }
     setSaveState("saving");
     saveTimer.current = window.setTimeout(() => {
+      if (activeClaimController.current) return;
       void (async () => {
         try {
           if (!qaMode && (!userId || hasUnclaimedCreatorAssets(next))) {
@@ -626,18 +648,21 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
   useEffect(() => {
     if ((!project.jobId && !project.renderRunId) || step !== "generating" || simulatedGeneration) return;
     let stopped = false;
+    let inFlight = false;
+    let completionTimer: number | undefined;
     const poll = async () => {
+      if (stopped || inFlight) return;
+      inFlight = true;
       try {
-        const job = project.renderRunId ? await pollCreatorGeneration(project.renderRunId) : await pollVideoJob(project.jobId!);
+        const job = project.renderRunId ? await pollCreatorGeneration(project.renderRunId, isGuest) : await pollVideoJob(project.jobId!);
         if (stopped) return;
-        const durableStage = job.processing_stage;
+        setGenerationLastCheckedAt(Date.now());
+        setGenerationStatusError("");
+        if (job.created_at && Number.isFinite(Date.parse(job.created_at))) setGenerationStartedAt(Date.parse(job.created_at));
+        const durableStage = job.processing_stage ?? (job.status === "completed" ? "ready" : job.status === "failed" ? "failed" : job.status === "processing" ? "rendering" : "preparing");
         setGenerationStage(durableStage);
-        if (durableStage === "preparing") setGenerationMessage("Preparing your product");
-        if (durableStage === "rendering") setGenerationMessage("Creating your video");
-        if (durableStage === "securing_output") setGenerationMessage("Securing your completed video");
-        if (durableStage === "quality_review") setGenerationMessage("Checking video quality");
-        if (durableStage === "cancelling") setGenerationMessage("Cancellation is pending — we'll keep checking your saved project");
         if (durableStage === "cancelled") {
+          stopped = true;
           setGenerationStage("cancelled");
           setProject((current) => ({
             ...current,
@@ -651,19 +676,22 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
           return;
         }
         if (job.status === "completed") {
+          stopped = true;
+          setGenerationCompletedAt(job.completed_at && Number.isFinite(Date.parse(job.completed_at)) ? Date.parse(job.completed_at) : Date.now());
           if (job.video_url && !isBundledDemoVideoUrl(job.video_url)) {
             setProject((current) => ({ ...current, status: "review", videoUrl: job.video_url!, lastError: null, pendingGenerationId: null }));
             setGenerationStage("ready");
-            setGenerationMessage("Your preview is ready");
-            window.setTimeout(() => setStep("editor"), 450);
+            completionTimer = window.setTimeout(() => setStep("editor"), 450);
           } else {
             const message = "The video was completed without a valid generated result.";
             setGenerationStage("failed");
             setProject((current) => ({ ...current, status: "failed", videoUrl: null, lastError: message, pendingGenerationId: null }));
             setSourceError(`${message} Your imported product images are unchanged.`);
-            setStep("details");
+            setGenerationStatusError(message);
           }
         } else if (job.status === "failed") {
+          stopped = true;
+          setGenerationCompletedAt(job.completed_at && Number.isFinite(Date.parse(job.completed_at)) ? Date.parse(job.completed_at) : Date.now());
           const recoverableOutput = job.error?.includes("provider_output") || job.error === "fetch failed";
           const message = recoverableOutput
             ? "Your video was created, but MovPrompt could not finish saving it. Open Projects and retry saving it—this will not generate or charge again."
@@ -671,19 +699,34 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
           setGenerationStage("failed");
           setProject((current) => ({ ...current, status: "failed", lastError: message, pendingGenerationId: null }));
           setSourceError(message);
-          setStep("details");
+          setGenerationStatusError(message);
         }
-      } catch {
-        setGenerationMessage("Still working — reconnecting to your video");
+      } catch (error) {
+        if (stopped) return;
+        const supportId = error instanceof PortableApiError && error.requestId ? ` (${error.requestId})` : "";
+        setGenerationStatusError(tr(`We couldn’t check video status. Your project is saved. Retrying automatically.${supportId}`, `ما قدرنا نتحقق من حالة الفيديو. مشروعك محفوظ. نعيد المحاولة تلقائياً.${supportId}`));
+        if (error instanceof PortableApiError && [401, 404, 410].includes(error.status ?? 0)) {
+          setSourceError(error.message);
+          stopped = true;
+          setGenerationStatusError(error.message);
+          setGenerationStage("failed");
+          setGenerationCompletedAt(Date.now());
+          return;
+        }
+      } finally {
+        inFlight = false;
       }
     };
+    generationStatusPoll.current = poll;
     void poll();
     const timer = window.setInterval(poll, 4000);
     return () => {
       stopped = true;
       window.clearInterval(timer);
+      if (completionTimer !== undefined) window.clearTimeout(completionTimer);
+      generationStatusPoll.current = async () => undefined;
     };
-  }, [project.jobId, project.renderRunId, simulatedGeneration, step]);
+  }, [project.jobId, project.renderRunId, simulatedGeneration, step, isGuest, tr]);
 
   const updateProject = (changes: Partial<CreatorProject>) => {
     setProject((current) => ({ ...current, ...changes, updatedAt: new Date().toISOString() }));
@@ -698,6 +741,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
 
   const updateCampaignSetup = (changes: Partial<CreatorProject>, field: CampaignSetupField) => {
     setCampaignSetupReady(false);
+    setSourceError("");
     setProject((current) => {
       let source = campaignSourceForProject(current);
       if (field === "price") source = editFact(source, "price", changes.product?.price ?? current.product.price);
@@ -725,6 +769,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
     const nextGoal = nextTemplate.goals[0] ?? project.goal;
     const serviceTemplate = nextVertical === "salon" || nextVertical === "clinic" || templateId === "app-service";
     const preserveConfirmedCampaign = Boolean(project.product.name || project.product.images.length);
+    const preservePurpose = preserveConfirmedCampaign && nextTemplate.goals.includes(project.goal);
     updateProjectSource({
       templateId,
       brandColor: nextTemplate.accent,
@@ -734,8 +779,8 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
       dialectRegister: nextTemplate.dialectRegister,
       promotionKind: serviceTemplate ? "business" : "product",
       vertical: nextVertical,
-      goal: preserveConfirmedCampaign ? project.goal : nextGoal,
-      cta: preserveConfirmedCampaign ? project.cta : getCampaignGoalOption(nextGoal).defaultCta,
+      goal: preservePurpose ? project.goal : nextGoal,
+      cta: preservePurpose ? project.cta : getCampaignGoalOption(nextGoal).defaultCta,
       scenes: nextTemplate.scenes.map((scene) => ({ ...scene })),
       title: project.product.name ? `${project.product.name} — ${nextTemplate.name}` : "Untitled campaign",
     });
@@ -792,8 +837,6 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
     });
     updateProjectSource(projectWithSource(project, source, {
       vertical: sourceSubject === "service" ? "salon" : "ecommerce",
-      goal: sourceSubject === "service" ? "bookings" : "launch",
-      cta: sourceSubject === "service" ? "Book now" : "Shop now",
     }));
     setStep("facts");
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -906,8 +949,6 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
       updateProjectSource(projectWithSource(project, source, {
         product: { ...project.product, sourceType: "upload", sourceUrl: "", images },
         vertical: sourceSubject === "service" ? "salon" : "ecommerce",
-        goal: sourceSubject === "service" ? "bookings" : "launch",
-        cta: sourceSubject === "service" ? "Book now" : "Shop now",
       }));
       setStep("facts");
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -1038,11 +1079,12 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
       }
       value = Math.min(100, value + 11 + Math.round(Math.random() * 7));
       setGenerationProgress(value);
-      setGenerationMessage(GENERATION_STATES[Math.min(GENERATION_STATES.length - 1, Math.floor((value / 100) * GENERATION_STATES.length))]);
+      setGenerationStage(value < 20 ? "preparing" : value < 80 ? "rendering" : value < 92 ? "securing_output" : "quality_review");
       if (value >= 100) {
         window.clearInterval(timer);
         setProject((current) => completeLocalProductPreview(current));
-        setGenerationMessage("Your product preview is ready");
+        setGenerationStage("ready");
+        setGenerationCompletedAt(Date.now());
         window.setTimeout(() => setStep("editor"), 500);
       }
     }, 520);
@@ -1170,9 +1212,9 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
       });
     }
 
-    const snapshot = await buildGuestClaimSnapshot({
+    let snapshot = await buildGuestClaimSnapshot({
       draftId: projectForClaim.id,
-      pendingGenerationId: guestDraft.pendingGenerationId,
+      pendingGenerationId: sourceCheckpoint?.pendingGenerationId ?? guestDraft.pendingGenerationId,
       assetManifest,
       title: projectForClaim.title,
       mode: "template",
@@ -1181,6 +1223,29 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
       productRecipe: portableProductRecipe(projectForClaim),
       campaignRecipe: portableCampaignRecipe(projectForClaim),
     });
+    let resumeReady = false;
+    if (sourceCheckpoint && JSON.stringify(sourceCheckpoint.assetManifest) === JSON.stringify(snapshot.assetManifest)) {
+      const operation = await requestClaimOperation(sourceCheckpoint.pendingGenerationId, options.signal).catch((error) => {
+        // A local checkpoint can precede the first server request.
+        if (error instanceof GuestClaimOperationMissingError) return null;
+        throw error;
+      });
+      if (operation?.status === "ready") {
+        // The initial claim succeeded before browser verification/persistence
+        // failed. Recover its exact receipt, then persist current form edits as
+        // a child version rather than replacing the immutable completed claim.
+        resumeReady = true;
+        snapshot = { ...snapshot, pendingGenerationId: sourceCheckpoint.pendingGenerationId,
+          snapshotDigest: sourceCheckpoint.snapshotDigest,
+          configuration: sourceCheckpoint.configuration as typeof snapshot.configuration,
+          assetManifest: sourceCheckpoint.assetManifest };
+      }
+    }
+    if (!resumeReady && guestDraft.claimCheckpoint && guestDraft.claimCheckpoint.snapshotDigest !== snapshot.snapshotDigest) {
+      const { snapshotDigest: previousDigest, ...changedSnapshot } = snapshot;
+      void previousDigest;
+      snapshot = await buildGuestClaimSnapshot({ ...changedSnapshot, pendingGenerationId: crypto.randomUUID() });
+    }
     await saveGuestDraft({
       ...projectToCreationDraft(projectForClaim, rightsConfirmed, "claiming"),
       pendingGenerationId: snapshot.pendingGenerationId,
@@ -1194,14 +1259,14 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
     });
     if (!checkpoint) throw new Error("The local campaign could not be prepared for secure recovery.");
 
-    const claimed = await claimGuestAssets({ snapshot, blobs, signal: options.signal, onProgress: options.onProgress });
+    const claimed = await claimGuestAssets({ snapshot, blobs, resumeReady, signal: options.signal, onProgress: options.onProgress });
     const cloudProject = await hydrateCloudProject(claimed.receipt.project);
     if (!cloudProject) throw new Error("The saved campaign could not be restored after secure claim.");
     const claimedAssets = new Map(claimed.assets.map((asset) => [asset.localAssetId, asset]));
     const images = projectForClaim.product.images.map((image) => {
       const secure = claimedAssets.get(image.id);
       return secure
-        ? { ...image, assetKey: undefined, storagePath: secure.storagePath, mimeType: secure.mimeType, checksum: secure.checksum, url: secure.url, ...(secure.durationMs === undefined ? {} : { durationMs: secure.durationMs }) }
+        ? { ...image, id: secure.assetId, assetKey: undefined, storagePath: secure.storagePath, mimeType: secure.mimeType, checksum: secure.checksum, url: secure.url, ...(secure.durationMs === undefined ? {} : { durationMs: secure.durationMs }) }
         : image;
     });
     const claimedProject = mergeClaimedCreatorProject(projectForClaim, cloudProject, images);
@@ -1246,6 +1311,13 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
   };
 
   const startGeneration = async (ratioOverride?: CreatorAspectRatio) => {
+    const settingsIssue = templateSettingsIssue || templateCampaignIssue(ratioOverride ? { ...project, aspectRatio: ratioOverride } : project, supportedOptions, arabicUi);
+    if (settingsIssue) {
+      setSourceError(settingsIssue);
+      setCampaignSetupReady(false);
+      setStep("details");
+      return;
+    }
     const source = campaignSourceForProject(project);
     const sourceName = campaignFactValue(source, source.subject === "product" ? "name" : "service_name").trim() || project.product.name.trim();
     const requiresSourceMedia = templateRequiresSourceMedia(project.templateId);
@@ -1265,12 +1337,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
       return;
     }
     if (!simulatedGeneration && !user) {
-      const pendingGenerationId = project.pendingGenerationId || crypto.randomUUID();
-      const pendingProject = { ...project, pendingGenerationId, pendingQuoteCredits: currentQuote!.credits };
-      setProject(pendingProject);
-      await saveGuestDraft(projectToCreationDraft(pendingProject, true, "auth_required"));
-      setAuthGateCancellation("");
-      setAuthGateOpen(true);
+      setSourceError("Your guest session is still loading. Please try again.");
       return;
     }
     setSourceBusy(true);
@@ -1278,6 +1345,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
     const showsClaimProgress = Boolean(user && !qaMode);
     if (showsClaimProgress) {
       activeClaimController.current = controller;
+      if (saveTimer.current) window.clearTimeout(saveTimer.current);
       setClaimProgress({ stage: "creating" });
       setAuthGateCancellation("");
     }
@@ -1297,6 +1365,12 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
       setProject(claimedProject);
     } catch (error) {
       if (isAbortError(error)) return;
+      const apiError = error instanceof PortableApiError ? error : null;
+      console.warn("creator_campaign_claim_failed", JSON.stringify({
+        code: apiError?.code ?? (error instanceof GuestClaimAssetFailure ? "asset_claim_failed" : "claim_verification_failed"),
+        status: apiError?.status ?? null,
+        requestId: apiError?.requestId ?? null,
+      }));
       const next = selectGuestClaimRecovery(
         projectToCreationDraft(project, rightsConfirmed),
         error instanceof GuestClaimAssetFailure ? "asset_claim_failed" : "claim_failed",
@@ -1338,7 +1412,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
         if (!authoritativeQuote.quoteId) {
           throw new Error(developmentFreeGeneration ? "The local generation session could not be saved." : "The confirmed generation price could not be saved.");
         }
-        if (authoritativeQuote.credits !== currentQuote!.credits) {
+        if (!isGuest && authoritativeQuote.credits !== currentQuote!.credits) {
           setProject({ ...renderProject, pendingQuoteCredits: authoritativeQuote.credits });
           setSourceError(developmentFreeGeneration
             ? tr("The generation settings changed. Select Generate video again.", "تغيّرت إعدادات التوليد. اختر توليد الفيديو مرة ثانية.")
@@ -1364,8 +1438,11 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
     setSourceBusy(false);
     setProject((current) => ({ ...current, aspectRatio: renderProject.aspectRatio, status: "generating", videoUrl: ratioOverride ? null : current.videoUrl, lastError: null }));
     setGenerationStage("preparing");
+    setGenerationStartedAt(Date.now());
+    setGenerationCompletedAt(null);
+    setGenerationLastCheckedAt(null);
+    setGenerationStatusError("");
     if (simulatedGeneration) setGenerationProgress(8);
-    setGenerationMessage(GENERATION_STATES[0]);
     setStep("generating");
     setExportOpen(false);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -1380,8 +1457,9 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
     try {
       const generation = await startCreatorGeneration({ projectId: renderProject.id, projectVersionId: renderProject.versionId!, quoteId: confirmedQuote.quoteId, idempotencyKey: renderProject.pendingGenerationId || crypto.randomUUID(), mode: "template", prompt: buildTemplatePrompt(renderProject), capability: confirmedQuote.capability as "video.cinematic" | "video.product_fidelity", options: { aspect_ratio: renderProject.aspectRatio === "4:5" ? "3:4" : renderProject.aspectRatio, duration: Math.min(15, template.duration), resolution: renderProject.resolution, audio: renderProject.audio }, referenceImages: renderProject.product.images.filter(isCreatorImageReference).map((image) => image.url), rightsAttested: rightsConfirmed, metadata: { creator_project_id: renderProject.id, template_id: renderProject.templateId, language: renderProject.language, market: renderProject.market } });
       setProject((current) => ({ ...current, jobId: generation.job.id, renderRunId: generation.runId, status: "generating" }));
+      if (generation.job.created_at && Number.isFinite(Date.parse(generation.job.created_at))) setGenerationStartedAt(Date.parse(generation.job.created_at));
       setGenerationStage("preparing");
-      setGenerationMessage("Your campaign is queued securely");
+      navigate(`/create?project=${encodeURIComponent(renderProject.id)}`, { replace: true });
     } catch (error) {
       const message = error instanceof Error ? error.message : "We couldn't start creating your video.";
       setProject((current) => ({ ...current, status: "failed", lastError: message, pendingGenerationId: null }));
@@ -1422,8 +1500,8 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
           && "status" in cancellation
           && cancellation.status === "cancelling"
         ) {
+          setGenerationStatusError("");
           setGenerationStage("cancelling");
-          setGenerationMessage("Cancellation is pending — we'll keep checking your saved project");
           setProject((current) => ({ ...current, status: "generating", lastError: null }));
           return;
         }
@@ -1432,6 +1510,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
           ? error.message
           : "This video could not be cancelled because creation has already started.";
         setSourceError(message);
+        setGenerationStatusError(message);
         toast.error(message);
         return;
       }
@@ -1502,13 +1581,20 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
 
   const downloadVideo = async () => {
     if (!hasRenderedVideo || !project.videoUrl) return;
+    if (!accountUser && !simulatedGeneration) {
+      setExportOpen(false);
+      setAuthGateOpen(true);
+      return;
+    }
     let downloadUrl = project.videoUrl;
     try {
       if (portablePlatform && project.renderRunId) {
-        downloadUrl = await portableCreatorApi.outputDownload(project.id, project.renderRunId);
-        setProject((current) => ({ ...current, videoUrl: downloadUrl }));
+        downloadUrl = await portableCreatorApi.outputFileDownload(project.id, project.renderRunId);
+        await downloadStoredVideo(downloadUrl, `${project.product.name || "movprompt-video"}-${project.aspectRatio.replace(":", "x")}.mp4`);
+        toast.success(tr("Download started.", "بدأ التنزيل."));
+        return;
       }
-      const response = await fetch(downloadUrl);
+      const response = await fetch(downloadUrl, { signal: AbortSignal.timeout(30_000) });
       if (!response.ok) throw new Error("download_failed");
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
@@ -1519,13 +1605,22 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
       URL.revokeObjectURL(url);
       updateProject({ status: "completed" });
       toast.success("Download started.");
-    } catch {
-      window.open(downloadUrl, "_blank", "noopener,noreferrer");
-      toast("The video opened in a new tab. Use Save Video if the download did not start.");
+    } catch (error) {
+      toast.error(tr("Download failed. Your video remains saved. Please try again.", "تعذر التنزيل. الفيديو ما زال محفوظاً. حاول مرة ثانية."));
+      throw error;
     }
   };
 
-  const selectedExportMeta = EXPORT_PRESETS.find((preset) => preset.ratio === selectedExport)!;
+  const downloadVideoRef = useRef(downloadVideo);
+  downloadVideoRef.current = downloadVideo;
+  const resumedDownload = useRef(false);
+  useEffect(() => {
+    if (!accountUser || !accountClaimReady || searchParams.get("resume") !== "download" || !hasRenderedVideo || !project.videoUrl || resumedDownload.current) return;
+    resumedDownload.current = true;
+    // The download already surfaces a saved-video error; avoid an unhandled
+    // rejection when resuming after authentication outside the export dialog.
+    void downloadVideoRef.current().catch(() => undefined);
+  }, [accountUser, accountClaimReady, searchParams, hasRenderedVideo, project.videoUrl]);
 
   const togglePreviewPlayback = async () => {
     const video = videoRef.current;
@@ -1563,7 +1658,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
     return (
       <CreatorShell qaMode={qaMode}>
         <Seo title="Creating your campaign · MovPrompt" description="MovPrompt is creating your template-based campaign." noindex />
-        <section className="creator-generation" aria-live="polite" aria-busy="true">
+        <section className={cn("creator-generation", ["ready", "failed", "cancelled"].includes(generationStage) && "is-terminal")} aria-busy={!["ready", "failed", "cancelled"].includes(generationStage)}>
           <div className="creator-generation-inner">
             <div className="creator-generation-preview">
               {productPreviewImage
@@ -1572,13 +1667,20 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
               <div className="creator-generation-scan" aria-hidden="true" />
             </div>
             <p className="creator-kicker">{arabicUi ? template.nameAr : template.name}</p>
-            <h1>{tr("Building your campaign", "جارٍ بناء حملتك")}</h1>
-            <p>{simulatedGeneration ? tr("Preview workflow only — no AI video or credits. We will open an editable still preview using only your imported product image.", "مسار معاينة فقط — بدون فيديو ذكاء اصطناعي أو رصيد. سنفتح معاينة ثابتة قابلة للتعديل باستخدام صورة منتجك المستوردة فقط.") : tr("You can leave this screen safely. Your project is saved and video creation will continue in the background.", "تقدر تترك هذه الصفحة بأمان. مشروعك محفوظ والتوليد راح يكمل بالخلفية.")}</p>
-            <div className="creator-generation-progress" aria-hidden="true">
-              <span style={{ width: simulatedGeneration ? `${generationProgress}%` : `${GENERATION_STAGE_POSITION[generationStage] * 20}%` }} />
-            </div>
-            <div className="creator-generation-status" role="status">{localizedGenerationMessage}{simulatedGeneration ? ` · ${generationProgress}%` : ""}</div>
-            <button className="creator-button creator-button-quiet" type="button" onClick={cancelGeneration} disabled={!simulatedGeneration && generationStage === "cancelling"}>{generationStage === "cancelling" ? tr("Cancellation pending", "الإلغاء قيد المعالجة") : tr("Cancel generation", "إلغاء التوليد")}</button>
+            <h1>{generationStage === "failed" ? tr("Video creation needs attention", "إنشاء الفيديو يحتاج متابعة") : generationStage === "ready" ? tr("Your preview is ready", "المعاينة جاهزة") : tr("Building your campaign", "جارٍ بناء حملتك")}</h1>
+            <p>{generationStage === "failed" ? tr("Your campaign is saved. Review the error below and return to your campaign.", "حملتك محفوظة. راجع الخطأ أدناه ثم عد إلى الحملة.") : simulatedGeneration ? tr("Preview workflow only — no AI video or credits. We will open an editable still preview using only your imported product image.", "مسار معاينة فقط — بدون فيديو ذكاء اصطناعي أو رصيد. سنفتح معاينة ثابتة قابلة للتعديل باستخدام صورة منتجك المستوردة فقط.") : tr("You can leave this screen safely. Your project is saved and video creation will continue in the background.", "تقدر تترك هذه الصفحة بأمان. مشروعك محفوظ والتوليد راح يكمل بالخلفية.")}</p>
+            <GenerationProgress
+              stage={generationStage}
+              startedAt={generationStartedAt}
+              completedAt={generationCompletedAt}
+              lastCheckedAt={generationLastCheckedAt}
+              error={generationStatusError}
+              arabic={arabicUi}
+              onRetry={() => void generationStatusPoll.current()}
+              simulatedProgress={simulatedGeneration ? generationProgress : undefined}
+            />
+            {generationStage === "failed" ? <button className="creator-button creator-button-secondary" type="button" onClick={() => setStep("details")}>{tr("Back to campaign", "العودة للحملة")}</button> : <button className="creator-button creator-button-quiet" type="button" onClick={cancelGeneration} disabled={!simulatedGeneration && generationStage === "cancelling"}>{generationStage === "cancelling" ? tr("Cancellation pending", "الإلغاء قيد المعالجة") : tr("Cancel generation", "إلغاء التوليد")}</button>}
+
           </div>
         </section>
       </CreatorShell>
@@ -1619,7 +1721,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
             <section className="creator-stage" aria-label={tr("Video preview", "معاينة الفيديو")}>
               <div className="creator-video-frame" data-ratio={project.aspectRatio}>
                 {hasRenderedVideo && project.videoUrl
-                  ? <video ref={videoRef} key={project.videoUrl} src={project.videoUrl} poster={productPreviewImage ?? undefined} aria-label={tr(`Generated video for ${project.product.name}`, `الفيديو المولّد لـ ${project.product.name}`)} playsInline autoPlay loop muted={previewMuted} />
+                  ? <video ref={videoRef} onError={() => void renewPreview()} key={project.videoUrl} src={project.videoUrl} poster={productPreviewImage ?? undefined} aria-label={tr(`Generated video for ${project.product.name}`, `الفيديو المولّد لـ ${project.product.name}`)} playsInline autoPlay loop muted={previewMuted} />
                   : productPreviewImage
                     ? <SourceMediaPreview asset={project.product.images[0]} alt={tr(`${project.product.name || "Product"} source preview`, `معاينة مصدر ${project.product.name || "المنتج"}`)} />
                     : <div className="creator-media-empty"><FileImage aria-hidden="true" /><span>{tr("Add a product image to preview this campaign", "أضف صورة منتج لمعاينة هذه الحملة")}</span></div>}
@@ -1645,66 +1747,53 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
                 <>
                   <div className="creator-field"><label htmlFor="scene-headline">{tr("On-screen headline", "العنوان على الشاشة")}</label><input id="scene-headline" className="creator-input" value={arabicUi ? activeScene.headlineAr ?? activeScene.headline : activeScene.headline} onChange={(event) => updateScene(activeScene.id, arabicUi ? { headlineAr: event.target.value } : { headline: event.target.value })} maxLength={70} /></div>
                   <div className="creator-field"><label htmlFor="scene-direction">{tr("What happens in this scene", "شنو يصير في هذا المشهد")}</label><textarea id="scene-direction" className="creator-textarea" value={activeScene.direction} onChange={(event) => updateScene(activeScene.id, { direction: event.target.value })} /></div>
-                  <div className="creator-field"><label>{tr("Scene length", "مدة المشهد")}</label><div className="creator-duration-control"><button type="button" onClick={() => updateScene(activeScene.id, { duration: Math.max(1, activeScene.duration - 1) }, true)} aria-label={tr("Shorten scene", "قصّر المشهد")}><Minus aria-hidden="true" /></button><span>{activeScene.duration} {activeScene.duration === 1 ? tr("second", "ثانية") : tr("seconds", "ثوانٍ")}</span><button type="button" onClick={() => updateScene(activeScene.id, { duration: Math.min(5, activeScene.duration + 1) }, true)} aria-label={tr("Lengthen scene", "طوّل المشهد")}><Plus aria-hidden="true" /></button></div></div>
+                  <div className="creator-field"><label>{tr("Scene length", "مدة المشهد")}</label><div className="creator-duration-control"><button type="button" onClick={() => updateScene(activeScene.id, { duration: Math.max(1, activeScene.duration - 1) }, true)} disabled={activeScene.duration <= 1} aria-label={tr("Shorten scene", "قصّر المشهد")}><Minus aria-hidden="true" /></button><span>{activeScene.duration} {activeScene.duration === 1 ? tr("second", "ثانية") : tr("seconds", "ثوانٍ")}</span><button type="button" onClick={() => updateScene(activeScene.id, { duration: Math.min(5, activeScene.duration + 1) }, true)} disabled={activeScene.duration >= 5} aria-label={tr("Lengthen scene", "طوّل المشهد")}><Plus aria-hidden="true" /></button></div></div>
                   <div className="creator-scene-actions"><button className="creator-button creator-button-secondary" type="button" onClick={() => moveScene(activeScene.id, -1)} disabled={project.scenes[0]?.id === activeScene.id}><ChevronUp aria-hidden="true" /> {tr("Earlier", "أبكر")}</button><button className="creator-button creator-button-secondary" type="button" onClick={() => moveScene(activeScene.id, 1)} disabled={project.scenes.at(-1)?.id === activeScene.id}><ChevronDown aria-hidden="true" /> {tr("Later", "لاحقاً")}</button></div>
                 </>
               )}
 
               {inspectorTab === "brand" && (
                 <>
-                  <div className="creator-field"><label htmlFor="editor-language">{tr("Campaign language", "لغة الحملة")}</label><select id="editor-language" className="creator-select" value={project.language} onChange={(event) => updateProject({ language: event.target.value as CreatorLanguage })}><option value="en">{tr("English", "الإنجليزية")}</option><option value="ar">{tr("Arabic · Kuwaiti dialect", "العربية · اللهجة الكويتية")}</option><option value="bilingual">{tr("Arabic + English · Kuwaiti dialect", "العربية + الإنجليزية · اللهجة الكويتية")}</option></select>{project.language !== "en" && <span className="creator-field-help">{tr("Voice and campaign copy use natural Kuwait Arabic (ar-KW).", "الصوت ونص الحملة يستخدمون عربي كويتي طبيعي (ar-KW).")}</span>}</div>
+                  <div className="creator-field"><label htmlFor="editor-language">{tr("Campaign language", "لغة الحملة")}</label><select id="editor-language" className="creator-select" value={supportedOptions.languages.includes(project.language) ? project.language : ""} onChange={(event) => updateProject({ language: event.target.value as CreatorLanguage })}>{!supportedOptions.languages.includes(project.language) && <option value="" disabled>{tr("Choose a supported language", "اختر لغة يدعمها القالب")}</option>}{supportedOptions.languages.map(language => <option key={language} value={language}>{language === "en" ? tr("English", "الإنجليزية") : language === "ar" ? tr("Arabic · Kuwaiti dialect", "العربية · اللهجة الكويتية") : tr("Arabic + English · Kuwaiti dialect", "العربية + الإنجليزية · اللهجة الكويتية")}</option>)}</select>{project.language !== "en" && <span className="creator-field-help">{tr("Voice and campaign copy use natural Kuwait Arabic (ar-KW).", "الصوت ونص الحملة يستخدمون عربي كويتي طبيعي (ar-KW).")}</span>}</div>
                   <div className="creator-field"><label htmlFor="editor-cta">{tr("Call to action", "الدعوة للإجراء")}</label><select id="editor-cta" className="creator-select" value={project.cta} onChange={(event) => updateProject({ cta: event.target.value })}>{CTA_OPTIONS.map((option) => <option key={option} value={option}>{campaignCtaLabel(option, arabicUi)}</option>)}</select></div>
                   <div className="creator-field"><label htmlFor="editor-offer">{tr("Offer", "العرض")}</label><input id="editor-offer" className="creator-input" value={project.offer} onChange={(event) => updateProject({ offer: event.target.value })} placeholder={tr("Optional — e.g. 20% off today", "اختياري — مثلاً خصم 20% اليوم")} /></div>
-                  <div className="creator-field"><label htmlFor="editor-color">{tr("Brand colour", "لون العلامة")}</label><input id="editor-color" className="creator-input" type="color" value={project.brandColor} onChange={(event) => updateProject({ brandColor: event.target.value })} /></div>
+                  <div className="creator-field"><label htmlFor="editor-color">{tr("Brand colour", "لون العلامة")}</label><div className="creator-color-control"><input id="editor-color" className="creator-color-input" type="color" value={project.brandColor} onChange={(event) => updateProject({ brandColor: event.target.value })} /><output htmlFor="editor-color" className="creator-color-value">{project.brandColor}</output></div></div>
                 </>
               )}
 
               {inspectorTab === "format" && (
                 <>
-                  <div className="creator-field"><label>{tr("Video format", "مقاس الفيديو")}</label><div className="creator-choice-grid">{(["9:16", "1:1", "4:5", "16:9"] as CreatorAspectRatio[]).map((ratio) => <button key={ratio} type="button" className={cn("creator-choice", project.aspectRatio === ratio && "is-selected")} aria-pressed={project.aspectRatio === ratio} onClick={() => updateProject({ aspectRatio: ratio })}>{ratio}</button>)}</div>{project.aspectRatio === "4:5" && <span className="creator-field-help">{tr("Uses a 3:4 generation canvas, then preserves the 4:5 safe area in export.", "يستخدم مساحة توليد 3:4 ويحافظ على منطقة 4:5 الآمنة في التصدير.")}</span>}</div>
-                  <div className="creator-field"><label htmlFor="editor-quality">{tr("Quality", "الجودة")}</label><select id="editor-quality" className="creator-select" value={project.resolution} onChange={(event) => updateProject({ resolution: event.target.value as CreatorResolution })}><option value="720p">720p · {tr("Recommended", "موصى به")}</option><option value="480p">480p · {tr("Faster preview", "معاينة أسرع")}</option></select></div>
+                  <div className="creator-field"><label>{tr("Video format", "مقاس الفيديو")}</label><div className="creator-choice-grid">{supportedOptions.ratios.map((ratio) => <button key={ratio} type="button" className={cn("creator-choice", project.aspectRatio === ratio && "is-selected")} aria-pressed={project.aspectRatio === ratio} onClick={() => updateProject({ aspectRatio: ratio })}>{ratio}</button>)}</div>{project.aspectRatio === "4:5" && <span className="creator-field-help">{tr("Uses a 3:4 generation canvas, then preserves the 4:5 safe area in export.", "يستخدم مساحة توليد 3:4 ويحافظ على منطقة 4:5 الآمنة في التصدير.")}</span>}</div>
+                  <div className="creator-field"><label htmlFor="editor-quality">{tr("Quality", "الجودة")}</label><select id="editor-quality" className="creator-select" value={supportedOptions.resolutions.includes(project.resolution) ? project.resolution : ""} onChange={(event) => updateProject({ resolution: event.target.value as CreatorResolution })}>{!supportedOptions.resolutions.includes(project.resolution) && <option value="" disabled>{tr("Choose a supported quality", "اختر جودة يدعمها القالب")}</option>}{supportedOptions.resolutions.map(resolution => <option key={resolution} value={resolution}>{resolution} · {resolution === "720p" ? tr("Recommended", "موصى به") : tr("Faster preview", "معاينة أسرع")}</option>)}</select></div>
                   <div className="creator-check-row"><input id="editor-subtitles" type="checkbox" checked={project.subtitles} onChange={(event) => updateProject({ subtitles: event.target.checked })} /><label htmlFor="editor-subtitles">{tr("Include subtitles when the video contains speech.", "أضف ترجمة مكتوبة إذا كان الفيديو يحتوي على كلام.")}</label></div>
                   <div className="creator-check-row"><input id="editor-audio" type="checkbox" checked={project.audio} onChange={(event) => updateProject({ audio: event.target.checked })} /><label htmlFor="editor-audio">{tr("Generate music and sound for this version.", "ولّد موسيقى وصوت لهذه النسخة.")}</label></div>
                 </>
               )}
 
               <div className="creator-change-box">
-                <div className="creator-change-box-header"><WandSparkles aria-hidden="true" /> {tr("Make a change in plain language", "اطلب تعديلاً بكلام بسيط")}</div>
-                <textarea className="creator-textarea" value={changeRequest} onChange={(event) => setChangeRequest(event.target.value)} placeholder={tr("Try “show the product earlier” or “make the opening faster”", "جرّب «أظهر المنتج أبكر» أو «سرّع البداية»")} aria-label={tr("Describe a change", "اكتب التعديل")} />
-                <button className="creator-button creator-button-primary" type="button" onClick={applyChangeRequest} disabled={!changeRequest.trim()} style={{ width: "100%", marginTop: 9 }}><Send aria-hidden="true" /> {tr("Apply change", "طبّق التعديل")}</button>
+                <label htmlFor="editor-change-request" className="creator-change-box-header"><WandSparkles aria-hidden="true" /><span>{tr("Make a change in plain language", "اطلب تعديلاً بكلام بسيط")}</span></label>
+                <textarea id="editor-change-request" className="creator-textarea" value={changeRequest} onChange={(event) => setChangeRequest(event.target.value)} placeholder={tr("Try “show the product earlier” or “make the opening faster”", "جرّب «أظهر المنتج أبكر» أو «سرّع البداية»")} aria-label={tr("Describe a change", "اكتب التعديل")} />
+                <button className="creator-button creator-button-primary" type="button" onClick={applyChangeRequest} disabled={!changeRequest.trim()}><Send aria-hidden="true" /> {tr("Apply change", "طبّق التعديل")}</button>
               </div>
             </aside>
           </div>
         </div>
 
-        <Dialog open={exportOpen} onOpenChange={setExportOpen}>
-          <DialogContent closeLabel={tr("Close", "إغلاق")} className="creator-export-panel left-auto right-0 top-0 translate-x-0 translate-y-0 max-w-[460px] max-h-none h-full rounded-none border-0 gap-0 p-6">
-            <div className="creator-export-head"><div><DialogTitle>{tr("Export campaign", "تصدير الحملة")}</DialogTitle><DialogDescription>{tr("Choose where this version will be published.", "اختر وين راح تنشر هذه النسخة.")}</DialogDescription></div></div>
-            <div className="creator-export-options">
-              {EXPORT_PRESETS.map((preset) => (
-                <button key={preset.ratio} type="button" className={cn("creator-export-option", selectedExport === preset.ratio && "is-selected")} aria-pressed={selectedExport === preset.ratio} onClick={() => setSelectedExport(preset.ratio)}>
-                  <span className="creator-ratio-icon">{preset.ratio}</span>
-                  <span><strong>{arabicUi ? preset.titleAr : preset.title}</strong><span>{preset.ratio === project.aspectRatio ? tr("Current video · Download", "النسخة المولّدة الحالية · تنزيل") : tr("New generated version · Separate quote", "نسخة توليد جديدة · تسعير منفصل")}</span></span>
-                  {selectedExport === preset.ratio && <CheckCircle2 className="creator-export-check" aria-hidden="true" />}
-                </button>
-              ))}
-            </div>
-            <div className="creator-summary-list" style={{ marginTop: 24 }}><div className="creator-summary-row"><span>{tr("File", "الملف")}</span><strong>MP4 · H.264</strong></div><div className="creator-summary-row"><span>{tr("Quality", "الجودة")}</span><strong>{project.resolution}</strong></div><div className="creator-summary-row"><span>{tr("Audio", "الصوت")}</span><strong>{project.audio ? tr("Included", "مشمول") : tr("Muted", "مكتوم")}</strong></div></div>
-            {selectedExport !== project.aspectRatio && (
-              <div className="creator-export-generation-note" role="note">
-                <strong>{tr("This creates a new AI-generated version", "هذا ينشئ نسخة جديدة مولّدة بالذكاء الاصطناعي")}</strong>
-                <span>{tr(`The ${selectedExport} format is not a crop of your current video. MovPrompt will save a new version and request a separate confirmed quote before generation.`, `مقاس ${selectedExport} ليس قصاً من الفيديو الحالي. سيحفظ MovPrompt نسخة جديدة ويطلب سعراً مؤكداً منفصلاً قبل التوليد.`)}</span>
-              </div>
-            )}
-            {simulatedGeneration ? (
-              <div className="creator-import-note" role="note" style={{ marginTop: 24 }}><strong>{tr("Preview only", "معاينة فقط")}</strong><span>{tr("A downloadable MP4 becomes available after your AI video is ready.", "يتوفر ملف MP4 للتنزيل بعد اكتمال توليد حقيقي بالذكاء الاصطناعي.")}</span></div>
-            ) : selectedExport === project.aspectRatio && hasRenderedVideo && project.videoUrl ? (
-              <button className="creator-button creator-button-primary" type="button" onClick={downloadVideo} style={{ width: "100%", marginTop: 24 }}><Download aria-hidden="true" /> {tr("Download", "تنزيل")} {selectedExportMeta.ratio}</button>
-            ) : (
-              <button className="creator-button creator-button-primary" type="button" onClick={() => void startGeneration(selectedExport)} style={{ width: "100%", marginTop: 24 }}><Sparkles aria-hidden="true" /> {tr("Get quote for", "احصل على سعر لنسخة")} {selectedExport}</button>
-            )}
-          </DialogContent>
-        </Dialog>
+        <CampaignExportDialog
+          open={exportOpen}
+          onOpenChange={setExportOpen}
+          arabic={arabicUi}
+          currentRatio={project.aspectRatio}
+          selectedRatio={selectedExport}
+          onSelectRatio={setSelectedExport}
+          resolution={project.resolution}
+          audio={project.audio}
+          hasVideo={hasRenderedVideo && Boolean(project.videoUrl)}
+          previewOnly={simulatedGeneration}
+          onDownload={downloadVideo}
+          onGenerate={(ratio) => startGeneration(ratio)}
+        />
+        <AuthGateDialog open={authGateOpen} onOpenChange={handleAuthGateChange} returnPath={`/create?project=${encodeURIComponent(project.id)}&resume=download`} />
       </CreatorShell>
     );
   }
@@ -1734,6 +1823,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
           <section className="creator-template-flow" aria-label={tr("Choose a campaign result", "اختر نتيجة الحملة")}>
             <OutcomeStep
               value={project.goal}
+              goals={supportedOptions.goals}
               arabic={arabicUi}
               onChange={(goal) => {
                 updateProject({ goal });
@@ -1826,6 +1916,10 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
                 onChange={updateCampaignSetup}
                 onContinue={() => setCampaignSetupReady(true)}
                 presenterCompatibility={presenterCompatibility}
+                options={supportedOptions}
+                settingsReady={templateSettings.ready}
+                settingsError={templateSettings.error ? templateSettingsIssue : ""}
+                onRetrySettings={templateSettings.retry}
                 arabic={arabicUi}
               />
               {campaignSetupReady && <>
@@ -1855,7 +1949,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
               <div className="creator-product-image" style={{ borderRadius: 14, overflow: "hidden" }}><SourceMediaPreview asset={project.product.images[0]} alt={project.product.name} /></div>
               <div className="creator-summary-list" style={{ marginTop: 16 }}><div className="creator-summary-row"><span>{tr("Template", "القالب")}</span><strong>{arabicUi ? template.nameAr : template.name}</strong></div><div className="creator-summary-row"><span>{tr("Campaign goal", "هدف الحملة")}</span><strong>{arabicUi ? ARABIC_GOAL_LABELS[project.goal] : getCampaignGoalOption(project.goal).label}</strong></div><div className="creator-summary-row"><span>{tr("Call to action", "الدعوة للإجراء")}</span><strong>{campaignCtaLabel(project.cta, arabicUi)}</strong></div>{!developmentFreeGeneration && project.product.price && <div className="creator-summary-row"><span>{tr("Price", "السعر")}</span><strong>{project.product.price} {MARKET_META[project.market].currency}</strong></div>}{project.offer && <div className="creator-summary-row"><span>{tr("Offer", "العرض")}</span><strong>{project.offer}</strong></div>}<div className="creator-summary-row"><span>{tr("Market", "السوق")}</span><strong>{MARKET_META[project.market].label}</strong></div><div className="creator-summary-row"><span>{tr("Campaign language", "لغة الحملة")}</span><strong>{project.language === "bilingual" ? tr("Kuwaiti Arabic + English", "عربي كويتي + إنجليزي") : project.language === "ar" ? tr("Kuwaiti Arabic", "عربي كويتي") : tr("English", "الإنجليزية")}</strong></div><div className="creator-summary-row"><span>{tr("Format", "المقاس")}</span><strong>{project.aspectRatio} · {project.resolution}</strong></div><div className="creator-summary-row"><span>{tr("Subtitles", "الترجمة المكتوبة")}</span><strong>{project.subtitles ? tr("Included", "مشمولة") : tr("Off", "متوقفة")}</strong></div><div className="creator-summary-row"><span>{tr("Audio", "الصوت")}</span><strong>{project.audio ? tr("Included", "مشمول") : tr("Off", "متوقف")}</strong></div></div>
               {!campaignSetupReady && <div className="creator-cost-box" aria-live="polite">
-                {developmentFreeGeneration ? <><small>{tr("Local development", "التطوير المحلي")}</small><strong>{tr("Vercel video generation is enabled", "توليد الفيديو عبر Vercel مفعّل")}</strong><span className="creator-cost-meta"><Clock3 aria-hidden="true" /> {tr(`Video length: ${projectDurationSeconds} seconds · estimated processing: 2–5 minutes`, `مدة الفيديو: ${projectDurationSeconds} ثانية · وقت المعالجة المتوقع: 2–5 دقائق`)}</span></> : activeQuote ? <>
+                {developmentFreeGeneration ? <><small>{tr(isGuest ? "Guest preview" : "Local development", isGuest ? "معاينة للزائر" : "التطوير المحلي")}</small><strong>{campaignSetupIssue ? compatibilityIssue || templateSettingsIssue || tr(campaignSetupIssue, "أضف بيانات التواصل المطلوبة للمتابعة.") : activeQuote ? tr("Ready to generate your preview", "جاهز لتوليد المعاينة") : quoteLoaded ? quoteError || tr("Generation setup is incomplete", "إعداد التوليد غير مكتمل") : tr("Checking generation availability…", "جارٍ التحقق من توفر التوليد…")}</strong><span className="creator-cost-meta"><Clock3 aria-hidden="true" /> {tr(`Video length: ${projectDurationSeconds} seconds · estimated processing: 2–5 minutes`, `مدة الفيديو: ${projectDurationSeconds} ثانية · وقت المعالجة المتوقع: 2–5 دقائق`)}</span>{!campaignSetupIssue && templateQuote.retryable && <button className="creator-cost-retry" type="button" onClick={retryQuote}><RefreshCw aria-hidden="true" /> {tr("Retry service check", "إعادة التحقق من الخدمة")}</button>}{quoteFailure?.requestId && <details className="creator-support-details"><summary>{tr("Support details", "تفاصيل الدعم")}</summary><code>{quoteFailure.requestId}</code></details>}</> : activeQuote ? <>
                   <small>{activeQuote.entitlementEligible ? tr("Your first video", "فيديوك الأول") : tr("Confirmed generation price", "سعر التوليد المؤكد")}</small>
                   <strong>{activeQuote.entitlementEligible ? tr("Included · 0 credits for this video", "مشمول · 0 رصيد لهذا التوليد") : tr(`${activeQuote.credits} credits`, `${activeQuote.credits} رصيد`)}</strong>
                   <span className="creator-cost-meta"><Clock3 aria-hidden="true" /> {tr(`Video length: ${projectDurationSeconds} seconds · estimated processing: 2–5 minutes`, `مدة الفيديو: ${projectDurationSeconds} ثانية · وقت المعالجة المتوقع: 2–5 دقائق`)}</span>
@@ -1865,7 +1959,9 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
           </div>
         )}
       </div>}
-      <AuthGateDialog open={authGateOpen} onOpenChange={handleAuthGateChange} returnPath={`/create?draft=${encodeURIComponent(project.id)}&resume=generate`} />
+      {isGuest && guestExpiresAt && hasRenderedVideo && <p role="status" className="creator-auth-gate-note">{tr("Watermarked preview. Sign in to download the clean video and keep it in My Projects. Unclaimed videos expire after 7 days.", "معاينة بعلامة مائية. سجّل الدخول لتنزيل الفيديو وحفظه في مشاريعي. تنتهي صلاحية الفيديو غير المحفوظ بعد ٧ أيام.")}</p>}
+      {guestError && <div role="alert" className="creator-import-note"><p>{tr("Your connection could not be established. Your draft is still saved.", "تعذّر الاتصال. مسودتك محفوظة.")}</p><button type="button" className="creator-button creator-button-secondary" onClick={() => setGuestRetry(value => value + 1)}>{tr("Retry connection", "إعادة الاتصال")}</button></div>}
+      <AuthGateDialog open={authGateOpen} onOpenChange={handleAuthGateChange} returnPath={`/create?project=${encodeURIComponent(project.id)}&resume=download`} />
       <p className="sr-only" role="status" aria-live="polite" aria-atomic="true">{authGateCancellation}</p>
     </CreatorShell>
   );

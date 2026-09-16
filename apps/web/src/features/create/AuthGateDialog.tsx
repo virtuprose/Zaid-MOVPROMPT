@@ -20,7 +20,7 @@ export function AuthGateDialog({ open, onOpenChange, returnPath, authCapability 
   authCapability?: AuthCapability | null;
 }) {
   const navigate = useNavigate();
-  const { t } = useLanguage();
+  const { t, locale } = useLanguage();
   const [provider, setProvider] = useState<"google" | "apple" | null>(null);
   const [serverCapability, setServerCapability] = useState<AuthCapability | null>(authCapability ?? null);
   const firstMethodRef = useRef<HTMLButtonElement | null>(null);
@@ -64,9 +64,9 @@ export function AuthGateDialog({ open, onOpenChange, returnPath, authCapability 
         }}
       >
         <div className="creator-auth-gate-icon"><LockKeyhole aria-hidden="true" /></div>
-        <DialogTitle>{t("auth.gateTitle")}</DialogTitle>
+        <DialogTitle>{locale === "ar" ? "سجّل الدخول لتنزيل الفيديو" : "Sign in to download your video"}</DialogTitle>
         <DialogDescription>
-          {t("auth.gateDescription")}
+          {locale === "ar" ? "الفيديو جاهز. احفظه في حسابك ونزّل النسخة بدون علامة مائية." : "Your video is ready. Save it to your account and download the clean version."}
         </DialogDescription>
         <div className="creator-auth-gate-actions">
           {socialProviders.map((nextProvider, index) => (
@@ -79,7 +79,7 @@ export function AuthGateDialog({ open, onOpenChange, returnPath, authCapability 
             {t("auth.continueEmail")}
           </button>
         </div>
-        <p className="creator-auth-gate-note">{t("auth.gatePriceNote")}</p>
+        <p className="creator-auth-gate-note">{locale === "ar" ? "لن نعيد توليد الفيديو." : "Your existing video will be saved; it will not be generated again."}</p>
       </DialogContent>
     </Dialog>
   );

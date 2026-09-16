@@ -3,7 +3,7 @@ import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import { basename, dirname, extname, join, resolve } from "node:path";
 
 import { PROVIDER_BENCHMARK_CORPUS } from "@movprompt/creative-engine";
-import { objectStorageConfigFromEnv, PrivateObjectStorage } from "@movprompt/storage";
+import { r2StorageConfigFromEnv, R2Storage } from "@movprompt/storage";
 
 import { benchmarkFactsChecksum, parseBenchmarkManifest, type BenchmarkManifest } from "./benchmark-manifest.js";
 
@@ -35,7 +35,7 @@ if (process.env.MOVPROMPT_BENCHMARK_RIGHTS_ATTESTED !== "YES") {
 
 const sourceDirectory = resolve(required("MOVPROMPT_BENCHMARK_ASSET_DIRECTORY"));
 const manifestPath = resolve(required("MOVPROMPT_BENCHMARK_MANIFEST_PATH"));
-const storage = new PrivateObjectStorage(objectStorageConfigFromEnv(process.env));
+const storage = new R2Storage(r2StorageConfigFromEnv(process.env));
 const subjectKeys = [...new Set(PROVIDER_BENCHMARK_CORPUS.map((brief) => `${brief.vertical}-${brief.challenge}`))].sort();
 if (subjectKeys.length !== 16) throw new Error("benchmark_subject_key_count_invalid");
 const referencesBySubject = new Map<string, BenchmarkManifest["items"][number]["references"]>();

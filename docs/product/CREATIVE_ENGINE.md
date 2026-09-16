@@ -36,27 +36,7 @@ change them to `approved`.
 5. Provider submission is blocked when the complete script score is below 90;
    all fifty template scripts are covered by this preflight test.
 
-Arabic text, KWD price, offer, CTA and subtitles are protected deterministic
-layers. The video model is not trusted to draw legible Arabic text into the
-generated footage. For ordinary product and service templates, speech is also
-deterministic: the final encoder replaces provider dialogue with the approved
-script synthesized through an explicit `ar-KW` voice. Only Azure's
-`ar-KW-NouraNeural` or `ar-KW-FahedNeural` is accepted for Arabic campaigns;
-a Saudi, Emirati, Egyptian or generic Arabic voice cannot be configured.
-
-Presenter and UGC templates are different: a detached TTS track would break
-mouth synchronization. Those templates request provider-native synchronized
-dialogue using the exact approved script, keep that native audio, and must pass
-both Kuwait-dialect and speech-sync evidence. They never receive a detached
-post-generation voice overlay. Automated video review is a screening gate;
-final presenter approval still requires Kuwait-based human listening and
-lip-sync review.
-
-Azure publishes the dedicated Kuwait voices and supports multiple voices in
-one SSML document for alternating bilingual scenes; voice quality still
-requires the live human benchmark:
-<https://learn.microsoft.com/azure/ai-services/speech-service/language-support>.
-<https://learn.microsoft.com/azure/ai-services/speech-service/speech-synthesis-markup-voice>.
+The five launch recipes preserve confirmed facts and predefined visual directions. Audio uses the configured Gateway model's native capabilities only; separate narration is disabled in this phase. Generated speech and Kuwaiti dialect must be inspected before quality claims. Do not assume a detached voice track or guaranteed text rendering exists.
 
 Kuwaiti Arabic is treated as a distinct dialect rather than a Gulf-Arabic
 label. This follows dialect-corpus research including MADAR and Gumar:
@@ -90,6 +70,18 @@ analyzers must supply evidence for:
 - Overlay safe zones.
 - Compliance.
 
+Campaign finishing renders the confirmed call to action and any nonempty offer,
+booking link and WhatsApp number in a closing card during the final four seconds.
+These exact strings come from the immutable generation brief (historical booking
+links can use the validated campaign context), never stale display fields. The
+provider prompt reserves space and excludes baked-in text; Canvas rasterizes
+English/Arabic text and FFmpeg composites it before the clean R2 master and
+watermarked preview are saved. Blank values produce no placeholder. Overlong
+text fails explicitly rather than silently dropping or shortening a destination.
+Previously generated files are not rewritten automatically.
+The worker explicitly loads DejaVu Sans on Linux (included in Dockerfile.worker)
+or Arial on macOS/Windows and checks font availability before advertising ready.
+
 Missing evidence scores zero, so a partially configured reviewer fails closed.
 Rejected candidates are stored in `render_attempts`. Up to two targeted quality
 retries use new provider idempotency keys and durable outbox jobs without a
@@ -112,8 +104,7 @@ asynchronous BytePlus ModelArk task contract for Dreamina Seedance 2.0:
 
 - FFprobe validates the real duration, streams, dimensions, frame cadence and
   H.264/AAC delivery.
-- Azure Speech renders the approved Kuwait-Arabic script, and FFmpeg replaces
-  provider dialogue during deterministic delivery encoding.
+- Gateway-native audio is retained; no external speech synthesis service is active.
 - A Google Gemini language model routed through Vercel AI Gateway receives the
   bounded MP4 FilePart, confirmed brief and up to five product references, then
   returns schema-validated evidence for identity, prompt adherence, motion,
@@ -148,3 +139,8 @@ Current primary API references used by the implementation:
 - AI SDK structured output and Vercel AI Gateway:
   <https://ai-sdk.dev/docs/ai-sdk-core/generating-structured-data> and
   <https://vercel.com/docs/ai-gateway>.
+# Template-supported campaign controls
+
+The creator loads the selected template's published purposes, languages and aspect ratios from the API before requesting an estimate. Quality choices use the shared server campaign-resolution contract: all current launch templates support 720p and 480p. Image uploads and manual source entry preserve the chosen purpose and call to action.
+
+Older drafts with incompatible settings require an explicit supported selection in Campaign purpose, language, format or quality. The creator preserves images and confirmed facts, blocks estimates and generation until the settings agree, and provides a retry if the template catalog cannot be loaded. Backend eligibility checks remain authoritative.

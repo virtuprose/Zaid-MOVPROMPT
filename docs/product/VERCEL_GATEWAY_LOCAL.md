@@ -115,7 +115,7 @@ Leave both capability `*_ENABLED` flags and
 is present and verified:
 
 - `AI_GATEWAY_API_KEY` is a server-only key with a capped budget.
-- `S3_ENDPOINT`, region, access key, secret, assets bucket and outputs bucket
+- the seven `R2_*` fields documented in `docs/R2_SETUP.md`
   point to private storage.
 - `PROVIDER_OUTPUT_ALLOWED_HOSTS` contains the exact observed provider-output
   host or an explicitly reviewed leading-dot DNS suffix. Do not copy or guess
@@ -144,9 +144,9 @@ secret-free API/worker runtime fingerprint. A stopped or differently configured
 worker therefore pauses new quotes without hiding saved projects or existing
 render status.
 
-Product-fidelity generation never exposes MinIO or private object URLs to AI
+Product-fidelity generation never exposes R2 or private object URLs to AI
 Gateway. The worker verifies the exact owner/project asset row and canonical
-object key, compares database MIME/size/SHA-256 with S3 metadata, magic bytes
+object key, compares database MIME/size/SHA-256 with R2 metadata, magic bytes
 and the downloaded body, contain-pads the image to the requested canvas, and
 sends a bounded inline JPEG first frame without a separate ratio field. The
 live Seedance contract inherits the prepared canvas and rejects a duplicate

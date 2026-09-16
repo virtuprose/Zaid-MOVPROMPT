@@ -1,3 +1,5 @@
+import { previewObjectKey } from "./preview-watermark.js";
+import { campaignOutputText, campaignTextPng, type CampaignOutputText } from "./campaign-output-text.js";
 import { createHash } from "node:crypto";
 import { execFile } from "node:child_process";
 import { lookup as lookupDns } from "node:dns/promises";
@@ -11,6 +13,7 @@ import { objectKeys } from "@movprompt/storage";
 
 import type { CampaignVoiceRenderer } from "./campaign-voice.js";
 import type { RenderOutputPersister } from "./render-lifecycle.js";
+import type { WorkerLogger } from "./logger.js";
 
 export interface WorkerOutputStorage {
   readonly outputsBucket: string;
@@ -29,12 +32,14 @@ type HostResolver = (hostname: string) => Promise<readonly ResolvedAddress[]>;
 type MediaNormalizer = (
   bytes: Uint8Array,
   campaignVoice?: Uint8Array,
-  delivery?: { aspectRatio?: "9:16" | "1:1" | "4:5" | "16:9" },
+  delivery?: { aspectRatio?: "9:16" | "1:1" | "4:5" | "16:9"; campaignText?: CampaignOutputText },
 ) => Promise<Uint8Array>;
 const execFileAsync = promisify(execFile);
 
 export type ProviderOutputPersisterOptions = {
+  logger?: WorkerLogger;
   storage: WorkerOutputStorage;
+  createPreview?: (bytes: Uint8Array) => Promise<Uint8Array>;
   allowedHosts: readonly string[];
   fetcher?: Fetcher;
   /** Test/controlled resolver. Production defaults to node:dns lookup(all). */
@@ -139,7 +144,7 @@ function isMp4(bytes: Uint8Array): boolean {
 export async function normalizeDeliveryMp4(
   bytes: Uint8Array,
   campaignVoice?: Uint8Array,
-  delivery?: { aspectRatio?: "9:16" | "1:1" | "4:5" | "16:9" },
+  delivery?: { aspectRatio?: "9:16" | "1:1" | "4:5" | "16:9"; campaignText?: CampaignOutputText },
 ): Promise<Uint8Array> {
   const directory = await mkdtemp(join(tmpdir(), "movprompt-normalize-"));
   const input = join(directory, "provider-input.mp4");
@@ -152,17 +157,37 @@ export async function normalizeDeliveryMp4(
     const audioArguments = campaignVoice
       ? ["-map", "1:a:0", "-af", "apad", "-shortest"]
       : ["-map", "0:a?"];
-    const videoFilterArguments = delivery?.aspectRatio === "4:5"
+    let videoFilterArguments = delivery?.aspectRatio === "4:5"
       ? [
           "-vf",
           "crop='if(gt(iw/ih,4/5),ih*4/5,iw)':'if(gt(iw/ih,4/5),ih,iw*5/4)',scale=trunc(iw/2)*2:trunc(ih/2)*2",
         ]
       : [];
+    let videoMap = "0:v:0";
+    if (delivery?.campaignText) {
+      const { stdout } = await execFileAsync(process.env.FFPROBE_PATH?.trim() || "ffprobe", ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height:format=duration", "-of", "json", input], { timeout: 30_000, maxBuffer: 1024 * 1024 });
+      const probe = JSON.parse(stdout);
+      const stream = probe.streams?.[0];
+      const duration = Number(probe.format?.duration);
+      if (!Number.isFinite(duration) || duration <= 0 || !Number.isInteger(stream?.width) || !Number.isInteger(stream?.height)) throw new Error("campaign_overlay_invalid_media");
+      let width = stream.width as number; let height = stream.height as number;
+      if (delivery.aspectRatio === "4:5") {
+        if (width / height > 4 / 5) width = Math.floor(height * 4 / 5 / 2) * 2;
+        else height = Math.floor(width * 5 / 4 / 2) * 2;
+      }
+      const overlay = join(directory, "campaign-text.png");
+      await writeFile(overlay, campaignTextPng(delivery.campaignText, width, height));
+      const crop = videoFilterArguments[1];
+      const imageIndex = campaignVoice ? 2 : 1;
+      inputArguments.push("-i", overlay);
+      videoFilterArguments = ["-filter_complex", `${crop ? `[0:v]${crop}[base];` : ""}[${crop ? "base" : "0:v"}][${imageIndex}:v]overlay=0:0:enable='gte(t,${Math.max(0, duration - 4)})'[campaign]`];
+      videoMap = "[campaign]";
+    }
     await execFileAsync(
       process.env.FFMPEG_PATH?.trim() || "ffmpeg",
       [
         "-hide_banner", "-loglevel", "error", "-y", ...inputArguments,
-        "-map", "0:v:0", ...audioArguments, ...videoFilterArguments,
+        "-map", videoMap, ...audioArguments, ...videoFilterArguments,
         "-c:v", "libx264", "-preset", "medium", "-crf", "16",
         "-pix_fmt", "yuv420p", "-movflags", "+faststart",
         "-c:a", "aac", "-b:a", "192k", "-ar", "48000",
@@ -347,6 +372,8 @@ export function createProviderOutputPersister(options: ProviderOutputPersisterOp
 
   return {
     async persist(input) {
+      const log = (message: string, fields: Record<string, unknown> = {}) => options.logger?.info(message, { renderRunId: input.runId, projectId: input.projectId, attemptNumber: input.attemptNumber, ...fields });
+      log("render_media_download_started");
       const providerBytes = await download(input.sourceUrl, {
         fetcher,
         hosts,
@@ -357,16 +384,20 @@ export function createProviderOutputPersister(options: ProviderOutputPersisterOp
         usePinnedHttps: options.fetcher === undefined,
       });
       const campaignVoice = await options.voiceRenderer?.render(input.configuration);
+      log("render_media_downloaded", { sizeBytes: providerBytes.byteLength });
       const generation = input.configuration.generation;
       const generationConfiguration = generation && typeof generation === "object" && !Array.isArray(generation)
         ? generation as Record<string, unknown>
         : input.configuration;
       const aspectRatio = generationConfiguration.aspectRatio;
-      const delivery: { aspectRatio?: "9:16" | "1:1" | "4:5" | "16:9" } | undefined =
+      const delivery: { aspectRatio?: "9:16" | "1:1" | "4:5" | "16:9"; campaignText?: CampaignOutputText } =
         aspectRatio === "9:16" || aspectRatio === "1:1" || aspectRatio === "4:5" || aspectRatio === "16:9"
         ? { aspectRatio }
-        : undefined;
-      const bytes = await normalizer(providerBytes, campaignVoice, delivery);
+        : {};
+      const campaignText = campaignOutputText(input.configuration);
+      if (campaignText) delivery.campaignText = campaignText;
+      const bytes = await normalizer(providerBytes, campaignVoice, Object.keys(delivery).length ? delivery : undefined);
+      log("render_media_normalized", { sizeBytes: bytes.byteLength, format: delivery.aspectRatio, contactCardIncluded: Boolean(campaignText) });
       if (!bytes.byteLength || bytes.byteLength > maxBytes || !isMp4(bytes)) {
         throw new Error("normalized_output_invalid");
       }
@@ -390,6 +421,12 @@ export function createProviderOutputPersister(options: ProviderOutputPersisterOp
           "delivery-audio-codec": "aac",
         },
       });
+      log("render_clean_master_saved_r2", { sizeBytes: bytes.byteLength });
+      if (options.createPreview) {
+        const preview = await options.createPreview(bytes);
+        await options.storage.put({ bucket: saved.bucket, key: previewObjectKey(saved.key), body: preview, contentType: "video/mp4", metadata: { "sha256-hex": createHash("sha256").update(preview).digest("hex") } });
+        log("render_watermarked_preview_saved_r2", { sizeBytes: preview.byteLength });
+      }
       return { bucket: saved.bucket, objectKey: saved.key };
     },
   };

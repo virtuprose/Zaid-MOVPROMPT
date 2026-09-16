@@ -112,6 +112,7 @@ type GenerationApiServiceOptions = {
   capabilities: CapabilityRegistry;
   now?: () => Date;
   starterOnly?: boolean;
+  isGuestOwner?: (userId: string) => Promise<boolean>;
   starterEligibilityRequiresEmailVerification?: boolean;
   campaignEligibility?: CampaignEligibilityService;
 };
@@ -454,6 +455,9 @@ function resolveTemplateCapability(input: {
 }
 
 function publicErrorMessage(code: string): string {
+  if (code === "generation_database_error") {
+    return "We could not record the video generation. Your campaign is saved. If it does not recover, try again from Projects.";
+  }
   if (code === "provider_output_host_not_allowed" || code === "provider_output_unavailable") {
     return "We could not finish saving this video. Your project is safe; try again from Projects.";
   }
@@ -637,17 +641,33 @@ export function createGenerationApiService(options: GenerationApiServiceOptions)
       );
     }
     const context = eligibilityContext(input.configuration, input.root);
+    const visualRecipe = input.template.visualRecipe;
+    if (visualRecipe) {
+      const brief = objectValue(input.configuration.creativeBrief);
+      const scenes = Array.isArray(brief?.scenes) ? brief.scenes : [];
+      const visualKeys = ["id", "direction", "shot", "camera", "lighting", "continuityAnchor", "duration"];
+      const matchesRecipe = brief?.templateRecipeVersion === visualRecipe.versionNumber &&
+        brief.templatePromptVersion === visualRecipe.promptVersion &&
+        brief.templateVisualSystem === visualRecipe.visualSystem &&
+        input.configuration.durationSeconds === input.template.durationSeconds &&
+        scenes.length === visualRecipe.scenes.length &&
+        visualRecipe.scenes.every((scene, index) => visualKeys.every(key => scene[key] === objectValue(scenes[index])?.[key]));
+      if (!matchesRecipe) throw new GenerationApplicationError("template_configuration_ineligible", "This campaign uses an older template recipe. Select the template again to use its current preview style; your images and confirmed facts remain saved.");
+    }
+    const missingInputs = eligibility.requiredInputs.filter(required => !hasRequiredInput(required, context));
     const matches =
       eligibility.goals.includes(context.goal as never) &&
       eligibility.supportedLanguages.includes(context.language as never) &&
       eligibility.supportedRatios.includes(context.ratio as never) &&
       eligibility.supportedMarkets.includes(context.market as "KW") &&
       eligibility.capabilityPolicy.includes(input.capability) &&
-      eligibility.requiredInputs.every((required) => hasRequiredInput(required, context));
+      missingInputs.length === 0;
     if (!matches) {
       throw new GenerationApplicationError(
         "template_configuration_ineligible",
-        "This template is not available for the current campaign configuration.",
+        missingInputs.length
+          ? `This template needs: ${missingInputs.map(required => ({ subject_name: "a product or service name", primary_reference: "a saved reference image", logo_or_brand_name: "a brand name", call_to_action: "a call to action" } as Record<string, string>)[required] ?? required.replaceAll("_", " ")).join(", ")}.`
+          : "Choose a campaign purpose, language and format supported by this template.",
       );
     }
   }
@@ -682,7 +702,7 @@ export function createGenerationApiService(options: GenerationApiServiceOptions)
     const keys = [...new Set(configuration.references.map((reference) => reference.objectKey))];
     for (const reference of configuration.references) {
       try {
-        assertOwnedProjectKey(reference.objectKey, userId, version.projectId);
+        assertOwnedProjectKey(reference.objectKey, reference.objectKey.split("/")[1] === userId ? userId : version.storageOwnerId ?? userId, version.projectId);
       } catch {
         throw new GenerationApplicationError(
           "invalid_generation_reference",
@@ -756,7 +776,8 @@ export function createGenerationApiService(options: GenerationApiServiceOptions)
     },
 
     async createQuote(request, session) {
-      const developmentFree = options.pricing.mode === "development-free";
+      const guestOwner = session?.session.guest === true;
+      const developmentFree = options.pricing.mode === "development-free" || guestOwner;
       const pricingVersion = options.pricing.version;
       const quotedAt = now();
       const expiresAt = new Date(quotedAt.getTime() + options.pricing.quoteTtlSeconds * 1_000);
@@ -806,7 +827,7 @@ export function createGenerationApiService(options: GenerationApiServiceOptions)
             userId: session.user.id,
             ...(version.templateVersionId ? { templateVersionId: version.templateVersionId } : {}),
             capabilityAlias: capability,
-            credits: price.credits,
+            credits: guestOwner ? 0 : price.credits,
             entitlementEligible,
             breakdown: price.breakdown,
             configuration: binding,
@@ -871,7 +892,7 @@ export function createGenerationApiService(options: GenerationApiServiceOptions)
       return {
         quoteId: null,
         capability,
-        credits: price.credits,
+        credits: guestOwner ? 0 : price.credits,
         entitlementEligible,
         configurationHash: hashGenerationConfiguration(binding),
         pricingVersion,
@@ -882,7 +903,8 @@ export function createGenerationApiService(options: GenerationApiServiceOptions)
     },
 
     async startRender(input) {
-      const developmentFree = options.pricing.mode === "development-free";
+      const guestOwner = await options.isGuestOwner?.(input.userId) ?? false;
+      const developmentFree = options.pricing.mode === "development-free" || guestOwner;
       const version = await loadOwnedVersion(input.userId, input.projectVersionId);
       if (version.projectId !== input.projectId) {
         throw new GenerationApplicationError("project_version_not_found");
@@ -893,6 +915,12 @@ export function createGenerationApiService(options: GenerationApiServiceOptions)
       const persistedTemplate = await persistedTemplateContext(options.repository, version);
       const template = persistedTemplate?.template
         ?? await publishedTemplate(options.repository, version.templateVersionId);
+      if (guestOwner) {
+        const brief = objectValue(objectValue(version.configuration.generation)?.creativeBrief);
+        if (version.mode !== "template" || !["luxury-product-reveal", "whatsapp-sales-ad", "food-beverage", "app-service", "salon-booking-offer"].includes(stringValue(brief?.templateId))) {
+          throw new GenerationApplicationError("unapproved_capability", "Guests can generate only the five launch templates.");
+        }
+      }
       const quote = await options.repository.findOwnedQuote(input.userId, input.quoteId);
       if (!quote) throw new GenerationApplicationError("quote_not_found");
       if (options.starterOnly && !developmentFree && !quote.entitlementEligible) {
@@ -932,7 +960,7 @@ export function createGenerationApiService(options: GenerationApiServiceOptions)
         configuration,
         template?.durationSeconds,
       );
-      if (quote.credits !== currentPrice.credits) {
+      if (quote.credits !== (guestOwner ? 0 : currentPrice.credits)) {
         throw new GenerationApplicationError("quote_price_changed");
       }
       try {

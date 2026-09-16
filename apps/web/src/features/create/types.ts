@@ -122,6 +122,8 @@ export type CreatorProject = {
   subtitles: boolean;
   audio: boolean;
   scenes: CreatorScene[];
+  hasGeneratedVideo?: boolean;
+  hasActiveGeneration?: boolean;
   videoUrl: string | null;
   jobId: string | null;
   renderRunId?: string | null;

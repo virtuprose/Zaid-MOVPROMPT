@@ -202,6 +202,9 @@ export class RenderLifecycleError extends Error {
 }
 
 function cleanError(error: unknown): { code: string; message: string } {
+  if (error && typeof error === "object" && "code" in error && [11000, 121].includes(Number(error.code))) {
+    return { code: "generation_database_error", message: "MongoDB could not record this generation. Your campaign is saved." };
+  }
   if (error instanceof RenderLifecycleError) {
     return { code: error.code, message: error.message.slice(0, 2_000) };
   }
@@ -293,6 +296,15 @@ export function createGenerationLifecycleHandler(options: GenerationLifecycleHan
       terminalStatus: cancelled ? "cancelled" : "failed",
       now: now(),
     });
+    await options.store.markTerminal({
+      runId: snapshot.id,
+      userId: snapshot.userId,
+      status: cancelled ? "cancelled" : "failed",
+      errorCode: failure.code,
+      errorMessage: failure.message,
+      attemptNumber: snapshot.qualityAttempt,
+      now: now(),
+    });
     return { renderRunId: snapshot.id, outcome: "reconciled" };
   }
 
@@ -311,7 +323,7 @@ export function createGenerationLifecycleHandler(options: GenerationLifecycleHan
       attemptNumber: snapshot.qualityAttempt,
       now: now(),
     });
-    await options.billing.refundRender({
+    if (snapshot.chargedAt) await options.billing.refundRender({
       userId: snapshot.userId,
       runId: snapshot.id,
       reason: failure.code,
@@ -323,6 +335,7 @@ export function createGenerationLifecycleHandler(options: GenerationLifecycleHan
   async function persistCompleted(
     snapshot: RenderLifecycleSnapshot,
     operation: ProviderOperation,
+    context: WorkerJobContext,
   ): Promise<GenerationJobResult> {
     if (!options.outputPersister) {
       return terminateAfterAcceptance(
@@ -336,6 +349,7 @@ export function createGenerationLifecycleHandler(options: GenerationLifecycleHan
       stage: "securing_output",
       now: now(),
     });
+    context.logger.info("render_output_processing_started", { renderRunId: snapshot.id, jobId: context.jobId });
     const persisted = await options.outputPersister.persist({
       runId: snapshot.id,
       userId: snapshot.userId,
@@ -360,6 +374,7 @@ export function createGenerationLifecycleHandler(options: GenerationLifecycleHan
       stage: "quality_review",
       now: now(),
     });
+    context.logger.info("render_quality_review_started", { renderRunId: snapshot.id, jobId: context.jobId });
     const quality = await options.outputQualityReviewer.review({
       runId: snapshot.id,
       userId: snapshot.userId,
@@ -370,6 +385,7 @@ export function createGenerationLifecycleHandler(options: GenerationLifecycleHan
       attemptNumber: snapshot.qualityAttempt,
       configuration: snapshot.configuration,
     });
+    context.logger.info("render_quality_review_finished", { renderRunId: snapshot.id, jobId: context.jobId, status: quality.status, score: quality.score });
     if (quality.status === "retry") {
       let maxRetries = Number.isSafeInteger(snapshot.maxQualityRetries)
         ? Math.max(0, Math.min(snapshot.maxQualityRetries, MAX_INTERNAL_QUALITY_RETRIES))
@@ -414,6 +430,7 @@ export function createGenerationLifecycleHandler(options: GenerationLifecycleHan
       attemptNumber: snapshot.qualityAttempt,
       now: now(),
     });
+    context.logger.info("render_video_ready", { renderRunId: snapshot.id, projectId: snapshot.projectId, jobId: context.jobId });
     return { renderRunId: snapshot.id, outcome: "reconciled" };
   }
 
@@ -421,6 +438,7 @@ export function createGenerationLifecycleHandler(options: GenerationLifecycleHan
     payload: GenerationJobPayload,
     snapshot: RenderLifecycleSnapshot,
     operation: ProviderOperation,
+    context: WorkerJobContext,
   ): Promise<GenerationJobResult> {
     if (operation.providerRequestId !== snapshot.providerRequestId) {
       return terminateAfterAcceptance(
@@ -445,7 +463,7 @@ export function createGenerationLifecycleHandler(options: GenerationLifecycleHan
         now: now(),
       });
     }
-    if (operation.status === "completed") return persistCompleted(snapshot, operation);
+    if (operation.status === "completed") return persistCompleted(snapshot, operation, context);
     if (operation.status === "failed") {
       return terminateAfterAcceptance(
         snapshot,
@@ -491,6 +509,7 @@ export function createGenerationLifecycleHandler(options: GenerationLifecycleHan
     // failing an accepted but not-yet-charged request.
     if (!snapshot.chargedAt) {
       try {
+        await options.billing.recordProviderSubmission({ userId: snapshot.userId, runId: snapshot.id, provider: snapshot.provider!, providerRequestId: snapshot.providerRequestId!, now: now() });
         await options.billing.finalizeProviderAccepted({
           userId: snapshot.userId,
           runId: snapshot.id,
@@ -517,7 +536,8 @@ export function createGenerationLifecycleHandler(options: GenerationLifecycleHan
         snapshot.status === "cancelling"
           ? await adapter.cancel(snapshot.providerRequestId!)
           : await adapter.getStatus(snapshot.providerRequestId!);
-      return await applyProviderOperation(payload, snapshot, operation);
+      context.logger.info("render_provider_status", { renderRunId: snapshot.id, requestId: payload.requestId, jobId: context.jobId, status: operation.status });
+      return await applyProviderOperation(payload, snapshot, operation, context);
     } catch (error) {
       const lastAttempt = context.retryCount >= context.retryLimit;
       if (isPermanentPreAcceptanceError(error) || lastAttempt) {
@@ -535,9 +555,10 @@ export function createGenerationLifecycleHandler(options: GenerationLifecycleHan
     }
   }
 
-  return {
+  const handler: GenerationJobHandler = {
     async handle(payload, context) {
       const snapshot = await options.store.load(payload);
+      context.logger.info("render_saved_state", { renderRunId: snapshot.id, requestId: payload.requestId, jobId: context.jobId, status: snapshot.status, stage: snapshot.processingStage, providerTracked: Boolean(snapshot.providerRequestId), attemptNumber: snapshot.qualityAttempt });
 
       if (snapshot.status === "completed") {
         return { renderRunId: snapshot.id, outcome: "reconciled" };
@@ -612,6 +633,8 @@ export function createGenerationLifecycleHandler(options: GenerationLifecycleHan
         if (snapshot.qualityAttempt > 0 && snapshot.qualityRetryDirective) {
           providerPrompt = `${providerPrompt}\n\nPREMIUM QUALITY RETRY ${snapshot.qualityAttempt}\nCorrect the rejected candidate without changing confirmed product or business facts:\n${snapshot.qualityRetryDirective}`;
         }
+        const loggedBrief = configuration.creativeBrief === undefined ? null : CreativeBriefSchema.parse(configuration.creativeBrief);
+        context.logger.info("render_configuration_validated", { renderRunId: snapshot.id, requestId: payload.requestId, templateId: loggedBrief?.templateId, templateVersion: loggedBrief?.templateRecipeVersion, imageCount: configuration.references.length, resolution: configuration.resolution, format: configuration.aspectRatio, durationSeconds: configuration.durationSeconds });
         request = {
           operationId: snapshot.id,
           userId: snapshot.userId,
@@ -646,7 +669,9 @@ export function createGenerationLifecycleHandler(options: GenerationLifecycleHan
           }
           return reconcile(payload, latest, context);
         }
+        context.logger.info("render_provider_submit_started", { renderRunId: snapshot.id, requestId: payload.requestId, jobId: context.jobId, attemptNumber: snapshot.qualityAttempt });
         const submission = await adapter.submit(request);
+        context.logger.info("render_provider_submit_returned", { renderRunId: snapshot.id, requestId: payload.requestId, status: submission.status });
         // Persist the provider identity before any economic transition. If the
         // process dies after submit, the next MongoDB worker retry reconciles this
         // exact provider request instead of submitting a second render.
@@ -679,6 +704,7 @@ export function createGenerationLifecycleHandler(options: GenerationLifecycleHan
         if (latest.providerRequestId) throw error;
         const lastAttempt = context.retryCount >= context.retryLimit;
         if (isPermanentPreAcceptanceError(error) || lastAttempt || context.signal.aborted) {
+          context.logger.error("render_stage_failed", { renderRunId: snapshot.id, requestId: payload.requestId, jobId: context.jobId, errorCode: cleanError(error).code, retrying: false });
           return terminateBeforeAcceptance(snapshot, error, context.signal.aborted);
         }
         throw error;
@@ -700,6 +726,30 @@ export function createGenerationLifecycleHandler(options: GenerationLifecycleHan
         provider: adapter.id,
       });
       return { renderRunId: snapshot.id, outcome: "accepted" };
+    },
+  };
+  return {
+    async handle(payload, context) {
+      const fields = { renderRunId: payload.renderRunId, projectId: payload.projectId, jobId: context.jobId, workerId: context.workerId, requestId: payload.requestId, retryCount: context.retryCount };
+      context.logger.info("render_job_started", fields);
+      try {
+        const result = await handler.handle(payload, context);
+        context.logger.info("render_job_finished", { ...fields, outcome: result.outcome });
+        return result;
+      } catch (error) {
+        const failure = cleanError(error);
+        const lastAttempt = context.retryCount >= context.retryLimit;
+        context.logger.error("render_stage_failed", { ...fields, errorCode: failure.code, retrying: !lastAttempt });
+        const latest = await options.store.load(payload);
+        if (["completed", "cancelled", "failed"].includes(latest.status)) throw error;
+        await options.store.recordRetryableFailure({ runId: latest.id, userId: latest.userId, errorCode: failure.code, errorMessage: failure.message, now: now() });
+        if (lastAttempt) {
+          if (latest.providerRequestId) return terminateAfterAcceptance(latest, error);
+          await options.store.markTerminal({ runId: latest.id, userId: latest.userId, status: "failed", errorCode: failure.code, errorMessage: failure.message, attemptNumber: latest.qualityAttempt, now: now() });
+          return terminateBeforeAcceptance(latest, error);
+        }
+        throw error;
+      }
     },
   };
 }

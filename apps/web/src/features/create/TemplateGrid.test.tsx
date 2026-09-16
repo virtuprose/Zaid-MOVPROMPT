@@ -20,7 +20,9 @@ vi.mock("@/config/features", () => ({
 vi.mock("@/lib/api/portableApiClient", () => ({ portableCreatorApi: catalogApi }));
 
 describe("TemplateGrid", () => {
+  const originalPreviews = CREATOR_TEMPLATES.map(t => t.previewVideo);
   afterEach(() => {
+    CREATOR_TEMPLATES.forEach((t, i) => { t.previewVideo = originalPreviews[i]!; });
     featureState.portableAuth = false;
     catalogApi.listTemplates.mockReset();
     catalogApi.getTemplate.mockReset();
@@ -44,6 +46,7 @@ describe("TemplateGrid", () => {
 
   it("renders honest static directions instead of fake playable cards", () => {
     languageState.locale = "en";
+    CREATOR_TEMPLATES[4]!.previewVideo = null;
     const view = render(
       <MemoryRouter>
         <TemplateGrid onSelect={vi.fn()} />
@@ -65,6 +68,7 @@ describe("TemplateGrid", () => {
 
   it("puts every verified preview before the honest static directions", () => {
     languageState.locale = "en";
+    CREATOR_TEMPLATES[4]!.previewVideo = null;
     const view = render(
       <MemoryRouter>
         <TemplateGrid onSelect={vi.fn()} />
@@ -81,6 +85,7 @@ describe("TemplateGrid", () => {
 
   it("keeps an already-selected static direction first without presenting it as playable", () => {
     languageState.locale = "en";
+    CREATOR_TEMPLATES[4]!.previewVideo = null;
     const selected = CREATOR_TEMPLATES.find((template) => !template.previewVideo)!;
     const view = render(
       <MemoryRouter>
@@ -99,6 +104,7 @@ describe("TemplateGrid", () => {
 
   it("localizes catalog proof groups in Arabic", () => {
     languageState.locale = "ar";
+    CREATOR_TEMPLATES[4]!.previewVideo = null;
     const view = render(
       <MemoryRouter>
         <TemplateGrid onSelect={vi.fn()} />
@@ -112,6 +118,7 @@ describe("TemplateGrid", () => {
 
   it("keeps static directions free of player-shaped timing chrome", () => {
     languageState.locale = "en";
+    CREATOR_TEMPLATES[4]!.previewVideo = null;
     const staticTemplate = CREATOR_TEMPLATES.find((template) => !template.previewVideo)!;
     const view = render(
       <MemoryRouter>

@@ -347,6 +347,8 @@ export const CreatorProjectSchema = z
     currentVersion: ProjectVersionSchema.nullable(),
     versionCount: z.number().int().nonnegative(),
     outputCount: z.number().int().nonnegative(),
+    hasGeneratedVideo: z.boolean().optional(),
+    hasActiveGeneration: z.boolean().optional(),
   })
   .strict();
 export type CreatorProjectRecord = z.infer<typeof CreatorProjectSchema>;
@@ -689,6 +691,9 @@ const TemplateCreativeBriefSchema = z
   .object({
     engineVersion: z.string().trim().min(1).max(120),
     templateId: z.string().trim().min(1).max(120),
+    templateRecipeVersion: z.number().int().positive().optional(),
+    templatePromptVersion: z.string().min(1).max(120).optional(),
+    templateVisualSystem: z.string().max(1_000).optional(),
     market: z.literal("KW"),
     language: CampaignLanguageSchema,
     arabicDialect: z.union([z.literal("kuwaiti"), z.null()]),
@@ -706,6 +711,7 @@ const TemplateCreativeBriefSchema = z
         callToAction: z.string().trim().min(1).max(240),
         whatsapp: KuwaitPhoneOrEmptySchema,
         location: z.string().trim().max(500),
+        bookingUrl: HttpUrlOrEmptySchema.optional(),
       })
       .strict(),
     scenes: z.array(TemplateGenerationSceneSchema).min(3).max(6),
@@ -850,6 +856,7 @@ export const TemplateCampaignPayloadSchema = z
       generation.creativeBrief.product.brand === campaign.brand,
       generation.creativeBrief.product.whatsapp === campaign.whatsapp,
       generation.creativeBrief.product.location === campaign.location,
+      generation.creativeBrief.product.bookingUrl === undefined || generation.creativeBrief.product.bookingUrl === campaign.bookingUrl,
       payload.productRecipe.price === campaign.price,
       payload.productRecipe.brand === campaign.brand,
       project.product.sourceType === (payload.productRecipe.sourceType === "product_url"

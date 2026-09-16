@@ -3,6 +3,15 @@ import { describe, expect, it } from "vitest";
 import { buildGuestClaimSnapshot } from "./guestClaimSnapshot";
 
 describe("guest claim snapshot", () => {
+  it("returns exactly the JSON payload used by the server and recovery checkpoint", async () => {
+    const snapshot = await buildGuestClaimSnapshot({
+      draftId: "11111111-1111-4111-8111-111111111111",
+      pendingGenerationId: "22222222-2222-4222-8222-222222222222",
+      assetManifest: [], title: "Uploaded image", mode: "advanced",
+      configuration: { images: [{ id: "33333333-3333-4333-8333-333333333333", assetKey: undefined }] }, productRecipe: {}, campaignRecipe: {},
+    });
+    expect(snapshot).toStrictEqual(JSON.parse(JSON.stringify(snapshot)));
+  });
   it("creates a stable digest and an ordered asset manifest for the authenticated claim", async () => {
     const base = {
       draftId: "11111111-1111-4111-8111-111111111111",

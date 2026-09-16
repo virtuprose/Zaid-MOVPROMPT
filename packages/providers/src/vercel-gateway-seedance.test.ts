@@ -296,7 +296,7 @@ describe("Vercel AI Gateway Seedance 2.5 adapter", () => {
     expect(fetcher).not.toHaveBeenCalled();
   });
 
-  it("never passes a localhost MinIO URL upstream", async () => {
+  it("never passes a local storage URL upstream", async () => {
     const resolveReferenceUrl = vi.fn(async (reference: { mimeType: string }) => ({
       url: "http://127.0.0.1:9000/creator-assets/private.png",
       mediaType: reference.mimeType,

@@ -1,3 +1,7 @@
+# Current R2 and guest-generation work
+
+See [R2 setup](R2_SETUP.md) and `.planning/quick/r2-guest-generation/SUMMARY.md` for the current stack and verified limits. The phase notes below are historical and do not describe the current storage or database configuration.
+
 # Production rebuild implementation status
 
 Updated: 2026-08-12

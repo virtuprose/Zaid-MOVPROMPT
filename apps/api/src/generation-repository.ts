@@ -6,6 +6,7 @@ import type {
 import type { JsonObject } from "@movprompt/db";
 
 export type OwnedProjectVersion = {
+  storageOwnerId?: string;
   id: string;
   projectId: string;
   mode: CreationMode;
@@ -16,6 +17,7 @@ export type OwnedProjectVersion = {
 };
 
 export type PublishedTemplateVersion = {
+  visualRecipe?: { versionNumber: number; promptVersion: string; visualSystem: string; scenes: Array<Record<string, unknown>> };
   id: string;
   durationSeconds: number;
   starterRenderEligible: boolean;

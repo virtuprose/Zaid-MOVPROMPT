@@ -35,6 +35,24 @@ type TemplateSpec = {
 
 const ALL_RATIOS = ["9:16", "1:1", "4:5", "16:9"] as const;
 const ALL_LANGUAGES = ["ar", "en", "bilingual"] as const;
+const IMAGE_FIRST_LAUNCH_IDS = new Set(["luxury-product-reveal", "whatsapp-sales-ad", "food-beverage", "salon-booking-offer", "app-service"]);
+
+// These shot directions also produce the demo footage. Only the reference
+// identity and confirmed factual copy change between customer campaigns.
+const CINEMATIC_SHOTS: Record<string, Array<{ shot: string; camera: string }>> = {
+  "salon-booking-offer": [
+    { shot: "Wide reveal of the supplied salon interior or beauty subject; warm cream, blush and champagne-gold atmosphere. No people or invented salon signage", camera: "slow straight dolly toward the reference subject" },
+    { shot: "Close detail of the existing material, mirror edge or beauty subject; keep all reference geometry and finishes unchanged", camera: "restrained lateral macro slide" },
+    { shot: "Return to the supplied subject in its original space; soft window-light falloff and elegant depth, no fabricated treatment or before/after result", camera: "gentle shallow parallax arc, no abrupt angle change" },
+    { shot: "Balanced hero composition of the same subject with uncluttered title-safe space for the booking invitation", camera: "settle into a stable end frame" },
+  ],
+  "app-service": [
+    { shot: "Hero reveal of the supplied app screenshot or service artwork on one upright smartphone; midnight-navy studio, ivory pedestal and champagne rim light. Preserve the supplied screen exactly", camera: "slow three-quarter push-in" },
+    { shot: "Closer view of the same unchanged screen and device edge; cool-blue halo and restrained glass reflections. No invented interface, button labels or features", camera: "short precision lateral slide" },
+    { shot: "Same device and uploaded screen, surrounded by a few subtle translucent decorative tiles with no text or claims", camera: "shallow ten-degree orbit, screen remains front-readable" },
+    { shot: "Centered upright phone and identical uploaded artwork, clean negative space for the final invitation", camera: "ease out and hold a stable hero end frame" },
+  ],
+};
 
 const PREMIUM_QUALITY = {
   tier: "premium" as const,
@@ -133,7 +151,11 @@ function durations(total: number, count: number): number[] {
 }
 
 function buildScenes(spec: TemplateSpec): TemplateSceneRecipe[] {
-  const steps = ARC_STEPS[spec.arc];
+  const steps = CINEMATIC_SHOTS[spec.id]?.map((step, index) => ({
+    ...step,
+    title: ARC_STEPS.hero[index]!.title,
+    purpose: ARC_STEPS.hero[index]!.purpose,
+  })) ?? ARC_STEPS[spec.arc];
   const allocated = durations(spec.duration, steps.length);
   return steps.map((step, index) => {
     const last = index === steps.length - 1;
@@ -180,7 +202,7 @@ function recipe(spec: TemplateSpec): CreativeTemplateRecipe {
   return CreativeTemplateRecipeSchema.parse({
     id: spec.id,
     slug: spec.id,
-    versionNumber: ["luxury-product-reveal", "salon-booking-offer"].includes(spec.id) ? 2 : 1,
+    versionNumber: IMAGE_FIRST_LAUNCH_IDS.has(spec.id) ? 3 : 1,
     category: spec.category,
     localizedName: spec.name,
     localizedDescription: spec.description,
@@ -191,7 +213,9 @@ function recipe(spec: TemplateSpec): CreativeTemplateRecipe {
     supportedLanguages: [...ALL_LANGUAGES],
     supportedRatios: [...ALL_RATIOS],
     supportedMarkets: ["KW"],
-    requiredInputs: spec.requiredInputs ?? ["subject_name", "primary_reference", "logo_or_brand_name", "call_to_action"],
+    requiredInputs: spec.requiredInputs ?? (IMAGE_FIRST_LAUNCH_IDS.has(spec.id)
+      ? ["subject_name", "primary_reference", "call_to_action"]
+      : ["subject_name", "primary_reference", "logo_or_brand_name", "call_to_action"]),
     starterRenderEligible: true,
     qualityStatus: "review",
     storyArc: spec.arc,
@@ -230,8 +254,8 @@ const SPECS: TemplateSpec[] = [
   { id: "fashion", category: "fashion", name: { en: "Fashion drop", ar: "نزول التشكيلة" }, description: { en: "An editorial social launch built around fit, fabric and movement.", ar: "إطلاق فاشن يبرز القصة والخامة والحركة." }, verticals: ["retail", "ecommerce"], goals: ["launch", "whatsapp_orders"], duration: 10, arc: "hero", tone: "premium", visual: "Contemporary Kuwait editorial architecture, fabric movement, clean styling and confident runway pacing", hook: { en: "The new edit", ar: "التشكيلة اليديدة" }, proof: { en: "Designed in every detail", ar: "كل تفصيلة محسوبة" }, cta: { en: "Shop the drop", ar: "اطلب التشكيلة الحين" }, tags: ["fashion", "collection", "editorial"] },
   { id: "electronics", category: "electronics", name: { en: "Electronics feature demo", ar: "عرض ميزة تقنية" }, description: { en: "One technical feature translated into a clear everyday benefit.", ar: "ميزة تقنية وحدة تنعرض بطريقة بسيطة وواضحة." }, verticals: ["retail", "ecommerce"], goals: ["demonstration", "launch"], duration: 10, arc: "demo", tone: "informative", visual: "Clean technical studio, exact ports and proportions, restrained UI callouts and physically accurate reflections", hook: { en: "Built to do more", ar: "مصمم يسوي أكثر" }, proof: { en: "Fast, simple, reliable", ar: "سريع وبسيط ويعتمد عليه" }, cta: { en: "Upgrade today", ar: "طوّر تجربتك الحين" }, tags: ["electronics", "feature", "demo"] },
   { id: "ramadan-eid", category: "seasonal", name: { en: "Ramadan and Eid campaign", ar: "حملة رمضان والعيد" }, description: { en: "A respectful Kuwait seasonal campaign for gifting, hospitality and offers.", ar: "حملة كويتية راقية للهدايا والضيافة وعروض الموسم." }, verticals: ["retail", "ecommerce"], goals: ["launch", "offer"], duration: 10, arc: "seasonal", tone: "warm", visual: "Contemporary Kuwait hospitality, subtle crescent geometry, warm lantern light and premium gifting details", hook: { en: "A season that brings us together", ar: "رمضان يجمعنا" }, proof: { en: "Made for sharing", ar: "شي يستاهل المشاركة" }, cta: { en: "Share the moment", ar: "خلّ الفرحة تكمل" }, tags: ["Ramadan", "Eid", "seasonal"] },
-  { id: "app-service", category: "digital-service", name: { en: "App and service promotion", ar: "تعريف تطبيق أو خدمة" }, description: { en: "A benefit-first story with legible UI and one simple next step.", ar: "قصة واضحة تبين فايدة التطبيق أو الخدمة بخطوات بسيطة." }, verticals: ["retail", "ecommerce"], goals: ["demonstration", "launch"], duration: 12, arc: "demo", tone: "informative", visual: "Natural phone-in-hand context, perfectly legible interface captures and clean kinetic transitions", hook: { en: "There is an easier way", ar: "في طريقة أسهل" }, proof: { en: "Done in a few taps", ar: "تخلصها بجم ضغطة" }, cta: { en: "Get started", ar: "ابدأ الحين" }, tags: ["app", "service", "UI"] },
-  { id: "salon-booking-offer", category: "salon-booking", name: { en: "Salon booking offer", ar: "عرض حجز صالون" }, description: { en: "A fact-safe local offer designed to turn attention into appointments.", ar: "عرض صالون واضح يحول المشاهدة إلى حجز." }, verticals: ["salon"], goals: ["bookings", "offer"], duration: 12, arc: "service", tone: "friendly", visual: "Real salon environment, clean beauty light, calm process details and Kuwait booking-safe composition", hook: { en: "Your next appointment", ar: "موعدك الجاي علينا" }, proof: { en: "Care in every detail", ar: "اهتمام بكل تفصيلة" }, cta: { en: "Book on WhatsApp", ar: "احجز على الواتساب" }, tags: ["salon", "booking", "Kuwait"] },
+  { id: "app-service", category: "digital-service", name: { en: "App and service promotion", ar: "تعريف تطبيق أو خدمة" }, description: { en: "A benefit-first story with legible UI and one simple next step.", ar: "قصة واضحة تبين فايدة التطبيق أو الخدمة بخطوات بسيطة." }, verticals: ["retail", "ecommerce"], goals: ["demonstration", "launch"], duration: 8, arc: "demo", tone: "informative", visual: "Premium midnight-navy studio, ivory smartphone pedestal, champagne rim light and a cool-blue halo; preserve the supplied app screenshot or service artwork exactly on the phone screen", hook: { en: "There is an easier way", ar: "في طريقة أسهل" }, proof: { en: "Done in a few taps", ar: "تخلصها بجم ضغطة" }, cta: { en: "Get started", ar: "ابدأ الحين" }, tags: ["app", "service", "UI"] },
+  { id: "salon-booking-offer", category: "salon-booking", name: { en: "Salon booking offer", ar: "عرض حجز صالون" }, description: { en: "A fact-safe local offer designed to turn attention into appointments.", ar: "عرض صالون واضح يحول المشاهدة إلى حجز." }, verticals: ["salon"], goals: ["bookings", "offer"], duration: 8, arc: "service", tone: "friendly", visual: "Editorial luxury salon film: warm cream and blush, brushed champagne gold, soft window light, tactile beauty details and calm precision camera movement; preserve the actual uploaded salon or beauty subject", hook: { en: "Your next appointment", ar: "موعدك الجاي علينا" }, proof: { en: "Care in every detail", ar: "اهتمام بكل تفصيلة" }, cta: { en: "Book on WhatsApp", ar: "احجز على الواتساب" }, tags: ["salon", "booking", "Kuwait"] },
   { id: "salon-transformation-proof", category: "salon-proof", name: { en: "Real salon transformation", ar: "نتيجة صالون حقيقية" }, description: { en: "A consented real-footage before/process/after story with no generated result.", ar: "قصة قبل وبعد من تصوير حقيقي وموافقة واضحة، من غير نتيجة مولدة." }, verticals: ["salon"], goals: ["trust", "bookings"], duration: 12, arc: "transformation", tone: "friendly", visual: "Matched real-footage framing, honest colour and process-led editing", hook: { en: "A real client story", ar: "تجربة عميلة حقيقية" }, proof: { en: "The process matters", ar: "الخطوات هي اللي تفرق" }, cta: { en: "Book your consultation", ar: "احجز استشارتك الحين" }, requiredInputs: ["consented_before_video", "consented_after_video", "service_name", "booking_destination"], tags: ["salon", "real-footage", "consent"] },
   { id: "stylist-introduction", category: "salon-trust", name: { en: "Stylist introduction", ar: "تعريف خبيرة التجميل" }, description: { en: "A warm professional introduction built on real expertise and personality.", ar: "تعريف طبيعي يبرز الخبرة والشخصية من غير مبالغة." }, verticals: ["salon"], goals: ["trust", "bookings"], duration: 12, arc: "trust", tone: "friendly", visual: "Consented stylist portrait, real workplace details and editorial beauty lighting", hook: { en: "Meet your stylist", ar: "تعرفوا على خبيرة التجميل" }, proof: { en: "Care, craft and detail", ar: "خبرة واهتمام بالتفاصيل" }, cta: { en: "Book with us", ar: "احجز موعدك ويانا" }, requiredInputs: ["consented_person_reference", "confirmed_role", "salon_location", "booking_destination"], tags: ["stylist", "trust", "booking"] },
   { id: "bridal-beauty-booking", category: "salon-bridal", name: { en: "Bridal beauty booking", ar: "حجز تجهيز العروس" }, description: { en: "An elegant bridal-service campaign with calm planning and clear booking.", ar: "حملة راقية لتجهيز العروس بخطوات وحجز واضح." }, verticals: ["salon"], goals: ["bookings", "trust"], duration: 15, arc: "service", tone: "premium", visual: "Soft bridal preparation details, pearl neutrals, fabric texture and respectful close framing", hook: { en: "Your day, thoughtfully prepared", ar: "يومج يستاهل كل الاهتمام" }, proof: { en: "Every detail, planned", ar: "كل تفصيلة مرتبة" }, cta: { en: "Reserve your date", ar: "احجزي تاريخج الحين" }, tags: ["bridal", "salon", "booking"] },

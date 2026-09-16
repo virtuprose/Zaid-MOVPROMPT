@@ -2,6 +2,23 @@ import type { MongoDatabase } from "./mongo-client.js";
 import { COLLECTIONS } from "./mongo-client.js";
 
 export async function ensureMongoIndexes(database: MongoDatabase): Promise<void> {
+  // Establish the canonical constraints before removing the obsolete indexes.
+  // Old runId indexes treated every renderRunId document as the same null run.
+  for (const [name, key, legacyName] of [
+    [COLLECTIONS.renderAttempts, { renderRunId: 1, attemptNumber: 1 }, "runId_1_attemptNumber_1"],
+    [COLLECTIONS.creditReservations, { renderRunId: 1 }, "runId_1"],
+  ] as const) {
+    const collection = database.collection(name);
+    await collection.createIndex(key, { unique: true });
+    const legacy = (await collection.indexes()).find(index => index.name === legacyName);
+    if (legacy) {
+      try { await collection.dropIndex(legacyName); }
+      catch (error) {
+        // API and worker can perform startup repair concurrently.
+        if (![26, 27].includes(Number((error as { code?: number }).code))) throw error;
+      }
+    }
+  }
   const workerJobs = database.collection(COLLECTIONS.workerJobs);
   const creatorProjectVersions = database.collection(COLLECTIONS.creatorProjectVersions);
   const singletonIndexName = "name_1_singletonKey_1";
@@ -61,10 +78,8 @@ export async function ensureMongoIndexes(database: MongoDatabase): Promise<void>
     database.collection(COLLECTIONS.requestRateLimits).createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 }),
     database.collection(COLLECTIONS.generationQuotes).createIndex({ expiresAt: 1 }, { expireAfterSeconds: 24 * 60 * 60 }),
     database.collection(COLLECTIONS.renderRuns).createIndex({ userId: 1, idempotencyKey: 1 }, { unique: true }),
-    database.collection(COLLECTIONS.renderAttempts).createIndex({ runId: 1, attemptNumber: 1 }, { unique: true }),
     database.collection(COLLECTIONS.entitlements).createIndex({ userId: 1, type: 1 }, { unique: true }),
     database.collection(COLLECTIONS.creditAccounts).createIndex({ userId: 1 }, { unique: true }),
-    database.collection(COLLECTIONS.creditReservations).createIndex({ runId: 1 }, { unique: true }),
     database.collection(COLLECTIONS.outboxJobs).createIndex({ topic: 1, operationKey: 1 }, { unique: true }),
     database.collection(COLLECTIONS.outboxJobs).createIndex({ status: 1, availableAt: 1, leaseExpiresAt: 1 }),
     database.collection(COLLECTIONS.serviceHeartbeats).createIndex({ serviceName: 1, instanceId: 1 }, { unique: true }),

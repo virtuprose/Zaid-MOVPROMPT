@@ -81,6 +81,7 @@ export function FactReviewStep({ source, goal, arabic = false, hidePricing = fal
         <p className="creator-kicker">{copy(arabic, "Review the facts", "راجع المعلومات")}</p>
         <h2 id="fact-review-heading">{copy(arabic, "Check the details we’ll use", "تأكد من التفاصيل التي سنستخدمها")}</h2>
         <p>{copy(arabic, "Correct anything that is wrong. Your changes stay visible and never replace the original silently.", "صحح أي معلومة غير دقيقة. تعديلاتك تبقى واضحة ولا تستبدل الأصل بدون علمك.")}</p>
+        <p className="creator-field-help"><span className="creator-required">*</span> {copy(arabic, "Required. All other details are optional.", "مطلوب. باقي التفاصيل اختيارية.")}</p>
       </div>
 
       <div className="creator-fact-source-summary" role="note">
@@ -95,24 +96,25 @@ export function FactReviewStep({ source, goal, arabic = false, hidePricing = fal
           const invalid = validation.includes(row.field);
           const inputId = `campaign-fact-${row.field}`;
           const errorId = `${inputId}-error`;
-          const stateLabel = fact ? provenanceCopy(arabic, fact.provenance) : copy(arabic, "Not added", "غير مضاف");
           return (
             <div key={row.field} className={cn("creator-fact-row", invalid && "has-error", !fact && "is-empty")}>
               <div className="creator-fact-row-heading">
-                <label htmlFor={inputId}>{meta[arabic ? "ar" : "en"]}</label>
-                <span className={cn("creator-fact-provenance", fact?.provenance && `is-${fact.provenance}`)}>
+                <label htmlFor={inputId}>{meta[arabic ? "ar" : "en"]}{required.has(row.field) && <span className="creator-required" aria-hidden="true"> *</span>}</label>
+                {fact && <span className={cn("creator-fact-provenance", `is-${fact.provenance}`)}>
                   {fact?.provenance === "user_confirmed" ? <CheckCircle2 aria-hidden="true" /> : <PencilLine aria-hidden="true" />}
-                  {stateLabel}
-                </span>
+                  {provenanceCopy(arabic, fact.provenance)}
+                </span>}
               </div>
               <input
                 ref={(node) => { if (node) fieldRefs.current.set(row.field, node); }}
                 id={inputId}
+                aria-label={meta[arabic ? "ar" : "en"]}
                 className="creator-input"
                 value={fact?.value ?? ""}
                 type={meta.type ?? "text"}
                 inputMode={meta.type === "tel" ? "tel" : meta.type === "url" ? "url" : undefined}
                 aria-invalid={invalid || undefined}
+                aria-required={required.has(row.field)}
                 aria-describedby={invalid ? errorId : undefined}
                 onChange={(event) => {
                   onEdit(row.field, event.target.value);
@@ -120,7 +122,6 @@ export function FactReviewStep({ source, goal, arabic = false, hidePricing = fal
                 }}
               />
               {invalid && <p id={errorId} className="creator-field-error" role="alert">{copy(arabic, `Add ${meta.en.toLocaleLowerCase()} to continue.`, `أضف ${meta.ar} للمتابعة.`)}</p>}
-              {!fact && !required.has(row.field) && <p className="creator-field-help">{copy(arabic, "Optional — not added to this campaign.", "اختياري — غير مضاف لهذه الحملة.")}</p>}
             </div>
           );
         })}

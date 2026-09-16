@@ -9,6 +9,8 @@ import { ENGINE_VERSION, getCreativeTemplate, type CreativeBrief } from "@movpro
 
 import { isFeatureEnabled } from "@/config/features";
 import { PortableApiError, portableCreatorApi } from "@/lib/api/portableApiClient";
+import { trashUnfinishedProject } from "./trashUnfinishedProject";
+import { canDeleteCreatorDraft } from "./creatorProjectDeletion";
 import { sanitizeCreatorProjectOutput } from "./creatorProjectOutput";
 import { hydrateCloudProject, stableProjectConfiguration } from "./portableProjectMapper";
 import { campaignFactValue, campaignSourceForProject } from "./sourceFacts";
@@ -124,12 +126,14 @@ export function buildPortableGenerationConfiguration(project: CreatorProject) {
   const sourceLocation = campaignFactValue(campaignSource, "location");
   const template = getCreativeTemplate(project.templateId);
   const templateScenes = new Map(template.scenes.map((scene) => [scene.id, scene]));
-  const scenes = project.scenes.map((scene, index) => {
+  const scenes = template.scenes.map((sourceScene, index) => {
+    const scene = project.scenes.find(item => item.id === sourceScene.id) ?? project.scenes[index];
+    if (!scene) return sourceScene;
     const source = templateScenes.get(scene.id) ?? template.scenes[index] ?? template.scenes[0]!;
     return {
       ...source,
-      id: scene.id,
-      duration: scene.duration,
+      id: source.id,
+      duration: source.duration,
       headline: {
         en: scene.headline || source.headline.en,
         ar: scene.headlineAr || source.headline.ar,
@@ -138,12 +142,15 @@ export function buildPortableGenerationConfiguration(project: CreatorProject) {
         en: scene.voiceover || source.voiceover.en,
         ar: scene.voiceoverAr || source.voiceover.ar,
       },
-      direction: scene.direction || source.direction,
+      direction: source.direction,
     };
   });
   const creativeBrief: CreativeBrief = {
     engineVersion: ENGINE_VERSION,
     templateId: template.id,
+    templateRecipeVersion: template.versionNumber,
+    templatePromptVersion: `${template.id}-v${template.versionNumber}`,
+    templateVisualSystem: template.visualSystem,
     market: "KW",
     language: project.language,
     arabicDialect: project.language === "en" ? null : "kuwaiti",
@@ -159,6 +166,7 @@ export function buildPortableGenerationConfiguration(project: CreatorProject) {
       offer: sourceOffer,
       callToAction: project.cta,
       whatsapp: sourceWhatsapp,
+      bookingUrl: campaignFactValue(campaignSource, "booking_url"),
       location: sourceLocation,
     },
     scenes,
@@ -171,11 +179,11 @@ export function buildPortableGenerationConfiguration(project: CreatorProject) {
       sourceDescription,
       sourceOffer ? `Offer: ${sourceOffer}.` : "Do not invent an offer.",
       `Call to action: ${project.cta}.`,
-      ...project.scenes.map((scene, index) => `${index + 1}. ${scene.direction} On-screen copy: ${scene.headline}.`),
+      template.visualSystem,
     ]
       .filter(Boolean)
       .join("\n"),
-    durationSeconds: project.scenes.reduce((sum, scene) => sum + scene.duration, 0),
+    durationSeconds: template.durationSeconds,
     aspectRatio: project.aspectRatio,
     resolution: project.resolution,
     audio: project.audio,
@@ -445,6 +453,8 @@ export async function duplicateCreatorProject(projectId: string, userId?: string
       versionNumber: 1,
       title: `${source.title} copy`,
       status: "draft" as const,
+      hasGeneratedVideo: false,
+      hasActiveGeneration: false,
       videoUrl: null,
       jobId: null,
       renderRunId: null,
@@ -459,6 +469,15 @@ export async function duplicateCreatorProject(projectId: string, userId?: string
 }
 
 export async function trashCreatorProject(projectId: string, userId?: string | null) {
-  if (userId && portableCreatorEnabled()) await portableCreatorApi.trashProject(projectId);
+  if (userId && portableCreatorEnabled()) {
+    await trashUnfinishedProject(projectId, {
+      trash: () => portableCreatorApi.trashProject(projectId),
+      listRuns: () => portableCreatorApi.listRenders({ projectId, limit: 50 }),
+      cancel: (runId, key) => portableCreatorApi.cancelRender(runId, key),
+    });
+  } else {
+    const project = getLocalCreatorProject(projectId, userId);
+    if (!project || !canDeleteCreatorDraft(project)) throw new Error("Only unfinished drafts can be deleted.");
+  }
   deleteLocalCreatorProject(projectId, userId);
 }

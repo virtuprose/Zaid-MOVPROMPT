@@ -12,7 +12,7 @@ function publicAsset(row: Record<string, unknown> | null): OwnedAssetRecord | nu
   return {
     id: String(row.id),
     projectId: String(row.projectId),
-    userId: String(row.userId),
+    userId: String(row.userId), ...(typeof row.storageOwnerId === "string" ? { storageOwnerId: row.storageOwnerId } : {}),
     kind: kind.data,
     bucket: String(row.bucket),
     objectKey: String(row.objectKey),

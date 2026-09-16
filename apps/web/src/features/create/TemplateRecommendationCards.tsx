@@ -116,7 +116,7 @@ function RecommendationCard({
   return (
     <article className={cn("creator-recommendation-card", quoteReady && "is-ready")} aria-label={arabic ? `قالب ${template.nameAr}` : `${template.name} template`}>
       <div className="creator-recommendation-media" data-preview-type={template.previewVideo ? "motion" : "direction"}>
-        <img src={template.poster} alt="" />
+        {template.poster ? <img src={template.poster} alt="" /> : <span className="creator-template-placeholder" aria-hidden="true" />}
         <span>{template.previewVideo ? (arabic ? "معاينة حركة" : "Motion preview") : (arabic ? "اتجاه ثابت" : "Static direction")}</span>
       </div>
       <div className="creator-recommendation-copy">

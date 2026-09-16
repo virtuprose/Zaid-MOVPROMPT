@@ -84,6 +84,15 @@ function serviceProject(): CreatorProject {
 }
 
 describe("campaign draft convergence", () => {
+  it("carries the reviewed booking link into the immutable generation brief", () => {
+    const project = serviceProject();
+    const configuration = portableConfiguration(project);
+    const generation = buildPortableGenerationConfiguration(project);
+    expect(generation.creativeBrief.product.bookingUrl).toBe("https://noura.example.test/book");
+    expect(TemplateCampaignPayloadSchema.safeParse({ configuration, productRecipe: portableProductRecipe(project), campaignRecipe: portableCampaignRecipe(project) }).success).toBe(true);
+    const changed = { ...configuration, generation: { ...generation, creativeBrief: { ...generation.creativeBrief, product: { ...generation.creativeBrief.product, bookingUrl: "https://wrong.example/book" } } } };
+    expect(TemplateCampaignPayloadSchema.safeParse({ configuration: changed, productRecipe: portableProductRecipe(project), campaignRecipe: portableCampaignRecipe(project) }).success).toBe(false);
+  });
   it("validates all nine campaign outcomes in public and creative contracts", () => {
     for (const goal of goals) {
       expect(CampaignGoalSchema.parse(goal)).toBe(goal);

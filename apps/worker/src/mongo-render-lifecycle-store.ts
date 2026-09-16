@@ -21,6 +21,9 @@ export function createMongoRenderLifecycleStore(database: MongoDatabase): Render
     async beginProviderSubmission(input) {
       const run = await owned(input.runId, input.userId); if (run.providerRequestId) { if (run.provider !== input.provider) throw new RenderLifecycleError("provider_submission_identity_mismatch", false); return false; }
       if (run.status !== "submitting" || Number(run.qualityAttempt ?? 0) !== input.attemptNumber || (run.provider && run.provider !== input.provider)) throw new RenderLifecycleError("provider_submission_unavailable", false);
+      // Exercise the attempt constraint before the billable provider call.
+      // A schema/index problem must fail here rather than lose an accepted ID.
+      await attempts.updateOne({ renderRunId: input.runId, userId: input.userId, attemptNumber: input.attemptNumber }, { $setOnInsert: { id: newMongoObjectId(), renderRunId: input.runId, userId: input.userId, projectId: run.projectId, projectVersionId: run.projectVersionId, attemptNumber: input.attemptNumber, provider: input.provider, status: "submitting", createdAt: input.now, updatedAt: input.now } }, { upsert: true });
       await runs.updateOne({ id: input.runId, userId: input.userId, status: "submitting" }, { $set: { provider: input.provider, processingStage: "rendering", errorCode: null, errorMessage: null, updatedAt: input.now } }); return true;
     },
     async updateProviderStatus(input) {

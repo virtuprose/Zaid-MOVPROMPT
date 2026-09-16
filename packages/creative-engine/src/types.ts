@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { CampaignGoalSchema } from "@movprompt/contracts";
 
-export const ENGINE_VERSION = "gcc-campaign-engine-2026.08" as const;
+export const ENGINE_VERSION = "gcc-campaign-engine-2026.09-r2" as const;
 
 export const StoryArcSchema = z.enum([
   "hero",
@@ -96,8 +96,11 @@ export type CreativeTemplateRecipe = z.infer<typeof CreativeTemplateRecipeSchema
 
 export const CreativeBriefSchema = z
   .object({
-    engineVersion: z.literal(ENGINE_VERSION),
+    engineVersion: z.enum(["gcc-campaign-engine-2026.08", ENGINE_VERSION]),
     templateId: z.string().min(1).max(120),
+    templateRecipeVersion: z.number().int().positive().optional(),
+    templatePromptVersion: z.string().min(1).max(120).optional(),
+    templateVisualSystem: z.string().max(1_000).optional(),
     market: z.literal("KW"),
     language: z.enum(["ar", "en", "bilingual"]),
     arabicDialect: z.literal("kuwaiti").nullable(),
@@ -114,6 +117,7 @@ export const CreativeBriefSchema = z
         offer: z.string().max(500).default(""),
         callToAction: z.string().min(1).max(240),
         whatsapp: z.string().max(80).default(""),
+        bookingUrl: z.string().max(2_048).optional(),
         location: z.string().max(500).default(""),
       })
       .strict(),

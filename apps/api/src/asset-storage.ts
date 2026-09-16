@@ -1,5 +1,5 @@
 import {
-  PrivateObjectStorage,
+  R2Storage,
   type PutPrivateObjectRequest,
   type GetPrivateObjectRequest,
   type SignUploadRequest,
@@ -32,7 +32,7 @@ export interface AssetStorageGateway {
   checkBuckets(): Promise<void>;
 }
 
-export function createAssetStorageGateway(storage: PrivateObjectStorage): AssetStorageGateway {
+export function createAssetStorageGateway(storage: R2Storage): AssetStorageGateway {
   return {
     assetsBucket: storage.assetsBucket,
     outputsBucket: storage.outputsBucket,

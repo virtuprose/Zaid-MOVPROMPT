@@ -1,3 +1,4 @@
+import { ObjectId } from "mongodb";
 import { COLLECTIONS, newMongoObjectId, type MongoDatabase } from "./mongo-client.js";
 import {
   assertApprovedCapability,
@@ -12,7 +13,7 @@ function idempotencyKey(value: string): string {
   return normalized;
 }
 
-export function createMongoGenerationService(database: MongoDatabase): GenerationService {
+export function createMongoGenerationService(database: MongoDatabase, environment: NodeJS.ProcessEnv = process.env): GenerationService {
   const quotes = database.collection(COLLECTIONS.generationQuotes);
   const runs = database.collection(COLLECTIONS.renderRuns);
   const reservations = database.collection(COLLECTIONS.creditReservations);
@@ -45,6 +46,7 @@ export function createMongoGenerationService(database: MongoDatabase): Generatio
           if (bound.capabilityAlias !== input.capabilityAlias) throw new GenerationDomainError("quote_capability_mismatch");
           return existing as never;
         }
+        if (!(await database.collection(COLLECTIONS.creatorProjects).findOne({ id: input.projectId, userId: input.userId, deletedAt: null }, { session }))) throw new GenerationDomainError("project_version_not_found");
         if (!(await database.collection(COLLECTIONS.creatorProjectVersions).findOne({ id: input.projectVersionId, projectId: input.projectId, userId: input.userId }, { session }))) throw new GenerationDomainError("project_version_not_found");
         const quote = await quotes.findOne({ id: input.quoteId }, { session });
         if (!quote) throw new GenerationDomainError("quote_not_found");
@@ -55,6 +57,25 @@ export function createMongoGenerationService(database: MongoDatabase): Generatio
         const active = await runs.find({ userId: input.userId, status: { $in: ["submitting", "queued", "processing", "cancelling"] } }, { session }).toArray();
         if (active.some((row) => row.projectId === input.projectId)) throw new GenerationDomainError("project_render_active");
         if (active.length >= 2) throw new GenerationDomainError("user_render_limit_reached");
+        const guest = await database.db.collection("guest_sessions").findOne({ _id: new ObjectId(input.userId), claimedBy: null }, { session });
+        let guestCostCeilingUsd = 0;
+        if (guest) {
+          // The same document is updated by account claiming/expiry: no render may race an ownership transfer.
+          const locked = await database.db.collection("guest_sessions").updateOne({ _id: guest._id, claimedBy: null, cleanupState: { $ne: "deleting" }, expiresAt: { $gt: now } }, { $inc: { revision: 1 } }, { session });
+          if (!locked.matchedCount) throw new GenerationDomainError("user_render_limit_reached");
+          if (environment.APP_ENV !== "local") {
+            const cap = Number(environment.GUEST_DAILY_BUDGET_USD);
+            guestCostCeilingUsd = Number(environment.GUEST_MAX_RENDER_COST_USD);
+            if (!Number.isFinite(cap) || !Number.isFinite(guestCostCeilingUsd) || !(cap > 0) || !(guestCostCeilingUsd > 0) || guestCostCeilingUsd > cap) throw new GenerationDomainError("user_render_limit_reached");
+            // Serialize quota/budget decisions across API replicas inside the enqueue transaction.
+            await database.db.collection("guest_budget_locks").updateOne({ _id: new ObjectId("000000000000000000000001") }, { $inc: { revision: 1 } }, { upsert: true, session });
+            const since = new Date(now.getTime() - 86400_000);
+            const recent = await runs.find({ guestIpHash: { $exists: true }, $or: [{ createdAt: { $gt: since } }, { completedAt: { $gt: since } }, { status: { $in: ["submitting", "queued", "processing", "cancelling"] } }] }, { session }).toArray();
+            if (recent.some(r => (r.guestIpHash === guest.ipHash || r.userId === input.userId) && !["failed", "cancelled"].includes(String(r.status)))) throw new GenerationDomainError("user_render_limit_reached");
+            // Reserve worst-case provider cost including retries. Failed requests still count toward spend.
+            if (recent.reduce((sum, r) => sum + Number(r.guestCostCeilingUsd ?? cap), 0) + guestCostCeilingUsd > cap) throw new GenerationDomainError("user_render_limit_reached");
+          }
+        }
         let starterEntitlementUsed = false;
         if (quote.entitlementEligible) {
           const reserved = await entitlements.findOneAndUpdate({ userId: input.userId, type: "starter_template_render", status: "available" }, { $set: { status: "reserved", reservedOperationKey: operationKey, updatedAt: now } }, { session, returnDocument: "after" });
@@ -65,24 +86,35 @@ export function createMongoGenerationService(database: MongoDatabase): Generatio
           const holds = await reservations.find({ userId: input.userId, status: "reserved" }, { session }).toArray();
           if (!account || Number(account.balance ?? 0) - holds.reduce((sum, row) => sum + Number(row.amount ?? 0), 0) < Number(quote.credits)) throw new GenerationDomainError("insufficient_credits");
         }
-        const run = { id: newMongoObjectId(), projectId: input.projectId, projectVersionId: input.projectVersionId, userId: input.userId, idempotencyKey: operationKey, capabilityAlias: input.capabilityAlias, quoteId: quote.id, quotedCredits: Number(quote.credits), chargedCredits: 0, starterEntitlementUsed, status: "submitting", processingStage: "preparing", refundStatus: "not_required", qualityAttempt: 0, provider: null, providerRequestId: null, outputBucket: null, outputObjectKey: null, errorCode: null, errorMessage: null, chargedAt: null, completedAt: null, createdAt: now, updatedAt: now };
+        const run = { ...(guest ? { guestIpHash: guest.ipHash, guestCostCeilingUsd } : {}), id: newMongoObjectId(), projectId: input.projectId, projectVersionId: input.projectVersionId, userId: input.userId, idempotencyKey: operationKey, capabilityAlias: input.capabilityAlias, quoteId: quote.id, quotedCredits: Number(quote.credits), chargedCredits: 0, starterEntitlementUsed, status: "submitting", processingStage: "preparing", refundStatus: "not_required", qualityAttempt: 0, provider: null, providerRequestId: null, outputBucket: null, outputObjectKey: null, errorCode: null, errorMessage: null, chargedAt: null, completedAt: null, createdAt: now, updatedAt: now };
         await runs.insertOne(run, { session });
         if (starterEntitlementUsed) await entitlements.updateOne({ userId: input.userId, type: "starter_template_render", status: "reserved", reservedOperationKey: operationKey }, { $set: { reservedRunId: run.id, updatedAt: now } }, { session });
         else if (Number(quote.credits) > 0) await reservations.insertOne({ id: newMongoObjectId(), userId: input.userId, renderRunId: run.id, amount: Number(quote.credits), status: "reserved", idempotencyKey: `render.reserve:${run.id}`, createdAt: now, updatedAt: now }, { session });
         await database.collection(COLLECTIONS.outboxJobs).updateOne({ topic: "render.start", operationKey: `render.start:${run.id}` }, { $setOnInsert: { id: newMongoObjectId(), topic: "render.start", operationKey: `render.start:${run.id}`, payload: { runId: run.id, userId: input.userId, projectId: input.projectId, projectVersionId: input.projectVersionId, quoteId: quote.id, capabilityAlias: input.capabilityAlias, configurationHash }, status: "pending", attempts: 0, availableAt: now, createdAt: now, updatedAt: now } }, { upsert: true, session });
-        await database.collection(COLLECTIONS.creatorProjects).updateOne({ id: input.projectId, userId: input.userId }, { $set: { status: "generating", currentWorkingVersionId: input.projectVersionId, updatedAt: now } }, { session });
+        const projectUpdate = await database.collection(COLLECTIONS.creatorProjects).updateOne({ id: input.projectId, userId: input.userId, deletedAt: null }, { $set: { status: "generating", currentWorkingVersionId: input.projectVersionId, updatedAt: now } }, { session });
+        if (!projectUpdate.matchedCount) throw new GenerationDomainError("project_version_not_found");
         return run as never;
       });
     },
     async recordProviderSubmission(input) {
       const now = input.now ?? new Date(); const provider = input.provider.trim(); const providerRequestId = input.providerRequestId.trim();
       if (!provider || !providerRequestId) throw new Error("provider and providerRequestId are required");
+      // Save the accepted identity independently. A later attempt/ledger write
+      // failure must never roll it back and cause another billable submission.
+      const saved = await runs.updateOne({ id: input.runId, userId: input.userId, status: "submitting", providerRequestId: null, provider: { $in: [null, provider] } }, { $set: { provider, providerRequestId, processingStage: "rendering", updatedAt: now } });
+      if (!saved.matchedCount) {
+        const existing = await runs.findOne({ id: input.runId, userId: input.userId });
+        if (!existing) throw new GenerationDomainError("render_not_found");
+        if (existing.providerRequestId && (existing.provider !== provider || existing.providerRequestId !== providerRequestId)) throw new GenerationDomainError("idempotency_conflict");
+        if (!existing.providerRequestId) throw new GenerationDomainError("render_submission_not_recordable");
+      }
       return database.transaction(async (session) => {
         const run = await runs.findOne({ id: input.runId, userId: input.userId }, { session }); if (!run) throw new GenerationDomainError("render_not_found");
-        if (run.providerRequestId) { if (run.provider !== provider || run.providerRequestId !== providerRequestId) throw new GenerationDomainError("idempotency_conflict"); return run as never; }
-        if (run.status !== "submitting") throw new GenerationDomainError("render_submission_not_recordable");
+        if (run.provider !== provider || run.providerRequestId !== providerRequestId) throw new GenerationDomainError("idempotency_conflict");
         await database.collection(COLLECTIONS.renderAttempts).updateOne({ renderRunId: run.id, userId: run.userId, attemptNumber: run.qualityAttempt }, { $setOnInsert: { id: newMongoObjectId(), renderRunId: run.id, projectId: run.projectId, projectVersionId: run.projectVersionId, userId: run.userId, attemptNumber: run.qualityAttempt, provider, providerRequestId, status: "submitted", createdAt: now, updatedAt: now } }, { upsert: true, session });
-        await runs.updateOne({ id: run.id, userId: input.userId }, { $set: { provider, providerRequestId, processingStage: "rendering", errorCode: null, errorMessage: null, updatedAt: now } }, { session });
+        await database.collection(COLLECTIONS.renderAttempts).updateOne({ renderRunId: run.id, userId: run.userId, attemptNumber: run.qualityAttempt }, { $set: { provider, providerRequestId, updatedAt: now } }, { session });
+        await database.collection(COLLECTIONS.renderAttempts).updateOne({ renderRunId: run.id, userId: run.userId, attemptNumber: run.qualityAttempt, status: "submitting" }, { $set: { status: "submitted", updatedAt: now } }, { session });
+        await runs.updateOne({ id: run.id, userId: input.userId }, { $set: { errorCode: null, errorMessage: null, updatedAt: now } }, { session });
         return (await runs.findOne({ id: run.id, userId: input.userId }, { session })) as never;
       });
     },

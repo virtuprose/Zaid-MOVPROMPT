@@ -59,12 +59,16 @@ export function stableProjectConfiguration(project: CreatorProject): CreatorProj
       brand: campaignFactValue(source, "brand"),
     },
   };
-  const { versionId: _versionId, versionNumber: _versionNumber, ...stableProject } = projectWithCampaignSource({
+  // Ownership/output flags come from the API; they are not editable recipe fields.
+  const { versionId: _versionId, versionNumber: _versionNumber, hasGeneratedVideo: _hasGeneratedVideo, hasActiveGeneration: _hasActiveGeneration, presenter: persistedPresenter, ...stableProject } = projectWithCampaignSource({
     ...sourceFirstProject,
     source: persistedSource,
   });
   return {
     ...stableProject,
+    // The persisted contract defaults an absent presenter to presenterMode.
+    // Hydration adding {mode:"none"} must not produce a new immutable version.
+    ...(project.presenterMode === "none" ? {} : { presenter: persistedPresenter }),
     status: "ready",
     logoUrl: "",
     product: {
@@ -104,6 +108,8 @@ export function projectFromCloud(input: CreatorProjectRecord): CreatorProject | 
     versionId: input.currentVersion?.id,
     versionNumber: input.currentVersion?.versionNumber,
     title: input.title,
+    hasGeneratedVideo: Boolean(input.hasGeneratedVideo || input.currentAcceptedVersionId || input.outputCount > 0),
+    hasActiveGeneration: input.hasActiveGeneration === true,
     status: recoveredProjectStatus(input),
     renderRunId: currentRenderRunId,
     jobId: currentRenderRunId,

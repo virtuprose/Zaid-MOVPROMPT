@@ -4,7 +4,7 @@
 
 A recoverable MovPrompt backup set includes:
 
-- PostgreSQL schema, data and migration history;
+- MongoDB collections, indexes and migration history;
 - private creator, output and legacy asset objects plus metadata/checksums;
 - deployment manifests, artifact digests and environment variable names;
 - OAuth/provider/payment configuration references;
@@ -15,29 +15,9 @@ RPO, RTO, retention, backup region and restore-test frequency are not yet
 approved. Production cannot launch until owners and measurable values are
 recorded.
 
-## Local PostgreSQL backup
+## MongoDB and media backups
 
-With the Compose database healthy, write an encrypted-at-rest backup outside
-the repository:
-
-```bash
-scripts/infra/backup-local-postgres.sh /absolute/private/backup/location
-```
-
-The script creates a custom-format `pg_dump` and SHA-256 checksum. It does not
-include MinIO data.
-
-For local object data, use an authenticated MinIO client to mirror both private
-buckets to an explicit backup destination and produce a manifest containing
-object key, version where available, size and checksum:
-
-```text
-creator-assets
-creator-outputs
-template-previews
-```
-
-Do not make buckets public to simplify backup.
+Use MongoDB replica-set backups or a managed point-in-time recovery service. Back up database records, queue state and all three R2 buckets to an independently controlled destination; MongoDB backups do not include media. Preserve stable object keys, metadata, sizes and SHA-256 checksums. Never make assets or output buckets public to simplify backups. Do not delete existing local volumes as part of this migration.
 
 ## Production backup requirements
 

@@ -135,7 +135,7 @@ export function CampaignReviewStep({
           <dl className="creator-review-list">
             <div><dt>{copy(arabic, "Type", "النوع")}</dt><dd>{sourceLabel(arabic, source.kind)}</dd></div>
             {project.product.sourceUrl && <div><dt>{copy(arabic, "Link", "الرابط")}</dt><dd dir="ltr" className="creator-review-direction-value">{project.product.sourceUrl}</dd></div>}
-            <div><dt>{copy(arabic, "Media", "الوسائط")}</dt><dd>{project.product.images.length ? copy(arabic, `${project.product.images.length} selected`, `${project.product.images.length} محددة`) : copy(arabic, "Not added", "غير مضافة")}</dd></div>
+            <div><dt>{copy(arabic, "Media", "الوسائط")}</dt><dd>{project.product.images.length ? copy(arabic, `${project.product.images.length} selected`, `${project.product.images.length} محددة`) : copy(arabic, "No media selected", "لم يتم اختيار وسائط")}</dd></div>
           </dl>
         </section>
 
@@ -151,7 +151,7 @@ export function CampaignReviewStep({
 
         <section className="creator-review-group" aria-labelledby="review-presenter-heading">
           <div className="creator-review-group-head"><div><span className="creator-review-index">03</span><h3 id="review-presenter-heading">{copy(arabic, "Presenter and media", "المقدم والوسائط")}</h3></div>{editButton("details", copy(arabic, "Edit presenter", "تعديل المقدم"))}</div>
-          <dl className="creator-review-list"><div><dt>{copy(arabic, "Who appears", "من يظهر")}</dt><dd>{presenter}</dd></div><div><dt>{copy(arabic, "Reference media", "وسائط مرجعية")}</dt><dd>{project.product.images.length ? copy(arabic, `${project.product.images.length} file${project.product.images.length === 1 ? "" : "s"} selected`, `${project.product.images.length} ملف محدد`) : copy(arabic, "Not added", "غير مضافة")}</dd></div></dl>
+          <dl className="creator-review-list"><div><dt>{copy(arabic, "Who appears", "من يظهر")}</dt><dd>{presenter}</dd></div><div><dt>{copy(arabic, "Reference media", "وسائط مرجعية")}</dt><dd>{project.product.images.length ? copy(arabic, `${project.product.images.length} file${project.product.images.length === 1 ? "" : "s"} selected`, `${project.product.images.length} ملف محدد`) : copy(arabic, "No media selected", "لم يتم اختيار وسائط")}</dd></div></dl>
         </section>
 
         <section className="creator-review-group" aria-labelledby="review-delivery-heading">
@@ -171,8 +171,9 @@ export function CampaignReviewStep({
       </div>
 
       {sourceError && <p className="creator-error" role="alert">{sourceError}</p>}
+      {hidePricing && ["unavailable", "expired"].includes(quoteState) && onRetryQuote && <button type="button" className="creator-button creator-button-secondary" onClick={onRetryQuote}><RefreshCw aria-hidden="true" /> {copy(arabic, "Retry connection", "إعادة الاتصال")}</button>}
       <div className="creator-review-actions">
-        <p>{canGenerate ? copy(arabic, "Everything is ready. Create your account only when you generate.", "كل شيء جاهز. أنشئ حسابك فقط عند الإنشاء.") : !hasRequiredSource ? requiresSourceMedia ? copy(arabic, "Add the required source details and media before generating. Your campaign is saved.", "أضف تفاصيل المصدر والوسائط المطلوبة قبل الإنشاء. حملتك محفوظة.") : copy(arabic, "Add the required source details before generating. Your campaign is saved.", "أضف تفاصيل المصدر المطلوبة قبل الإنشاء. حملتك محفوظة.") : missingRights ? copy(arabic, "Confirm your rights to generate this campaign.", "أكد حقوقك لإنشاء هذه الحملة.") : hidePricing ? copy(arabic, "The local generation service is getting ready. Keep this page open.", "جارٍ تجهيز خدمة التوليد المحلية. أبق هذه الصفحة مفتوحة.") : quoteState === "ready" ? copy(arabic, "Your campaign is being prepared. Keep this page open.", "جارٍ تجهيز حملتك. أبق هذه الصفحة مفتوحة.") : quoteStateMessage(arabic, quoteState)}</p>
+        <p>{canGenerate ? copy(arabic, "Everything is ready. Generate a preview, then sign in to download.", "كل شيء جاهز. أنشئ المعاينة ثم سجل الدخول للتنزيل.") : !hasRequiredSource ? requiresSourceMedia ? copy(arabic, "Add the required source details and media before generating. Your campaign is saved.", "أضف تفاصيل المصدر والوسائط المطلوبة قبل الإنشاء. حملتك محفوظة.") : copy(arabic, "Add the required source details before generating. Your campaign is saved.", "أضف تفاصيل المصدر المطلوبة قبل الإنشاء. حملتك محفوظة.") : missingRights ? copy(arabic, "Confirm your rights to generate this campaign.", "أكد حقوقك لإنشاء هذه الحملة.") : hidePricing ? quoteState === "loading" || quoteState === "changed" ? copy(arabic, "Checking generation availability…", "جارٍ التحقق من توفر التوليد…") : copy(arabic, "Generation is unavailable. Complete the storage and generation setup, then retry. Your campaign is saved.", "التوليد غير متوفر. أكمل إعداد التخزين والتوليد ثم أعد المحاولة. حملتك محفوظة.") : quoteState === "ready" ? copy(arabic, "Your campaign is being prepared. Keep this page open.", "جارٍ تجهيز حملتك. أبق هذه الصفحة مفتوحة.") : quoteStateMessage(arabic, quoteState)}</p>
         <button ref={generateButtonRef} type="button" className="creator-button creator-button-primary" onClick={onGenerate} disabled={!canGenerate}>
           {sourceBusy ? <RefreshCw className="animate-spin" aria-hidden="true" /> : <Sparkles aria-hidden="true" />}
           {copy(arabic, "Generate campaign", "أنشئ الحملة")}

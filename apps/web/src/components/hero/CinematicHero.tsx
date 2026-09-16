@@ -116,7 +116,7 @@ function HomepageTemplateGroup({
                 onClick={() => onSelect(template.id)}
               >
                 <span className="mp-template-card-media" data-media-tone={template.mediaTone}>
-                  <img src={template.poster} alt="" loading="lazy" style={{ objectPosition: template.posterPosition }} />
+                  {template.poster ? <img src={template.poster} alt="" loading="lazy" style={{ objectPosition: template.posterPosition }} /> : <span className="creator-template-placeholder" aria-hidden="true" />}
                   <span className="mp-template-media-stamp" aria-hidden="true"><b>{template.mediaCode}</b><span>{templateGoalLabel(template.goals[0] ?? "launch", locale)}</span></span>
                   <em aria-hidden="true">{ar ? "اتجاه القالب" : "Template direction"}</em>
                 </span>

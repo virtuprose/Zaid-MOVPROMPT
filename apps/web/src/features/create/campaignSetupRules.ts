@@ -3,6 +3,7 @@ import type { CampaignGoal } from "@movprompt/contracts";
 import type { CreatorProject } from "./types";
 
 export type CampaignSetupField =
+  | "goal"
   | "price"
   | "offer"
   | "cta"
@@ -15,7 +16,7 @@ export type CampaignSetupField =
   | "audio"
   | "presenter";
 
-export type CampaignSetupErrors = Partial<Record<"bookingUrl" | "whatsapp", string>>;
+export type CampaignSetupErrors = Partial<Record<"bookingUrl" | "whatsapp" | "offer", string>>;
 
 export const CTA_BY_GOAL: Record<CampaignGoal, string> = {
   whatsapp_orders: "Order on WhatsApp",
@@ -66,12 +67,13 @@ export function isValidDestination(value: string): boolean {
 /** Browser checks improve recovery; the server is still authoritative on claim and render. */
 export function validateCampaignSetup(project: CreatorProject): CampaignSetupErrors {
   const errors: CampaignSetupErrors = {};
-  if (isBookingOutcome(project.goal) && !isValidDestination(project.bookingUrl)) {
+  if ((isBookingOutcome(project.goal) || project.bookingUrl.trim()) && !isValidDestination(project.bookingUrl)) {
     errors.bookingUrl = "Add a valid booking link to continue.";
   }
-  if (isWhatsappOutcome(project.goal) && !isValidKuwaitPhone(project.whatsapp)) {
+  if ((isWhatsappOutcome(project.goal) || project.whatsapp.trim()) && !isValidKuwaitPhone(project.whatsapp)) {
     errors.whatsapp = "Add a Kuwait WhatsApp number to continue.";
   }
+  if (project.goal === "offer" && !project.offer.trim()) errors.offer = "Add an offer to continue.";
   return errors;
 }
 
@@ -83,5 +85,5 @@ export function deliveryFieldsFor(goal: CampaignGoal) {
 }
 
 export function isQuoteAffectingCampaignChange(field: CampaignSetupField): boolean {
-  return ["price", "offer", "cta", "bookingUrl", "whatsapp", "language", "aspectRatio", "resolution", "subtitles", "audio"].includes(field);
+  return ["goal", "price", "offer", "cta", "bookingUrl", "whatsapp", "language", "aspectRatio", "resolution", "subtitles", "audio"].includes(field);
 }

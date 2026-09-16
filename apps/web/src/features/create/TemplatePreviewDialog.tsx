@@ -30,8 +30,8 @@ export function TemplatePreviewDialog({
           <DialogTitle>{name}</DialogTitle>
           <DialogDescription>
             {ar
-              ? "معاينة حركة حقيقية من مكتبة الإنتاج الحالية. منتجك ونصك لا يظهران إلا بعد توليد حملتك."
-              : "A verified motion preview from the current production library. Your product and copy appear only after your campaign is generated."}
+              ? "مثال على الاتجاه البصري. تُستخدم صورتك ومعلوماتك المؤكدة لتوليد فيديو جديد وقد تختلف الحركة والتفاصيل."
+              : "Example visual direction. Your image and confirmed facts guide a new AI generation; movement and details can vary."}
           </DialogDescription>
         </DialogHeader>
         {template?.previewVideo && (

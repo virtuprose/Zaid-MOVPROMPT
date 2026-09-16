@@ -30,12 +30,15 @@ async function sha256(value: string): Promise<string> {
  * draft the guest configured, while keeping object storage coordinates server-owned.
  */
 export async function buildGuestClaimSnapshot(input: GuestClaimSnapshotInput): Promise<GuestClaimSnapshot> {
-  return {
+  // IndexedDB retains undefined properties, while HTTP JSON omits them.
+  // Store and hash exactly the same payload that the server will receive.
+  const transferred = JSON.parse(JSON.stringify({
     ...input,
-    assetManifest: [...input.assetManifest].sort((left, right) => left.ordinal - right.ordinal) as GuestClaimAssetManifest,
-    snapshotDigest: await sha256(canonicalJson({
-      ...input,
-      assetManifest: [...input.assetManifest].sort((left, right) => left.ordinal - right.ordinal),
-    })),
+    assetManifest: [...input.assetManifest].sort((left, right) => left.ordinal - right.ordinal),
+  })) as GuestClaimSnapshotInput;
+  return {
+    ...transferred,
+    assetManifest: transferred.assetManifest as GuestClaimAssetManifest,
+    snapshotDigest: await sha256(canonicalJson(transferred)),
   };
 }

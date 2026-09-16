@@ -196,6 +196,7 @@ export function registerGenerationRoutes(
         idempotencyKey,
       });
       const response: RenderRunResponse = { run, requestId: context.get("requestId") };
+      console.info(JSON.stringify({ level: "info", message: "generation_job_submitted", timestamp: new Date().toISOString(), requestId: context.get("requestId"), renderRunId: run.id, projectId: run.projectId, status: run.status, stage: run.processingStage }));
       context.header("cache-control", "private, no-store");
       return context.json(response, 202);
     } catch (error) {
