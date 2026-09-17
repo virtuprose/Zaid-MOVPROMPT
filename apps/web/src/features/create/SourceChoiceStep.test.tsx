@@ -97,4 +97,24 @@ describe("SourceChoiceStep", () => {
     expect(screen.getByRole("radio", { name: /رابط منتج/ })).toHaveAttribute("aria-checked", "true");
     expect(screen.getByRole("region", { name: "شنو تبي تروّج له؟" })).toHaveAttribute("dir", "rtl");
   });
+
+  it("disables the manual radio for templates that require a primary reference image", () => {
+    const { onChoiceChange } = renderSourceChoice({ templateId: "new-york-billboard-takeover" });
+    const manual = screen.getByRole("radio", { name: /Enter details manually/i });
+    expect(manual).toHaveAttribute("aria-disabled", "true");
+    expect(manual).toHaveClass("is-disabled");
+    expect(screen.getByText(/Not available for this template/)).toBeVisible();
+    fireEvent.click(manual);
+    expect(onChoiceChange).not.toHaveBeenCalled();
+  });
+
+  it("keeps the manual radio enabled for templates that do not require a primary reference image", () => {
+    // clinic-appointment-campaign has explicit requiredInputs that do not include
+    // any real video or photo reference, so the manual option stays enabled.
+    const { onChoiceChange } = renderSourceChoice({ templateId: "clinic-appointment-campaign" });
+    const manual = screen.getByRole("radio", { name: /Enter details manually/i });
+    expect(manual).not.toHaveAttribute("aria-disabled");
+    fireEvent.click(manual);
+    expect(onChoiceChange).toHaveBeenCalledWith("manual");
+  });
 });

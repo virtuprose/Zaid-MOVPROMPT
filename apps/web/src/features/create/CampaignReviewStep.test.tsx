@@ -191,11 +191,138 @@ describe("CampaignReviewStep", () => {
     );
 
     expect(screen.getByRole("button", { name: "Generate campaign" })).toBeDisabled();
-    expect(screen.getByText("Add the required source details and media before generating. Your campaign is saved.")).toBeVisible();
+    // The same specific message appears in both the inline missing-source list and the
+    // bottom-of-page paragraph so the screen reader and the visual UI agree.
+    expect(screen.getAllByText("Upload at least one product photo to continue.").length).toBeGreaterThan(0);
   });
 
   it("derives the media requirement from the immutable template recipe", () => {
     expect(templateRequiresSourceMedia("luxury-product-reveal")).toBe(true);
     expect(templateRequiresSourceMedia("app-service")).toBe(true);
+  });
+
+  it("names the missing product name specifically and links back to the source step", () => {
+    const project = createDraftProject("premium-phone-reveal");
+    project.product = {
+      ...project.product,
+      sourceType: "upload",
+      name: "",
+      images: [{ id: "phone", name: "phone.jpg", url: "blob:phone", mimeType: "image/jpeg", source: "upload" }],
+    };
+    project.source = {
+      kind: "product_upload",
+      subject: "product",
+      assetKeys: [],
+      facts: [],
+    };
+    const onEdit = vi.fn();
+    render(
+      <CampaignReviewStep
+        project={project}
+        rightsConfirmed
+        quote={{ quoteId: "q1", capability: "video.cinematic", credits: 100, entitlementEligible: false, expiresAt: new Date(Date.now() + 60_000).toISOString(), breakdown: [], configurationHash: "h", pricingVersion: "test", estimateOnly: false }}
+        quoteState="ready"
+        onEdit={onEdit}
+        onGenerate={vi.fn()}
+      />,
+    );
+
+    // The new inline list summarizes each missing field with a clickable "Edit source" link.
+    const listHeading = screen.getByText(/Before you can generate/);
+    expect(listHeading).toBeVisible();
+    const phoneLabels = screen.getAllByText("Add a phone model or product name to continue.");
+    expect(phoneLabels.length).toBeGreaterThan(0);
+    expect(screen.getByRole("button", { name: "Generate campaign" })).toBeDisabled();
+
+    // Clicking the inline list's "Edit source" button jumps back to the source step
+    const missingLinks = screen.getAllByRole("button", { name: "Edit source" });
+    fireEvent.click(missingLinks[missingLinks.length - 1]!);
+    expect(onEdit).toHaveBeenCalledWith("source");
+  });
+
+  it("names the missing image specifically for image-first templates", () => {
+    const project = createDraftProject("new-york-billboard-takeover");
+    project.product = {
+      ...project.product,
+      sourceType: "upload",
+      name: "Northfield Cola",
+      images: [],
+    };
+    project.source = {
+      kind: "product_upload",
+      subject: "product",
+      assetKeys: [],
+      facts: [{ field: "name", value: "Northfield Cola", provenance: "manual" }],
+    };
+    render(
+      <CampaignReviewStep
+        project={project}
+        rightsConfirmed
+        quote={{ quoteId: "q2", capability: "video.cinematic", credits: 100, entitlementEligible: false, expiresAt: new Date(Date.now() + 60_000).toISOString(), breakdown: [], configurationHash: "h", pricingVersion: "test", estimateOnly: false }}
+        quoteState="ready"
+        onEdit={vi.fn()}
+        onGenerate={vi.fn()}
+      />,
+    );
+
+    const matches = screen.getAllByText("Upload at least one product photo to continue.");
+    expect(matches.length).toBeGreaterThan(0);
+    expect(screen.getByRole("button", { name: "Generate campaign" })).toBeDisabled();
+  });
+
+  it("names both missing source name and media together", () => {
+    const project = createDraftProject("premium-phone-reveal");
+    project.product = { ...project.product, sourceType: "upload", name: "", images: [] };
+    project.source = {
+      kind: "product_upload",
+      subject: "product",
+      assetKeys: [],
+      facts: [],
+    };
+    render(
+      <CampaignReviewStep
+        project={project}
+        rightsConfirmed
+        quote={{ quoteId: "q3", capability: "video.cinematic", credits: 100, entitlementEligible: false, expiresAt: new Date(Date.now() + 60_000).toISOString(), breakdown: [], configurationHash: "h", pricingVersion: "test", estimateOnly: false }}
+        quoteState="ready"
+        onEdit={vi.fn()}
+        onGenerate={vi.fn()}
+      />,
+    );
+
+    const phoneLabels = screen.getAllByText("Add a phone model or product name to continue.");
+    const mediaLabels = screen.getAllByText("Upload at least one product photo to continue.");
+    expect(phoneLabels.length).toBeGreaterThan(0);
+    expect(mediaLabels.length).toBeGreaterThan(0);
+  });
+
+  it("asks for a Kuwait WhatsApp number when the goal is whatsapp_orders and the number is empty", () => {
+    const project = createDraftProject("restaurant-food-hero");
+    project.goal = "whatsapp_orders";
+    project.product = {
+      ...project.product,
+      sourceType: "upload",
+      name: "Mandi Rice",
+      images: [{ id: "rice", name: "rice.jpg", url: "blob:rice", mimeType: "image/jpeg", source: "upload" }],
+    };
+    project.whatsapp = "";
+    project.source = {
+      kind: "product_upload",
+      subject: "product",
+      assetKeys: [],
+      facts: [{ field: "name", value: "Mandi Rice", provenance: "manual" }],
+    };
+    render(
+      <CampaignReviewStep
+        project={project}
+        rightsConfirmed
+        quote={{ quoteId: "q4", capability: "video.cinematic", credits: 100, entitlementEligible: false, expiresAt: new Date(Date.now() + 60_000).toISOString(), breakdown: [], configurationHash: "h", pricingVersion: "test", estimateOnly: false }}
+        quoteState="ready"
+        onEdit={vi.fn()}
+        onGenerate={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("Add a Kuwait WhatsApp number to continue.")).toBeVisible();
   });
 });

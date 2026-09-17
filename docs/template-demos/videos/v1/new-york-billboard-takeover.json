@@ -1,0 +1,49 @@
+{
+  "templateId": "new-york-billboard-takeover",
+  "recipeVersion": 1,
+  "promptVersion": "new-york-billboard-takeover-v1",
+  "model": "bytedance/seedance-2.5",
+  "source": {
+    "bucket": "movprompt",
+    "key": "templates/references/v1/new-york-billboard-takeover.png",
+    "checksum": "c0ea7efec7924d105365c5a284e6d62c6c00233cef4a29f12ed1223a88f1d8ff"
+  },
+  "objects": [
+    {
+      "bucket": "movprompt",
+      "key": "templates/v1/new-york-billboard-takeover.mp4",
+      "contentType": "video/mp4",
+      "checksum": "fe99678942e8f5bdadb064580195edfebce5b7516b451ae6641193eefce70322"
+    },
+    {
+      "bucket": "movprompt",
+      "key": "templates/v1/new-york-billboard-takeover.jpg",
+      "contentType": "image/jpeg",
+      "checksum": "f9a350d1b6179f32375943735d15c65a01b44348653806be2c5af02a743ce906"
+    }
+  ],
+  "prompt": "docs/template-demos/videos/v1/new-york-billboard-takeover-prompt.txt",
+  "providerMetadata": "artifacts/template-demos/new-york-billboard-takeover-v1-provider.json",
+  "mediaProbe": {
+    "programs": [],
+    "stream_groups": [],
+    "streams": [
+      {
+        "codec_name": "h264",
+        "width": 720,
+        "height": 1280
+      },
+      {
+        "codec_name": "aac"
+      }
+    ],
+    "format": {
+      "duration": "8.064000"
+    }
+  },
+  "manualReviewRequired": [
+    "uploaded artwork fidelity",
+    "absence of readable third-party branding",
+    "anonymous natural crowd"
+  ]
+}

@@ -7,4 +7,5 @@ export const VERIFIED_PREVIEW_TEMPLATE_IDS = [
   "premium-phone-reveal",
   "restaurant-food-hero",
   "fashion-product-showcase",
+  "new-york-billboard-takeover",
 ] as const;

@@ -57,16 +57,16 @@ const IMAGE_FIRST_TEMPLATE_IDS = new Set([
 // identity and confirmed factual copy change between customer campaigns.
 const CINEMATIC_SHOTS: Record<string, Array<{ shot: string; camera: string }>> = {
   "premium-phone-reveal": [
-    { shot: "Uploaded phone standing upright in a dark premium studio on a reflective surface, exact front and rear identity visible", camera: "slow centered push-in" },
-    { shot: "Controlled light sweep reveals the unchanged camera module, frame finish and buttons", camera: "restrained left-to-right arc" },
-    { shot: "Exact phone completes a slow partial rotation without changing proportions or screen", camera: "smooth 180-degree product orbit" },
-    { shot: "Phone settles into a clean hero composition with lower-third overlay-safe space", camera: "locked close hero frame" },
+    { shot: "Uploaded phone standing upright in a dark premium studio on a reflective surface, exact front and rear identity visible, screen as a clean neutral gradient", camera: "slow centered push-in" },
+    { shot: "Controlled light sweep reveals the unchanged camera module, frame finish and buttons, screen still a clean neutral gradient", camera: "restrained left-to-right arc" },
+    { shot: "Exact phone completes a slow partial rotation without changing proportions; screen stays an empty neutral surface throughout", camera: "smooth 180-degree product orbit" },
+    { shot: "Phone settles into a clean hero composition with lower-third overlay-safe space, screen still empty", camera: "locked close hero frame" },
   ],
   "phone-floating-ad": [
-    { shot: "Uploaded phone floats vertically against a futuristic gradient with subtle particles", camera: "gentle forward drift" },
-    { shot: "Exact device tilts to reveal its real edge, camera layout and material", camera: "controlled twenty-degree orbit" },
-    { shot: "Soft light passes over the unchanged screen and body while particles remain secondary", camera: "subtle zoom with stable horizon" },
-    { shot: "Phone returns front-readable and centered with clean end-card space", camera: "ease out and hold" },
+    { shot: "Uploaded phone floats vertically against a futuristic gradient with subtle particles, screen as a clean neutral gradient", camera: "gentle forward drift" },
+    { shot: "Exact device tilts to reveal its real edge, camera layout and material, screen still a clean neutral gradient", camera: "controlled twenty-degree orbit" },
+    { shot: "Soft light passes over the unchanged screen and body while particles remain secondary, screen still empty", camera: "subtle zoom with stable horizon" },
+    { shot: "Phone returns front-readable and centered with clean end-card space, screen still empty", camera: "ease out and hold" },
   ],
   "restaurant-food-hero": [
     { shot: "Uploaded dish appears exactly plated on a premium table against a dark restaurant background", camera: "slow macro push-in" },
@@ -111,16 +111,15 @@ const CINEMATIC_SHOTS: Record<string, Array<{ shot: string; camera: string }>> =
     { shot: "Property holds as a premium listing hero with contact-safe space", camera: "stable wide end frame" },
   ],
   "business-service-promotion": [
-    { shot: "Uploaded service artwork, app screen or business image appears centered in a modern professional studio", camera: "slow confident push-in" },
-    { shot: "Light sweep reveals the exact supplied artwork and brand marks without invented interface or claims", camera: "short precision slide" },
-    { shot: "Subtle depth layers frame the unchanged subject while leaving factual-copy safe zones", camera: "gentle ten-degree orbit" },
-    { shot: "Supplied service image settles into a clear professional end frame", camera: "locked CTA-safe hold" },
+    { shot: "Uploaded service artwork, app screen or business image appears centered in a modern professional studio with slow confident push-in", camera: "slow confident push-in" },
+    { shot: "Light sweep reveals the exact supplied artwork and brand marks without invented interface, claims, prices or any added text", camera: "short precision slide" },
+    { shot: "Subtle depth layers frame the unchanged subject while leaving factual-copy safe zones; no generated UI chrome or text", camera: "gentle ten-degree orbit" },
+    { shot: "Supplied service image settles into a clear professional end frame, artwork unchanged and CTA-safe", camera: "locked CTA-safe hold" },
   ],
   "new-york-billboard-takeover": [
-    { shot: "A busy Times Square-style New York plaza opens wide around one dominant digital billboard showing the exact uploaded brand artwork", camera: "slow elevated establishing push" },
-    { shot: "The central billboard fills more of the frame while the uploaded logo, artwork, colours, proportions and layout remain unchanged", camera: "smooth street-level push toward the screen" },
-    { shot: "A natural anonymous crowd pauses and looks toward the same billboard as its light reflects across the plaza", camera: "restrained lateral crowd parallax" },
-    { shot: "The single billboard holds as the hero with the exact uploaded artwork and clean lower-frame space for deterministic business-name and CTA overlays", camera: "locked architectural hero frame" },
+    { shot: "Wide Times Square plaza at blue hour with one large empty digital billboard glowing softly as a clean neutral gradient. No third-party signage", camera: "slow straight-on static hold" },
+    { shot: "Same plaza, same camera. Uploaded brand artwork appears as a clean rectangular insert inside the billboard at the exact same proportions, colours and layout as the upload", camera: "subtle 5% push-in" },
+    { shot: "Same locked hero, uploaded artwork on the billboard, lower 25% of the frame empty for a deterministic text overlay. Crowd as soft motion blur at the bottom, never in focus", camera: "locked" },
   ],
   "salon-booking-offer": [
     { shot: "Wide reveal of the supplied salon interior or beauty subject; warm cream, blush and champagne-gold atmosphere. No people or invented salon signage", camera: "slow straight dolly toward the reference subject" },
@@ -129,8 +128,8 @@ const CINEMATIC_SHOTS: Record<string, Array<{ shot: string; camera: string }>> =
     { shot: "Balanced hero composition of the same subject with uncluttered title-safe space for the booking invitation", camera: "settle into a stable end frame" },
   ],
   "app-service": [
-    { shot: "Hero reveal of the supplied app screenshot or service artwork on one upright smartphone; midnight-navy studio, ivory pedestal and champagne rim light. Preserve the supplied screen exactly", camera: "slow three-quarter push-in" },
-    { shot: "Closer view of the same unchanged screen and device edge; cool-blue halo and restrained glass reflections. No invented interface, button labels or features", camera: "short precision lateral slide" },
+    { shot: "Hero reveal of the supplied app screenshot or service artwork on one upright smartphone; midnight-navy studio, ivory pedestal, champagne rim light", camera: "slow three-quarter push-in" },
+    { shot: "Closer view of the same unchanged screen and device edge; cool-blue halo and restrained glass reflections", camera: "short precision lateral slide" },
     { shot: "Same device and uploaded screen, surrounded by a few subtle translucent decorative tiles with no text or claims", camera: "shallow ten-degree orbit, screen remains front-readable" },
     { shot: "Centered upright phone and identical uploaded artwork, clean negative space for the final invitation", camera: "ease out and hold a stable hero end frame" },
   ],
@@ -386,7 +385,7 @@ const SPECS: TemplateSpec[] = [
   { id: "perfume-advertisement", category: "beauty-cosmetics", name: { en: "Perfume Advertisement", ar: "إعلان عطر" }, description: { en: "A mist-led perfume reveal with exact bottle, glass, liquid and label fidelity.", ar: "إظهار سينمائي للعطر يحافظ على العبوة والزجاج والسائل والاسم." }, verticals: ["retail", "ecommerce"], goals: ["launch", "trust"], duration: 8, arc: "hero", tone: "premium", visual: "Dark reflective surface, controlled mist, precise light sweep, subtle bottle rotation and elegant close push-in", hook: { en: "Leave your signature", ar: "خل بصمتك" }, proof: { en: "A presence that remains", ar: "حضور يبقى" }, cta: { en: "Discover the scent", ar: "اكتشف العطر" }, tags: ["beauty", "perfume", "fragrance", "luxury"] },
   { id: "real-estate-property", category: "property-services", name: { en: "Real Estate Property Advertisement", ar: "إعلان عقار" }, description: { en: "A premium property listing film that never invents rooms, views or features.", ar: "فيلم عقاري راقٍ يحافظ على المكان الحقيقي من غير إضافة غرف أو مزايا." }, verticals: ["real_estate"], goals: ["announcement", "trust"], duration: 8, arc: "service", tone: "premium", visual: "Premium property listing, accurate architecture, natural daylight, subtle environmental movement and smooth architectural push", hook: { en: "A property worth seeing", ar: "عقار يستاهل تشوفه" }, proof: { en: "Shown as it is", ar: "مثل ما هو بالحقيقة" }, cta: { en: "Book a viewing", ar: "احجز معاينة" }, tags: ["real-estate", "property", "listing", "business"] },
   { id: "business-service-promotion", category: "property-services", name: { en: "Business / Service Promotional Video", ar: "فيديو ترويجي لخدمة أو نشاط" }, description: { en: "A clear professional promo using the supplied service image, app screen or business artwork.", ar: "فيديو مهني واضح يستخدم صورة الخدمة أو شاشة التطبيق أو تصميم النشاط." }, verticals: ["services"], goals: ["demonstration", "bookings"], duration: 8, arc: "service", tone: "informative", visual: "Modern professional studio, centered supplied artwork, slow push-in, restrained light sweep and clean factual-copy safe zones", hook: { en: "A simpler way forward", ar: "طريقة أبسط للخطوة الياية" }, proof: { en: "Clear service, real value", ar: "خدمة واضحة وقيمة حقيقية" }, cta: { en: "Get started", ar: "ابدأ الحين" }, tags: ["business", "service", "promotion", "professional"] },
-  { id: "new-york-billboard-takeover", category: "advertising", discoveryCategory: "advertising", name: { en: "New York Billboard Takeover", ar: "إعلان شاشة نيويورك" }, description: { en: "Place your exact brand artwork on one landmark-scale screen in a busy New York plaza.", ar: "اعرض تصميم علامتك كما هو على شاشة ضخمة في ساحة نيويورك المزدحمة." }, verticals: ["retail", "ecommerce", "services"], goals: ["announcement", "launch", "brand_story"], duration: 8, arc: "hero", tone: "premium", visual: "A photoreal Times Square-style New York plaza at blue hour, one dominant digital billboard, natural anonymous crowd movement, accurate screen perspective, cinematic city reflections and no readable unrelated advertising", hook: { en: "Own the moment", ar: "خل علامتك تكون الحدث" }, proof: { en: "Your brand, impossible to miss", ar: "علامتك ما تنطوف" }, cta: { en: "Discover the brand", ar: "اكتشف العلامة" }, compliance: ["Use only the uploaded brand artwork on the dominant billboard and preserve its exact proportions, colours, logo, layout and readable text", "Do not show third-party logos, readable unrelated advertisements, celebrities, duplicated billboards, distorted screens or invented campaign facts", "Crowd members must remain anonymous background participants and must not resemble public figures"], tags: ["advertising", "billboard", "New York", "brand", "launch"] },
+  { id: "new-york-billboard-takeover", category: "advertising", discoveryCategory: "advertising", name: { en: "New York Billboard Takeover", ar: "إعلان شاشة نيويورك" }, description: { en: "Place your exact brand artwork on one landmark-scale screen in a busy New York plaza.", ar: "اعرض تصميم علامتك كما هو على شاشة ضخمة في ساحة نيويورك المزدحمة." }, verticals: ["retail", "ecommerce", "services"], goals: ["announcement", "launch", "brand_story"], duration: 8, arc: "hero", tone: "premium", visual: "A photoreal Times Square-style New York plaza at blue hour, one dominant digital billboard, soft neutral glowing surface with no baked-in text or invented signage, natural anonymous crowd movement, accurate screen perspective and cinematic city reflections", hook: { en: "Own the moment", ar: "خل علامتك تكون الحدث" }, proof: { en: "Your brand, impossible to miss", ar: "علامتك ما تنطوف" }, cta: { en: "Discover the brand", ar: "اكتشف العلامة" }, compliance: ["Use only the uploaded brand artwork on the dominant billboard and preserve its exact proportions, colours, logo and layout. The supplied artwork is inserted into a clean glowing billboard surface; the model must not bake any additional text, prices, logos, or invented signage into the billboard.", "Do not show third-party logos, readable unrelated advertisements, celebrities, duplicated billboards, distorted screens or invented campaign facts", "Crowd members must remain anonymous background participants and must not resemble public figures"], tags: ["advertising", "billboard", "New York", "brand", "launch"] },
 ];
 
 export const CREATIVE_TEMPLATE_CATALOG: readonly CreativeTemplateRecipe[] = Object.freeze(SPECS.map(recipe));

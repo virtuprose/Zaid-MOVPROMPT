@@ -24,12 +24,11 @@ describe("beginner creator templates", () => {
     expect(PREVIEWED_CREATOR_TEMPLATES.map((template) => template.id)).toEqual(CATEGORY_PREVIEW_TEMPLATE_IDS);
   });
 
-  it("makes the three video previews and poster-only advertising recipe discoverable", () => {
-    expect(DISCOVERABLE_CREATOR_TEMPLATES).toHaveLength(CATEGORY_PREVIEW_TEMPLATE_IDS.length + 1);
-    expect(DISCOVERABLE_CREATOR_TEMPLATES.map((template) => template.id)).toEqual([
-      ...CATEGORY_PREVIEW_TEMPLATE_IDS,
-      "new-york-billboard-takeover",
-    ]);
+  it("makes the verified motion previews and poster-only advertising recipe discoverable", () => {
+    // The new-york-billboard-takeover template is now itself a verified motion preview,
+    // so the discoverable list is just the CATEGORY_PREVIEW_TEMPLATE_IDS list.
+    expect(DISCOVERABLE_CREATOR_TEMPLATES).toHaveLength(CATEGORY_PREVIEW_TEMPLATE_IDS.length);
+    expect(DISCOVERABLE_CREATOR_TEMPLATES.map((template) => template.id)).toEqual(CATEGORY_PREVIEW_TEMPLATE_IDS);
   });
 
   it("creates isolated draft scene data", () => {

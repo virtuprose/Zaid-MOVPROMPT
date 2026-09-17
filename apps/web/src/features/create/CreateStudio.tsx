@@ -834,6 +834,10 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
   };
 
   const beginManualSource = () => {
+    if (templateRequiresSourceMedia(project.templateId)) {
+      setSourceError("This template requires a real product photo. Please upload one or paste a product link instead of entering details manually.");
+      return;
+    }
     const source = normalizeCampaignSource({
       kind: "service_manual",
       subject: sourceSubject,
@@ -1869,6 +1873,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
                 busy={sourceBusy}
                 error={sourceError}
                 arabic={arabicUi}
+                templateId={project.templateId}
                 onChoiceChange={chooseSourceChoice}
                 onSubjectChange={chooseSourceSubject}
                 onUrlChange={setProductUrl}

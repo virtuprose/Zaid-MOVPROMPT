@@ -54,12 +54,12 @@ describe("TemplateGrid", () => {
     );
 
     expect(view.container.querySelectorAll("video")).toHaveLength(0);
-    expect(screen.getAllByText("Video preview coming later")).toHaveLength(1);
+    expect(screen.queryAllByText("Video preview coming later")).toHaveLength(0);
     expect(screen.getAllByText("Motion preview")).toHaveLength(CATEGORY_PREVIEW_TEMPLATE_IDS.length);
     expect(view.container.querySelectorAll(".creator-template-media[data-media-tone]")).toHaveLength(DISCOVERABLE_CREATOR_TEMPLATES.length);
     expect(view.container.querySelectorAll<HTMLImageElement>(".creator-template-media img")[0]?.style.objectPosition).toBeTruthy();
     expect(screen.getAllByRole("button", { name: /Play .* preview/ })).toHaveLength(CATEGORY_PREVIEW_TEMPLATE_IDS.length);
-    expect(screen.getAllByRole("link", { name: /View .* details/ })).toHaveLength(1);
+    expect(screen.queryAllByRole("link", { name: /View .* details/ })).toHaveLength(0);
     view.unmount();
   });
 

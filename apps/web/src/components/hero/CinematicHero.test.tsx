@@ -47,10 +47,10 @@ describe("CinematicHero scrollable campaign galleries", () => {
     view.unmount();
   });
 
-  it("shows only the three verified previews", () => {
+  it("shows only the four verified previews", () => {
     const view = renderHero("en");
     const ready = screen.getByRole("region", { name: "Ready previews" });
-    expect(within(ready).getAllByRole("button", { name: /Play .* preview/ })).toHaveLength(3);
+    expect(within(ready).getAllByRole("button", { name: /Play .* preview/ })).toHaveLength(4);
     expect(screen.queryByRole("region", { name: "More campaign directions" })).not.toBeInTheDocument();
     expect(screen.queryByRole("region", { name: "Selected direction" })).not.toBeInTheDocument();
     view.unmount();

@@ -2,6 +2,7 @@ import { useId, useRef, type KeyboardEvent, type MutableRefObject } from "react"
 import { FileUp, Globe2, Link2, Loader2, PencilLine, X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { templateRequiresSourceMedia } from "./templates";
 
 export type SourceChoice = "product_link" | "business_link" | "upload" | "manual";
 export type SourceSubject = "product" | "service";
@@ -13,6 +14,8 @@ type SourceChoiceStepProps = {
   busy?: boolean;
   error?: string;
   arabic?: boolean;
+  /** When set, the manual option is disabled for templates that require a primary reference image. */
+  templateId?: string | null;
   onChoiceChange: (choice: SourceChoice) => void;
   onSubjectChange: (subject: SourceSubject) => void;
   onUrlChange: (value: string) => void;
@@ -118,6 +121,7 @@ export function SourceChoiceStep({
   busy = false,
   error,
   arabic = false,
+  templateId,
   onChoiceChange,
   onSubjectChange,
   onUrlChange,
@@ -131,6 +135,7 @@ export function SourceChoiceStep({
 }: SourceChoiceStepProps) {
   const sourceChoiceRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const subjectRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const manualDisabled = templateId != null && templateRequiresSourceMedia(templateId);
   const isLink = value === "product_link" || value === "business_link";
   const linkLabel = value === "business_link"
     ? text(arabic, "Business or service link", "رابط النشاط أو الخدمة")
@@ -157,22 +162,40 @@ export function SourceChoiceStep({
           {SOURCE_CHOICES.map((choice) => {
             const Icon = choice.icon;
             const selected = value === choice.value;
+            const isManualChoice = choice.value === "manual";
+            const disabled = isManualChoice && manualDisabled;
             return (
               <button
                 key={choice.value}
                 ref={(node) => { sourceChoiceRefs.current[SOURCE_CHOICES.indexOf(choice)] = node; }}
-                className={cn("creator-source-choice-card", selected && "is-selected")}
+                className={cn("creator-source-choice-card", selected && "is-selected", disabled && "is-disabled")}
                 type="button"
                 role="radio"
                 aria-checked={selected}
+                aria-disabled={disabled || undefined}
                 tabIndex={selected ? 0 : -1}
-                onClick={() => onChoiceChange(choice.value)}
-                onKeyDown={(event) => selectWithRadioKeys(event, SOURCE_CHOICES.map((item) => item.value), value, sourceChoiceRefs, onChoiceChange)}
+                onClick={() => {
+                  if (disabled) return;
+                  onChoiceChange(choice.value);
+                }}
+                onKeyDown={(event) => {
+                  if (disabled) return;
+                  selectWithRadioKeys(event, SOURCE_CHOICES.map((item) => item.value), value, sourceChoiceRefs, onChoiceChange);
+                }}
               >
                 <span className="creator-source-choice-icon"><Icon aria-hidden="true" /></span>
                 <span className="creator-source-choice-copy">
                   <strong>{text(arabic, choice.label, choice.labelAr)}</strong>
                   <span>{text(arabic, choice.description, choice.descriptionAr)}</span>
+                  {disabled && (
+                    <small className="creator-source-choice-note">
+                      {text(
+                        arabic,
+                        "Not available for this template — the model needs a real photo to use.",
+                        "غير متاح لهذا القالب — يحتاج النموذج صورة حقيقية.",
+                      )}
+                    </small>
+                  )}
                 </span>
               </button>
             );
