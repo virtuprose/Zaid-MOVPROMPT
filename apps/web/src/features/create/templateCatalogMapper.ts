@@ -1,10 +1,10 @@
 import type { PublicTemplate } from "@movprompt/contracts";
 
-import { CREATOR_TEMPLATES } from "./templates";
+import { getCreatorTemplate } from "./templates";
 import type { CreatorTemplate } from "./types";
 
 export function creatorTemplateFromCatalog(template: PublicTemplate): CreatorTemplate {
-  const local = CREATOR_TEMPLATES.find((item) => item.id === template.slug || item.id === template.id) ?? CREATOR_TEMPLATES[0]!;
+  const local = getCreatorTemplate(template.slug || template.id);
   return {
     ...local,
     // Browser recipes and create URLs use slugs. MongoDB IDs are resolved
@@ -12,7 +12,8 @@ export function creatorTemplateFromCatalog(template: PublicTemplate): CreatorTem
     id: template.slug,
     name: template.name.en,
     nameAr: template.name.ar,
-    eyebrow: template.category,
+    eyebrow: template.category.replace(/-/g, " "),
+    discoveryCategory: template.discoveryCategory,
     description: template.description.en,
     descriptionAr: template.description.ar,
     bestFor: template.outcome,

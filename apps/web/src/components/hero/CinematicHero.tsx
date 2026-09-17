@@ -18,7 +18,7 @@ import { HeroTopNav } from "./HeroTopNav";
 import { Seo } from "@/components/Seo";
 import { useTheme } from "@/components/ThemeProvider";
 import { templateGoalLabel } from "@/features/create/templateMedia";
-import { CREATOR_TEMPLATES } from "@/features/create/templates";
+import { PREVIEWED_CREATOR_TEMPLATES } from "@/features/create/templates";
 import type { CreatorTemplate } from "@/features/create/types";
 import { TemplatePreviewDialog } from "@/features/create/TemplatePreviewDialog";
 import { useLanguage } from "@/i18n/LanguageContext";
@@ -26,7 +26,7 @@ import { isFeatureEnabled } from "@/config/features";
 import logoMark from "@/assets/logo-mark-white.svg";
 import "./cinematic-hero.css";
 
-type TemplateCategory = "All" | "Shops" | "Ecommerce" | "Salons" | "Clinics";
+type TemplateCategory = "All" | "Mobile / Electronics" | "Food / Restaurants" | "Clothing / Fashion" | "Beauty / Cosmetics" | "Real Estate / Services";
 type TemplateSort = "recommended" | "duration";
 
 const heroReels = [
@@ -49,14 +49,19 @@ const footerFrames = [
   { label: "Lifestyle", image: "/homepage/hero-lifestyle.png" },
 ] as const;
 
-const categories: TemplateCategory[] = ["All", "Shops", "Ecommerce", "Salons", "Clinics"];
-
-const categoryVertical: Record<Exclude<TemplateCategory, "All">, "retail" | "ecommerce" | "salon" | "clinic"> = {
-  Shops: "retail",
-  Ecommerce: "ecommerce",
-  Salons: "salon",
-  Clinics: "clinic",
+const categoryRecipe: Record<Exclude<TemplateCategory, "All">, string> = {
+  "Mobile / Electronics": "mobile electronics",
+  "Food / Restaurants": "food restaurants",
+  "Clothing / Fashion": "clothing fashion",
+  "Beauty / Cosmetics": "beauty cosmetics",
+  "Real Estate / Services": "property services",
 };
+
+const categories: TemplateCategory[] = [
+  "All",
+  ...(["Mobile / Electronics", "Food / Restaurants", "Clothing / Fashion", "Beauty / Cosmetics", "Real Estate / Services"] as const)
+    .filter((category) => PREVIEWED_CREATOR_TEMPLATES.some((template) => template.eyebrow === categoryRecipe[category])),
+];
 
 const formatTemplateCategory = (value: string) => value
   .split("-")
@@ -173,13 +178,13 @@ export const CinematicHero = () => {
   const [query, setQuery] = useState("");
   const [visibleTemplateCount, setVisibleTemplateCount] = useState(13);
   const [templateSort, setTemplateSort] = useState<TemplateSort>("recommended");
-  const [selectedTemplate, setSelectedTemplate] = useState(CREATOR_TEMPLATES[0]!.id);
+  const [selectedTemplate, setSelectedTemplate] = useState(PREVIEWED_CREATOR_TEMPLATES[0]!.id);
   const [activeCampaignFrame, setActiveCampaignFrame] = useState("Hero film");
 
   const matchingTemplates = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
-    const matches = CREATOR_TEMPLATES.filter((template) => {
-      const matchesCategory = category === "All" || template.verticals.includes(categoryVertical[category]);
+    const matches = PREVIEWED_CREATOR_TEMPLATES.filter((template) => {
+      const matchesCategory = category === "All" || template.eyebrow === categoryRecipe[category];
       const haystack = [template.name, template.nameAr, template.eyebrow, template.description, template.descriptionAr, template.bestFor, ...template.tags]
         .join(" ")
         .toLocaleLowerCase();
@@ -354,7 +359,7 @@ export const CinematicHero = () => {
                 <h2 id="templates-title">Choose the result, then make it yours.</h2>
                 <p>Start with a format built for the way people watch, shop and share. MovPrompt handles the technical decisions.</p>
               </div>
-              <Link to="/templates">View all {CREATOR_TEMPLATES.length} templates <ArrowRight aria-hidden="true" /></Link>
+              <Link to="/templates">View all {PREVIEWED_CREATOR_TEMPLATES.length} templates <ArrowRight aria-hidden="true" /></Link>
             </div>
 
             <div id="template-browser" className="mp-template-toolbar">
@@ -384,7 +389,7 @@ export const CinematicHero = () => {
             </div>
 
             <p className="mp-template-count" aria-live="polite">
-              Showing {visibleTemplates.length} of {matchingTemplates.length} matching templates, {CREATOR_TEMPLATES.length} total
+              Showing {visibleTemplates.length} of {matchingTemplates.length} matching templates, {PREVIEWED_CREATOR_TEMPLATES.length} total
             </p>
 
             {visibleTemplates.length ? (

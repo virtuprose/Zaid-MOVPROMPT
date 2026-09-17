@@ -1,6 +1,14 @@
 import { z } from "zod";
 import { CampaignGoalSchema } from "@movprompt/contracts";
 
+const TemplateDiscoveryCategorySchema = z.enum([
+  "electronics",
+  "food",
+  "ecommerce",
+  "advertising",
+  "other",
+]);
+
 export const ENGINE_VERSION = "gcc-campaign-engine-2026.09-r2" as const;
 
 export const StoryArcSchema = z.enum([
@@ -67,10 +75,11 @@ export const CreativeTemplateRecipeSchema = z
     slug: z.string().min(1).max(120),
     versionNumber: z.number().int().positive(),
     category: z.string().min(1).max(80),
+    discoveryCategory: TemplateDiscoveryCategorySchema,
     localizedName: LocalizedCopySchema,
     localizedDescription: LocalizedCopySchema,
     outcome: z.string().min(1).max(240),
-    verticals: z.array(z.enum(["salon", "clinic", "retail", "ecommerce"])).min(1),
+    verticals: z.array(z.enum(["salon", "clinic", "retail", "ecommerce", "real_estate", "services"])).min(1),
     goals: z.array(CampaignGoalSchema).min(1),
     durationSeconds: z.number().int().min(3).max(60),
     supportedLanguages: z.array(z.enum(["ar", "en", "bilingual"])).min(1),
@@ -106,7 +115,7 @@ export const CreativeBriefSchema = z
     arabicDialect: z.literal("kuwaiti").nullable(),
     dialectRegister: DialectRegisterSchema,
     tone: CampaignToneSchema,
-    vertical: z.enum(["salon", "clinic", "retail", "ecommerce"]),
+    vertical: z.enum(["salon", "clinic", "retail", "ecommerce", "real_estate", "services"]),
     goal: CampaignGoalSchema,
     product: z
       .object({

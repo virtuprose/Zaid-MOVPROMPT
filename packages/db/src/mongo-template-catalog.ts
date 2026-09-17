@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import type { CreativeTemplateRecipe } from "@movprompt/creative-engine";
+import { CATEGORY_PREVIEW_TEMPLATE_IDS, type CreativeTemplateRecipe } from "@movprompt/creative-engine";
 import type { MongoDatabase } from "./mongo-client.js";
 import { COLLECTIONS } from "./mongo-client.js";
 
@@ -66,8 +66,10 @@ export function mongoTemplateCatalogDocuments(catalog: readonly CreativeTemplate
       supportedRatios: template.supportedRatios,
       supportedMarkets: template.supportedMarkets,
       durationSeconds: template.durationSeconds,
-      previewObjectKey: null,
-      posterObjectKey: null,
+      previewObjectKey: (CATEGORY_PREVIEW_TEMPLATE_IDS as readonly string[]).includes(template.id)
+        ? `templates/v${template.versionNumber}/${template.id}.mp4`
+        : null,
+      posterObjectKey: `templates/v${template.versionNumber}/${template.id}.jpg`,
       publishedAt: now,
       createdAt: now,
       updatedAt: now,
@@ -78,6 +80,7 @@ export function mongoTemplateCatalogDocuments(catalog: readonly CreativeTemplate
     id: stableObjectId("movprompt-template", template.id),
     slug: template.slug,
     category: template.category,
+    discoveryCategory: template.discoveryCategory,
     publishingState: "published",
     currentPublishedVersionId: versionByTemplate.get(template.id)!.id,
     createdAt: now,
@@ -112,11 +115,13 @@ export async function ensureMongoTemplateCatalog(
     })),
   );
   if (options.prune) {
-    await database.collection(COLLECTIONS.videoTemplateVersions).deleteMany({
-      id: { $nin: documents.versions.map((version) => version.id) },
-    });
-    await database.collection(COLLECTIONS.videoTemplates).deleteMany({
+    // Historical project versions keep pointing at immutable template versions.
+    // Removing a recipe from the launch catalog therefore archives its catalog
+    // entry while retaining both the entry and every version document.
+    await database.collection(COLLECTIONS.videoTemplates).updateMany({
       id: { $nin: documents.templates.map((template) => template.id) },
+    }, {
+      $set: { publishingState: "archived", updatedAt: new Date() },
     });
   }
 }

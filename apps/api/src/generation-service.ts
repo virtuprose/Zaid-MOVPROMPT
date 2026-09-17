@@ -20,6 +20,7 @@ import {
   type CapabilityRegistry,
 } from "@movprompt/providers";
 import { assertOwnedProjectKey } from "@movprompt/storage";
+import { LAUNCH_TEMPLATE_IDS } from "@movprompt/creative-engine";
 
 import {
   CampaignEligibilityError,
@@ -917,8 +918,8 @@ export function createGenerationApiService(options: GenerationApiServiceOptions)
         ?? await publishedTemplate(options.repository, version.templateVersionId);
       if (guestOwner) {
         const brief = objectValue(objectValue(version.configuration.generation)?.creativeBrief);
-        if (version.mode !== "template" || !["luxury-product-reveal", "whatsapp-sales-ad", "food-beverage", "app-service", "salon-booking-offer"].includes(stringValue(brief?.templateId))) {
-          throw new GenerationApplicationError("unapproved_capability", "Guests can generate only the five launch templates.");
+        if (version.mode !== "template" || !LAUNCH_TEMPLATE_IDS.includes(stringValue(brief?.templateId) as (typeof LAUNCH_TEMPLATE_IDS)[number])) {
+          throw new GenerationApplicationError("unapproved_capability", "Guests can generate only published launch templates.");
         }
       }
       const quote = await options.repository.findOwnedQuote(input.userId, input.quoteId);

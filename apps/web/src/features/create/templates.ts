@@ -1,17 +1,18 @@
-import { LAUNCH_CREATIVE_TEMPLATE_CATALOG } from "@movprompt/creative-engine";
+import { CREATIVE_TEMPLATE_CATALOG, LAUNCH_CREATIVE_TEMPLATE_CATALOG, type CreativeTemplateRecipe } from "@movprompt/creative-engine";
 
 import { templateMediaFor } from "./templateMedia";
 import { getCampaignGoalOption, type CreatorAsset, type CreatorProject, type CreatorTemplate } from "./types";
 
 const ACCENTS = ["#c99946", "#77a989", "#d49737", "#b78452", "#a68b69", "#d1763d", "#c08a86", "#8d796a", "#6f8fa8", "#7a88b5"] as const;
 
-export const CREATOR_TEMPLATES: CreatorTemplate[] = LAUNCH_CREATIVE_TEMPLATE_CATALOG.map((template, index) => {
+function creatorTemplateFromRecipe(template: CreativeTemplateRecipe, index: number): CreatorTemplate {
   const primaryGoal = template.goals[0] ?? "launch";
   return {
     id: template.id,
     name: template.localizedName.en,
     nameAr: template.localizedName.ar,
     eyebrow: template.category.replace(/-/g, " "),
+    discoveryCategory: template.discoveryCategory,
     description: template.localizedDescription.en,
     descriptionAr: template.localizedDescription.ar,
     bestFor: template.tags.join(", "),
@@ -44,7 +45,18 @@ export const CREATOR_TEMPLATES: CreatorTemplate[] = LAUNCH_CREATIVE_TEMPLATE_CAT
       continuityAnchor: scene.continuityAnchor,
     })),
   };
-});
+}
+
+export const CREATOR_TEMPLATES: CreatorTemplate[] = LAUNCH_CREATIVE_TEMPLATE_CATALOG.map(creatorTemplateFromRecipe);
+/** Public selection surfaces only show templates with a verified playable preview. */
+export const PREVIEWED_CREATOR_TEMPLATES: CreatorTemplate[] = CREATOR_TEMPLATES.filter(
+  (template) => Boolean(template.previewVideo),
+);
+/** Keep the funded previews plus the explicitly approved poster-only advertising recipe discoverable. */
+export const DISCOVERABLE_CREATOR_TEMPLATES: CreatorTemplate[] = CREATOR_TEMPLATES.filter(
+  (template) => Boolean(template.previewVideo) || template.id === "new-york-billboard-takeover",
+);
+const INTERNAL_CREATOR_TEMPLATES: CreatorTemplate[] = CREATIVE_TEMPLATE_CATALOG.map(creatorTemplateFromRecipe);
 
 const REFERENCE_REQUIRED_INPUTS = new Set([
   "primary_reference",
@@ -104,7 +116,9 @@ export const SAMPLE_PRODUCT = {
 };
 
 export function getCreatorTemplate(id: string | null | undefined) {
-  return CREATOR_TEMPLATES.find((template) => template.id === id) ?? CREATOR_TEMPLATES[0]!;
+  return CREATOR_TEMPLATES.find((template) => template.id === id)
+    ?? INTERNAL_CREATOR_TEMPLATES.find((template) => template.id === id)
+    ?? CREATOR_TEMPLATES[0]!;
 }
 
 export function createDraftProject(templateId = CREATOR_TEMPLATES[0]!.id): CreatorProject {
@@ -112,7 +126,7 @@ export function createDraftProject(templateId = CREATOR_TEMPLATES[0]!.id): Creat
   const now = new Date().toISOString();
   const vertical = template.verticals[0] ?? "ecommerce";
   const goal = template.goals[0] ?? "launch";
-  const serviceTemplate = vertical === "salon" || vertical === "clinic" || template.id === "app-service";
+  const serviceTemplate = vertical === "salon" || vertical === "clinic" || vertical === "real_estate" || vertical === "services";
   const arabicFirst = template.tags.some((tag) => /arabic|kuwait|ramadan|national/iu.test(tag));
   return {
     id: crypto.randomUUID(),

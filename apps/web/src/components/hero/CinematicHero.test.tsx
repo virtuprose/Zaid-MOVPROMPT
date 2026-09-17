@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import { HelmetProvider } from "react-helmet-async";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it } from "vitest";
@@ -47,15 +47,12 @@ describe("CinematicHero scrollable campaign galleries", () => {
     view.unmount();
   });
 
-  it("leads the homepage catalog with all verified playable previews", () => {
+  it("shows only the three verified previews", () => {
     const view = renderHero("en");
     const ready = screen.getByRole("region", { name: "Ready previews" });
+    expect(within(ready).getAllByRole("button", { name: /Play .* preview/ })).toHaveLength(3);
     expect(screen.queryByRole("region", { name: "More campaign directions" })).not.toBeInTheDocument();
-
-    const previewButtons = within(ready).getAllByRole("button", { name: /Play .* preview/ });
-    expect(previewButtons).toHaveLength(5);
-    fireEvent.click(previewButtons[0]!);
-    expect(screen.getByRole("dialog").querySelector("video")).toHaveAttribute("controls");
+    expect(screen.queryByRole("region", { name: "Selected direction" })).not.toBeInTheDocument();
     view.unmount();
   });
 
@@ -64,6 +61,7 @@ describe("CinematicHero scrollable campaign galleries", () => {
 
     await waitFor(() => {
       expect(screen.getByRole("region", { name: "معاينات جاهزة" })).toBeVisible();
+      expect(screen.queryByRole("region", { name: "الاتجاه المحدد" })).not.toBeInTheDocument();
       expect(screen.queryByRole("region", { name: "اتجاهات حملات إضافية" })).not.toBeInTheDocument();
     });
     view.unmount();

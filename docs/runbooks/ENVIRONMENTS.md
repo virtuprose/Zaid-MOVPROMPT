@@ -67,14 +67,12 @@ from it, for example
 `${BETTER_AUTH_URL}/api/auth/callback/apple`. Register exact staging and
 production callbacks in separate OAuth applications.
 
-`AUTH_REQUIRE_EMAIL_VERIFICATION` and
-`VITE_AUTH_REQUIRE_EMAIL_VERIFICATION` are one policy exposed to the server
-and browser respectively, so they must always match. Local private-beta
-development may set both to `false`: email/password sign-up creates a session
-immediately, restores the exact campaign and exposes a manual verification
-action in Account settings. Staging and production keep both values `true` so
-starter-render eligibility and sign-in remain verification-gated. Changing
-this policy requires rebuilding the web bundle as well as restarting the API.
+The server owns the deferred first-campaign verification policy.
+`VITE_AUTH_REQUIRE_EMAIL_VERIFICATION=false` mirrors that policy in every web
+bundle. The obsolete `AUTH_REQUIRE_EMAIL_VERIFICATION` variable must remain
+absent because the API rejects it instead of allowing the browser and server to
+drift. A future policy change must update the server contract and rebuild the
+web bundle together.
 
 All public UI feature flags are explicit in the staging and production build
 contracts. `VITE_FEATURE_ADVANCED_MODE` must match `FEATURE_ADVANCED_MODE`, and

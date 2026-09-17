@@ -42,7 +42,7 @@ import { TemplateGrid } from "./TemplateGrid";
 import { OutcomeStep } from "./OutcomeStep";
 import { TemplateRecommendations } from "./TemplateRecommendationCards";
 import type { RecommendationSelection } from "./templateRecommendations";
-import { CREATOR_TEMPLATES, createDraftProject, getCreatorTemplate, hasCreatorImageReference, isCreatorImageReference, templateRequiresSourceMedia } from "./templates";
+import { PREVIEWED_CREATOR_TEMPLATES, createDraftProject, getCreatorTemplate, hasCreatorImageReference, isCreatorImageReference, templateRequiresSourceMedia } from "./templates";
 import {
   completeLocalProductPreview,
   hasRealCreatorVideo,
@@ -261,6 +261,11 @@ function sourceChoiceForProject(project: CreatorProject): SourceChoice {
 
 function sourceSubjectForProject(project: CreatorProject): SourceSubject {
   return campaignSourceForProject(project).subject;
+}
+
+function verticalForSubject(project: CreatorProject, subject: SourceSubject): CreatorProject["vertical"] {
+  if (subject === "product") return ["retail", "ecommerce"].includes(project.vertical) ? project.vertical : "ecommerce";
+  return ["salon", "clinic", "real_estate", "services"].includes(project.vertical) ? project.vertical : "services";
 }
 
 function productSourceTypeFor(source: CampaignSource): CreatorProject["product"]["sourceType"] {
@@ -767,7 +772,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
     const nextTemplate = getCreatorTemplate(templateId);
     const nextVertical = nextTemplate.verticals[0] ?? project.vertical;
     const nextGoal = nextTemplate.goals[0] ?? project.goal;
-    const serviceTemplate = nextVertical === "salon" || nextVertical === "clinic" || templateId === "app-service";
+    const serviceTemplate = ["salon", "clinic", "real_estate", "services"].includes(nextVertical);
     const preserveConfirmedCampaign = Boolean(project.product.name || project.product.images.length);
     const preservePurpose = preserveConfirmedCampaign && nextTemplate.goals.includes(project.goal);
     updateProjectSource({
@@ -836,7 +841,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
       facts: [],
     });
     updateProjectSource(projectWithSource(project, source, {
-      vertical: sourceSubject === "service" ? "salon" : "ecommerce",
+      vertical: verticalForSubject(project, sourceSubject),
     }));
     setStep("facts");
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -948,7 +953,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
       });
       updateProjectSource(projectWithSource(project, source, {
         product: { ...project.product, sourceType: "upload", sourceUrl: "", images },
-        vertical: sourceSubject === "service" ? "salon" : "ecommerce",
+        vertical: verticalForSubject(project, sourceSubject),
       }));
       setStep("facts");
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -1831,7 +1836,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
               }}
             />
             <TemplateRecommendations
-              templates={CREATOR_TEMPLATES}
+              templates={PREVIEWED_CREATOR_TEMPLATES}
               goal={project.goal}
               vertical={project.vertical}
               language={project.language}
@@ -1892,6 +1897,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
             <section className="creator-panel creator-panel-pad">
               <FactReviewStep
                 source={campaignSourceForProject(project)}
+                templateId={project.templateId}
                 goal={project.goal}
                 arabic={arabicUi}
                 hidePricing={developmentFreeGeneration}

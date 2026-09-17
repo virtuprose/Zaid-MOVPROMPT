@@ -1,4 +1,4 @@
-import type { BusinessVertical, CampaignGoal, CampaignPresenter, CampaignSource, PresenterMode } from "@movprompt/contracts";
+import type { BusinessVertical, CampaignGoal, CampaignPresenter, CampaignSource, PresenterMode, TemplateDiscoveryCategory } from "@movprompt/contracts";
 
 export type CreatorLanguage = "en" | "ar" | "bilingual";
 export type CreatorMarket = "KW" | "SA" | "AE" | "QA" | "BH" | "OM";
@@ -54,6 +54,7 @@ export type CreatorTemplate = {
   name: string;
   nameAr: string;
   eyebrow: string;
+  discoveryCategory: TemplateDiscoveryCategory;
   description: string;
   descriptionAr: string;
   bestFor: string;

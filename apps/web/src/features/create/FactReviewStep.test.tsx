@@ -77,7 +77,7 @@ describe("FactReviewStep", () => {
     expect(screen.getByLabelText(/Business or service name/)).toHaveValue("Noura Salon");
     expect(screen.getByLabelText(/Booking link/)).toHaveValue("");
     expect(screen.getByLabelText(/Booking link/)).toHaveAttribute("aria-required", "true");
-    expect(screen.getByLabelText("Description")).not.toHaveAttribute("aria-required", "true");
+    expect(screen.getByLabelText("Description or tagline")).not.toHaveAttribute("aria-required", "true");
     expect(screen.queryByText("Not added")).toBeNull();
     expect(screen.queryByText(/not added to this campaign/)).toBeNull();
     expect(screen.getByText("Real footage")).toBeVisible();

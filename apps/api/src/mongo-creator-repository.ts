@@ -33,12 +33,15 @@ function templatePublic(row: Document): PublicTemplate {
   const recipe = (row.recipe ?? {}) as JsonObject;
   return {
     id: String(row.templateId), slug: String(row.slug), category: String(row.category),
+    discoveryCategory: ["electronics", "food", "ecommerce", "advertising", "other"].includes(String(row.discoveryCategory))
+      ? row.discoveryCategory as PublicTemplate["discoveryCategory"]
+      : "other",
     versionId: String(row.id), versionNumber: Number(row.versionNumber),
     name: localized((row.localizedName ?? {}) as Record<string, string>, String(row.slug)),
     description: localized((row.localizedDescription ?? {}) as Record<string, string>, String(row.slug)),
     outcome: typeof recipe.outcome === "string" && recipe.outcome.trim() ? recipe.outcome : "Create a clear campaign outcome",
-    verticals: strings(recipe.verticals).filter((item): item is BusinessVertical => ["salon", "clinic", "retail", "ecommerce"].includes(item)),
-    goals: strings(recipe.goals).filter((item): item is CampaignGoal => ["whatsapp_orders", "bookings", "launch", "offer", "demonstration", "trust"].includes(item)),
+    verticals: strings(recipe.verticals).filter((item): item is BusinessVertical => ["salon", "clinic", "retail", "ecommerce", "real_estate", "services"].includes(item)),
+    goals: strings(recipe.goals).filter((item): item is CampaignGoal => ["whatsapp_orders", "bookings", "launch", "offer", "demonstration", "education", "announcement", "trust", "brand_story"].includes(item)),
     durationSeconds: Number(row.durationSeconds),
     supportedLanguages: strings(row.supportedLanguages).filter((item): item is "ar" | "en" | "bilingual" => ["ar", "en", "bilingual"].includes(item)),
     supportedRatios: strings(row.supportedRatios).filter((item): item is "9:16" | "1:1" | "4:5" | "16:9" => ["9:16", "1:1", "4:5", "16:9"].includes(item)),
@@ -158,7 +161,7 @@ export function createMongoCreatorRepository(database: MongoDatabase): CreatorRe
       const published = await templates.find({ publishingState: "published" }).sort({ category: 1, slug: 1 }).toArray();
       const rows = (await Promise.all(published.map(async (template) => {
         const version = await templateVersions.findOne({ id: template.currentPublishedVersionId, publishedAt: { $ne: null } });
-        return version ? { ...version, templateId: template.id, slug: template.slug, category: template.category } : null;
+        return version ? { ...version, templateId: template.id, slug: template.slug, category: template.category, discoveryCategory: template.discoveryCategory } : null;
       }))).filter(Boolean) as Document[];
       const mapped = rows.map(templatePublic);
       return mapped.filter((template) => (!filters.vertical || template.verticals.includes(filters.vertical)) && (!filters.goal || template.goals.includes(filters.goal)) && (!filters.language || template.supportedLanguages.includes(filters.language)));

@@ -24,11 +24,13 @@ FROM dependencies AS build
 COPY apps/api apps/api
 COPY packages/auth packages/auth
 COPY packages/contracts packages/contracts
+COPY packages/creative-engine packages/creative-engine
 COPY packages/db packages/db
 COPY packages/providers packages/providers
 COPY packages/storage packages/storage
 
 RUN bun run --filter @movprompt/contracts build \
+  && bun run --filter @movprompt/creative-engine build \
   && bun run --filter @movprompt/db build \
   && bun run --filter @movprompt/auth build \
   && bun run --filter @movprompt/providers build \
@@ -44,7 +46,7 @@ WORKDIR /workspace
 COPY --from=build --chown=node:node /workspace /workspace
 
 ENV NODE_ENV=production
-ENV API_PORT=3000
+ENV PORT=3000
 
 EXPOSE 3000
 

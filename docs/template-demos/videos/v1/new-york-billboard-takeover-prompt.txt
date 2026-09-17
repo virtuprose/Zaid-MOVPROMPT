@@ -1,0 +1,74 @@
+MOVPROMPT PREMIUM CAMPAIGN ENGINE · gcc-campaign-engine-2026.09-r2
+
+FIRST QUALITY PASS: prioritise product identity, physical realism and shot-to-shot continuity over decorative complexity.
+
+NON-NEGOTIABLE PRODUCT AND BUSINESS TRUTH
+
+Subject name: MovPrompt brand artwork
+Brand: MovPrompt
+Confirmed description: Neutral demonstration artwork for the New York billboard template
+Confirmed call to action: Create your campaign
+
+OFFER AND CONTACT FINISHING: preserve the confirmed offer, booking link and WhatsApp number exactly. Leave a clear lower end-card area for the finishing service to display supplied facts and the confirmed call to action. Never display an empty optional field, placeholder or invented destination. Do not bake these texts into AI footage; the finishing service adds accurate text afterwards.
+
+REFERENCE POLICY
+
+Treat supplied product references as an exact digital identity lock. Preserve silhouette, packaging geometry, label placement, logo, colour and material. Treat people and locations as continuity references only when explicitly supplied.
+
+Preserve the exact uploaded artwork, logo, proportions, colours, layout and readable text on one dominant billboard. Never replace, crop, distort, duplicate or redesign it; exclude third-party logos and readable unrelated advertisements.
+
+CAMPAIGN DIRECTION
+
+Pinned template prompt: new-york-billboard-takeover-v1; recipe 1
+
+A photoreal Times Square-style New York plaza at blue hour, one dominant digital billboard, natural anonymous crowd movement, accurate screen perspective, cinematic city reflections and no readable unrelated advertising
+
+A photoreal Times Square-style New York plaza at blue hour, one dominant digital billboard, natural anonymous crowd movement, accurate screen perspective, cinematic city reflections and no readable unrelated advertising
+
+Tone: premium. Market: Kuwait. Format: conversion-ready social campaign.
+
+SHOT PLAN
+
+SHOT 1 · 0.0s–2.0s · Signature reveal
+Purpose: Stop the scroll
+Visual action: A photoreal Times Square-style New York plaza at blue hour, one dominant digital billboard, natural anonymous crowd movement, accurate screen perspective, cinematic city reflections and no readable unrelated advertising. A busy Times Square-style New York plaza opens wide around one dominant digital billboard showing the exact uploaded brand artwork. Keep the confirmed subject visually dominant and leave intentional overlay-safe negative space.
+Framing: A busy Times Square-style New York plaza opens wide around one dominant digital billboard showing the exact uploaded brand artwork. Camera: slow elevated establishing push. Lighting: controlled key, soft fill, precise rim separation and rich but natural contrast.
+Continuity: Preserve the exact subject identity, environment geography, wardrobe, props, light direction and colour grade from the previous shot.
+Approved copy context (do not speak or render as text): Own the moment
+Keep clean negative space for deterministic text overlays; render no text inside the generated footage.
+
+SHOT 2 · 2.0s–4.0s · Material truth
+Purpose: Build desire
+Visual action: A photoreal Times Square-style New York plaza at blue hour, one dominant digital billboard, natural anonymous crowd movement, accurate screen perspective, cinematic city reflections and no readable unrelated advertising. The central billboard fills more of the frame while the uploaded logo, artwork, colours, proportions and layout remain unchanged. Keep the confirmed subject visually dominant and leave intentional overlay-safe negative space.
+Framing: The central billboard fills more of the frame while the uploaded logo, artwork, colours, proportions and layout remain unchanged. Camera: smooth street-level push toward the screen. Lighting: controlled key, soft fill, precise rim separation and rich but natural contrast.
+Continuity: Preserve the exact subject identity, environment geography, wardrobe, props, light direction and colour grade from the previous shot.
+Approved copy context (do not speak or render as text): Your brand, impossible to miss
+Keep clean negative space for deterministic text overlays; render no text inside the generated footage.
+
+SHOT 3 · 4.0s–6.0s · Context moment
+Purpose: Make it relevant
+Visual action: A photoreal Times Square-style New York plaza at blue hour, one dominant digital billboard, natural anonymous crowd movement, accurate screen perspective, cinematic city reflections and no readable unrelated advertising. A natural anonymous crowd pauses and looks toward the same billboard as its light reflects across the plaza. Keep the confirmed subject visually dominant and leave intentional overlay-safe negative space.
+Framing: A natural anonymous crowd pauses and looks toward the same billboard as its light reflects across the plaza. Camera: restrained lateral crowd parallax. Lighting: controlled key, soft fill, precise rim separation and rich but natural contrast.
+Continuity: Preserve the exact subject identity, environment geography, wardrobe, props, light direction and colour grade from the previous shot.
+Approved copy context (do not speak or render as text): Your brand, impossible to miss
+Keep clean negative space for deterministic text overlays; render no text inside the generated footage.
+
+SHOT 4 · 6.0s–8.0s · Brand close
+Purpose: Drive action
+Visual action: A photoreal Times Square-style New York plaza at blue hour, one dominant digital billboard, natural anonymous crowd movement, accurate screen perspective, cinematic city reflections and no readable unrelated advertising. The single billboard holds as the hero with the exact uploaded artwork and clean lower-frame space for deterministic business-name and CTA overlays. Keep the confirmed subject visually dominant and leave intentional overlay-safe negative space.
+Framing: The single billboard holds as the hero with the exact uploaded artwork and clean lower-frame space for deterministic business-name and CTA overlays. Camera: locked architectural hero frame. Lighting: controlled key, soft fill, precise rim separation and rich but natural contrast.
+Continuity: Preserve the exact subject identity, environment geography, wardrobe, props, light direction and colour grade from the previous shot.
+Approved copy context (do not speak or render as text): Discover the brand
+Keep clean negative space for deterministic text overlays; render no text inside the generated footage.
+
+AUDIO AND LANGUAGE
+
+Natural English voice and locally neutral Kuwait-market delivery.
+
+MUTED OUTPUT: generate no speech, dialogue, music or sound effects. Do not show a person visibly speaking or moving their mouth as if speaking.
+
+FINISHING STANDARD
+
+Photoreal commercial finish, physically plausible motion, coherent geography, motivated key/fill/rim lighting, stable exposure and colour, clean edit points, premium sound perspective and intentional pacing.
+
+NEGATIVE CONSTRAINTS: changed product shape, label, logo, packaging, colour or proportions, invented product feature, medical claim, qualification, price, discount or result, baked-in text, fake typography, misspelled Arabic, subtitles, watermark or user interface, extra fingers, warped hands, duplicated objects, rubber motion, flicker, frame tearing or sudden identity drift, unmotivated camera movement, impossible reflections, floating props or inconsistent lighting.

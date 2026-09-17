@@ -14,6 +14,20 @@ function seconds(value: number): string {
   return `${value.toFixed(1)}s`;
 }
 
+const SUBJECT_IDENTITY_LOCKS: Record<string, string> = {
+  "premium-phone-reveal": "Preserve the exact camera module, screen layout, logo placement, buttons, frame finish, thickness and proportions.",
+  "phone-floating-ad": "Preserve the exact camera module, screen layout, logo placement, buttons, frame finish, thickness and proportions.",
+  "restaurant-food-hero": "Preserve the exact plating, ingredients, portion and texture; never add garnish, steam effects that obscure food, or a different serving vessel.",
+  "food-delivery-ad": "Preserve the exact plating, ingredients, portion and texture plus every supplied packaging shape, colour and label.",
+  "fashion-product-showcase": "Preserve the exact fabric, cut, stitching, pattern and logo, including garment length, drape and hardware.",
+  "luxury-fashion-reveal": "Preserve the exact fabric, cut, stitching, pattern and logo, including silhouette, material finish and hardware.",
+  "cosmetic-product-commercial": "Preserve the exact packaging geometry, cap, applicator, shade, material, logo and label placement.",
+  "perfume-advertisement": "Preserve the exact bottle silhouette, cap, glass, liquid colour and label, including real reflections and proportions.",
+  "real-estate-property": "Preserve the exact architecture, room geometry, fixtures and view; never add floors, rooms, windows, furniture, amenities or scenery.",
+  "business-service-promotion": "Preserve the exact uploaded service artwork, brand marks and interface; never invent features, screens, testimonials or business claims.",
+  "new-york-billboard-takeover": "Preserve the exact uploaded artwork, logo, proportions, colours, layout and readable text on one dominant billboard. Never replace, crop, distort, duplicate or redesign it; exclude third-party logos and readable unrelated advertisements.",
+};
+
 export function compileCreativeDirection(input: {
   rawPrompt: string;
   creativeBrief: unknown;
@@ -49,15 +63,15 @@ export function compileCreativeDirection(input: {
 
   const factualLock = [
     `Subject name: ${brief.product.name}`,
-    brief.product.brand ? `Brand: ${brief.product.brand}` : "Brand: not supplied; do not invent one",
-    brief.product.description ? `Confirmed description: ${brief.product.description}` : "Description: not supplied",
-    brief.product.price ? `Confirmed price: ${brief.product.price} KWD` : "Price: not supplied; never invent a price",
-    brief.product.offer ? `Confirmed offer: ${brief.product.offer}` : "Offer: not supplied; never invent an offer",
+    brief.product.brand ? `Brand: ${brief.product.brand}` : "",
+    brief.product.description ? `Confirmed description: ${brief.product.description}` : "",
+    brief.product.price ? `Confirmed price: ${brief.product.price} KWD` : "",
+    brief.product.offer ? `Confirmed offer: ${brief.product.offer}` : "",
     `Confirmed call to action: ${brief.product.callToAction}`,
-    brief.product.whatsapp ? `Confirmed WhatsApp destination: ${brief.product.whatsapp}` : "WhatsApp destination: not supplied",
-    brief.product.bookingUrl ? `Confirmed booking link: ${brief.product.bookingUrl}` : "Booking link: not supplied; never invent a destination",
-    brief.product.location ? `Confirmed location: ${brief.product.location}` : "Location: not supplied",
-  ].join("\n");
+    brief.product.whatsapp ? `Confirmed WhatsApp destination: ${brief.product.whatsapp}` : "",
+    brief.product.bookingUrl ? `Confirmed booking link: ${brief.product.bookingUrl}` : "",
+    brief.product.location ? `Confirmed location: ${brief.product.location}` : "",
+  ].filter(Boolean).join("\n");
 
   const retry = input.qualityAttempt && input.qualityAttempt > 0
     ? `QUALITY RETRY ${input.qualityAttempt}: ${input.retryDirective || "Simplify motion and strengthen identity continuity without changing the campaign facts."}`
@@ -71,6 +85,7 @@ export function compileCreativeDirection(input: {
     "OFFER AND CONTACT FINISHING: preserve the confirmed offer, booking link and WhatsApp number exactly. Leave a clear lower end-card area for the finishing service to display supplied facts and the confirmed call to action. Never display an empty optional field, placeholder or invented destination. Do not bake these texts into AI footage; the finishing service adds accurate text afterwards.",
     "REFERENCE POLICY",
     "Treat supplied product references as an exact digital identity lock. Preserve silhouette, packaging geometry, label placement, logo, colour and material. Treat people and locations as continuity references only when explicitly supplied.",
+    SUBJECT_IDENTITY_LOCKS[brief.templateId] ?? "Preserve the supplied subject exactly across every shot.",
     "CAMPAIGN DIRECTION",
     brief.templatePromptVersion ? `Pinned template prompt: ${brief.templatePromptVersion}; recipe ${brief.templateRecipeVersion}` : "",
     brief.templateVisualSystem ?? "",

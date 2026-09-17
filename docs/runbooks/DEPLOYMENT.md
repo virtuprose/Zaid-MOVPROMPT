@@ -1,10 +1,12 @@
 # Deployment runbook
 
-## Current limitation
+## Current deployment target
 
-No cloud provider, deployment adapter, production database or public domain is
-defined in this repository. These steps are release controls, not proof of a
-deployment.
+The repository includes a safe-first-release Render Blueprint for a static web
+site and Docker API backed by MongoDB Atlas and Cloudflare R2. See
+[`RENDER.md`](./RENDER.md). The Blueprint is deployment configuration, not
+proof of a live deployment. Video generation remains disabled until the worker
+and production activation evidence are complete.
 
 ## Required release inputs
 

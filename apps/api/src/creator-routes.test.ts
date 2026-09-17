@@ -86,6 +86,7 @@ const template: PublicTemplate = {
   id: "luxury-product-reveal",
   slug: "luxury-product-reveal",
   category: "retail",
+  discoveryCategory: "ecommerce",
   versionId: TEMPLATE_VERSION_ID,
   versionNumber: 1,
   name: { en: "Luxury product reveal", ar: "عرض منتج فاخر" },

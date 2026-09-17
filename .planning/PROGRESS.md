@@ -1,8 +1,20 @@
 # MovPrompt Progress
 
-Updated: 2026-08-21
+Updated: 2026-09-17
 
 This is the compact, chat-independent resume file. Product rules remain in `AGENTS.md` and `.planning/PROJECT.md`; scope and exit criteria remain in `.planning/ROADMAP.md`; detailed evidence remains in the Phase 04 plans, summaries, and validation files.
+
+## Ten-template catalog implementation
+
+- The public launch catalog now contains exactly ten version-one Seedance recipes in five supplied categories: mobile/electronics, food/restaurants, clothing/fashion, beauty/cosmetics, and real-estate/business services.
+- The full internal creative catalog contains 60 recipes. The previous five launch templates remain resolvable for historical projects but are no longer public choices.
+- MongoDB migration evidence on 2026-09-17: 10 published templates, 5 archived legacy templates, 5 retained legacy current versions, and 15 retained version documents total.
+- Ten purpose-specific 1080x1350 JPEG posters are published under R2 `templates/v1/`. Premium Phone Reveal, Restaurant Food Hero Shot, and Fashion Product Showcase also have verified 8-second 720x1280 Seedance 2.5 MP4 previews, real video-frame posters, signed R2 reads, and matching SHA-256 checksums.
+- The approved Perfume Advertisement and Real Estate Property preview requests were rejected before generation with Gateway `402 insufficient_funds` after the balance fell to USD 8.49; Vercel requires a minimum USD 10 balance before accepting another video request. No retries were made, and both cards remain honestly poster-only.
+- Browser evidence covers all ten cards and R2 posters at 375, 768, 1024, and 1440 pixels with zero horizontal overflow; English/Arabic, light/dark, template selection, local upload, campaign settings, and review were checked. Generation was not submitted.
+- Validation: 627 workspace tests passed, workspace type checks passed, production builds passed, and ESLint completed with zero errors and 20 existing Fast Refresh warnings.
+- The user explicitly authorized one paid preview per category. Three paid previews completed; two uncharged submissions were rejected for insufficient balance. No Git commit, GitHub push, or deployment was made.
+- Public template selection now shows only the three recipes with verified playable R2 previews. The seven poster-only recipes remain versioned internally for historical compatibility and can be exposed after matching previews are approved.
 
 ## Durable snapshot
 
@@ -71,3 +83,13 @@ Automation cannot fabricate, duplicate, infer, or self-approve reviewer labels. 
 9. [`04-VALIDATION.md`](./phases/04-durable-generation-and-accepted-quality/04-VALIDATION.md)
 
 Repository files and Git history are authoritative. Codex chat history is not.
+
+## 2026-09-17: Four-category template discovery
+
+- Added `new-york-billboard-takeover-v1` as master recipe 61 and public launch recipe 11, with four fixed scenes, identity constraints, deterministic overlay space, and English/Arabic catalog copy.
+- Added typed discovery categories and replaced overlapping Shops/Ecommerce filtering with All, Electronics, Food, Ecommerce, and Advertising. Business verticals remain unchanged for campaign compatibility.
+- Added the advertising poster/reference assets, R2 route and publishing support, MongoDB catalog metadata, and a guarded single-request Seedance generator.
+- The one authorized advertising request was rejected before generation with `402 insufficient_funds` at USD 8.49; no retry occurred and no video was uploaded.
+- Motion-preview activation remains fail-closed through `verified-preview-manifest.ts`. The Advertising category now exposes the verified poster-only New York Billboard Takeover recipe as a selectable template and labels its video preview as coming later; all other unapproved poster-only recipes remain hidden.
+- Full workspace verification passed after the provider rejection: 635 tests passed with 34 intentional skips, all workspace type checks and builds passed, and ESLint reported zero errors with 20 existing Fast Refresh warnings.
+- Browser verification passed at 375, 768, 1024, and 1440 pixels with no horizontal overflow; English/Arabic, light/dark, category filtering, and three playable previews were inspected. After enabling the poster-only Advertising recipe, 18 focused web tests, web typecheck, targeted ESLint, and the production web build passed. A live browser check confirmed four cards under All, one card under Advertising, and successful navigation to `/create?template=new-york-billboard-takeover`.

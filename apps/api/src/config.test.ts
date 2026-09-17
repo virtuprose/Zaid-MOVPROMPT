@@ -3,6 +3,11 @@ import { describe, expect, it } from "vitest";
 import { loadApiConfig } from "./config.js";
 
 describe("API rate-limit configuration", () => {
+  it("uses Render's assigned PORT when API_PORT is absent", () => {
+    expect(loadApiConfig({ PORT: "10000" }).port).toBe(10000);
+    expect(loadApiConfig({ PORT: "10000", API_PORT: "8787" }).port).toBe(8787);
+  });
+
   it("uses the locked scan, mirror and direct-connection defaults", () => {
     expect(loadApiConfig({ API_PORT: "3001" })).toMatchObject({
       requestRateLimit: {

@@ -20,7 +20,7 @@ describe("template recommendations", () => {
     expect(first[0]?.template.goals).toContain("launch");
     expect(first.map((item) => item.template.id)).toEqual(second.map((item) => item.template.id));
     expect(first).toHaveLength(3);
-    expect(first[0]?.template.id).toBe("food-beverage");
+    expect(first[0]?.template.id).toBe("restaurant-food-hero");
     expect(first[0]?.whyThisFits).toContain("launch");
   });
 

@@ -18,7 +18,7 @@ export const CampaignSourceKindSchema = z.enum([
 ]);
 export type CampaignSourceKind = z.infer<typeof CampaignSourceKindSchema>;
 
-export const BusinessVerticalSchema = z.enum(["salon", "clinic", "retail", "ecommerce"]);
+export const BusinessVerticalSchema = z.enum(["salon", "clinic", "retail", "ecommerce", "real_estate", "services"]);
 export type BusinessVertical = z.infer<typeof BusinessVerticalSchema>;
 
 export const CampaignGoalSchema = z.enum([
@@ -177,11 +177,21 @@ const LocalizedTextSchema = z
   })
   .strict();
 
+export const TemplateDiscoveryCategorySchema = z.enum([
+  "electronics",
+  "food",
+  "ecommerce",
+  "advertising",
+  "other",
+]);
+export type TemplateDiscoveryCategory = z.infer<typeof TemplateDiscoveryCategorySchema>;
+
 export const PublicTemplateSchema = z
   .object({
     id: z.string().trim().min(1).max(120),
     slug: z.string().trim().min(1).max(120),
     category: z.string().trim().min(1).max(80),
+    discoveryCategory: TemplateDiscoveryCategorySchema,
     versionId: EntityIdSchema,
     versionNumber: z.number().int().positive(),
     name: LocalizedTextSchema,

@@ -25,7 +25,7 @@ function readBoolean(value: string | undefined, fallback: boolean): boolean {
 function readPort(value: string | undefined): number {
   const parsed = Number(value ?? "3001");
   if (!Number.isInteger(parsed) || parsed < 1 || parsed > 65_535) {
-    throw new Error("API_PORT must be an integer between 1 and 65535.");
+    throw new Error("API_PORT or PORT must be an integer between 1 and 65535.");
   }
   return parsed;
 }
@@ -79,7 +79,10 @@ export function loadApiConfig(
     commitSha: environment.COMMIT_SHA?.trim() || "local",
     builtAt: readBuildTime(environment.BUILD_TIME),
     environment: environment.APP_ENV?.trim() || "development",
-    port: readPort(environment.API_PORT),
+    // Render exposes the assigned listener through PORT. API_PORT remains the
+    // explicit local/container override so existing development commands keep
+    // their current behavior.
+    port: readPort(environment.API_PORT ?? environment.PORT),
     corsOrigins: readOrigins(environment),
     requestRateLimit: {
       publicScanLimit: readBoundedInteger(environment.SOURCE_SCAN_RATE_LIMIT, 20, "Source scan rate limit", 1, 100000),

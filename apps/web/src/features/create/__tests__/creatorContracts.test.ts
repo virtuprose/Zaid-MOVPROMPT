@@ -4,11 +4,12 @@ import { createDraftProject, CREATOR_TEMPLATES } from "../templates";
 import { GOLDEN_PRODUCT_PATH, GOLDEN_SERVICE_PATH, canonicalGoldenPathIntent, createGoldenPathProject } from "../__fixtures__/goldenPathFixtures";
 
 describe("creator contracts", () => {
-  it("keeps only the five distinct launch categories available", () => {
-    expect(CREATOR_TEMPLATES).toHaveLength(5);
-    expect(new Set(CREATOR_TEMPLATES.map((template) => template.id)).size).toBe(5);
-    expect(new Set(CREATOR_TEMPLATES.map((template) => template.eyebrow)).size).toBe(5);
-    expect(CREATOR_TEMPLATES.some((template) => template.id === "salon-booking-offer")).toBe(true);
+  it("keeps the eleven launch templates in six distinct launch categories available", () => {
+    expect(CREATOR_TEMPLATES).toHaveLength(11);
+    expect(new Set(CREATOR_TEMPLATES.map((template) => template.id)).size).toBe(11);
+    expect(new Set(CREATOR_TEMPLATES.map((template) => template.eyebrow)).size).toBe(6);
+    expect(CREATOR_TEMPLATES.some((template) => template.id === "salon-booking-offer")).toBe(false);
+    expect(CREATOR_TEMPLATES.some((template) => template.id === "premium-phone-reveal")).toBe(true);
     for (const template of CREATOR_TEMPLATES) {
       expect(template.languages).toEqual(expect.arrayContaining(["en", "ar", "bilingual"]));
       expect(template.aspectRatios).toEqual(expect.arrayContaining(["9:16", "1:1", "4:5", "16:9"]));
@@ -17,7 +18,7 @@ describe("creator contracts", () => {
   });
 
   it("preserves the pending generation intent in a seven-day guest draft", () => {
-    const project = createDraftProject("whatsapp-sales-ad");
+    const project = createDraftProject("food-delivery-ad");
     project.pendingGenerationId = "stable-generation-intent";
     project.pendingQuoteCredits = 180;
     const draft = projectToCreationDraft(project, true, "auth_required");
@@ -29,15 +30,15 @@ describe("creator contracts", () => {
   });
 
   it("preserves a Kuwait service campaign through the authentication handoff", () => {
-    const project = createDraftProject("salon-booking-offer");
+    const project = createDraftProject("business-service-promotion");
     project.location = "Salmiya";
     project.bookingUrl = "https://example.test/book";
     project.whatsapp = "+96550000000";
     const draft = projectToCreationDraft(project, true, "auth_required");
     expect(draft.product.sourceType).toBeNull();
     expect(draft.campaign).toMatchObject({
-      vertical: "salon",
-      goal: "bookings",
+      vertical: "services",
+      goal: "demonstration",
       presenterMode: "none",
       location: "Salmiya",
       bookingUrl: "https://example.test/book",
@@ -46,7 +47,7 @@ describe("creator contracts", () => {
   });
 
   it("keeps imported product settings in IndexedDB without persisting any preview video", () => {
-    const project = createDraftProject("luxury-product-reveal");
+    const project = createDraftProject("premium-phone-reveal");
     project.product = {
       sourceType: "product_link",
       sourceUrl: "https://www.apple.com/airpods-max/",

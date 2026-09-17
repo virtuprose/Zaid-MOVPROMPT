@@ -39,7 +39,9 @@
     "db:migrate": "bun --env-file=../../.env run --cwd packages/db migrate",
     "db:check": "bun --env-file=../../.env run --cwd packages/db check",
     "storage:check": "bun --env-file=.env scripts/infra/check-object-storage.ts",
-    "storage:publish-templates": "bun --env-file=.env scripts/infra/publish-r2-templates.ts"
+    "storage:publish-templates": "bun --env-file=.env scripts/infra/publish-r2-templates.ts",
+    "templates:generate-category-demos": "bun --env-file=.env scripts/infra/generate-category-template-demos.ts",
+    "templates:generate-advertising-demo": "bun --env-file=.env scripts/infra/generate-advertising-template-demo.ts"
   },
   "devDependencies": {
     "@aws-sdk/client-s3": "^3.1108.0",

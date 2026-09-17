@@ -1,12 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { CREATOR_TEMPLATES, createDraftProject, getCreatorTemplate, hasCreatorImageReference } from "./templates";
+import { CATEGORY_PREVIEW_TEMPLATE_IDS } from "@movprompt/creative-engine";
+import { CREATOR_TEMPLATES, DISCOVERABLE_CREATOR_TEMPLATES, PREVIEWED_CREATOR_TEMPLATES, createDraftProject, getCreatorTemplate, hasCreatorImageReference } from "./templates";
 import { getCampaignGoalOption, normalizeCreatorResolution } from "./types";
 import { buildTemplatePrompt } from "./templateGenerationPrompt";
 
 describe("beginner creator templates", () => {
-  it("ships five launch categories with editable scenes and required client references", () => {
-    expect(CREATOR_TEMPLATES).toHaveLength(5);
-    expect(new Set(CREATOR_TEMPLATES.map((template) => template.eyebrow))).toHaveLength(5);
+  it("ships eleven templates in six launch categories with editable scenes and required client references", () => {
+    expect(CREATOR_TEMPLATES).toHaveLength(11);
+    expect(new Set(CREATOR_TEMPLATES.map((template) => template.eyebrow))).toHaveLength(6);
     for (const template of CREATOR_TEMPLATES) {
       expect(template.scenes.length).toBeGreaterThanOrEqual(3);
       expect(template.aspectRatios).toContain("9:16");
@@ -17,14 +18,28 @@ describe("beginner creator templates", () => {
     }
   });
 
+  it("tracks templates with verified video previews", () => {
+    expect(PREVIEWED_CREATOR_TEMPLATES).toHaveLength(CATEGORY_PREVIEW_TEMPLATE_IDS.length);
+    expect(PREVIEWED_CREATOR_TEMPLATES.every((template) => Boolean(template.previewVideo))).toBe(true);
+    expect(PREVIEWED_CREATOR_TEMPLATES.map((template) => template.id)).toEqual(CATEGORY_PREVIEW_TEMPLATE_IDS);
+  });
+
+  it("makes the three video previews and poster-only advertising recipe discoverable", () => {
+    expect(DISCOVERABLE_CREATOR_TEMPLATES).toHaveLength(CATEGORY_PREVIEW_TEMPLATE_IDS.length + 1);
+    expect(DISCOVERABLE_CREATOR_TEMPLATES.map((template) => template.id)).toEqual([
+      ...CATEGORY_PREVIEW_TEMPLATE_IDS,
+      "new-york-billboard-takeover",
+    ]);
+  });
+
   it("creates isolated draft scene data", () => {
-    const first = createDraftProject("salon-booking-offer");
-    const second = createDraftProject("salon-booking-offer");
+    const first = createDraftProject("business-service-promotion");
+    const second = createDraftProject("business-service-promotion");
     first.scenes[0].headline = "Changed";
 
     expect(first.id).not.toBe(second.id);
     expect(second.scenes[0].headline).not.toBe("Changed");
-    expect(first.language).toBe("ar");
+    expect(first.language).toBe("en");
     expect(first.arabicDialect).toBe("kuwaiti");
   });
 
@@ -56,8 +71,8 @@ describe("beginner creator templates", () => {
     }
   });
 
-  it("starts salon and digital-service templates with a business source", () => {
-    for (const templateId of ["salon-booking-offer", "app-service"]) {
+  it("starts real-estate and business-service templates with a business source", () => {
+    for (const templateId of ["real-estate-property", "business-service-promotion"]) {
       expect(createDraftProject(templateId).promotionKind).toBe("business");
     }
   });

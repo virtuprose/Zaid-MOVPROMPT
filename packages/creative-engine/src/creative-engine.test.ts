@@ -46,10 +46,27 @@ function brief(): CreativeBrief {
 }
 
 describe("creative template catalog", () => {
-  it("publishes five launch templates with distinct categories and authoritative client references", () => {
+  it("publishes the ten supplied Seedance recipes plus the advertising takeover", () => {
+    expect(LAUNCH_TEMPLATE_IDS).toEqual([
+      "premium-phone-reveal",
+      "phone-floating-ad",
+      "restaurant-food-hero",
+      "food-delivery-ad",
+      "fashion-product-showcase",
+      "luxury-fashion-reveal",
+      "cosmetic-product-commercial",
+      "perfume-advertisement",
+      "real-estate-property",
+      "business-service-promotion",
+      "new-york-billboard-takeover",
+    ]);
     expect(LAUNCH_CREATIVE_TEMPLATE_CATALOG.map((template) => template.id)).toEqual(LAUNCH_TEMPLATE_IDS);
-    expect(new Set(LAUNCH_CREATIVE_TEMPLATE_CATALOG.map((template) => template.category))).toHaveLength(5);
+    expect(new Set(LAUNCH_CREATIVE_TEMPLATE_CATALOG.map((template) => template.category))).toHaveLength(6);
+    expect([...LAUNCH_CREATIVE_TEMPLATE_CATALOG.reduce((counts, template) => counts.set(template.category, (counts.get(template.category) ?? 0) + 1), new Map<string, number>()).values()]).toEqual([2, 2, 2, 2, 2, 1]);
     for (const template of LAUNCH_CREATIVE_TEMPLATE_CATALOG) {
+      expect(template.versionNumber).toBe(1);
+      expect(template.durationSeconds).toBe(8);
+      expect(template.scenes).toHaveLength(4);
       expect(template.requiredInputs).toContain("primary_reference");
       expect(template.complianceRules).toEqual(expect.arrayContaining([
         expect.stringContaining("client-uploaded primary reference"),
@@ -58,10 +75,10 @@ describe("creative template catalog", () => {
     }
   });
 
-  it("contains fifty distinct, fully structured Kuwait recipes", () => {
-    expect(CREATIVE_TEMPLATE_CATALOG).toHaveLength(50);
-    expect(new Set(CREATIVE_TEMPLATE_CATALOG.map((template) => template.id))).toHaveLength(50);
-    expect(CREATIVE_TEMPLATE_CATEGORIES).toHaveLength(50);
+  it("contains sixty-one distinct, fully structured Kuwait recipes", () => {
+    expect(CREATIVE_TEMPLATE_CATALOG).toHaveLength(61);
+    expect(new Set(CREATIVE_TEMPLATE_CATALOG.map((template) => template.id))).toHaveLength(61);
+    expect(CREATIVE_TEMPLATE_CATEGORIES).toHaveLength(56);
     for (const template of CREATIVE_TEMPLATE_CATALOG) {
       expect(template.supportedMarkets).toEqual(["KW"]);
       expect(template.supportedLanguages).toEqual(expect.arrayContaining(["ar", "en", "bilingual"]));
@@ -72,9 +89,9 @@ describe("creative template catalog", () => {
     }
   });
 
-  it("includes retail, ecommerce, salon and clinic outcomes", () => {
+  it("includes the two new public business verticals without changing the established verticals", () => {
     const verticals = new Set(CREATIVE_TEMPLATE_CATALOG.flatMap((template) => template.verticals));
-    expect(verticals).toEqual(new Set(["retail", "ecommerce", "salon", "clinic"]));
+    expect(verticals).toEqual(new Set(["retail", "ecommerce", "salon", "clinic", "real_estate", "services"]));
     expect(CREATIVE_TEMPLATE_CATALOG.filter((template) => template.verticals.includes("clinic")).length).toBeGreaterThanOrEqual(7);
     expect(CREATIVE_TEMPLATE_CATALOG.filter((template) => template.verticals.includes("salon")).length).toBeGreaterThanOrEqual(8);
   });
@@ -223,7 +240,7 @@ describe("Kuwaiti Arabic engine", () => {
     expect(result.policyVersion).toBe("ar-KW-campaign-2026.08");
   });
 
-  it("keeps every one of the fifty template scripts above the ar-KW submission threshold", () => {
+  it("keeps every template script above the ar-KW submission threshold", () => {
     for (const template of CREATIVE_TEMPLATE_CATALOG) {
       const sample = brief();
       sample.templateId = template.id;
@@ -258,6 +275,34 @@ describe("premium prompt compiler and quality gate", () => {
     expect(result.prompt).toContain("SHOT 1");
     expect(result.prompt).toContain("render no text inside the generated footage");
     expect(result.spokenLocale).toBe("ar-KW");
+  });
+
+  it.each([
+    ["premium-phone-reveal", "camera module, screen layout, logo placement"],
+    ["restaurant-food-hero", "plating, ingredients, portion and texture"],
+    ["fashion-product-showcase", "fabric, cut, stitching, pattern and logo"],
+    ["perfume-advertisement", "bottle silhouette, cap, glass, liquid colour and label"],
+    ["real-estate-property", "architecture, room geometry, fixtures and view"],
+    ["business-service-promotion", "uploaded service artwork, brand marks and interface"],
+    ["new-york-billboard-takeover", "uploaded artwork, logo, proportions, colours, layout and readable text"],
+  ])("adds the subject-specific identity lock for %s", (templateId, expectedLock) => {
+    const template = CREATIVE_TEMPLATE_CATALOG.find((item) => item.id === templateId)!;
+    const input = brief();
+    Object.assign(input, {
+      templateId,
+      templateRecipeVersion: template.versionNumber,
+      templatePromptVersion: `${template.id}-v${template.versionNumber}`,
+      templateVisualSystem: template.visualSystem,
+      vertical: template.verticals[0]!,
+      goal: template.goals[0]!,
+      tone: template.tone,
+      dialectRegister: template.dialectRegister,
+      scenes: template.scenes,
+      qualityPolicy: template.qualityPolicy,
+    });
+    const result = compileCreativeDirection({ rawPrompt: template.visualSystem, creativeBrief: input });
+    expect(result.prompt).toContain(expectedLock);
+    expect(result.prompt).toContain("render no text inside the generated footage");
   });
 
   it("requires native synchronized speech for a presenter template", () => {

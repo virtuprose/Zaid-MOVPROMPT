@@ -31,11 +31,7 @@ required_variables=(
   FEATURE_BILLING
   MONGODB_URI
   MONGODB_DATABASE
-  GUEST_TRUST_PROXY
-  GUEST_DAILY_BUDGET_USD
-  GUEST_MAX_RENDER_COST_USD
   R2_ACCOUNT_ID
-  R2_TEMPLATE_PREVIEWS_BASE_URL
   R2_ACCESS_KEY_ID
   R2_SECRET_ACCESS_KEY
   R2_ASSETS_BUCKET
@@ -46,24 +42,10 @@ required_variables=(
   SMTP_HOST
   SMTP_PORT
   SMTP_SECURE
-  SMTP_USER
-  SMTP_PASSWORD
   EMAIL_FROM
   BETTER_AUTH_URL
   BETTER_AUTH_SECRET
   BETTER_AUTH_TRUSTED_ORIGINS
-  AUTH_REQUIRE_EMAIL_VERIFICATION
-  GOOGLE_CLIENT_ID
-  GOOGLE_CLIENT_SECRET
-  APPLE_CLIENT_ID
-  APPLE_CLIENT_SECRET
-  APPLE_APP_BUNDLE_IDENTIFIER
-  WORKER_ID
-  WORKER_SMOKE_TEST_ON_START
-  WORKER_OUTBOX_BATCH_SIZE
-  WORKER_OUTBOX_LEASE_MS
-  WORKER_OUTBOX_POLL_INTERVAL_MS
-  WORKER_RENDER_RECONCILIATION_DELAY_SECONDS
 )
 
 missing=0
@@ -84,8 +66,13 @@ if [[ "${APP_ENV}" != "${target_environment}" ]]; then
   exit 1
 fi
 
-if [[ ! "${PUBLIC_APP_URL}" =~ ^https:// || ! "${WEB_ORIGIN}" =~ ^https:// || ! "${API_ORIGIN}" =~ ^https:// || ! "${VITE_API_ORIGIN}" =~ ^https:// || ! "${BETTER_AUTH_URL}" =~ ^https:// || ! "${R2_TEMPLATE_PREVIEWS_BASE_URL}" =~ ^https:// ]]; then
-  echo "Public, API, Vite API, Better Auth and object-storage URLs must use HTTPS outside local development." >&2
+if [[ ! "${PUBLIC_APP_URL}" =~ ^https:// || ! "${WEB_ORIGIN}" =~ ^https:// || ! "${API_ORIGIN}" =~ ^https:// || ! "${VITE_API_ORIGIN}" =~ ^https:// || ! "${BETTER_AUTH_URL}" =~ ^https:// ]]; then
+  echo "Public, API, Vite API and Better Auth URLs must use HTTPS outside local development." >&2
+  exit 1
+fi
+
+if [[ -n "${R2_TEMPLATE_PREVIEWS_BASE_URL:-}" && ! "${R2_TEMPLATE_PREVIEWS_BASE_URL}" =~ ^https:// ]]; then
+  echo "R2_TEMPLATE_PREVIEWS_BASE_URL must be empty for a shared private bucket or use HTTPS." >&2
   exit 1
 fi
 
@@ -112,12 +99,12 @@ for cors_origin in "${cors_origins[@]}"; do
   fi
 done
 
-if [[ ! "${MONGODB_URI}" =~ ^mongodb(+srv)?:// ]]; then
+if [[ ! "${MONGODB_URI}" =~ ^mongodb(\+srv)?:// ]]; then
   echo "MONGODB_URI must be a MongoDB connection string." >&2
   exit 1
 fi
 
-for boolean_variable in VITE_FEATURE_PORTABLE_AUTH VITE_AUTH_REQUIRE_EMAIL_VERIFICATION VITE_FEATURE_GUEST_CREATOR VITE_FEATURE_WORKSPACE_SHELL VITE_FEATURE_PROJECTS VITE_FEATURE_ADVANCED_MODE VITE_FEATURE_EXPORT_PIPELINE VITE_FEATURE_LOCAL_DEMO_GENERATION FEATURE_AUTHENTICATION FEATURE_ASSETS FEATURE_TEMPLATE_MODE FEATURE_ADVANCED_MODE FEATURE_GENERATION FEATURE_EXPORTS FEATURE_BILLING AUTH_REQUIRE_EMAIL_VERIFICATION SMTP_SECURE WORKER_SMOKE_TEST_ON_START; do
+for boolean_variable in VITE_FEATURE_PORTABLE_AUTH VITE_AUTH_REQUIRE_EMAIL_VERIFICATION VITE_FEATURE_GUEST_CREATOR VITE_FEATURE_WORKSPACE_SHELL VITE_FEATURE_PROJECTS VITE_FEATURE_ADVANCED_MODE VITE_FEATURE_EXPORT_PIPELINE VITE_FEATURE_LOCAL_DEMO_GENERATION FEATURE_AUTHENTICATION FEATURE_ASSETS FEATURE_TEMPLATE_MODE FEATURE_ADVANCED_MODE FEATURE_GENERATION FEATURE_EXPORTS FEATURE_BILLING SMTP_SECURE; do
   boolean_value="${!boolean_variable}"
   if [[ "${boolean_value}" != "true" && "${boolean_value}" != "false" ]]; then
     echo "${boolean_variable} must be true or false." >&2
@@ -125,8 +112,13 @@ for boolean_variable in VITE_FEATURE_PORTABLE_AUTH VITE_AUTH_REQUIRE_EMAIL_VERIF
   fi
 done
 
-if [[ "${VITE_AUTH_REQUIRE_EMAIL_VERIFICATION}" != "${AUTH_REQUIRE_EMAIL_VERIFICATION}" ]]; then
-  echo "VITE_AUTH_REQUIRE_EMAIL_VERIFICATION must match AUTH_REQUIRE_EMAIL_VERIFICATION." >&2
+if [[ "${VITE_AUTH_REQUIRE_EMAIL_VERIFICATION}" != "false" ]]; then
+  echo "VITE_AUTH_REQUIRE_EMAIL_VERIFICATION must be false for the current deferred first-campaign verification policy." >&2
+  exit 1
+fi
+
+if [[ -n "${AUTH_REQUIRE_EMAIL_VERIFICATION:-}" ]]; then
+  echo "AUTH_REQUIRE_EMAIL_VERIFICATION is obsolete and must be removed; the server owns the current verification policy." >&2
   exit 1
 fi
 
@@ -170,10 +162,45 @@ if [[ "${FEATURE_GENERATION}" == "true" ]]; then
   generation_variables=(
     GENERATION_PRICING_VERSION
     GENERATION_QUOTE_TTL_SECONDS
+    GUEST_TRUST_PROXY
+    GUEST_DAILY_BUDGET_USD
+    GUEST_MAX_RENDER_COST_USD
+    WORKER_ID
+    WORKER_SMOKE_TEST_ON_START
+    WORKER_OUTBOX_BATCH_SIZE
+    WORKER_OUTBOX_LEASE_MS
+    WORKER_OUTBOX_POLL_INTERVAL_MS
+    WORKER_RENDER_RECONCILIATION_DELAY_SECONDS
+    WORKER_HEARTBEAT_INTERVAL_SECONDS
+    WORKER_HEARTBEAT_MAX_AGE_SECONDS
   )
   for variable_name in "${generation_variables[@]}"; do
     if [[ -z "${!variable_name:-}" ]]; then
       echo "FEATURE_GENERATION=true requires ${variable_name}." >&2
+      exit 1
+    fi
+  done
+
+  for variable_name in GUEST_TRUST_PROXY WORKER_SMOKE_TEST_ON_START; do
+    variable_value="${!variable_name}"
+    if [[ "${variable_value}" != "true" && "${variable_value}" != "false" ]]; then
+      echo "FEATURE_GENERATION=true requires ${variable_name} to be true or false." >&2
+      exit 1
+    fi
+  done
+
+  for variable_name in WORKER_OUTBOX_BATCH_SIZE WORKER_OUTBOX_LEASE_MS WORKER_OUTBOX_POLL_INTERVAL_MS WORKER_RENDER_RECONCILIATION_DELAY_SECONDS; do
+    variable_value="${!variable_name}"
+    if [[ ! "${variable_value}" =~ ^[0-9]+$ || "${variable_value}" -lt 1 ]]; then
+      echo "FEATURE_GENERATION=true requires positive integer ${variable_name}." >&2
+      exit 1
+    fi
+  done
+
+  for variable_name in GUEST_DAILY_BUDGET_USD GUEST_MAX_RENDER_COST_USD; do
+    variable_value="${!variable_name}"
+    if [[ ! "${variable_value}" =~ ^[0-9]+([.][0-9]+)?$ ]]; then
+      echo "FEATURE_GENERATION=true requires positive numeric ${variable_name}." >&2
       exit 1
     fi
   done
@@ -324,12 +351,43 @@ if (( ${#BETTER_AUTH_SECRET} < 32 )); then
   exit 1
 fi
 
-if [[ "${R2_ASSETS_BUCKET}" != "creator-assets" || "${R2_OUTPUTS_BUCKET}" != "creator-outputs" || "${R2_TEMPLATE_PREVIEWS_BUCKET}" != "template-previews" ]]; then
-  echo "S3 bucket names must be creator-assets, creator-outputs and template-previews." >&2
+if [[ ! "${R2_ACCOUNT_ID}" =~ ^[a-fA-F0-9]{32}$ ]]; then
+  echo "R2_ACCOUNT_ID must be a 32-character Cloudflare account ID." >&2
   exit 1
 fi
 
-for integer_variable in SMTP_PORT R2_UPLOAD_URL_TTL_SECONDS R2_DOWNLOAD_URL_TTL_SECONDS WORKER_OUTBOX_BATCH_SIZE WORKER_OUTBOX_LEASE_MS WORKER_OUTBOX_POLL_INTERVAL_MS WORKER_RENDER_RECONCILIATION_DELAY_SECONDS; do
+for bucket_variable in R2_ASSETS_BUCKET R2_OUTPUTS_BUCKET R2_TEMPLATE_PREVIEWS_BUCKET; do
+  bucket_value="${!bucket_variable}"
+  if [[ ! "${bucket_value}" =~ ^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$ ]]; then
+    echo "${bucket_variable} must be a valid R2 bucket name." >&2
+    exit 1
+  fi
+done
+
+if [[ -n "${R2_TEMPLATE_PREVIEWS_BASE_URL:-}" && ( "${R2_TEMPLATE_PREVIEWS_BUCKET}" == "${R2_ASSETS_BUCKET}" || "${R2_TEMPLATE_PREVIEWS_BUCKET}" == "${R2_OUTPUTS_BUCKET}" ) ]]; then
+  echo "A shared customer-media R2 bucket must remain private; leave R2_TEMPLATE_PREVIEWS_BASE_URL empty." >&2
+  exit 1
+fi
+
+if [[ -n "${SMTP_USER:-}" || -n "${SMTP_PASSWORD:-}" ]]; then
+  if [[ -z "${SMTP_USER:-}" || -z "${SMTP_PASSWORD:-}" ]]; then
+    echo "SMTP_USER and SMTP_PASSWORD must be configured together." >&2
+    exit 1
+  fi
+fi
+
+for oauth_provider in GOOGLE APPLE; do
+  client_id_variable="${oauth_provider}_CLIENT_ID"
+  client_secret_variable="${oauth_provider}_CLIENT_SECRET"
+  if [[ -n "${!client_id_variable:-}" || -n "${!client_secret_variable:-}" ]]; then
+    if [[ -z "${!client_id_variable:-}" || -z "${!client_secret_variable:-}" ]]; then
+      echo "${client_id_variable} and ${client_secret_variable} must be configured together." >&2
+      exit 1
+    fi
+  fi
+done
+
+for integer_variable in SMTP_PORT R2_UPLOAD_URL_TTL_SECONDS R2_DOWNLOAD_URL_TTL_SECONDS; do
   integer_value="${!integer_variable}"
   if [[ ! "${integer_value}" =~ ^[0-9]+$ || "${integer_value}" -lt 1 ]]; then
     echo "${integer_variable} must be a positive integer." >&2
@@ -353,6 +411,11 @@ if [[ "${target_environment}" == "production" ]]; then
       exit 1
     fi
   done
+
+  if [[ ! "${MONGODB_URI}" =~ ^mongodb\+srv:// ]]; then
+    echo "Production MONGODB_URI must use the TLS-enabled MongoDB Atlas SRV form." >&2
+    exit 1
+  fi
 fi
 
 echo "${target_environment} environment contract is complete. Secret values were not printed."

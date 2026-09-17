@@ -98,7 +98,6 @@ EMAIL_FROM=MovPrompt <no-reply@localhost>
 BETTER_AUTH_URL=http://localhost:8787
 BETTER_AUTH_SECRET=movprompt-local-only-better-auth-secret-change-me
 BETTER_AUTH_TRUSTED_ORIGINS=http://localhost:8080,http://127.0.0.1:8080
-AUTH_REQUIRE_EMAIL_VERIFICATION=false
 GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
 APPLE_CLIENT_ID=

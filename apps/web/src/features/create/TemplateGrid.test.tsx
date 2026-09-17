@@ -1,9 +1,10 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter } from "react-router-dom";
+import { CATEGORY_PREVIEW_TEMPLATE_IDS } from "@movprompt/creative-engine";
 
 import { TemplateGrid } from "./TemplateGrid";
-import { CREATOR_TEMPLATES } from "./templates";
+import { CREATOR_TEMPLATES, DISCOVERABLE_CREATOR_TEMPLATES, PREVIEWED_CREATOR_TEMPLATES } from "./templates";
 
 const languageState = vi.hoisted(() => ({ locale: "en" as "en" | "ar" }));
 const featureState = vi.hoisted(() => ({ portableAuth: false }));
@@ -44,9 +45,8 @@ describe("TemplateGrid", () => {
     view.unmount();
   });
 
-  it("renders honest static directions instead of fake playable cards", () => {
+  it("renders verified motion previews plus the approved advertising direction", () => {
     languageState.locale = "en";
-    CREATOR_TEMPLATES[4]!.previewVideo = null;
     const view = render(
       <MemoryRouter>
         <TemplateGrid onSelect={vi.fn()} />
@@ -54,84 +54,98 @@ describe("TemplateGrid", () => {
     );
 
     expect(view.container.querySelectorAll("video")).toHaveLength(0);
-    expect(screen.getAllByText("Template direction")).toHaveLength(1);
-    expect(screen.getAllByText("Motion preview")).toHaveLength(4);
-    expect(view.container.querySelectorAll(".creator-template-media[data-media-tone]")).toHaveLength(5);
+    expect(screen.getAllByText("Video preview coming later")).toHaveLength(1);
+    expect(screen.getAllByText("Motion preview")).toHaveLength(CATEGORY_PREVIEW_TEMPLATE_IDS.length);
+    expect(view.container.querySelectorAll(".creator-template-media[data-media-tone]")).toHaveLength(DISCOVERABLE_CREATOR_TEMPLATES.length);
     expect(view.container.querySelectorAll<HTMLImageElement>(".creator-template-media img")[0]?.style.objectPosition).toBeTruthy();
-    const previewButtons = screen.getAllByRole("button", { name: /Play .* preview/ });
-    expect(previewButtons.length).toBeGreaterThan(0);
-    expect(screen.getAllByRole("link", { name: /View .* details/ }).length).toBeGreaterThan(0);
-    fireEvent.click(previewButtons[0]!);
-    expect(screen.getByRole("dialog").querySelector("video")).toHaveAttribute("controls");
+    expect(screen.getAllByRole("button", { name: /Play .* preview/ })).toHaveLength(CATEGORY_PREVIEW_TEMPLATE_IDS.length);
+    expect(screen.getAllByRole("link", { name: /View .* details/ })).toHaveLength(1);
     view.unmount();
   });
 
-  it("puts every verified preview before the honest static directions", () => {
+  it("renders one usable template in each approved discovery category", () => {
     languageState.locale = "en";
-    CREATOR_TEMPLATES[4]!.previewVideo = null;
     const view = render(
       <MemoryRouter>
         <TemplateGrid onSelect={vi.fn()} />
       </MemoryRouter>,
     );
 
-    const ready = screen.getByRole("region", { name: "Ready previews" });
-    const directions = screen.getByRole("region", { name: "More campaign directions" });
-    expect(within(ready).getAllByRole("button", { name: /Play .* preview/ })).toHaveLength(4);
-    expect(within(directions).getAllByRole("link", { name: /View .* details/ })).toHaveLength(1);
-    expect(ready.compareDocumentPosition(directions) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    for (const name of ["Electronics", "Food", "Ecommerce", "Advertising"]) {
+      expect(within(screen.getByRole("region", { name })).getAllByRole("button", { name: /Choose .* template/ })).toHaveLength(1);
+    }
+    expect(screen.queryByRole("region", { name: "Beauty / Cosmetics" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Real Estate / Business Services" })).not.toBeInTheDocument();
     view.unmount();
   });
 
-  it("keeps an already-selected static direction first without presenting it as playable", () => {
+  it("keeps an already-selected direction selected inside its category", () => {
     languageState.locale = "en";
-    CREATOR_TEMPLATES[4]!.previewVideo = null;
-    const selected = CREATOR_TEMPLATES.find((template) => !template.previewVideo)!;
+    const selected = PREVIEWED_CREATOR_TEMPLATES[1]!;
     const view = render(
       <MemoryRouter>
         <TemplateGrid selectedId={selected.id} onSelect={vi.fn()} />
       </MemoryRouter>,
     );
 
-    const selectedGroup = screen.getByRole("region", { name: "Selected direction" });
+    const selectedGroup = screen.getByRole("region", { name: "Food" });
     expect(within(selectedGroup).getByRole("button", { name: `Choose ${selected.name} template` })).toHaveAttribute("aria-pressed", "true");
-    expect(within(selectedGroup).getByRole("link", { name: `View ${selected.name} details` })).toBeVisible();
-    expect(screen.getByRole("region", { name: "Ready previews" })).toBeVisible();
-    expect(screen.queryByRole("region", { name: "More campaign directions" })).not.toBeInTheDocument();
-    expect(view.container.querySelector(".creator-template-group")).toBe(selectedGroup);
+    expect(within(selectedGroup).getByRole("button", { name: `Play ${selected.name} preview` })).toBeVisible();
     view.unmount();
   });
 
   it("localizes catalog proof groups in Arabic", () => {
     languageState.locale = "ar";
-    CREATOR_TEMPLATES[4]!.previewVideo = null;
     const view = render(
       <MemoryRouter>
         <TemplateGrid onSelect={vi.fn()} />
       </MemoryRouter>,
     );
 
-    expect(screen.getByRole("region", { name: "معاينات جاهزة" })).toBeVisible();
-    expect(screen.getByRole("region", { name: "اتجاهات حملات إضافية" })).toBeVisible();
+    expect(screen.getByRole("region", { name: "الإلكترونيات" })).toBeVisible();
+    expect(screen.getByRole("region", { name: "الأطعمة" })).toBeVisible();
+    expect(screen.getByRole("region", { name: "الإعلانات" })).toBeVisible();
+    expect(screen.queryByRole("region", { name: "العقار وخدمات الأعمال" })).not.toBeInTheDocument();
     view.unmount();
   });
 
-  it("keeps static directions free of player-shaped timing chrome", () => {
+  it("shows only the explicitly approved poster-only advertising direction", () => {
     languageState.locale = "en";
-    CREATOR_TEMPLATES[4]!.previewVideo = null;
-    const staticTemplate = CREATOR_TEMPLATES.find((template) => !template.previewVideo)!;
+    const advertising = CREATOR_TEMPLATES.find((template) => template.id === "new-york-billboard-takeover")!;
+    const hiddenPosterOnlyTemplate = CREATOR_TEMPLATES.find((template) => !template.previewVideo && template.id !== advertising.id)!;
+    const onSelect = vi.fn();
+    const view = render(
+      <MemoryRouter>
+        <TemplateGrid onSelect={onSelect} />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Advertising", pressed: false }));
+    const chooseAdvertising = screen.getByRole("button", { name: `Choose ${advertising.name} template` });
+    expect(chooseAdvertising).toBeEnabled();
+    fireEvent.click(chooseAdvertising);
+    expect(onSelect).toHaveBeenCalledWith(advertising.id);
+    expect(screen.queryByRole("button", { name: `Choose ${hiddenPosterOnlyTemplate.name} template` })).not.toBeInTheDocument();
+    view.unmount();
+  });
+
+  it("filters one template into each discovery category", () => {
+    languageState.locale = "en";
     const view = render(
       <MemoryRouter>
         <TemplateGrid onSelect={vi.fn()} />
       </MemoryRouter>,
     );
 
-    const directions = screen.getByRole("region", { name: "More campaign directions" });
-    const staticCard = within(directions).getByRole("button", { name: `Choose ${staticTemplate.name} template` }).closest("article")!;
-    expect(within(staticCard).queryByRole("button", { name: /Play .* preview/ })).not.toBeInTheDocument();
-    expect(within(staticCard).getByRole("link", { name: `View ${staticTemplate.name} details` })).toBeVisible();
-    expect(staticCard.querySelector(".creator-template-duration")).toBeNull();
-    expect(staticCard.querySelector("video")).toBeNull();
+    expect(screen.getAllByRole("button", { name: /Choose .* template/ })).toHaveLength(DISCOVERABLE_CREATOR_TEMPLATES.length);
+    for (const category of ["Electronics", "Food", "Ecommerce", "Advertising"]) {
+      fireEvent.click(screen.getByRole("button", { name: category, pressed: false }));
+      expect(screen.getAllByRole("button", { name: /Choose .* template/ })).toHaveLength(1);
+      fireEvent.click(screen.getByRole("button", { name: "All", pressed: false }));
+    }
+    const advertising = screen.getByRole("button", { name: "Advertising", pressed: false });
+    expect(advertising).toBeEnabled();
+    expect(screen.getAllByRole("button", { name: /Choose .* template/ })).toHaveLength(DISCOVERABLE_CREATOR_TEMPLATES.length);
     view.unmount();
   });
 

@@ -4,29 +4,34 @@ import { ArrowUpRight, Check, Film, Grid2X2, Play, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { isFeatureEnabled } from "@/config/features";
 import { portableCreatorApi } from "@/lib/api/portableApiClient";
-import { CREATOR_TEMPLATES } from "./templates";
+import { DISCOVERABLE_CREATOR_TEMPLATES } from "./templates";
 import type { CreatorTemplate } from "./types";
 import { creatorTemplateFromCatalog } from "./templateCatalogMapper";
 import { templateGoalLabel } from "./templateMedia";
 import { TemplatePreviewDialog } from "./TemplatePreviewDialog";
 import { useLanguage } from "@/i18n/LanguageContext";
+import type { TemplateDiscoveryCategory } from "@movprompt/contracts";
 
-type VisibleTemplateGroups = {
-  selectedDirection: CreatorTemplate | null;
-  readyPreviews: CreatorTemplate[];
-  campaignDirections: CreatorTemplate[];
-};
+const CATEGORY_COPY = {
+  electronics: { en: "Electronics", ar: "الإلكترونيات" },
+  food: { en: "Food", ar: "الأطعمة" },
+  ecommerce: { en: "Ecommerce", ar: "التجارة الإلكترونية" },
+  advertising: { en: "Advertising", ar: "الإعلانات" },
+} as const;
+const CATEGORY_ORDER = Object.keys(CATEGORY_COPY) as Array<keyof typeof CATEGORY_COPY>;
 
-function groupVisibleTemplates(
-  templates: CreatorTemplate[],
-  selectedId?: string | null,
-): VisibleTemplateGroups {
-  const selectedDirection = templates.find((template) => template.id === selectedId && !template.previewVideo) ?? null;
-  return {
-    selectedDirection,
-    readyPreviews: templates.filter((template) => template.previewVideo),
-    campaignDirections: templates.filter((template) => !template.previewVideo && template.id !== selectedDirection?.id),
-  };
+function categoryTitle(category: string, locale: "en" | "ar") {
+  return CATEGORY_COPY[category as keyof typeof CATEGORY_COPY]?.[locale] ?? category;
+}
+
+function groupByCategory(templates: CreatorTemplate[]) {
+  const groups = new Map<string, CreatorTemplate[]>();
+  for (const template of templates) groups.set(template.discoveryCategory, [...(groups.get(template.discoveryCategory) ?? []), template]);
+  return [...groups.entries()].sort(([left], [right]) => {
+    const leftIndex = CATEGORY_ORDER.indexOf(left as keyof typeof CATEGORY_COPY);
+    const rightIndex = CATEGORY_ORDER.indexOf(right as keyof typeof CATEGORY_COPY);
+    return (leftIndex < 0 ? CATEGORY_ORDER.length : leftIndex) - (rightIndex < 0 ? CATEGORY_ORDER.length : rightIndex);
+  });
 }
 
 export function TemplateGrid({
@@ -38,42 +43,31 @@ export function TemplateGrid({
 }) {
   const { locale } = useLanguage();
   const ar = locale === "ar";
-  const [templates, setTemplates] = useState<CreatorTemplate[]>(CREATOR_TEMPLATES);
+  const [templates, setTemplates] = useState<CreatorTemplate[]>(DISCOVERABLE_CREATOR_TEMPLATES);
   const [catalogState, setCatalogState] = useState<"loading" | "ready" | "fallback">(
     isFeatureEnabled("portableAuth") ? "loading" : "fallback",
   );
   const [query, setQuery] = useState("");
-  const [vertical, setVertical] = useState<"all" | "salon" | "clinic" | "retail" | "ecommerce">("all");
+  const [discoveryCategory, setDiscoveryCategory] = useState<"all" | Exclude<TemplateDiscoveryCategory, "other">>("all");
   const [visibleCount, setVisibleCount] = useState(12);
   const [previewTemplate, setPreviewTemplate] = useState<CreatorTemplate | null>(null);
   const normalizedQuery = query.trim().toLocaleLowerCase();
   const filteredTemplates = templates.filter((template) => {
-    const matchesVertical = vertical === "all" || template.verticals.includes(vertical);
+    const matchesCategory = discoveryCategory === "all" || template.discoveryCategory === discoveryCategory;
     const haystack = [template.name, template.nameAr, template.eyebrow, template.description, template.descriptionAr, template.bestFor, ...template.tags]
       .join(" ")
       .toLocaleLowerCase();
-    return matchesVertical && (!normalizedQuery || haystack.includes(normalizedQuery));
+    return matchesCategory && (!normalizedQuery || haystack.includes(normalizedQuery));
   });
   const selectedTemplate = selectedId
     ? filteredTemplates.find((template) => template.id === selectedId) ?? null
     : null;
-  const remainingTemplates = selectedTemplate
-    ? filteredTemplates.filter((template) => template.id !== selectedTemplate.id)
-    : filteredTemplates;
-  const readyPreviews = remainingTemplates.filter((template) => template.previewVideo);
-  const campaignDirections = remainingTemplates.filter((template) => !template.previewVideo);
   const orderedTemplates = selectedTemplate
-    ? [selectedTemplate, ...readyPreviews, ...campaignDirections]
-    : [...readyPreviews, ...campaignDirections];
-  const minimumGroupedLimit = (selectedTemplate ? 1 : 0)
-    + readyPreviews.length
-    + (campaignDirections.length ? 1 : 0);
-  const visibleLimit = Math.max(
-    visibleCount + (selectedTemplate && !selectedTemplate.previewVideo ? 1 : 0),
-    minimumGroupedLimit,
-  );
+    ? [selectedTemplate, ...filteredTemplates.filter((template) => template.id !== selectedTemplate.id)]
+    : filteredTemplates;
+  const visibleLimit = Math.max(visibleCount, selectedTemplate ? 1 : 0);
   const visibleTemplates = orderedTemplates.slice(0, visibleLimit);
-  const visibleGroups = groupVisibleTemplates(visibleTemplates, selectedId);
+  const visibleGroups = groupByCategory(visibleTemplates);
   const selectionEnabled = catalogState !== "fallback" || !isFeatureEnabled("portableAuth");
 
   const loadPublishedCatalog = useCallback(() => {
@@ -85,7 +79,9 @@ export function TemplateGrid({
         if (active) setCatalogState("fallback");
         return;
       }
-      const merged = published.map(creatorTemplateFromCatalog);
+      const merged = published
+        .map(creatorTemplateFromCatalog)
+        .filter((template) => Boolean(template.previewVideo) || template.id === "new-york-billboard-takeover");
       setTemplates(merged);
       setCatalogState("ready");
     }).catch(() => {
@@ -99,7 +95,10 @@ export function TemplateGrid({
   useEffect(() => {
     if (selectedId && !templates.some((template) => template.id === selectedId)) {
       void portableCreatorApi.getTemplate(selectedId).then((published) => {
-        setTemplates((current) => [creatorTemplateFromCatalog(published), ...current]);
+        const mapped = creatorTemplateFromCatalog(published);
+        if (mapped.previewVideo || mapped.id === "new-york-billboard-takeover") {
+          setTemplates((current) => [mapped, ...current]);
+        }
       }).catch(() => undefined);
     }
   }, [selectedId, templates]);
@@ -131,65 +130,47 @@ export function TemplateGrid({
               : `Showing ${visibleTemplates.length} of ${filteredTemplates.length}`}
           </p>
         </div>
-        <div className="creator-template-filters" role="group" aria-label={ar ? "تصفية القوالب حسب نوع النشاط" : "Filter templates by business type"}>
+        <div className="creator-template-filters" role="group" aria-label={ar ? "تصفية القوالب حسب الفئة" : "Filter templates by category"}>
           {([
             ["all", ar ? "الكل" : "All"],
-            ["retail", ar ? "المحلات" : "Shops"],
-            ["ecommerce", ar ? "المتاجر الإلكترونية" : "Ecommerce"],
-            ["salon", ar ? "الصالونات" : "Salons"],
-            ["clinic", ar ? "العيادات" : "Clinics"],
-          ] as const).filter(([value]) => value === "all" || templates.some((template) => template.verticals.includes(value))).map(([value, label]) => (
+            ["electronics", ar ? "الإلكترونيات" : "Electronics"],
+            ["food", ar ? "الأطعمة" : "Food"],
+            ["ecommerce", ar ? "التجارة الإلكترونية" : "Ecommerce"],
+            ["advertising", ar ? "الإعلانات" : "Advertising"],
+          ] as const).map(([value, label]) => {
+            const available = value === "all" || templates.some((template) => template.discoveryCategory === value);
+            return (
             <button
               key={value}
               type="button"
-              className={cn("creator-template-filter", vertical === value && "is-active")}
-              aria-pressed={vertical === value}
-              onClick={() => { setVertical(value); setVisibleCount(12); }}
+              className={cn("creator-template-filter", discoveryCategory === value && "is-active")}
+              aria-pressed={discoveryCategory === value}
+              disabled={!available}
+              title={!available ? (ar ? "المعاينة قيد التجهيز" : "Preview is being prepared") : undefined}
+              onClick={() => { setDiscoveryCategory(value); setVisibleCount(12); }}
             >
               {label}
             </button>
-          ))}
+            );
+          })}
         </div>
       </div>
       <div className="creator-template-groups" aria-busy={catalogState === "loading"} aria-live="polite">
-        {visibleGroups.selectedDirection && (
+        {visibleGroups.map(([category, groupTemplates]) => (
           <TemplateGroup
-            id="selected-direction"
-            title={ar ? "الاتجاه المحدد" : "Selected direction"}
-            description={ar ? "اختيارك الحالي محفوظ في الأعلى بينما تستكشف الخيارات الجاهزة." : "Your current choice stays first while you compare ready options."}
+            key={category}
+            id={category.replace(/\s+/g, "-")}
+            title={categoryTitle(category, locale)}
+            description={ar ? "اختر اتجاهًا ثابتًا، ثم أضف صورتك. قد تختلف التفاصيل البصرية في كل نتيجة مولّدة." : "Choose a fixed direction, then add your image. Visual details may vary in each generated result."}
             icon="direction"
-            templates={[visibleGroups.selectedDirection]}
+            templates={groupTemplates}
             selectedId={selectedId}
             onSelect={onSelect}
             onPreview={setPreviewTemplate}
             locale={locale}
             selectionEnabled={selectionEnabled}
           />
-        )}
-        <TemplateGroup
-          id="ready-previews"
-          title={ar ? "معاينات جاهزة" : "Ready previews"}
-          description={ar ? "معاينات حركة حقيقية تم التحقق منها ويمكن تشغيلها قبل الاختيار." : "Verified motion previews you can play before choosing."}
-          icon="preview"
-          templates={visibleGroups.readyPreviews}
-          selectedId={selectedId}
-          onSelect={onSelect}
-          onPreview={setPreviewTemplate}
-          locale={locale}
-          selectionEnabled={selectionEnabled}
-        />
-        <TemplateGroup
-          id="campaign-directions"
-          title={ar ? "اتجاهات حملات إضافية" : "More campaign directions"}
-          description={ar ? "فيديوهات المعاينة غير متوفرة بعد. تقدر تختار قالب وتجهز حملتك." : "Preview videos are not available yet. You can still choose a template and prepare your campaign."}
-          icon="direction"
-          templates={visibleGroups.campaignDirections}
-          selectedId={selectedId}
-          onSelect={onSelect}
-          onPreview={setPreviewTemplate}
-          locale={locale}
-          selectionEnabled={selectionEnabled}
-        />
+        ))}
       </div>
       {selectionEnabled && selectedId && filteredTemplates.some((template) => template.id === selectedId) && (
         <div className="creator-template-continue">
@@ -209,8 +190,8 @@ export function TemplateGrid({
       {!filteredTemplates.length && (
         <div className="creator-template-empty" role="status">
           <strong>{ar ? "ما لقينا قالب مطابق" : "No matching templates"}</strong>
-          <span>{ar ? "جرّب بحث أوسع أو اختر نوع نشاط ثاني." : "Try a broader search or choose another business type."}</span>
-          <button type="button" className="creator-button creator-button-secondary" onClick={() => { setQuery(""); setVertical("all"); setVisibleCount(12); }}>
+          <span>{ar ? "جرّب بحث أوسع أو اختر فئة ثانية." : "Try a broader search or choose another category."}</span>
+          <button type="button" className="creator-button creator-button-secondary" onClick={() => { setQuery(""); setDiscoveryCategory("all"); setVisibleCount(12); }}>
             {ar ? "مسح التصفية" : "Clear filters"}
           </button>
         </div>
@@ -292,11 +273,11 @@ function TemplateCard({ template, selected, onSelect, onPreview, locale, selecti
           <div className="creator-template-media" data-media-tone={template.mediaTone}>
             {template.poster ? <img src={template.poster} alt="" loading="lazy" style={{ objectPosition: template.posterPosition }} /> : <span className="creator-template-placeholder" aria-hidden="true" />}
             <span className="creator-template-direction" aria-hidden="true"><b>{template.mediaCode}</b><span>{templateGoalLabel(goal, locale)}</span></span>
-            <span className="creator-template-media-kind" aria-hidden="true">{template.previewVideo ? (ar ? "معاينة حركة" : "Motion preview") : (ar ? "اتجاه القالب" : "Template direction")}</span>
+            <span className="creator-template-media-kind">{template.previewVideo ? (ar ? "معاينة حركة" : "Motion preview") : (ar ? "معاينة الفيديو قريباً" : "Video preview coming later")}</span>
             {template.previewVideo ? <span className="creator-template-duration">{template.duration}s</span> : null}
           </div>
           <div className="creator-template-copy">
-            <span className="creator-template-eyebrow">{template.eyebrow}</span>
+            <span className="creator-template-eyebrow">{categoryTitle(template.discoveryCategory, locale)}</span>
             <h3>{locale === "ar" ? template.nameAr : template.name}</h3>
             <p>{locale === "ar" ? template.descriptionAr : template.description}</p>
             <div className="creator-template-meta">
@@ -320,7 +301,7 @@ function TemplateCard({ template, selected, onSelect, onPreview, locale, selecti
             aria-label={ar ? `شغّل معاينة قالب ${template.nameAr}` : `Play ${template.name} preview`}
           >
             <Play aria-hidden="true" />
-            <span>{ar ? "شغّل المعاينة" : "Play preview"}</span>
+            <span>{ar ? "معاينة النتيجة" : "Preview output"}</span>
           </button>
         ) : (
           <Link

@@ -1,50 +1,136 @@
-# Five reusable template prompts
+# Eleven reusable Seedance template recipes
 
-These fixed visual recipes are compiled with confirmed facts and verified uploaded images. Brand names and offers are optional; WhatsApp-order and booking campaigns still need their real destination. AI motion and details can vary, even with the same recipe.
+MovPrompt publishes the ten supplied version-one recipes plus the New York Billboard Takeover recipe. Each recipe is eight seconds with four fixed scenes and accepts an uploaded R2 image through the product-fidelity reference pipeline. The server keeps `bytedance/seedance-2.5`; the source document’s Seedance 1.0 wording is prompt guidance only.
 
-Source: `packages/creative-engine/src/catalog.ts`; compiler: `packages/creative-engine/src/prompt-compiler.ts`. Saved briefs pin recipe/prompt versions and their scene snapshot. The API checks the snapshot against the immutable MongoDB template version.
+The client image is authoritative. The template controls scene order, camera, lighting, composition and motion. Seedance remains generative, so repeated runs follow the same direction without promising identical pixels. Price, offer, location, phone number, booking destination and CTA are deterministic finishing overlays. Empty optional facts are omitted.
 
-## Luxury product reveal (luxury-product-reveal-v3)
+Source: `packages/creative-engine/src/catalog.ts`. Identity policy and confirmed-fact compilation: `packages/creative-engine/src/prompt-compiler.ts`.
 
-Black-stone studio, fine condensation, restrained gold highlights and luxury negative space
+## Mobile / Electronics
 
-1. 2s: Black-stone studio, fine condensation, restrained gold highlights and luxury negative space. hero silhouette with controlled negative space. Keep the confirmed subject visually dominant and leave intentional overlay-safe negative space. Camera: slow precision push-in.
-2. 2s: Black-stone studio, fine condensation, restrained gold highlights and luxury negative space. extreme macro material detail. Keep the confirmed subject visually dominant and leave intentional overlay-safe negative space. Camera: short parallax slide.
-3. 2s: Black-stone studio, fine condensation, restrained gold highlights and luxury negative space. medium lifestyle composition. Keep the confirmed subject visually dominant and leave intentional overlay-safe negative space. Camera: restrained orbit or track.
-4. 2s: Black-stone studio, fine condensation, restrained gold highlights and luxury negative space. stable product or business lockup. Keep the confirmed subject visually dominant and leave intentional overlay-safe negative space. Camera: locked frame with subtle living detail.
+### Premium Phone Reveal — `premium-phone-reveal-v1`
 
-## WhatsApp sales ad (whatsapp-sales-ad-v3)
+Dark premium studio, reflective surface, precise rim light and a controlled light sweep.
 
-Fast subject-first sequence with deterministic offer, KWD price and WhatsApp CTA safe areas
+1. Upright reference phone reveal with a slow centered push.
+2. Light sweep across the exact camera module, frame and buttons.
+3. Slow partial orbit with unchanged proportions and screen.
+4. Stable close hero frame with lower-third overlay space.
 
-1. 2s: Fast subject-first sequence with deterministic offer, KWD price and WhatsApp CTA safe areas. subject and offer-safe negative space. Keep the confirmed subject visually dominant and leave intentional overlay-safe negative space. Camera: fast controlled reveal.
-2. 2s: Fast subject-first sequence with deterministic offer, KWD price and WhatsApp CTA safe areas. complete product or service inclusion. Keep the confirmed subject visually dominant and leave intentional overlay-safe negative space. Camera: short lateral move.
-3. 2s: Fast subject-first sequence with deterministic offer, KWD price and WhatsApp CTA safe areas. one factual proof detail. Keep the confirmed subject visually dominant and leave intentional overlay-safe negative space. Camera: macro or medium push.
-4. 2s: Fast subject-first sequence with deterministic offer, KWD price and WhatsApp CTA safe areas. stable product, price and CTA safe zones. Keep the confirmed subject visually dominant and leave intentional overlay-safe negative space. Camera: locked frame.
+### Phone Floating Advertisement — `phone-floating-ad-v1`
 
-## Food and beverage craving (food-beverage-v3)
+Futuristic gradient studio, vertical float, subtle particles and restrained rotation.
 
-Macro steam, fizz, pour, crisp texture and appetising natural colour with exact packaging
+1. Exact reference phone floats vertically.
+2. Controlled twenty-degree orbit reveals its real edge and material.
+3. Soft light moves across the unchanged screen and body.
+4. Front-readable hero hold with end-card space.
 
-1. 2s: Macro steam, fizz, pour, crisp texture and appetising natural colour with exact packaging. hero silhouette with controlled negative space. Keep the confirmed subject visually dominant and leave intentional overlay-safe negative space. Camera: slow precision push-in.
-2. 2s: Macro steam, fizz, pour, crisp texture and appetising natural colour with exact packaging. extreme macro material detail. Keep the confirmed subject visually dominant and leave intentional overlay-safe negative space. Camera: short parallax slide.
-3. 2s: Macro steam, fizz, pour, crisp texture and appetising natural colour with exact packaging. medium lifestyle composition. Keep the confirmed subject visually dominant and leave intentional overlay-safe negative space. Camera: restrained orbit or track.
-4. 2s: Macro steam, fizz, pour, crisp texture and appetising natural colour with exact packaging. stable product or business lockup. Keep the confirmed subject visually dominant and leave intentional overlay-safe negative space. Camera: locked frame with subtle living detail.
+## Food / Restaurants
 
-## Salon booking offer (salon-booking-offer-v3)
+### Restaurant Food Hero Shot — `restaurant-food-hero-v1`
 
-Editorial luxury salon film: warm cream and blush, brushed champagne gold, soft window light, tactile beauty details and calm precision camera movement; preserve the actual uploaded salon or beauty subject
+Premium table, dark restaurant background, warm side light and appetising macro detail.
 
-1. 2s: Editorial luxury salon film: warm cream and blush, brushed champagne gold, soft window light, tactile beauty details and calm precision camera movement; preserve the actual uploaded salon or beauty subject. Wide reveal of the supplied salon interior or beauty subject; warm cream, blush and champagne-gold atmosphere. No people or invented salon signage. Keep the confirmed subject visually dominant and leave intentional overlay-safe negative space. Camera: slow straight dolly toward the reference subject.
-2. 2s: Editorial luxury salon film: warm cream and blush, brushed champagne gold, soft window light, tactile beauty details and calm precision camera movement; preserve the actual uploaded salon or beauty subject. Close detail of the existing material, mirror edge or beauty subject; keep all reference geometry and finishes unchanged. Keep the confirmed subject visually dominant and leave intentional overlay-safe negative space. Camera: restrained lateral macro slide.
-3. 2s: Editorial luxury salon film: warm cream and blush, brushed champagne gold, soft window light, tactile beauty details and calm precision camera movement; preserve the actual uploaded salon or beauty subject. Return to the supplied subject in its original space; soft window-light falloff and elegant depth, no fabricated treatment or before/after result. Keep the confirmed subject visually dominant and leave intentional overlay-safe negative space. Camera: gentle shallow parallax arc, no abrupt angle change.
-4. 2s: Editorial luxury salon film: warm cream and blush, brushed champagne gold, soft window light, tactile beauty details and calm precision camera movement; preserve the actual uploaded salon or beauty subject. Balanced hero composition of the same subject with uncluttered title-safe space for the booking invitation. Keep the confirmed subject visually dominant and leave intentional overlay-safe negative space. Camera: settle into a stable end frame.
+1. Exact supplied dish appears in its real plating.
+2. Macro detail preserves ingredients, portion, texture and garnish.
+3. Natural steam and a restrained three-quarter arc.
+4. Stable hero frame with offer-safe space.
 
-## App and service promotion (app-service-v3)
+### Food Delivery Advertisement — `food-delivery-ad-v1`
 
-Premium midnight-navy studio, ivory smartphone pedestal, champagne rim light and a cool-blue halo; preserve the supplied app screenshot or service artwork exactly on the phone screen
+Modern tabletop, supplied packaging, soft highlights and a semicircular camera move.
 
-1. 2s: Premium midnight-navy studio, ivory smartphone pedestal, champagne rim light and a cool-blue halo; preserve the supplied app screenshot or service artwork exactly on the phone screen. Hero reveal of the supplied app screenshot or service artwork on one upright smartphone; midnight-navy studio, ivory pedestal and champagne rim light. Preserve the supplied screen exactly. Keep the confirmed subject visually dominant and leave intentional overlay-safe negative space. Camera: slow three-quarter push-in.
-2. 2s: Premium midnight-navy studio, ivory smartphone pedestal, champagne rim light and a cool-blue halo; preserve the supplied app screenshot or service artwork exactly on the phone screen. Closer view of the same unchanged screen and device edge; cool-blue halo and restrained glass reflections. No invented interface, button labels or features. Keep the confirmed subject visually dominant and leave intentional overlay-safe negative space. Camera: short precision lateral slide.
-3. 2s: Premium midnight-navy studio, ivory smartphone pedestal, champagne rim light and a cool-blue halo; preserve the supplied app screenshot or service artwork exactly on the phone screen. Same device and uploaded screen, surrounded by a few subtle translucent decorative tiles with no text or claims. Keep the confirmed subject visually dominant and leave intentional overlay-safe negative space. Camera: shallow ten-degree orbit, screen remains front-readable.
-4. 2s: Premium midnight-navy studio, ivory smartphone pedestal, champagne rim light and a cool-blue halo; preserve the supplied app screenshot or service artwork exactly on the phone screen. Centered upright phone and identical uploaded artwork, clean negative space for the final invitation. Keep the confirmed subject visually dominant and leave intentional overlay-safe negative space. Camera: ease out and hold a stable hero end frame.
+1. Exact dish and only the packaging that was supplied.
+2. Hero food detail preserves portion and plating.
+3. Highlight passes across food and packaging without invented labels.
+4. Order-ready locked composition.
+
+## Clothing / Fashion
+
+### Fashion Product Showcase — `fashion-product-showcase-v1`
+
+Minimal luxury studio with a top-to-bottom light sweep.
+
+1. Exact garment centered with its original cut and drape.
+2. Light reveals real fabric, stitching, pattern and logo.
+3. Subtle orbit preserves construction and proportions.
+4. Clean editorial hero frame.
+
+### Luxury Brand Product Reveal — `luxury-fashion-reveal-v1`
+
+Black studio, reflective floor, focused spotlight and high-contrast finish.
+
+1. Exact product emerges from shadow.
+2. Spotlight traces the true silhouette, material and hardware.
+3. Gentle parallax adds depth without altering the item.
+4. Luxury close with title-safe space.
+
+## Beauty / Cosmetics
+
+### Cosmetic Product Commercial — `cosmetic-product-commercial-v1`
+
+Soft beauty studio, liquid reflections, fine particles and a gentle push.
+
+1. Exact package stands upright with unchanged label.
+2. Light travels across the real container, cap and material.
+3. Fine particles remain behind the product.
+4. Clean beauty hero with overlay-safe space.
+
+### Perfume Advertisement — `perfume-advertisement-v1`
+
+Dark reflective surface, controlled mist, precise light sweep and subtle bottle rotation.
+
+1. Exact bottle, cap, glass and label reveal.
+2. Mist stays behind while light shows the true liquid colour.
+3. Restrained orbit preserves the silhouette and label.
+4. Elegant end frame with CTA-safe negative space.
+
+## Real Estate / Business Services
+
+### Real Estate Property Advertisement — `real-estate-property-v1`
+
+Premium architectural listing with natural daylight and smooth, restrained motion.
+
+1. Wide view preserves architecture and room geometry.
+2. Daylight reveals real finishes, fixtures and layout.
+3. Environmental motion adds life without inventing rooms, views or features.
+4. Stable listing hero with contact-safe space.
+
+### Business / Service Promotional Video — `business-service-promotion-v1`
+
+Modern professional studio with the supplied service artwork, app screen or business image.
+
+1. Uploaded artwork appears centered and unchanged.
+2. Light sweep preserves brand marks and interface.
+3. Subtle depth layers leave factual-copy safe zones.
+4. Clear professional end frame.
+
+## Advertising
+
+### New York Billboard Takeover — `new-york-billboard-takeover-v1`
+
+Blue-hour Times Square-style New York plaza with one dominant digital billboard, a natural anonymous crowd, accurate screen perspective and no readable unrelated advertising.
+
+1. Establish the busy plaza around the single billboard carrying the exact uploaded artwork.
+2. Push toward the screen while preserving the artwork's logo, colours, proportions, layout and readable text.
+3. Show anonymous people naturally watching as billboard light reflects across the plaza.
+4. Hold the unchanged billboard artwork with safe space for deterministic business-name and CTA overlays.
+
+Exclude third-party logos, readable unrelated advertising, celebrities, duplicated billboards, distorted screens and invented campaign facts.
+
+## Poster publishing
+
+Generate the deterministic, provider-free poster files:
+
+```bash
+python3 scripts/infra/generate-template-posters.py
+```
+
+Publish and checksum-verify the eleven posters in the configured R2 template-preview bucket:
+
+```bash
+bun --env-file=.env scripts/infra/publish-r2-templates.ts
+```
+
+The object keys are `templates/v1/<template-id>.jpg`. Video object keys remain empty until matching demos receive separate approval.

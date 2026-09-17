@@ -8,6 +8,7 @@ import { factsForReview, requiredFactsForOutcome } from "./sourceFacts";
 
 type FactReviewStepProps = {
   source: CampaignSource;
+  templateId?: string;
   goal: CampaignGoal;
   arabic?: boolean;
   hidePricing?: boolean;
@@ -33,6 +34,21 @@ const FACT_META: Record<CampaignFactField, { en: string; ar: string; type?: "url
   media: { en: "Photos or footage", ar: "الصور أو الفيديو" },
 };
 
+function factMeta(field: CampaignFactField, templateId: string) {
+  const base = FACT_META[field];
+  if (field === "name" && /phone/u.test(templateId)) return { ...base, en: "Phone model or product name", ar: "اسم الهاتف أو المنتج" };
+  if (field === "name" && /food/u.test(templateId)) return { ...base, en: "Dish name", ar: "اسم الطبق" };
+  if (field === "name" && /fashion/u.test(templateId)) return { ...base, en: "Clothing or product name", ar: "اسم قطعة الأزياء أو المنتج" };
+  if (field === "name" && /cosmetic|perfume/u.test(templateId)) return { ...base, en: "Cosmetic or fragrance name", ar: "اسم المستحضر أو العطر" };
+  if (field === "service_name" && templateId === "real-estate-property") return { ...base, en: "Property or listing name", ar: "اسم العقار أو الإعلان" };
+  if (field === "brand" && templateId === "real-estate-property") return { ...base, en: "Agency name", ar: "اسم الوكالة" };
+  if (field === "service_name" && templateId === "business-service-promotion") return { ...base, en: "Service name", ar: "اسم الخدمة" };
+  if (field === "brand" && templateId === "business-service-promotion") return { ...base, en: "Business name", ar: "اسم النشاط" };
+  if (field === "description" && templateId === "real-estate-property") return { ...base, en: "Property description or tagline", ar: "وصف العقار أو العبارة التعريفية" };
+  if (field === "description") return { ...base, en: "Description or tagline", ar: "الوصف أو العبارة التعريفية" };
+  return base;
+}
+
 function copy(arabic: boolean, english: string, arabicText: string) {
   return arabic ? arabicText : english;
 }
@@ -44,7 +60,7 @@ function provenanceCopy(arabic: boolean, provenance: CampaignSource["facts"][num
 }
 
 /** A controlled fact editor; the parent applies exact source and legacy-project transitions. */
-export function FactReviewStep({ source, goal, arabic = false, hidePricing = false, onEdit, onConfirm, onContinue, onBack }: FactReviewStepProps) {
+export function FactReviewStep({ source, templateId = "", goal, arabic = false, hidePricing = false, onEdit, onConfirm, onContinue, onBack }: FactReviewStepProps) {
   const [validation, setValidation] = useState<CampaignFactField[]>([]);
   const fieldRefs = useRef(new Map<CampaignFactField, HTMLInputElement>());
   const rows = useMemo(
@@ -91,7 +107,7 @@ export function FactReviewStep({ source, goal, arabic = false, hidePricing = fal
 
       <div className="creator-fact-list">
         {rows.map((row) => {
-          const meta = FACT_META[row.field];
+          const meta = factMeta(row.field, templateId);
           const fact = row.fact;
           const invalid = validation.includes(row.field);
           const inputId = `campaign-fact-${row.field}`;

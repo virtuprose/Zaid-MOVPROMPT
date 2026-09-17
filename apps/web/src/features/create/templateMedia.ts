@@ -1,4 +1,5 @@
 import type { CampaignGoal } from "@movprompt/contracts";
+import { CATEGORY_PREVIEW_TEMPLATE_IDS } from "@movprompt/creative-engine";
 
 export type TemplateMediaTone = "warm" | "cool" | "soft" | "vivid" | "neutral";
 
@@ -23,6 +24,24 @@ for (const id of ["luxury-product-reveal", "whatsapp-sales-ad", "food-beverage",
   const version = ["app-service", "salon-booking-offer"].includes(id) ? "v3" : "v1";
   TEMPLATE_POSTERS[id] = `${mediaBaseUrl}/api/v1/template-previews/${version}/${id}.jpg`;
   VERIFIED_TEMPLATE_VIDEOS[id] = `${mediaBaseUrl}/api/v1/template-previews/${version}/${id}.mp4`;
+}
+for (const id of [
+  "premium-phone-reveal",
+  "phone-floating-ad",
+  "restaurant-food-hero",
+  "food-delivery-ad",
+  "fashion-product-showcase",
+  "luxury-fashion-reveal",
+  "cosmetic-product-commercial",
+  "perfume-advertisement",
+  "real-estate-property",
+  "business-service-promotion",
+  "new-york-billboard-takeover",
+]) {
+  TEMPLATE_POSTERS[id] = `${mediaBaseUrl}/api/v1/template-previews/v1/${id}.jpg`;
+}
+for (const id of CATEGORY_PREVIEW_TEMPLATE_IDS) {
+  VERIFIED_TEMPLATE_VIDEOS[id] = `${mediaBaseUrl}/api/v1/template-previews/v1/${id}.mp4`;
 }
 
 const toneByGoal: Record<CampaignGoal, TemplateMediaTone> = {

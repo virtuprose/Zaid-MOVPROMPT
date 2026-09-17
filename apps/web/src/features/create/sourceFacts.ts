@@ -36,6 +36,7 @@ const PRODUCT_FACT_FIELDS: CampaignFactField[] = [
 
 const SERVICE_FACT_FIELDS: CampaignFactField[] = [
   "service_name",
+  "brand",
   "description",
   "service_details",
   "location",
