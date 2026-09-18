@@ -2063,3 +2063,39 @@
   transition: color var(--creator-anim-fast) var(--creator-anim-ease);
 }
 .creator-template-back:hover { color: hsl(var(--creator-ink)); }
+
+/* ---- Flat template grid: uniform cards, all same size ---------------------- */
+
+.creator-template-flat-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  align-items: stretch;
+}
+@media (min-width: 520px) {
+  .creator-template-flat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+}
+@media (min-width: 880px) {
+  .creator-template-flat-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
+}
+@media (min-width: 1200px) {
+  .creator-template-flat-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 24px; }
+}
+.creator-template-flat-grid > div {
+  display: flex;
+  align-items: stretch;
+}
+.creator-template-flat-grid .creator-template-card-v2 {
+  width: 100%;
+  max-width: none;
+  height: 100%;
+}
+.creator-template-flat-grid .creator-template-card-v2.is-featured,
+.creator-template-flat-grid .creator-template-card-v2 {
+  max-width: none;
+  grid-column: auto;
+  grid-row: auto;
+}
+.creator-template-flat-grid .creator-template-media {
+  aspect-ratio: 4 / 5;
+}

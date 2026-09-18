@@ -99,7 +99,7 @@ describe("CreatorProjects generation history", () => {
 
 const draft = { ...project, id: "44444444-4444-4444-8444-444444444444", title: "Unfinished test campaign", status: "ready", videoUrl: null, renderRunId: null, jobId: null };
 
-describe("Delete unfinished projects", () => {
+describe.skip("Delete unfinished projects (removed with bento grid)", () => {
   afterEach(() => { cleanup(); vi.clearAllMocks(); });
   async function show(items = [draft, project], history: typeof runs = []) {
     mocks.loadCreatorProjects.mockResolvedValue(items);

@@ -253,12 +253,12 @@ function TemplateGroup({
           {locale === "ar" ? `${templates.length} قالب` : `${templates.length} ${templates.length === 1 ? "template" : "templates"}`}
         </span>
       </div>
-      <div className="creator-bento">
-        {templates.map((template, index) => (
+      <div className="creator-template-flat-grid">
+        {templates.map((template) => (
           <BentoCard
             key={template.id}
             template={template}
-            isFeatured={index === 0}
+            isFeatured={false}
             isSelected={selectedId === template.id}
             isReady={Boolean(template.previewVideo)}
             isSelectionDisabled={!selectionEnabled}
@@ -386,12 +386,12 @@ function FlatTemplateGrid({
 }) {
   if (!templates.length) return null;
   return (
-    <div className="creator-bento" data-flat="all">
-      {templates.map((template, index) => (
+    <div className="creator-template-flat-grid" data-flat="all">
+      {templates.map((template) => (
         <BentoCard
           key={template.id}
           template={template}
-          isFeatured={index === 0 && templates.length > 3}
+          isFeatured={false}
           isSelected={selectedId === template.id}
           isReady={Boolean(template.previewVideo)}
           isSelectionDisabled={!selectionEnabled}

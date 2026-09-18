@@ -6,8 +6,6 @@ import { toast } from "sonner";
 import { Seo } from "@/components/Seo";
 import { useAuth } from "@/hooks/useAuth";
 import { CreatorShell } from "@/features/create/CreatorShell";
-import { getCreatorTemplate } from "@/features/create/templates";
-import { ProjectCardV2 } from "@/features/create/ProjectCardV2";
 import { duplicateCreatorProject, listLocalCreatorProjects, loadCreatorProjects, subscribeToCreatorProjects, trashCreatorProject } from "@/features/create/projectStore";
 import { ProjectDeletionPendingError } from "@/features/create/trashUnfinishedProject";
 import { canDeleteCreatorDraft } from "@/features/create/creatorProjectDeletion";
@@ -275,31 +273,6 @@ export default function CreatorProjects({ qaMode = false }: { qaMode?: boolean }
             ) : null}
           </section>
         ) : null}
-
-        {projects.length ? (
-          <div className="creator-bento">
-            {projects.map((project, index) => {
-              const template = getCreatorTemplate(project.templateId);
-              const isFeatured = index === 0;
-              return (
-                <div key={project.id} className={isFeatured ? "creator-bento-featured" : undefined}>
-                  <ProjectCardV2
-                    project={project}
-                    isFeatured={isFeatured}
-                    onOpen={(p) => navigate(qaMode ? `/qa/create?project=${p.id}` : `/projects/${p.id}`)}
-                    onDuplicate={(p) => void duplicate(p)}
-                    onDelete={canDeleteCreatorDraft(project, runs) ? (p) => { setDeleteError(""); setPendingDelete(p); } : undefined}
-                    resolution={project.resolution}
-                  />
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="creator-empty">
-            <div><span className="creator-empty-icon"><FolderOpen aria-hidden="true" /></span><h2>{tr("No campaigns yet", "ما عندك حملات بعد")}</h2><p>{tr("Choose a template and add a product. MovPrompt will save your work automatically.", "اختر قالباً وأضف منتجك. MovPrompt يحفظ شغلك تلقائياً.")}</p><button className="creator-button creator-button-primary" type="button" onClick={createNew}><Plus aria-hidden="true" /> {tr("Create your first video", "أنشئ أول فيديو")}</button></div>
-          </div>
-        )}
       </div>
       <AlertDialog open={Boolean(pendingDelete)} onOpenChange={(open) => { if (!open && !deletingRef.current) setPendingDelete(null); }}>
         <AlertDialogContent className="creator-app" dir={ar ? "rtl" : "ltr"}>
