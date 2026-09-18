@@ -1,6 +1,11 @@
 # MovPrompt Progress
 
-Updated: 2026-09-17
+Updated: 2026-09-18
+
+## 2026-09-18: Template Mode launch cleanup
+
+- Temporarily hid the **Switch to Advanced** handoff and the remaining public **Advanced** navigation links. The `/advanced` route and workspace remain in the codebase for later activation.
+- Documented the Render deployment source requirement and the hosted customer-upload path through the Render API, private R2 storage and MongoDB ownership records in `docs/runbooks/RENDER.md`.
 
 This is the compact, chat-independent resume file. Product rules remain in `AGENTS.md` and `.planning/PROJECT.md`; scope and exit criteria remain in `.planning/ROADMAP.md`; detailed evidence remains in the Phase 04 plans, summaries, and validation files.
 

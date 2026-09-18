@@ -9,6 +9,12 @@ The root `render.yaml` defines the safe first release:
 - authentication, uploads, templates and projects enabled;
 - billing, exports and provider video generation disabled.
 
+The **Switch to Advanced** handoff and all public **Advanced** navigation links
+are temporarily hidden for this release. The `/advanced` route and Advanced
+workspace remain in the codebase for later activation; restore the navigation
+and handoff only after its hosted draft transfer and generation path pass
+release verification.
+
 No worker is provisioned in this first release. Render background workers use
 paid compute, and this repository keeps production generation unavailable until
 pricing, quality calibration, provider output validation and an authorized
@@ -36,6 +42,13 @@ indexes before reporting ready.
 
 Render needs this local work in an accessible Git repository before it can
 build the Blueprint. Pushing or deploying remains a separate user action.
+
+Render does not provide a direct ZIP or project-folder upload for this
+Blueprint workflow. Use a private GitHub, GitLab or Bitbucket repository. If
+GitHub is not desired, create a private GitLab or Bitbucket repository and push
+the reviewed branch there. A prebuilt container registry is an alternative for
+the API, but it does not replace the Git-backed static-site and Blueprint flow
+defined by this repository.
 
 1. Push the reviewed changes to the intended private repository and branch.
 2. In Render, choose **New > Blueprint** and select that repository.
@@ -74,7 +87,44 @@ The single R2 bucket is intentionally configured as all three logical bucket
 roles. `R2_TEMPLATE_PREVIEWS_BASE_URL` stays empty so customer media and
 template objects remain private and the API issues temporary signed URLs.
 
-## 4. Verify the safe release
+## 4. Enable and verify customer file uploads
+
+Do not attach a Render persistent disk for customer uploads. Render service
+filesystems are temporary, while MovPrompt already stores persistent media in
+private Cloudflare R2.
+
+1. In Cloudflare R2, keep the `movprompt` bucket and use the same bucket name
+   for `R2_ASSETS_BUCKET`, `R2_OUTPUTS_BUCKET` and
+   `R2_TEMPLATE_PREVIEWS_BUCKET`.
+2. Create a scoped R2 credential with object read/write/delete access for that
+   bucket and enter its account ID, access-key ID and secret in the Render API
+   service. Keep every credential server-only.
+3. Keep `FEATURE_ASSETS=true` on the API and set `VITE_API_ORIGIN` on the web
+   service to the deployed API origin.
+4. Set `PUBLIC_APP_URL`, `WEB_ORIGIN`, `API_ORIGIN`,
+   `CORS_ALLOWED_ORIGINS`, `BETTER_AUTH_URL` and
+   `BETTER_AUTH_TRUSTED_ORIGINS` to the final Render origins shown in
+   `render.yaml`.
+5. Deploy the API, then check `/api/v1/health`. MongoDB and R2 must both report
+   `ok` before testing uploads.
+6. Sign in, create a project, and upload one JPG, PNG or WebP image smaller
+   than 12 MB. The API checks the declared MIME type, byte length, image
+   structure and SHA-256 checksum before marking it ready.
+7. Refresh My Projects and reopen the draft. Confirm the image still loads by
+   temporary signed URL, then verify the R2 object exists under the private
+   user/project asset prefix and the MongoDB asset record stores only its
+   bucket and object key.
+8. Test a disallowed file, an oversized file and a second user's asset URL.
+   Each must fail without creating a usable asset.
+
+The browser-to-storage path is:
+
+```text
+Browser -> Render API ownership check -> validated upload -> private R2 object
+        -> MongoDB asset record -> temporary signed read URL
+```
+
+## 5. Verify the safe release
 
 After the services deploy:
 
@@ -91,7 +141,7 @@ After the services deploy:
 The free API plan may sleep during inactivity and is suitable for deployment
 testing, not a production availability claim.
 
-## 5. Later generation activation
+## 6. Later generation activation
 
 Add the existing worker Docker image as a paid Render background worker only
 after the generation activation runbook passes. The worker must receive the

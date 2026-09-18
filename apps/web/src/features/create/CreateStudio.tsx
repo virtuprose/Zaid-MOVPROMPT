@@ -16,7 +16,6 @@ import {
   Redo2,
   RefreshCw,
   Send,
-  SlidersHorizontal,
   Sparkles,
   Undo2,
   Upload,
@@ -61,7 +60,6 @@ import {
   buildPortableGenerationConfiguration,
   buildPortableTemplateEstimateConfiguration,
   getLocalCreatorProject,
-  imageReferencesForAdvancedHandoff,
   loadCreatorProjects,
   portableCampaignRecipe,
   portableConfiguration,
@@ -383,7 +381,6 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
   const [sourceBusy, setSourceBusy] = useState(false);
   const [showAllTemplates, setShowAllTemplates] = useState(false);
   const [claimProgress, setClaimProgress] = useState<GuestClaimProgressState | null>(null);
-  const [modeSwitching, setModeSwitching] = useState(false);
   const [rightsConfirmed, setRightsConfirmed] = useState(false);
   const [campaignSetupReady, setCampaignSetupReady] = useState(false);
   const [presenterCompatibility, setPresenterCompatibility] = useState<PresenterCompatibility>({ aiUgc: false, uploadedSpokesperson: false });
@@ -1050,29 +1047,6 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
       </button>
     </div>
   ) : null;
-
-  const switchToAdvanced = async () => {
-    if (modeSwitching) return;
-    setModeSwitching(true);
-    try {
-      const templateDraft = projectToCreationDraft(project, rightsConfirmed);
-      await saveGuestDraft({
-        ...templateDraft,
-        mode: "advanced",
-        advanced: {
-          capability: "video.product_fidelity",
-          prompt: project.product.images.length ? buildTemplatePrompt(project) : "",
-          references: imageReferencesForAdvancedHandoff(project),
-          renderSettings: { duration: project.durationSeconds, ratio: project.aspectRatio },
-        },
-        returnPath: `/advanced?draft=${encodeURIComponent(project.id)}`,
-      });
-      navigate(`/advanced?draft=${encodeURIComponent(project.id)}&from=template`);
-    } catch {
-      toast.error("We couldn’t open Advanced Mode. Your template draft is unchanged.");
-      setModeSwitching(false);
-    }
-  };
 
   const runQaGeneration = () => {
     generationCancelled.current = false;
@@ -1813,14 +1787,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
             <p className="creator-kicker">{tr("Create with a template", "أنشئ باستخدام قالب")}</p>
             <h1 className="creator-title creator-title-sm">{step === "template" ? (project.product.images.length ? tr(`Choose the best format for this ${project.promotionKind === "business" ? "service" : "product"}.`, "اختر أفضل قالب لهذه الحملة.") : tr("Choose the result you want.", "اختر النتيجة التي تريدها.")) : step === "source" ? tr("What are you promoting?", "شنو تبي تروّج له؟") : step === "facts" ? tr("Check the details we’ll use.", "تأكد من التفاصيل التي سنستخدمها.") : tr("Review the campaign.", "راجع الحملة.")}</h1>
             <p className="creator-subtitle">{step === "template" ? (project.product.images.length ? tr(`MovPrompt keeps your ${project.promotionKind === "business" ? "business" : "product"} facts while you compare proven campaign outcomes.`, "يحافظ MovPrompt على معلوماتك أثناء مقارنة نتائج الحملات المجربة.") : tr("Start from a proven campaign structure. You can still change the copy, branding and individual scenes later.", "ابدأ بهيكل حملة مجرب. تقدر تعدل النص والهوية والمشاهد لاحقاً.")) : step === "source" ? tr("Add a product page, business website or clear photos. You will confirm every imported fact before generation.", "أضف صفحة منتج أو موقع نشاط أو صور واضحة. راح تأكد كل معلومة قبل التوليد.") : step === "facts" ? tr("Correct anything that is wrong. Every source label stays visible before you choose a template.", "صحح أي معلومة غير دقيقة. كل تسمية للمصدر تبقى واضحة قبل اختيار القالب.") : tr("A few final details help MovPrompt create the right version for Kuwait.", "تفاصيل بسيطة تساعد MovPrompt يصنع النسخة المناسبة للكويت.")}</p>
-            <button className="creator-mode-switch" type="button" onClick={() => void switchToAdvanced()} disabled={modeSwitching}>
-              <span className="creator-mode-switch-icon"><SlidersHorizontal aria-hidden="true" /></span>
-              <span className="creator-mode-switch-copy">
-                <strong>{modeSwitching ? tr("Opening Advanced Mode…", "جارٍ فتح الوضع المتقدم…") : tr("Switch to Advanced", "الانتقال للوضع المتقدم")}</strong>
-                <small>{project.product.images.length ? tr("Your product and campaign settings come with you.", "منتجك وإعدادات الحملة تنتقل معك.") : tr("Use references and detailed creative controls.", "استخدم المراجع وأدوات تحكم إبداعية مفصّلة.")}</small>
-              </span>
-              {modeSwitching ? <Loader2 className="animate-spin" aria-hidden="true" /> : <ArrowRight aria-hidden="true" />}
-            </button>
+            {/* Advanced handoff is intentionally hidden during the current Template Mode launch. */}
           </div>
           <CreatorProgress current={step} steps={flowSteps} label={tr("Step", "الخطوة")} arabic={arabicUi} />
         </header>

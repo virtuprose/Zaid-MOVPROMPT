@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
-import { Bell, CreditCard, Download, FolderOpen, Globe2, LayoutTemplate, Loader2, LogOut, Menu, Moon, Settings, SlidersHorizontal, Sparkles, Sun, UserRoundCog, X } from "lucide-react";
+import { Bell, CreditCard, Download, FolderOpen, Globe2, LayoutTemplate, Loader2, LogOut, Menu, Moon, Settings, Sparkles, Sun, UserRoundCog, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useTheme } from "@/components/ThemeProvider";
@@ -26,7 +26,7 @@ const NAVIGATION = [
   { to: "/create", label: "Create", icon: Sparkles },
   { to: "/templates", label: "Templates", icon: LayoutTemplate },
   { to: "/projects", label: "Projects", icon: FolderOpen },
-  { to: "/advanced", label: "Advanced", icon: SlidersHorizontal },
+  // Advanced Mode stays implemented but is intentionally absent from public navigation for this release.
 ];
 
 type StudioChrome = {
@@ -123,7 +123,7 @@ export function CreatorShell({ children, qaMode = false, studio }: { children: R
                     className={cn("creator-nav-link", isActive(item.to) && "is-active")}
                   >
                     <Icon aria-hidden="true" />
-                    {ar ? ({ Create: "إنشاء", Templates: "القوالب", Projects: "المشاريع", Advanced: "متقدم" } as const)[item.label] : item.label}
+                    {ar ? ({ Create: "إنشاء", Templates: "القوالب", Projects: "المشاريع" } as const)[item.label] : item.label}
                   </NavLink>
                 );
               })}
@@ -188,7 +188,7 @@ export function CreatorShell({ children, qaMode = false, studio }: { children: R
               return (
                 <NavLink key={item.to} to={routeFor(item.to)} onClick={() => setMenuOpen(false)} className={cn("creator-nav-link", isActive(item.to) && "is-active")}>
                   <Icon aria-hidden="true" />
-                  {ar ? ({ Create: "إنشاء", Templates: "القوالب", Projects: "المشاريع", Advanced: "متقدم" } as const)[item.label] : item.label}
+                  {ar ? ({ Create: "إنشاء", Templates: "القوالب", Projects: "المشاريع" } as const)[item.label] : item.label}
                 </NavLink>
               );
             })}

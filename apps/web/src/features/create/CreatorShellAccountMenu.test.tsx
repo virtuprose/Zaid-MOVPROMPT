@@ -35,6 +35,8 @@ describe("CreatorShell account menu", () => {
       </MemoryRouter>,
     );
 
+    expect(screen.queryByRole("link", { name: "Advanced" })).not.toBeInTheDocument();
+
     fireEvent.pointerDown(screen.getByRole("button", { name: /account menu: client@example.com/i }), {
       button: 0,
       ctrlKey: false,

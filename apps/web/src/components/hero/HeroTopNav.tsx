@@ -45,7 +45,7 @@ export const HeroTopNav = () => {
               {item.label}
             </a>
           ))}
-          <Link to="/advanced">Advanced</Link>
+          {/* Advanced Mode navigation is deferred until the workspace is release-ready. */}
           {!developmentFreeGeneration && <Link to="/pricing">Pricing</Link>}
         </div>
 
@@ -97,9 +97,7 @@ export const HeroTopNav = () => {
               {item.label}
             </a>
           ))}
-          <Link to="/advanced" onClick={() => setMenuOpen(false)}>
-            Advanced
-          </Link>
+          {/* Advanced Mode navigation is deferred until the workspace is release-ready. */}
           {!developmentFreeGeneration && <Link to="/pricing" onClick={() => setMenuOpen(false)}>
             Pricing
           </Link>}

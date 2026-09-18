@@ -40,6 +40,13 @@ describe("CinematicHero scrollable campaign galleries", () => {
     view.unmount();
   });
 
+  it("keeps Advanced Mode out of public homepage navigation", () => {
+    const view = renderHero("en");
+
+    expect(screen.queryByRole("link", { name: /^Advanced(?: Studio)?$/ })).not.toBeInTheDocument();
+    view.unmount();
+  });
+
   it("localizes the gallery labels for Arabic interface users", () => {
     const view = renderHero("ar");
 
