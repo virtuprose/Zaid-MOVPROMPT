@@ -158,21 +158,32 @@ export function TemplateGrid({
         </div>
       </div>
       <div className="creator-template-groups" aria-busy={catalogState === "loading"} aria-live="polite">
-        {visibleGroups.map(([category, groupTemplates]) => (
-          <TemplateGroup
-            key={category}
-            id={category.replace(/\s+/g, "-")}
-            title={categoryTitle(category, locale)}
-            description={ar ? "اختر اتجاهًا ثابتًا، ثم أضف صورتك. قد تختلف التفاصيل البصرية في كل نتيجة مولّدة." : "Choose a fixed direction, then add your image. Visual details may vary in each generated result."}
-            icon="direction"
-            templates={groupTemplates}
+        {discoveryCategory === "all" ? (
+          <FlatTemplateGrid
+            templates={visibleTemplates}
             selectedId={selectedId}
             onSelect={onSelect}
             onPreview={setPreviewTemplate}
             locale={locale}
             selectionEnabled={selectionEnabled}
           />
-        ))}
+        ) : (
+          visibleGroups.map(([category, groupTemplates]) => (
+            <TemplateGroup
+              key={category}
+              id={category.replace(/\s+/g, "-")}
+              title={categoryTitle(category, locale)}
+              description={ar ? "اختر اتجاهًا ثابتًا، ثم أضف صورتك. قد تختلف التفاصيل البصرية في كل نتيجة مولّدة." : "Choose a fixed direction, then add your image. Visual details may vary in each generated result."}
+              icon="direction"
+              templates={groupTemplates}
+              selectedId={selectedId}
+              onSelect={onSelect}
+              onPreview={setPreviewTemplate}
+              locale={locale}
+              selectionEnabled={selectionEnabled}
+            />
+          ))
+        )}
       </div>
       {selectionEnabled && selectedId && filteredTemplates.some((template) => template.id === selectedId) && (
         <div className="creator-template-continue">
@@ -354,6 +365,41 @@ function BentoCard({
         categoryLabel={categoryTitle(template.discoveryCategory, locale)}
         modelLabel={capabilities.active.displayName}
       />
+    </div>
+  );
+}
+
+function FlatTemplateGrid({
+  templates,
+  selectedId,
+  onSelect,
+  onPreview,
+  locale,
+  selectionEnabled,
+}: {
+  templates: CreatorTemplate[];
+  selectedId: string | null | undefined;
+  onSelect: (templateId: string) => void;
+  onPreview: (template: CreatorTemplate) => void;
+  locale: "en" | "ar";
+  selectionEnabled: boolean;
+}) {
+  if (!templates.length) return null;
+  return (
+    <div className="creator-bento" data-flat="all">
+      {templates.map((template, index) => (
+        <BentoCard
+          key={template.id}
+          template={template}
+          isFeatured={index === 0 && templates.length > 3}
+          isSelected={selectedId === template.id}
+          isReady={Boolean(template.previewVideo)}
+          isSelectionDisabled={!selectionEnabled}
+          onSelect={(t) => onSelect(t.id)}
+          onPreview={onPreview}
+          locale={locale}
+        />
+      ))}
     </div>
   );
 }

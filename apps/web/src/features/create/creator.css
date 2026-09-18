@@ -1530,10 +1530,10 @@
   transition: transform var(--creator-anim-fast) var(--creator-anim-ease),
               box-shadow var(--creator-anim-fast) var(--creator-anim-ease);
   isolation: isolate;
-  max-width: 240px;
+  max-width: 200px;
   margin: 0 auto;
 }
-.creator-template-card-v2.is-featured { max-width: 360px; }
+.creator-template-card-v2.is-featured { max-width: 320px; }
 .creator-template-card-v2:hover,
 .creator-template-card-v2:focus-within {
   transform: translateY(-2px);
@@ -1544,11 +1544,11 @@
 }
 .creator-template-card-v2 .creator-template-media {
   position: relative;
-  aspect-ratio: 9 / 16;
+  aspect-ratio: 4 / 5;
   background: hsl(var(--creator-bg) / .5);
   overflow: hidden;
 }
-.creator-template-card-v2.is-featured .creator-template-media { aspect-ratio: 9 / 16; }
+.creator-template-card-v2.is-featured .creator-template-media { aspect-ratio: 4 / 5; }
 .creator-template-card-v2 .creator-template-media img {
   width: 100%;
   height: 100%;
@@ -1559,15 +1559,15 @@
 .creator-template-card-v2:hover .creator-template-media img { transform: scale(1.03); }
 .creator-template-card-v2 .creator-template-eyebrow {
   position: absolute;
-  inset-inline-start: 12px;
-  top: 12px;
+  inset-inline-start: 8px;
+  top: 8px;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 10px;
+  gap: 4px;
+  padding: 3px 8px;
   background: hsl(var(--creator-ink) / .78);
   color: hsl(var(--creator-bg));
-  font-size: 11px;
+  font-size: 9px;
   font-weight: 600;
   letter-spacing: .04em;
   border-radius: 999px;
@@ -1576,80 +1576,69 @@
 }
 .creator-template-card-v2 .creator-template-chip-row {
   position: absolute;
-  inset-inline-end: 12px;
-  top: 12px;
+  inset-inline-end: 8px;
+  top: 8px;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
 }
 .creator-template-card-v2 .creator-template-chip {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 4px 8px;
+  gap: 3px;
+  padding: 2px 6px;
   background: hsl(var(--creator-bg) / .88);
   border: 1px solid hsl(var(--creator-line));
   color: hsl(var(--creator-ink));
-  font-size: 11px;
+  font-size: 9px;
   font-weight: 600;
   border-radius: 999px;
 }
-.creator-template-card-v2 .creator-template-chip svg { width: 12px; height: 12px; }
+.creator-template-card-v2 .creator-template-chip svg { width: 10px; height: 10px; }
 .creator-template-card-v2 .creator-template-body {
   display: grid;
-  gap: 8px;
-  padding: 16px 18px 18px;
+  gap: 6px;
+  padding: 10px 12px 12px;
 }
 .creator-template-card-v2 .creator-template-cat {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: .08em;
-  text-transform: uppercase;
-  color: hsl(var(--creator-accent));
+  display: none;
 }
 .creator-template-card-v2 .creator-template-title {
   font-family: "Inter Tight", Inter, sans-serif;
-  font-size: 18px;
+  font-size: 14px;
   font-weight: 650;
   line-height: 1.25;
   letter-spacing: -.01em;
   color: hsl(var(--creator-ink));
   margin: 0;
 }
-.creator-template-card-v2.is-featured .creator-template-title { font-size: 22px; }
+.creator-template-card-v2.is-featured .creator-template-title { font-size: 18px; }
 .creator-template-card-v2 .creator-template-desc {
-  font-size: 13px;
-  line-height: 1.55;
-  color: hsl(var(--creator-muted));
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  margin: 0;
+  display: none;
 }
 .creator-template-card-v2 .creator-template-actions {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  margin-top: 8px;
-  padding-top: 12px;
+  gap: 8px;
+  margin-top: 4px;
+  padding-top: 8px;
   border-top: 1px solid hsl(var(--creator-line));
 }
 .creator-template-card-v2 .creator-template-cta {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  font-size: 13px;
+  gap: 4px;
+  font-size: 12px;
   font-weight: 600;
   color: hsl(var(--creator-ink));
 }
-.creator-template-card-v2 .creator-template-cta svg { width: 14px; height: 14px; }
+.creator-template-card-v2 .creator-template-cta svg { width: 12px; height: 12px; }
 .creator-template-card-v2 .creator-template-status {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  font-size: 11px;
+  gap: 4px;
+  font-size: 10px;
   font-weight: 600;
   color: hsl(var(--creator-muted));
 }

@@ -65,19 +65,19 @@ describe("TemplateGrid", () => {
 
   it("renders one usable template in each approved discovery category", () => {
     languageState.locale = "en";
-    const view = render(
-      <MemoryRouter>
-        <TemplateGrid onSelect={vi.fn()} />
-      </MemoryRouter>,
-    );
-
     for (const name of ["Electronics", "Food", "Ecommerce", "Advertising"]) {
+      const view = render(
+        <MemoryRouter>
+          <TemplateGrid onSelect={vi.fn()} />
+        </MemoryRouter>,
+      );
+      fireEvent.click(screen.getByRole("button", { name, pressed: false }));
       const group = within(screen.getByRole("region", { name }));
       expect(group.getAllByRole("button", { name: /Choose .* template/ })).toHaveLength(1);
+      expect(screen.queryByRole("region", { name: "Beauty / Cosmetics" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("region", { name: "Real Estate / Business Services" })).not.toBeInTheDocument();
+      view.unmount();
     }
-    expect(screen.queryByRole("region", { name: "Beauty / Cosmetics" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("region", { name: "Real Estate / Business Services" })).not.toBeInTheDocument();
-    view.unmount();
   });
 
   it("keeps an already-selected direction selected inside its category", () => {
@@ -88,7 +88,7 @@ describe("TemplateGrid", () => {
         <TemplateGrid selectedId={selected.id} onSelect={vi.fn()} />
       </MemoryRouter>,
     );
-
+    fireEvent.click(screen.getByRole("button", { name: "Food", pressed: false }));
     const selectedGroup = screen.getByRole("region", { name: "Food" });
     const selectedCard = within(selectedGroup).getByTestId(`v2-${selected.id}`);
     expect(selectedCard).toHaveAttribute("data-template-selected", "true");
@@ -103,9 +103,11 @@ describe("TemplateGrid", () => {
         <TemplateGrid onSelect={vi.fn()} />
       </MemoryRouter>,
     );
-
+    fireEvent.click(screen.getByRole("button", { name: "الإلكترونيات", pressed: false }));
     expect(screen.getByRole("region", { name: "الإلكترونيات" })).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "الأطعمة", pressed: false }));
     expect(screen.getByRole("region", { name: "الأطعمة" })).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "الإعلانات", pressed: false }));
     expect(screen.getByRole("region", { name: "الإعلانات" })).toBeVisible();
     expect(screen.queryByRole("region", { name: "العقار وخدمات الأعمال" })).not.toBeInTheDocument();
     view.unmount();
