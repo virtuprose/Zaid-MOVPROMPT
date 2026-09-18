@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 
 import { LanguageProvider } from "@/i18n/LanguageContext";
+import logoMark from "@/assets/logo-mark-white.svg";
 import Auth from "./Auth";
 
 const authMocks = vi.hoisted(() => ({
@@ -87,6 +88,17 @@ describe("authentication screen flow", () => {
     cleanup();
     document.documentElement.dir = "ltr";
     document.documentElement.lang = "en";
+  });
+
+  it("uses the shared MovPrompt brand on sign-in and sign-up", () => {
+    renderAuth();
+
+    const brand = screen.getByRole("link", { name: "MovPrompt home" });
+    expect(brand).toHaveTextContent("MovPrompt");
+    expect(brand.querySelector("img")).toHaveAttribute("src", logoMark);
+
+    openSignUp();
+    expect(screen.getByRole("link", { name: "MovPrompt home" })).toBe(brand);
   });
 
   it("keeps account creation disabled until the terms are accepted", () => {

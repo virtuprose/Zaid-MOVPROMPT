@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { InstallPrompt } from "@/components/InstallPrompt";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { Seo } from "@/components/Seo";
+import logoMark from "@/assets/logo-mark-white.svg";
 import { enabledSocialAuthProviders } from "@/config/authProviders";
 import { isEmailVerificationRequired } from "@/config/authPolicy";
 import { isFeatureEnabled } from "@/config/features";
@@ -222,9 +223,9 @@ export default function Auth() {
       <Seo title="Sign in or create an account - MovPrompt" description="Save your campaign and start creating with MovPrompt." path="/auth" />
 
       <header className="auth-topbar">
-        <Link to="/" className="auth-brand rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-          <span className="auth-brand-mark" aria-hidden="true" />
-          <span><b>Mov</b>Prompt</span>
+        <Link to="/" className="auth-brand rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label="MovPrompt home">
+          <img className="auth-brand-mark" src={logoMark} alt="" width="28" height="28" />
+          <span>MovPrompt</span>
         </Link>
         <div className="[&_button]:min-h-11"><LanguageToggle /></div>
       </header>
