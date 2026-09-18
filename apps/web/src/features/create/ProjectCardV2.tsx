@@ -84,24 +84,6 @@ export function ProjectCardV2({
         </span>
       </header>
 
-      <dl className="creator-project-card-row">
-        <div className="creator-project-stat">
-          <dt>{ar ? "المدة" : "Duration"}</dt>
-          <dd>
-            {project.durationSeconds}
-            {ar ? "ث" : "s"}
-          </dd>
-        </div>
-        <div className="creator-project-stat">
-          <dt>{ar ? "المقاس" : "Aspect"}</dt>
-          <dd>{project.aspectRatio}</dd>
-        </div>
-        <div className="creator-project-stat">
-          <dt>{ar ? "الجودة" : "Quality"}</dt>
-          <dd>{resolution ?? project.resolution}</dd>
-        </div>
-      </dl>
-
       <footer className="creator-project-card-actions">
         {onDuplicate ? (
           <button

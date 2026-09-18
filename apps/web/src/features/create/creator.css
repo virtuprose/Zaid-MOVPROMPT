@@ -1520,7 +1520,7 @@
 .creator-template-card-v2 {
   position: relative;
   display: grid;
-  grid-template-rows: auto 1fr;
+  grid-template-rows: auto auto;
   gap: 0;
   background: hsl(var(--creator-panel));
   border: 1px solid hsl(var(--creator-line));
@@ -1530,7 +1530,10 @@
   transition: transform var(--creator-anim-fast) var(--creator-anim-ease),
               box-shadow var(--creator-anim-fast) var(--creator-anim-ease);
   isolation: isolate;
+  max-width: 240px;
+  margin: 0 auto;
 }
+.creator-template-card-v2.is-featured { max-width: 360px; }
 .creator-template-card-v2:hover,
 .creator-template-card-v2:focus-within {
   transform: translateY(-2px);
@@ -1541,11 +1544,11 @@
 }
 .creator-template-card-v2 .creator-template-media {
   position: relative;
-  aspect-ratio: 4 / 3;
+  aspect-ratio: 9 / 16;
   background: hsl(var(--creator-bg) / .5);
   overflow: hidden;
 }
-.creator-template-card-v2.is-featured .creator-template-media { aspect-ratio: 16 / 9; }
+.creator-template-card-v2.is-featured .creator-template-media { aspect-ratio: 9 / 16; }
 .creator-template-card-v2 .creator-template-media img {
   width: 100%;
   height: 100%;
@@ -1723,9 +1726,7 @@
 }
 .creator-project-card-v2 .creator-project-card-status svg { width: 12px; height: 12px; }
 .creator-project-card-v2 .creator-project-card-row {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
+  display: none;
 }
 .creator-project-card-v2 .creator-project-stat {
   padding: 8px 10px;
