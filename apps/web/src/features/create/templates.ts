@@ -153,7 +153,9 @@ export function createDraftProject(templateId = CREATOR_TEMPLATES[0]!.id): Creat
     logoUrl: "",
     aspectRatio: "9:16",
     resolution: "720p",
-    durationSeconds: template.duration,
+    // Duration is fixed at 8 seconds for the v1 launch — every template renders the
+    // same length so the catalog previews, pricing, and scene pacing line up.
+    durationSeconds: 8,
     subtitles: true,
     audio: true,
     scenes: template.scenes.map((scene) => ({ ...scene })),

@@ -11,26 +11,8 @@ vi.mock("@/lib/api/portableApiClient", () => ({
 
 import {
   __resetCapabilitiesCacheForTests,
-  isDurationSupported,
-  snapDuration,
   useCapabilities,
 } from "./useCapabilities";
-
-import type { ResolvedCapabilities } from "./useCapabilities";
-
-const STATIC_FALLBACK: ResolvedCapabilities = {
-  active: {
-    modelId: "bytedance/seedance-2.5",
-    displayName: "Seedance 2.5",
-    environment: "production",
-    durations: [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
-    minimumDurationSeconds: 4,
-    maximumDurationSeconds: 30,
-  },
-  models: [],
-  live: false,
-  fallbackReason: "boom",
-};
 
 const SUCCESS_BODY = {
   models: [
@@ -74,14 +56,5 @@ describe("useCapabilities", () => {
     });
     expect(result.current.live).toBe(false);
     expect(result.current.active.durations).toEqual([4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]);
-  });
-
-  it("isDurationSupported and snapDuration match the active list", () => {
-    expect(isDurationSupported(STATIC_FALLBACK, 8)).toBe(true);
-    expect(isDurationSupported(STATIC_FALLBACK, 9)).toBe(true);
-    expect(isDurationSupported(STATIC_FALLBACK, 13)).toBe(true);
-    expect(snapDuration(STATIC_FALLBACK, 9)).toBe(9);
-    // 8 and 10 are equidistant; the implementation picks the first best, so 8 wins.
-    expect(snapDuration(STATIC_FALLBACK, 9)).toBe(9);
   });
 });

@@ -81,31 +81,6 @@ export function useCapabilities(): ResolvedCapabilities {
   return state;
 }
 
-/** True if `seconds` is in the active model's accepted durations. */
-export function isDurationSupported(capabilities: ResolvedCapabilities, seconds: number) {
-  return capabilities.active.durations.includes(seconds);
-}
-
-/**
- * Pick the closest supported duration for the active model. Used by the
- * DurationSelector to gracefully handle a project loaded with a duration
- * that's no longer supported (e.g. after a model policy change).
- */
-export function snapDuration(capabilities: ResolvedCapabilities, seconds: number): number {
-  const list = capabilities.active.durations;
-  if (list.includes(seconds)) return seconds;
-  let nearest = list[0]!;
-  let bestDelta = Math.abs(nearest - seconds);
-  for (const candidate of list) {
-    const delta = Math.abs(candidate - seconds);
-    if (delta < bestDelta) {
-      nearest = candidate;
-      bestDelta = delta;
-    }
-  }
-  return nearest;
-}
-
 /** Test-only: drop the session-level cache so the next useCapabilities() re-fetches. */
 export function __resetCapabilitiesCacheForTests() {
   cache = undefined;

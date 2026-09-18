@@ -91,8 +91,10 @@ export function isSupportedDuration(
 }
 
 /**
- * Snap a user-chosen duration to the nearest supported value. Useful for the
- * DurationSelector when the policy widens but readiness hasn't been refreshed.
+ * Snap a user-chosen duration to the nearest supported value. The v1 launch
+ * locks every render to 8 seconds, so this helper is unused in the web app
+ * today. It stays exported for tests and any future surface that re-introduces
+ * a duration control.
  */
 export function snapToSupportedDuration(
   capabilities: SeedanceCapabilities,
