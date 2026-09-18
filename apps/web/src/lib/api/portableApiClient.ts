@@ -13,6 +13,7 @@ import {
   SignedAssetDownloadResponseSchema,
   TemplateListResponseSchema,
   TemplateResponseSchema,
+  VideoCapabilitiesResponseSchema,
   type ClaimDraftRequest,
   type CreateGenerationQuoteRequest,
   type CreateProjectVersionRequest,
@@ -26,6 +27,7 @@ import {
   type PublicTemplate,
   type SourceScanResponse,
   type StartRenderRunRequest,
+  type VideoCapabilitiesResponse,
 } from "@movprompt/contracts";
 import { z } from "zod";
 
@@ -107,6 +109,9 @@ export const portableCreatorApi = {
   },
   async featureFlags(): Promise<FeatureFlagsResponse> {
     return request("/api/v1/feature-flags", FeatureFlagsResponseSchema);
+  },
+  async videoCapabilities(): Promise<VideoCapabilitiesResponse> {
+    return request("/api/v1/capabilities/video", VideoCapabilitiesResponseSchema);
   },
 
   async listTemplates(filters: { vertical?: string; goal?: string; language?: string } = {}): Promise<PublicTemplate[]> {

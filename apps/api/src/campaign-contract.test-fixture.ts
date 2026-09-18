@@ -33,6 +33,7 @@ export function validTemplateClaim(
     subtitles: true,
     audio: true,
   };
+  const projectDurationSeconds = 8;
   const scenes = ["hook", "detail", "close"].map((id, index) => ({
     id,
     title: `Scene ${index + 1}`,
@@ -105,6 +106,7 @@ export function validTemplateClaim(
       logoUrl: "",
       aspectRatio: campaign.aspectRatio,
       resolution: campaign.resolution,
+      durationSeconds: projectDurationSeconds,
       subtitles: campaign.subtitles,
       audio: campaign.audio,
       scenes,

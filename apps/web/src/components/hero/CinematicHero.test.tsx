@@ -3,6 +3,7 @@ import { HelmetProvider } from "react-helmet-async";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it } from "vitest";
 import { vi } from "vitest";
+import { CATEGORY_PREVIEW_TEMPLATE_IDS } from "@movprompt/creative-engine";
 
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { CinematicHero } from "./CinematicHero";
@@ -47,10 +48,10 @@ describe("CinematicHero scrollable campaign galleries", () => {
     view.unmount();
   });
 
-  it("shows only the three verified previews", () => {
+  it("shows only the verified previews", () => {
     const view = renderHero("en");
     const ready = screen.getByRole("region", { name: "Ready previews" });
-    expect(within(ready).getAllByRole("button", { name: /Play .* preview/ })).toHaveLength(3);
+    expect(within(ready).getAllByRole("button", { name: /Play .* preview/ })).toHaveLength(CATEGORY_PREVIEW_TEMPLATE_IDS.length);
     expect(screen.queryByRole("region", { name: "More campaign directions" })).not.toBeInTheDocument();
     expect(screen.queryByRole("region", { name: "Selected direction" })).not.toBeInTheDocument();
     view.unmount();

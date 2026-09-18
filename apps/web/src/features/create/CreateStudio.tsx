@@ -94,6 +94,7 @@ import { templateCampaignIssue } from "./templateCampaignOptions";
 import { useTemplateQuotes } from "./useTemplateQuotes";
 import { stepForLoadedProject } from "./creatorResumeStep";
 import { buildTemplatePrompt } from "./templateGenerationPrompt";
+import { GenerationSummaryCard } from "./GenerationSummaryCard";
 import { prepareAuthenticatedAssetClaim } from "./authenticatedAssetClaim";
 import type { TemplateQuote } from "./templateQuoteState";
 import { applyImportedFacts, campaignFactValue, campaignSourceForProject, confirmCampaignFacts, editFact, normalizeCampaignSource } from "./sourceFacts";
@@ -1062,7 +1063,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
           capability: "video.product_fidelity",
           prompt: project.product.images.length ? buildTemplatePrompt(project) : "",
           references: imageReferencesForAdvancedHandoff(project),
-          renderSettings: { duration: template.duration, ratio: project.aspectRatio },
+          renderSettings: { duration: project.durationSeconds, ratio: project.aspectRatio },
         },
         returnPath: `/advanced?draft=${encodeURIComponent(project.id)}`,
       });
@@ -1460,7 +1461,7 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
     if (generationSubmission.current) return;
     generationSubmission.current = true;
     try {
-      const generation = await startCreatorGeneration({ projectId: renderProject.id, projectVersionId: renderProject.versionId!, quoteId: confirmedQuote.quoteId, idempotencyKey: renderProject.pendingGenerationId || crypto.randomUUID(), mode: "template", prompt: buildTemplatePrompt(renderProject), capability: confirmedQuote.capability as "video.cinematic" | "video.product_fidelity", options: { aspect_ratio: renderProject.aspectRatio === "4:5" ? "3:4" : renderProject.aspectRatio, duration: Math.min(15, template.duration), resolution: renderProject.resolution, audio: renderProject.audio }, referenceImages: renderProject.product.images.filter(isCreatorImageReference).map((image) => image.url), rightsAttested: rightsConfirmed, metadata: { creator_project_id: renderProject.id, template_id: renderProject.templateId, language: renderProject.language, market: renderProject.market } });
+      const generation = await startCreatorGeneration({ projectId: renderProject.id, projectVersionId: renderProject.versionId!, quoteId: confirmedQuote.quoteId, idempotencyKey: renderProject.pendingGenerationId || crypto.randomUUID(), mode: "template", prompt: buildTemplatePrompt(renderProject), capability: confirmedQuote.capability as "video.cinematic" | "video.product_fidelity", options: { aspect_ratio: renderProject.aspectRatio === "4:5" ? "3:4" : renderProject.aspectRatio, duration: renderProject.durationSeconds, resolution: renderProject.resolution, audio: renderProject.audio }, referenceImages: renderProject.product.images.filter(isCreatorImageReference).map((image) => image.url), rightsAttested: rightsConfirmed, metadata: { creator_project_id: renderProject.id, template_id: renderProject.templateId, language: renderProject.language, market: renderProject.market } });
       setProject((current) => ({ ...current, jobId: generation.job.id, renderRunId: generation.runId, status: "generating" }));
       if (generation.job.created_at && Number.isFinite(Date.parse(generation.job.created_at))) setGenerationStartedAt(Date.parse(generation.job.created_at));
       setGenerationStage("preparing");
@@ -1950,9 +1951,12 @@ export function CreateStudio({ qaMode = false }: { qaMode?: boolean }) {
               </>}
             </section>
 
-            <aside className="creator-panel creator-panel-pad creator-generation-summary" aria-label={tr("Generation summary", "ملخص التوليد")}>
+            <aside className="creator-panel creator-panel-pad" aria-label={tr("Generation summary", "ملخص التوليد")}>
               <p className="creator-kicker">{tr("Ready to create", "جاهز للإنشاء")}</p>
               <div className="creator-product-image" style={{ borderRadius: 14, overflow: "hidden" }}><SourceMediaPreview asset={project.product.images[0]} alt={project.product.name} /></div>
+              <div style={{ marginTop: 14 }}>
+                <GenerationSummaryCard project={project} resolution={project.resolution} />
+              </div>
               <div className="creator-summary-list" style={{ marginTop: 16 }}><div className="creator-summary-row"><span>{tr("Template", "القالب")}</span><strong>{arabicUi ? template.nameAr : template.name}</strong></div><div className="creator-summary-row"><span>{tr("Campaign goal", "هدف الحملة")}</span><strong>{arabicUi ? ARABIC_GOAL_LABELS[project.goal] : getCampaignGoalOption(project.goal).label}</strong></div><div className="creator-summary-row"><span>{tr("Call to action", "الدعوة للإجراء")}</span><strong>{campaignCtaLabel(project.cta, arabicUi)}</strong></div>{!developmentFreeGeneration && project.product.price && <div className="creator-summary-row"><span>{tr("Price", "السعر")}</span><strong>{project.product.price} {MARKET_META[project.market].currency}</strong></div>}{project.offer && <div className="creator-summary-row"><span>{tr("Offer", "العرض")}</span><strong>{project.offer}</strong></div>}<div className="creator-summary-row"><span>{tr("Market", "السوق")}</span><strong>{MARKET_META[project.market].label}</strong></div><div className="creator-summary-row"><span>{tr("Campaign language", "لغة الحملة")}</span><strong>{project.language === "bilingual" ? tr("Kuwaiti Arabic + English", "عربي كويتي + إنجليزي") : project.language === "ar" ? tr("Kuwaiti Arabic", "عربي كويتي") : tr("English", "الإنجليزية")}</strong></div><div className="creator-summary-row"><span>{tr("Format", "المقاس")}</span><strong>{project.aspectRatio} · {project.resolution}</strong></div><div className="creator-summary-row"><span>{tr("Subtitles", "الترجمة المكتوبة")}</span><strong>{project.subtitles ? tr("Included", "مشمولة") : tr("Off", "متوقفة")}</strong></div><div className="creator-summary-row"><span>{tr("Audio", "الصوت")}</span><strong>{project.audio ? tr("Included", "مشمول") : tr("Off", "متوقف")}</strong></div></div>
               {!campaignSetupReady && <div className="creator-cost-box" aria-live="polite">
                 {developmentFreeGeneration ? <><small>{tr(isGuest ? "Guest preview" : "Local development", isGuest ? "معاينة للزائر" : "التطوير المحلي")}</small><strong>{campaignSetupIssue ? compatibilityIssue || templateSettingsIssue || tr(campaignSetupIssue, "أضف بيانات التواصل المطلوبة للمتابعة.") : activeQuote ? tr("Ready to generate your preview", "جاهز لتوليد المعاينة") : quoteLoaded ? quoteError || tr("Generation setup is incomplete", "إعداد التوليد غير مكتمل") : tr("Checking generation availability…", "جارٍ التحقق من توفر التوليد…")}</strong><span className="creator-cost-meta"><Clock3 aria-hidden="true" /> {tr(`Video length: ${projectDurationSeconds} seconds · estimated processing: 2–5 minutes`, `مدة الفيديو: ${projectDurationSeconds} ثانية · وقت المعالجة المتوقع: 2–5 دقائق`)}</span>{!campaignSetupIssue && templateQuote.retryable && <button className="creator-cost-retry" type="button" onClick={retryQuote}><RefreshCw aria-hidden="true" /> {tr("Retry service check", "إعادة التحقق من الخدمة")}</button>}{quoteFailure?.requestId && <details className="creator-support-details"><summary>{tr("Support details", "تفاصيل الدعم")}</summary><code>{quoteFailure.requestId}</code></details>}</> : activeQuote ? <>

@@ -51,6 +51,7 @@ const project: CreatorProject = {
   logoUrl: "",
   aspectRatio: "9:16",
   resolution: "720p",
+  durationSeconds: 8,
   subtitles: true,
   audio: true,
   scenes: [{ id: "scene-1", title: "Reveal", purpose: "Hook", duration: 3, headline: "New", direction: "Reveal the product." }],

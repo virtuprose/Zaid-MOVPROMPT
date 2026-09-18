@@ -1,14 +1,16 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import { Clock, Layers, Sparkles, Languages, RectangleHorizontal } from "lucide-react";
 import { Seo } from "@/components/Seo";
 import { CreatorShell } from "@/features/create/CreatorShell";
 import { TemplateGrid } from "@/features/create/TemplateGrid";
 import { creatorTemplateFromCatalog } from "@/features/create/templateCatalogMapper";
 import { CREATOR_TEMPLATES, getCreatorTemplate } from "@/features/create/templates";
+import { useCapabilities } from "@/features/create/useCapabilities";
 import type { CreatorTemplate } from "@/features/create/types";
 import { isFeatureEnabled } from "@/config/features";
 import { portableCreatorApi } from "@/lib/api/portableApiClient";
-import { ArrowLeft, Sparkles } from "lucide-react";
+import { ArrowLeft, ArrowUpRight } from "lucide-react";
 import { useLanguage } from "@/i18n/LanguageContext";
 
 export default function CreatorTemplates({ qaMode = false }: { qaMode?: boolean }) {
@@ -56,7 +58,7 @@ export default function CreatorTemplates({ qaMode = false }: { qaMode?: boolean 
       <CreatorShell qaMode={qaMode}>
         <Seo title={`${displayName} · MovPrompt`} description={displayDescription} path={`/templates/${template.id}`} />
         <div className="creator-page creator-template-detail">
-          <Link className="creator-button creator-button-quiet" to="/templates"><ArrowLeft aria-hidden="true" /> {ar ? "كل القوالب" : "All templates"}</Link>
+          <Link className="creator-template-back" to="/templates"><ArrowLeft aria-hidden="true" /> {ar ? "كل القوالب" : "All templates"}</Link>
           <div className="creator-template-detail-grid">
             <figure className="creator-template-detail-media" data-preview-kind={template.previewVideo ? "video" : "poster"}>
               <div className="creator-template-detail-frame">
@@ -72,7 +74,7 @@ export default function CreatorTemplates({ qaMode = false }: { qaMode?: boolean 
                   : (ar ? "اتجاه بصري ثابت للقالب، وليس فيديو جاهزاً. اللقطات النهائية تُولد من موادك." : "Static template direction, not a finished video. Final footage is generated from your assets.")}
               </figcaption>
             </figure>
-            <section><p className="creator-kicker">{template.eyebrow} · {template.duration} {ar ? "ثانية" : "seconds"}</p><h1 className="creator-title creator-title-sm">{displayName}</h1><p className="creator-subtitle">{displayDescription}</p><div className="creator-summary-list"><div className="creator-summary-row"><span>{ar ? "الأنسب لـ" : "Best for"}</span><strong>{ar ? displayDescription : template.bestFor}</strong></div><div className="creator-summary-row"><span>{ar ? "اللغات" : "Languages"}</span><strong>{ar ? "اللهجة الكويتية، الإنجليزية، أو الاثنين" : "Kuwaiti Arabic, English, bilingual"}</strong></div><div className="creator-summary-row"><span>{ar ? "المقاسات" : "Formats"}</span><strong>{template.aspectRatios.join(" · ")}</strong></div><div className="creator-summary-row"><span>{ar ? "التركيب" : "Structure"}</span><strong>{ar ? `${template.scenes.length} مشاهد موجهة` : `${template.scenes.length} guided scenes`}</strong></div></div><Link className="creator-button creator-button-primary" to={`/create?template=${template.id}`}><Sparkles aria-hidden="true" /> {ar ? "استخدم هذا القالب" : "Use this template"}</Link></section>
+            <TemplateDetailSide template={template} qaMode={qaMode} />
           </div>
         </div>
       </CreatorShell>
@@ -92,5 +94,76 @@ export default function CreatorTemplates({ qaMode = false }: { qaMode?: boolean 
         <TemplateGrid onSelect={(templateId) => navigate(`${qaMode ? "/qa/create" : "/create"}?template=${templateId}`)} />
       </div>
     </CreatorShell>
+  );
+}
+
+function TemplateDetailSide({ template, qaMode }: { template: CreatorTemplate; qaMode: boolean }) {
+  const { locale } = useLanguage();
+  const ar = locale === "ar";
+  const capabilities = useCapabilities();
+  const displayName = ar ? template.nameAr : template.name;
+  const displayDescription = ar ? template.descriptionAr : template.description;
+  return (
+    <aside className="creator-template-detail-side">
+      <p className="creator-kicker">{template.eyebrow}</p>
+      <h1>{displayName}</h1>
+      <p className="creator-subtitle">{displayDescription}</p>
+      <ul className="creator-template-detail-chips" aria-label={ar ? "مواصفات القالب" : "Template specifications"}>
+        <li>
+          <Clock aria-hidden="true" />
+          {template.duration}{ar ? "ث" : "s"}
+        </li>
+        <li>
+          <Sparkles aria-hidden="true" />
+          {capabilities.active.displayName}
+        </li>
+        <li>
+          <Layers aria-hidden="true" />
+          {ar ? `${template.scenes.length} مشاهد` : `${template.scenes.length} scenes`}
+        </li>
+        <li>
+          <RectangleHorizontal aria-hidden="true" />
+          {template.aspectRatios.join(" · ")}
+        </li>
+        <li>
+          <Languages aria-hidden="true" />
+          {ar ? "كويتي + إنجليزي" : "Kuwaiti Arabic + English"}
+        </li>
+      </ul>
+      <dl className="creator-template-detail-summary">
+        <div>
+          <span>{ar ? "الأنسب لـ" : "Best for"}</span>
+          <strong>{template.bestFor}</strong>
+        </div>
+        <div>
+          <span>{ar ? "اللغات" : "Languages"}</span>
+          <strong>{ar ? "اللهجة الكويتية، الإنجليزية، أو الاثنين" : "Kuwaiti Arabic, English, bilingual"}</strong>
+        </div>
+        <div>
+          <span>{ar ? "المقاسات" : "Formats"}</span>
+          <strong>{template.aspectRatios.join(" · ")}</strong>
+        </div>
+        <div>
+          <span>{ar ? "التركيب" : "Structure"}</span>
+          <strong>{ar ? `${template.scenes.length} مشاهد موجهة` : `${template.scenes.length} guided scenes`}</strong>
+        </div>
+        <div>
+          <span>{ar ? "النموذج" : "Model"}</span>
+          <strong>{capabilities.active.displayName}</strong>
+        </div>
+      </dl>
+      <div className="creator-template-detail-cta">
+        <Link
+          className="creator-button creator-button-primary"
+          to={`${qaMode ? "/qa/create" : "/create"}?template=${template.id}`}
+        >
+          <Sparkles aria-hidden="true" /> {ar ? "استخدم هذا القالب" : "Use this template"}
+          <ArrowUpRight aria-hidden="true" />
+        </Link>
+        <Link className="creator-button creator-button-quiet" to="/templates">
+          {ar ? "تصفح قالباً آخر" : "Browse another template"}
+        </Link>
+      </div>
+    </aside>
   );
 }

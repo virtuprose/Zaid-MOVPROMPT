@@ -120,6 +120,9 @@ export type CreatorProject = {
   logoUrl: string;
   aspectRatio: CreatorAspectRatio;
   resolution: CreatorResolution;
+  /** User-chosen video duration in seconds. Seeded from the template default and
+   *  validated against the resolved model's supported durations at the boundary. */
+  durationSeconds: number;
   subtitles: boolean;
   audio: boolean;
   scenes: CreatorScene[];

@@ -38,14 +38,15 @@ describe("TemplateGrid", () => {
       </MemoryRouter>,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Continue with selected template" }));
-
+    const card = screen.getByTestId(`v2-${selectedId}`);
+    expect(card).toHaveAttribute("data-template-selected", "true");
+    fireEvent.click(within(card).getByRole("button", { name: /Choose .* template/i }));
     expect(onSelect).toHaveBeenCalledTimes(1);
     expect(onSelect).toHaveBeenCalledWith(selectedId);
     view.unmount();
   });
 
-  it("renders verified motion previews plus the approved advertising direction", () => {
+  it("renders verified motion previews for every approved launch template", () => {
     languageState.locale = "en";
     const view = render(
       <MemoryRouter>
@@ -54,12 +55,11 @@ describe("TemplateGrid", () => {
     );
 
     expect(view.container.querySelectorAll("video")).toHaveLength(0);
-    expect(screen.getAllByText("Video preview coming later")).toHaveLength(1);
-    expect(screen.getAllByText("Motion preview")).toHaveLength(CATEGORY_PREVIEW_TEMPLATE_IDS.length);
-    expect(view.container.querySelectorAll(".creator-template-media[data-media-tone]")).toHaveLength(DISCOVERABLE_CREATOR_TEMPLATES.length);
-    expect(view.container.querySelectorAll<HTMLImageElement>(".creator-template-media img")[0]?.style.objectPosition).toBeTruthy();
-    expect(screen.getAllByRole("button", { name: /Play .* preview/ })).toHaveLength(CATEGORY_PREVIEW_TEMPLATE_IDS.length);
-    expect(screen.getAllByRole("link", { name: /View .* details/ })).toHaveLength(1);
+    expect(screen.queryByText("Video preview coming later")).not.toBeInTheDocument();
+    expect(view.container.querySelectorAll(".creator-template-card-v2")).toHaveLength(DISCOVERABLE_CREATOR_TEMPLATES.length);
+    expect(view.container.querySelectorAll<HTMLImageElement>(".creator-template-card-v2 img")[0]).toBeTruthy();
+    expect(screen.getAllByRole("button", { name: /Play .* preview/i })).toHaveLength(CATEGORY_PREVIEW_TEMPLATE_IDS.length);
+    expect(screen.queryByRole("link", { name: /View .* details/ })).not.toBeInTheDocument();
     view.unmount();
   });
 
@@ -72,7 +72,8 @@ describe("TemplateGrid", () => {
     );
 
     for (const name of ["Electronics", "Food", "Ecommerce", "Advertising"]) {
-      expect(within(screen.getByRole("region", { name })).getAllByRole("button", { name: /Choose .* template/ })).toHaveLength(1);
+      const group = within(screen.getByRole("region", { name }));
+      expect(group.getAllByRole("button", { name: /Choose .* template/ })).toHaveLength(1);
     }
     expect(screen.queryByRole("region", { name: "Beauty / Cosmetics" })).not.toBeInTheDocument();
     expect(screen.queryByRole("region", { name: "Real Estate / Business Services" })).not.toBeInTheDocument();
@@ -89,8 +90,9 @@ describe("TemplateGrid", () => {
     );
 
     const selectedGroup = screen.getByRole("region", { name: "Food" });
-    expect(within(selectedGroup).getByRole("button", { name: `Choose ${selected.name} template` })).toHaveAttribute("aria-pressed", "true");
-    expect(within(selectedGroup).getByRole("button", { name: `Play ${selected.name} preview` })).toBeVisible();
+    const selectedCard = within(selectedGroup).getByTestId(`v2-${selected.id}`);
+    expect(selectedCard).toHaveAttribute("data-template-selected", "true");
+    expect(within(selectedCard).getByRole("button", { name: /Play .* preview/i })).toBeVisible();
     view.unmount();
   });
 
@@ -109,7 +111,7 @@ describe("TemplateGrid", () => {
     view.unmount();
   });
 
-  it("shows only the explicitly approved poster-only advertising direction", () => {
+  it("shows the advertising direction only inside the Advertising category", () => {
     languageState.locale = "en";
     const advertising = CREATOR_TEMPLATES.find((template) => template.id === "new-york-billboard-takeover")!;
     const hiddenPosterOnlyTemplate = CREATOR_TEMPLATES.find((template) => !template.previewVideo && template.id !== advertising.id)!;
@@ -137,15 +139,15 @@ describe("TemplateGrid", () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getAllByRole("button", { name: /Choose .* template/ })).toHaveLength(DISCOVERABLE_CREATOR_TEMPLATES.length);
+    expect(screen.getAllByRole("button", { name: /Choose .* template/i })).toHaveLength(DISCOVERABLE_CREATOR_TEMPLATES.length);
     for (const category of ["Electronics", "Food", "Ecommerce", "Advertising"]) {
       fireEvent.click(screen.getByRole("button", { name: category, pressed: false }));
-      expect(screen.getAllByRole("button", { name: /Choose .* template/ })).toHaveLength(1);
+      expect(screen.getAllByRole("button", { name: /Choose .* template/i })).toHaveLength(1);
       fireEvent.click(screen.getByRole("button", { name: "All", pressed: false }));
     }
     const advertising = screen.getByRole("button", { name: "Advertising", pressed: false });
     expect(advertising).toBeEnabled();
-    expect(screen.getAllByRole("button", { name: /Choose .* template/ })).toHaveLength(DISCOVERABLE_CREATOR_TEMPLATES.length);
+    expect(screen.getAllByRole("button", { name: /Choose .* template/i })).toHaveLength(DISCOVERABLE_CREATOR_TEMPLATES.length);
     view.unmount();
   });
 
@@ -157,9 +159,10 @@ describe("TemplateGrid", () => {
     const view = render(<MemoryRouter><TemplateGrid onSelect={onSelect} /></MemoryRouter>);
 
     await screen.findByText("Local template previews are available to view only while the published catalog reconnects.");
-    const previewOnlyCard = screen.getByRole("button", { name: `${CREATOR_TEMPLATES[0]!.name} template preview only` });
-    expect(previewOnlyCard).toBeDisabled();
-    fireEvent.click(previewOnlyCard);
+    const firstCard = screen.getByTestId(`v2-${CREATOR_TEMPLATES[0]!.id}`);
+    const chooseButton = within(firstCard).getByRole("button", { name: /Choose .* template/i });
+    expect(chooseButton).toBeDisabled();
+    fireEvent.click(chooseButton);
     expect(onSelect).not.toHaveBeenCalled();
 
     catalogApi.listTemplates.mockResolvedValue([]);

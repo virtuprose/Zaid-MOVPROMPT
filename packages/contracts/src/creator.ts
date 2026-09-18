@@ -644,6 +644,7 @@ const PersistedTemplateCreatorProjectSchema = z
     logoUrl: z.literal(""),
     aspectRatio: CampaignRatioSchema,
     resolution: CampaignResolutionSchema,
+    durationSeconds: z.number().int().min(3).max(60),
     subtitles: z.boolean(),
     audio: z.boolean(),
     scenes: z.array(PersistedCreatorSceneSchema).min(1).max(12),

@@ -9,6 +9,8 @@ import type { CreatorTemplate } from "./types";
 import { creatorTemplateFromCatalog } from "./templateCatalogMapper";
 import { templateGoalLabel } from "./templateMedia";
 import { TemplatePreviewDialog } from "./TemplatePreviewDialog";
+import { TemplateCardV2 } from "./TemplateCardV2";
+import { useCapabilities } from "./useCapabilities";
 import { useLanguage } from "@/i18n/LanguageContext";
 import type { TemplateDiscoveryCategory } from "@movprompt/contracts";
 
@@ -240,16 +242,18 @@ function TemplateGroup({
           {locale === "ar" ? `${templates.length} قالب` : `${templates.length} ${templates.length === 1 ? "template" : "templates"}`}
         </span>
       </div>
-      <div className="creator-template-grid">
-        {templates.map((template) => (
-          <TemplateCard
+      <div className="creator-bento">
+        {templates.map((template, index) => (
+          <BentoCard
             key={template.id}
             template={template}
-            selected={selectedId === template.id}
-            onSelect={onSelect}
+            isFeatured={index === 0}
+            isSelected={selectedId === template.id}
+            isReady={Boolean(template.previewVideo)}
+            isSelectionDisabled={!selectionEnabled}
+            onSelect={(t) => onSelect(t.id)}
             onPreview={onPreview}
             locale={locale}
-            selectionEnabled={selectionEnabled}
           />
         ))}
       </div>
@@ -314,5 +318,42 @@ function TemplateCard({ template, selected, onSelect, onPreview, locale, selecti
           </Link>
         )}
       </article>
+  );
+}
+
+function BentoCard({
+  template,
+  isFeatured,
+  isSelected,
+  isReady,
+  isSelectionDisabled,
+  onSelect,
+  onPreview,
+  locale,
+}: {
+  template: CreatorTemplate;
+  isFeatured: boolean;
+  isSelected: boolean;
+  isReady: boolean;
+  isSelectionDisabled: boolean;
+  onSelect: (template: CreatorTemplate) => void;
+  onPreview: (template: CreatorTemplate) => void;
+  locale: "en" | "ar";
+}) {
+  const capabilities = useCapabilities();
+  return (
+    <div className={isFeatured ? "creator-bento-featured" : undefined}>
+      <TemplateCardV2
+        template={template}
+        isSelected={isSelected}
+        isFeatured={isFeatured}
+        isReady={isReady}
+        isSelectionDisabled={isSelectionDisabled}
+        onSelect={onSelect}
+        onPreview={onPreview}
+        categoryLabel={categoryTitle(template.discoveryCategory, locale)}
+        modelLabel={capabilities.active.displayName}
+      />
+    </div>
   );
 }

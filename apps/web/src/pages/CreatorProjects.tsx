@@ -7,6 +7,7 @@ import { Seo } from "@/components/Seo";
 import { useAuth } from "@/hooks/useAuth";
 import { CreatorShell } from "@/features/create/CreatorShell";
 import { getCreatorTemplate } from "@/features/create/templates";
+import { ProjectCardV2 } from "@/features/create/ProjectCardV2";
 import { duplicateCreatorProject, listLocalCreatorProjects, loadCreatorProjects, subscribeToCreatorProjects, trashCreatorProject } from "@/features/create/projectStore";
 import { ProjectDeletionPendingError } from "@/features/create/trashUnfinishedProject";
 import { canDeleteCreatorDraft } from "@/features/create/creatorProjectDeletion";
@@ -276,27 +277,21 @@ export default function CreatorProjects({ qaMode = false }: { qaMode?: boolean }
         ) : null}
 
         {projects.length ? (
-          <div className="creator-project-grid">
-            {projects.map((project) => {
+          <div className="creator-bento">
+            {projects.map((project, index) => {
               const template = getCreatorTemplate(project.templateId);
+              const isFeatured = index === 0;
               return (
-                <article className="creator-project-card" key={project.id}>
-                  <Link to={qaMode ? `/qa/create?project=${project.id}` : `/projects/${project.id}`} className="creator-project-preview" aria-label={tr(`Open ${project.title}`, `افتح ${project.title}`)}>
-                    {project.product.images[0]?.url
-                      ? <img src={project.product.images[0].url} alt="" />
-                      : <span className="creator-project-preview-empty"><FileImage aria-hidden="true" /><span>{tr("No product image yet", "ما تمت إضافة صورة المنتج بعد")}</span></span>}
-                    <span className="creator-project-status">{statusLabel(project.status, ar)}</span>
-                  </Link>
-                  <div className="creator-project-copy">
-                    <h2>{project.title}</h2>
-                    <p>{ar ? template.nameAr : template.name} · {project.aspectRatio} · {tr("Updated", "آخر تحديث")} {new Date(project.updatedAt).toLocaleDateString(ar ? "ar-KW" : "en-KW")}</p>
-                    <div className="creator-project-actions">
-                      <Link className="creator-button creator-button-secondary" to={qaMode ? `/qa/create?project=${project.id}` : `/projects/${project.id}`}>{tr("Open", "فتح")}</Link>
-                      <button className="creator-icon-button" type="button" onClick={() => void duplicate(project)} aria-label={tr(`Duplicate ${project.title}`, `انسخ ${project.title}`)}><Copy aria-hidden="true" /></button>
-                      {canDeleteCreatorDraft(project, runs) ? <button className="creator-button creator-button-secondary creator-delete-draft" type="button" onClick={() => { setDeleteError(""); setPendingDelete(project); }} aria-label={tr(`Delete project ${project.title}`, `حذف مشروع ${project.title}`)}><Trash2 aria-hidden="true" />{tr("Delete project", "حذف المشروع")}</button> : null}
-                    </div>
-                  </div>
-                </article>
+                <div key={project.id} className={isFeatured ? "creator-bento-featured" : undefined}>
+                  <ProjectCardV2
+                    project={project}
+                    isFeatured={isFeatured}
+                    onOpen={(p) => navigate(qaMode ? `/qa/create?project=${p.id}` : `/projects/${p.id}`)}
+                    onDuplicate={(p) => void duplicate(p)}
+                    onDelete={canDeleteCreatorDraft(project, runs) ? (p) => { setDeleteError(""); setPendingDelete(p); } : undefined}
+                    resolution={project.resolution}
+                  />
+                </div>
               );
             })}
           </div>

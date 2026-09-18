@@ -3,6 +3,7 @@ import { CampaignPresenterSchema, type CreatorProjectRecord } from "@movprompt/c
 import { portableCreatorApi } from "@/lib/api/portableApiClient";
 import { sanitizeCreatorProjectOutput } from "./creatorProjectOutput";
 import { campaignFactValue, campaignSourceForProject, projectWithCampaignSource } from "./sourceFacts";
+import { getCreatorTemplate } from "./templates";
 import { normalizeCreatorResolution, type CreatorProject } from "./types";
 
 function isDurableCreatorObjectKey(value: string): boolean {
@@ -114,6 +115,12 @@ export function projectFromCloud(input: CreatorProjectRecord): CreatorProject | 
     renderRunId: currentRenderRunId,
     jobId: currentRenderRunId,
     resolution: normalizeCreatorResolution((candidate as CreatorProject & { resolution?: unknown }).resolution),
+    durationSeconds: (() => {
+      const candidateSeconds = (candidate as CreatorProject & { durationSeconds?: unknown }).durationSeconds;
+      return typeof candidateSeconds === "number" && candidateSeconds > 0
+        ? candidateSeconds
+        : getCreatorTemplate(candidate.templateId).duration;
+    })(),
     promotionKind: candidate.promotionKind ?? "product",
     vertical: candidate.vertical ?? "ecommerce",
     goal: candidate.goal ?? "launch",

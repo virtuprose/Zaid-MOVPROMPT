@@ -12,6 +12,7 @@ export type CampaignSetupField =
   | "language"
   | "aspectRatio"
   | "resolution"
+  | "durationSeconds"
   | "subtitles"
   | "audio"
   | "presenter";

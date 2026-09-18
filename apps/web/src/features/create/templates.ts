@@ -153,6 +153,7 @@ export function createDraftProject(templateId = CREATOR_TEMPLATES[0]!.id): Creat
     logoUrl: "",
     aspectRatio: "9:16",
     resolution: "720p",
+    durationSeconds: template.duration,
     subtitles: true,
     audio: true,
     scenes: template.scenes.map((scene) => ({ ...scene })),

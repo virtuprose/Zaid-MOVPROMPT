@@ -12,6 +12,7 @@ import { PortableApiError, portableCreatorApi } from "@/lib/api/portableApiClien
 import { trashUnfinishedProject } from "./trashUnfinishedProject";
 import { canDeleteCreatorDraft } from "./creatorProjectDeletion";
 import { sanitizeCreatorProjectOutput } from "./creatorProjectOutput";
+import { getCreatorTemplate } from "./templates";
 import { hydrateCloudProject, stableProjectConfiguration } from "./portableProjectMapper";
 import { campaignFactValue, campaignSourceForProject } from "./sourceFacts";
 import { normalizeCreatorResolution, type CreatorProject } from "./types";
@@ -45,7 +46,17 @@ function readLocal(userId?: string | null): CreatorProject[] {
   try {
     const parsed = JSON.parse(localStorage.getItem(storageKey(userId)) || "[]");
     return Array.isArray(parsed)
-      ? parsed.map((project) => sanitizeCreatorProjectOutput({ ...project, resolution: normalizeCreatorResolution(project?.resolution) }))
+      ? parsed.map((project) => {
+        const template = getCreatorTemplate(project?.templateId);
+        const seededDuration = typeof project?.durationSeconds === "number" && project.durationSeconds > 0
+          ? project.durationSeconds
+          : template.duration;
+        return sanitizeCreatorProjectOutput({
+          ...project,
+          resolution: normalizeCreatorResolution(project?.resolution),
+          durationSeconds: seededDuration,
+        });
+      })
       : [];
   } catch {
     return [];
