@@ -1587,14 +1587,16 @@
   align-items: center;
   gap: 3px;
   padding: 2px 6px;
-  background: hsl(var(--creator-bg) / .88);
-  border: 1px solid hsl(var(--creator-line));
-  color: hsl(var(--creator-ink));
+  background: hsl(var(--creator-ink) / .82);
+  border: 1px solid hsl(var(--creator-ink) / .82);
+  color: #ffffff;
   font-size: 9px;
   font-weight: 600;
   border-radius: 999px;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
 }
-.creator-template-card-v2 .creator-template-chip svg { width: 10px; height: 10px; }
+.creator-template-card-v2 .creator-template-chip svg { width: 10px; height: 10px; color: #ffffff; }
 .creator-template-card-v2 .creator-template-body {
   display: grid;
   gap: 6px;
