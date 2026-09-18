@@ -66,7 +66,9 @@ describe("creative template catalog", () => {
     for (const template of LAUNCH_CREATIVE_TEMPLATE_CATALOG) {
       expect(template.versionNumber).toBe(1);
       expect(template.durationSeconds).toBe(8);
-      expect(template.scenes).toHaveLength(4);
+      // new-york-billboard-takeover is the only launch recipe with a 3-scene
+      // arc (3+3+2) to keep camera moves under two per film.
+      expect(template.scenes).toHaveLength(template.id === "new-york-billboard-takeover" ? 3 : 4);
       expect(template.requiredInputs).toContain("primary_reference");
       expect(template.complianceRules).toEqual(expect.arrayContaining([
         expect.stringContaining("client-uploaded primary reference"),
@@ -279,12 +281,14 @@ describe("premium prompt compiler and quality gate", () => {
 
   it.each([
     ["premium-phone-reveal", "camera module, screen layout, logo placement"],
+    ["phone-floating-ad", "camera module, screen layout, logo placement"],
     ["restaurant-food-hero", "plating, ingredients, portion and texture"],
     ["fashion-product-showcase", "fabric, cut, stitching, pattern and logo"],
     ["perfume-advertisement", "bottle silhouette, cap, glass, liquid colour and label"],
     ["real-estate-property", "architecture, room geometry, fixtures and view"],
     ["business-service-promotion", "uploaded service artwork, brand marks and interface"],
-    ["new-york-billboard-takeover", "uploaded artwork, logo, proportions, colours, layout and readable text"],
+    ["app-service", "Preserve the supplied subject exactly across every shot"],
+    ["new-york-billboard-takeover", "clean neutral glowing panel"],
   ])("adds the subject-specific identity lock for %s", (templateId, expectedLock) => {
     const template = CREATIVE_TEMPLATE_CATALOG.find((item) => item.id === templateId)!;
     const input = brief();
@@ -303,6 +307,27 @@ describe("premium prompt compiler and quality gate", () => {
     const result = compileCreativeDirection({ rawPrompt: template.visualSystem, creativeBrief: input });
     expect(result.prompt).toContain(expectedLock);
     expect(result.prompt).toContain("render no text inside the generated footage");
+    expect(result.prompt).toContain("NO-BAKED-TEXT RULE (HIGHEST PRIORITY)");
+    expect(result.prompt).toContain("The finishing service adds every readable element afterwards");
+  });
+
+  it("removes the old readable-text permission from the new-york-billboard-takeover identity lock", () => {
+    const template = CREATIVE_TEMPLATE_CATALOG.find((item) => item.id === "new-york-billboard-takeover")!;
+    const input = brief();
+    Object.assign(input, {
+      templateId: template.id,
+      templateRecipeVersion: template.versionNumber,
+      templatePromptVersion: `${template.id}-v${template.versionNumber}`,
+      templateVisualSystem: template.visualSystem,
+      vertical: template.verticals[0]!,
+      goal: template.goals[0]!,
+      tone: template.tone,
+      dialectRegister: template.dialectRegister,
+      scenes: template.scenes,
+      qualityPolicy: template.qualityPolicy,
+    });
+    const result = compileCreativeDirection({ rawPrompt: template.visualSystem, creativeBrief: input });
+    expect(result.prompt).not.toContain("preserve the exact uploaded artwork, logo, proportions, colours, layout and readable text");
   });
 
   it("requires native synchronized speech for a presenter template", () => {

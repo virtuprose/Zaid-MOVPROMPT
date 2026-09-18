@@ -1,5 +1,5 @@
 import { CheckCircle2, CircleAlert, Clock3, PencilLine, RefreshCw, Sparkles } from "lucide-react";
-import type { RefObject } from "react";
+import { useId, type RefObject } from "react";
 
 import type { CampaignFactField } from "@movprompt/contracts";
 import { cn } from "@/lib/utils";
@@ -59,6 +59,22 @@ function provenanceCopy(arabic: boolean, provenance: "imported" | "user_confirme
   return copy(arabic, "Added by you", "أضفته بنفسك");
 }
 
+/** Mirror the per-template label overrides used in FactReviewStep so the review-step copy
+ *  matches what the user already saw in the facts form. */
+function primaryNameLabel(arabic: boolean, templateId: string, subject: "product" | "service"): { en: string; ar: string } {
+  if (subject === "service") {
+    if (templateId === "real-estate-property") return { en: "Property or listing name", ar: "اسم العقار أو الإعلان" };
+    if (templateId === "business-service-promotion") return { en: "Service name", ar: "اسم الخدمة" };
+    return { en: "Business or service name", ar: "اسم النشاط أو الخدمة" };
+  }
+  if (/phone/u.test(templateId)) return { en: "Phone model or product name", ar: "اسم الهاتف أو المنتج" };
+  if (/food/u.test(templateId)) return { en: "Dish name", ar: "اسم الطبق" };
+  if (/fashion/u.test(templateId)) return { en: "Clothing or product name", ar: "اسم قطعة الأزياء أو المنتج" };
+  if (/cosmetic|perfume/u.test(templateId)) return { en: "Cosmetic or fragrance name", ar: "اسم المستحضر أو العطر" };
+  if (templateId === "new-york-billboard-takeover") return { en: "Brand name on the billboard", ar: "اسم العلامة على الشاشة" };
+  return { en: "Product name", ar: "اسم المنتج" };
+}
+
 function sourceLabel(arabic: boolean, kind: ReturnType<typeof campaignSourceForProject>["kind"]) {
   const copyByKind = {
     product_url: ["Product link", "رابط منتج"],
@@ -114,6 +130,71 @@ export function CampaignReviewStep({
   const canGenerate = Boolean(quoteFresh && rightsConfirmed && hasRequiredSource && !sourceBusy);
   const missingRights = !rightsConfirmed;
   const goal = getCampaignGoalOption(project.goal).label;
+
+  // Per-template "what is required" list. Each item is a structured object so the UI can
+  // render a specific message and a single "Edit source" link that jumps the user back to
+  // the relevant step. The labels reuse primaryNameLabel() so the wording matches what the
+  // user already saw in the facts form.
+  const missingItems: { key: string; message: string; editTarget: CampaignReviewEditTarget }[] = [];
+  if (!primaryName) {
+    const label = primaryNameLabel(false, project.templateId, source.subject);
+    const labelAr = primaryNameLabel(true, project.templateId, source.subject);
+    missingItems.push({
+      key: "primaryName",
+      message: arabic
+        ? `أضف ${labelAr.ar} للمتابعة.`
+        : `Add a ${label.en.toLowerCase()} to continue.`,
+      editTarget: "source",
+    });
+  }
+  if (requiresSourceMedia && !hasCreatorImageReference(project.product.images)) {
+    missingItems.push({
+      key: "media",
+      message: copy(
+        arabic,
+        "Upload at least one product photo to continue.",
+        "أرفق صورة منتج واحدة على الأقل للمتابعة.",
+      ),
+      editTarget: "source",
+    });
+  }
+  if (project.goal === "whatsapp_orders" && !project.whatsapp?.trim()) {
+    missingItems.push({
+      key: "whatsapp",
+      message: copy(
+        arabic,
+        "Add a Kuwait WhatsApp number to continue.",
+        "أضف رقم واتساب كويتي للمتابعة.",
+      ),
+      editTarget: "details",
+    });
+  }
+  if (project.goal === "bookings" && !project.bookingUrl?.trim()) {
+    missingItems.push({
+      key: "bookingUrl",
+      message: copy(
+        arabic,
+        "Add a valid booking link to continue.",
+        "أضف رابط حجز صحيح للمتابعة.",
+      ),
+      editTarget: "details",
+    });
+  }
+  if (project.goal === "offer" && !project.offer?.trim()) {
+    missingItems.push({
+      key: "offer",
+      message: copy(arabic, "Add an offer to continue.", "أضف عرضًا للمتابعة."),
+      editTarget: "details",
+    });
+  }
+  // Build a single concise summary that matches the inline list, so screen readers using
+  // the Generate-button aria-describedby hear the same wording.
+  const summaryEn = missingItems.map((item) => item.message).join(" ");
+  const summaryAr = missingItems.map((item) => item.message).join(" ");
+
+  const reviewActionsId = useId();
+  const missingListId = `${reviewActionsId}-missing`;
+  const reviewActionsAria = missingItems.length ? { "aria-describedby": missingListId } : {};
 
   const editButton = (target: CampaignReviewEditTarget, label: string) => (
     <button type="button" className="creator-review-edit" onClick={() => onEdit(target)}>
@@ -172,9 +253,42 @@ export function CampaignReviewStep({
 
       {sourceError && <p className="creator-error" role="alert">{sourceError}</p>}
       {hidePricing && ["unavailable", "expired"].includes(quoteState) && onRetryQuote && <button type="button" className="creator-button creator-button-secondary" onClick={onRetryQuote}><RefreshCw aria-hidden="true" /> {copy(arabic, "Retry connection", "إعادة الاتصال")}</button>}
+      {missingItems.length > 0 && (
+        <aside className="creator-review-missing" id={missingListId} aria-labelledby={`${missingListId}-heading`}>
+          <p id={`${missingListId}-heading`} className="creator-review-missing-title">
+            <CircleAlert aria-hidden="true" /> {copy(arabic, "Before you can generate, finish these:", "قبل الإنشاء، أكمل ما يلي:")}
+          </p>
+          <ul>
+            {missingItems.map((item) => (
+              <li key={item.key}>
+                <span>{item.message}</span>
+                <button type="button" className="creator-review-missing-link" onClick={() => onEdit(item.editTarget)}>
+                  <PencilLine aria-hidden="true" /> {item.editTarget === "source"
+                    ? copy(arabic, "Edit source", "تعديل المصدر")
+                    : copy(arabic, "Edit details", "تعديل التفاصيل")}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </aside>
+      )}
       <div className="creator-review-actions">
-        <p>{canGenerate ? copy(arabic, "Everything is ready. Generate a preview, then sign in to download.", "كل شيء جاهز. أنشئ المعاينة ثم سجل الدخول للتنزيل.") : !hasRequiredSource ? requiresSourceMedia ? copy(arabic, "Add the required source details and media before generating. Your campaign is saved.", "أضف تفاصيل المصدر والوسائط المطلوبة قبل الإنشاء. حملتك محفوظة.") : copy(arabic, "Add the required source details before generating. Your campaign is saved.", "أضف تفاصيل المصدر المطلوبة قبل الإنشاء. حملتك محفوظة.") : missingRights ? copy(arabic, "Confirm your rights to generate this campaign.", "أكد حقوقك لإنشاء هذه الحملة.") : hidePricing ? quoteState === "loading" || quoteState === "changed" ? copy(arabic, "Checking generation availability…", "جارٍ التحقق من توفر التوليد…") : copy(arabic, "Generation is unavailable. Complete the storage and generation setup, then retry. Your campaign is saved.", "التوليد غير متوفر. أكمل إعداد التخزين والتوليد ثم أعد المحاولة. حملتك محفوظة.") : quoteState === "ready" ? copy(arabic, "Your campaign is being prepared. Keep this page open.", "جارٍ تجهيز حملتك. أبق هذه الصفحة مفتوحة.") : quoteStateMessage(arabic, quoteState)}</p>
-        <button ref={generateButtonRef} type="button" className="creator-button creator-button-primary" onClick={onGenerate} disabled={!canGenerate}>
+        <p {...reviewActionsAria}>
+          {canGenerate
+            ? copy(arabic, "Everything is ready. Generate a preview, then sign in to download.", "كل شيء جاهز. أنشئ المعاينة ثم سجل الدخول للتنزيل.")
+            : missingItems.length > 0
+              ? arabic ? summaryAr : summaryEn
+              : missingRights
+                ? copy(arabic, "Confirm your rights to generate this campaign.", "أكد حقوقك لإنشاء هذه الحملة.")
+                : hidePricing
+                  ? quoteState === "loading" || quoteState === "changed"
+                    ? copy(arabic, "Checking generation availability…", "جارٍ التحقق من توفر التوليد…")
+                    : copy(arabic, "Generation is unavailable. Complete the storage and generation setup, then retry. Your campaign is saved.", "التوليد غير متوفر. أكمل إعداد التخزين والتوليد ثم أعد المحاولة. حملتك محفوظة.")
+                  : quoteState === "ready"
+                    ? copy(arabic, "Your campaign is being prepared. Keep this page open.", "جارٍ تجهيز حملتك. أبق هذه الصفحة مفتوحة.")
+                    : quoteStateMessage(arabic, quoteState)}
+        </p>
+        <button ref={generateButtonRef} type="button" className="creator-button creator-button-primary" onClick={onGenerate} disabled={!canGenerate} {...reviewActionsAria}>
           {sourceBusy ? <RefreshCw className="animate-spin" aria-hidden="true" /> : <Sparkles aria-hidden="true" />}
           {copy(arabic, "Generate campaign", "أنشئ الحملة")}
         </button>
